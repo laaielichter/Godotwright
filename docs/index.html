@@ -255,24 +255,23 @@ footer a { color: var(--muted); }
   <section id="install">
     <div class="wrap">
       <h2>Install</h2>
-      <p class="sub">Needs Node.js 22.12 or newer. <code>scan</code>, <code>api</code> and <code>review</code> need no Godot install; <code>check</code> runs Godot 4.7 headless.</p>
+      <p class="sub">One command, no clone: <code>npx</code> installs and builds it straight from GitHub. Needs Node.js 22.12 or newer. <code>scan</code>, <code>api</code> and <code>review</code> need no Godot install; <code>check</code> runs Godot 4.7 headless.</p>
       <div class="steps">
         <div>
-          <div class="step-h">1. Build from source</div>
-          <div class="cmd"><pre><code>git clone https://github.com/laaielichter/Godotwright
-cd Godotwright &amp;&amp; npm ci &amp;&amp; npm run build</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="step-h">1. Review your game</div>
+          <div class="cmd"><pre><code>npx -y github:laaielichter/godotwright review ~/games/my-game</code></pre><button class="copy" type="button">Copy</button></div>
         </div>
         <div>
-          <div class="step-h">2. Review your game</div>
-          <div class="cmd"><pre><code>node dist/cli.js review ~/games/my-game</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="step-h">2. Map the project</div>
+          <div class="cmd"><pre><code>npx -y github:laaielichter/godotwright scan ~/games/my-game</code></pre><button class="copy" type="button">Copy</button></div>
         </div>
         <div>
           <div class="step-h">3a. Add to Claude Code</div>
-          <div class="cmd"><pre><code>claude mcp add godotwright -- node /path/to/Godotwright/dist/cli.js mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="cmd"><pre><code>claude mcp add godotwright -- npx -y github:laaielichter/godotwright mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
         </div>
         <div>
           <div class="step-h">3b. Add to Codex</div>
-          <div class="cmd"><pre><code>codex mcp add godotwright -- node /path/to/Godotwright/dist/cli.js mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="cmd"><pre><code>codex mcp add godotwright -- npx -y github:laaielichter/godotwright mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
         </div>
       </div>
       <p class="sub">Run the agent from your Godot project folder, or pass <code>--project &lt;path&gt;</code>. Use <code>--tier cheap</code> for small models: shorter output and step-by-step instructions.</p>
@@ -375,7 +374,7 @@ cd Godotwright &amp;&amp; npm ci &amp;&amp; npm run build</code></pre><button cl
         <details><summary>Does it send my code anywhere?</summary><p>No. Learning stays on your machine and stores counters, rule names and API names, never code, names or paths. Sharing anonymous counters is opt-in, off by default, and respects <code>DO_NOT_TRACK</code>. See <a href="https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md">PRIVACY.md</a>.</p></details>
         <details><summary>Will it help me port a Godot 3 project?</summary><p>Yes. The review flags Godot 3 syntax and names such as <code>export var</code>, <code>yield</code>, <code>KinematicBody2D</code>, <code>deg2rad</code> and <code>move_and_slide()</code> with arguments, and gives the Godot 4 replacement for each.</p></details>
         <details><summary>Does it work with Godot 4.0–4.6?</summary><p>The target is Godot 4.7.x. Most findings apply to every Godot 4 version, but API lookups answer for 4.7, so a method added after your version may be reported as present.</p></details>
-        <details><summary>Is it on npm?</summary><p>Not yet. Build it from source as shown above; the npm package and MCP Registry listing come next.</p></details>
+        <details><summary>Is it on npm?</summary><p>Not yet. Until then <code>npx -y github:laaielichter/godotwright</code> installs it straight from GitHub; the npm package and MCP Registry listing come next.</p></details>
       </div>
     </div>
   </section>

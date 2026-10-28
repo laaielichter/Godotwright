@@ -43,8 +43,7 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
    - Description: `MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4: offline API, project map, headless checks, AAA GDScript review.`
    - Website: `https://laaielichter.github.io/Godotwright/`
    - Topics: `godot godot4 gdscript gamedev godot-engine mcp mcp-server claude-code codex ai-agents linter static-analysis`
-2. **Pages**: Settings > Pages > Source: **GitHub Actions**. After this branch is merged,
-   the Pages workflow publishes `docs/`.
+2. ~~**Pages**~~: done, the site is live.
 3. **Social preview**: Settings > General > Social preview > upload `docs/og.png`.
 4. **Discussions**: Settings > General > Features > Discussions. Then add a
    `contact_links` entry to `.github/ISSUE_TEMPLATE/config.yml`.
@@ -53,20 +52,19 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
 6. **Release v0.1.0** on GitHub with short notes (what each command does).
 7. **MCP Registry**: add `"mcpName": "io.github.laaielichter/godotwright"` to
    package.json, then `mcp-publisher init`, `mcp-publisher login github`, `mcp-publisher publish`.
-8. **3-5 good first issues**, for example: a review rule for `get_node()` with a
-   string literal in `_process()`; a `--format sarif` output for code scanning;
-   a site page per use case (porting Godot 3, reviewing mods).
+8. ~~**Good first issues**~~: done, issues #2-#5.
 9. **Record a real demo**: 20-30 s screen capture of Claude Code fixing a Godot 3 script
    with Godotwright (prompt, `godot_review` call, fixed code, score going up). MP4 for posts,
    GIF or WebP under 5 MB for the README.
 
 ## Readiness gate (before any launch post)
 
-- [ ] On npm, one-command install works
+- [x] One-command install works (`npx -y github:laaielichter/godotwright`); npm still to do
 - [ ] Release v0.1.0
 - [ ] Real screen-recorded demo
-- [ ] Social preview uploaded, site live
-- [ ] 3-5 good first issues
+- [ ] Social preview uploaded
+- [x] Site live
+- [x] 3-5 good first issues
 - [ ] You can be online 6-8 hours on launch day to answer every comment
 
 ## Listings (after npm)
