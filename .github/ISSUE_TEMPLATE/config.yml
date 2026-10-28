@@ -1,1 +1,5 @@
 blank_issues_enabled: true
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/laaielichter/Godotwright/discussions
+    about: Ask how to use Godotwright with your agent, or share an idea.
