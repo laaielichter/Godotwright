@@ -1,0 +1,25 @@
+{
+  "task": "hud_health",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 17,
+  "turns": 11,
+  "costUsd": 0.004919119999999999,
+  "isError": false,
+  "result": "Added an \"HP: <health>/<max_health>\" label to the HUD (`scenes/ui/hud.tscn`), wired to `Player.health_changed` in `scripts/main.gd` with an initial update at startup. The HUD's score and health labels now sit in a VBox so they don't overlap. The Godot review passed with no findings, but I couldn't run the game here.",
+  "toolCalls": {
+    "Glob": 1,
+    "ToolSearch": 1,
+    "Read": 4,
+    "Edit": 3,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "scenes/ui/hud.tscn",
+    "scripts/main.gd",
+    "scripts/ui/hud.gd"
+  ],
+  "deleted": []
+}

@@ -1,0 +1,27 @@
+{
+  "task": "pause_menu",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 32,
+  "turns": 18,
+  "costUsd": 0.010251899999999998,
+  "isError": false,
+  "result": "Added pausing: an Escape-bound \"pause\" input action in `project.godot`, a hidden \"Paused\" label in `scenes/ui/hud.tscn`, and toggle logic in `scripts/ui/hud.gd`. The HUD runs in always-process mode so it keeps handling input and showing the label while the tree is paused. godot_review reports no errors; I could not run the game.",
+  "toolCalls": {
+    "ToolSearch": 1,
+    "Glob": 1,
+    "mcp__godotwright__godot_scan": 1,
+    "Read": 5,
+    "mcp__godotwright__godot_api": 3,
+    "Edit": 4,
+    "mcp__godotwright__godot_review": 2
+  },
+  "changed": [
+    "project.godot",
+    "scenes/ui/hud.tscn",
+    "scripts/ui/hud.gd"
+  ],
+  "deleted": []
+}

@@ -1,0 +1,28 @@
+{
+  "task": "pause_menu",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 31,
+  "turns": 20,
+  "costUsd": 0.00950819,
+  "isError": false,
+  "result": "Added Escape-bound \"pause\" input action, a centered \"Paused\" label in the HUD (hidden by default), and a toggle in `main.gd` that calls `get_tree().paused`; `godot_review` reports 0 errors and `godot_scan` shows no warnings. Godot isn't installed, so the game itself is untested.",
+  "toolCalls": {
+    "Glob": 1,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_scan": 2,
+    "Read": 6,
+    "mcp__godotwright__godot_api": 3,
+    "Edit": 5,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "project.godot",
+    "scenes/ui/hud.tscn",
+    "scripts/main.gd",
+    "scripts/ui/hud.gd"
+  ],
+  "deleted": []
+}

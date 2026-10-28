@@ -3,32 +3,21 @@
  * Grades benchmark projects with real Godot (needs $GODOT and `npm run build`).
  *
  *   node bench/grade.mjs --validate          base projects must fail, reference solutions must pass
- *   node bench/grade.mjs --runs <dir>        grade agent runs in <dir>/<label>/<task>/project
+ *   node bench/grade.mjs --runs <dir>        grade agent runs in <dir>/<label>/<task>/ (run.json + files/)
  *
  * A project passes a task when its Godot behavior test passes (bench/tasks/<task>/test.gd).
  * It also records Godot errors (godotwright check) and Godotwright review numbers.
  */
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkProject, reviewProject } from "../dist/index.js";
+import { loadRuns, summarize, table } from "./summarize.mjs";
+import { makeProject, makeRunProject, TASKS_DIR, tasks } from "./tasks.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const TASKS_DIR = join(HERE, "tasks");
-export const BASE_PROJECT = join(HERE, "..", "test", "fixtures", "demo");
-
-export const tasks = () => readdirSync(TASKS_DIR).filter((t) => existsSync(join(TASKS_DIR, t, "test.gd"))).sort();
-
-/** Copies the base project plus the task's starting files (and optionally its solution). */
-export function makeProject(task, dir, withSolution = false) {
-  cpSync(BASE_PROJECT, dir, { recursive: true });
-  const files = join(TASKS_DIR, task, "files");
-  if (existsSync(files)) cpSync(files, dir, { recursive: true });
-  if (withSolution) cpSync(join(TASKS_DIR, task, "solution"), dir, { recursive: true });
-  return dir;
-}
 
 function godot(args, cwd, timeout) {
   const result = spawnSync(process.env.GODOT, ["--headless", ...args], { cwd, encoding: "utf8", timeout });
@@ -100,18 +89,25 @@ async function gradeRuns(root) {
   const results = [];
   for (const label of readdirSync(root).sort()) {
     const labelDir = join(root, label);
+    if (!statSync(labelDir).isDirectory()) continue;
     for (const task of readdirSync(labelDir).sort()) {
-      const project = join(labelDir, task, "project");
-      if (!existsSync(project)) continue;
+      const runDir = join(labelDir, task);
+      if (!existsSync(join(runDir, "run.json"))) continue;
+      const project = makeRunProject(task, runDir, mkdtempSync(join(tmpdir(), `run-${task}-`)));
       const result = { label, ...(await grade(task, project)) };
       results.push(result);
       console.log(`${result.pass ? "PASS" : "FAIL"} ${label} ${task} ${result.passed}/${result.total} godot errors ${result.godotErrors}`);
       for (const c of result.checks.filter((x) => !x.pass)) console.log(`     FAIL ${c.name}`);
+      for (const line of result.godotErrorLines) console.log(`     error ${line}`);
     }
   }
   const out = join(root, "grades.json");
-  writeFileSync(out, `${JSON.stringify(results, null, 2)}\n`);
-  console.log(`wrote ${out}`);
+  const slim = results.map(({ log, ...rest }) => rest);
+  writeFileSync(out, `${JSON.stringify(slim, null, 2)}\n`);
+  const summary = table(summarize(slim, loadRuns(root)));
+  console.log(`wrote ${out}\n\nBENCH_TABLE_BEGIN\n${summary}\nBENCH_TABLE_END`);
+  console.log(`BENCH_GRADES_BEGIN\n${JSON.stringify(slim)}\nBENCH_GRADES_END`);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Benchmark\n\n${summary}\n`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

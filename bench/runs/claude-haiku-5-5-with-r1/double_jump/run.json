@@ -1,0 +1,22 @@
+{
+  "task": "double_jump",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 10,
+  "turns": 6,
+  "costUsd": 0.00313435,
+  "isError": false,
+  "result": "Added a double jump to `scripts/player.gd`: a `can_double_jump` flag is restored whenever the player is on the floor, and one extra jump with `JUMP_VELOCITY` is allowed in the air. The godotwright review reports 0 findings for the file; I couldn't run the game here.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 2,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

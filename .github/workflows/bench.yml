@@ -28,7 +28,7 @@ jobs:
       - name: Validate tasks (base fails, reference solution passes)
         run: node bench/grade.mjs --validate
       - name: Grade agent runs
-        if: hashFiles('bench/runs/**/project/project.godot') != ''
+        if: hashFiles('bench/runs/**/run.json') != ''
         run: node bench/grade.mjs --runs bench/runs
       - name: Upload grades
         if: hashFiles('bench/runs/grades.json') != ''

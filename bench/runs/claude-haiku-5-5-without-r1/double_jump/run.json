@@ -1,0 +1,20 @@
+{
+  "task": "double_jump",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 15,
+  "turns": 6,
+  "costUsd": 0.00396667,
+  "isError": false,
+  "result": "Added a double jump to `scripts/player.gd`: a `can_double_jump` flag lets the player jump once more in the air, the flag resets whenever the player is on the floor, and the normal floor jump is unchanged. I couldn't run the game here, so this is checked by reading the code only.",
+  "toolCalls": {
+    "Read": 2,
+    "Edit": 3
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

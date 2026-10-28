@@ -1,0 +1,22 @@
+{
+  "task": "difficulty_ramp",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 8,
+  "turns": 5,
+  "costUsd": 0.00252741,
+  "isError": false,
+  "result": "Each enemy spawn now cuts `SpawnTimer.wait_time` by 0.1s, floored at 0.5s, in `scripts/main.gd`'s `_on_spawn_timer_timeout()`.",
+  "toolCalls": {
+    "Grep": 1,
+    "Glob": 1,
+    "Read": 1,
+    "Edit": 1
+  },
+  "changed": [
+    "scripts/main.gd"
+  ],
+  "deleted": []
+}
