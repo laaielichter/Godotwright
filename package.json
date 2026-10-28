@@ -48,11 +48,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/laaielichter/godotwright.git"
+    "url": "git+https://github.com/laaielichter/Godotwright.git"
   },
   "homepage": "https://laaielichter.github.io/Godotwright/",
   "bugs": {
-    "url": "https://github.com/laaielichter/godotwright/issues"
+    "url": "https://github.com/laaielichter/Godotwright/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
