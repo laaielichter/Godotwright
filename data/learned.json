@@ -1,7 +1,159 @@
 {
   "version": 1,
-  "installs": 0,
+  "installs": 19,
   "apiHints": {},
-  "rules": {},
-  "missedByReview": {}
+  "rules": {
+    "api/godot3-syntax": {
+      "reported": 9,
+      "confirmed": 64,
+      "contradicted": 5,
+      "dismissed": 0,
+      "installs": 9
+    },
+    "api/unknown-function": {
+      "reported": 7,
+      "confirmed": 22,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 7
+    },
+    "api/unknown-member": {
+      "reported": 5,
+      "confirmed": 0,
+      "contradicted": 2,
+      "dismissed": 0,
+      "installs": 5
+    },
+    "api/unknown-type": {
+      "reported": 7,
+      "confirmed": 3,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 7
+    },
+    "api/unsafe-member": {
+      "reported": 6,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 6
+    },
+    "api/wrong-arguments": {
+      "reported": 3,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 3
+    },
+    "performance/instantiate-per-frame": {
+      "reported": 1,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 1
+    },
+    "performance/node-lookup-per-frame": {
+      "reported": 10,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 10
+    },
+    "quality/deep-nesting": {
+      "reported": 1,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 1
+    },
+    "quality/fragile-path": {
+      "reported": 3,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 3
+    },
+    "quality/long-function": {
+      "reported": 4,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 4
+    },
+    "quality/naming": {
+      "reported": 9,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 9
+    },
+    "quality/string-signal": {
+      "reported": 4,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 4
+    },
+    "quality/todo": {
+      "reported": 2,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 2
+    },
+    "quality/untyped": {
+      "reported": 13,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 13
+    },
+    "structure/bad-connection": {
+      "reported": 3,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 3
+    },
+    "structure/file-naming": {
+      "reported": 6,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 6
+    },
+    "structure/missing-node": {
+      "reported": 5,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 5
+    },
+    "structure/no-gitignore": {
+      "reported": 19,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 19
+    },
+    "structure/unknown-group": {
+      "reported": 2,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 2
+    },
+    "structure/unused-script": {
+      "reported": 2,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 2
+    }
+  },
+  "missedByReview": {
+    "Parse Error: Could not parse global class \"<s>\" from \"<s>\".": 1,
+    "Parse Error: Expected end of statement after return statement, found \"<s>\" instead.": 1,
+    "Parse Error: Identifier \"<s>\" not declared in the current scope. Did you mean to use \"<s>\"?": 1
+  }
 }
