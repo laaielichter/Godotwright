@@ -46,6 +46,8 @@ node dist/cli.js --help
   sends the opt-in anonymous report (see `PRIVACY.md`; keep it in sync). Learning must never break a
   tool, and must never store code, names or paths.
 - `src/version.ts`: package version and the Godot target version.
+- `server.json`: the MCP Registry entry. Its name and versions must match `package.json`
+  (`mcpName`, `version`); a test checks this.
 - `src/index.ts`: public library exports.
 - `bench/`: the benchmark (tasks with Godot behavior tests, runner, grader).
   See `bench/README.md`. Task tests run in CI by the Bench workflow.
@@ -76,3 +78,5 @@ node dist/cli.js --help
 - Small commits with a short imperative subject (`Add project scan`).
 - No trailers, chat or session links, or personal information in commits or files.
 - Update the status list in `ROADMAP.md` when a step is done.
+- Releases: bump the version in `package.json` and `server.json`, then push a tag
+  `vX.Y.Z`. The Publish workflow publishes to npm and the MCP Registry.

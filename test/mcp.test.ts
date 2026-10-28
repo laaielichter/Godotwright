@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Tier } from "../src/mcp/server.js";
 import { DEMO, FIXTURES } from "./helpers.js";
@@ -113,5 +114,25 @@ describe("MCP server (premium profile)", () => {
     expect(after).toContain("1 finding hidden");
     const bad = (await client.callTool({ name: "godot_feedback", arguments: { finding: "nonsense", verdict: "wrong" } })) as Result;
     expect(bad.isError).toBe(true);
+  });
+});
+
+describe("MCP Registry entry", () => {
+  const read = (file: string) => JSON.parse(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+  const pkg = read("package.json") as { name: string; version: string; mcpName: string };
+  const server = read("server.json") as {
+    name: string;
+    description: string;
+    version: string;
+    packages: { registryType: string; identifier: string; version: string; packageArguments: { value?: string }[] }[];
+  };
+
+  it("matches the npm package, so the registry accepts it", () => {
+    expect(server.name).toBe(pkg.mcpName);
+    expect(server.version).toBe(pkg.version);
+    expect(server.description.length).toBeLessThanOrEqual(100);
+    expect(server.packages).toHaveLength(1);
+    expect(server.packages[0]).toMatchObject({ registryType: "npm", identifier: pkg.name, version: pkg.version });
+    expect(server.packages[0]?.packageArguments[0]?.value).toBe("mcp");
   });
 });

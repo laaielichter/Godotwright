@@ -1,6 +1,7 @@
 {
   "name": "godotwright",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "mcpName": "io.github.laaielichter/godotwright",
   "description": "MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4: offline Godot 4.7 API, project map, headless checks and an AAA GDScript review.",
   "license": "MIT",
   "type": "module",
