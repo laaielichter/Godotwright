@@ -1,6 +1,8 @@
 import type { GodotApi, LookupResult } from "../api/api.js";
 import { checkProject, type CheckOptions, type CheckResult } from "../check/check.js";
 import { reviewProject, type ReviewOptions, type ReviewReport } from "../review/review.js";
+import { bundledLearning } from "./bundled.js";
+import { emptyLearning } from "./store.js";
 import { currentLearning, learnedHints, recordApiLookup, recordCheck, recordReview } from "./learn.js";
 
 /**
@@ -10,7 +12,8 @@ import { currentLearning, learnedHints, recordApiLookup, recordCheck, recordRevi
 
 export function reviewLearning(path: string, options: ReviewOptions = {}): ReviewReport {
   const learning = currentLearning();
-  const report = reviewProject(path, { ...options, learning });
+  // Shared knowledge applies even with local learning off; it holds nothing personal.
+  const report = reviewProject(path, { ...options, learning: learning ?? emptyLearning(), shared: bundledLearning() });
   if (learning) recordReview(report);
   return report;
 }
@@ -32,11 +35,11 @@ export async function checkLearning(path: string, options: CheckOptions = {}): P
 
 export function lookupLearning(api: GodotApi, query: string): { result: LookupResult; hints: string[] } {
   const result = api.lookup(query);
-  const learning = currentLearning();
   // A Godot 3 name already gets its Godot 4 name from the bundled renames.
-  if (!learning || result.renamed) return { result, hints: [] };
+  if (result.renamed) return { result, hints: [] };
+  const learning = currentLearning();
   const found = result.entries.length > 0;
-  const hints = found ? [] : learnedHints(query, api, learning);
-  recordApiLookup(query, found);
+  const hints = found ? [] : learnedHints(query, api, learning ?? emptyLearning(), bundledLearning().apiHints);
+  if (learning) recordApiLookup(query, found);
   return { result, hints };
 }

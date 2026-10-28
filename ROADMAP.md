@@ -81,3 +81,5 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 7: Benchmark (see [bench/RESULTS.md](bench/RESULTS.md))
 - [x] Step 8: Local learning
 - [x] Step 9: Opt-in sharing (sends nothing until a collector is set up)
+- [x] Step 10: Collector (reference server; not hosted yet)
+- [x] Step 11: Shared knowledge (`data/learned.json`, empty until reports come in)

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { GodotApi } from "../api/api.js";
 import type { CheckResult } from "../check/check.js";
+import type { LearnedData } from "../collector/collector.js";
 import type { ReviewReport } from "../review/review.js";
 import type { Finding } from "../review/rules.js";
 import { learningAllowed, readLearning, ruleStats, updateLearning, type LearningData } from "./store.js";
@@ -21,6 +22,11 @@ export const GODOT_CHECKED_RULES = new Set([
 /** After this many contradictions and no confirmation, a rule's errors become warnings here. */
 export const DOWNGRADE_AFTER = 3;
 
+/** The same over all installs (shipped data): contradicted this often, never confirmed. */
+export const SHARED_DOWNGRADE_AFTER = 20;
+
+const HINT_NOTE = / \(Godot did not confirm this rule in \d+ checks; treat it as a hint\.\)$/;
+
 /** How long after a failed API lookup a successful one counts as its answer. */
 const RESOLVE_WINDOW_MS = 120_000;
 
@@ -37,8 +43,11 @@ export interface Adjusted {
   hidden: number;
 }
 
-/** Applies what was learned to a list of findings. Pure: no I/O. */
-export function adjustFindings(findings: Finding[], data: LearningData): Adjusted {
+/**
+ * Applies what was learned to a list of findings. Pure: no I/O.
+ * What this machine saw wins over the shipped data: one local confirmation keeps a rule an error.
+ */
+export function adjustFindings(findings: Finding[], data: LearningData, shared?: LearnedData): Adjusted {
   const downgraded = new Set<string>();
   let hidden = 0;
   const out: Finding[] = [];
@@ -47,19 +56,25 @@ export function adjustFindings(findings: Finding[], data: LearningData): Adjuste
       hidden++;
       continue;
     }
-    const stats = data.rules[f.rule];
-    if (f.severity === "error" && stats && stats.contradicted >= DOWNGRADE_AFTER && stats.confirmed === 0) {
+    const contradicted = f.severity === "error" ? contradictions(f.rule, data, shared) : 0;
+    if (contradicted) {
       downgraded.add(f.rule);
-      out.push({
-        ...f,
-        severity: "warning",
-        message: `${f.message} (Godot did not confirm this rule in ${stats.contradicted} checks here; treat it as a hint.)`,
-      });
+      out.push({ ...f, severity: "warning", message: `${f.message} (Godot did not confirm this rule in ${contradicted} checks; treat it as a hint.)` });
       continue;
     }
     out.push(f);
   }
   return { findings: out, downgraded: [...downgraded].sort(), hidden };
+}
+
+/** How often Godot contradicted a rule that it never confirmed, or 0 when the rule stays an error. */
+function contradictions(rule: string, data: LearningData, shared?: LearnedData): number {
+  const local = data.rules[rule];
+  if (local?.confirmed) return 0;
+  if (local && local.contradicted >= DOWNGRADE_AFTER) return local.contradicted;
+  const all = shared?.rules[rule];
+  if (all && all.confirmed === 0 && all.contradicted >= SHARED_DOWNGRADE_AFTER) return all.contradicted;
+  return 0;
 }
 
 /** Counts which rules fired in a review (once per rule per review). */
@@ -141,7 +156,7 @@ export type Verdict = "wrong" | "right";
 /** Feedback on one finding, e.g. from an agent that verified it. */
 export function recordFeedback(finding: Pick<Finding, "rule" | "file" | "message">, verdict: Verdict): void {
   // A downgraded finding carries a note; the fingerprint is of the original message.
-  finding = { ...finding, message: finding.message.replace(/ \(Godot did not confirm this rule in \d+ checks here; treat it as a hint\.\)$/, "") };
+  finding = { ...finding, message: finding.message.replace(HINT_NOTE, "") };
   updateIfAllowed((data) => {
     const stats = ruleStats(data, finding.rule);
     if (verdict === "wrong") {

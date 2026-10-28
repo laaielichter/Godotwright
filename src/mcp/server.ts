@@ -265,7 +265,7 @@ function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile,
   if (list.length > shown.length) out.push(`+${list.length - shown.length} more`);
   if (errors === 0 && focus.length) out.push("No errors in these files.");
   if (report.learning?.hidden) out.push(`${report.learning.hidden} ${report.learning.hidden === 1 ? "finding" : "findings"} hidden: marked as wrong earlier.`);
-  if (report.learning?.downgraded.length) out.push(`Learned: ${report.learning.downgraded.join(", ")} shown as warnings; Godot did not confirm them here.`);
+  if (report.learning?.downgraded.length) out.push(`Learned: ${report.learning.downgraded.join(", ")} shown as warnings; Godot did not confirm them.`);
   return `${out.join("\n")}\n`;
 }
 

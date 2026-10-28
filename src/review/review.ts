@@ -1,5 +1,6 @@
 import { GodotApi } from "../api/api.js";
 import { adjustFindings } from "../learn/learn.js";
+import type { LearnedData } from "../collector/collector.js";
 import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
@@ -16,6 +17,8 @@ export interface ReviewOptions {
   overrides?: Record<string, string>;
   /** What was learned on this machine; adjusts findings when given (see learn/learn.ts). */
   learning?: LearningData;
+  /** What many installs learned (data/learned.json); used together with `learning`. */
+  shared?: LearnedData;
 }
 
 export interface CategoryScore {
@@ -72,7 +75,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   findings.push(...checkUnusedSignals(pm));
   findings.push(...checkStructure(pm).filter((f) => inScope(f.file)));
 
-  const adjusted = options.learning ? adjustFindings(findings, options.learning) : undefined;
+  const adjusted = options.learning ? adjustFindings(findings, options.learning, options.shared) : undefined;
   const sorted = (adjusted?.findings ?? findings).sort(
     (a, b) =>
       SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
