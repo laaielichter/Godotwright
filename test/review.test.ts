@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GodotApi } from "../src/api/api.js";
 import { formatFinding, formatReview } from "../src/review/format.js";
 import { reviewProject } from "../src/review/review.js";
 import { FIXTURES, DEMO, makeProject, runCli } from "./helpers.js";
@@ -174,5 +175,54 @@ describe("godotwright review", () => {
     expect(JSON.parse(bad.output).overall).toBeLessThan(60);
     expect(process.exitCode).toBe(1);
     process.exitCode = previous;
+  });
+});
+
+
+describe("moved Godot 3 window properties", () => {
+  const cases = [
+    ["window_position", "position", "Vector2i(20, 30)"],
+    ["min_window_size", "min_size", "Vector2i(320, 240)"],
+    ["max_window_size", "max_size", "Vector2i(1280, 720)"],
+    ["window_borderless", "borderless", "true"],
+  ] as const;
+
+  it.each(cases)("suggests the Window replacement for OS.%s reads and writes", (old, property, value) => {
+    const lines = findings({
+      "main.tscn": "[gd_scene load_steps=2 format=3]\n[ext_resource type=\"Script\" path=\"res://main.gd\" id=\"1\"]\n[node name=\"Main\" type=\"Node\"]\nscript = ExtResource(\"1\")\n",
+      "main.gd": [
+        "extends Node",
+        "",
+        "",
+        "func _ready() -> void:",
+        `\tprint(OS.${old})`,
+        `\tOS.${old} = ${value}`,
+      ].join("\n"),
+    });
+    const moved = lines.filter((line) => line.includes(`In Godot 4 use get_window().${property}.`));
+    expect(moved).toHaveLength(2);
+    expect(moved.every((line) => line.includes("error [api/unknown-member]"))).toBe(true);
+  });
+
+  it.each(cases)("checks OS.%s replacement against the bundled Godot 4.7 API", (_old, property) => {
+    const api = GodotApi.load();
+    expect(api.version).toMatch(/^4\.7/);
+    expect(api.lookup(`Window.${property}`).entries).not.toHaveLength(0);
+  });
+
+  it("stays quiet on the supported Window properties", () => {
+    expect(findings({
+      "main.tscn": "[gd_scene load_steps=2 format=3]\n[ext_resource type=\"Script\" path=\"res://main.gd\" id=\"1\"]\n[node name=\"Main\" type=\"Node\"]\nscript = ExtResource(\"1\")\n",
+      "main.gd": [
+        "extends Node",
+        "",
+        "",
+        "func _ready() -> void:",
+        ...cases.flatMap(([_old, property, value]) => [
+          `\tget_window().${property} = ${value}`,
+          `\tprint(get_window().${property})`,
+        ]),
+      ].join("\n"),
+    })).toEqual([]);
   });
 });
