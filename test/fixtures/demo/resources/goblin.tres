@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="EnemyStats" load_steps=2 format=3 uid="uid://bgoblin0stats"]
+
+[ext_resource type="Script" uid="uid://denemystats01" path="res://scripts/enemy_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+hit_points = 2
+speed = 150.0
+damage = 1

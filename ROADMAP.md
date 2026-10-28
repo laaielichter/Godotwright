@@ -55,8 +55,8 @@ Each step is small and has a clear "done" check.
 
 - [x] Name, repository, MIT license
 - [x] Design and roadmap
-- [ ] Step 1: Skeleton
-- [ ] Step 2: Project scan
+- [x] Step 1: Skeleton
+- [x] Step 2: Project scan
 - [ ] Step 3: Real checks
 - [ ] Step 4: API knowledge
 - [ ] Step 5: AAA review

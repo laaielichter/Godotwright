@@ -1,0 +1,98 @@
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
+
+/** Directories Godot never treats as project content. */
+const SKIP_DIRS = new Set([".godot", ".import", ".git", ".svn", ".hg", "node_modules", ".vs", ".vscode", ".idea"]);
+
+/**
+ * Finds the directory holding project.godot, starting at `start` and walking up.
+ * Returns undefined when there is none.
+ */
+export function findProjectRoot(start: string): string | undefined {
+  let dir = resolve(start);
+  if (existsSync(dir) && statSync(dir).isFile()) dir = dirname(dir);
+  for (;;) {
+    if (existsSync(join(dir, "project.godot"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
+  }
+}
+
+/** Lists project files as `res://` paths, sorted, skipping ignored directories. */
+export function listProjectFiles(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    if (dir !== root && entries.some((e) => e.name === ".gdignore" && e.isFile())) return;
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name)) walk(full);
+      } else if (entry.isFile()) {
+        out.push(toResPath(root, full));
+      }
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+export function toResPath(root: string, file: string): string {
+  return `res://${relative(root, file).split(sep).join("/")}`;
+}
+
+export function fromResPath(root: string, resPath: string): string {
+  return join(root, ...resPath.replace(/^res:\/\//, "").split("/"));
+}
+
+/** Resolves a path relative to the directory of `from` (both `res://`). */
+export function resolveResPath(from: string, path: string): string {
+  if (path.startsWith("res://") || path.startsWith("uid://")) return path;
+  const parts = from.replace(/^res:\/\//, "").split("/");
+  parts.pop();
+  for (const part of path.split("/")) {
+    if (part === "..") parts.pop();
+    else if (part !== "." && part !== "") parts.push(part);
+  }
+  return `res://${parts.join("/")}`;
+}
+
+export function extension(path: string): string {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const dot = name.lastIndexOf(".");
+  return dot <= 0 ? "" : name.slice(dot + 1).toLowerCase();
+}
+
+export const ASSET_KINDS: Record<string, string> = {
+  png: "texture",
+  jpg: "texture",
+  jpeg: "texture",
+  webp: "texture",
+  svg: "texture",
+  tga: "texture",
+  bmp: "texture",
+  exr: "texture",
+  hdr: "texture",
+  ktx: "texture",
+  ktx2: "texture",
+  dds: "texture",
+  wav: "audio",
+  ogg: "audio",
+  mp3: "audio",
+  glb: "model",
+  gltf: "model",
+  fbx: "model",
+  blend: "model",
+  obj: "model",
+  dae: "model",
+  ttf: "font",
+  otf: "font",
+  woff: "font",
+  woff2: "font",
+  fnt: "font",
+  ogv: "video",
+  json: "data",
+  csv: "data",
+  txt: "data",
+};

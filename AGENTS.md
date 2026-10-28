@@ -23,9 +23,15 @@ node dist/cli.js --help
 
 - `src/cli.ts`: executable entry point (`godotwright` bin). Keep it tiny.
 - `src/program.ts`: builds the commander program. Commands are added here.
+- `src/commands/`: one file per CLI command.
+- `src/godot/`: readers for Godot file formats (Variant text, project.godot,
+  .tscn/.tres, GDScript outline). No I/O in here.
+- `src/project/`: finding the project root and listing its files.
+- `src/scan/`: builds the project map and formats it (brief, full, JSON).
 - `src/version.ts`: package version and the Godot target version.
 - `src/index.ts`: public library exports.
-- `test/`: vitest tests, one file per area.
+- `test/`: vitest tests, one file per area. `test/fixtures/demo` is a small,
+  valid Godot 4.7 project; keep it error-free.
 
 ## Conventions
 

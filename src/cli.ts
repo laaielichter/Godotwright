@@ -1,4 +1,9 @@
 #!/usr/bin/env node
 import { createProgram } from "./program.js";
 
-await createProgram().parseAsync(process.argv);
+try {
+  await createProgram().parseAsync(process.argv);
+} catch (error) {
+  process.stderr.write(`error: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
+}
