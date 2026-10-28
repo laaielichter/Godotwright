@@ -27,14 +27,12 @@ are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a comp
 map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
-> Not on npm yet: build from source as below.
+> Not on npm yet: `npx` installs it straight from GitHub.
 
 ## Quickstart
 
 ```sh
-git clone https://github.com/laaielichter/Godotwright
-cd Godotwright && npm ci && npm run build
-node dist/cli.js review ~/games/my-game
+npx -y github:laaielichter/godotwright review ~/games/my-game
 ```
 
 You get a score from 0 to 100 for api, performance, quality and structure, and each
