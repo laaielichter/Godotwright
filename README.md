@@ -95,6 +95,33 @@ inherited scenes, built-in scripts, duck typing with `has_method()`), and are tu
 on the official demo projects so they report real problems, not noise.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.
 
+## Review in GitHub Actions
+
+Save this as `.github/workflows/godot-review.yml` in your game repository. It
+reviews the project on every push and pull request, failing if there are errors
+or the overall score is below 80. The static review needs only Node.js 22.12+
+(Node 24 below), not a Godot install, model or API key.
+
+```yaml
+name: Review Godot project
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npx --yes github:laaielichter/godotwright#0dd9ce885df21fafefc09f8ddd6e92745d5ae303 review . --min-score 80
+```
+
+The toolkit is pinned to a revision; update that revision deliberately when you
+want a newer version. For a game in a subdirectory, set `working-directory` on
+the review step to the folder containing `project.godot`.
+
 ## Mods and patches over a game
 
 A mod or patch often uses scripts, scenes and models that live in the game, not in
