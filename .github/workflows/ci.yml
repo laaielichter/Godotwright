@@ -2,8 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,3 +28,40 @@ jobs:
       - run: npm run build
       - name: Smoke test CLI
         run: node dist/cli.js --help
+
+  godot:
+    name: Godot ${{ matrix.godot }} integration
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        godot: ["4.7.2"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ matrix.godot }}-linux-x86_64
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          base="https://github.com/godotengine/godot/releases/download/${{ matrix.godot }}-stable"
+          file="Godot_v${{ matrix.godot }}-stable_linux.x86_64"
+          curl -fsSLO "$base/$file.zip"
+          curl -fsSLO "$base/SHA512-SUMS.txt"
+          grep " $file.zip$" SHA512-SUMS.txt | sha512sum -c -
+          unzip -q "$file.zip"
+          mv "$file" godot
+          rm "$file.zip"
+      - run: ~/godot/godot --headless --version
+      - name: Integration tests
+        run: npx vitest run test/integration
+        env:
+          GODOT: /home/runner/godot/godot

@@ -1,0 +1,120 @@
+import { chmodSync, cpSync, existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { checkProject } from "../src/check/check.js";
+import { findGodot, GodotNotFoundError } from "../src/check/godot.js";
+import { FIXTURES, runCli } from "./helpers.js";
+
+/** A stand-in for the Godot binary that replays canned output. */
+function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string }): string {
+  const dir = mkdtempSync(join(tmpdir(), "fake-godot-"));
+  const bin = join(dir, "godot");
+  const script = `#!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
+const args = process.argv.slice(2);
+const b = ${JSON.stringify(behavior)};
+fs.appendFileSync(${JSON.stringify(join(dir, "calls.log"))}, JSON.stringify(args) + "\\n");
+if (args.includes("--version")) { console.log(b.version ?? "4.7.2.stable.official.fake"); process.exit(0); }
+if (args.includes("--import")) { console.log("Godot Engine v4.7.2.stable.official.fake - https://godotengine.org"); process.exit(0); }
+const scriptAt = args.indexOf("--script");
+if (scriptAt >= 0) {
+  const root = args[args.indexOf("--path") + 1];
+  const checker = path.join(root, args[scriptAt + 1].replace("res://", ""));
+  if (!fs.existsSync(checker)) { console.error("ERROR: checker missing"); process.exit(1); }
+  process.stderr.write(b.checkLog ?? "");
+  if (b.finish !== false) process.stderr.write("\\nGODOTWRIGHT_DONE 3 1\\n");
+  process.exit(0);
+}
+if (args.includes("--quit-after")) { process.stderr.write(b.runLog ?? ""); process.exit(0); }
+process.exit(0);
+`;
+  writeFileSync(bin, script);
+  chmodSync(bin, 0o755);
+  return bin;
+}
+
+function copyFixture(name: string): string {
+  const dir = mkdtempSync(join(tmpdir(), `godotwright-${name}-`));
+  cpSync(join(FIXTURES, name), dir, { recursive: true });
+  return dir;
+}
+
+describe("checkProject", () => {
+  it("collects script errors, scan warnings and run errors", async () => {
+    const root = copyFixture("broken");
+    const godot = fakeGodot({
+      checkLog: [
+        "GODOTWRIGHT_BEGIN res://scripts/broken.gd",
+        'SCRIPT ERROR: Parse Error: Identifier "undefined_name" not declared in the current scope.',
+        "   at: GDScript::reload (res://scripts/broken.gd:5)",
+        'ERROR: Failed to load script "res://scripts/broken.gd" with error "Parse error".',
+        "   at: load (modules/gdscript/gdscript.cpp:2936)",
+        "GODOTWRIGHT_END res://scripts/broken.gd",
+      ].join("\n"),
+      runLog: "SCRIPT ERROR: Out of bounds get index '3' (on base: 'Array[int]')\n   at: _ready (res://scripts/main.gd:7)\n",
+    });
+    const result = await checkProject(root, { godot, runFrames: 10 });
+    expect(result.godotVersion).toBe("4.7.2.stable.official.fake");
+    expect([result.scripts, result.scenes]).toEqual([3, 1]);
+    expect(result.diagnostics).toEqual([
+      { severity: "warning", file: "res://main.tscn", line: 4, message: "missing Texture2D: res://missing.png", source: "scan" },
+      {
+        severity: "error",
+        file: "res://scripts/broken.gd",
+        line: 5,
+        message: 'Parse Error: Identifier "undefined_name" not declared in the current scope.',
+        source: "script",
+      },
+      {
+        severity: "error",
+        file: "res://scripts/main.gd",
+        line: 7,
+        message: "Out of bounds get index '3' (on base: 'Array[int]')",
+        source: "script",
+      },
+    ]);
+    expect(result.errors).toBe(2);
+    expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
+    // The checker script is removed afterwards.
+    expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
+  });
+
+  it("warns about other Godot versions and a checker that does not finish", async () => {
+    const root = copyFixture("demo");
+    const godot = fakeGodot({ version: "4.6.1.stable.official.fake", finish: false, checkLog: "boom" });
+    const result = await checkProject(root, { godot, import: false });
+    expect(result.steps.map((s) => s.name)).toEqual(["check"]);
+    expect(result.diagnostics.map((d) => `${d.severity}: ${d.message}`)).toEqual([
+      "warning: Godot 4.6.1.stable.official.fake found; Godotwright targets Godot 4.7.x",
+      "error: checker did not finish (exit code 0); last output: boom",
+    ]);
+  });
+});
+
+describe("findGodot", () => {
+  it("prefers an explicit path, then $GODOT, then PATH", () => {
+    const godot = fakeGodot({});
+    expect(findGodot(godot, {})).toBe(godot);
+    expect(findGodot(undefined, { GODOT: godot })).toBe(godot);
+    expect(findGodot(undefined, { PATH: join(godot, "..") })).toBe(godot);
+    expect(() => findGodot(undefined, { PATH: "" })).toThrow(GodotNotFoundError);
+    expect(() => findGodot("/no/such/godot", {})).toThrow(/not found or not executable/);
+  });
+});
+
+describe("godotwright check", () => {
+  it("prints compiler-style lines and exits with 1 on errors", async () => {
+    const root = copyFixture("broken");
+    const godot = fakeGodot({
+      checkLog: 'SCRIPT ERROR: Parse Error: Unexpected "Indent".\n   at: GDScript::reload (res://scripts/broken.gd:5)\n',
+    });
+    const previous = process.exitCode;
+    const { output } = await runCli(["check", root, "--godot", godot]);
+    expect(output).toContain('res://scripts/broken.gd:5: error: Parse Error: Unexpected "Indent".');
+    expect(output).toContain("1 error, 1 warning (Godot 4.7.2.stable.official.fake, 3 scripts, 1 scenes)");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = previous;
+  });
+});
