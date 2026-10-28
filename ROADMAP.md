@@ -60,5 +60,5 @@ Each step is small and has a clear "done" check.
 - [x] Step 3: Real checks
 - [x] Step 4: API knowledge
 - [x] Step 5: AAA review
-- [ ] Step 6: MCP server
+- [x] Step 6: MCP server
 - [ ] Step 7: Benchmark

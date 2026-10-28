@@ -36,18 +36,24 @@ export interface ProjectData {
   uids: Map<string, string>;
 }
 
-export function scanProject(path: string): ProjectMap {
-  return loadProject(path).map;
+export interface LoadOptions {
+  /** File contents by `res://` path that replace (or add to) what is on disk. */
+  overrides?: Record<string, string>;
 }
 
-export function loadProject(path: string): ProjectData {
+export function scanProject(path: string, options: LoadOptions = {}): ProjectMap {
+  return loadProject(path, options).map;
+}
+
+export function loadProject(path: string, options: LoadOptions = {}): ProjectData {
   const root = findProjectRoot(path);
   if (!root) throw new ProjectNotFoundError(path);
 
-  const files = listProjectFiles(root);
+  const overrides = options.overrides ?? {};
+  const files = [...new Set([...listProjectFiles(root), ...Object.keys(overrides)])].sort();
   const fileSet = new Set(files);
   const warnings: Warning[] = [];
-  const read = (res: string) => readFileSync(fromResPath(root, res), "utf8");
+  const read = (res: string) => overrides[res] ?? readFileSync(fromResPath(root, res), "utf8");
   const fail = (file: string, error: unknown) => {
     const line = error instanceof VariantParseError ? error.line : undefined;
     const message = error instanceof Error ? error.message.replace(/ \(line \d+\)$/, "") : String(error);

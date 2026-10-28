@@ -24,8 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
       - run: npm run build
+      - run: npm test
       - name: Smoke test CLI
         run: node dist/cli.js --help
 
@@ -79,3 +79,21 @@ jobs:
         env:
           GODOT: /home/runner/godot/godot
           GODOT_DEMOS: ${{ github.workspace }}/demos
+
+  agents:
+    name: Claude Code and Codex
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install agent CLIs
+        run: npm install -g @anthropic-ai/claude-code@2.1.312 @openai/codex@0.165.0
+      - name: Connect the agents to godotwright mcp
+        run: npx vitest run test/integration/agents.test.ts
+        env:
+          AGENT_CLIS: "1"

@@ -10,6 +10,8 @@ import { CATEGORIES, CATEGORY_WEIGHTS, type Category, type Finding, type Severit
 export interface ReviewOptions {
   /** Also review scripts under res://addons/ (third-party code). Default false. */
   includeAddons?: boolean;
+  /** Unsaved file contents by `res://` path, reviewed instead of the files on disk. */
+  overrides?: Record<string, string>;
 }
 
 export interface CategoryScore {
@@ -38,7 +40,7 @@ const RULE_CAP = 30;
 const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 export function reviewProject(path: string, options: ReviewOptions = {}): ReviewReport {
-  const data = loadProject(path);
+  const data = loadProject(path, { overrides: options.overrides });
   const api = GodotApi.load();
   const pm = new ProjectModel(data, api);
   const inScope = (p: string) => options.includeAddons || !p.startsWith("res://addons/");

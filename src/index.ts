@@ -4,6 +4,7 @@ export type * from "./api/types.js";
 export { checkProject, type CheckOptions, type CheckResult } from "./check/check.js";
 export { findGodot } from "./check/godot.js";
 export { formatDiagnostic, parseGodotLog, type Diagnostic } from "./check/log.js";
+export { createServer, type ServerOptions, type Tier } from "./mcp/server.js";
 export { createProgram } from "./program.js";
 export { formatFinding, formatReview } from "./review/format.js";
 export { reviewProject, type CategoryScore, type ReviewOptions, type ReviewReport } from "./review/review.js";

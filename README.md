@@ -49,6 +49,49 @@ inherited scenes, built-in scripts, duck typing with `has_method()`), and are tu
 on the official demo projects so they report real problems, not noise.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.
 
+## Use with coding agents (MCP)
+
+`godotwright mcp` runs an MCP server over stdio with six tools:
+
+| Tool | What it does |
+| --- | --- |
+| `godot_scan` | Map the project: scenes and node trees, scripts, signals, autoloads, input map |
+| `godot_api` | Exact Godot 4.7 lookup: signatures, inheritance, Godot 3 names |
+| `godot_api_search` | Search the Godot 4.7 class reference |
+| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`) |
+| `godot_check` | Run Godot headless and report errors as file:line |
+| `godot_checklist` | Every AAA rule with its fix |
+
+Pick a profile with `--tier`:
+
+- `cheap` (default): short output, and server instructions that walk the model
+  through small checked steps (scan, look up, review before saving, review after each edit).
+- `premium`: full detail, all findings with fixes.
+
+**Claude Code**
+
+```sh
+claude mcp add godotwright -- npx -y godotwright mcp --tier premium
+```
+
+**Codex**
+
+```sh
+codex mcp add godotwright -- npx -y godotwright mcp --tier premium
+```
+
+or in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.godotwright]
+command = "npx"
+args = ["-y", "godotwright", "mcp", "--tier", "premium"]
+```
+
+Run the agent from the Godot project folder (or pass `--project <path>`).
+Until the npm release, use `node /path/to/godotwright/dist/cli.js mcp` as the command.
+CI connects both Claude Code and Codex to the server on every push.
+
 ## Requirements
 
 - Node.js 22.12 or newer

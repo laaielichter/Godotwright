@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { apiCommand } from "./commands/api.js";
 import { checkCommand } from "./commands/check.js";
+import { mcpCommand } from "./commands/mcp.js";
 import { reviewCommand } from "./commands/review.js";
 import { scanCommand } from "./commands/scan.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
@@ -17,5 +18,6 @@ export function createProgram(): Command {
     .addCommand(scanCommand())
     .addCommand(checkCommand())
     .addCommand(apiCommand())
-    .addCommand(reviewCommand());
+    .addCommand(reviewCommand())
+    .addCommand(mcpCommand());
 }
