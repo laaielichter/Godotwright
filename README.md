@@ -13,6 +13,8 @@ godotwright scan [path] --detail full # node trees, signatures, line numbers
 godotwright scan [path] --json        # the full map as JSON
 godotwright check [path]              # run Godot headless, report errors as file:line
 godotwright check [path] --run        # also run the main scene for 120 frames
+godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
+godotwright api --search "is on floor"
 ```
 
 `scan` reads `project.godot`, scenes, resources and scripts without starting Godot.
@@ -24,6 +26,11 @@ autoloads, input actions and key settings, and warns about broken references
 the project, loads and instantiates every script and scene, and can run the main scene.
 Each problem comes back once, as `res://path/file.gd:12: error: ...`.
 The exit code is 1 when there are errors.
+
+`api` answers from the official Godot 4.7 class reference, bundled offline
+(1078 classes). It accepts `Class`, `Class.member`, `Class.Enum.VALUE`, `@annotation`
+or a global function, follows inheritance, and explains Godot 3 names
+(`KinematicBody2D` is `CharacterBody2D` in Godot 4). See [data/README.md](data/README.md).
 
 ## Requirements
 

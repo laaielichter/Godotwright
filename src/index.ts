@@ -1,3 +1,9 @@
+export { closest, formatMethodSignature, GodotApi, type LookupResult, type SearchHit } from "./api/api.js";
+export { formatLookup, formatSearch } from "./api/format.js";
+export type * from "./api/types.js";
+export { checkProject, type CheckOptions, type CheckResult } from "./check/check.js";
+export { findGodot } from "./check/godot.js";
+export { formatDiagnostic, parseGodotLog, type Diagnostic } from "./check/log.js";
 export { createProgram } from "./program.js";
 export { formatProjectMap, type Detail } from "./scan/format.js";
 export { loadProject, ProjectNotFoundError, scanProject, type ProjectData } from "./scan/scan.js";
