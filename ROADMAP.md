@@ -61,4 +61,4 @@ Each step is small and has a clear "done" check.
 - [x] Step 4: API knowledge
 - [x] Step 5: AAA review
 - [x] Step 6: MCP server
-- [ ] Step 7: Benchmark
+- [x] Step 7: Benchmark (see [bench/RESULTS.md](bench/RESULTS.md))

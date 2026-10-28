@@ -3,7 +3,8 @@
 AAA coding toolkit for **Godot 4**. It makes any coding agent (Claude, Codex and
 others) better at building Godot games.
 
-> Early work in progress. See [ROADMAP.md](ROADMAP.md) for the plan.
+> Layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
+> Not on npm yet.
 
 ## Usage
 
@@ -91,6 +92,15 @@ args = ["-y", "godotwright", "mcp", "--tier", "premium"]
 Run the agent from the Godot project folder (or pass `--project <path>`).
 Until the npm release, use `node /path/to/godotwright/dist/cli.js mcp` as the command.
 CI connects both Claude Code and Codex to the server on every push.
+
+## Benchmark
+
+`bench/` runs coding agents on fixed Godot tasks with and without Godotwright, and lets
+real Godot 4.7.2 judge the result with a behavior test per task.
+First round (168 runs, Claude Haiku, Sonnet and Opus 5.5, 12 tasks): every run passed,
+with and without Godotwright, so these tasks do not separate the setups on correctness.
+With Godotwright, all code came out fully statically typed (84 of 84 runs, against
+71 of 84 without). Details and limits: [bench/RESULTS.md](bench/RESULTS.md).
 
 ## Requirements
 

@@ -39,6 +39,8 @@ node dist/cli.js --help
 - `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles.
 - `src/version.ts`: package version and the Godot target version.
 - `src/index.ts`: public library exports.
+- `bench/`: the benchmark (tasks with Godot behavior tests, runner, grader).
+  See `bench/README.md`. Task tests run in CI by the Bench workflow.
 - `test/`: vitest tests, one file per area. `test/fixtures/demo` is a small,
   valid Godot 4.7 project; keep it error-free. `test/fixtures/broken` has known errors.
   `test/fixtures/messy` has one example of most review findings.

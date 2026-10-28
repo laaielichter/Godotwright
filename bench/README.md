@@ -6,7 +6,7 @@ lets real Godot 4.7 judge the result.
 
 ## Tasks
 
-Eight small, realistic tasks on the demo game in `test/fixtures/demo`
+Twelve small, realistic tasks on the demo game in `test/fixtures/demo`
 (a 2D platformer with a player, enemies, a HUD and a GameState autoload):
 
 | Task | What the agent must do | What usually goes wrong |
@@ -19,6 +19,10 @@ Eight small, realistic tasks on the demo game in `test/fixtures/demo`
 | `difficulty_ramp` | spawn faster over time, never below 0.5 s | timer wiring |
 | `game_over` | a game over scene with a Restart button | scene files, scene changes |
 | `port_turret` | port a Godot 3 turret and bullet to Godot 4.7 | every Godot 3 to 4 change |
+| `tilemap_layer` | fill cells and test a world position on a moved TileMapLayer | TileMap vs TileMapLayer API, coordinate spaces |
+| `line_of_sight` | a ray query on layer 1 that ignores the enemy | Godot 3 `intersect_ray` signature |
+| `tool_button` | an Inspector button that resets health | `@export_tool_button` (Godot 4.4+), `@tool` |
+| `big_port` | port a Godot 3 hero with export ranges, setget, yield and a tool script | `velocity` clash, setget, yield, export hints |
 
 Each task has:
 

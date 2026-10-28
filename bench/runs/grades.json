@@ -1,0 +1,2354 @@
+[
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 98,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-with",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 98,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 98,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-opus-5-5-without",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r1",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r2",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-with-r3",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 98,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r1",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r2",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "best_score",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "big_port",
+    "pass": true,
+    "passed": 15,
+    "total": 15,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 98,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "difficulty_ramp",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "double_jump",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "game_over",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "hit_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "hud_health",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "line_of_sight",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "pause_menu",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "port_turret",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 97,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "tilemap_layer",
+    "pass": true,
+    "passed": 11,
+    "total": 11,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-sonnet-5-5-without-r3",
+    "task": "tool_button",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "godotErrors": 0,
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  }
+]
