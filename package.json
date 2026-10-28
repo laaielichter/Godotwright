@@ -26,7 +26,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build",
-    "build:api": "node scripts/build-api.ts"
+    "build:api": "node scripts/build-api.ts",
+    "prepare": "npm run build"
   },
   "keywords": [
     "godot",
