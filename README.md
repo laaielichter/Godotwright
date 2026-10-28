@@ -155,6 +155,7 @@ or in `~/.codex/config.toml`:
 [mcp_servers.godotwright]
 command = "npx"
 args = ["-y", "godotwright", "mcp", "--tier", "premium"]
+startup_timeout_sec = 30 # the first npx run downloads the package
 ```
 
 Run the agent from the Godot project folder (or pass `--project <path>`).
