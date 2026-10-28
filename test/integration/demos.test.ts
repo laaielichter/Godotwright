@@ -4,19 +4,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkProject } from "../../src/check/check.js";
 import { formatDiagnostic } from "../../src/check/log.js";
+import { DEMO_PROJECTS } from "./demo-list.js";
 
 /** Official demo projects (pinned checkout in $GODOT_DEMOS) should check clean. */
 const GODOT = process.env["GODOT"];
 const DEMOS = process.env["GODOT_DEMOS"];
 
-export const DEMO_PROJECTS = [
-  "2d/dodge_the_creeps",
-  "2d/platformer",
-  "2d/role_playing_game",
-  "2d/finite_state_machine",
-  "3d/platformer",
-  "3d/squash_the_creeps",
-];
 
 describe.skipIf(!GODOT || !DEMOS)("godotwright check on official demo projects", () => {
   for (const demo of DEMO_PROJECTS) {

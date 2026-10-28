@@ -63,6 +63,7 @@ export interface VariableSummary {
 }
 
 export interface ScriptInfo {
+  /** `res://` path, or `res://scene.tscn::Id` for a built-in script. */
   path: string;
   uid?: string;
   className?: string;

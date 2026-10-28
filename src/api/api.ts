@@ -98,9 +98,19 @@ export class GodotApi {
     return out;
   }
 
-  /** Finds a member on a class or its ancestors; the nearest definition wins. */
+  /**
+   * Finds a member on a class or its ancestors; the nearest definition wins.
+   * Theme items only match when no method, property, signal or constant does,
+   * because code cannot reach them as members (Button has both a `pressed`
+   * signal and a `pressed` stylebox).
+   */
   member(className: string, name: string): ApiEntry[] {
-    for (const cls of this.ancestors(className)) {
+    const chain = this.ancestors(className);
+    for (const cls of chain) {
+      const found = this.ownMembers(cls, name).filter((e) => e.kind !== "theme_item");
+      if (found.length) return found;
+    }
+    for (const cls of chain) {
       const found = this.ownMembers(cls, name);
       if (found.length) return found;
     }

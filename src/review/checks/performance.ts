@@ -1,0 +1,92 @@
+import type { FunctionInfo, LogicalLine } from "../../godot/gdscript.js";
+import { finding, type Finding } from "../rules.js";
+import type { ProjectModel } from "../model.js";
+
+/** Callbacks Godot runs every frame or physics tick. */
+const PER_FRAME = new Set(["_process", "_physics_process", "_integrate_forces"]);
+
+const NODE_LOOKUP = /(\$[A-Za-z_"%.]|(?<![.\w])%[A-Za-z_]|\b(get_node|get_node_or_null|find_child|find_children|find_parent|get_nodes_in_group|get_first_node_in_group)\s*\()/;
+const LOAD = /(?<![.\w])(load|ResourceLoader\.load)\s*\(/;
+const PRINT = /(?<![.\w])(print|prints|printt|print_rich|print_debug)\s*\(/;
+const PHYSICS = /\b(move_and_slide|move_and_collide|apply_force|apply_central_force|apply_impulse|apply_central_impulse|apply_torque|apply_torque_impulse)\s*\(/;
+const INSTANTIATE = /\.instantiate\s*\(/;
+
+const SHADOW_LIGHTS = new Set(["OmniLight3D", "SpotLight3D", "DirectionalLight3D", "PointLight2D", "DirectionalLight2D"]);
+const MAX_SHADOW_LIGHTS = 6;
+const HUGE_SCENE = 1500;
+
+export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[] {
+  const script = pm.data.scripts.get(path);
+  if (!script) return [];
+  const out: Finding[] = [];
+  const models = [...pm.allModels()].filter((m) => m.path === path);
+  for (const model of models) {
+    for (const fn of model.outline.functions) {
+      if (!PER_FRAME.has(fn.name)) continue;
+      const body = bodyOf(script.logicalLines, fn);
+      if (body.length === 0 || body.every((l) => l.code === "pass")) {
+        out.push(finding("performance/empty-callback", path, fn.line, `${fn.name}() is empty; Godot still calls it every frame.`));
+        continue;
+      }
+      const where = `${fn.name}()`;
+      const lookups = body.filter((ll) => NODE_LOOKUP.test(ll.code)).map((ll) => ll.line);
+      if (lookups.length > 0) {
+        const lines = lookups.length > 1 ? ` (lines ${lookups.slice(0, 6).join(", ")}${lookups.length > 6 ? ", ..." : ""})` : "";
+        out.push(
+          finding(
+            "performance/node-lookup-per-frame",
+            path,
+            lookups[0],
+            lookups.length === 1
+              ? `A node lookup in ${where} runs every frame; store the node in an @onready var.`
+              : `${lookups.length} node lookups in ${where} run every frame${lines}; store the nodes in @onready vars.`,
+          ),
+        );
+      }
+      for (const ll of body) {
+        const code = ll.code;
+        if (LOAD.test(code)) {
+          out.push(finding("performance/load-per-frame", path, ll.line, `load() in ${where} runs every frame; use preload() or load once.`));
+        }
+        if (PRINT.test(code)) {
+          out.push(finding("performance/print-per-frame", path, ll.line, `print() in ${where} prints every frame and slows the game.`));
+        }
+        if (fn.name === "_process" && PHYSICS.test(code)) {
+          const call = PHYSICS.exec(code)![1];
+          out.push(finding("performance/physics-in-process", path, ll.line, `${call}() is called in _process(); physics belongs in _physics_process().`));
+        }
+        if (INSTANTIATE.test(code)) {
+          out.push(finding("performance/instantiate-per-frame", path, ll.line, `instantiate() in ${where} can run every frame; spawn on events or use a pool.`));
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** Statements in a function body (not the `func` line itself). */
+export function bodyOf(lines: LogicalLine[], fn: FunctionInfo): LogicalLine[] {
+  return lines.filter((l) => l.line > fn.line && l.line <= fn.endLine && l.indent > fn.indent);
+}
+
+export function checkScenePerformance(pm: ProjectModel): Finding[] {
+  const out: Finding[] = [];
+  for (const [path, file] of pm.data.resources) {
+    if (file.kind !== "scene") continue;
+    const shadowed = file.nodes.filter((n) => n.type && SHADOW_LIGHTS.has(n.type) && n.props["shadow_enabled"] === true);
+    if (shadowed.length > MAX_SHADOW_LIGHTS) {
+      out.push(
+        finding(
+          "performance/many-shadow-lights",
+          path,
+          shadowed[MAX_SHADOW_LIGHTS]!.line,
+          `${shadowed.length} lights cast shadows in this scene; each one costs a shadow pass.`,
+        ),
+      );
+    }
+    if (file.nodes.length > HUGE_SCENE) {
+      out.push(finding("performance/huge-scene", path, undefined, `${file.nodes.length} nodes in one scene.`));
+    }
+  }
+  return out;
+}

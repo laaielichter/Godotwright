@@ -99,7 +99,9 @@ describe("parseResourceText", () => {
       ["1_a", "Script", "res://a.gd", "uid://s1"],
       ["2_b", "PackedScene", "res://b.tscn", undefined],
     ]);
-    expect(scene.subResources).toEqual([{ id: "CircleShape2D_1", type: "CircleShape2D", line: 6 }]);
+    expect(scene.subResources).toEqual([
+      { id: "CircleShape2D_1", type: "CircleShape2D", line: 6, props: { radius: 4 }, propLines: { radius: 7 } },
+    ]);
     expect(scene.nodes.map((n) => [n.path, n.type, n.scriptRef, n.instanceRef, n.groups, n.uniqueName])).toEqual([
       [".", "Node2D", "1_a", undefined, [], false],
       ["Child", undefined, undefined, "2_b", [], false],

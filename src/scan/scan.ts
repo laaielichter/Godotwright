@@ -145,6 +145,17 @@ export function loadProject(path: string): ProjectData {
     }
     const lookup = (id: string | undefined) => (id === undefined ? undefined : ext.get(id));
 
+    // Built-in scripts live inside the scene; Godot names them `res://scene.tscn::Id`.
+    const builtins = new Map<string, string>();
+    for (const sub of parsed.subResources) {
+      const code = sub.props["script/source"];
+      if (sub.type !== "GDScript" || typeof code !== "string") continue;
+      const path = `${file}::${sub.id}`;
+      builtins.set(sub.id, path);
+      sources.set(path, code);
+      scripts.set(path, outlineScript(code));
+    }
+
     if (parsed.kind === "resource") {
       resourceInfos.push({
         path: file,
@@ -156,7 +167,7 @@ export function loadProject(path: string): ProjectData {
     }
 
     const nodes = parsed.nodes.map((node) => {
-      const script = lookup(node.scriptRef);
+      const script = lookup(node.scriptRef) ?? (node.builtinScriptRef ? builtins.get(node.builtinScriptRef) : undefined);
       if (script) {
         if (!usedBy.has(script)) usedBy.set(script, new Set());
         usedBy.get(script)!.add(file);
@@ -205,7 +216,7 @@ export function loadProject(path: string): ProjectData {
   const scriptUids = new Map([...uids].map(([uid, path]) => [path, uid]));
   for (const [file, outline] of scripts) {
     for (const ref of outline.preloads) {
-      const target = resolveResPath(file, ref.path);
+      const target = resolveResPath(file.replace(/::.*$/, ""), ref.path);
       if (!resolve({ path: target })) {
         warnings.push({ file, line: ref.line, message: `${ref.kind}() path not found: ${ref.path}` });
       }

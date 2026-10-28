@@ -59,6 +59,6 @@ Each step is small and has a clear "done" check.
 - [x] Step 2: Project scan
 - [x] Step 3: Real checks
 - [x] Step 4: API knowledge
-- [ ] Step 5: AAA review
+- [x] Step 5: AAA review
 - [ ] Step 6: MCP server
 - [ ] Step 7: Benchmark

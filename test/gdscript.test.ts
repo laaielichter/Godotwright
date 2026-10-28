@@ -65,7 +65,8 @@ describe("logicalLines", () => {
       ["var a = [1, 2]", 1, 2],
       ["var b = 'x#y'", 3, 3],
     ]);
-    expect(lines[1]!.code).toBe("var b = ''");
+    expect(lines[1]!.code).toBe("var b = '   '");
+    expect(lines[1]!.code.length).toBe(lines[1]!.text.length);
   });
 });
 

@@ -5,6 +5,9 @@ export { checkProject, type CheckOptions, type CheckResult } from "./check/check
 export { findGodot } from "./check/godot.js";
 export { formatDiagnostic, parseGodotLog, type Diagnostic } from "./check/log.js";
 export { createProgram } from "./program.js";
+export { formatFinding, formatReview } from "./review/format.js";
+export { reviewProject, type CategoryScore, type ReviewOptions, type ReviewReport } from "./review/review.js";
+export { RULES, type Category, type Finding, type Rule, type Severity } from "./review/rules.js";
 export { formatProjectMap, type Detail } from "./scan/format.js";
 export { loadProject, ProjectNotFoundError, scanProject, type ProjectData } from "./scan/scan.js";
 export type * from "./scan/types.js";

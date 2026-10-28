@@ -13,6 +13,8 @@ export interface SubResource {
   id: string;
   type: string;
   line: number;
+  props: Record<string, Variant>;
+  propLines: Record<string, number>;
 }
 
 export interface SceneNode {
@@ -22,6 +24,8 @@ export interface SceneNode {
   type?: string;
   /** Ext resource id of the attached script. */
   scriptRef?: string;
+  /** Sub resource id of a built-in script. */
+  builtinScriptRef?: string;
   /** Ext resource id of the instanced scene. */
   instanceRef?: string;
   groups: string[];
@@ -82,7 +86,13 @@ export function parseResourceText(text: string): ResourceFile {
         });
         break;
       case "sub_resource":
-        file.subResources.push({ id: attr("id") ?? "", type: attr("type") ?? "", line: section.line });
+        file.subResources.push({
+          id: attr("id") ?? "",
+          type: attr("type") ?? "",
+          line: section.line,
+          props: section.props,
+          propLines: section.propLines,
+        });
         break;
       case "node":
         file.nodes.push(toNode(section));
@@ -113,6 +123,7 @@ function toNode(section: Section): SceneNode {
     path,
     type: asString(section.attrs["type"]),
     scriptRef: refId(section.props["script"]),
+    builtinScriptRef: refId(section.props["script"], "SubResource"),
     instanceRef: refId(section.attrs["instance"]),
     groups: asStringList(section.attrs["groups"]),
     uniqueName: section.props["unique_name_in_owner"] === true,
@@ -121,9 +132,9 @@ function toNode(section: Section): SceneNode {
   };
 }
 
-/** Returns the id of an `ExtResource("id")` value. */
-export function refId(value: Variant | undefined): string | undefined {
-  if (!isCall(value, "ExtResource")) return undefined;
+/** Returns the id of an `ExtResource("id")` (or `SubResource("id")`) value. */
+export function refId(value: Variant | undefined, kind: "ExtResource" | "SubResource" = "ExtResource"): string | undefined {
+  if (!isCall(value, kind)) return undefined;
   const id = value.args[0];
   return typeof id === "string" || typeof id === "number" ? String(id) : undefined;
 }

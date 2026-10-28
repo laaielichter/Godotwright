@@ -1,0 +1,178 @@
+import { describe, expect, it } from "vitest";
+import { formatFinding, formatReview } from "../src/review/format.js";
+import { reviewProject } from "../src/review/review.js";
+import { FIXTURES, DEMO, makeProject, runCli } from "./helpers.js";
+
+const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\nconfig/features=PackedStringArray("4.7")\n';
+
+function findings(files: Record<string, string>): string[] {
+  const root = makeProject({ "project.godot": PROJECT, ".gitignore": ".godot/\n", ...files });
+  return reviewProject(root).findings.filter((f) => f.severity !== "info").map(formatFinding);
+}
+
+describe("review of the demo fixture", () => {
+  it("scores a clean, typed project 100", () => {
+    const report = reviewProject(DEMO);
+    expect(report.findings).toEqual([]);
+    expect(report.overall).toBe(100);
+    expect(report.categories.map((c) => c.score)).toEqual([100, 100, 100, 100]);
+    expect(report.typing.percent).toBe(100);
+  });
+});
+
+describe("review of the messy fixture", () => {
+  const report = reviewProject(`${FIXTURES}/messy`);
+  const lines = report.findings.map(formatFinding);
+  const has = (text: string) => expect(lines.some((l) => l.includes(text)), text).toBe(true);
+
+  it("catches Godot 3 code", () => {
+    has("old_player.gd:1: error [api/unknown-type] Cannot extend \"KinematicBody2D\"");
+    has("In Godot 4 it is `CharacterBody2D`");
+    has("old_player.gd:3: error [api/godot3-syntax]");
+    has("old_player.gd:4: error [api/godot3-syntax]");
+    has("old_player.gd:11: error [api/godot3-syntax] Godot 3 syntax: `yield()` is `await`");
+    has("old_player.gd:17: error [api/wrong-arguments] move_and_slide() takes 0 arguments, but 2 are given.");
+    has("old_player.gd:18: error [api/unknown-function] Function \"deg2rad()\"");
+    has("In Godot 4 it is `deg_to_rad`");
+    has("old_player.gd:19: error [api/unknown-member] Method \"get_ticks_msec()\" does not exist on OS in Godot 4.7. In Godot 4 use Time.get_ticks_msec().");
+    has("old_player.gd:21: error [api/unknown-member] Method \"change_scene()\" does not exist on SceneTree");
+    has("change_scene_to_file");
+    has("old_player.gd:23: error [api/unknown-member] Method \"empty()\" does not exist on Array");
+  });
+
+  it("catches invented API in Godot 4 code", () => {
+    has("enemy.gd:15: error [api/unknown-function] Function \"look_at_smooth()\"");
+    has("Did you mean: look_at?");
+    has("enemy.gd:16: warning [api/unsafe-member] Method \"set_glow()\" is not a member of Sprite2D");
+    has("enemy.gd:17: error [api/unknown-member] Method \"normalize_it()\" does not exist on Vector2");
+    has("enemy.gd:21: error [api/unknown-signal] Signal \"dead\"");
+    has("enemy.gd:22: error [api/unknown-input-action] Input action \"fire\"");
+  });
+
+  it("catches per-frame performance problems", () => {
+    has("enemy.gd:14: warning [performance/node-lookup-per-frame] 2 node lookups in _process()");
+    has("enemy.gd:18: warning [performance/physics-in-process] move_and_slide()");
+    has("enemy.gd:19: warning [performance/load-per-frame]");
+    has("enemy.gd:20: info [performance/print-per-frame]");
+  });
+
+  it("catches broken scene structure", () => {
+    has("Main.tscn:21: error [structure/bad-connection] Connection Button.pressed -> Main._on_start_pressed(): res://scripts/main.gd has no method \"_on_start_pressed\".");
+    has("Main.tscn:22: error [structure/bad-connection] Connection Button.clicked: Button has no signal \"clicked\".");
+    has("enemy.gd:10: warning [structure/missing-node] Node \"UI/HealthBar\" does not exist under node \"Enemy\"");
+    has("old_player.gd:4: warning [structure/missing-node] Node \"Sprite\"");
+    has("enemy.gd:23: warning [structure/unknown-group] Group \"players\"");
+    has("enemy.gd:19: error [structure/broken-reference] load() path not found: res://icon.svg");
+  });
+
+  it("reports code quality", () => {
+    has("enemy.gd:5: warning [quality/unused-signal] Signal \"never_emitted\"");
+    has("enemy.gd:27: info [quality/naming] Function \"DoDamage\" should be snake_case.");
+    has("main.gd:6: info [quality/todo] TODO: spawn more enemies");
+    has("old_player.gd:6: info [quality/untyped] 6 of 6 declarations have no static type");
+    expect(report.typing.percent).toBeLessThan(60);
+  });
+
+  it("scores it low, worst in api", () => {
+    const [api, performance, quality, structure] = report.categories;
+    expect(api!.score).toBe(0);
+    expect(performance!.score).toBeLessThan(100);
+    expect(quality!.score).toBeLessThan(100);
+    expect(structure!.score).toBeLessThan(60);
+    expect(report.overall).toBeLessThan(60);
+  });
+
+  it("formats brief and full reports", () => {
+    const brief = formatReview(report);
+    expect(brief).toContain("AAA review: Messy Project");
+    expect(brief).toMatch(/api\s+0/);
+    expect(brief).not.toContain("fix:");
+    const full = formatReview(report, "full");
+    expect(full).toContain("fix: Pass the arguments the Godot 4.7 signature expects");
+  });
+});
+
+describe("review precision", () => {
+  it("accepts valid Godot 4 idioms", () => {
+    expect(
+      findings({
+        "main.tscn": [
+          "[gd_scene format=3]",
+          '[ext_resource type="Script" path="res://main.gd" id="1"]',
+          '[sub_resource type="GDScript" id="GDScript_1"]',
+          'script/source = "extends Node2D\\n\\nfunc add_item(item: Node) -> void:\\n\\tadd_child(item)\\n"',
+          '[node name="Main" type="ColorRect"]',
+          'script = ExtResource("1")',
+          '[node name="Items" type="Node2D" parent="."]',
+          'script = SubResource("GDScript_1")',
+          '[node name="Label" type="Label" parent="."]',
+          "unique_name_in_owner = true",
+          '[node name="Button" type="Button" parent="."]',
+          '[connection signal="pressed" from="Button" to="." method="_on_pressed"]',
+          '[connection signal="resized" from="." to="." method="_on_pressed"]',
+        ].join("\n"),
+        "main.gd": [
+          "extends Control",
+          "",
+          "enum Mode { A, B }",
+          "",
+          "var mode: Mode = Mode.A",
+          "var process: ProcessMode = PROCESS_MODE_INHERIT",
+          "var data := {\"hp\": 3}",
+          "@onready var items: Node2D = $Items",
+          "",
+          "",
+          "func _ready() -> void:",
+          "\tself.color = Color.RED",
+          "\tset_size(Vector2(10, 10))",
+          "\tvar err: Error = OK",
+          "\tvar t: Variant.Type = TYPE_INT",
+          "\tprint(data.hp, err, t, get_size())",
+          "\t%Label.text = \"hi\"",
+          "\titems.add_item(Node.new())",
+          "\tvar events := InputMap.action_get_events(\"ui_accept\")",
+          "\tprint(events.size())",
+          "\tvar node := get_node(\"Items\")",
+          "\tif node.has_method(\"special\"):",
+          "\t\tnode.special()",
+          "\tvar parts: PackedStringArray = \"a,b\".split(\",\")",
+          "\tprint(parts.size(), mode, process)",
+          "",
+          "",
+          "func _on_pressed() -> void:",
+          "\tpass",
+        ].join("\n"),
+      }),
+    ).toEqual([]);
+  });
+
+  it("follows inherited scenes and built-in scripts", () => {
+    expect(
+      findings({
+        "base.tscn": '[gd_scene format=3]\n[node name="Base" type="Node2D"]\n[node name="Panel" type="Panel" parent="."]\n[node name="Label" type="Label" parent="Panel"]\n',
+        "main.tscn": [
+          "[gd_scene format=3]",
+          '[ext_resource type="PackedScene" path="res://base.tscn" id="1"]',
+          '[ext_resource type="Script" path="res://main.gd" id="2"]',
+          '[node name="Main" instance=ExtResource("1")]',
+          'script = ExtResource("2")',
+          '[node name="Panel" parent="." index="0"]',
+          "modulate = Color(1, 0, 0, 1)",
+        ].join("\n"),
+        "main.gd": 'extends Node2D\n\n@onready var label: Label = $Panel/Label\n\n\nfunc _ready() -> void:\n\tlabel.text = "x"\n',
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("godotwright review", () => {
+  it("prints scores and exits 1 when there are errors", async () => {
+    const ok = await runCli(["review", DEMO]);
+    expect(ok.output).toContain("overall: 100/100");
+    const previous = process.exitCode;
+    const bad = await runCli(["review", `${FIXTURES}/messy`, "--json"]);
+    expect(JSON.parse(bad.output).overall).toBeLessThan(60);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = previous;
+  });
+});

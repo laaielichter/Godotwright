@@ -6,7 +6,10 @@
 export interface LogicalLine {
   /** Code of the statement with comments removed and continuation lines joined. */
   text: string;
-  /** Same as `text`, with string contents emptied so tokens inside strings are ignored. */
+  /**
+   * Same as `text`, with string contents blanked to spaces (same length, quotes kept),
+   * so tokens inside strings are ignored and positions still match `text`.
+   */
   code: string;
   /** 1-based first physical line. */
   line: number;
@@ -160,8 +163,11 @@ export function logicalLines(source: string): LogicalLine[] {
       const end = Math.min(j + quote.length, src.length);
       const literal = src.slice(i, end);
       line += (literal.match(/\n/g) ?? []).length;
-      text += literal.replace(/\n/g, "\\n");
-      code += quote + quote;
+      const shown = literal.replace(/\n/g, "\\n");
+      text += shown;
+      const closed = src.startsWith(quote, j);
+      const inner = shown.length - quote.length - (closed ? quote.length : 0);
+      code += quote + " ".repeat(Math.max(0, inner)) + (closed ? quote : "");
       i = end;
       continue;
     }
