@@ -82,8 +82,25 @@ export function table(rows) {
   return lines.join("\n");
 }
 
+/** Reads BENCH_ROW lines (from a CI log) back into grade records. */
+export function parseRows(text) {
+  return [...text.matchAll(/BENCH_ROW (.*)$/gm)].map((m) => {
+    const [label, task, pass, passed, total, godotErrors, reviewErrors, reviewOverall, failed] = m[1].split("|");
+    return {
+      label,
+      task,
+      pass: pass === "1",
+      passed: Number(passed),
+      total: Number(total),
+      godotErrors: godotErrors === "" ? null : Number(godotErrors),
+      review: { errors: Number(reviewErrors), overall: Number(reviewOverall) },
+      failed: failed ? failed.split("; ") : [],
+    };
+  });
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const root = process.argv[2];
-  const grades = JSON.parse(readFileSync(join(root, "grades.json"), "utf8"));
+  const [root, log] = process.argv.slice(2);
+  const grades = log ? parseRows(readFileSync(log, "utf8")) : JSON.parse(readFileSync(join(root, "grades.json"), "utf8"));
   console.log(table(summarize(grades, loadRuns(root))));
 }

@@ -106,7 +106,11 @@ async function gradeRuns(root) {
   writeFileSync(out, `${JSON.stringify(slim, null, 2)}\n`);
   const summary = table(summarize(slim, loadRuns(root)));
   console.log(`wrote ${out}\n\nBENCH_TABLE_BEGIN\n${summary}\nBENCH_TABLE_END`);
-  console.log(`BENCH_GRADES_BEGIN\n${JSON.stringify(slim)}\nBENCH_GRADES_END`);
+  // One compact row per run, so the CI log holds every grade without the full JSON.
+  for (const r of slim) {
+    const failed = r.checks.filter((c) => !c.pass).map((c) => c.name.replace(/\|/g, "/")).join("; ");
+    console.log(`BENCH_ROW ${[r.label, r.task, r.pass ? 1 : 0, r.passed, r.total, r.godotErrors ?? "", r.review?.errors ?? "", r.review?.overall ?? "", failed].join("|")}`);
+  }
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Benchmark\n\n${summary}\n`);
 }
 
