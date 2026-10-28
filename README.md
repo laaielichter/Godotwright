@@ -62,6 +62,8 @@ godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods,
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
 godotwright review [path] --detail full --min-score 90
+godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
+godotwright model lint car.glb        # model review with a score per category
 godotwright learn                     # what Godotwright learned on this machine
 ```
 
@@ -93,6 +95,21 @@ each finding as `res://file.gd:12: error [rule] message`:
 The checks follow Godot's own rules (inheritance, scripts on more specific nodes,
 inherited scenes, built-in scripts, duck typing with `has_method()`), and are tuned
 on the official demo projects so they report real problems, not noise.
+The exit code is 1 when there are errors, or when the score is below `--min-score`.
+
+`model` reads a `.glb` or `.gltf` file without Godot. `model` alone shows the node tree,
+triangle count, materials, textures (with an estimate of texture memory), size and lowest
+point. `model lint` scores four categories from 0 to 100:
+
+| Category | What it checks |
+| --- | --- |
+| geometry | triangles facing against their own normals (pink backfaces, wrong light), open edges on single-sided surfaces, edges shared by more than two triangles, triangles without area, negative scale, models that are almost but not quite left-right symmetric |
+| materials | missing normals, UVs or tangents, UVs outside 0..1, very large or non-power-of-two textures |
+| performance | triangle budget (`--max-triangles`), texture memory budget (`--max-texture-mb`), many materials |
+| rig | sibling nodes with the same name, unnamed nodes, a model that does not sit on y = 0, an empty file |
+
+Findings are grouped per node, and their severity follows how much of the surface is
+affected, so one stray triangle is an info and a flipped panel is an error.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.
 
 ## Review in GitHub Actions

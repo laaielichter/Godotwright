@@ -1,0 +1,49 @@
+export type ModelCategory = "geometry" | "materials" | "performance" | "rig";
+export type ModelSeverity = "error" | "warning" | "info";
+
+export interface ModelRule {
+  id: string;
+  category: ModelCategory;
+  severity: ModelSeverity;
+  title: string;
+  /** How to fix it, in one sentence. */
+  fix: string;
+}
+
+export interface ModelFinding {
+  rule: string;
+  category: ModelCategory;
+  severity: ModelSeverity;
+  file: string;
+  /** Node path the finding is about, when there is one. */
+  node?: string;
+  message: string;
+}
+
+export const MODEL_CATEGORIES: ModelCategory[] = ["geometry", "materials", "performance", "rig"];
+
+export const MODEL_WEIGHTS: Record<ModelCategory, number> = { geometry: 0.4, materials: 0.25, performance: 0.15, rig: 0.2 };
+
+const list: ModelRule[] = [
+  { id: "model/flipped-faces", category: "geometry", severity: "error", title: "Faces turned the wrong way", fix: "Flip the winding of the marked triangles (neighbours must share an edge in opposite directions); they show as holes or pink backfaces." },
+  { id: "model/open-edges", category: "geometry", severity: "warning", title: "Open edges on a single-sided surface", fix: "Close the gap, or mark the material double sided if the surface is meant to be thin." },
+  { id: "model/non-manifold", category: "geometry", severity: "info", title: "Edge shared by more than two triangles", fix: "Split the surfaces or remove the stray triangle." },
+  { id: "model/degenerate-triangles", category: "geometry", severity: "warning", title: "Triangles without area", fix: "Merge or delete the vertices of the flat triangles." },
+  { id: "model/mirrored-node", category: "geometry", severity: "warning", title: "Node with a negative scale", fix: "Apply the mirror to the mesh (bake the scale) so the winding stays right." },
+  { id: "model/asymmetry", category: "geometry", severity: "warning", title: "Almost symmetric, but not quite", fix: "Mirror one half onto the other so left and right match." },
+  { id: "model/missing-normals", category: "materials", severity: "warning", title: "Mesh without normals", fix: "Export the normals, or the surface shades flat and wrong." },
+  { id: "model/missing-uv", category: "materials", severity: "error", title: "Textured material on a mesh without UVs", fix: "Add UV coordinates (TEXCOORD_0) to the mesh." },
+  { id: "model/missing-tangents", category: "materials", severity: "warning", title: "Normal map without tangents", fix: "Export tangents so the normal map lights the same in every engine." },
+  { id: "model/uv-out-of-range", category: "materials", severity: "info", title: "UVs outside 0..1", fix: "Fine for tiling textures; otherwise move the UVs into 0..1." },
+  { id: "model/texture-size", category: "materials", severity: "warning", title: "Very large texture", fix: "Scale the texture down to 4096 or less, or split it." },
+  { id: "model/texture-not-power-of-two", category: "materials", severity: "info", title: "Texture size is not a power of two", fix: "Use 1024, 2048, 4096... so mipmaps and VRAM compression work well." },
+  { id: "model/triangle-budget", category: "performance", severity: "warning", title: "Over the triangle budget", fix: "Reduce the detail, or add LODs." },
+  { id: "model/texture-memory", category: "performance", severity: "warning", title: "Over the texture memory budget", fix: "Lower the texture sizes, or share textures between materials." },
+  { id: "model/many-materials", category: "performance", severity: "info", title: "Many materials", fix: "Merge materials that can share a texture atlas; every material is a draw call." },
+  { id: "model/duplicate-node-names", category: "rig", severity: "error", title: "Two siblings with the same name", fix: "Give every sibling a unique name; Godot renames the second one and node paths break." },
+  { id: "model/unnamed-node", category: "rig", severity: "info", title: "Node without a name", fix: "Name the node; scripts and animations find nodes by name." },
+  { id: "model/ground-offset", category: "rig", severity: "info", title: "Model does not sit on y = 0", fix: "Move the origin so the lowest point is at y = 0, unless that is intended." },
+  { id: "model/empty-geometry", category: "rig", severity: "warning", title: "No geometry in the file", fix: "Check the export: the file holds no triangles." },
+];
+
+export const MODEL_RULES: Record<string, ModelRule> = Object.fromEntries(list.map((r) => [r.id, r]));
