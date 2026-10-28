@@ -160,7 +160,8 @@ args = ["-y", "godotwright", "mcp", "--tier", "premium"]
 ```
 
 Run the agent from the Godot project folder (or pass `--project <path>`).
-Until the npm release, use `node /path/to/godotwright/dist/cli.js mcp` as the command.
+Until the npm release, install straight from GitHub: use `npx -y github:laaielichter/godotwright mcp` as the command
+(it builds itself on install).
 CI connects both Claude Code and Codex to the server on every push.
 
 ## Learning

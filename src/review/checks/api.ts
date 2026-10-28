@@ -159,6 +159,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     }
     if ((m = /^(static\s+)?var\s+([A-Za-z_]\w*)\s*(?::\s*([^=]*?))?\s*(:?=)\s*/.exec(rest))) {
       const body = rest.slice(m[0].length).replace(/:\s*$/, "");
+      if (/:\s*=\s*$/.test(m[0]) && !m[3]?.trim()) checkInferVariant(m[2]!, body, ll.line);
       const result = analyzeExpr(body, offset + m[0].length);
       if (fn && !annotations.length) {
         checkTypeName(m[3]?.trim() || undefined, ll.line, model);
@@ -198,6 +199,19 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     }
 
     /** Walks one expression; returns its type when the whole expression is a single chain. */
+    /** `var x := abs(v)`: Godot cannot infer a type from a function that returns Variant, and stops with an error. */
+    function checkInferVariant(name: string, code: string, line: number): void {
+      const call = /^([a-z_]\w*)\s*\(/.exec(code.trim());
+      if (!call || !VARIANT_FUNCTIONS.has(call[1]!) || closeParenAt(code.trim(), call[0].length - 1) !== code.trim().length - 1) return;
+      if (pm.chain(model).some((c) => c.outline.functions.some((f) => f.name === call[1]))) return;
+      const typed = TYPED_VERSIONS[call[1]!];
+      report(
+        "api/infer-variant",
+        line,
+        `Cannot infer the type of "${name}": ${call[1]}() returns Variant. Give it a type${typed ? ` or use ${typed}` : ""}.`,
+      );
+    }
+
     function analyzeExpr(code: string, base: number): GType | undefined {
       const tokens = tokenize(code);
       let whole: GType | undefined;
@@ -245,13 +259,20 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         // `self.x` is checked like any typed value: the node may be a subclass of the script's base.
         value = { type: selfType, exact: false };
       } else if (t0 === "super") {
-        // An unknown base (a missing script) leaves `super` unknown too.
-        value = model.parent
-          ? { type: { kind: "script", model: model.parent, meta: false }, exact: true }
-          : model.dynamic && model.extendsRaw
-            ? undefined
-            : { type: native(pm.nativeOf(model)), exact: true };
-        if (tokens[k + 1]?.t === "(") j = closeIndex(tokens, k + 1);
+        if (tokens[k + 1]?.t === "(") {
+          // `super(...)` calls this same function on the parent: its value is what that returns.
+          const parentType: GType | undefined = model.parent ? { kind: "script", model: model.parent, meta: false } : undefined;
+          const found = fn && parentType ? pm.memberOf(parentType, fn.name) : undefined;
+          value = found?.kind === "method" && (found.type?.kind === "native" || found.type?.kind === "script") ? { type: found.type, exact: false } : undefined;
+          j = closeIndex(tokens, k + 1);
+        } else {
+          // An unknown base (a missing script) leaves `super` unknown too.
+          value = model.parent
+            ? { type: { kind: "script", model: model.parent, meta: false }, exact: true }
+            : model.dynamic && model.extendsRaw
+              ? undefined
+              : { type: native(pm.nativeOf(model)), exact: true };
+        }
       } else if (t0.startsWith("$") || t0.startsWith("%")) {
         value = nodeRef(t0.startsWith("%") ? "%" : "$", nodeText(tokens[k]!, base));
       } else if (tokens[k + 1]?.t === "(") {
@@ -486,4 +507,39 @@ function suggestSignals(pm: ProjectModel, type: GType, name: string): string {
 function suggest(name: string, candidates: string[]): string {
   const near = closest(name, [...new Set(candidates)], 3);
   return near.length ? ` Did you mean: ${near.join(", ")}?` : "";
+}
+
+/** Global functions that return Variant, so `var x := f(...)` does not compile. */
+const VARIANT_FUNCTIONS = new Set(["abs", "bytes_to_var", "bytes_to_var_with_objects", "ceil", "clamp", "convert", "floor", "lerp", "max", "min", "round", "sign", "snapped", "str_to_var", "type_convert", "weakref", "wrap"]);
+
+const TYPED_VERSIONS: Record<string, string> = {
+  abs: "absf() or absi()",
+  ceil: "ceilf() or ceili()",
+  clamp: "clampf() or clampi()",
+  floor: "floorf() or floori()",
+  lerp: "lerpf()",
+  max: "maxf() or maxi()",
+  min: "minf() or mini()",
+  round: "roundf() or roundi()",
+  sign: "signf() or signi()",
+  snapped: "snappedf() or snappedi()",
+  wrap: "wrapf() or wrapi()",
+};
+
+/** Index of the `)` closing the `(` at `open`, skipping strings; -1 when unclosed. */
+function closeParenAt(text: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    const ch = text[i]!;
+    if (ch === '"' || ch === "'") {
+      const end = text.indexOf(ch, i + 1);
+      if (end < 0) return -1;
+      i = end;
+    } else if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
 }
