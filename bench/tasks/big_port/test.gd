@@ -18,7 +18,10 @@ func run() -> void:
 	var range_ok: bool = false
 	for property: Dictionary in hero.get_property_list():
 		if property["name"] == "speed" and property["hint"] == PROPERTY_HINT_RANGE:
-			range_ok = str(property["hint_string"]).begins_with("100,600")
+			var parts: PackedStringArray = str(property["hint_string"]).split(",")
+			range_ok = parts.size() >= 2 and is_equal_approx(parts[0].to_float(), 100.0) and is_equal_approx(parts[1].to_float(), 600.0)
+			if not range_ok:
+				print("speed hint_string: ", property["hint_string"])
 	check("speed is exported with range 100..600", range_ok)
 
 	hero.global_position = Vector2(0, -3000)
