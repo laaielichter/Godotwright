@@ -1,0 +1,38 @@
+name: Bench
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "bench/**"
+      - ".github/workflows/bench.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  grade:
+    name: Grade benchmark with Godot 4.7.2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: "4.7.2"
+      - name: Validate tasks (base fails, reference solution passes)
+        run: node bench/grade.mjs --validate
+      - name: Grade agent runs
+        if: hashFiles('bench/runs/**/project/project.godot') != ''
+        run: node bench/grade.mjs --runs bench/runs
+      - name: Upload grades
+        if: hashFiles('bench/runs/grades.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: grades
+          path: bench/runs/grades.json

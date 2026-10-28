@@ -1,0 +1,33 @@
+name: Set up Godot
+description: Download a checksum-verified Godot Linux build (cached) and export $GODOT.
+inputs:
+  version:
+    description: Godot version, e.g. 4.7.2
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Cache Godot
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot
+        key: godot-${{ inputs.version }}-linux-x86_64
+    - name: Download Godot
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/godot && cd ~/godot
+        base="https://github.com/godotengine/godot/releases/download/${{ inputs.version }}-stable"
+        file="Godot_v${{ inputs.version }}-stable_linux.x86_64"
+        curl -fsSLO "$base/$file.zip"
+        curl -fsSLO "$base/SHA512-SUMS.txt"
+        grep " $file.zip$" SHA512-SUMS.txt | sha512sum -c -
+        unzip -q "$file.zip"
+        mv "$file" godot
+        rm "$file.zip"
+    - name: Export GODOT
+      shell: bash
+      run: |
+        echo "GODOT=$HOME/godot/godot" >> "$GITHUB_ENV"
+        "$HOME/godot/godot" --headless --version

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://bbenchturret1"]
+
+[ext_resource type="Script" path="res://scripts/turret.gd" id="1_turret"]
+[ext_resource type="PackedScene" path="res://scenes/bullet.tscn" id="2_bullet"]
+
+[node name="Turret" type="Node2D"]
+script = ExtResource("1_turret")
+bullet_scene = ExtResource("2_bullet")
+
+[node name="Timer" type="Timer" parent="."]
