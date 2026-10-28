@@ -46,11 +46,11 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
 2. ~~**Pages**~~: done, the site is live.
 3. **Social preview**: Settings > General > Social preview > upload `docs/og.png`.
 4. ~~**Discussions**~~: done, linked from the issue forms.
-5. **npm**: `npm publish` (name `godotwright` was free on 28 Oct; check again).
-   Then switch README and site to the `npx -y godotwright mcp` commands.
+5. ~~**npm**~~: done, `godotwright` 0.0.1 is live; README and site use `npx -y godotwright`.
 6. **Release v0.1.0** on GitHub with short notes (what each command does).
-7. **MCP Registry**: add `"mcpName": "io.github.laaielichter/godotwright"` to
-   package.json, then `mcp-publisher init`, `mcp-publisher login github`, `mcp-publisher publish`.
+7. **MCP Registry**: `mcpName` and `server.json` are in place, and the Publish workflow
+   lists every tagged version. Set up npm trusted publishing (see `.github/workflows/publish.yml`),
+   then push tag `v0.0.2`.
 8. ~~**Good first issues**~~: done, issues #2-#5.
 9. **Record a real demo**: 20-30 s screen capture of Claude Code fixing a Godot 3 script
    with Godotwright (prompt, `godot_review` call, fixed code, score going up). MP4 for posts,
@@ -58,7 +58,7 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
 
 ## Readiness gate (before any launch post)
 
-- [x] One-command install works (`npx -y github:laaielichter/godotwright`); npm still to do
+- [x] One-command install works (`npx -y godotwright`)
 - [ ] Release v0.1.0
 - [ ] Real screen-recorded demo
 - [ ] Social preview uploaded

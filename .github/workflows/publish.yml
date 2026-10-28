@@ -1,6 +1,9 @@
-name: Publish to npm
+name: Publish
 
 # Runs when a version tag like v0.1.0 is pushed, or by hand from the Actions tab.
+# Publishes to npm with trusted publishing (no token), then lists the version in
+# the MCP Registry. One-time setup on npmjs.com: package Settings > Trusted
+# Publisher > GitHub Actions, repository laaielichter/Godotwright, workflow publish.yml.
 on:
   push:
     tags:
@@ -9,12 +12,14 @@ on:
 
 permissions:
   contents: read
-  id-token: write # needed for npm provenance
+  id-token: write # npm trusted publishing and provenance, MCP Registry login
 
 jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -34,6 +39,39 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match package.json version $pkg"
             exit 1
           fi
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Update npm (trusted publishing needs npm 11.5.1 or newer)
+        run: npm install -g npm@11
+      - name: Publish to npm
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "godotwright@$version" version >/dev/null 2>&1; then
+            echo "godotwright@$version is already on npm"
+          else
+            npm publish --provenance --access public
+          fi
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+      - name: Publish to the MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          # The registry checks mcpName on npm, which can take a moment to serve the new version.
+          for attempt in 1 2 3 4 5; do
+            ./mcp-publisher publish && exit 0
+            sleep 30
+          done
+          exit 1

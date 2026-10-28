@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.laaielichter/godotwright",
+  "title": "Godotwright",
+  "description": "Makes coding agents better at Godot 4: offline 4.7 API, project map, headless checks, AAA review.",
+  "repository": {
+    "url": "https://github.com/laaielichter/Godotwright",
+    "source": "github"
+  },
+  "websiteUrl": "https://laaielichter.github.io/Godotwright/",
+  "version": "0.0.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "godotwright",
+      "version": "0.0.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        },
+        {
+          "type": "named",
+          "name": "--tier",
+          "description": "Model profile: cheap (short output, strict steps) or premium (full detail)",
+          "choices": [
+            "cheap",
+            "premium"
+          ],
+          "default": "cheap"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "GODOT",
+          "description": "Godot 4.7 binary for godot_check (default: godot on PATH)",
+          "format": "filepath"
+        }
+      ]
+    }
+  ]
+}
