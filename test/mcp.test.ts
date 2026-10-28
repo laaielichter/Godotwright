@@ -28,6 +28,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_api_search",
       "godot_check",
       "godot_checklist",
+      "godot_feedback",
       "godot_review",
       "godot_scan",
     ]);
@@ -97,5 +98,20 @@ describe("MCP server (premium profile)", () => {
 
   it("describes all tools in its instructions", () => {
     expect(client.getInstructions()).toContain("godot_checklist lists every AAA rule");
+    expect(client.getInstructions()).toContain("godot_feedback marks a review finding");
+  });
+
+  it("hides a finding after feedback says it is wrong", async () => {
+    const files = ["res://scripts/old_player.gd"];
+    const before = textOf(await client.callTool({ name: "godot_review", arguments: { files } }));
+    const line = before.split("\n").find((l) => l.includes('Method "empty()"'))!;
+    expect(line).toBeTruthy();
+    const noted = textOf(await client.callTool({ name: "godot_feedback", arguments: { finding: line, verdict: "wrong" } }));
+    expect(noted).toContain("api/unknown-member");
+    const after = textOf(await client.callTool({ name: "godot_review", arguments: { files } }));
+    expect(after).not.toContain('Method "empty()"');
+    expect(after).toContain("1 finding hidden");
+    const bad = (await client.callTool({ name: "godot_feedback", arguments: { finding: "nonsense", verdict: "wrong" } })) as Result;
+    expect(bad.isError).toBe(true);
   });
 });

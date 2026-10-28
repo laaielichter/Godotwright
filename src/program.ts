@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { apiCommand } from "./commands/api.js";
 import { checkCommand } from "./commands/check.js";
+import { learnCommand } from "./commands/learn.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { reviewCommand } from "./commands/review.js";
 import { scanCommand } from "./commands/scan.js";
@@ -19,5 +20,6 @@ export function createProgram(): Command {
     .addCommand(checkCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
-    .addCommand(mcpCommand());
+    .addCommand(mcpCommand())
+    .addCommand(learnCommand());
 }

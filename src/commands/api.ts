@@ -1,6 +1,7 @@
 import { Command, Option } from "commander";
 import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
+import { lookupLearning } from "../learn/hooks.js";
 import type { Detail } from "../scan/format.js";
 import { writeOut } from "./output.js";
 
@@ -20,8 +21,8 @@ export function apiCommand(): Command {
         writeOut(command, options.json ? `${JSON.stringify(hits, null, 2)}\n` : formatSearch(api, hits));
         return;
       }
-      const result = api.lookup(text);
-      writeOut(command, options.json ? `${JSON.stringify(result, null, 2)}\n` : formatLookup(api, result, options.detail));
+      const { result, hints } = lookupLearning(api, text);
+      writeOut(command, options.json ? `${JSON.stringify({ ...result, hints }, null, 2)}\n` : formatLookup(api, result, options.detail, hints));
       if (result.entries.length === 0) process.exitCode = 1;
     });
 }

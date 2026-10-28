@@ -18,6 +18,7 @@ godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods,
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
 godotwright review [path] --detail full --min-score 90
+godotwright learn                     # what Godotwright learned on this machine
 ```
 
 `scan` reads `project.godot`, scenes, resources and scripts without starting Godot.
@@ -52,7 +53,7 @@ The exit code is 1 when there are errors, or when the score is below `--min-scor
 
 ## Use with coding agents (MCP)
 
-`godotwright mcp` runs an MCP server over stdio with six tools:
+`godotwright mcp` runs an MCP server over stdio with seven tools:
 
 | Tool | What it does |
 | --- | --- |
@@ -62,6 +63,7 @@ The exit code is 1 when there are errors, or when the score is below `--min-scor
 | `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`) |
 | `godot_check` | Run Godot headless and report errors as file:line |
 | `godot_checklist` | Every AAA rule with its fix |
+| `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
 
 Pick a profile with `--tier`:
 
@@ -92,6 +94,31 @@ args = ["-y", "godotwright", "mcp", "--tier", "premium"]
 Run the agent from the Godot project folder (or pass `--project <path>`).
 Until the npm release, use `node /path/to/godotwright/dist/cli.js mcp` as the command.
 CI connects both Claude Code and Codex to the server on every push.
+
+## Learning
+
+Godotwright learns from every use, on your machine:
+
+- **Rules Godot keeps contradicting.** After each `check`, it compares the review with
+  what real Godot reported. When an error rule is contradicted 3 times here and never
+  confirmed, its findings become warnings, marked as hints.
+- **False alarms.** `godotwright learn feedback wrong "<finding line>"` (or the
+  `godot_feedback` MCP tool) hides that finding in later reviews.
+- **API lookups.** When a lookup finds nothing and the next one does, the next failed
+  lookup of the same name says what it usually means.
+
+Nothing leaves your machine. The learning file (`godotwright learn` shows where) holds
+counters, rule names, API names and message templates without names or paths; findings
+marked as wrong are stored as hashes.
+
+```sh
+godotwright learn          # status: what was learned, where the file is
+godotwright learn off      # stop learning (or set GODOTWRIGHT_LEARN=0)
+godotwright learn on
+godotwright learn reset    # forget everything
+```
+
+Set `GODOTWRIGHT_HOME` to keep the file somewhere else.
 
 ## Benchmark
 

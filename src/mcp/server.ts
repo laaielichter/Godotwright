@@ -3,12 +3,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
-import { checkProject } from "../check/check.js";
+import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
+import { parseFindingLine, recordFeedback } from "../learn/learn.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { findProjectRoot } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
-import { reviewProject, type ReviewReport } from "../review/review.js";
+import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
 import { scanProject } from "../scan/scan.js";
@@ -46,6 +47,7 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
+      "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
     ].join("\n"),
   },
@@ -60,6 +62,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
       "- godot_checklist lists every AAA rule with its fix.",
+      "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish.",
     ].join("\n"),
   },
@@ -122,8 +125,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     async ({ query, detail }) =>
       guard(() => {
         const api = GodotApi.load();
-        const result = api.lookup(query);
-        const out = formatLookup(api, result, detail ?? profile.detail);
+        const { result, hints } = lookupLearning(api, query);
+        const out = formatLookup(api, result, detail ?? profile.detail, hints);
         return result.entries.length ? text(out) : failure(out);
       }),
   );
@@ -165,7 +168,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       guard(() => {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
         const target = file && !file.startsWith("res://") ? `res://${file.replace(/^\/+/, "")}` : file;
-        const report = reviewProject(where(path), { overrides: code !== undefined && target ? { [target]: code } : undefined });
+        const report = reviewLearning(where(path), { overrides: code !== undefined && target ? { [target]: code } : undefined });
         const focus = [...(files ?? []), ...(target ? [target] : [])].map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`));
         return text(formatReviewFor(report, detail ?? profile.detail, profile, focus));
       }),
@@ -186,7 +189,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     async ({ path, run_frames, timeout_seconds }) => {
       try {
-        const result = await checkProject(where(path), {
+        const result = await checkLearning(where(path), {
           godot: options.godot,
           runFrames: run_frames ?? 0,
           timeoutMs: (timeout_seconds ?? 600) * 1000,
@@ -200,6 +203,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
         }
         return failure(error instanceof Error ? error.message : String(error));
       }
+    },
+  );
+
+  server.registerTool(
+    "godot_feedback",
+    {
+      title: "Feedback on a review finding",
+      description:
+        "Tell Godotwright that a godot_review finding was wrong (a false alarm you verified) or right. Pass the finding line exactly as godot_review printed it. Wrong findings are hidden in later reviews on this machine, and Godotwright learns which rules to trust.",
+      inputSchema: {
+        finding: z.string().describe("the finding line, e.g. res://player.gd:12: error [api/unknown-member] ..."),
+        verdict: z.enum(["wrong", "right"]),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ finding, verdict }) => {
+      const parsed = parseFindingLine(finding);
+      if (!parsed) return failure("Pass the finding line exactly as godot_review printed it.");
+      recordFeedback(parsed, verdict);
+      return text(verdict === "wrong" ? `Noted: ${parsed.rule} at ${parsed.file} is hidden from now on.` : `Noted: ${parsed.rule} was right.`);
     },
   );
 
@@ -241,6 +264,8 @@ function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile,
   }
   if (list.length > shown.length) out.push(`+${list.length - shown.length} more`);
   if (errors === 0 && focus.length) out.push("No errors in these files.");
+  if (report.learning?.hidden) out.push(`${report.learning.hidden} ${report.learning.hidden === 1 ? "finding" : "findings"} hidden: marked as wrong earlier.`);
+  if (report.learning?.downgraded.length) out.push(`Learned: ${report.learning.downgraded.join(", ")} shown as warnings; Godot did not confirm them here.`);
   return `${out.join("\n")}\n`;
 }
 

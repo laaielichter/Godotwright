@@ -119,10 +119,11 @@ export function formatClass(api: GodotApi, cls: ApiClass, detail: Detail = "brie
   return out;
 }
 
-export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail = "brief"): string {
+export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail = "brief", hints: string[] = []): string {
   const out: string[] = [];
   if (result.entries.length === 0) {
     out.push(`not found in Godot ${api.version}: ${result.query}`);
+    if (hints.length) out.push(`learned from earlier lookups, this usually means: ${hints.join(", ")}`);
     if (result.renamed) {
       out.push(`Godot 3 name: the ${result.renamed.kind} ${result.renamed.from} is called ${result.renamed.to} in Godot 4.`);
     }

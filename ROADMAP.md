@@ -46,6 +46,23 @@ Each step is small and has a clear "done" check.
 7. **Benchmark.** A fixed set of Godot tasks, run with and without Godotwright.
    *Done when:* we have before/after numbers.
 
+## Learning
+
+Godotwright gets better with every use, without collecting anything personal.
+
+8. **Local learning.** Remember per machine which rules real Godot confirms or
+   contradicts, which findings were false alarms, and what failed API lookups meant.
+   *Done when:* tests show reviews and lookups improve from earlier use, and nothing
+   leaves the machine.
+9. **Opt-in sharing.** Users who say yes send anonymous counters (no code, names or
+   paths), and can see exactly what would be sent first.
+   *Done when:* tests prove a report holds nothing from the project, and nothing is
+   sent without a yes.
+10. **Collector.** A small server that accepts reports and aggregates them, keeping
+    only what at least 3 installs reported.
+11. **Shared knowledge.** Aggregated results ship with each release, so every user
+    benefits.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -62,3 +79,4 @@ Each step is small and has a clear "done" check.
 - [x] Step 5: AAA review
 - [x] Step 6: MCP server
 - [x] Step 7: Benchmark (see [bench/RESULTS.md](bench/RESULTS.md))
+- [x] Step 8: Local learning

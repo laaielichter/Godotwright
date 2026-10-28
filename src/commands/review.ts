@@ -1,6 +1,6 @@
 import { Command, Option } from "commander";
 import { formatReview } from "../review/format.js";
-import { reviewProject } from "../review/review.js";
+import { reviewLearning } from "../learn/hooks.js";
 import type { Detail } from "../scan/format.js";
 import { writeOut } from "./output.js";
 
@@ -13,7 +13,7 @@ export function reviewCommand(): Command {
     .option("--min-score <score>", "exit with code 1 when the overall score is lower")
     .option("--json", "print the report as JSON")
     .action((path: string, options: { detail: Detail; includeAddons?: boolean; minScore?: string; json?: boolean }, command: Command) => {
-      const report = reviewProject(path, { includeAddons: options.includeAddons });
+      const report = reviewLearning(path, { includeAddons: options.includeAddons });
       writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatReview(report, options.detail));
       const errors = report.categories.reduce((n, c) => n + c.errors, 0);
       if (errors > 0 || (options.minScore !== undefined && report.overall < Number(options.minScore))) process.exitCode = 1;

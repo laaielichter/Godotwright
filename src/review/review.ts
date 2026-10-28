@@ -1,4 +1,6 @@
 import { GodotApi } from "../api/api.js";
+import { adjustFindings } from "../learn/learn.js";
+import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
@@ -12,6 +14,8 @@ export interface ReviewOptions {
   includeAddons?: boolean;
   /** Unsaved file contents by `res://` path, reviewed instead of the files on disk. */
   overrides?: Record<string, string>;
+  /** What was learned on this machine; adjusts findings when given (see learn/learn.ts). */
+  learning?: LearningData;
 }
 
 export interface CategoryScore {
@@ -31,6 +35,8 @@ export interface ReviewReport {
   typing: TypingStats & { percent: number };
   scripts: number;
   scenes: number;
+  /** Set when learning adjusted the findings. */
+  learning?: { downgraded: string[]; hidden: number };
 }
 
 /** Points lost per finding, and the most one rule can take from a category. */
@@ -66,7 +72,8 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   findings.push(...checkUnusedSignals(pm));
   findings.push(...checkStructure(pm).filter((f) => inScope(f.file)));
 
-  const sorted = findings.sort(
+  const adjusted = options.learning ? adjustFindings(findings, options.learning) : undefined;
+  const sorted = (adjusted?.findings ?? findings).sort(
     (a, b) =>
       SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
       CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category) ||
@@ -86,6 +93,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     typing: { ...typing, percent: typingPercent },
     scripts: [...data.scripts.keys()].filter(inScope).length,
     scenes: data.map.scenes.length,
+    ...(adjusted && (adjusted.downgraded.length || adjusted.hidden) ? { learning: { downgraded: adjusted.downgraded, hidden: adjusted.hidden } } : {}),
   };
 }
 

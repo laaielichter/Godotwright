@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { checkProject } from "../check/check.js";
+import { checkLearning } from "../learn/hooks.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { writeOut } from "./output.js";
@@ -29,7 +29,7 @@ export function checkCommand(): Command {
     .option("--verbose", "also print the raw Godot output")
     .action(async (path: string, options: Options, command: Command) => {
       try {
-        const result = await checkProject(path, {
+        const result = await checkLearning(path, {
           godot: options.godot,
           import: options.import,
           instantiate: options.instantiate,

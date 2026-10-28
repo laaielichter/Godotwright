@@ -28,5 +28,7 @@ export function formatReview(report: ReviewReport, detail: Detail = "brief"): st
     if (detail === "full") out.push(`    fix: ${RULES[f.rule]?.fix ?? ""}`);
   }
   if (hidden > 0) out.push(`  +${hidden} more (infos and the rest: use --detail full)`);
+  if (report.learning?.hidden) out.push(`  ${report.learning.hidden} ${report.learning.hidden === 1 ? "finding" : "findings"} hidden because they were marked as wrong (godotwright learn reset undoes this)`);
+  if (report.learning?.downgraded.length) out.push(`  learned: ${report.learning.downgraded.join(", ")} reported as warnings, because Godot did not confirm them here`);
   return `${out.join("\n")}\n`;
 }
