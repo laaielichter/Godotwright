@@ -1,12 +1,58 @@
-# Godotwright
+<p align="center">
+  <img src="docs/logo.svg" alt="Godotwright logo" width="72" height="72">
+</p>
+<h1 align="center">Godotwright</h1>
+<p align="center"><b>MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4.</b><br>
+Offline Godot 4.7 API, a project map, headless checks and an AAA review of GDScript.</p>
+<p align="center">
+  <a href="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml"><img src="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Godot-4.7-478cbf?logo=godotengine&logoColor=white" alt="Godot 4.7">
+  <img src="https://img.shields.io/badge/MCP-server-6e56cf" alt="MCP server">
+</p>
+<p align="center">
+  <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#use-with-claude-code-codex-and-other-coding-agents-mcp">MCP setup</a> ·
+  <a href="bench/RESULTS.md">Benchmark</a> ·
+  <a href="ROADMAP.md">Roadmap</a>
+</p>
+<p align="center">
+  <img src="docs/demo.svg" alt="godotwright review scores a Godot project 50/100 and lists errors such as Cannot extend KinematicBody2D, export var is @export var in Godot 4, and a connection to a signal that does not exist" width="860">
+</p>
 
-AAA coding toolkit for **Godot 4**. It makes any coding agent (Claude, Codex and
-others) better at building Godot games.
+Coding agents learned Godot from years of Godot 3 tutorials. They write `yield`,
+`export var` and `KinematicBody2D`, invent methods, and wire signals to nodes that
+are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a compact
+map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
-> Layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
-> Not on npm yet.
+> Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
+> Not on npm yet: build from source as below.
 
-## Usage
+## Quickstart
+
+```sh
+git clone https://github.com/laaielichter/Godotwright
+cd Godotwright && npm ci && npm run build
+node dist/cli.js review ~/games/my-game
+```
+
+You get a score from 0 to 100 for api, performance, quality and structure, and each
+finding as `res://file.gd:12: error [rule] message` with the Godot 4 fix.
+Then [connect it to your agent](#use-with-claude-code-codex-and-other-coding-agents-mcp).
+
+## Why Godotwright?
+
+- **No more Godot 3 code.** The review flags Godot 3 syntax and names and gives the Godot 4 replacement.
+- **No invented API.** Every class, method, property and signal is checked against the
+  official Godot 4.7 class reference, bundled offline (1078 classes).
+- **Mistakes found before you press F5.** Missing `$Node` paths, scene connections to
+  methods that do not exist, unknown input actions and broken `preload()` paths.
+- **Cheap for the model.** Compact, stable output, and a `cheap` profile that walks
+  small models through small checked steps.
+- **Local and private.** `scan`, `api` and `review` need no Godot install and no network.
+
+## Commands
 
 ```sh
 godotwright scan [path]               # compact project map, cheap to read
@@ -73,7 +119,7 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 `path`, `resource` or `file` key); exported names such as `x.glb.import` and
 `x.gdc` map back to their source.
 
-## Use with coding agents (MCP)
+## Use with Claude Code, Codex and other coding agents (MCP)
 
 `godotwright mcp` runs an MCP server over stdio with seven tools:
 
@@ -167,6 +213,34 @@ First round (168 runs, Claude Haiku, Sonnet and Opus 5.5, 12 tasks): every run p
 with and without Godotwright, so these tasks do not separate the setups on correctness.
 With Godotwright, all code came out fully statically typed (84 of 84 runs, against
 71 of 84 without). Details and limits: [bench/RESULTS.md](bench/RESULTS.md).
+
+## How it compares
+
+| | Godotwright | Agent on its own | Godot editor |
+| --- | --- | --- | --- |
+| Godot 4.7 API | bundled class reference, offline | from training data | built in |
+| Flags Godot 3 code with the fix | yes | sometimes | parse errors only |
+| Usable by the agent itself | MCP + CLI | n/a | needs a human |
+| Performance and structure review | scored per category | no | warnings only |
+| Needs Godot installed | only for `check` | no | yes |
+| Does not | write your game, replace playtesting, review C# | run Godot | talk to agents |
+
+## FAQ
+
+**Does it need Godot installed?** No for `scan`, `api` and `review`. Only `check` runs Godot 4.7 headless.
+
+**Which agents does it work with?** Any agent that speaks MCP over stdio. CI connects
+Claude Code and Codex on every push. The CLI works from any shell.
+
+**Does it send my code anywhere?** No. See [Learning](#learning) and [PRIVACY.md](PRIVACY.md).
+
+**Older Godot 4 versions?** Most findings apply to every Godot 4 version, but API
+lookups answer for 4.7.
+
+## Contributing
+
+Wrong review findings and ideas for new rules are the most useful reports.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Requirements
 
