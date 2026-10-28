@@ -186,3 +186,33 @@ describe("GDScript that real projects use", () => {
     expect(lines).toEqual(['res://a.gd:1: error [api/unknown-type] Cannot extend "res://missing.gd": it does not exist in Godot 4.7 or this project.']);
   });
 });
+
+describe("type inference from Variant", () => {
+  const review = (body: string) => {
+    const root = makeProject({ "project.godot": '[application]\nconfig/name="T"\n', "a.gd": `extends Node\n\n\nfunc _ready() -> void:\n${body}` });
+    return reviewProject(root).findings.filter((f) => f.file === "res://a.gd" && f.severity !== "info").map(formatFinding);
+  };
+
+  it("reports := from a function that returns Variant, as Godot does", () => {
+    expect(review("\tvar w := weakref(self)\n\tvar m := max(1, 2)\n\tprint(w, m)\n")).toEqual([
+      'res://a.gd:5: error [api/infer-variant] Cannot infer the type of "w": weakref() returns Variant. Give it a type.',
+      'res://a.gd:6: error [api/infer-variant] Cannot infer the type of "m": max() returns Variant. Give it a type or use maxf() or maxi().',
+    ]);
+  });
+
+  it("accepts typed variables, typed functions and the script's own functions", () => {
+    expect(review("\tvar w: WeakRef = weakref(self)\n\tvar m := maxi(1, 2)\n\tvar a := abs(1.0) as float\n\tvar c := clamp_it()\n\tprint(w, m, a, c)\n\n\nfunc clamp_it() -> int:\n\treturn 1\n")).toEqual([]);
+    expect(review("\tvar c := clamp(1, 0, 2) + 1\n\tprint(c)\n")).toEqual([]);
+  });
+});
+
+describe("super(...)", () => {
+  it("has the value the parent's function returns", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="T"\n',
+      "base.gd": "class_name Base\nextends Node\n\n\nfunc act(id: int) -> Dictionary:\n\treturn {}\n",
+      "a.gd": 'extends Base\n\n\nfunc act(id: int) -> Dictionary:\n\tvar result := super(id)\n\tprint(result.get("ok", false))\n\treturn result\n',
+    });
+    expect(reviewProject(root).findings.filter((f) => f.file === "res://a.gd" && f.severity !== "info").map(formatFinding)).toEqual([]);
+  });
+});
