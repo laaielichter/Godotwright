@@ -13,6 +13,10 @@ import { CATEGORIES, CATEGORY_WEIGHTS, type Category, type Finding, type Severit
 export interface ReviewOptions {
   /** Also review scripts under res://addons/ (third-party code). Default false. */
   includeAddons?: boolean;
+  /** Base projects (a game this project modifies); see LoadOptions.base. */
+  base?: string[];
+  /** File lists of the shipped game; see LoadOptions.baseFiles. */
+  baseFiles?: string[];
   /** Unsaved file contents by `res://` path, reviewed instead of the files on disk. */
   overrides?: Record<string, string>;
   /** What was learned on this machine; adjusts findings when given (see learn/learn.ts). */
@@ -49,14 +53,19 @@ const RULE_CAP = 30;
 const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 export function reviewProject(path: string, options: ReviewOptions = {}): ReviewReport {
-  const data = loadProject(path, { overrides: options.overrides });
+  const data = loadProject(path, { overrides: options.overrides, base: options.base, baseFiles: options.baseFiles });
   const api = GodotApi.load();
   const pm = new ProjectModel(data, api);
-  const inScope = (p: string) => options.includeAddons || !p.startsWith("res://addons/");
+  // Base project files are context, not under review.
+  const inScope = (p: string) => !data.external.has(p.replace(/::.*$/, "")) && (options.includeAddons || !p.startsWith("res://addons/"));
 
   const inputActions = new Set(data.map.inputActions.map((a) => a.name));
   for (const source of data.sources.values()) {
     for (const m of source.matchAll(/InputMap\.add_action\s*\(\s*&?"([^"]+)"/g)) inputActions.add(m[1]!);
+    // Actions added from a variable (a loop over a list of names): every name in that script may be one.
+    if (/InputMap\.add_action\s*\(\s*(?!&?")/.test(source)) {
+      for (const m of source.matchAll(/&?"([A-Za-z_][\w.]*)"/g)) inputActions.add(m[1]!);
+    }
   }
   const foreignClasses = data.map.csharpScripts.length > 0 || data.files.some((f) => f.endsWith(".gdextension"));
 
@@ -71,8 +80,8 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     typing.typed += quality.typing.typed;
     typing.total += quality.typing.total;
   }
-  findings.push(...checkScenePerformance(pm));
-  findings.push(...checkUnusedSignals(pm));
+  findings.push(...checkScenePerformance(pm).filter((f) => inScope(f.file)));
+  findings.push(...checkUnusedSignals(pm).filter((f) => inScope(f.file)));
   findings.push(...checkStructure(pm).filter((f) => inScope(f.file)));
 
   const adjusted = options.learning ? adjustFindings(findings, options.learning, options.shared) : undefined;
@@ -95,7 +104,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     findings: sorted,
     typing: { ...typing, percent: typingPercent },
     scripts: [...data.scripts.keys()].filter(inScope).length,
-    scenes: data.map.scenes.length,
+    scenes: data.map.scenes.filter((sc) => !sc.external).length,
     ...(adjusted && (adjusted.downgraded.length || adjusted.hidden) ? { learning: { downgraded: adjusted.downgraded, hidden: adjusted.hidden } } : {}),
   };
 }

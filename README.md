@@ -51,6 +51,28 @@ inherited scenes, built-in scripts, duck typing with `has_method()`), and are tu
 on the official demo projects so they report real problems, not noise.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.
 
+## Mods and patches over a game
+
+A mod or patch often uses scripts, scenes and models that live in the game, not in
+the mod's folder. Point Godotwright at the game so they count as present:
+
+```sh
+godotwright review mod/ --base game/                       # the game's source folder
+godotwright review mod/ --base-files game/pck-manifest.json # files the shipped .pck holds
+```
+
+or put it in `godotwright.json` in the mod's root (paths relative to that root):
+
+```json
+{ "base": ["../game"], "baseFiles": ["../manifests/pck-files.json"] }
+```
+
+The game's classes, autoloads, input map and scenes are then known, the mod's own
+files win where both have the same path, and only the mod's files are reviewed.
+A file list is text with one path per line, or JSON (strings, or objects with a
+`path`, `resource` or `file` key); exported names such as `x.glb.import` and
+`x.gdc` map back to their source.
+
 ## Use with coding agents (MCP)
 
 `godotwright mcp` runs an MCP server over stdio with seven tools:

@@ -166,6 +166,9 @@ export class ProjectModel {
       if (renamed && this.api.getClass(renamed.to)) {
         model.native = renamed.to;
         model.renamedBase = raw.trim();
+      } else {
+        // Unknown base (reported on its own): its members are unknown too.
+        model.dynamic = true;
       }
     }
   }
@@ -294,11 +297,12 @@ export class ProjectModel {
       return undefined;
     }
     if ((m = /\bas\s+([A-Za-z_][\w.]*)\s*$/.exec(e))) return this.resolveTypeName(m[1]!, from);
-    if ((m = /^([A-Za-z_][\w.]*)\.new\(.*\)$/.exec(e))) {
+    // `X.new(...)` only when the call is the whole expression, not `X.new().f()`.
+    if ((m = /^([A-Za-z_][\w.]*)\.new\(.*\)$/.exec(e)) && closingParen(e, m[1]!.length + 4) === e.length - 1) {
       const t = this.resolveTypeName(m[1]!, from);
       return t && t.kind !== "enum" ? { ...t, meta: false } : undefined;
     }
-    if ((m = /^([A-Z][A-Za-z0-9_]*)\(.*\)$/.exec(e)) && VALUE_TYPES.has(m[1]!)) return native(m[1]!);
+    if ((m = /^([A-Z][A-Za-z0-9_]*)\(.*\)$/.exec(e)) && VALUE_TYPES.has(m[1]!) && closingParen(e, m[1]!.length) === e.length - 1) return native(m[1]!);
     if (/^-?\d+$/.test(e)) return native("int");
     if (/^-?(\d+\.\d*|\.\d+|\d+e-?\d+)$/i.test(e)) return native("float");
     if (/^(true|false)$/.test(e)) return native("bool");
@@ -513,4 +517,22 @@ export class ProjectModel {
     }
     return node.type ? native(node.type) : undefined;
   }
+}
+
+/** Index of the `)` that closes the `(` at `open`, skipping strings; -1 when unclosed. */
+function closingParen(text: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    const ch = text[i]!;
+    if (ch === '"' || ch === "'") {
+      const end = text.indexOf(ch, i + 1);
+      if (end < 0) return -1;
+      i = end;
+    } else if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
 }

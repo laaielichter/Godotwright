@@ -26,7 +26,10 @@ function list(items: string[], max: number): string {
   return shown.join(", ") + (hidden ? `, +${hidden} more` : "");
 }
 
-export function formatProjectMap(map: ProjectMap, detail: Detail = "brief"): string {
+export function formatProjectMap(all: ProjectMap, detail: Detail = "brief"): string {
+  // Only this project's own files; base project files are counted, not listed.
+  const own = <T extends { external?: boolean }>(items: T[]) => items.filter((i) => !i.external);
+  const map = { ...all, scenes: own(all.scenes), scripts: own(all.scripts), resources: own(all.resources), shaders: own(all.shaders) };
   const full = detail === "full";
   const max = full ? Number.POSITIVE_INFINITY : BRIEF_LIMIT;
   const out: string[] = [];
@@ -48,6 +51,8 @@ export function formatProjectMap(map: ProjectMap, detail: Detail = "brief"): str
       .map(([kind, count]) => plural(count, ASSET_LABELS[kind] ?? kind)),
   ];
   out.push(`files: ${counts.join(", ")}`);
+  if (map.base?.roots.length) out.push(`base: ${plural(map.base.files, "file")} from ${map.base.roots.join(", ")} (used, not listed)`);
+  if (map.base?.listed) out.push(`base file lists: ${plural(map.base.listed, "file")} the game ships`);
 
   if (map.autoloads.length) {
     out.push(`autoloads: ${list(map.autoloads.map((a) => `${a.name}=${a.path}`), max)}`);

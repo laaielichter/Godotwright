@@ -245,7 +245,12 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         // `self.x` is checked like any typed value: the node may be a subclass of the script's base.
         value = { type: selfType, exact: false };
       } else if (t0 === "super") {
-        value = model.parent ? { type: { kind: "script", model: model.parent, meta: false }, exact: true } : { type: native(pm.nativeOf(model)), exact: true };
+        // An unknown base (a missing script) leaves `super` unknown too.
+        value = model.parent
+          ? { type: { kind: "script", model: model.parent, meta: false }, exact: true }
+          : model.dynamic && model.extendsRaw
+            ? undefined
+            : { type: native(pm.nativeOf(model)), exact: true };
         if (tokens[k + 1]?.t === "(") j = closeIndex(tokens, k + 1);
       } else if (t0.startsWith("$") || t0.startsWith("%")) {
         value = nodeRef(t0.startsWith("%") ? "%" : "$", nodeText(tokens[k]!, base));
@@ -396,6 +401,8 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     function member(value: Value | undefined, name: string, isCall: boolean): Value | undefined {
       const type = value?.type;
       if (!type || type.kind === "enum") return undefined;
+      // `dict.key` reads a key, even when a method has the same name (`dict.size`).
+      if (type.kind === "native" && type.name === "Dictionary" && !type.meta && !isCall) return undefined;
       const found = pm.memberOf(type, name);
       if (found) {
         if (isCall && found.kind === "method") checkArgs(name, found.args, currentTokens, currentOpen);
@@ -406,8 +413,6 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       }
       if (name === "new" && type.meta) return { type: { ...type, meta: false }, exact: false };
       if (type.kind === "script" && pm.chain(type.model).some((c) => c.dynamic)) return undefined;
-      // `dict.key` reads a key; it is not a member access.
-      if (type.kind === "native" && type.name === "Dictionary" && !isCall) return undefined;
       const label = typeLabel(type);
       const valueType = type.kind === "native" && VALUE_TYPES.has(type.name);
       const certain = valueType || type.meta || value!.exact;

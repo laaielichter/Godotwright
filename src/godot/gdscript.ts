@@ -155,11 +155,14 @@ export function logicalLines(source: string): LogicalLine[] {
       const triple = src.startsWith(ch.repeat(3), i);
       const quote = triple ? ch.repeat(3) : ch;
       let j = i + quote.length;
+      // Godot 4 also lets a plain string run over lines; one that never closes ends at its line.
+      let firstBreak = -1;
       while (j < src.length && !src.startsWith(quote, j)) {
         if (src[j] === "\\" && !raw) j++;
-        else if (src[j] === "\n" && !triple) break;
+        else if (src[j] === "\n" && !triple && firstBreak < 0) firstBreak = j;
         j++;
       }
+      if (j >= src.length && firstBreak >= 0) j = firstBreak;
       const end = Math.min(j + quote.length, src.length);
       const literal = src.slice(i, end);
       line += (literal.match(/\n/g) ?? []).length;
@@ -332,7 +335,7 @@ export function outlineScript(source: string): ScriptOutline {
   let pending: string[] = [];
 
   for (const ll of lines) {
-    for (const match of ll.text.matchAll(/\b(preload|load)\s*\(\s*"([^"]*)"/g)) {
+    for (const match of ll.text.matchAll(/(?<![\w.])(preload|load)\s*\(\s*"([^"]*)"\s*\)/g)) {
       script.preloads.push({ path: match[2]!, kind: match[1] as "preload" | "load", line: ll.line });
     }
 
@@ -480,7 +483,7 @@ function parseMember(text: string, ll: LogicalLine, annotations: string[]): Memb
       },
     };
   }
-  if ((match = /^class\s+([A-Za-z_]\w*)(?:\s+extends\s+([^:]+?))?\s*:\s*$/.exec(text))) {
+  if ((match = /^class\s+([A-Za-z_]\w*)(?:\s+extends\s+("[^"]*"|'[^']*'|[^:]+?))?\s*:\s*$/.exec(text))) {
     return { kind: "class", name: match[1]!, extends: match[2] ? unquote(match[2]) : undefined };
   }
   return undefined;

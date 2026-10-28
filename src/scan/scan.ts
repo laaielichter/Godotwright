@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
 import { formatParams, formatSignature, outlineScript, type ScriptOutline } from "../godot/gdscript.js";
-import { KEY_SETTINGS, parseProjectSettings } from "../godot/project-settings.js";
+import { KEY_SETTINGS, parseProjectSettings, type ProjectSettings } from "../godot/project-settings.js";
 import { parseResourceFile } from "../godot/resource-file.js";
 import { parseResourceText, type ResourceFile } from "../godot/scene.js";
 import { asString, VariantParseError } from "../godot/variant.js";
@@ -34,11 +35,98 @@ export interface ProjectData {
   resources: Map<string, ResourceFile>;
   /** `uid://` to `res://` path. */
   uids: Map<string, string>;
+  /** Files that come only from a base project (see LoadOptions.base). */
+  external: Set<string>;
 }
 
 export interface LoadOptions {
   /** File contents by `res://` path that replace (or add to) what is on disk. */
   overrides?: Record<string, string>;
+  /**
+   * Base projects this project is laid over, like a mod or patch over a game:
+   * their files count as present at the same `res://` paths, and the project's
+   * own files win. Also read from `godotwright.json` (`{"base": ["../game"]}`).
+   */
+  base?: string[];
+  /**
+   * Lists of files a shipped game holds (e.g. a .pck manifest), for files that are
+   * not in any source folder. Text with one path per line, or JSON (strings, or
+   * objects with a path, resource or file key). Also from godotwright.json (`baseFiles`).
+   */
+  baseFiles?: string[];
+}
+
+/** Config file in a project root, e.g. {"base": ["../game"]}; paths are relative to the root. */
+export const CONFIG_FILE = "godotwright.json";
+
+/** Reads a list of paths from godotwright.json, resolved against the project root. */
+function configPaths(root: string, key: "base" | "baseFiles"): string[] {
+  const config = resolvePath(root, CONFIG_FILE);
+  if (!existsSync(config)) return [];
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(readFileSync(config, "utf8")) as Record<string, unknown>;
+  } catch (error) {
+    throw new Error(`${CONFIG_FILE}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const value = parsed[key];
+  const list = value === undefined ? [] : Array.isArray(value) ? value : [value];
+  return list.map((dir) => {
+    if (typeof dir !== "string") throw new Error(`${CONFIG_FILE}: ${key} must be a path or a list of paths`);
+    return resolvePath(root, dir);
+  });
+}
+
+/** The base project roots for a project: from the options (relative to the working dir) and godotwright.json. */
+export function baseRoots(root: string, base: string[] = []): string[] {
+  const dirs = [...base.map((dir) => resolvePath(dir)), ...configPaths(root, "base")];
+  const out = [...new Set(dirs)].filter((dir) => dir !== root);
+  for (const dir of out) {
+    if (!existsSync(resolvePath(dir, "project.godot"))) throw new Error(`base project not found: no project.godot in ${dir}`);
+  }
+  return out;
+}
+
+/**
+ * `res://` paths listed in file lists such as a .pck manifest. Exported forms
+ * map back to their source: `x.glb.import` and `x.gd.remap` to `x.glb` and `x.gd`,
+ * `x.gdc` to `x.gd`; Godot's own `.godot/` cache is left out.
+ */
+export function listedFiles(root: string, lists: string[] = []): Set<string> {
+  const out = new Set<string>();
+  const add = (raw: string) => {
+    const path = raw.trim().replace(/\\/g, "/").replace(/^res:\/\//, "").replace(/\/{2,}/g, "/").replace(/^\/+/, "");
+    if (!path || path.startsWith(".godot/") || /^[a-z]+:\/\//i.test(path)) return;
+    const source = path.replace(/\.(import|remap)$/, "").replace(/\.gdc$/, ".gd");
+    out.add(`res://${source}`);
+  };
+  const walk = (value: unknown) => {
+    if (typeof value === "string") add(value);
+    else if (Array.isArray(value)) value.forEach((v) => (typeof v === "string" ? add(v) : walk(v)));
+    else if (value && typeof value === "object") {
+      for (const [key, v] of Object.entries(value)) {
+        if (typeof v === "string" ? ["path", "resource", "file"].includes(key) : typeof v === "object") walk(v);
+      }
+    }
+  };
+  for (const file of [...lists.map((f) => resolvePath(f)), ...configPaths(root, "baseFiles")]) {
+    let text: string;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch {
+      throw new Error(`base file list not found: ${file}`);
+    }
+    if (/^\s*[[{]/.test(text)) {
+      try {
+        walk(JSON.parse(text));
+        continue;
+      } catch {
+        // not JSON after all: read it as lines
+      }
+    }
+    text.split("\n").forEach(add);
+  }
+  return out;
 }
 
 export function scanProject(path: string, options: LoadOptions = {}): ProjectMap {
@@ -50,10 +138,16 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   if (!root) throw new ProjectNotFoundError(path);
 
   const overrides = options.overrides ?? {};
-  const files = [...new Set([...listProjectFiles(root), ...Object.keys(overrides)])].sort();
+  // Which root each file comes from: base projects first, the project's own files win.
+  const bases = baseRoots(root, options.base);
+  const origin = new Map<string, string>();
+  for (const dir of [...bases, root]) for (const file of listProjectFiles(dir)) origin.set(file, dir);
+  for (const file of Object.keys(overrides)) origin.set(file, root);
+  const files = [...origin.keys()].sort();
+  const external = new Set(files.filter((f) => origin.get(f) !== root && f !== "res://project.godot"));
   const fileSet = new Set(files);
   const warnings: Warning[] = [];
-  const read = (res: string) => overrides[res] ?? readFileSync(fromResPath(root, res), "utf8");
+  const read = (res: string) => overrides[res] ?? readFileSync(fromResPath(origin.get(res) ?? root, res), "utf8");
   const fail = (file: string, error: unknown) => {
     const line = error instanceof VariantParseError ? error.line : undefined;
     const message = error instanceof Error ? error.message.replace(/ \(line \d+\)$/, "") : String(error);
@@ -62,9 +156,16 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
 
   let settings = parseProjectSettings("");
   try {
-    settings = parseProjectSettings(read("res://project.godot"));
+    settings = parseProjectSettings(overrides["res://project.godot"] ?? readFileSync(fromResPath(root, "res://project.godot"), "utf8"));
   } catch (error) {
     fail("res://project.godot", error);
+  }
+  for (const dir of [...bases].reverse()) {
+    try {
+      settings = mergeSettings(parseProjectSettings(readFileSync(fromResPath(dir, "res://project.godot"), "utf8")), settings);
+    } catch {
+      // A broken base project.godot only loses its settings.
+    }
   }
 
   // uid:// -> res:// from .uid sidecars, .import files and resource headers.
@@ -96,7 +197,8 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     }
   }
 
-  const exists = (res: string) => fileSet.has(res) || existsSync(fromResPath(root, res));
+  const listed = listedFiles(root, options.baseFiles);
+  const exists = (res: string) => fileSet.has(res) || listed.has(res) || [root, ...bases].some((dir) => existsSync(fromResPath(dir, res)));
   /** Resolves a uid or path reference; returns undefined when neither points to a file. */
   const resolve = (ref: { uid?: string; path?: string }): string | undefined => {
     const byUid = ref.uid ? uids.get(ref.uid) : undefined;
@@ -164,6 +266,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
 
     if (parsed.kind === "resource") {
       resourceInfos.push({
+        ...(external.has(file) ? { external: true } : {}),
         path: file,
         uid: parsed.uid,
         type: parsed.resourceType,
@@ -191,6 +294,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     });
     const root = nodes[0];
     scenes.push({
+      ...(external.has(file) ? { external: true } : {}),
       path: file,
       uid: parsed.uid,
       rootName: root?.name,
@@ -228,6 +332,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       }
     }
     scriptInfos.push({
+      ...(external.has(file.replace(/::.*$/, "")) ? { external: true } : {}),
       path: file,
       uid: scriptUids.get(file),
       className: outline.className,
@@ -267,10 +372,10 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     const ext = extension(file);
     if (ext === "gdshader") {
       const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(read(file));
-      shaders.push({ path: file, shaderType: match?.[1] });
+      shaders.push({ ...(external.has(file) ? { external: true } : {}), path: file, shaderType: match?.[1] });
     } else if (ext === "cs") {
       csharpScripts.push(file);
-    } else {
+    } else if (!external.has(file)) {
       const kind = ext === "scn" ? "binary_scene" : ext === "res" ? "binary_resource" : ASSET_KINDS[ext];
       if (kind) assets[kind] = (assets[kind] ?? 0) + 1;
     }
@@ -306,7 +411,29 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     shaders,
     assets,
     csharpScripts,
-    warnings: warnings.sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
+    ...(bases.length || listed.size ? { base: { roots: bases, files: external.size, ...(listed.size ? { listed: listed.size } : {}) } } : {}),
+    // A base project's own problems are not this project's.
+    warnings: warnings.filter((w) => !external.has(w.file.replace(/::.*$/, ""))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
-  return { root, files, map, scripts, sources, resources, uids };
+  return { root, files, map, scripts, sources, resources, uids, external };
+}
+
+/** Settings of a base project with the project's own on top; autoloads and input actions add up. */
+function mergeSettings(base: ProjectSettings, own: ProjectSettings): ProjectSettings {
+  const byName = <T extends { name: string }>(a: T[], b: T[]) => [...new Map([...a, ...b].map((x) => [x.name, x])).values()];
+  return {
+    ...own,
+    values: { ...base.values, ...own.values },
+    name: own.name ?? base.name,
+    description: own.description ?? base.description,
+    mainScene: own.mainScene ?? base.mainScene,
+    icon: own.icon ?? base.icon,
+    features: own.features.length ? own.features : base.features,
+    godotVersion: own.godotVersion ?? base.godotVersion,
+    renderer: own.renderer ?? base.renderer,
+    configVersion: own.configVersion ?? base.configVersion,
+    autoloads: byName(base.autoloads, own.autoloads),
+    inputActions: byName(base.inputActions, own.inputActions),
+    plugins: [...new Set([...base.plugins, ...own.plugins])],
+  };
 }

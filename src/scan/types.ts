@@ -35,6 +35,8 @@ export interface ConnectionInfo {
 }
 
 export interface SceneInfo {
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
   path: string;
   uid?: string;
   rootName?: string;
@@ -63,6 +65,8 @@ export interface VariableSummary {
 }
 
 export interface ScriptInfo {
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
   /** `res://` path, or `res://scene.tscn::Id` for a built-in script. */
   path: string;
   uid?: string;
@@ -81,6 +85,8 @@ export interface ScriptInfo {
 }
 
 export interface ResourceInfo {
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
   path: string;
   uid?: string;
   type?: string;
@@ -88,6 +94,8 @@ export interface ResourceInfo {
 }
 
 export interface ShaderInfo {
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
   path: string;
   shaderType?: string;
 }
@@ -111,5 +119,7 @@ export interface ProjectMap {
   /** Counts of other files by kind (texture, audio, model, ...). */
   assets: Record<string, number>;
   csharpScripts: string[];
+  /** Set when the project is laid over base projects (a mod over a game). */
+  base?: { roots: string[]; files: number; listed?: number };
   warnings: Warning[];
 }

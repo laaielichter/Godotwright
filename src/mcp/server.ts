@@ -24,6 +24,10 @@ export interface ServerOptions {
   tier?: Tier;
   /** Godot binary for godot_check. */
   godot?: string;
+  /** Base projects the project is laid over (a mod over a game). */
+  base?: string[];
+  /** File lists of the shipped game (e.g. a .pck manifest). */
+  baseFiles?: string[];
 }
 
 interface Profile {
@@ -107,7 +111,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       inputSchema: { path: pathParam, detail: detailParam },
       annotations: readOnly,
     },
-    async ({ path, detail }) => guard(() => text(formatProjectMap(scanProject(where(path)), detail ?? profile.detail))),
+    async ({ path, detail }) => guard(() => text(formatProjectMap(scanProject(where(path), { base: options.base, baseFiles: options.baseFiles }), detail ?? profile.detail))),
   );
 
   server.registerTool(
@@ -168,7 +172,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       guard(() => {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
         const target = file && !file.startsWith("res://") ? `res://${file.replace(/^\/+/, "")}` : file;
-        const report = reviewLearning(where(path), { overrides: code !== undefined && target ? { [target]: code } : undefined });
+        const report = reviewLearning(where(path), { base: options.base, baseFiles: options.baseFiles, overrides: code !== undefined && target ? { [target]: code } : undefined });
         const focus = [...(files ?? []), ...(target ? [target] : [])].map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`));
         return text(formatReviewFor(report, detail ?? profile.detail, profile, focus));
       }),
