@@ -52,8 +52,17 @@ describe("checkProject", () => {
         'ERROR: Failed to load script "res://scripts/broken.gd" with error "Parse error".',
         "   at: load (modules/gdscript/gdscript.cpp:2936)",
         "GODOTWRIGHT_END res://scripts/broken.gd",
+        "WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).",
+        "   at: cleanup (core/object/object.cpp:2600)",
+        "ERROR: 2 resources still in use at exit (run with --verbose for details).",
+        "   at: clear (core/io/resource.cpp:810)",
       ].join("\n"),
-      runLog: "SCRIPT ERROR: Out of bounds get index '3' (on base: 'Array[int]')\n   at: _ready (res://scripts/main.gd:7)\n",
+      runLog: [
+        "SCRIPT ERROR: Out of bounds get index '3' (on base: 'Array[int]')",
+        "   at: _ready (res://scripts/main.gd:7)",
+        "ERROR: 38 resources still in use at exit (run with --verbose for details).",
+        "   at: clear (core/io/resource.cpp:810)",
+      ].join("\n"),
     });
     const result = await checkProject(root, { godot, runFrames: 10 });
     expect(result.godotVersion).toBe("4.7.2.stable.official.fake");
@@ -73,6 +82,11 @@ describe("checkProject", () => {
         line: 7,
         message: "Out of bounds get index '3' (on base: 'Array[int]')",
         source: "script",
+      },
+      {
+        severity: "warning",
+        message: "at exit: 38 resources still in use at exit (run with --verbose for details).",
+        source: "run",
       },
     ]);
     expect(result.errors).toBe(2);

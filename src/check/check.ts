@@ -54,6 +54,10 @@ const NOISE = [
   /^Plugin is not attached to debugger\.?$/,
 ];
 
+/** Leak reports Godot prints when it exits. */
+const EXIT_LEAK =
+  /(ObjectDB instances? (were|was) leaked at exit|resources? still in use at exit|RIDs? of type .* (were|was) leaked|Pages in use exist at exit)/;
+
 const CHECKER_DIR = ".godot/godotwright";
 const CHECKER_RES = `res://${CHECKER_DIR}/check.gd`;
 
@@ -116,7 +120,8 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
       });
     }
     for (const d of parseGodotLog(result.stderr, "check")) {
-      if (d.file === CHECKER_RES) continue;
+      // The checker exits with resources still cached; those leaks are its own.
+      if (d.file === CHECKER_RES || EXIT_LEAK.test(d.message)) continue;
       if (d.source === "check" && d.file) d.source = d.file.endsWith(".gd") ? "script" : "scene";
       diagnostics.push(d);
     }
@@ -126,7 +131,14 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
 
   if (options.runFrames && options.runFrames > 0) {
     const result = await run("run", ["--quit-after", String(options.runFrames)]);
-    diagnostics.push(...parseGodotLog(result.stderr, "run"));
+    for (const d of parseGodotLog(result.stderr, "run")) {
+      // Stopping after N frames can leave objects alive; report leaks, but not as errors.
+      if (EXIT_LEAK.test(d.message)) {
+        d.severity = "warning";
+        d.message = `at exit: ${d.message}`;
+      }
+      diagnostics.push(d);
+    }
   }
 
   const clean = cleanup(diagnostics);
