@@ -1,0 +1,20 @@
+{
+  "task": "tool_button",
+  "mode": "without",
+  "model": "claude-sonnet-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 11,
+  "turns": 5,
+  "costUsd": 0.0362315,
+  "isError": false,
+  "result": "In `scripts/player.gd` I added an `@export_tool_button(\"Reset Health\")` that calls a new `reset_health()`, which sets `health = max_health`. I haven't run any of it, since Godot isn't installed here.\n\nThe button only works in a `@tool` script, so I added `@tool` to the top of the file. That makes the script run in the editor, so I added an `Engine.is_editor_hint()` early return in `_physics_process` to keep the player from moving there. `_ready()` still runs in the editor but only sets `health`,",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 3
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

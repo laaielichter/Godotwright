@@ -1,0 +1,20 @@
+{
+  "task": "tilemap_layer",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 8,
+  "turns": 4,
+  "costUsd": 0.0022461399999999998,
+  "isError": false,
+  "result": "Added `fill_rect` and `is_solid_at` to `scripts/level.gd`; `is_solid_at` converts through `Ground.to_local()` before `local_to_map()`, so the Ground's offset is respected. Not run, since Godot isn't installed here.",
+  "toolCalls": {
+    "Read": 2,
+    "Write": 1
+  },
+  "changed": [
+    "scripts/level.gd"
+  ],
+  "deleted": []
+}

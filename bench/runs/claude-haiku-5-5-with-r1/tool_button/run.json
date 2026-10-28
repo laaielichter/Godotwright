@@ -1,0 +1,23 @@
+{
+  "task": "tool_button",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 16,
+  "turns": 9,
+  "costUsd": 0.00502838,
+  "isError": false,
+  "result": "I added a \"Reset Health\" tool button to `scripts/player.gd` (`@export_tool_button`) that sets `health` to `max_health` and emits `health_changed`. I also added `@tool` and an `Engine.is_editor_hint()` guard so the button works in the editor without the player moving there. The godotwright review reports no errors; I could not run the game.",
+  "toolCalls": {
+    "Read": 1,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_api": 1,
+    "Edit": 4,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

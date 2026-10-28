@@ -1,0 +1,22 @@
+{
+  "task": "tilemap_layer",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 10,
+  "turns": 6,
+  "costUsd": 0.00332205,
+  "isError": false,
+  "result": "Added `fill_rect(area: Rect2i)` and `is_solid_at(world_position: Vector2)` to `scripts/level.gd`, with `is_solid_at` converting the position through `Ground` before looking up the cell. The godot_review check passes with 0 findings; I could not run the game.",
+  "toolCalls": {
+    "Read": 2,
+    "Write": 1,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "scripts/level.gd"
+  ],
+  "deleted": []
+}

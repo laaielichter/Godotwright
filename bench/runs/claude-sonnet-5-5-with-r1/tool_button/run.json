@@ -1,0 +1,20 @@
+{
+  "task": "tool_button",
+  "mode": "with",
+  "model": "claude-sonnet-5-5",
+  "tier": "premium",
+  "exitCode": 0,
+  "seconds": 11,
+  "turns": 5,
+  "costUsd": 0.0341462,
+  "isError": false,
+  "result": "In `scripts/player.gd` I added a \"Reset Health\" Inspector button using `@export_tool_button` (under a \"Debug\" group) that calls a new `reset_health()`, which sets `health` to `max_health` and emits `health_changed`. Tool buttons only work in `@tool` scripts, so I added `@tool` and an `Engine.is_editor_hint()` early return in `_physics_process`, so the player doesn't move in the editor. I haven't run any of this, since Godot isn't installed here.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 3
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

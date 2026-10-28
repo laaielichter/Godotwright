@@ -1,0 +1,20 @@
+{
+  "task": "line_of_sight",
+  "mode": "with",
+  "model": "claude-sonnet-5-5",
+  "tier": "premium",
+  "exitCode": 0,
+  "seconds": 8,
+  "turns": 3,
+  "costUsd": 0.025324,
+  "isError": false,
+  "result": "I added `has_line_of_sight(target)` to `scripts/enemy.gd`. It casts a ray from the enemy's global position to `target` on layer 1 only, excludes the enemy's own RID, and returns true when nothing is hit. I haven't run it, since Godot isn't installed here.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 1
+  },
+  "changed": [
+    "scripts/enemy.gd"
+  ],
+  "deleted": []
+}

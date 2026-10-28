@@ -1,0 +1,24 @@
+{
+  "task": "big_port",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 19,
+  "turns": 11,
+  "costUsd": 0.005500919999999999,
+  "isError": false,
+  "result": "Ported `scripts/hero.gd` to Godot 4.7: it now extends `CharacterBody2D` (matching the scene), uses `@export_range`, `@tool`, `await`, `Color.WHITE`, and the built-in `velocity`/`move_and_slide()`, and the godotwright review reports 0 errors.",
+  "toolCalls": {
+    "Read": 2,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_scan": 1,
+    "mcp__godotwright__godot_api": 4,
+    "Write": 1,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "scripts/hero.gd"
+  ],
+  "deleted": []
+}

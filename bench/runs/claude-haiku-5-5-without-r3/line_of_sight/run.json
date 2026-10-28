@@ -1,0 +1,21 @@
+{
+  "task": "line_of_sight",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 12,
+  "turns": 6,
+  "costUsd": 0.0038011300000000002,
+  "isError": false,
+  "result": "I added `has_line_of_sight(target: Vector2) -> bool` to `scripts/enemy.gd`. It casts a ray from `global_position` to `target` on collision mask 1 and excludes the enemy's own RID, returning true when the ray hits nothing. I couldn't run Godot here, so this is unverified.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 2,
+    "Grep": 2
+  },
+  "changed": [
+    "scripts/enemy.gd"
+  ],
+  "deleted": []
+}

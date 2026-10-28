@@ -1,0 +1,23 @@
+{
+  "task": "big_port",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 19,
+  "turns": 10,
+  "costUsd": 0.00587759,
+  "isError": false,
+  "result": "I ported `scripts/hero.gd` to Godot 4.7 (tool mode, CharacterBody2D base, `@export_range` speed, typed setter for `coins`, `move_and_slide()` without arguments, `await` for the flash timer). godot_review reports 0 errors for the file; I could not run the game.",
+  "toolCalls": {
+    "Read": 2,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_api": 3,
+    "mcp__godotwright__godot_review": 2,
+    "Write": 1
+  },
+  "changed": [
+    "scripts/hero.gd"
+  ],
+  "deleted": []
+}

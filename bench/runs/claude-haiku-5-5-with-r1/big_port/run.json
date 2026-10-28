@@ -1,0 +1,23 @@
+{
+  "task": "big_port",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 14,
+  "turns": 9,
+  "costUsd": 0.00478718,
+  "isError": false,
+  "result": "I ported `scripts/hero.gd` to Godot 4.7: `@tool`, `CharacterBody2D`, `@export_range(100, 600)` for `speed`, typed `@onready` nodes, a `coins` setter, `coins_changed.emit`, `await` in `collect`, and a parameterless `move_and_slide()`. The godot_review check reports 0 findings; I could not run the game here.",
+  "toolCalls": {
+    "Read": 2,
+    "ToolSearch": 1,
+    "mcp__godotwright__godot_api": 3,
+    "Write": 1,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "scripts/hero.gd"
+  ],
+  "deleted": []
+}
