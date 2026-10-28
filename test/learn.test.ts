@@ -139,6 +139,7 @@ describe("learning from real Godot checks", () => {
   it("does not judge when the check did not finish", () => {
     recordCheck(godot([], { timedOut: true, exitCode: null }), review);
     recordCheck(godot([{ severity: "error", message: "the checker did not finish", source: "check" }]), review);
+    recordCheck({ ...godot([]), scripts: 0 }, review);
     expect(readLearning().rules).toEqual({});
   });
 

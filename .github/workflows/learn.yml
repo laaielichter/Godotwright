@@ -1,0 +1,81 @@
+name: Learn
+
+# Learns from public projects for free: the official demos for Godot 4 and,
+# for real migration mistakes, the same demos written for Godot 3.
+# The result is data/learned.json, which ships with every release.
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: learn
+
+jobs:
+  learn:
+    name: Learn from public projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: "4.7.2"
+      - name: Check out Godot 4 demos
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot-demo-projects
+          ref: b761b4cd5718a7118f2c95eb55f181d0a5f004f1
+          path: public/godot4
+          sparse-checkout: |
+            2d/dodge_the_creeps
+            2d/platformer
+            2d/role_playing_game
+            2d/finite_state_machine
+            2d/kinematic_character
+            2d/physics_platformer
+            2d/pong
+            3d/platformer
+            3d/squash_the_creeps
+            3d/kinematic_character
+      - name: Check out Godot 3 demos
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot-demo-projects
+          ref: 3.x
+          path: public/godot3
+          sparse-checkout: |
+            2d/dodge_the_creeps
+            2d/platformer
+            2d/role_playing_game
+            2d/finite_state_machine
+            2d/kinematic_character
+            2d/physics_platformer
+            2d/pong
+            3d/platformer
+            3d/squash_the_creeps
+            3d/kinematic_character
+      - name: Learn
+        run: node dist/cli.js collector projects public/godot4/*/* public/godot3/*/* --out data/learned.json
+      - name: Show the result
+        run: cat data/learned.json
+      - run: npm test
+      - name: Commit when something changed
+        run: |
+          git config user.name laaielichter
+          git config user.email 314876474+laaielichter@users.noreply.github.com
+          git add data/learned.json
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -m "Update learned data from public projects"
+          git push origin HEAD:main

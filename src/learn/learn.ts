@@ -94,6 +94,8 @@ export function recordReview(report: Pick<ReviewReport, "findings">): void {
 export function recordCheck(check: CheckResult, review: Pick<ReviewReport, "findings">): void {
   if (!check.steps.some((s) => s.name === "check" && s.exitCode !== null && !s.timedOut)) return;
   if (check.diagnostics.some((d) => d.source === "check" && /checker did not finish/.test(d.message))) return;
+  // Godot loaded no script at all (e.g. it could not open the project): nothing to judge.
+  if (check.scripts === 0) return;
   const godotErrors = check.diagnostics.filter((d) => d.severity === "error" && d.file?.endsWith(".gd"));
   const errorsByFile = new Map<string, number[]>();
   for (const d of godotErrors) errorsByFile.set(d.file!, [...(errorsByFile.get(d.file!) ?? []), d.line ?? 0]);

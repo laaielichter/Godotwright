@@ -83,3 +83,4 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 9: Opt-in sharing (sends nothing until a collector is set up)
 - [x] Step 10: Collector (reference server; not hosted yet)
 - [x] Step 11: Shared knowledge (`data/learned.json`, empty until reports come in)
+- [x] Learning from public projects for free (weekly Learn workflow on the official demos)

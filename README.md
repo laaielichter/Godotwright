@@ -125,13 +125,17 @@ It is off by default, sends no code, file names, paths or project names, and
 respects `DO_NOT_TRACK`. See [PRIVACY.md](PRIVACY.md).
 Set `GODOTWRIGHT_HOME` to keep the file somewhere else.
 
-What many installs learned ships in `data/learned.json` (built by the collector,
-see below): API hints for common typos, and rules Godot keeps contradicting.
+Godotwright also learns for free from public projects: every week the Learn
+workflow reviews the official Godot demos, and the same demos written for Godot 3,
+checks them with real Godot, and records which rules Godot confirmed or
+contradicted. That, plus what opted-in installs share, ships in `data/learned.json`:
+API hints for common typos, and rules Godot keeps contradicting.
 What your own machine saw wins: one confirmation by Godot keeps a rule an error.
 
 For maintainers, `godotwright collector serve` accepts reports (checked again,
 stored without IP addresses), and `godotwright collector aggregate <dir> --out
 data/learned.json` sums them, keeping only what at least 3 installs reported.
+`godotwright collector projects <dirs...>` learns from public projects.
 
 ## Benchmark
 

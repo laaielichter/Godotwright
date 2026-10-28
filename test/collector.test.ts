@@ -5,12 +5,13 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { GodotApi } from "../src/api/api.js";
 import { aggregate, createCollector, readReports, safeTemplate, validateReport } from "../src/collector/collector.js";
+import { learnFromProjects } from "../src/collector/public.js";
 import { bundledLearning } from "../src/learn/bundled.js";
 import { adjustFindings, learnedHints, recordApiLookup, SHARED_DOWNGRADE_AFTER } from "../src/learn/learn.js";
 import { buildReport, maybeShare, setSharing, type ShareReport } from "../src/learn/share.js";
 import { emptyLearning, readLearning, resetLearning } from "../src/learn/store.js";
 import type { Finding } from "../src/review/rules.js";
-import { runCli } from "./helpers.js";
+import { DEMO, FIXTURES, runCli } from "./helpers.js";
 
 const api = GodotApi.load();
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -139,5 +140,27 @@ describe("aggregating", () => {
     const low = await runCli(["collector", "aggregate", dir, "--min-installs", "1"]);
     expect(JSON.parse(low.output).installs).toBe(3);
     expect(JSON.parse(low.output).apiHints).toEqual({ "Node2D.lookat": { "Node2D.look_at": 3 } });
+  });
+});
+
+describe("learning from public projects", () => {
+  it("reviews and checks each project as its own install, and leaves no state behind", async () => {
+    const home = process.env["GODOTWRIGHT_HOME"];
+    const seen: string[] = [];
+    // Fake Godot: on the second project (messy) it reports the Godot 3 `yield()` error, nothing else.
+    const check = async (path: string) => {
+      seen.push(path);
+      const diagnostics = seen.length === 2 ? [{ severity: "error" as const, file: "res://scripts/old_player.gd", line: 11, message: 'Parse Error: Function "yield" not found.', source: "script" }] : [];
+      return { godot: "godot", godotVersion: "4.7", scripts: 1, scenes: 0, diagnostics, steps: [{ name: "check", ms: 1, exitCode: 0, timedOut: false }], errors: diagnostics.length, warnings: 0 };
+    };
+    const logs: string[] = [];
+    const learned = await learnFromProjects([DEMO, `${FIXTURES}/messy`, "/no/such/dir"], { check, log: (l) => logs.push(l) });
+    expect(learned.installs).toBe(2);
+    expect(learned.rules["api/godot3-syntax"]).toMatchObject({ installs: 1 });
+    expect(learned.rules["api/godot3-syntax"]!.confirmed).toBeGreaterThan(0);
+    expect(learned.rules["api/unknown-member"]?.contradicted).toBeGreaterThan(0);
+    expect(logs.some((l) => l.startsWith("skip /no/such/dir"))).toBe(true);
+    expect(seen.every((p) => !p.startsWith(FIXTURES))).toBe(true);
+    expect(process.env["GODOTWRIGHT_HOME"]).toBe(home);
   });
 });
