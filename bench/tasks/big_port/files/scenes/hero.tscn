@@ -1,0 +1,38 @@
+[gd_scene load_steps=7 format=3 uid="uid://bbenchhero001"]
+
+[ext_resource type="Script" path="res://scripts/hero.gd" id="1_hero"]
+[ext_resource type="Texture2D" uid="uid://cicon00svg001" path="res://icon.svg" id="2_icon"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hero"]
+size = Vector2(40, 60)
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+length = 0.5
+loop_mode = 1
+
+[sub_resource type="Animation" id="Animation_run"]
+resource_name = "run"
+length = 0.5
+loop_mode = 1
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_hero"]
+_data = {
+&"idle": SubResource("Animation_idle"),
+&"run": SubResource("Animation_run")
+}
+
+[node name="Hero" type="CharacterBody2D"]
+script = ExtResource("1_hero")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+scale = Vector2(0.3, 0.45)
+texture = ExtResource("2_icon")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_hero")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_hero")
+}

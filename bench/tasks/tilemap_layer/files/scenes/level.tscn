@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://bbenchlevel01"]
+
+[ext_resource type="Script" path="res://scripts/level.gd" id="1_level"]
+[ext_resource type="TileSet" uid="uid://bbenchtiles01" path="res://resources/tiles.tres" id="2_tiles"]
+
+[node name="Level" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+position = Vector2(16, 8)
+tile_set = ExtResource("2_tiles")

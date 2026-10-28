@@ -1,0 +1,14 @@
+extends Node2D
+
+@onready var ground: TileMapLayer = $Ground
+
+
+func fill_rect(area: Rect2i) -> void:
+	for x: int in range(area.position.x, area.end.x):
+		for y: int in range(area.position.y, area.end.y):
+			ground.set_cell(Vector2i(x, y), 0, Vector2i(0, 0))
+
+
+func is_solid_at(world_position: Vector2) -> bool:
+	var cell: Vector2i = ground.local_to_map(ground.to_local(world_position))
+	return ground.get_cell_source_id(cell) != -1
