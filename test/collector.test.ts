@@ -124,8 +124,12 @@ describe("aggregating", () => {
     expect(adjustFindings([f], local, noisy).findings[0]!.severity).toBe("error");
   });
 
-  it("ships an empty, valid data/learned.json until there is data", () => {
-    expect(bundledLearning()).toEqual({ version: 1, installs: 0, apiHints: {}, rules: {}, missedByReview: {} });
+  it("ships a valid data/learned.json", () => {
+    const shipped = bundledLearning();
+    expect(shipped.version).toBe(1);
+    expect(Object.keys(shipped).sort()).toEqual(["apiHints", "installs", "missedByReview", "rules", "version"]);
+    for (const [rule, s] of Object.entries(shipped.rules)) expect(Object.keys(s).sort(), rule).toEqual(["confirmed", "contradicted", "dismissed", "installs", "reported"]);
+    for (const t of Object.keys(shipped.missedByReview)) expect(safeTemplate(t), t).toBe(true);
   });
 
   it("writes the result with the CLI", async () => {
