@@ -9,6 +9,7 @@ Offline Godot 4.7 API, a project map, headless checks and an AAA review of GDScr
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Godot-4.7-478cbf?logo=godotengine&logoColor=white" alt="Godot 4.7">
   <img src="https://img.shields.io/badge/MCP-server-6e56cf" alt="MCP server">
+  <a href="https://www.npmjs.com/package/godotwright"><img src="https://img.shields.io/npm/v/godotwright" alt="npm version"></a>
 </p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
@@ -27,12 +28,11 @@ are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a comp
 map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
-> Not on npm yet: `npx` installs it straight from GitHub.
 
 ## Quickstart
 
 ```sh
-npx -y github:laaielichter/godotwright review ~/games/my-game
+npx -y godotwright review ~/games/my-game
 ```
 
 You get a score from 0 to 100 for api, performance, quality and structure, and each
@@ -158,8 +158,6 @@ args = ["-y", "godotwright", "mcp", "--tier", "premium"]
 ```
 
 Run the agent from the Godot project folder (or pass `--project <path>`).
-Until the npm release, install straight from GitHub: use `npx -y github:laaielichter/godotwright mcp` as the command
-(it builds itself on install).
 CI connects both Claude Code and Codex to the server on every push.
 
 ## Learning
