@@ -1,7 +1,7 @@
 {
   "name": "godotwright",
   "version": "0.0.1",
-  "description": "AAA coding toolkit for Godot 4 that makes any coding agent better at Godot.",
+  "description": "MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4: offline Godot 4.7 API, project map, headless checks and an AAA GDScript review.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -31,16 +31,25 @@
   "keywords": [
     "godot",
     "godot4",
+    "godot-engine",
+    "gdscript",
     "gamedev",
     "mcp",
-    "agent",
+    "mcp-server",
+    "model-context-protocol",
+    "claude-code",
+    "codex",
+    "ai-agent",
+    "coding-agent",
+    "linter",
+    "code-review",
     "cli"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/laaielichter/godotwright.git"
   },
-  "homepage": "https://github.com/laaielichter/godotwright#readme",
+  "homepage": "https://laaielichter.github.io/Godotwright/",
   "bugs": {
     "url": "https://github.com/laaielichter/godotwright/issues"
   },

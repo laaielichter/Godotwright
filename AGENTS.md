@@ -49,6 +49,8 @@ node dist/cli.js --help
 - `src/index.ts`: public library exports.
 - `bench/`: the benchmark (tasks with Godot behavior tests, runner, grader).
   See `bench/README.md`. Task tests run in CI by the Bench workflow.
+- `docs/`: the GitHub Pages site (`index.html`, `demo.svg`, `og.png`), deployed by
+  the Pages workflow. Keep its claims in sync with the README.
 - `test/`: vitest tests, one file per area. `test/setup.ts` points
   `GODOTWRIGHT_HOME` at a temp dir, so tests never touch the real learning file. `test/fixtures/demo` is a small,
   valid Godot 4.7 project; keep it error-free. `test/fixtures/broken` has known errors.

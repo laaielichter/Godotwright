@@ -1,0 +1,29 @@
+name: Bug report
+description: A command or MCP tool does not work as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you run, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: A small Godot project or script that shows the problem helps most.
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "godotwright --version, Node.js version, Godot version"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output
+      render: shell

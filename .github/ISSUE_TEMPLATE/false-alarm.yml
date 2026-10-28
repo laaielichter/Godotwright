@@ -1,0 +1,26 @@
+name: Wrong review finding
+description: The review reports a problem that is not real, or misses one Godot reports
+labels: ["bug"]
+body:
+  - type: input
+    id: finding
+    attributes:
+      label: Finding line
+      description: The line from `godotwright review`, for example `res://player.gd:12: error [api/unknown-member] ...`
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code
+      description: The smallest GDScript or scene snippet that triggers it.
+      render: gdscript
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is wrong
+      description: For example, Godot 4.7 runs this code without errors.
+    validations:
+      required: true
