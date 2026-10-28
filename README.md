@@ -107,7 +107,7 @@ Godotwright learns from every use, on your machine:
 - **API lookups.** When a lookup finds nothing and the next one does, the next failed
   lookup of the same name says what it usually means.
 
-Nothing leaves your machine. The learning file (`godotwright learn` shows where) holds
+Nothing leaves your machine unless you say yes. The learning file (`godotwright learn` shows where) holds
 counters, rule names, API names and message templates without names or paths; findings
 marked as wrong are stored as hashes.
 
@@ -116,8 +116,13 @@ godotwright learn          # status: what was learned, where the file is
 godotwright learn off      # stop learning (or set GODOTWRIGHT_LEARN=0)
 godotwright learn on
 godotwright learn reset    # forget everything
+godotwright learn preview  # the exact report sharing would send
+godotwright learn share on # opt in: send anonymous counts once a day
 ```
 
+Sharing helps every user: what many installs learn ships with later releases.
+It is off by default, sends no code, file names, paths or project names, and
+respects `DO_NOT_TRACK`. See [PRIVACY.md](PRIVACY.md).
 Set `GODOTWRIGHT_HOME` to keep the file somewhere else.
 
 ## Benchmark

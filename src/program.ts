@@ -5,6 +5,7 @@ import { learnCommand } from "./commands/learn.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { reviewCommand } from "./commands/review.js";
 import { scanCommand } from "./commands/scan.js";
+import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
 
 export function createProgram(): Command {
@@ -21,5 +22,12 @@ export function createProgram(): Command {
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
     .addCommand(mcpCommand())
-    .addCommand(learnCommand());
+    .addCommand(learnCommand())
+    .hook("postAction", async (_program, action) => {
+      // The MCP server keeps running and shares on its own; learn commands manage sharing.
+      if (action.name() === "mcp" || action.parent?.name() === "learn") return;
+      const notice = takeShareNotice();
+      if (notice) process.stderr.write(`\n${notice}\n`);
+      await maybeShare();
+    });
 }

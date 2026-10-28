@@ -1,5 +1,7 @@
 import { Command } from "commander";
+import { GodotApi } from "../api/api.js";
 import { parseFindingLine, recordFeedback, type Verdict } from "../learn/learn.js";
+import { buildReport, setSharing, shareBlocked, shareEndpoint } from "../learn/share.js";
 import { learningFile, readLearning, resetLearning, updateLearning } from "../learn/store.js";
 import { writeOut } from "./output.js";
 
@@ -15,7 +17,8 @@ export function learnCommand(): Command {
       const lines = [
         `learning file: ${learningFile()}`,
         `local learning: ${data.enabled && process.env["GODOTWRIGHT_LEARN"] !== "0" ? "on" : "off"} (stays on this machine)`,
-        `sharing: ${data.sharing.enabled ? "on" : "off"} (opt-in)`,
+        `sharing: ${data.sharing.enabled ? "on" : "off"} (opt-in; godotwright learn share on|off)`,
+        ...(data.sharing.enabled ? [`  collector: ${shareEndpoint(data) || "none set up yet, nothing is sent"}`, `  last report: ${data.sharing.lastSentAt ?? "never"}`] : []),
         "",
         `rules seen: ${rules.length}`,
         ...rules.map(([rule, s]) => `  ${rule}: reported ${s.reported}, confirmed by Godot ${s.confirmed}, contradicted ${s.contradicted}, marked wrong ${s.dismissed}`),
@@ -44,8 +47,46 @@ export function learnCommand(): Command {
     });
 
   learn
+    .command("share")
+    .description("turn anonymous sharing on or off (default off)")
+    .argument("<state>", "on or off")
+    .action((state: string, _o: unknown, command: Command) => {
+      if (state !== "on" && state !== "off") throw new Error("state must be on or off");
+      const data = setSharing(state === "on");
+      if (state === "off") {
+        writeOut(command, "sharing is off; nothing is sent\n");
+        return;
+      }
+      const endpoint = shareEndpoint(data);
+      writeOut(
+        command,
+        [
+          "sharing is on. Thank you!",
+          "Once a day, Godotwright sends anonymous counts: which review rules Godot confirmed or",
+          "contradicted, mistyped Godot API names and what they meant, and Godot error templates",
+          "without names. Never code, file names, paths or project names.",
+          "See the next report with: godotwright learn preview",
+          endpoint ? `collector: ${endpoint}` : "No collector is set up in this version yet, so nothing is sent until one is.",
+          "",
+        ].join("\n"),
+      );
+    });
+
+  learn
+    .command("preview")
+    .description("show exactly what sharing would send next")
+    .action((_o: unknown, command: Command) => {
+      const data = readLearning();
+      const built = buildReport(data, GodotApi.load());
+      const blocked = shareBlocked(data);
+      const lines = [blocked ? `not sent now: ${blocked}` : `next report goes to ${shareEndpoint(data)}`];
+      lines.push(built ? JSON.stringify(built.report, null, 2) : "nothing new to send");
+      writeOut(command, `${lines.join("\n")}\n`);
+    });
+
+  learn
     .command("reset")
-    .description("forget everything learned on this machine")
+    .description("forget everything learned on this machine (sharing goes back to off)")
     .action((_o: unknown, command: Command) => {
       resetLearning();
       writeOut(command, `deleted ${learningFile()}\n`);

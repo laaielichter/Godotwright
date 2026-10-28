@@ -39,7 +39,8 @@ node dist/cli.js --help
 - `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles.
 - `src/learn/`: local learning. `store.ts` reads and writes the learning file,
   `learn.ts` turns reviews, checks, lookups and feedback into counters and applies
-  them, `hooks.ts` is what the CLI and MCP server call. Learning must never break a
+  them, `hooks.ts` is what the CLI and MCP server call, `share.ts` builds and
+  sends the opt-in anonymous report (see `PRIVACY.md`; keep it in sync). Learning must never break a
   tool, and must never store code, names or paths.
 - `src/version.ts`: package version and the Godot target version.
 - `src/index.ts`: public library exports.

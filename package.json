@@ -15,7 +15,8 @@
   },
   "files": [
     "dist",
-    "data"
+    "data",
+    "PRIVACY.md"
   ],
   "engines": {
     "node": ">=22.12.0"
