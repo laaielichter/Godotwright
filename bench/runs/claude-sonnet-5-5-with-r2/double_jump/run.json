@@ -1,0 +1,20 @@
+{
+  "task": "double_jump",
+  "mode": "with",
+  "model": "claude-sonnet-5-5",
+  "tier": "premium",
+  "exitCode": 0,
+  "seconds": 7,
+  "turns": 4,
+  "costUsd": 0.0292457,
+  "isError": false,
+  "result": "I added a double jump to `scripts/player.gd`: pressing jump in the air now uses a `has_double_jump` flag for one extra jump at the same `JUMP_VELOCITY`, and landing resets it. I couldn't run the game here, so it's untested.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 2
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

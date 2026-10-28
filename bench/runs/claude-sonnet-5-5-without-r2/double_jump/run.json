@@ -1,0 +1,20 @@
+{
+  "task": "double_jump",
+  "mode": "without",
+  "model": "claude-sonnet-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 7,
+  "turns": 4,
+  "costUsd": 0.02694,
+  "isError": false,
+  "result": "I added a `has_double_jump` flag to `player.gd` that allows one extra mid-air jump at `JUMP_VELOCITY` and resets whenever the player is on the floor. The floor jump is unchanged. I couldn't run the game, so this is untested.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 2
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

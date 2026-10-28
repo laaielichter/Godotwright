@@ -1,0 +1,20 @@
+{
+  "task": "double_jump",
+  "mode": "with",
+  "model": "claude-sonnet-5-5",
+  "tier": "premium",
+  "exitCode": 0,
+  "seconds": 8,
+  "turns": 5,
+  "costUsd": 0.0315197,
+  "isError": false,
+  "result": "I added a double jump to `scripts/player.gd`: one extra mid-air jump at `JUMP_VELOCITY` that refills on landing, with the floor jump unchanged. I couldn't run the game, so none of it has been tested.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 3
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

@@ -1,0 +1,20 @@
+{
+  "task": "double_jump",
+  "mode": "without",
+  "model": "claude-sonnet-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 7,
+  "turns": 4,
+  "costUsd": 0.027658499999999996,
+  "isError": false,
+  "result": "I added a `has_double_jump` flag to `res://scripts/player.gd`. It is refilled whenever the player is on the floor, and one mid-air jump with the same `JUMP_VELOCITY` spends it. The normal floor jump is unchanged. I couldn't run the game, so none of this has been tested.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 2
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}

@@ -1,0 +1,20 @@
+{
+  "task": "double_jump",
+  "mode": "without",
+  "model": "claude-sonnet-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 8,
+  "turns": 4,
+  "costUsd": 0.164881,
+  "isError": false,
+  "result": "I added a `has_double_jump` flag to `scripts/player.gd`. It lets the player jump once more in the air with the same `JUMP_VELOCITY`, and landing on the floor gives it back. The normal floor jump is unchanged. I couldn't run the game here, so this is untested.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 2
+  },
+  "changed": [
+    "scripts/player.gd"
+  ],
+  "deleted": []
+}
