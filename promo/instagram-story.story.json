@@ -1,0 +1,182 @@
+{
+  "version": "aes.story/1",
+  "name": "Godotwright - Instagram Story",
+  "deliver": "vertical-share",
+  "size": "1080",
+  "safeArea": "story",
+  "fps": 30,
+  "music": {
+    "bpm": 120,
+    "style": "synthwave",
+    "mood": "epic",
+    "seed": 7
+  },
+  "style": {
+    "accent": "#478cbf",
+    "accent2": "#f5c66b",
+    "ink": "#e3e8ef",
+    "muted": "#9aa6b6",
+    "panel": "#262c35",
+    "background": {
+      "from": "#1d2229",
+      "to": "#0d1015"
+    },
+    "grain": true,
+    "grid": true,
+    "glow": true
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "kind": "title",
+      "beats": 4,
+      "lines": [
+        "Your AI",
+        "still writes",
+        "*Godot 3.*"
+      ],
+      "stagger": 0.75
+    },
+    {
+      "id": "bad",
+      "kind": "terminal",
+      "beats": 8,
+      "title": "messy-project",
+      "command": "godotwright review .",
+      "output": [
+        "overall: 50/100",
+        "api: 15 errors",
+        "error: KinematicBody2D",
+        "  \u2192 CharacterBody2D",
+        "error: export var",
+        "  \u2192 @export var",
+        "error: no signal \"clicked\""
+      ],
+      "transition": "cut"
+    },
+    {
+      "id": "meet",
+      "kind": "title",
+      "beats": 6,
+      "lines": [
+        "Meet",
+        "*Godotwright.*"
+      ],
+      "sub": "The Godot 4 co-pilot for AI agents",
+      "transition": "fadewhite"
+    },
+    {
+      "id": "api",
+      "kind": "counter",
+      "beats": 4,
+      "to": 1078,
+      "title": "Real API. Zero guesses.",
+      "label": "Godot 4.7 classes",
+      "sub": "bundled offline",
+      "transition": "cut"
+    },
+    {
+      "id": "typed",
+      "kind": "counter",
+      "beats": 6,
+      "to": 100,
+      "suffix": "%",
+      "title": "AAA code. Every run.",
+      "label": "fully typed GDScript",
+      "sub": "84 of 84 agent runs",
+      "sourceNote": "Godotwright bench \u00b7 168 runs \u00b7 Godot 4.7.2",
+      "transition": "cut"
+    },
+    {
+      "id": "any",
+      "kind": "chips",
+      "beats": 8,
+      "title": "Plug into\n*any AI.*",
+      "items": [
+        "Anthropic",
+        "OpenAI",
+        "Google",
+        "Claude Code",
+        "Codex",
+        "Gemini CLI",
+        "Cursor",
+        "any MCP agent"
+      ],
+      "footer": "One MCP server. Every model.",
+      "transition": "fadeblack"
+    },
+    {
+      "id": "big",
+      "kind": "title",
+      "beats": 4,
+      "lines": [
+        "Stop guessing.",
+        "*Ship Godot 4.*"
+      ],
+      "transition": "fadewhite"
+    },
+    {
+      "id": "end",
+      "kind": "card/end",
+      "beats": 8,
+      "title": "Godotwright",
+      "tagline": "Free \u00b7 Open source\n*MCP + CLI for Godot 4*",
+      "cta": "npx github:laaielichter/godotwright",
+      "url": "github.com/laaielichter/godotwright",
+      "logo": "/ABSOLUTE/PATH/TO/logo-512.png",
+      "transition": "fadeblack"
+    }
+  ],
+  "drops": [
+    {
+      "event": "meet.in"
+    },
+    {
+      "event": "big.in"
+    }
+  ],
+  "sfx": [
+    {
+      "kind": "riser",
+      "at": {
+        "beat": 8
+      }
+    },
+    {
+      "kind": "hit",
+      "at": {
+        "event": "meet.in"
+      }
+    },
+    {
+      "kind": "whoosh",
+      "at": {
+        "event": "api.in"
+      }
+    },
+    {
+      "kind": "click",
+      "at": {
+        "event": "typed.done"
+      }
+    },
+    {
+      "kind": "whoosh",
+      "at": {
+        "event": "any.in"
+      }
+    },
+    {
+      "kind": "hit",
+      "at": {
+        "event": "big.in"
+      }
+    },
+    {
+      "kind": "pop",
+      "at": {
+        "event": "end.cta"
+      }
+    }
+  ]
+}
