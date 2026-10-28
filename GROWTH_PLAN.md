@@ -45,8 +45,7 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
    - Topics: `godot godot4 gdscript gamedev godot-engine mcp mcp-server claude-code codex ai-agents linter static-analysis`
 2. ~~**Pages**~~: done, the site is live.
 3. **Social preview**: Settings > General > Social preview > upload `docs/og.png`.
-4. **Discussions**: Settings > General > Features > Discussions. Then add a
-   `contact_links` entry to `.github/ISSUE_TEMPLATE/config.yml`.
+4. ~~**Discussions**~~: done, linked from the issue forms.
 5. **npm**: `npm publish` (name `godotwright` was free on 28 Oct; check again).
    Then switch README and site to the `npx -y godotwright mcp` commands.
 6. **Release v0.1.0** on GitHub with short notes (what each command does).
