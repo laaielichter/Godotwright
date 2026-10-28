@@ -1,0 +1,52 @@
+{
+  "name": "godotwright",
+  "version": "0.0.1",
+  "description": "AAA coding toolkit for Godot 4 that makes any coding agent better at Godot.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "godotwright": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "keywords": [
+    "godot",
+    "godot4",
+    "gamedev",
+    "mcp",
+    "agent",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laaielichter/godotwright.git"
+  },
+  "homepage": "https://github.com/laaielichter/godotwright#readme",
+  "bugs": {
+    "url": "https://github.com/laaielichter/godotwright/issues"
+  },
+  "dependencies": {
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
