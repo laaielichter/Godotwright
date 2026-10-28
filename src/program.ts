@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { checkCommand } from "./commands/check.js";
 import { scanCommand } from "./commands/scan.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
 
@@ -11,5 +12,6 @@ export function createProgram(): Command {
     .version(VERSION, "-v, --version", "print the version")
     .helpOption("-h, --help", "show help")
     .showHelpAfterError()
-    .addCommand(scanCommand());
+    .addCommand(scanCommand())
+    .addCommand(checkCommand());
 }

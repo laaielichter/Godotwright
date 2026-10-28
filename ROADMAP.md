@@ -57,7 +57,7 @@ Each step is small and has a clear "done" check.
 - [x] Design and roadmap
 - [x] Step 1: Skeleton
 - [x] Step 2: Project scan
-- [ ] Step 3: Real checks
+- [x] Step 3: Real checks
 - [ ] Step 4: API knowledge
 - [ ] Step 5: AAA review
 - [ ] Step 6: MCP server

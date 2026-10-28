@@ -28,10 +28,14 @@ node dist/cli.js --help
   .tscn/.tres, GDScript outline). No I/O in here.
 - `src/project/`: finding the project root and listing its files.
 - `src/scan/`: builds the project map and formats it (brief, full, JSON).
+- `src/check/`: runs Godot headless (import, checker script, optional run) and
+  turns its output into diagnostics.
 - `src/version.ts`: package version and the Godot target version.
 - `src/index.ts`: public library exports.
 - `test/`: vitest tests, one file per area. `test/fixtures/demo` is a small,
-  valid Godot 4.7 project; keep it error-free.
+  valid Godot 4.7 project; keep it error-free. `test/fixtures/broken` has known errors.
+- `test/integration/`: tests that need a real Godot binary in `$GODOT`
+  (and `$GODOT_DEMOS` for the official demo projects). CI runs them.
 
 ## Conventions
 
