@@ -51,6 +51,7 @@ const NOISE = [
   /^--- GDScript language server started/,
   /editor_layout\.cfg/,
   /^Detected \d+ monitors?/,
+  /^Plugin is not attached to debugger\.?$/,
 ];
 
 const CHECKER_DIR = ".godot/godotwright";
@@ -146,14 +147,29 @@ function tail(text: string): string {
   return text.trim().split(/\r?\n/).slice(-3).join(" | ").slice(0, 400) || "(none)";
 }
 
-/** Drops noise and repeats, and follow-up errors that only restate a script error. */
+const MENTIONED_PATH = /res:\/\/[^\s'"()]+[^\s'"().,:;]/g;
+
+/**
+ * Drops noise and repeats, so each root cause is reported once:
+ * - follow-up errors that only restate a script error,
+ * - vaguer reports of a missing file that Godot also reported with a line.
+ */
 export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
   const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message)));
   const scriptErrors = new Set(kept.filter((d) => d.source === "script" && d.line).map((d) => d.file));
+  const located = new Set<string>();
+  for (const d of kept) {
+    if (d.severity === "error" && d.line && d.source !== "scan") {
+      for (const path of d.message.match(MENTIONED_PATH) ?? []) located.add(path);
+    }
+  }
   const seen = new Set<string>();
   return kept.filter((d) => {
     const restated = /^Failed to load script "(.+?)" with error/.exec(d.message);
     if (restated && scriptErrors.has(restated[1])) return false;
+    const paths = d.message.match(MENTIONED_PATH) ?? [];
+    const vague = d.source === "scan" || !d.line;
+    if (vague && paths.length > 0 && paths.every((p) => located.has(p))) return false;
     const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
     if (seen.has(key)) return false;
     seen.add(key);

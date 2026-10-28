@@ -81,8 +81,9 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
         diag.line = Number(inMessage[2]);
         diag.message = message.replace(`${inMessage[0]} - `, "").replace(inMessage[0], "").trim() || message;
       } else {
+        // Inside a checker block the file being loaded is the one to fix.
         const path = RES_PATH.exec(message);
-        if (path) diag.file = path[1];
+        if (path && !current) diag.file = path[1];
       }
       pending = { diag, hasProjectLocation: inMessage !== null };
       continue;
@@ -92,7 +93,8 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
     const location = AT.exec(line) ?? FRAME.exec(line);
     if (location) {
       const file = location[2]!;
-      if (file.startsWith("res://") && !pending.hasProjectLocation) {
+      // Frames in res://.godot/ belong to Godotwright's own checker, not the project.
+      if (file.startsWith("res://") && !file.startsWith("res://.godot/") && !pending.hasProjectLocation) {
         pending.diag.file = file;
         pending.diag.line = Number(location[3]);
         pending.hasProjectLocation = true;

@@ -61,7 +61,21 @@ jobs:
           mv "$file" godot
           rm "$file.zip"
       - run: ~/godot/godot --headless --version
+      - name: Check out official demo projects
+        uses: actions/checkout@v5
+        with:
+          repository: godotengine/godot-demo-projects
+          ref: b761b4cd5718a7118f2c95eb55f181d0a5f004f1
+          path: demos
+          sparse-checkout: |
+            2d/dodge_the_creeps
+            2d/platformer
+            2d/role_playing_game
+            2d/finite_state_machine
+            3d/platformer
+            3d/squash_the_creeps
       - name: Integration tests
         run: npx vitest run test/integration
         env:
           GODOT: /home/runner/godot/godot
+          GODOT_DEMOS: ${{ github.workspace }}/demos

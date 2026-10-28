@@ -2,6 +2,50 @@ import { describe, expect, it } from "vitest";
 import { cleanup } from "../src/check/check.js";
 import { formatDiagnostic, parseGodotLog } from "../src/check/log.js";
 
+describe("parseGodotLog on real Godot 4.7.2 output", () => {
+  const check = [
+    "GODOTWRIGHT_BEGIN res://scripts/broken.gd",
+    'SCRIPT ERROR: Parse Error: Identifier "undefined_name" not declared in the current scope.',
+    "          at: GDScript::reload (res://scripts/broken.gd:5)",
+    "          GDScript backtrace (most recent call first):",
+    "              [0] _initialize (res://.godot/godotwright/check.gd:14)",
+    'ERROR: Failed to load script "res://scripts/broken.gd" with error "Parse error".',
+    "   at: load (modules/gdscript/gdscript_resource_format.cpp:46)",
+    "   GDScript backtrace (most recent call first):",
+    "       [0] _initialize (res://.godot/godotwright/check.gd:14)",
+    "GODOTWRIGHT_END res://scripts/broken.gd",
+    "GODOTWRIGHT_BEGIN res://main.tscn",
+    "ERROR: Resource file not found: res://missing.png (expected type: Texture2D)",
+    "   at: _load (core/io/resource_loader.cpp:325)",
+    "   GDScript backtrace (most recent call first):",
+    "       [0] _initialize (res://.godot/godotwright/check.gd:18)",
+    "ERROR: res://main.tscn:10 - Parse Error: [ext_resource] referenced non-existent resource at: res://missing.png.",
+    "   at: _printerr (scene/resources/resource_format_text.cpp:41)",
+    "   GDScript backtrace (most recent call first):",
+    "       [0] _initialize (res://.godot/godotwright/check.gd:18)",
+    "GODOTWRIGHT_END res://main.tscn",
+    "GODOTWRIGHT_DONE 3 1",
+  ].join("\n");
+  const importLog = [
+    "ERROR: Failed loading resource: res://missing.png.",
+    "   at: _load (core/io/resource_loader.cpp:317)",
+    "ERROR: Plugin is not attached to debugger.",
+    "   at: is_active (editor/debugger/editor_debugger_plugin.cpp:102)",
+  ].join("\n");
+
+  it("reports one diagnostic per root cause", () => {
+    const all = cleanup([
+      { severity: "warning", file: "res://main.tscn", line: 4, message: "missing Texture2D: res://missing.png", source: "scan" },
+      ...parseGodotLog(importLog, "import"),
+      ...parseGodotLog(check, "check"),
+    ]);
+    expect(all.map(formatDiagnostic)).toEqual([
+      'res://scripts/broken.gd:5: error: Parse Error: Identifier "undefined_name" not declared in the current scope.',
+      "res://main.tscn:10: error: Parse Error: [ext_resource] referenced non-existent resource at: res://missing.png.",
+    ]);
+  });
+});
+
 describe("parseGodotLog", () => {
   it("reads script parse errors with file and line", () => {
     const log = [
