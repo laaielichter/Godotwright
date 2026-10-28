@@ -25,7 +25,9 @@ const SNAKE_FILE = /^[a-z0-9_]+(\.[a-z0-9_]+)*$/;
 
 export function checkStructure(pm: ProjectModel): Finding[] {
   const out: Finding[] = [];
-  const { map, files, root } = pm.data;
+  const { map, root } = pm.data;
+  // Only this project's own files: a base project's layout is not this project's (see LoadOptions.base).
+  const files = pm.data.files.filter((f) => !pm.data.external.has(f));
 
   // Broken references found while scanning.
   for (const w of map.warnings) out.push(finding("structure/broken-reference", w.file, w.line, w.message));

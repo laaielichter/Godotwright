@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 /** Directories Godot never treats as project content. */
@@ -22,14 +22,30 @@ export function findProjectRoot(start: string): string | undefined {
 /** Lists project files as `res://` paths, sorted, skipping ignored directories. */
 export function listProjectFiles(root: string): string[] {
   const out: string[] = [];
+  const seen = new Set<string>();
   const walk = (dir: string) => {
+    // Symlinked folders are followed (Godot does too); each real folder once, so a link loop ends.
+    const real = realpathSync(dir);
+    if (seen.has(real)) return;
+    seen.add(real);
     const entries = readdirSync(dir, { withFileTypes: true });
     if (dir !== root && entries.some((e) => e.name === ".gdignore" && e.isFile())) return;
     for (const entry of entries) {
       const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
+      let isDir = entry.isDirectory();
+      let isFile = entry.isFile();
+      if (entry.isSymbolicLink()) {
+        try {
+          const st = statSync(full);
+          isDir = st.isDirectory();
+          isFile = st.isFile();
+        } catch {
+          continue; // broken link
+        }
+      }
+      if (isDir) {
         if (!SKIP_DIRS.has(entry.name)) walk(full);
-      } else if (entry.isFile()) {
+      } else if (isFile) {
         out.push(toResPath(root, full));
       }
     }

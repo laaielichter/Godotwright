@@ -216,3 +216,26 @@ describe("super(...)", () => {
     expect(reviewProject(root).findings.filter((f) => f.file === "res://a.gd" && f.severity !== "info").map(formatFinding)).toEqual([]);
   });
 });
+
+describe("project files", () => {
+  it("follows symlinked folders, once per real folder", async () => {
+    const { symlinkSync, mkdirSync } = await import("node:fs");
+    const shared = makeProject({ "lib/tool.gd": "extends Node\n" });
+    const root = makeProject({ "project.godot": '[application]\nconfig/name="T"\n' });
+    mkdirSync(join(root, "addons_src"));
+    symlinkSync(join(shared, "lib"), join(root, "lib"), "dir");
+    symlinkSync(root, join(root, "addons_src", "loop"), "dir");   // a loop must not hang
+    symlinkSync(join(root, "nope"), join(root, "broken"), "dir");
+    const files = loadProject(root).files;
+    expect(files).toContain("res://lib/tool.gd");
+    expect(files.filter((f) => f.endsWith("tool.gd"))).toHaveLength(1);
+  });
+
+  it("judges only the project's own files for layout rules", () => {
+    const { game, mod } = gameAndMod();
+    for (let i = 0; i < 30; i++) writeFileSync(join(game, `Clutter${i}.txt`), "x");
+    const rules = reviewProject(mod, { base: [game] }).findings.map((f) => f.rule);
+    expect(rules).not.toContain("structure/root-clutter");
+    expect(rules).not.toContain("structure/file-naming");
+  });
+});
