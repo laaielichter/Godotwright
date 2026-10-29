@@ -32,6 +32,7 @@ import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
+import { TestRunError, formatTests, runTests, testsPassed } from "../test/run.js";
 import { SceneError, editScene, formatScenePlan, type SceneEdit } from "../scene/edit.js";
 import { SettingsError, editProjectSettings, formatSettingsPlan, type SettingsEdit } from "../settings/edit.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
@@ -93,6 +94,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
+      "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
@@ -422,6 +424,40 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return failure(`${error.message}\nUse godot_review for checks without Godot.`);
         }
         return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_test",
+    {
+      title: "Run the unit tests",
+      description:
+        "Run the project's GUT or GdUnit4 tests in Godot 4.7 headless and return only the totals and the failing tests, each with res://file:line and the failure message, plus script errors from the run. Use it after a change to see whether the tests still pass. Needs Godot on this machine and GUT (res://addons/gut) or GdUnit4 (res://addons/gdUnit4) in the project.",
+      inputSchema: {
+        path: pathParam,
+        framework: z.enum(["gut", "gdunit"]).optional().describe("which framework (default: whichever is installed)"),
+        dirs: z.array(z.string()).optional().describe("test folders or scripts as res:// paths (default: the framework's config, else res://test and res://tests)"),
+        filter: z.string().optional().describe("GUT only: run only tests whose name contains this text"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout of the run (default 600)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, framework, dirs, filter, timeout_seconds }) => {
+      try {
+        const report = await runTests(where(path), {
+          godot: options.godot,
+          ...(framework ? { framework } : {}),
+          ...(dirs?.length ? { paths: dirs } : {}),
+          ...(filter ? { filter } : {}),
+          timeoutMs: (timeout_seconds ?? 600) * 1000,
+        });
+        const body = formatTests(report);
+        return testsPassed(report) ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof TestRunError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );

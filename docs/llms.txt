@@ -32,6 +32,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright project set <key> <value>`, `project input add <action> --key Space --joy-button A`, `project autoload add <Name> <res://file>` (godot_project_edit with op set, unset, input_add, input_remove, autoload_add, autoload_remove): changes project.godot with checks, touching only that entry. Dry run first, `--write` (write: true) applies.
 
+## Unit tests
+
+`godotwright test [path]` (godot_test): runs the project's GUT or GdUnit4 tests headless and returns the totals and only the failing tests with res://file:line and message. Needs Godot and GUT or GdUnit4 in res://addons.
+
 ## Scene edits
 
 `godotwright scene add|remove|set|connect|disconnect|script <scene.tscn> ...` (godot_scene_edit with op add_node, remove_node, set, connect, disconnect, attach_script): changes a scene with checks against Godot 4.7 and the node's script, touching only those lines. Node paths are relative to the root ("."). Dry run first, `--write` (write: true) applies.
