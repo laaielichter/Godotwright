@@ -164,4 +164,11 @@ describe("outlineScript", () => {
       ["level", "@export_range (0, 10)"],
     ]);
   });
+
+  it("strips single quotes from extends and icon paths", () => {
+    const quoted = outlineScript("@icon('res://x.svg')\nclass_name Q extends 'res://base.gd'\n");
+    expect(quoted.icon).toBe("res://x.svg");
+    expect(quoted.extends).toBe("res://base.gd");
+    expect(outlineScript("extends 'res://base.gd'\n").extends).toBe("res://base.gd");
+  });
 });
