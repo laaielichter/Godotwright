@@ -217,6 +217,25 @@ describe("model contract", () => {
     expect(() => loadContract(`${root}/missing.json`)).toThrow(/not found/);
   });
 
+  it("refuses a value of the wrong type, instead of crashing or silently ignoring it", () => {
+    const loads = (contract: object) => () => loadContract(makeProject({ "c.json": JSON.stringify({ version: 1, ...contract }) }) + "/c.json");
+    expect(loads({ lowestY: null })).toThrow(ModelError);
+    expect(loads({ lowestY: null })).toThrow(/"lowestY" must be an object/);
+    expect(loads({ size: 5 })).toThrow(/"size" must be an object/);
+    expect(loads({ size: { x: null } })).toThrow(/"size.x" must be an object/);
+    expect(loads({ size: { X: { value: 2 } } })).toThrow(/unknown axis "X"/);
+    expect(loads({ size: { x: { value: "2" } } })).toThrow(/needs a finite numeric "value"/);
+    expect(loads({ size: { x: { value: 2, tolerance: -1 } } })).toThrow(/"tolerance"/);
+    expect(loads({ ordered: "yes" })).toThrow(/"ordered" must be true or false/);
+    expect(loads({ exact: 1 })).toThrow(/"exact" must be true or false/);
+    expect(loads({ maxTriangles: "many" })).toThrow(/"maxTriangles" must be a number/);
+  });
+
+  it("loads a contract with every field as the checker expects it", () => {
+    const file = contractFile({ nodes: ["Body"], ordered: true, exact: false, size: { x: { value: 2, tolerance: 0.1, source: "spec" } }, lowestY: { value: 0 }, maxTriangles: 100 });
+    expect(loadContract(file)).toMatchObject({ version: 1, maxTriangles: 100, size: { x: { value: 2 } } });
+  });
+
   it("works from the command line", async () => {
     const path = named(["Body"]);
     const made = await runCli(["model", "contract", path]);
