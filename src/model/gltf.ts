@@ -111,15 +111,26 @@ function loadText(file: string, data: Buffer, dir: string): LoadedGltf {
   return { file, bytes: data.length, json, buffers, dir };
 }
 
+const LISTS = ["nodes", "meshes", "accessors", "bufferViews", "buffers", "images", "textures", "materials", "scenes"] as const;
+
 function parseJson(file: string, text: string): Gltf {
+  let parsed: unknown;
   try {
-    const json = JSON.parse(text) as Gltf;
-    if (!json.asset?.version?.startsWith("2")) throw new ModelError(`${file}: not a glTF 2.0 file`);
-    return json;
+    parsed = JSON.parse(text);
   } catch (error) {
-    if (error instanceof ModelError) throw error;
     throw new ModelError(`${file}: invalid glTF JSON (${(error as Error).message})`);
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new ModelError(`${file}: not a glTF 2.0 file`);
+  const json = parsed as Gltf;
+  if (typeof json.asset?.version !== "string" || !json.asset.version.startsWith("2")) throw new ModelError(`${file}: not a glTF 2.0 file`);
+  // The lists are read by index all over the reader, so a list that is not one, or holds a non-object, fails here by name.
+  for (const key of LISTS) {
+    const list: unknown = (json as Record<string, unknown>)[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) throw new ModelError(`${file}: "${key}" must be a list`);
+    if (list.some((entry) => typeof entry !== "object" || entry === null)) throw new ModelError(`${file}: "${key}" must be a list of objects`);
+  }
+  return json;
 }
 
 function resolveBuffer(file: string, uri: string | undefined, dir: string): Buffer {

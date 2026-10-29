@@ -1,4 +1,4 @@
-import { type Gltf, type GltfMaterial, type GltfPrimitive, type LoadedGltf, ModelError, loadGltf, readAccessor, readUri } from "./gltf.js";
+import { type Gltf, type GltfMaterial, type GltfPrimitive, type LoadedGltf, ModelError, isIndex, loadGltf, readAccessor, readUri } from "./gltf.js";
 import { imageSize } from "./images.js";
 import { at } from "./num.js";
 
@@ -144,7 +144,8 @@ function readTextures(model: LoadedGltf): TextureInfo[] {
     if (image?.bufferView !== undefined) {
       const view = model.json.bufferViews?.[image.bufferView];
       const buffer = view && model.buffers[view.buffer];
-      if (view && buffer) bytes = buffer.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength);
+      if (!view || !buffer) throw new ModelError(`${model.file}: image ${t.source} points at a missing buffer view or buffer`);
+      bytes = buffer.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength);
     } else if (image?.uri) bytes = readUri(model.file, image.uri, model.dir);
     const size = bytes && imageSize(bytes);
     return {
@@ -181,9 +182,12 @@ export function inspectModel(file: string): ModelInfo {
     if (node.mesh !== undefined) {
       const mesh = json.meshes?.[node.mesh];
       if (!mesh) throw new ModelError(`${file}: mesh ${node.mesh} does not exist`);
-      for (const prim of mesh.primitives) {
-        const posIndex = prim.attributes.POSITION;
-        if (posIndex === undefined) continue;
+      if (!Array.isArray(mesh.primitives)) throw new ModelError(`${file}: mesh ${node.mesh} has no primitive list`);
+      for (const [p, prim] of mesh.primitives.entries()) {
+        const attributes = prim?.attributes;
+        if (typeof attributes !== "object" || attributes === null) throw new ModelError(`${file}: primitive ${p} of mesh ${node.mesh} has no attributes`);
+        const posIndex = attributes.POSITION;
+        if (!isIndex(posIndex)) throw new ModelError(`${file}: primitive ${p} of mesh ${node.mesh} has no POSITION`);
         const pos = readAccessor(model, posIndex);
         const indices = triangleIndices(model, prim, pos.count);
         let uvOutOfRange = false;
@@ -205,10 +209,13 @@ export function inspectModel(file: string): ModelInfo {
       }
     }
     nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: scaleOf(world), mirrored: determinant3(world) < 0, origin: [at(world, 12), at(world, 13), at(world, 14)] });
+    if (node.children !== undefined && !Array.isArray(node.children)) throw new ModelError(`${file}: node ${index} children must be a list`);
     for (const child of node.children ?? []) walk(child, world, path, depth + 1);
   };
 
+  if (json.scene !== undefined && !json.scenes?.[json.scene]) throw new ModelError(`${file}: scene ${json.scene} does not exist`);
   const roots = json.scenes?.[json.scene ?? 0]?.nodes ?? [];
+  if (!Array.isArray(roots)) throw new ModelError(`${file}: the scene's nodes must be a list`);
   for (const root of roots) walk(root, identity(), "", 0);
 
   const hasBounds = Number.isFinite(min[0]);

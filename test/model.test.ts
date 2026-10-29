@@ -334,6 +334,36 @@ describe("model accessors", () => {
   });
 });
 
+describe("model malformed files", () => {
+  /** Expects the error to be a ModelError that says `message`, so the user sees the file and the cause. */
+  const refuses = (path: string, message: RegExp) => {
+    expect(() => inspectModel(path)).toThrow(ModelError);
+    expect(() => inspectModel(path)).toThrow(message);
+  };
+
+  it("names the file and the broken part, instead of a bare TypeError", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.meshes[0].primitives = "nope"; }), /mesh 0 has no primitive list/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { delete j.meshes[0].primitives[0].attributes; }), /primitive 0 of mesh 0 has no attributes/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { delete j.meshes[0].primitives[0].attributes.POSITION; }), /primitive 0 of mesh 0 has no POSITION/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.nodes[0].children = 5; }), /node 0 children must be a list/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.buffers = "x"; }), /"buffers" must be a list/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.materials = [null]; }), /"materials" must be a list of objects/);
+  });
+
+  it("refuses a scene that does not exist, instead of drawing nothing", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.scene = 5; }), /scene 5 does not exist/);
+  });
+
+  it("refuses an image that points at a missing buffer view", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0].bufferView = 99; }), /image 0 points at a missing buffer view/);
+  });
+
+  it("says the file is not glTF when the JSON is not an object", () => {
+    const root = makeProject({ "null.gltf": "null" });
+    expect(() => loadGltf(`${root}/null.gltf`)).toThrow(/not a glTF 2.0 file/);
+  });
+});
+
 describe("model files outside the model's folder", () => {
   /** A one-triangle .gltf whose only buffer has the given uri. */
   const gltfWith = (uri: string) =>
