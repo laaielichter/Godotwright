@@ -106,6 +106,39 @@ export interface Lake {
 
 const lakes = new WeakMap<Params, Lake | null>();
 
+/**
+ * The lowest ground height on the rim of a lake. The ring is sampled at eight points per wave the grid can show (the shortest
+ * wave is the smaller of the feature size and four grid steps, see fbm), so every dip is found. Each dip is then refined to its
+ * true lowest point, because on steep ground the samples alone can miss by metres.
+ */
+function lowestOnRim(p: Params, x: number, z: number, radius: number): number {
+  const feature = p["featureSize"] as number, size = p["tileSize"] as number;
+  const spacing = Math.min(feature / 8, size / (Number(p["resolution"]) - 1) / 2);
+  const n = Math.max(8, Math.ceil((2 * Math.PI * radius) / spacing));
+  const angle = (2 * Math.PI) / n;
+  const ground = (a: number): number => baseHeight(p, x + radius * Math.cos(a), z + radius * Math.sin(a));
+  const sampled = Array.from({ length: n }, (_, k) => ground(k * angle));
+  const phi = (Math.sqrt(5) - 1) / 2;
+  let rim = Infinity;
+  for (let k = 0; k < n; k++) {
+    const h = sampled[k] as number;
+    if (h > (sampled[(k + n - 1) % n] as number) || h > (sampled[(k + 1) % n] as number)) continue;
+    // Golden-section search between the two neighbours of this dip.
+    let lo = (k - 1) * angle, hi = (k + 1) * angle;
+    let c = hi - phi * (hi - lo), d = lo + phi * (hi - lo);
+    let fc = ground(c), fd = ground(d);
+    for (let i = 0; i < 30; i++) {
+      if (fc < fd) {
+        hi = d; d = c; fd = fc; c = hi - phi * (hi - lo); fc = ground(c);
+      } else {
+        lo = c; c = d; fc = fd; d = lo + phi * (hi - lo); fd = ground(d);
+      }
+    }
+    rim = Math.min(rim, h, fc, fd);
+  }
+  return rim;
+}
+
 /** The lake of these parameters, if there is one. Its water level is half a metre under the lowest point of its rim, so the water never spills. */
 export function lakeOf(p: Params): Lake | undefined {
   const known = lakes.get(p);
@@ -114,12 +147,7 @@ export function lakeOf(p: Params): Lake | undefined {
   let lake: Lake | null = null;
   if (radius > 0) {
     const x = p["lakeX"] as number, z = p["lakeZ"] as number;
-    let rim = Infinity;
-    for (let k = 0; k < 32; k++) {
-      const a = (k / 32) * Math.PI * 2;
-      rim = Math.min(rim, baseHeight(p, x + radius * Math.cos(a), z + radius * Math.sin(a)));
-    }
-    lake = { x, z, radius, depth: p["lakeDepth"] as number, level: rim - 0.5 };
+    lake = { x, z, radius, depth: p["lakeDepth"] as number, level: lowestOnRim(p, x, z, radius) - 0.5 };
   }
   lakes.set(p, lake);
   return lake ?? undefined;

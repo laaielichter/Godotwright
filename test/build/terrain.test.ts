@@ -129,6 +129,26 @@ describe("a lake in the terrain", () => {
     }
   });
 
+  it("sits half a metre under the lowest point of the rim, found on a dense reference ring", () => {
+    const cases = [
+      { relief: "hills", lakeRadius: 300, seed: 1, tileSize: 256, resolution: "129" },
+      { relief: "mountains", lakeRadius: 300, seed: 1, tileSize: 256, resolution: "129" },
+      { relief: "hills", lakeRadius: 400, seed: 5, tileSize: 1024, resolution: "33", featureSize: 20, maxHeight: 300 },
+    ];
+    for (const input of cases) {
+      const p = resolveParams(TERRAIN_PARAMS, input, "terrain");
+      const ground = resolveParams(TERRAIN_PARAMS, { ...input, lakeRadius: 0 }, "terrain");
+      const lake = lakeOf(p)!;
+      let lowest = Infinity;
+      for (let k = 0; k < 20000; k++) {
+        const a = (k / 20000) * Math.PI * 2;
+        lowest = Math.min(lowest, terrainHeight(ground, lake.x + lake.radius * Math.cos(a), lake.z + lake.radius * Math.sin(a)));
+      }
+      expect(lake.level, JSON.stringify(input)).toBeGreaterThan(lowest - 0.6);
+      expect(lake.level, JSON.stringify(input)).toBeLessThan(lowest - 0.4);
+    }
+  });
+
   it("digs a basin: the ground at the centre is below the water, by about the depth", () => {
     const p = resolveParams(TERRAIN_PARAMS, lakeInput, "terrain");
     const lake = lakeOf(p)!;
