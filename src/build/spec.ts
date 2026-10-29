@@ -6,7 +6,7 @@ import { BuildError, resolveParams, type ParamDef } from "./params.js";
 import { box, cylinder, ellipsoid, extrude, lathe, ringSurface, roof } from "./shapes.js";
 
 /** Limits that keep a spec from running away (a mistake or a hostile file). */
-export const LIMITS = { nodes: 5000, repeat: 500, triangles: 3_000_000, points: 256, sections: 200, segments: 128 };
+export const LIMITS = { nodes: 5000, depth: 100, repeat: 500, triangles: 3_000_000, points: 256, sections: 200, segments: 128 };
 
 type Obj = Record<string, unknown>;
 
@@ -26,6 +26,8 @@ interface Ctx {
   material?: string;
   materials: Record<string, Material>;
   counters: { nodes: number; triangles: number };
+  /** Nesting level of the node being built: top-level nodes are 1. */
+  depth: number;
 }
 
 function isObj(v: unknown): v is Obj {
@@ -246,6 +248,8 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
   if (!isObj(raw)) throw new BuildError(`${path}: expected an object`);
   const name = raw["name"];
   if (typeof name !== "string" || name === "") throw new BuildError(`${path}: every node needs a "name"`);
+  const depth = parent.depth + 1;
+  if (depth > LIMITS.depth) throw new BuildError(`${path}: nested too deeply (max ${LIMITS.depth} levels)`);
   spendNodes(parent.counters, 1, path);
 
   const scope: Scope = { ...parent.scope };
@@ -253,7 +257,7 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
     if (!isObj(raw["vars"])) throw new BuildError(`${path}.vars: expected an object`);
     for (const [k, v] of Object.entries(raw["vars"])) scope[k] = num(v, scope, `${path}.vars.${k}`);
   }
-  const ctx: Ctx = { ...parent, scope, ...(typeof raw["material"] === "string" ? { material: raw["material"] } : {}) };
+  const ctx: Ctx = { ...parent, scope, depth, ...(typeof raw["material"] === "string" ? { material: raw["material"] } : {}) };
 
   const repeat = raw["repeat"];
   let count = 1;
@@ -393,7 +397,7 @@ export function buildSpec(raw: unknown, overrides: Record<string, unknown> = {})
   if (raw["version"] !== 1) throw new BuildError('the spec needs "version": 1');
   const { scope } = readParams(raw["params"], overrides);
   const materials = readMaterials(raw["materials"]);
-  const ctx: Ctx = { scope, materials, counters: { nodes: 0, triangles: 0 } };
+  const ctx: Ctx = { scope, materials, counters: { nodes: 0, triangles: 0 }, depth: 0 };
   const roots = list(raw["nodes"], "nodes", LIMITS.nodes).flatMap((n, i) => buildNodes(n, ctx, `nodes[${i}]`));
   assertUnique(roots, "nodes");
   if (raw["archetype"] !== undefined && typeof raw["archetype"] !== "string") throw new BuildError('"archetype" must be an archetype id such as "vehicle.wheeled.car"');

@@ -203,6 +203,17 @@ describe("mistakes get a path and a reason", () => {
     }
   });
 
+  it("refuses nesting deeper than the limit, with a path, before the stack runs out", () => {
+    const chain = (levels: number): object => {
+      let node: object = solid({ name: "Leaf" });
+      for (let k = 1; k < levels; k++) node = { name: `N${k}`, children: [node] };
+      return node;
+    };
+    expect(() => buildSpec(spec([chain(LIMITS.depth)]))).not.toThrow();
+    expect(() => buildSpec(spec([chain(LIMITS.depth + 1)]))).toThrow(/nodes\[0\]\.children\[0\].*: nested too deeply \(max 100 levels\)/);
+    expect(() => buildSpec(spec([chain(3000)]))).toThrow(/nested too deeply/);
+  });
+
   it("counts mirror copies against the node and triangle limits", () => {
     // 500 pairs of 6 nodes is 3,000 nodes; mirrored, it is 6,000.
     const pair = { name: "Pair{i}", repeat: { count: 500, step: [2, 0, 0] }, mirror: "Twin{i}", children: [1, 2, 3, 4, 5].map((k) => solid({ name: `P${k}` })) };
