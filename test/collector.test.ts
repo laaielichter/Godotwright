@@ -50,6 +50,15 @@ describe("checking reports again on the collector", () => {
       report(1, { apiMisses: { "res://player.gd": { count: 1, resolved: {} } } }),
       report(1, { apiMisses: { "Node2D.lookat": { count: 1, resolved: { "a b": 1 } } } }),
       report(1, { rules: { "My Rule": { reported: 1, confirmed: 0, contradicted: 0, dismissed: 0 } } }),
+      report(1, { rules: { "api/made-up": { reported: 1, confirmed: 0, contradicted: 0, dismissed: 0 } } }),
+      // Same checks as the client: no identifiers of a project in a template, no bare names or unrelated answers in misses.
+      report(1, { missedByReview: { "Function mySceneName not found in base Node": 1 } }),
+      report(1, { missedByReview: { 'Identifier "<s>" not declared near Player2': 1 } }),
+      report(1, { unparsed: { "Cannot open <path> Smith": 1 } }),
+      report(1, { apiMisses: { Level: { count: 1, resolved: {} } } }),
+      report(1, { apiMisses: { "Enemy.take_damage": { count: 1, resolved: { "Enemy.take_damage": 1 } } } }),
+      report(1, { apiMisses: { "Node2D.lookat": { count: 1, resolved: { "Node2D.visible": 1 } } } }),
+      report(1, { apiMisses: { "Node2D.lookat": { count: 1, resolved: { "Nope.nothing": 1 } } } }),
       report(1, { rules: { "api/unknown-member": { reported: -1, confirmed: 0, contradicted: 0, dismissed: 0 } } }),
       { ...report(1), schema: 2 },
       "text",
@@ -57,6 +66,8 @@ describe("checking reports again on the collector", () => {
     ];
     for (const b of bad) expect(validateReport(b), JSON.stringify(b)).toBeUndefined();
     expect(safeTemplate('Identifier "<s>" not declared at <path>')).toBe(true);
+    expect(safeTemplate("Function <id> not found in base <id>")).toBe(true);
+    expect(safeTemplate("Function mySceneName not found in base Node")).toBe(false);
   });
 });
 
