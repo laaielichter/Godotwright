@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildGlb, type BuildScene } from "../../src/build/glb.js";
 import { MeshBuilder, cross, dot, type V3 } from "../../src/build/mesh.js";
+import { tempFolder } from "../helpers.js";
 
 /** Signed volume of every closed shell in a mesh (positive when the faces point outwards). */
 export function volume(mesh: MeshBuilder, material?: string): number {
@@ -27,7 +27,7 @@ export function sha(buffer: Buffer): string {
 
 /** Writes a scene as a .glb in a temp folder and returns the path. */
 export function writeScene(scene: BuildScene): string {
-  const path = join(mkdtempSync(join(tmpdir(), "godotwright-build-")), "model.glb");
+  const path = join(tempFolder("godotwright-build-"), "model.glb");
   writeFileSync(path, buildGlb(scene));
   return path;
 }
