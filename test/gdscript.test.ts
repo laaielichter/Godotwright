@@ -206,4 +206,23 @@ describe("outlineScript", () => {
       { path: "res://d.tres", kind: "load", line: 4 },
     ]);
   });
+
+  it("reads Unicode identifiers for functions, variables, constants and signals", () => {
+    const script = outlineScript(
+      [
+        "func größe(höhe: int) -> void:",
+        "\tvar lokal := 1",
+        "\tprint(lokal, höhe)",
+        "",
+        "var café := 2",
+        "var 変数 := 3",
+        "const π := 3.14",
+        "signal ñ",
+      ].join("\n"),
+    );
+    expect(script.functions.map((f) => [f.name, f.params.map((p) => p.name)])).toEqual([["größe", ["höhe"]]]);
+    expect(script.variables.map((v) => v.name)).toEqual(["café", "変数"]);
+    expect(script.constants.map((c) => c.name)).toEqual(["π"]);
+    expect(script.signals.map((s) => s.name)).toEqual(["ñ"]);
+  });
 });
