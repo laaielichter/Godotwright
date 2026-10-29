@@ -24,7 +24,7 @@ const GODOT3_SYNTAX: [RegExp, string][] = [
 ];
 
 /** Godot 3 members that moved to another class in Godot 4. */
-const MOVED: Record<string, string> = {
+export const MOVED: Record<string, string> = {
   "OS.get_ticks_msec": "Time.get_ticks_msec()",
   "OS.get_ticks_usec": "Time.get_ticks_usec()",
   "OS.get_unix_time": "Time.get_unix_time_from_system()",

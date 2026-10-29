@@ -1,0 +1,373 @@
+{
+ "version": 1,
+ "name": "dragon",
+ "archetype": "creature.dragon",
+ "description": "A four-legged dragon: a long body, a neck rising to a horned head with a hinged jaw, two wings hinged at the shoulders, four legs and a long tapering tail; every moving part a node with its pivot at its joint. Head towards +Z, feet on y = 0.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 12,
+   "min": 4,
+   "max": 30,
+   "description": "Length from the nose to the tip of the tail, in metres."
+  },
+  {
+   "name": "wingSpan",
+   "type": "number",
+   "default": 0.6,
+   "min": 0.35,
+   "max": 0.9,
+   "description": "Length of one wing as a fraction of the length."
+  }
+ ],
+ "materials": {
+  "scales": {
+   "color": [
+    0.18,
+    0.35,
+    0.2,
+    1
+   ],
+   "metallic": 0.1,
+   "roughness": 0.55
+  },
+  "membrane": {
+   "color": [
+    0.35,
+    0.2,
+    0.15,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.7
+  },
+  "horn": {
+   "color": [
+    0.85,
+    0.8,
+    0.68,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "Dragon",
+   "material": "scales",
+   "vars": {
+    "L": "$length",
+    "lg": "$length * 0.1",
+    "by": "$length * 0.18",
+    "rl": "$length * 0.03",
+    "sp": "$length * $wingSpan"
+   },
+   "children": [
+    {
+     "name": "Body",
+     "shape": "ellipsoid",
+     "segments": 20,
+     "radii": [
+      "$L * 0.095",
+      "$L * 0.09",
+      "$L * 0.22"
+     ],
+     "at": [
+      0,
+      "$by",
+      0
+     ]
+    },
+    {
+     "name": "Neck",
+     "shape": "cylinder",
+     "radius": "$L * 0.035",
+     "segments": 14,
+     "height": "hypot(($by + $L * 0.2) - ($by + $L * 0.03), ($L * 0.3) - ($L * 0.15))",
+     "at": [
+      0,
+      "(($by + $L * 0.03) + ($by + $L * 0.2)) / 2",
+      "(($L * 0.15) + ($L * 0.3)) / 2"
+     ],
+     "rotate": [
+      "deg(atan2(($L * 0.3) - ($L * 0.15), ($by + $L * 0.2) - ($by + $L * 0.03)))",
+      0,
+      0
+     ]
+    },
+    {
+     "name": "Head",
+     "at": [
+      0,
+      "$by + $L * 0.18",
+      "$L * 0.25"
+     ],
+     "children": [
+      {
+       "name": "Skull",
+       "shape": "ellipsoid",
+       "segments": 16,
+       "radii": [
+        "$L * 0.035",
+        "$L * 0.03",
+        "$L * 0.07"
+       ],
+       "offset": [
+        0,
+        "$L * 0.03",
+        "$L * 0.10"
+       ]
+      },
+      {
+       "name": "Jaw",
+       "at": [
+        0,
+        "$L * 0.012",
+        "$L * 0.05"
+       ],
+       "children": [
+        {
+         "name": "Mandible",
+         "shape": "box",
+         "size": [
+          "$L * 0.045",
+          "$L * 0.014",
+          "$L * 0.1"
+         ],
+         "offset": [
+          0,
+          "-$L * 0.007",
+          "$L * 0.05"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Horn_L",
+       "shape": "lathe",
+       "material": "horn",
+       "segments": 8,
+       "at": [
+        "$L * 0.02",
+        "$L * 0.05",
+        "$L * 0.05"
+       ],
+       "rotate": [
+        -55,
+        0,
+        0
+       ],
+       "profile": [
+        [
+         "$L * 0.01",
+         0
+        ],
+        [
+         0,
+         "$L * 0.06"
+        ]
+       ],
+       "mirror": "Horn_R"
+      }
+     ]
+    },
+    {
+     "name": "Leg_FL",
+     "at": [
+      "$L * 0.06 + $rl * 2",
+      "$lg + $L * 0.05",
+      "$L * 0.13"
+     ],
+     "children": [
+      {
+       "name": "Bone",
+       "shape": "cylinder",
+       "radius": "$rl",
+       "height": "$lg + $L * 0.05",
+       "segments": 12,
+       "offset": [
+        "-($rl)",
+        "-($lg + $L * 0.05) / 2",
+        0
+       ]
+      }
+     ],
+     "mirror": "Leg_FR"
+    },
+    {
+     "name": "Leg_BL",
+     "at": [
+      "$L * 0.06 + $rl * 2",
+      "$lg + $L * 0.05",
+      "-$L * 0.13"
+     ],
+     "children": [
+      {
+       "name": "Bone",
+       "shape": "cylinder",
+       "radius": "$rl",
+       "height": "$lg + $L * 0.05",
+       "segments": 12,
+       "offset": [
+        "-($rl)",
+        "-($lg + $L * 0.05) / 2",
+        0
+       ]
+      }
+     ],
+     "mirror": "Leg_BR"
+    },
+    {
+     "name": "Tail",
+     "at": [
+      0,
+      "$by + $L * 0.04",
+      "-$L * 0.17"
+     ],
+     "children": [
+      {
+       "name": "Spine",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": "-$L * 0.000",
+         "superellipse": {
+          "width": "$L * 0.1000",
+          "height": "$L * 0.0900",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0450"
+         }
+        },
+        {
+         "z": "-$L * 0.070",
+         "superellipse": {
+          "width": "$L * 0.0853",
+          "height": "$L * 0.0768",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0384"
+         }
+        },
+        {
+         "z": "-$L * 0.140",
+         "superellipse": {
+          "width": "$L * 0.0707",
+          "height": "$L * 0.0636",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0318"
+         }
+        },
+        {
+         "z": "-$L * 0.210",
+         "superellipse": {
+          "width": "$L * 0.0560",
+          "height": "$L * 0.0504",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0252"
+         }
+        },
+        {
+         "z": "-$L * 0.280",
+         "superellipse": {
+          "width": "$L * 0.0413",
+          "height": "$L * 0.0372",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0186"
+         }
+        },
+        {
+         "z": "-$L * 0.350",
+         "superellipse": {
+          "width": "$L * 0.0267",
+          "height": "$L * 0.0240",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0120"
+         }
+        },
+        {
+         "z": "-$L * 0.420",
+         "superellipse": {
+          "width": "$L * 0.0120",
+          "height": "$L * 0.0108",
+          "n": 2.2,
+          "count": 16,
+          "cy": "-$L * 0.0054"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Wing_L",
+     "at": [
+      "$L * 0.05",
+      "$by + $L * 0.06",
+      "$L * 0.08"
+     ],
+     "rotate": [
+      0,
+      0,
+      18
+     ],
+     "mirror": "Wing_R",
+     "children": [
+      {
+       "name": "Membrane",
+       "shape": "extrude",
+       "material": "membrane",
+       "y0": "-$L * 0.003",
+       "y1": "$L * 0.003",
+       "plan": [
+        [
+         0,
+         0
+        ],
+        [
+         "$sp",
+         "$L * 0.04"
+        ],
+        [
+         "$sp * 0.75",
+         "-$L * 0.18"
+        ],
+        [
+         "$sp * 0.45",
+         "-$L * 0.12"
+        ],
+        [
+         "$sp * 0.2",
+         "-$L * 0.16"
+        ],
+        [
+         0,
+         "-$L * 0.1"
+        ]
+       ]
+      },
+      {
+       "name": "Arm",
+       "shape": "cylinder",
+       "axis": "x",
+       "radius": "$L * 0.008",
+       "height": "$sp",
+       "segments": 8,
+       "offset": [
+        "$sp / 2",
+        0,
+        "$L * 0.02"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

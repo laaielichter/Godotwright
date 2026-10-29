@@ -1,0 +1,227 @@
+{
+ "version": 1,
+ "name": "rocket",
+ "archetype": "spacecraft.rocket",
+ "description": "A two-stage launch rocket standing upright on its engines: a ring of nozzle bells, four fins at the base, a first and a second stage and an ogive nose cone.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 45,
+   "min": 15,
+   "max": 110,
+   "description": "Height in metres, engines to the tip of the nose cone."
+  },
+  {
+   "name": "diameter",
+   "type": "number",
+   "default": 3.7,
+   "min": 1.2,
+   "max": 10,
+   "description": "Diameter of the stages in metres."
+  },
+  {
+   "name": "engines",
+   "type": "integer",
+   "default": 5,
+   "min": 1,
+   "max": 9,
+   "description": "Number of engines in the ring at the base."
+  }
+ ],
+ "materials": {
+  "rocket_white": {
+   "color": [
+    0.92,
+    0.92,
+    0.9,
+    1
+   ],
+   "metallic": 0.1,
+   "roughness": 0.45
+  },
+  "rocket_dark": {
+   "color": [
+    0.08,
+    0.08,
+    0.09,
+    1
+   ],
+   "metallic": 0.2,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "Rocket",
+   "material": "rocket_white",
+   "vars": {
+    "H": "$height",
+    "R": "$diameter / 2",
+    "hE": "$diameter * 0.45",
+    "er": "$diameter / 2 * min(0.35, 0.9 / $engines + 0.05)",
+    "ring": "min(1, $engines - 1) * $diameter / 2 * 0.55",
+    "s1": "$height * 0.6",
+    "s2": "$height * 0.25"
+   },
+   "children": [
+    {
+     "name": "Engines",
+     "material": "metal",
+     "children": [
+      {
+       "name": "Engine_{i}",
+       "shape": "lathe",
+       "segments": 16,
+       "at": [
+        "$ring",
+        0,
+        0
+       ],
+       "repeat": {
+        "count": "$engines",
+        "around": "y",
+        "phase": 90
+       },
+       "profile": [
+        [
+         "$er",
+         0
+        ],
+        [
+         "$er * 0.75",
+         "$hE * 0.45"
+        ],
+        [
+         "$er * 0.42",
+         "$hE * 0.85"
+        ],
+        [
+         "$er * 0.5",
+         "$hE"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Stage_1",
+     "shape": "lathe",
+     "segments": 32,
+     "profile": [
+      [
+       "$R * 0.9",
+       "$hE * 0.9"
+      ],
+      [
+       "$R",
+       "$hE * 1.1"
+      ],
+      [
+       "$R",
+       "$hE + $s1"
+      ]
+     ]
+    },
+    {
+     "name": "Interstage",
+     "shape": "cylinder",
+     "material": "rocket_dark",
+     "radius": "$R * 1.001",
+     "height": "$H * 0.03",
+     "segments": 32,
+     "at": [
+      0,
+      "$hE + $s1 + $H * 0.015",
+      0
+     ]
+    },
+    {
+     "name": "Stage_2",
+     "shape": "cylinder",
+     "radius": "$R",
+     "height": "$s2",
+     "segments": 32,
+     "at": [
+      0,
+      "$hE + $s1 + $H * 0.03 + $s2 / 2",
+      0
+     ]
+    },
+    {
+     "name": "NoseCone",
+     "shape": "lathe",
+     "segments": 32,
+     "at": [
+      0,
+      "$hE + $s1 + $H * 0.03 + $s2",
+      0
+     ],
+     "profile": [
+      [
+       "$R",
+       0
+      ],
+      [
+       "$R * 0.92",
+       "($H - $hE - $s1 - $H * 0.03 - $s2) * 0.35"
+      ],
+      [
+       "$R * 0.62",
+       "($H - $hE - $s1 - $H * 0.03 - $s2) * 0.7"
+      ],
+      [
+       0,
+       "$H - $hE - $s1 - $H * 0.03 - $s2"
+      ]
+     ]
+    },
+    {
+     "name": "Fins",
+     "material": "rocket_dark",
+     "children": [
+      {
+       "name": "Fin_{i}",
+       "shape": "extrude",
+       "at": [
+        "$R * 0.98",
+        0,
+        0
+       ],
+       "rotate": [
+        90,
+        0,
+        0
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "y",
+        "phase": 45
+       },
+       "plan": [
+        [
+         0,
+         "-$hE * 0.9"
+        ],
+        [
+         "$R * 0.7",
+         "-$hE * 0.9"
+        ],
+        [
+         "$R * 0.7",
+         "-$hE * 1.6"
+        ],
+        [
+         0,
+         "-$hE * 3.4"
+        ]
+       ],
+       "y0": -0.06,
+       "y1": 0.06
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

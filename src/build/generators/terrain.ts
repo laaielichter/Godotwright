@@ -1,7 +1,7 @@
 import type { Material } from "../materials.js";
 import type { BuildNode, BuildScene } from "../glb.js";
 import { MeshBuilder, normalize, type V3 } from "../mesh.js";
-import type { ParamDef, Params } from "../params.js";
+import { BuildError, type ParamDef, type Params } from "../params.js";
 import type { Generator } from "./index.js";
 
 /** Gradient noise on an integer lattice. Only + - * and a table lookup, so every platform gives the same numbers. */
@@ -64,6 +64,12 @@ export const TERRAIN_PARAMS: ParamDef[] = [
   { name: "lakeX", type: "number", default: 0, min: -100000, max: 100000, description: "World x of the lake centre in metres." },
   { name: "lakeZ", type: "number", default: 0, min: -100000, max: 100000, description: "World z of the lake centre in metres." },
   { name: "lakeDepth", type: "number", default: 4, min: 0.5, max: 100, description: "How deep the lake is below its water level at the centre, in metres." },
+  { name: "riverWidth", type: "number", default: 0, min: 0, max: 200, description: "Width of the river channel in metres (the banks reach out to 1.5 times this from the centre line); 0 means no river, otherwise at least 2. The river flows towards +z." },
+  { name: "riverX", type: "number", default: 0, min: -100000, max: 100000, description: "World x where the river starts, in metres." },
+  { name: "riverZ", type: "number", default: -400, min: -100000, max: 100000, description: "World z where the river starts, in metres." },
+  { name: "riverLength", type: "number", default: 800, min: 50, max: 20000, description: "Length of the river along z in metres." },
+  { name: "riverDepth", type: "number", default: 2, min: 0.3, max: 20, description: "Depth of the water in metres." },
+  { name: "meander", type: "number", default: 20, min: 0, max: 150, description: "How far the river winds sideways, in metres." },
 ];
 
 /** The ground height before a lake is carved, in metres above sea level. */
@@ -153,19 +159,86 @@ export function lakeOf(p: Params): Lake | undefined {
   return lake ?? undefined;
 }
 
+export interface River {
+  /** Where the river starts and ends along z. */
+  z0: number;
+  z1: number;
+  width: number;
+  depth: number;
+  /** World x of the centre line at a given z. */
+  centre(z: number): number;
+  /** Height of the water surface at a given z: it never rises along the flow. */
+  level(z: number): number;
+}
+
+const rivers = new WeakMap<Params, River | null>();
+const RIVER_STEP = 4;
+
 /**
- * The ground height at a world position, in metres above sea level, with the lake basin carved in.
- * The same function serves every tile, which is what makes borders match, also across a lake.
+ * The river of these parameters, if there is one. It flows towards +z along a winding line.
+ * Its bed follows the lowest ground across the river and then never rises, so water always runs downhill and always lies
+ * below the ground beside it.
+ */
+export function riverOf(p: Params): River | undefined {
+  const known = rivers.get(p);
+  if (known !== undefined) return known ?? undefined;
+  const width = p["riverWidth"] as number;
+  let river: River | null = null;
+  if (width > 0) {
+    if (width < 2) throw new BuildError(`terrain: parameter "riverWidth" must be 0 (no river) or at least 2 m, got ${width}`);
+    const x0 = p["riverX"] as number, z0 = p["riverZ"] as number, length = p["riverLength"] as number;
+    const meander = p["meander"] as number, seed = p["seed"] as number;
+    const centre = (z: number): number => x0 + meander * noise2(z / 150, 0.37, seed + 99);
+    const count = Math.ceil(length / RIVER_STEP);
+    const bed = new Float64Array(count + 1);
+    for (let k = 0; k <= count; k++) {
+      const z = z0 + k * RIVER_STEP, x = centre(z);
+      let lowest = Infinity;
+      for (const o of [-2, -1, 0, 1, 2]) lowest = Math.min(lowest, baseHeight(p, x + o * width, z));
+      bed[k] = k === 0 ? lowest : Math.min(bed[k - 1] as number, lowest);
+    }
+    river = {
+      z0,
+      z1: z0 + length,
+      width,
+      depth: p["riverDepth"] as number,
+      centre,
+      level(z: number): number {
+        const t = Math.min(count, Math.max(0, (z - z0) / RIVER_STEP));
+        const k = Math.min(count - 1, Math.floor(t));
+        return (bed[k] as number) + ((bed[k + 1] as number) - (bed[k] as number)) * (t - k) - 0.3;
+      },
+    };
+  }
+  rivers.set(p, river);
+  return river ?? undefined;
+}
+
+/**
+ * The ground height at a world position, in metres above sea level, with the lake basin and the river channel carved in.
+ * The same function serves every tile, which is what makes borders match, also across a lake or a river.
  */
 export function terrainHeight(p: Params, wx: number, wz: number): number {
-  const ground = baseHeight(p, wx, wz);
+  let ground = baseHeight(p, wx, wz);
   const lake = lakeOf(p);
-  if (!lake) return ground;
-  const r = Math.hypot(wx - lake.x, wz - lake.z);
-  // A parabolic bowl under the water level, blended into the surrounding ground between 0.8 and 1.4 radii.
-  const bowl = lake.level - lake.depth * Math.max(0, 1 - (r / lake.radius) ** 2);
-  const weight = 1 - smoothstep(0.8 * lake.radius, 1.4 * lake.radius, r);
-  return ground - (ground - bowl) * weight;
+  if (lake) {
+    const r = Math.hypot(wx - lake.x, wz - lake.z);
+    // A parabolic bowl under the water level, blended into the surrounding ground between 0.8 and 1.4 radii.
+    const bowl = lake.level - lake.depth * Math.max(0, 1 - (r / lake.radius) ** 2);
+    const weight = 1 - smoothstep(0.8 * lake.radius, 1.4 * lake.radius, r);
+    ground -= (ground - bowl) * weight;
+  }
+  const river = riverOf(p);
+  if (river && wz > river.z0 && wz < river.z1) {
+    const w = river.width;
+    const d = Math.abs(wx - river.centre(wz));
+    // The channel dies out over four widths at both ends, so the river starts and stops without a cliff.
+    const ends = smoothstep(river.z0, river.z0 + 4 * w, wz) * (1 - smoothstep(river.z1 - 4 * w, river.z1, wz));
+    const floor = river.level(wz) - river.depth;
+    // Flat bottom up to 0.3 widths from the centre, then banks that rise to the surrounding ground at 1.5 widths.
+    ground -= (ground - floor) * (1 - smoothstep(0.3 * w, 1.5 * w, d)) * ends;
+  }
+  return ground;
 }
 
 const LAKE_WATER: Material = { name: "lake_water", color: [0.08, 0.3, 0.42, 0.7], metallic: 0, roughness: 0.08, alpha: "BLEND", doubleSided: true };
@@ -177,7 +250,7 @@ const UV_METERS = 8;
 export const terrain: Generator = {
   kind: "terrain",
   archetype: "world.terrain",
-  description: "A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals and an optional lake. Tiles with the same seed, tileSize and resolution continue each other exactly, so a world can be cut into tiles.",
+  description: "A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals, an optional lake and an optional river. Tiles with the same seed, tileSize and resolution continue each other exactly, so a world can be cut into tiles.",
   params: TERRAIN_PARAMS,
   build(p: Params): BuildScene {
     const size = p["tileSize"] as number, n = Number(p["resolution"]);
@@ -220,9 +293,11 @@ export const terrain: Generator = {
     }
     const children: BuildNode[] = [{ name: "Surface", mesh }];
     const materials: Record<string, Material> = { terrain_ground: GROUND };
-    const lake = lakeOf(p);
-    if (lake) {
-      // Water on every grid cell that has a corner under the water level. Cells that stick out over the shore are hidden by the ground.
+    /**
+     * Water on the grid cells near a body of water that have a corner under its level. Cells that stick out over the shore are
+     * hidden by the ground. Corner heights come from `levelAt(z)`, so a river's surface runs on smoothly from row to row.
+     */
+    const waterMesh = (levelAt: (wz: number) => number, near: (wx: number, wz: number) => boolean): MeshBuilder | undefined => {
       const water = new MeshBuilder();
       const wp = water.prim("lake_water");
       const vertex = new Map<number, number>();
@@ -230,22 +305,37 @@ export const terrain: Generator = {
         const key = j * n + i;
         let id = vertex.get(key);
         if (id === undefined) {
-          id = water.vertex(wp, [-size / 2 + i * step, lake.level, -size / 2 + j * step], [0, 1, 0], [(cx - size / 2 + i * step) / UV_METERS, (cz - size / 2 + j * step) / UV_METERS]);
+          const wz = cz - size / 2 + j * step;
+          id = water.vertex(wp, [-size / 2 + i * step, levelAt(wz), -size / 2 + j * step], [0, 1, 0], [(cx - size / 2 + i * step) / UV_METERS, wz / UV_METERS]);
           vertex.set(key, id);
         }
         return id;
       };
       for (let j = 0; j < n - 1; j++) {
         for (let i = 0; i < n - 1; i++) {
-          // Only inside the rim: the rim is above the water, so low ground beyond it is dry or a pool of its own, and not the lake.
-          if (Math.hypot(cx - size / 2 + (i + 0.5) * step - lake.x, cz - size / 2 + (j + 0.5) * step - lake.z) > lake.radius + step) continue;
-          if (Math.min(H(i, j), H(i + 1, j), H(i, j + 1), H(i + 1, j + 1)) >= lake.level) continue;
+          const mx = cx - size / 2 + (i + 0.5) * step, mz = cz - size / 2 + (j + 0.5) * step;
+          if (!near(mx, mz)) continue;
+          if (Math.min(H(i, j), H(i + 1, j), H(i, j + 1), H(i + 1, j + 1)) >= levelAt(mz)) continue;
           wp.indices.push(corner(i, j), corner(i, j + 1), corner(i + 1, j));
           wp.indices.push(corner(i + 1, j), corner(i, j + 1), corner(i + 1, j + 1));
         }
       }
-      if (!water.empty) {
+      return water.empty ? undefined : water;
+    };
+    const lake = lakeOf(p);
+    if (lake) {
+      // Only inside the rim: the rim is above the water, so low ground beyond it is dry or a pool of its own, and not the lake.
+      const water = waterMesh(() => lake.level, (wx, wz) => Math.hypot(wx - lake.x, wz - lake.z) <= lake.radius + step);
+      if (water) {
         children.push({ name: "Water", mesh: water });
+        materials["lake_water"] = LAKE_WATER;
+      }
+    }
+    const river = riverOf(p);
+    if (river) {
+      const water = waterMesh((wz) => river.level(wz), (wx, wz) => wz >= river.z0 && wz <= river.z1 && Math.abs(wx - river.centre(wz)) <= 1.5 * river.width + step);
+      if (water) {
+        children.push({ name: "River", mesh: water });
         materials["lake_water"] = LAKE_WATER;
       }
     }

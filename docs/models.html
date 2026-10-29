@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>53 ready-made 3D models for Godot, built from code | Godotwright</title>
+<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 53 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
+<link rel="canonical" href="https://laaielichter.github.io/Godotwright/models.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1d2229">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Godotwright">
+<meta property="og:title" content="53 ready-made 3D models for Godot, built from code">
+<meta property="og:description" content="Parametric .glb models a coding agent can build, view and check: vehicles, aircraft, ships, buildings, plants, terrain. MIT, no Blender.">
+<meta property="og:url" content="https://laaielichter.github.io/Godotwright/models.html">
+<meta property="og:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="53 ready-made 3D models for Godot, built from code">
+<meta name="twitter:description" content="Parametric .glb models a coding agent can build, view and check. MIT, no Blender.">
+<meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Ready-made 3D models for Godot, built from code",
+  "url": "https://laaielichter.github.io/Godotwright/models.html",
+  "isPartOf": { "@type": "WebSite", "name": "Godotwright", "url": "https://laaielichter.github.io/Godotwright/" },
+  "description": "Parametric 3D models (.glb) that a coding agent can build, view and check with Godotwright."
+}
+</script>
+<style>
+/* Layout: a single column set like Godot's own editor docks: a top bar, panels with tab headers, the Output panel as the hero. */
+:root {
+  --bg: #1d2229;
+  --panel: #262c35;
+  --panel-2: #2e3540;
+  --line: #3a4250;
+  --fg: #e3e8ef;
+  --muted: #9aa6b6;
+  --accent: #478cbf;
+  --accent-ink: #7fb6e0;
+  --n2d: #8da5f3;   /* Godot editor: 2D node icons */
+  --n3d: #fc7f7f;   /* 3D node icons */
+  --nui: #8eef97;   /* Control node icons */
+  --nres: #f5c66b;  /* warnings, resources */
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(2.2rem, 5.5vw, 3.6rem);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+    --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+    --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+  --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+  --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 var(--step-0)/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; }
+a { color: var(--accent-ink); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
+code, pre, kbd { font-family: var(--mono); font-size: .88em; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: var(--step-2); font-weight: 700; letter-spacing: -.01em; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Top bar */
+.bar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.bar .wrap { display: flex; align-items: center; gap: 1.25rem; padding-block: .7rem; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: .55rem; text-decoration: none; color: var(--fg); font: 800 1.15rem var(--display); }
+.brand img { width: 28px; height: 28px; }
+.bar nav { display: flex; gap: 1.1rem; margin-left: auto; flex-wrap: wrap; }
+.bar nav a { color: var(--muted); text-decoration: none; font-size: .95rem; }
+.bar nav a:hover { color: var(--fg); }
+
+/* Hero */
+.hero { padding-block: clamp(2.5rem, 7vw, 4.5rem) 2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.eyebrow { font: 600 .78rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-size: var(--step-3); font-weight: 800; letter-spacing: -.025em; max-width: 18ch; }
+.hero h1 em { font-style: normal; color: var(--accent-ink); }
+.lede { font-size: var(--step-1); color: var(--muted); max-width: 60ch; line-height: 1.5; }
+.cta { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .7rem 1.1rem;
+  border-radius: 8px; font: 700 1rem var(--body); text-decoration: none; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:hover { filter: brightness(1.08); }
+
+/* Dock panels, like Godot's Output / Scene docks */
+.dock { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.tabs { display: flex; gap: .25rem; background: var(--panel-2); border-bottom: 1px solid var(--line); padding: .35rem .5rem 0; overflow-x: auto; }
+.tab { font: 600 .8rem var(--mono); color: var(--muted); padding: .35rem .75rem; border-radius: 6px 6px 0 0; white-space: nowrap; }
+.tab.on { background: var(--panel); color: var(--fg); }
+.dock .body { padding: 1rem; overflow-x: auto; }
+.demo .body { padding: 0; background: #1d2229; }
+.demo img { display: block; width: 100%; min-width: 760px; }
+.caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
+
+section { padding-block: 3rem; border-top: 1px solid var(--line); }
+section > .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.sub { color: var(--muted); max-width: 65ch; }
+
+/* Install */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 1rem; }
+.cmd { position: relative; }
+.cmd pre { margin: 0; padding: 2.4rem 1rem .9rem 1rem; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+.cmd .copy {
+  position: absolute; top: .5rem; right: .5rem; font: 600 .75rem var(--mono); padding: .3rem .55rem;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer;
+}
+.cmd .copy:hover { color: var(--fg); }
+.step-h { font: 600 .85rem var(--mono); color: var(--muted); margin-bottom: .5rem; }
+
+/* Before / after */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
+.code { margin: 0; font: .85rem/1.65 var(--mono); white-space: pre; }
+.code .ln { color: var(--muted); opacity: .6; user-select: none; display: inline-block; width: 2.2ch; }
+.code .bad { background: color-mix(in srgb, var(--n3d) 16%, transparent); display: inline-block; min-width: 100%; }
+.find { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font: .84rem/1.5 var(--mono); }
+.find li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; }
+.find .at { color: var(--muted); }
+.find .e { color: var(--n3d); }
+.find .w { color: var(--nres); }
+.find b { color: var(--fg); font-weight: 600; }
+
+/* Tools: tree like the Scene dock */
+.tree { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tree li { background: var(--panel); padding: 1.1rem 1.1rem 1.2rem; display: grid; gap: .4rem; align-content: start; }
+.node { display: flex; align-items: center; gap: .5rem; font: 600 .95rem var(--mono); }
+.dot { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.tree p { color: var(--muted); font-size: .95rem; }
+.tree code { color: var(--muted); font-size: .78rem; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+.stat { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1rem; display: grid; gap: .2rem; }
+.stat .n { font: 800 2.2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: .92rem; }
+.stat.good { border-color: var(--nui); }
+.stat.good .n { color: var(--nui); }
+
+/* Table */
+.table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .95rem; }
+th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { background: var(--panel-2); font: 600 .8rem var(--mono); color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--muted); }
+.yes { color: var(--nui); font-weight: 700; }
+.no { color: var(--muted); }
+
+/* FAQ */
+.faq { display: grid; gap: .5rem; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; }
+summary { cursor: pointer; font-weight: 700; }
+details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
+
+footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: .9rem; }
+footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
+footer a { color: var(--muted); }
+
+.models { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 1rem; }
+.model { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; }
+.model img { display: block; width: 100%; height: auto; background: var(--panel-2); aspect-ratio: 4 / 3; object-fit: cover; }
+.model figcaption { padding: .8rem 1rem 1rem; display: grid; gap: .4rem; align-content: start; }
+.model h3 { font-size: 1.05rem; }
+.model p { color: var(--muted); font-size: .92rem; margin: 0; }
+.model code { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
+.how { display: grid; gap: .6rem; counter-reset: step; padding: 0; list-style: none; max-width: 70ch; }
+.how li { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .7rem 1rem; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="logo.svg" alt="" width="28" height="28">Godotwright</a>
+    <nav aria-label="Main">
+      <a href="./">Home</a>
+      <a href="#vehicles">Vehicles</a>
+      <a href="#aircraft">Aircraft</a>
+      <a href="#boats-and-ships">Boats and ships</a>
+      <a href="#machines">Machines</a>
+      <a href="#buildings">Buildings</a>
+      <a href="#roads-rails-and-bridges">Roads, rails and bridges</a>
+      <a href="#plants">Plants</a>
+      <a href="#terrain-and-water">Terrain and water</a>
+      <a href="#creatures">Creatures</a>
+      <a href="#spacecraft">Spacecraft</a>
+      <a href="#props">Props</a>
+      <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <p class="eyebrow">3D models from code</p>
+    <h1>53 ready-made models for <em>Godot&nbsp;4</em>.</h1>
+    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with UVs, tangents, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/laaielichter/Godotwright#readme">Install in 1 minute</a>
+      <a class="btn" href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">Works with small, cheap models too</a>
+    </div>
+    <img src="gallery/overview.jpg" width="1200" height="600" alt="A sheet of models built by Godotwright: cars, aircraft, boats, buildings, trees and terrain" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)">
+    <p class="caption">Real renders of the default model of each kind, with a simple three.js viewer. They are clean base models, meant to be refined, not hand-sculpted art.</p>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How an agent builds a model</h2>
+      <ol class="how">
+        <li><strong>Identify.</strong> <code>godotwright model identify "a tractor"</code> says what a thing is: its parts, typical size, variants, pivots and what to anticipate. English or Dutch, typos and descriptions work.</li>
+        <li><strong>Build.</strong> <code>godotwright model build car --set width=1.9 -o car.glb</code> from a ready-made kind, or from your own JSON spec of named parts.</li>
+        <li><strong>View.</strong> <code>godotwright model view car.glb</code> draws front, side and top views as text, with a table of the parts, for agents that cannot see a picture.</li>
+        <li><strong>Check.</strong> <code>godotwright model lint car.glb --archetype car</code> scores geometry, materials and performance, and checks it is what it should be: required parts, pivots, wheel axes, size, direction.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="vehicles">
+    <div class="wrap">
+      <h2>Vehicles</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/bicycle.jpg" width="400" height="300" loading="lazy" alt="Bicycle: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Bicycle</h3>
+            <p>A city bicycle: a diamond frame of round tubes, a steering fork with handlebar that carries the front wheel, a rear wheel with spokes, a saddle and a crank with pedals.</p>
+            <code>npx -y godotwright model build bicycle -o bicycle.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/bus.jpg" width="400" height="300" loading="lazy" alt="Bus: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Bus</h3>
+            <p>A city bus: a long body with window bands and windscreen, two passenger doors on the right-hand side hinged at their front edge, and two axles.</p>
+            <code>npx -y godotwright model build bus -o bus.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/car.jpg" width="400" height="300" loading="lazy" alt="Car: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Car</h3>
+            <p>A passenger car: a lofted body, a glass cabin, four wheels with their pivot at the hub, doors on their hinges, lights and mirrors.</p>
+            <code>npx -y godotwright model build car -o car.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/motorcycle.jpg" width="400" height="300" loading="lazy" alt="Motorcycle: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Motorcycle</h3>
+            <p>A motorcycle: a frame with tank, seat and engine, a rear wheel on a swingarm, and a fork that steers about a raked axis and carries the front wheel and handlebar.</p>
+            <code>npx -y godotwright model build motorcycle -o motorcycle.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/tank.jpg" width="400" height="300" loading="lazy" alt="Tank: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Tank</h3>
+            <p>A main battle tank: a sloped hull, two track units with a row of road wheels each, and a turret on the vertical turret-ring axis that carries a gun hinged at its trunnion.</p>
+            <code>npx -y godotwright model build tank -o tank.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/tractor.jpg" width="400" height="300" loading="lazy" alt="Tractor: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Tractor</h3>
+            <p>A farm tractor: hood, cab, big rear and small front wheels with their pivot at the hub, fenders, exhaust and a hitch on its hinge.</p>
+            <code>npx -y godotwright model build tractor -o tractor.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/train.jpg" width="400" height="300" loading="lazy" alt="Train: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Train</h3>
+            <p>A single railcar or locomotive-style coach: a streamlined body with window band and windscreen, two bogies that can pivot under the body, and wheels on standard gauge (1.435 m).</p>
+            <code>npx -y godotwright model build train -o train.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/truck.jpg" width="400" height="300" loading="lazy" alt="Truck: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Truck</h3>
+            <p>A rigid lorry: a cab with windscreen, a cargo box on a ladder frame, three axles (six wheels, the front ones steer) and mirrors.</p>
+            <code>npx -y godotwright model build truck -o truck.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="aircraft">
+    <div class="wrap">
+      <h2>Aircraft</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/airliner.jpg" width="400" height="300" loading="lazy" alt="Airliner: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Airliner</h3>
+            <p>A twin-engine passenger jet: round fuselage, swept tapered wings with dihedral, engines under the wings, tailplane, fin, cockpit glass and landing gear.</p>
+            <code>npx -y godotwright model build airliner -o airliner.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/drone.jpg" width="400" height="300" loading="lazy" alt="Drone: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Drone</h3>
+            <p>A quadcopter: a flat body with a camera gimbal, four arms in an X, a motor and a two-blade propeller on each arm, and short landing legs.</p>
+            <code>npx -y godotwright model build drone -o drone.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/fighter.jpg" width="400" height="300" loading="lazy" alt="Fighter: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Fighter</h3>
+            <p>A twin-fin jet fighter: a long blended fuselage with canopy and intake, swept trapezoid wings with ailerons, all-moving tailplanes, canted fins with a rudder, an engine nozzle and retractable tricycle landing gear.</p>
+            <code>npx -y godotwright model build fighter -o fighter.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/helicopter.jpg" width="400" height="300" loading="lazy" alt="Helicopter: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Helicopter</h3>
+            <p>A light helicopter: cabin and tail boom, glass canopy, main rotor with blades that pitch about their root, a tail rotor, fin and skids.</p>
+            <code>npx -y godotwright model build helicopter -o helicopter.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/light-aircraft.jpg" width="400" height="300" loading="lazy" alt="Light aircraft: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Light aircraft</h3>
+            <p>A high-wing single-engine propeller aeroplane: tapered fuselage with cabin glass, straight wings with ailerons, tailplane with elevators, fin with rudder, a spinning propeller and fixed tricycle landing gear.</p>
+            <code>npx -y godotwright model build light-aircraft -o light-aircraft.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="boats-and-ships">
+    <div class="wrap">
+      <h2>Boats and ships</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/boat.jpg" width="400" height="300" loading="lazy" alt="Boat: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Boat</h3>
+            <p>A small motorboat: a pointed hull floating on the waterline (y = 0), a windscreen and console, two bench seats and an outboard engine on the transom.</p>
+            <code>npx -y godotwright model build boat -o boat.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/rowing-boat.jpg" width="400" height="300" loading="lazy" alt="Rowing boat: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Rowing boat</h3>
+            <p>A double-ended wooden rowing boat: an open hull with its waterline at y = 0, two thwarts, and a pair of oars that pivot in their oarlocks on the gunwale.</p>
+            <code>npx -y godotwright model build rowing-boat -o rowing-boat.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/sailboat.jpg" width="400" height="300" loading="lazy" alt="Sailboat: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Sailboat</h3>
+            <p>A small sailing yacht: a slim hull with cabin, a fin keel below the waterline, a tall mast, a mainsail on a boom that swings about the mast and a jib at the bow.</p>
+            <code>npx -y godotwright model build sailboat -o sailboat.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/ship.jpg" width="400" height="300" loading="lazy" alt="Ship: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Ship</h3>
+            <p>A cargo ship: a lofted hull with the waterline at y = 0, an aft superstructure with bridge, funnel and mast, container stacks on deck, a rudder and a propeller.</p>
+            <code>npx -y godotwright model build ship -o ship.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="machines">
+    <div class="wrap">
+      <h2>Machines</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/jet-engine.jpg" width="400" height="300" loading="lazy" alt="Jet engine: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Jet engine</h3>
+            <p>A turbofan engine: a nacelle with an intake lip, a fan with blades that spins about the engine axis, a core cowl and an exhaust nozzle.</p>
+            <code>npx -y godotwright model build jet-engine -o jet-engine.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/piston-engine.jpg" width="400" height="300" loading="lazy" alt="Piston engine: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Piston engine</h3>
+            <p>An inline piston engine: a crankcase block with an oil pan, a row of cylinders with a piston in each, a cylinder head and cover, a crankshaft along the length and a flywheel at the rear.</p>
+            <code>npx -y godotwright model build piston-engine -o piston-engine.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/wind-turbine.jpg" width="400" height="300" loading="lazy" alt="Wind turbine: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Wind turbine</h3>
+            <p>A wind turbine: a tapered tower, a nacelle that yaws on top of it, and a three-blade rotor that spins about the horizontal axis.</p>
+            <code>npx -y godotwright model build wind-turbine -o wind-turbine.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="buildings">
+    <div class="wrap">
+      <h2>Buildings</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/apartment.jpg" width="400" height="300" loading="lazy" alt="Apartment: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Apartment</h3>
+            <p>A block of flats: a long rectangular block with a flat roof and parapet, a glazed band of windows on every floor, a glass entrance with a canopy on the +Z side and a stair core that rises above the roof.</p>
+            <code>npx -y godotwright model build apartment -o apartment.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/barn.jpg" width="400" height="300" loading="lazy" alt="Barn: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Barn</h3>
+            <p>A farm barn: a long box with a gable roof, a big double door in the +Z gable end, a hayloft hatch above it and a row of small windows along both long sides.</p>
+            <code>npx -y godotwright model build barn -o barn.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/castle.jpg" width="400" height="300" loading="lazy" alt="Castle: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Castle</h3>
+            <p>A square stone castle: four curtain walls with battlements, a round tower at each corner with a conical roof, a gatehouse with a gate and a drawbridge in the +Z face, and a keep against the back wall.</p>
+            <code>npx -y godotwright model build castle -o castle.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/church.jpg" width="400" height="300" loading="lazy" alt="Church: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Church</h3>
+            <p>A parish church: a long nave with a gable roof and tall side windows, a square belfry at the +Z end with a pyramid spire, and a doorway in the tower.</p>
+            <code>npx -y godotwright model build church -o church.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/house.jpg" width="400" height="300" loading="lazy" alt="House: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>House</h3>
+            <p>A house or small building: walls, roof, windows, a door and an optional chimney.</p>
+            <code>npx -y godotwright model build house -o house.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/tower.jpg" width="400" height="300" loading="lazy" alt="Tower: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Tower</h3>
+            <p>A high-rise office tower: a wide podium with a glass entrance on the +Z side, a tall shaft with a band of glass at every floor, a setback upper block and a crown with an antenna.</p>
+            <code>npx -y godotwright model build tower -o tower.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/windmill.jpg" width="400" height="300" loading="lazy" alt="Windmill: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Windmill</h3>
+            <p>A traditional Dutch tower mill: a tapering eight-sided brick tower with a gallery and a door, a domed cap that turns about the tower axis, and four sails on a slightly tilted axle that spin about their hub.</p>
+            <code>npx -y godotwright model build windmill -o windmill.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="roads-rails-and-bridges">
+    <div class="wrap">
+      <h2>Roads, rails and bridges</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/bridge.jpg" width="400" height="300" loading="lazy" alt="Bridge: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Bridge</h3>
+            <p>A girder road bridge: a deck with a railing on each side, a row of piers under it and an abutment at each end.</p>
+            <code>npx -y godotwright model build bridge -o bridge.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/fence.jpg" width="400" height="300" loading="lazy" alt="Fence: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Fence</h3>
+            <p>A section of wooden picket fence along z: a post at each end, two horizontal rails and evenly spaced pickets.</p>
+            <code>npx -y godotwright model build fence -o fence.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/power-pylon.jpg" width="400" height="300" loading="lazy" alt="Power pylon: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Power pylon</h3>
+            <p>A lattice transmission pylon: four tapering legs braced by square frames at regular heights, three crossarms near the top with a hanging insulator at each end and a peak.</p>
+            <code>npx -y godotwright model build power-pylon -o power-pylon.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/railway-track.jpg" width="400" height="300" loading="lazy" alt="Railway track: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Railway track</h3>
+            <p>A length of standard-gauge railway track along z: a ballast bed, concrete sleepers every 0.6 m and two rails with their heads 1.435 m apart.</p>
+            <code>npx -y godotwright model build railway-track -o railway-track.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/road.jpg" width="400" height="300" loading="lazy" alt="Road: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Road</h3>
+            <p>A straight road segment along z: an asphalt surface, a dashed centre line, solid edge lines and a raised curb on each side.</p>
+            <code>npx -y godotwright model build road -o road.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/street-lamp.jpg" width="400" height="300" loading="lazy" alt="Street lamp: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Street lamp</h3>
+            <p>A street lamp: a tapering steel pole on a base plate, an arm that reaches out towards +Z over the road, a housing and an emissive lamp underneath it.</p>
+            <code>npx -y godotwright model build street-lamp -o street-lamp.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="plants">
+    <div class="wrap">
+      <h2>Plants</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/bush.jpg" width="400" height="300" loading="lazy" alt="Bush: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Bush</h3>
+            <p>A shrub: a cluster of overlapping rounded leaf masses around a central one, on short woody stems, standing on y = 0.</p>
+            <code>npx -y godotwright model build bush -o bush.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/conifer.jpg" width="400" height="300" loading="lazy" alt="Conifer: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Conifer</h3>
+            <p>A conifer: a slim trunk and a crown of five stacked tiers of needles.</p>
+            <code>npx -y godotwright model build conifer -o conifer.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/flower.jpg" width="400" height="300" loading="lazy" alt="Flower: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Flower</h3>
+            <p>A flower: a slender stem, two leaves near the base and a head of petals around a centre disc, facing up.</p>
+            <code>npx -y godotwright model build flower -o flower.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/grass.jpg" width="400" height="300" loading="lazy" alt="Grass: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Grass</h3>
+            <p>A tuft of grass: thin tapering blades in a ring, each leaning outwards by a different amount and with a different height so the tuft looks natural.</p>
+            <code>npx -y godotwright model build grass -o grass.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/palm.jpg" width="400" height="300" loading="lazy" alt="Palm: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Palm</h3>
+            <p>A palm tree: a slim ringed trunk that swells at the base, a crown knob at the top and a ring of long, arching fronds, each its own node with its pivot at the crown so it can sway.</p>
+            <code>npx -y godotwright model build palm -o palm.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/tree.jpg" width="400" height="300" loading="lazy" alt="Tree: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Tree</h3>
+            <p>A broadleaf tree: a flared, tapering trunk, ringed branches and a crown of blobs of foliage.</p>
+            <code>npx -y godotwright model build tree -o tree.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="terrain-and-water">
+    <div class="wrap">
+      <h2>Terrain and water</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/sea.jpg" width="400" height="300" loading="lazy" alt="Sea: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Sea</h3>
+            <p>A sea: a flat, subdivided water plane at sea level (y = 0) for a wave shader, and a flat sea floor below it.</p>
+            <code>npx -y godotwright model build sea -o sea.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/terrain.jpg" width="400" height="300" loading="lazy" alt="Terrain: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Terrain</h3>
+            <p>A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals, an optional lake and an optional river.</p>
+            <code>npx -y godotwright model build terrain -o terrain.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/terrain-mountains.jpg" width="400" height="300" loading="lazy" alt="Mountains: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Mountains</h3>
+            <p>The same terrain kind with ridged mountains. Neighbouring tiles continue each other exactly.</p>
+            <code>npx -y godotwright model build terrain --set relief=mountains --set maxHeight=90 -o mountains.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/terrain-island.jpg" width="400" height="300" loading="lazy" alt="Island: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Island</h3>
+            <p>One landmass with the sea floor around it.</p>
+            <code>npx -y godotwright model build terrain --set relief=island -o island.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/terrain-lake.jpg" width="400" height="300" loading="lazy" alt="Lake: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Lake</h3>
+            <p>A lake carved into the ground, with the water level just under the lowest point of its shore.</p>
+            <code>npx -y godotwright model build terrain --set lakeRadius=45 --set lakeDepth=8 -o lake.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="creatures">
+    <div class="wrap">
+      <h2>Creatures</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/dragon.jpg" width="400" height="300" loading="lazy" alt="Dragon: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Dragon</h3>
+            <p>A four-legged dragon: a long body, a neck rising to a horned head with a hinged jaw, two wings hinged at the shoulders, four legs and a long tapering tail; every moving part a node with its pivot at its joint.</p>
+            <code>npx -y godotwright model build dragon -o dragon.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/horse.jpg" width="400" height="300" loading="lazy" alt="Horse: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Horse</h3>
+            <p>A horse-shaped four-legged animal: a barrel body, a neck leaning forward, a head with ears, four legs with hooves and a hanging tail; every leg, the head and the tail a node with its pivot at the joint.</p>
+            <code>npx -y godotwright model build horse -o horse.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/humanoid.jpg" width="400" height="300" loading="lazy" alt="Humanoid: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Humanoid</h3>
+            <p>A person-shaped character in a T-pose for rigging: torso, neck and head, arms straight out with hands, legs with feet; every limb a node with its pivot at the joint (shoulder, hip, neck).</p>
+            <code>npx -y godotwright model build humanoid -o humanoid.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="spacecraft">
+    <div class="wrap">
+      <h2>Spacecraft</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/rocket.jpg" width="400" height="300" loading="lazy" alt="Rocket: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Rocket</h3>
+            <p>A two-stage launch rocket standing upright on its engines: a ring of nozzle bells, four fins at the base, a first and a second stage and an ogive nose cone.</p>
+            <code>npx -y godotwright model build rocket -o rocket.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/satellite.jpg" width="400" height="300" loading="lazy" alt="Satellite: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Satellite</h3>
+            <p>A communications satellite: a box-shaped bus with gold foil, a solar panel wing on each side that hinges at the bus, and a dish antenna facing +Z.</p>
+            <code>npx -y godotwright model build satellite -o satellite.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/spaceship.jpg" width="400" height="300" loading="lazy" alt="Spaceship: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Spaceship</h3>
+            <p>A small science-fiction fighter: a tapered hull with a glass cockpit at the front (+Z), two glowing engines at the back, swept wings with a cannon at each tip, and three landing legs it stands on (y = 0), hinged at the hull.</p>
+            <code>npx -y godotwright model build spaceship -o spaceship.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="props">
+    <div class="wrap">
+      <h2>Props</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/barrel.jpg" width="400" height="300" loading="lazy" alt="Barrel: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Barrel</h3>
+            <p>A 55-gallon steel drum: a cylindrical body with rolling hoops, a separate lid disc on top and a rim, standing on y = 0.</p>
+            <code>npx -y godotwright model build barrel -o barrel.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/campfire.jpg" width="400" height="300" loading="lazy" alt="Campfire: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Campfire</h3>
+            <p>A campfire: logs leaning together in a cone over a glowing bed of embers, a low flame and a ring of stones around it, on y = 0.</p>
+            <code>npx -y godotwright model build campfire -o campfire.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/chair.jpg" width="400" height="300" loading="lazy" alt="Chair: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Chair</h3>
+            <p>A wooden dining chair facing +Z: a square seat on four legs and a backrest with two uprights and a rail at the back (-Z side).</p>
+            <code>npx -y godotwright model build chair -o chair.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/crate.jpg" width="400" height="300" loading="lazy" alt="Crate: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Crate</h3>
+            <p>A wooden crate: a box of planks with a corner post at each vertical edge, a slightly overhanging lid and a base frame.</p>
+            <code>npx -y godotwright model build crate -o crate.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/shipping-container.jpg" width="400" height="300" loading="lazy" alt="Shipping container: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Shipping container</h3>
+            <p>An ISO shipping container: 8 ft wide, 8 ft 6 in tall (9 ft 6 in high cube), corrugated sides and double doors on hinges at the rear (-z).</p>
+            <code>npx -y godotwright model build shipping-container -o shipping-container.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/table.jpg" width="400" height="300" loading="lazy" alt="Table: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Table</h3>
+            <p>A wooden table: a top, four legs and an apron frame under the top.</p>
+            <code>npx -y godotwright model build table -o table.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>FAQ</h2>
+      <div class="faq">
+        <details><summary>Do I need Blender or Godot installed?</summary><p>No. Models are built and checked by Godotwright itself. Godot only loads the result when you open the <code>.glb</code> in your project.</p></details>
+        <details><summary>Can I change the models?</summary><p>Yes. Every kind has parameters with ranges (<code>godotwright model kinds</code> lists them), and every recipe is a JSON spec you can copy and edit.</p></details>
+        <details><summary>Can a cheap model like Haiku or a Flash model do this?</summary><p>Yes, with limits. In a small test, six Haiku agents each built a recognisable model, but they worked blind; that is why <code>model view</code> and a check for loose parts exist. See <a href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">the write-up</a>.</p></details>
+        <details><summary>How good are they?</summary><p>They are clean, correctly scaled base models with the right parts and pivots, not sculpted art. The point is a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Godotwright · MIT licensed · not affiliated with the Godot Engine project</span>
+    <span><a href="./">Home</a> · <a href="https://github.com/laaielichter/Godotwright">GitHub</a> · <a href="https://github.com/laaielichter/Godotwright/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://github.com/laaielichter/Godotwright/issues">Issues</a></span>
+  </div>
+</footer>
+</body>
+</html>

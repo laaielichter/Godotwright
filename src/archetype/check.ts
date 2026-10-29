@@ -59,15 +59,8 @@ const dist = (a: V3, b: V3): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2]
 const AXIS = { x: 0, y: 1, z: 2 } as const;
 const m = (n: number): string => (n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2));
 
-/** Checks a model against what its archetype says it should be: parts, pivots, wheels, size and direction. */
-export function checkArchetype(info: ModelInfo, arch: ResolvedArchetype): ModelFinding[] {
-  const out: ModelFinding[] = [];
-  const add = (rule: string, message: string, node?: string): void => {
-    const def = MODEL_RULES[rule];
-    if (def) out.push({ rule, category: def.category, severity: def.severity, file: info.file, ...(node ? { node } : {}), message });
-  };
-
-  // Which primitives sit in which subtree.
+/** Which primitives sit in which subtree, and which node with geometry belongs to which part (the part its name fits best). */
+function assignNodes(info: ModelInfo, arch: ResolvedArchetype): { subtree: Map<string, PrimitiveInfo[]>; candidates: Map<string, NodeInfo[]> } {
   const subtree = new Map<string, PrimitiveInfo[]>();
   for (const prim of info.primitives) {
     const parts = prim.nodeName.split("/");
@@ -95,6 +88,51 @@ export function checkArchetype(info: ModelInfo, arch: ResolvedArchetype): ModelF
     }
     if (bestPart) candidates.set(bestPart.name, [...(candidates.get(bestPart.name) ?? []), node]);
   }
+  return { subtree, candidates };
+}
+
+/** What a check against an archetype actually compared, so a score is never read as more than it is. */
+export interface Comparison {
+  archetype: string;
+  name: string;
+  /** Required parts and how many nodes were found for each. */
+  required: { part: string; found: number }[];
+  /** Optional parts that were found. */
+  optionalFound: string[];
+  /** Nodes with geometry that no part of the archetype matched (and that sit under no matched node). */
+  unmatchedNodes: string[];
+  /** True when the archetype has a typical size to compare against. */
+  sizeChecked: boolean;
+}
+
+/** Counts, per part, the nodes whose names fit it; groups such as "Wheels" do not count as one more wheel. */
+export function compareArchetype(info: ModelInfo, arch: ResolvedArchetype): Comparison {
+  const { subtree, candidates } = assignNodes(info, arch);
+  const matched = new Set<string>();
+  const required: Comparison["required"] = [];
+  const optionalFound: string[] = [];
+  for (const part of arch.parts) {
+    const all = candidates.get(part.name) ?? [];
+    for (const n of all) matched.add(n.path);
+    const found = all.filter((c) => !all.some((o) => o !== c && o.path.startsWith(`${c.path}/`)));
+    if (part.required) required.push({ part: part.name, found: found.length });
+    else if (found.length) optionalFound.push(part.name);
+  }
+  const covered = (path: string): boolean => [...matched].some((m) => path === m || path.startsWith(`${m}/`));
+  const own = new Set(info.primitives.map((p) => p.nodeName));
+  const unmatchedNodes = info.nodes.filter((n) => subtree.has(n.path) && own.has(n.path) && !covered(n.path)).map((n) => n.path);
+  return { archetype: arch.id, name: arch.name, required, optionalFound, unmatchedNodes, sizeChecked: arch.scale !== undefined };
+}
+
+/** Checks a model against what its archetype says it should be: parts, pivots, wheels, size and direction. */
+export function checkArchetype(info: ModelInfo, arch: ResolvedArchetype): ModelFinding[] {
+  const out: ModelFinding[] = [];
+  const add = (rule: string, message: string, node?: string): void => {
+    const def = MODEL_RULES[rule];
+    if (def) out.push({ rule, category: def.category, severity: def.severity, file: info.file, ...(node ? { node } : {}), message });
+  };
+
+  const { subtree, candidates } = assignNodes(info, arch);
 
   const unused: string[] = [];
   for (const part of arch.parts) {

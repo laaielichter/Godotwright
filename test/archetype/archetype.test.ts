@@ -191,8 +191,44 @@ describe("identify", () => {
     expect(flies.best.id).toBe("aircraft.rotorcraft");
     expect(flies.matches.map((m) => m.id)).toContain("aircraft.rotorcraft.helicopter");
     expect(identify("something with wheels and an engine", library).best.id).toBe("vehicle.wheeled");
-    expect(identify("castle", library).best.id).toBe("building");
+    expect(identify("shop", library).best.id).toBe("building");
     expect(identify("een kraan", library).best.id).toBe("machine");
+  });
+
+  it("knows fortifications, creatures, spacecraft, rowing boats and campfires", () => {
+    const id = (text: string) => identify(text, library);
+    for (const [text, expected] of [
+      ["castle", "building.fortification"], ["een kasteel", "building.fortification"], ["city wall", "building.fortification"],
+      ["dragon", "creature.dragon"], ["draak", "creature.dragon"], ["a wyvern", "creature.dragon"],
+      ["horse", "creature.quadruped"], ["knight", "creature.humanoid"], ["goblin", "creature.humanoid"],
+      ["rocket", "spacecraft.rocket"], ["raket", "spacecraft.rocket"], ["spaceship", "spacecraft.spaceship"], ["ruimteschip", "spacecraft.spaceship"], ["satelliet", "spacecraft.satellite"],
+      ["rowing boat", "vessel.boat.rowing-boat"], ["roeiboot", "vessel.boat.rowing-boat"], ["motorboat", "vessel.boat"],
+      ["campfire", "prop.campfire"], ["kampvuur", "prop.campfire"],
+    ] as const) {
+      const r = id(text);
+      expect(r.best.id, text).toBe(expected);
+      expect(r.generic, text).toBe(false);
+    }
+    expect(id("something with legs, a tail and claws").best.id.startsWith("creature")).toBe(true);
+  });
+
+  it("gives the new families the general conventions and a size with its source", () => {
+    for (const idText of ["building.fortification", "creature.dragon", "creature.humanoid", "spacecraft.rocket", "spacecraft.spaceship", "vessel.boat.rowing-boat", "prop.campfire"]) {
+      const a = library.resolve(idText);
+      expect(a.conventions.join(" "), idText).toContain("+Y is up");
+      expect(a.scale?.source, idText).toBeTruthy();
+      expect(a.parts.some((p) => p.required), idText).toBe(true);
+    }
+    // Made-up sizes are marked unknown, not passed off as measured.
+    expect(library.resolve("creature.dragon").scale?.confidence).toBe("X");
+    expect(library.resolve("spacecraft.spaceship").scale?.confidence).toBe("X");
+  });
+
+  it("never asks for two required bodies: a child that names its body differently replaces the parent's", () => {
+    for (const a of library.archetypes) {
+      const bodies = library.resolve(a.id).parts.filter((p) => p.required && p.role === "body").map((p) => p.name);
+      expect(bodies.length, `${a.id}: ${bodies.join(", ")}`).toBeLessThanOrEqual(1);
+    }
   });
 
   it("lets the rest of the description support a named match", () => {

@@ -80,7 +80,7 @@ describe("parameters", () => {
     expect(() => buildKind("house", { floors: 2.5 })).toThrow(/whole number/);
     expect(() => buildKind("house", { width: "wide" })).toThrow(/must be a number/);
     expect(() => buildKind("house", { chimney: "maybe" })).toThrow(/true or false/);
-    expect(() => buildKind("castle")).toThrow(/unknown model kind "castle"/);
+    expect(() => buildKind("starfighter")).toThrow(/unknown model kind "starfighter"/);
   });
 
   it("does not take the names of Object.prototype for kinds", () => {

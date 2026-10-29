@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadLibrary } from "../../src/archetype/library.js";
 import { buildGlb } from "../../src/build/glb.js";
 import { buildKind } from "../../src/build/generators/index.js";
-import { lakeOf, noise2, terrain, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
+import { lakeOf, noise2, riverOf, terrain, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
 import { resolveParams } from "../../src/build/params.js";
 import { lintModelFile } from "../../src/model/lint.js";
 import { runCli } from "../helpers.js";
@@ -215,6 +215,82 @@ describe("a lake in the terrain", () => {
       expect(problems("terrain", input), JSON.stringify(input)).toEqual([]);
     }
   });
+});
+
+describe("a river in the terrain", () => {
+  const riverInput = { relief: "hills", resolution: "129", tileSize: 256, riverWidth: 10, riverDepth: 3, riverZ: -128, riverLength: 256, meander: 30, seed: 4 };
+  const params = (input: Record<string, unknown>) => resolveParams(TERRAIN_PARAMS, input, "terrain");
+  const riverNode = (input: Record<string, unknown>) => buildKind("terrain", input).nodes[0]!.children!.find((c) => c.name === "River");
+
+  it("is absent by default, and a width under 2 m is refused", () => {
+    expect(riverNode({})).toBeUndefined();
+    expect(() => buildKind("terrain", { riverWidth: 1 })).toThrow(/at least 2 m/);
+  });
+
+  it("flows downhill: the water level never rises along the river, over its whole length and for several seeds", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      for (const relief of RELIEFS) {
+        const river = riverOf(params({ ...riverInput, seed, relief, riverLength: 2000, riverZ: -1000 }))!;
+        let last = Infinity;
+        for (let z = river.z0; z <= river.z1; z += 1) {
+          const level = river.level(z);
+          expect(level, `${relief} seed ${seed} z ${z}`).toBeLessThanOrEqual(last + 1e-9);
+          last = level;
+        }
+      }
+    }
+  });
+
+  it("lies below the ground beside it, and the channel is carved to the depth", () => {
+    const p = params(riverInput);
+    const river = riverOf(p)!;
+    for (let z = river.z0 + 60; z < river.z1 - 60; z += 7) {
+      const x = river.centre(z);
+      expect(terrainHeight(p, x, z), `bed at ${z}`).toBeCloseTo(river.level(z) - 3, 6);
+      for (const side of [-1, 1]) expect(terrainHeight(p, x + side * 1.6 * 10, z), `bank at ${z}`).toBeGreaterThan(river.level(z));
+    }
+  });
+
+  it("has water on every grid vertex that is under the water level near the river, and nowhere else", () => {
+    const g = grid(riverInput);
+    const prim = riverNode(riverInput)!.mesh!.prims.get("lake_water")!;
+    const wet = new Map<string, number>();
+    for (let v = 0; v < prim.positions.length; v += 3) wet.set(`${Math.round(prim.positions[v]! * 1e4)},${Math.round(prim.positions[v + 2]! * 1e4)}`, prim.positions[v + 1]!);
+    const river = riverOf(params(riverInput))!;
+    let under = 0;
+    for (let k = 0; k < g.y.length; k++) {
+      const z = g.z[k]!;
+      if (z <= river.z0 + 1 || z >= river.z1 - 1) continue;
+      if (g.y[k]! < river.level(z) - 1e-6 && Math.abs(g.x[k]! - river.centre(z)) < 1.5 * 10) {
+        under++;
+        expect(wet.has(`${Math.round(g.x[k]! * 1e4)},${Math.round(z * 1e4)}`), `vertex ${k}`).toBe(true);
+      }
+    }
+    expect(under).toBeGreaterThan(50);
+    for (let v = 0; v < prim.positions.length; v += 3) expect(Math.abs(prim.positions[v]! - river.centre(prim.positions[v + 2]!))).toBeLessThanOrEqual(1.5 * 10 + 2 * 2 + 1e-6);
+    // The surface falls along the flow, row by row.
+    const rows = [...wet].map(([key, y]) => [Number(key.split(",")[1]), y] as const).sort((a, b) => a[0] - b[0]);
+    for (let i = 1; i < rows.length; i++) expect(rows[i]![1]).toBeLessThanOrEqual(rows[i - 1]![1] + 1e-9);
+  });
+
+  it("carries on across a tile border: a river over the border of two tiles has the same heights on both sides, and water in both", () => {
+    const base = { ...riverInput, riverX: 128, riverZ: -128, riverLength: 256 };
+    const west = grid({ ...base, tileX: 0 });
+    const east = grid({ ...base, tileX: 1 });
+    const n = west.n;
+    for (let k = 0; k < n; k++) expect(west.y[k * n + (n - 1)]).toBeCloseTo(east.y[k * n]!, 9);
+    expect(riverNode({ ...base, tileX: 0 })).toBeDefined();
+    expect(riverNode({ ...base, tileX: 1 })).toBeDefined();
+  });
+
+  it("is deterministic and stays clean as a model at the narrowest and widest river, on every relief", () => {
+    expect(sha(buildGlb(buildKind("terrain", { ...riverInput, resolution: "33" })))).toBe(sha(buildGlb(buildKind("terrain", { ...riverInput, resolution: "33" }))));
+    for (const relief of RELIEFS) {
+      for (const input of [{ riverWidth: 2, riverDepth: 0.3, meander: 0 }, { riverWidth: 200, riverDepth: 20, meander: 150, tileSize: 1024 }, { riverWidth: 20, riverZ: -100, riverLength: 50 }]) {
+        expect(problems("terrain", { relief, ...input }), JSON.stringify({ relief, ...input })).toEqual([]);
+      }
+    }
+  }, 60_000);
 });
 
 describe("sea", () => {

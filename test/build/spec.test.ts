@@ -181,7 +181,8 @@ describe("nodes", () => {
     expect(right!.rotation![0]).toBeCloseTo(left!.rotation![0]);
     expect(right!.children![0]!.name).toBe("Hand");
     expect(mirrorNode(left!, "X").children![0]!.mesh!.triangles).toBe(12);
-    expect(lintModelFile(writeScene(scene)).findings.filter((f) => f.severity !== "info")).toEqual([]);
+    // The two arms are 4 m apart on purpose, so the floating-part check does not apply to this fixture.
+    expect(lintModelFile(writeScene(scene)).findings.filter((f) => f.severity !== "info" && f.rule !== "model/floating-part")).toEqual([]);
   });
 
   it("inherits materials, and scopes variables to the node and its children", () => {

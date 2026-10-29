@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Port Godot 3 projects to Godot 4 with Godotwright</title>
+<meta name="description" content="Port Godot 3 scripts to Godot 4: Godotwright rewrites the mechanical part (annotations, renames, yield, connect), reviews the rest and lists every replacement.">
+<link rel="canonical" href="https://laaielichter.github.io/Godotwright/godot-3-to-4.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1d2229">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap"><style>
+/* Layout: a single column set like Godot's own editor docks: a top bar, panels with tab headers, the Output panel as the hero. */
+:root {
+  --bg: #1d2229;
+  --panel: #262c35;
+  --panel-2: #2e3540;
+  --line: #3a4250;
+  --fg: #e3e8ef;
+  --muted: #9aa6b6;
+  --accent: #478cbf;
+  --accent-ink: #7fb6e0;
+  --n2d: #8da5f3;   /* Godot editor: 2D node icons */
+  --n3d: #fc7f7f;   /* 3D node icons */
+  --nui: #8eef97;   /* Control node icons */
+  --nres: #f5c66b;  /* warnings, resources */
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(2.2rem, 5.5vw, 3.6rem);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+    --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+    --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+  --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+  --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 var(--step-0)/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; }
+a { color: var(--accent-ink); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
+code, pre, kbd { font-family: var(--mono); font-size: .88em; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: var(--step-2); font-weight: 700; letter-spacing: -.01em; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Top bar */
+.bar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.bar .wrap { display: flex; align-items: center; gap: 1.25rem; padding-block: .7rem; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: .55rem; text-decoration: none; color: var(--fg); font: 800 1.15rem var(--display); }
+.brand img { width: 28px; height: 28px; }
+.bar nav { display: flex; gap: 1.1rem; margin-left: auto; flex-wrap: wrap; }
+.bar nav a { color: var(--muted); text-decoration: none; font-size: .95rem; }
+.bar nav a:hover { color: var(--fg); }
+
+/* Hero */
+.hero { padding-block: clamp(2.5rem, 7vw, 4.5rem) 2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.eyebrow { font: 600 .78rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-size: var(--step-3); font-weight: 800; letter-spacing: -.025em; max-width: 18ch; }
+.hero h1 em { font-style: normal; color: var(--accent-ink); }
+.lede { font-size: var(--step-1); color: var(--muted); max-width: 60ch; line-height: 1.5; }
+.cta { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .7rem 1.1rem;
+  border-radius: 8px; font: 700 1rem var(--body); text-decoration: none; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:hover { filter: brightness(1.08); }
+
+/* Dock panels, like Godot's Output / Scene docks */
+.dock { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.tabs { display: flex; gap: .25rem; background: var(--panel-2); border-bottom: 1px solid var(--line); padding: .35rem .5rem 0; overflow-x: auto; }
+.tab { font: 600 .8rem var(--mono); color: var(--muted); padding: .35rem .75rem; border-radius: 6px 6px 0 0; white-space: nowrap; }
+.tab.on { background: var(--panel); color: var(--fg); }
+.dock .body { padding: 1rem; overflow-x: auto; }
+.demo .body { padding: 0; background: #1d2229; }
+.demo img { display: block; width: 100%; min-width: 760px; }
+.caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
+
+section { padding-block: 3rem; border-top: 1px solid var(--line); }
+section > .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.sub { color: var(--muted); max-width: 65ch; }
+
+/* Install */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 1rem; }
+.cmd { position: relative; }
+.cmd pre { margin: 0; padding: 2.4rem 1rem .9rem 1rem; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+.cmd .copy {
+  position: absolute; top: .5rem; right: .5rem; font: 600 .75rem var(--mono); padding: .3rem .55rem;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer;
+}
+.cmd .copy:hover { color: var(--fg); }
+.step-h { font: 600 .85rem var(--mono); color: var(--muted); margin-bottom: .5rem; }
+
+/* Before / after */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
+.code { margin: 0; font: .85rem/1.65 var(--mono); white-space: pre; }
+.code .ln { color: var(--muted); opacity: .6; user-select: none; display: inline-block; width: 2.2ch; }
+.code .bad { background: color-mix(in srgb, var(--n3d) 16%, transparent); display: inline-block; min-width: 100%; }
+.find { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font: .84rem/1.5 var(--mono); }
+.find li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; }
+.find .at { color: var(--muted); }
+.find .e { color: var(--n3d); }
+.find .w { color: var(--nres); }
+.find b { color: var(--fg); font-weight: 600; }
+
+/* Tools: tree like the Scene dock */
+.tree { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tree li { background: var(--panel); padding: 1.1rem 1.1rem 1.2rem; display: grid; gap: .4rem; align-content: start; }
+.node { display: flex; align-items: center; gap: .5rem; font: 600 .95rem var(--mono); }
+.dot { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.tree p { color: var(--muted); font-size: .95rem; }
+.tree code { color: var(--muted); font-size: .78rem; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+.stat { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1rem; display: grid; gap: .2rem; }
+.stat .n { font: 800 2.2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: .92rem; }
+.stat.good { border-color: var(--nui); }
+.stat.good .n { color: var(--nui); }
+
+/* Table */
+.table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .95rem; }
+th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { background: var(--panel-2); font: 600 .8rem var(--mono); color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--muted); }
+.yes { color: var(--nui); font-weight: 700; }
+.no { color: var(--muted); }
+
+/* FAQ */
+.faq { display: grid; gap: .5rem; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; }
+summary { cursor: pointer; font-weight: 700; }
+details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
+
+footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: .9rem; }
+footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
+footer a { color: var(--muted); }
+
+.migration-table { overflow-x: auto; margin-top: 1.5rem; }
+.migration-table table { width: 100%; border-collapse: collapse; text-align: left; }
+.migration-table caption { text-align: left; color: var(--muted); padding: .75rem 0; }
+.migration-table th, .migration-table td { border-bottom: 1px solid var(--line); padding: .75rem; vertical-align: top; }
+.migration-table th { color: var(--nres); }
+.migration-table code { overflow-wrap: anywhere; }
+.migration-list { padding-left: 1.5rem; }
+.migration-list li { margin-bottom: 1rem; }
+.migration-main section { scroll-margin-top: 5rem; }
+.migration-main .lede { margin-top: 1rem; }
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+<a class="brand" href="./"><img src="logo.svg" alt="" width="28" height="28">Godotwright</a>
+<nav aria-label="Main"><a href="./#install">Install</a><a href="#review">Review</a><a href="#syntax">Syntax</a><a href="#classes">Classes</a><a href="https://github.com/laaielichter/Godotwright">GitHub</a></nav>
+</div></header>
+<main class="migration-main">
+<div class="wrap hero">
+<p class="eyebrow">Godot 3 to Godot 4</p>
+<h1>Port your project with the <em>real Godot 4 API.</em></h1>
+<p class="lede">Find old syntax and names before they become runtime surprises. Godotwright rewrites the mechanical part of a port with <code>migrate</code>, reviews GDScript against its bundled Godot 4.7 reference and gives replacement hints for the rest.</p>
+</div>
+<section id="review"><div class="wrap"><h2>Review a project you are porting</h2>
+<p class="sub">Back up or commit your Godot 3 project first, then follow the <a href="https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html">official Godot migration guide</a>. Use Node.js 22.12 or newer to review the project without installing Godot or configuring a model/API key:</p>
+<div class="cmd"><pre><code>npx -y godotwright migrate /path/to/your-project          # shows the rewrites and what is left
+npx -y godotwright migrate /path/to/your-project --write  # applies them
+npx -y godotwright review /path/to/your-project</code></pre></div>
+<p class="sub"><code>migrate</code> turns <code>export</code>, <code>onready</code> and <code>tool</code> into annotations, renames classes, functions, properties and constants that no longer exist in Godot 4, rewrites <code>yield()</code> to <code>await</code> and <code>connect()</code>, <code>emit_signal()</code> and <code>funcref()</code> to signals and callables, and moves members such as <code>OS.get_ticks_msec()</code>. It leaves strings, comments and node paths alone and lists what still needs a hand (<code>setget</code>, <code>move_and_slide(velocity)</code>, RPC keywords). Scenes and project settings are not converted; Godot's own <code>--convert-3to4</code> does those.</p>
+<p class="sub">Pass the directory containing <code>project.godot</code>. Follow each finding's file and line number, update the code, and run the review again. Look up a replacement with <code>npx -y godotwright api CharacterBody2D</code>. A review is static analysis; it does not replace opening the converted project in the matching Godot version and testing gameplay. Native validation with <code>godotwright check</code> requires Godot 4.7.</p>
+</div></section>
+<section id="syntax"><div class="wrap"><h2>GDScript syntax changes</h2>
+<p class="sub">These are the Godot 3 forms recognized by the review's <code>api/godot3-syntax</code> rule. Adapt annotations and RPC options to your project's behavior.</p>
+<ol class="migration-list"><li><code>export var</code> is <code>@export var</code> in Godot 4.</li><li><code>onready var</code> is <code>@onready var</code> in Godot 4.</li><li><code>tool</code> is <code>@tool</code> in Godot 4.</li><li><code>setget</code> is gone in Godot 4; use <code>var x: T: set = _set_x, get = _get_x</code> or set()/get blocks.</li><li><code>yield()</code> is <code>await</code> in Godot 4, e.g. <code>await get_tree().create_timer(1.0).timeout</code>.</li><li><code>PackedScene.instance()</code> is <code>instantiate()</code> in Godot 4.</li><li>network keywords are <code>@rpc(...)</code> annotations in Godot 4.</li><li><code>funcref()</code> is a Callable in Godot 4: <code>object.method</code> or <code>Callable(object, &quot;method&quot;)</code>.</li><li><code>connect(&quot;signal&quot;, target, &quot;method&quot;)</code> is <code>signal_name.connect(target.method)</code> in Godot 4.</li><li><code>.method()</code> super calls are <code>super.method()</code> in Godot 4.</li></ol></div></section>
+<section id="members"><div class="wrap"><h2>APIs that moved</h2>
+<p class="sub">Use the new owner or property. Choose the getter or setter appropriate to the original access. Timestamp APIs differ in units: <code>Time.get_unix_time_from_system()</code> returns seconds, so preserve any required milliseconds conversion when replacing <code>OS.get_system_time_msecs()</code>.</p>
+<div class="migration-table"><table><caption>Moved members recognized by this review</caption><thead><tr><th scope="col">Godot 3</th><th scope="col">Godot 4</th></tr></thead><tbody><tr><td><code>Engine.editor_hint</code></td><td><code>Engine.is_editor_hint()</code></td></tr><tr><td><code>OS.get_date</code></td><td><code>Time.get_date_dict_from_system()</code></td></tr><tr><td><code>OS.get_datetime</code></td><td><code>Time.get_datetime_dict_from_system()</code></td></tr><tr><td><code>OS.get_screen_size</code></td><td><code>DisplayServer.screen_get_size()</code></td></tr><tr><td><code>OS.get_system_time_msecs</code></td><td><code>Time.get_unix_time_from_system()</code></td></tr><tr><td><code>OS.get_ticks_msec</code></td><td><code>Time.get_ticks_msec()</code></td></tr><tr><td><code>OS.get_ticks_usec</code></td><td><code>Time.get_ticks_usec()</code></td></tr><tr><td><code>OS.get_time</code></td><td><code>Time.get_time_dict_from_system()</code></td></tr><tr><td><code>OS.get_unix_time</code></td><td><code>Time.get_unix_time_from_system()</code></td></tr><tr><td><code>OS.max_window_size</code></td><td><code>get_window().max_size</code></td></tr><tr><td><code>OS.min_window_size</code></td><td><code>get_window().min_size</code></td></tr><tr><td><code>OS.set_window_title</code></td><td><code>DisplayServer.window_set_title() or get_window().title</code></td></tr><tr><td><code>OS.vsync_enabled</code></td><td><code>DisplayServer.window_set_vsync_mode()</code></td></tr><tr><td><code>OS.window_borderless</code></td><td><code>get_window().borderless</code></td></tr><tr><td><code>OS.window_fullscreen</code></td><td><code>DisplayServer.window_set_mode()</code></td></tr><tr><td><code>OS.window_position</code></td><td><code>get_window().position</code></td></tr><tr><td><code>OS.window_size</code></td><td><code>DisplayServer.window_get_size() / window_set_size()</code></td></tr></tbody></table></div></div></section>
+<section id="classes"><div class="wrap"><h2>Renamed classes</h2>
+<p class="sub">The bundled API maps these Godot 3 class names to their Godot 4 names. Renaming a class is only a starting point: method signatures and behavior can also change. For example, <code>CharacterBody2D.move_and_slide()</code> takes no velocity argument; set <code>velocity</code> first.</p>
+<div class="migration-table"><table><caption>Class renames from the bundled API data</caption><thead><tr><th scope="col">Godot 3</th><th scope="col">Godot 4</th></tr></thead><tbody><tr><td><code>ARVRAnchor</code></td><td><code>XRAnchor3D</code></td></tr><tr><td><code>ARVRCamera</code></td><td><code>XRCamera3D</code></td></tr><tr><td><code>ARVRController</code></td><td><code>XRController3D</code></td></tr><tr><td><code>ARVRInterface</code></td><td><code>XRInterface</code></td></tr><tr><td><code>ARVRInterfaceGDNative</code></td><td><code>Node3D</code></td></tr><tr><td><code>ARVROrigin</code></td><td><code>XROrigin3D</code></td></tr><tr><td><code>ARVRPositionalTracker</code></td><td><code>XRPositionalTracker</code></td></tr><tr><td><code>ARVRServer</code></td><td><code>XRServer</code></td></tr><tr><td><code>AStar</code></td><td><code>AStar3D</code></td></tr><tr><td><code>AnimatedSprite</code></td><td><code>AnimatedSprite2D</code></td></tr><tr><td><code>Area</code></td><td><code>Area3D</code></td></tr><tr><td><code>AudioStreamOGGVorbis</code></td><td><code>AudioStreamOggVorbis</code></td></tr><tr><td><code>AudioStreamRandomPitch</code></td><td><code>AudioStreamRandomizer</code></td></tr><tr><td><code>AudioStreamSample</code></td><td><code>AudioStreamWAV</code></td></tr><tr><td><code>BakedLightmap</code></td><td><code>LightmapGI</code></td></tr><tr><td><code>BakedLightmapData</code></td><td><code>LightmapGIData</code></td></tr><tr><td><code>BitmapFont</code></td><td><code>FontFile</code></td></tr><tr><td><code>BoneAttachment</code></td><td><code>BoneAttachment3D</code></td></tr><tr><td><code>BoxShape</code></td><td><code>BoxShape3D</code></td></tr><tr><td><code>CPUParticles</code></td><td><code>CPUParticles3D</code></td></tr><tr><td><code>CSGBox</code></td><td><code>CSGBox3D</code></td></tr><tr><td><code>CSGCombiner</code></td><td><code>CSGCombiner3D</code></td></tr><tr><td><code>CSGCylinder</code></td><td><code>CSGCylinder3D</code></td></tr><tr><td><code>CSGMesh</code></td><td><code>CSGMesh3D</code></td></tr><tr><td><code>CSGPolygon</code></td><td><code>CSGPolygon3D</code></td></tr><tr><td><code>CSGPrimitive</code></td><td><code>CSGPrimitive3D</code></td></tr><tr><td><code>CSGShape</code></td><td><code>CSGShape3D</code></td></tr><tr><td><code>CSGSphere</code></td><td><code>CSGSphere3D</code></td></tr><tr><td><code>CSGTorus</code></td><td><code>CSGTorus3D</code></td></tr><tr><td><code>Camera</code></td><td><code>Camera3D</code></td></tr><tr><td><code>CapsuleShape</code></td><td><code>CapsuleShape3D</code></td></tr><tr><td><code>ClippedCamera</code></td><td><code>Camera3D</code></td></tr><tr><td><code>CollisionObject</code></td><td><code>CollisionObject3D</code></td></tr><tr><td><code>CollisionPolygon</code></td><td><code>CollisionPolygon3D</code></td></tr><tr><td><code>CollisionShape</code></td><td><code>CollisionShape3D</code></td></tr><tr><td><code>ConcavePolygonShape</code></td><td><code>ConcavePolygonShape3D</code></td></tr><tr><td><code>ConeTwistJoint</code></td><td><code>ConeTwistJoint3D</code></td></tr><tr><td><code>ConvexPolygonShape</code></td><td><code>ConvexPolygonShape3D</code></td></tr><tr><td><code>CubeMap</code></td><td><code>Cubemap</code></td></tr><tr><td><code>CubeMesh</code></td><td><code>BoxMesh</code></td></tr><tr><td><code>CylinderShape</code></td><td><code>CylinderShape3D</code></td></tr><tr><td><code>DirectionalLight</code></td><td><code>DirectionalLight3D</code></td></tr><tr><td><code>Directory</code></td><td><code>DirAccess</code></td></tr><tr><td><code>DynamicFont</code></td><td><code>FontFile</code></td></tr><tr><td><code>DynamicFontData</code></td><td><code>FontFile</code></td></tr><tr><td><code>EditorNavigationMeshGenerator</code></td><td><code>NavigationMeshGenerator</code></td></tr><tr><td><code>EditorSceneImporter</code></td><td><code>EditorSceneFormatImporter</code></td></tr><tr><td><code>EditorSceneImporterFBX</code></td><td><code>EditorSceneFormatImporterFBX2GLTF</code></td></tr><tr><td><code>EditorSceneImporterGLTF</code></td><td><code>EditorSceneFormatImporterGLTF</code></td></tr><tr><td><code>EditorSpatialGizmo</code></td><td><code>EditorNode3DGizmo</code></td></tr><tr><td><code>EditorSpatialGizmoPlugin</code></td><td><code>EditorNode3DGizmoPlugin</code></td></tr><tr><td><code>GIProbe</code></td><td><code>VoxelGI</code></td></tr><tr><td><code>GIProbeData</code></td><td><code>VoxelGIData</code></td></tr><tr><td><code>Generic6DOFJoint</code></td><td><code>Generic6DOFJoint3D</code></td></tr><tr><td><code>GeometryInstance</code></td><td><code>GeometryInstance3D</code></td></tr><tr><td><code>GradientTexture</code></td><td><code>GradientTexture2D</code></td></tr><tr><td><code>HeightMapShape</code></td><td><code>HeightMapShape3D</code></td></tr><tr><td><code>HingeJoint</code></td><td><code>HingeJoint3D</code></td></tr><tr><td><code>ImmediateGeometry</code></td><td><code>ImmediateMesh</code></td></tr><tr><td><code>ImmediateGeometry3D</code></td><td><code>ImmediateMesh</code></td></tr><tr><td><code>InterpolatedCamera</code></td><td><code>Camera3D</code></td></tr><tr><td><code>InterpolatedCamera3D</code></td><td><code>Camera3D</code></td></tr><tr><td><code>JSONParseResult</code></td><td><code>JSON</code></td></tr><tr><td><code>Joint</code></td><td><code>Joint3D</code></td></tr><tr><td><code>KinematicBody</code></td><td><code>CharacterBody3D</code></td></tr><tr><td><code>KinematicBody2D</code></td><td><code>CharacterBody2D</code></td></tr><tr><td><code>KinematicCollision</code></td><td><code>KinematicCollision3D</code></td></tr><tr><td><code>LargeTexture</code></td><td><code>ImageTexture</code></td></tr><tr><td><code>Light</code></td><td><code>Light3D</code></td></tr><tr><td><code>Light2D</code></td><td><code>PointLight2D</code></td></tr><tr><td><code>LineShape2D</code></td><td><code>WorldBoundaryShape2D</code></td></tr><tr><td><code>Listener</code></td><td><code>AudioListener3D</code></td></tr><tr><td><code>Listener2D</code></td><td><code>AudioListener2D</code></td></tr><tr><td><code>MeshInstance</code></td><td><code>MeshInstance3D</code></td></tr><tr><td><code>MultiMeshInstance</code></td><td><code>MultiMeshInstance3D</code></td></tr><tr><td><code>MultiplayerPeerGDNative</code></td><td><code>MultiplayerPeerExtension</code></td></tr><tr><td><code>Navigation2DServer</code></td><td><code>NavigationServer2D</code></td></tr><tr><td><code>NavigationAgent</code></td><td><code>NavigationAgent3D</code></td></tr><tr><td><code>NavigationMeshInstance</code></td><td><code>NavigationRegion3D</code></td></tr><tr><td><code>NavigationObstacle</code></td><td><code>NavigationObstacle3D</code></td></tr><tr><td><code>NavigationPolygonInstance</code></td><td><code>NavigationRegion2D</code></td></tr><tr><td><code>NavigationRegion</code></td><td><code>NavigationRegion3D</code></td></tr><tr><td><code>NavigationServer</code></td><td><code>NavigationServer3D</code></td></tr><tr><td><code>NetworkedMultiplayerCustom</code></td><td><code>MultiplayerPeerExtension</code></td></tr><tr><td><code>NetworkedMultiplayerENet</code></td><td><code>ENetMultiplayerPeer</code></td></tr><tr><td><code>NetworkedMultiplayerPeer</code></td><td><code>MultiplayerPeer</code></td></tr><tr><td><code>Occluder</code></td><td><code>OccluderInstance3D</code></td></tr><tr><td><code>OmniLight</code></td><td><code>OmniLight3D</code></td></tr><tr><td><code>OpenSimplexNoise</code></td><td><code>FastNoiseLite</code></td></tr><tr><td><code>PHashTranslation</code></td><td><code>OptimizedTranslation</code></td></tr><tr><td><code>PacketPeerGDNative</code></td><td><code>PacketPeerExtension</code></td></tr><tr><td><code>PanoramaSky</code></td><td><code>Sky</code></td></tr><tr><td><code>Particles2D</code></td><td><code>GPUParticles2D</code></td></tr><tr><td><code>ParticlesMaterial</code></td><td><code>ParticleProcessMaterial</code></td></tr><tr><td><code>Path</code></td><td><code>Path3D</code></td></tr><tr><td><code>PathFollow</code></td><td><code>PathFollow3D</code></td></tr><tr><td><code>PhysicalBone</code></td><td><code>PhysicalBone3D</code></td></tr><tr><td><code>Physics2DDirectBodyState</code></td><td><code>PhysicsDirectBodyState2D</code></td></tr><tr><td><code>Physics2DDirectSpaceState</code></td><td><code>PhysicsDirectSpaceState2D</code></td></tr><tr><td><code>Physics2DServer</code></td><td><code>PhysicsServer2D</code></td></tr><tr><td><code>Physics2DServerSW</code></td><td><code>GodotPhysicsServer2D</code></td></tr><tr><td><code>Physics2DShapeQueryParameters</code></td><td><code>PhysicsShapeQueryParameters2D</code></td></tr><tr><td><code>Physics2DTestMotionResult</code></td><td><code>PhysicsTestMotionResult2D</code></td></tr><tr><td><code>PhysicsBody</code></td><td><code>PhysicsBody3D</code></td></tr><tr><td><code>PhysicsDirectBodyState</code></td><td><code>PhysicsDirectBodyState3D</code></td></tr><tr><td><code>PhysicsDirectSpaceState</code></td><td><code>PhysicsDirectSpaceState3D</code></td></tr><tr><td><code>PhysicsServer</code></td><td><code>PhysicsServer3D</code></td></tr><tr><td><code>PhysicsShapeQueryParameters</code></td><td><code>PhysicsShapeQueryParameters3D</code></td></tr><tr><td><code>PhysicsTestMotionResult</code></td><td><code>PhysicsTestMotionResult3D</code></td></tr><tr><td><code>PinJoint</code></td><td><code>PinJoint3D</code></td></tr><tr><td><code>PlaneShape</code></td><td><code>WorldBoundaryShape3D</code></td></tr><tr><td><code>PopupDialog</code></td><td><code>Popup</code></td></tr><tr><td><code>Position2D</code></td><td><code>Marker2D</code></td></tr><tr><td><code>Position3D</code></td><td><code>Marker3D</code></td></tr><tr><td><code>ProceduralSky</code></td><td><code>Sky</code></td></tr><tr><td><code>RayCast</code></td><td><code>RayCast3D</code></td></tr><tr><td><code>RayShape</code></td><td><code>SeparationRayShape3D</code></td></tr><tr><td><code>RayShape2D</code></td><td><code>SeparationRayShape2D</code></td></tr><tr><td><code>Reference</code></td><td><code>RefCounted</code></td></tr><tr><td><code>RemoteTransform</code></td><td><code>RemoteTransform3D</code></td></tr><tr><td><code>ResourceInteractiveLoader</code></td><td><code>ResourceLoader</code></td></tr><tr><td><code>RigidBody</code></td><td><code>RigidBody3D</code></td></tr><tr><td><code>SceneTreeTween</code></td><td><code>Tween</code></td></tr><tr><td><code>Shape</code></td><td><code>Shape3D</code></td></tr><tr><td><code>ShortCut</code></td><td><code>Shortcut</code></td></tr><tr><td><code>Skeleton</code></td><td><code>Skeleton3D</code></td></tr><tr><td><code>SkeletonIK</code></td><td><code>SkeletonIK3D</code></td></tr><tr><td><code>SliderJoint</code></td><td><code>SliderJoint3D</code></td></tr><tr><td><code>SoftBody</code></td><td><code>SoftBody3D</code></td></tr><tr><td><code>Spatial</code></td><td><code>Node3D</code></td></tr><tr><td><code>SpatialGizmo</code></td><td><code>Node3DGizmo</code></td></tr><tr><td><code>SpatialMaterial</code></td><td><code>StandardMaterial3D</code></td></tr><tr><td><code>SphereShape</code></td><td><code>SphereShape3D</code></td></tr><tr><td><code>SpotLight</code></td><td><code>SpotLight3D</code></td></tr><tr><td><code>SpringArm</code></td><td><code>SpringArm3D</code></td></tr><tr><td><code>Sprite</code></td><td><code>Sprite2D</code></td></tr><tr><td><code>StaticBody</code></td><td><code>StaticBody3D</code></td></tr><tr><td><code>StreamCubemap</code></td><td><code>CompressedCubemap</code></td></tr><tr><td><code>StreamCubemapArray</code></td><td><code>CompressedCubemapArray</code></td></tr><tr><td><code>StreamPeerGDNative</code></td><td><code>StreamPeerExtension</code></td></tr><tr><td><code>StreamPeerSSL</code></td><td><code>StreamPeerTLS</code></td></tr><tr><td><code>StreamTexture</code></td><td><code>CompressedTexture2D</code></td></tr><tr><td><code>StreamTexture2D</code></td><td><code>CompressedTexture2D</code></td></tr><tr><td><code>StreamTexture2DArray</code></td><td><code>CompressedTexture2DArray</code></td></tr><tr><td><code>StreamTextureLayered</code></td><td><code>CompressedTextureLayered</code></td></tr><tr><td><code>TCP_Server</code></td><td><code>TCPServer</code></td></tr><tr><td><code>Tabs</code></td><td><code>TabBar</code></td></tr><tr><td><code>TextFile</code></td><td><code>Node3D</code></td></tr><tr><td><code>Texture</code></td><td><code>Texture2D</code></td></tr><tr><td><code>TextureArray</code></td><td><code>Texture2DArray</code></td></tr><tr><td><code>TextureProgress</code></td><td><code>TextureProgressBar</code></td></tr><tr><td><code>ToolButton</code></td><td><code>Button</code></td></tr><tr><td><code>VehicleBody</code></td><td><code>VehicleBody3D</code></td></tr><tr><td><code>VehicleWheel</code></td><td><code>VehicleWheel3D</code></td></tr><tr><td><code>VideoPlayer</code></td><td><code>VideoStreamPlayer</code></td></tr><tr><td><code>Viewport</code></td><td><code>SubViewport</code></td></tr><tr><td><code>ViewportContainer</code></td><td><code>SubViewportContainer</code></td></tr><tr><td><code>VisibilityEnabler</code></td><td><code>VisibleOnScreenEnabler3D</code></td></tr><tr><td><code>VisibilityEnabler2D</code></td><td><code>VisibleOnScreenEnabler2D</code></td></tr><tr><td><code>VisibilityNotifier</code></td><td><code>VisibleOnScreenNotifier3D</code></td></tr><tr><td><code>VisibilityNotifier2D</code></td><td><code>VisibleOnScreenNotifier2D</code></td></tr><tr><td><code>VisibilityNotifier3D</code></td><td><code>VisibleOnScreenNotifier3D</code></td></tr><tr><td><code>VisualInstance</code></td><td><code>VisualInstance3D</code></td></tr><tr><td><code>VisualServer</code></td><td><code>RenderingServer</code></td></tr><tr><td><code>VisualShaderNodeBooleanUniform</code></td><td><code>VisualShaderNodeBooleanParameter</code></td></tr><tr><td><code>VisualShaderNodeColorUniform</code></td><td><code>VisualShaderNodeColorParameter</code></td></tr><tr><td><code>VisualShaderNodeCubeMap</code></td><td><code>VisualShaderNodeCubemap</code></td></tr><tr><td><code>VisualShaderNodeCubemapUniform</code></td><td><code>VisualShaderNodeCubemapParameter</code></td></tr><tr><td><code>VisualShaderNodeScalarClamp</code></td><td><code>VisualShaderNodeClamp</code></td></tr><tr><td><code>VisualShaderNodeScalarConstant</code></td><td><code>VisualShaderNodeFloatConstant</code></td></tr><tr><td><code>VisualShaderNodeScalarFunc</code></td><td><code>VisualShaderNodeFloatFunc</code></td></tr><tr><td><code>VisualShaderNodeScalarInterp</code></td><td><code>VisualShaderNodeMix</code></td></tr><tr><td><code>VisualShaderNodeScalarOp</code></td><td><code>VisualShaderNodeFloatOp</code></td></tr><tr><td><code>VisualShaderNodeScalarSmoothStep</code></td><td><code>VisualShaderNodeSmoothStep</code></td></tr><tr><td><code>VisualShaderNodeScalarSwitch</code></td><td><code>VisualShaderNodeSwitch</code></td></tr><tr><td><code>VisualShaderNodeScalarTransformMult</code></td><td><code>VisualShaderNodeTransformOp</code></td></tr><tr><td><code>VisualShaderNodeScalarUniform</code></td><td><code>VisualShaderNodeFloatParameter</code></td></tr><tr><td><code>VisualShaderNodeTextureUniform</code></td><td><code>VisualShaderNodeTexture2DParameter</code></td></tr><tr><td><code>VisualShaderNodeTextureUniformTriplanar</code></td><td><code>VisualShaderNodeTextureParameterTriplanar</code></td></tr><tr><td><code>VisualShaderNodeTransformMult</code></td><td><code>VisualShaderNode</code></td></tr><tr><td><code>VisualShaderNodeTransformUniform</code></td><td><code>VisualShaderNodeTransformParameter</code></td></tr><tr><td><code>VisualShaderNodeUniform</code></td><td><code>VisualShaderNodeParameter</code></td></tr><tr><td><code>VisualShaderNodeUniformRef</code></td><td><code>VisualShaderNodeParameterRef</code></td></tr><tr><td><code>VisualShaderNodeVec3Uniform</code></td><td><code>VisualShaderNodeVec3Parameter</code></td></tr><tr><td><code>VisualShaderNodeVectorClamp</code></td><td><code>VisualShaderNodeClamp</code></td></tr><tr><td><code>VisualShaderNodeVectorInterp</code></td><td><code>VisualShaderNodeMix</code></td></tr><tr><td><code>VisualShaderNodeVectorScalarMix</code></td><td><code>VisualShaderNodeMix</code></td></tr><tr><td><code>VisualShaderNodeVectorScalarSmoothStep</code></td><td><code>VisualShaderNodeSmoothStep</code></td></tr><tr><td><code>VisualShaderNodeVectorScalarStep</code></td><td><code>VisualShaderNodeStep</code></td></tr><tr><td><code>VisualShaderNodeVectorSmoothStep</code></td><td><code>VisualShaderNodeSmoothStep</code></td></tr><tr><td><code>WebRTCDataChannelGDNative</code></td><td><code>WebRTCDataChannelExtension</code></td></tr><tr><td><code>WebRTCMultiplayer</code></td><td><code>WebRTCMultiplayerPeer</code></td></tr><tr><td><code>WebRTCPeerConnectionGDNative</code></td><td><code>WebRTCPeerConnectionExtension</code></td></tr><tr><td><code>WindowDialog</code></td><td><code>Window</code></td></tr><tr><td><code>XRAnchor</code></td><td><code>XRAnchor3D</code></td></tr><tr><td><code>XRController</code></td><td><code>XRController3D</code></td></tr><tr><td><code>XROrigin</code></td><td><code>XROrigin3D</code></td></tr><tr><td><code>YSort</code></td><td><code>Node2D</code></td></tr></tbody></table></div></div></section>
+<section><div class="wrap"><h2>Keep reviewing as you migrate</h2>
+<p class="sub">A clean static report is not a guarantee that the port is complete. Check scenes, resources, physics and rendering in Godot, and play-test each migrated feature. See <a href="./#tools">all Godotwright tools</a> and the <a href="https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html">official migration guide</a> for the engine changes.</p>
+</div></section>
+</main>
+<footer class="wrap"><p><a href="./">Godotwright home</a> · <a href="https://github.com/laaielichter/Godotwright">Source on GitHub</a></p></footer>
+</body>
+</html>

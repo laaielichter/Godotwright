@@ -3,12 +3,15 @@ import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } fr
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
-import { formatIdentify } from "../archetype/format.js";
+import { briefFor } from "../archetype/brief.js";
+import { formatChecked, formatIdentify } from "../archetype/format.js";
 import { identify } from "../archetype/identify.js";
 import { loadLibrary } from "../archetype/library.js";
 import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
 import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
+import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { formatDelta, reviewDelta } from "../review/delta.js";
 import { parseFindingLine, recordFeedback } from "../learn/learn.js";
 import { allKinds } from "../build/generators/index.js";
 import { buildModel } from "../build/run.js";
@@ -18,6 +21,7 @@ import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { ModelError } from "../model/gltf.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
+import { viewModel } from "../model/view.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { findProjectRoot, listProjectFiles } from "../project/files.js";
@@ -64,9 +68,10 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
+      "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
-      "To make or check a 3D model (.glb): 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
+      "To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
     ].join("\n"),
   },
   premium: {
@@ -80,12 +85,15 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
       "- godot_checklist lists every AAA rule with its fix.",
+      "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
+      "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
       "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
       "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, with expressions, mirror and repeat) and lists the ready-made kinds.",
       "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
+      "- godot_model_view draws a .glb as text: front, side and top views made of letters (one letter per part), a table of the parts with sizes, and the parts that do not touch the rest (a ladder away from its tree, a wheel without an axle). You cannot see a picture, so use it after every build to check shape, proportions and that everything is attached.",
       "- godot_model_lint scores a .glb (geometry, materials, performance, rig), and with `archetype` also checks it is what it should be: parts, pivots, wheel axes, size, direction. godot_model_inspect shows what is in a .glb.",
-      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, lint with the archetype, fix, repeat.",
+      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, view, lint with the archetype, fix, repeat.",
     ].join("\n"),
   },
 };
@@ -179,17 +187,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "AAA review",
       description:
-        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure, with a 0-100 score per category. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk.",
+        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure, with a 0-100 score per category. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk. Pass `only_new: true` while you are fixing: it shows only findings that are new since your last review in full, the ones you already saw as one short line each, and how many are fixed.",
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only show findings in these res:// files"),
         code: z.string().optional().describe("unsaved GDScript to review in place of the file on disk"),
         file: z.string().optional().describe("res:// path the code belongs to (required with code)"),
+        only_new: z.boolean().optional().describe("show only what changed since the last review of this project (saves tokens in a fix loop)"),
         detail: detailParam,
       },
       annotations: writesLearning,
     },
-    async ({ path, files, code, file, detail }) =>
+    async ({ path, files, code, file, only_new, detail }) =>
       guard(() => {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
         const target = file ? resPath(file) : undefined;
@@ -198,8 +207,34 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const report = reviewLearning(dir, { base: options.base, baseFiles: options.baseFiles, overrides });
         const focus = [...(files ?? []), ...(target ? [target] : [])].map(resPath);
         const missing = focus.length ? unknownFiles(dir, focus, overrides ?? {}) : [];
-        const body = formatReviewFor(report, detail ?? profile.detail, profile, focus, missing);
+        // Unsaved code is a what-if: it does not become the memory the next delta compares with.
+        const delta = reviewDelta(dir, report, { remember: code === undefined });
+        const body = only_new
+          ? `AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100\n${report.categories.map((c) => `${c.category} ${c.score}`).join(", ")}; static typing ${report.typing.percent}%\n` +
+            formatDelta(delta, { cap: profile.findings, focus, noInfos: !profile.infos && (detail ?? profile.detail) === "brief" })
+          : formatReviewFor(report, detail ?? profile.detail, profile, focus, missing);
         return missing.length ? failure(body) : text(body);
+      }),
+  );
+
+  server.registerTool(
+    "godot_migrate",
+    {
+      title: "Port Godot 3 scripts to Godot 4",
+      description:
+        "Rewrite Godot 3 GDScript to Godot 4 where that is mechanical: @export/@onready/@tool, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, members that moved (OS.get_ticks_msec() to Time). Strings, comments and node paths are left alone. Without `write` it only reports the changes; with `write: true` it rewrites the scripts. It also lists what still needs a hand (setget, move_and_slide arguments, rpc keywords, export hints it does not know). Scenes and project settings are not migrated; Godot's --convert-3to4 does those. Run godot_review afterwards.",
+      inputSchema: {
+        path: pathParam,
+        write: z.boolean().optional().describe("rewrite the scripts on disk (default false: report only)"),
+        files: z.array(z.string()).optional().describe("only these res:// scripts"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, write, files, detail }) =>
+      guard(() => {
+        const result = migrateProject(where(path), { write: write === true, ...(files ? { files: files.map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`)) } : {}) });
+        return text(formatMigration(result, detail ?? profile.detail));
       }),
   );
 
@@ -208,23 +243,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene. Reports engine errors as res://file:line. Needs Godot on this machine; slower than godot_review.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here: it is the only way to see the game run without a screen. Needs Godot on this machine; slower than godot_review.",
       inputSchema: {
         path: pathParam,
-        run_frames: z.number().int().min(0).max(10_000).optional().describe("also run the main scene for this many frames (default 0)"),
+        run_frames: z.number().int().min(0).max(10_000).optional().describe("also run the main scene for this many frames and return its output (default 0; 120 when scene is given)"),
+        scene: z.string().optional().describe("run this scene (a res:// path) instead of the main scene"),
         timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout per Godot run (default 600)"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ path, run_frames, timeout_seconds }) => {
+    async ({ path, run_frames, scene, timeout_seconds }) => {
       try {
         const result = await checkLearning(where(path), {
           godot: options.godot,
-          runFrames: run_frames ?? 0,
+          runFrames: run_frames ?? (scene ? 120 : 0),
+          ...(scene ? { scene } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
         const lines = result.diagnostics.map(formatDiagnostic);
         lines.push(`${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`);
+        if (result.output !== undefined) lines.push(`output of the run (what the game printed):\n${result.output || "(nothing)"}`);
         return result.errors > 0 ? failure(lines.join("\n")) : text(lines.join("\n"));
       } catch (error) {
         if (error instanceof GodotNotFoundError) {
@@ -307,6 +345,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   server.registerTool(
+    "godot_model_brief",
+    {
+      title: "Briefing before you build a model",
+      description:
+        "One page to read before building a 3D model, made for small models: what the thing is, the ready-made kind to start from (with its build command), the parts to name your nodes after, typical size, rules, the usual mistakes, the order of tools to call, and a short spec cheat sheet. Replaces calling godot_model_identify and godot_model_spec separately when you just want to start.",
+      inputSchema: { text: z.string().describe("what you want to make, e.g. 'a rowing boat', 'dragon', 'castle wall'") },
+      annotations: readOnly,
+    },
+    async ({ text: query }) => guard(() => text(briefFor(query).text)),
+  );
+
+  server.registerTool(
     "godot_model_spec",
     {
       title: "Model spec format",
@@ -325,7 +375,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Build a 3D model from code",
       description:
-        "Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` or a model `spec`, write it to `out`, and lint it. If the spec has an \"archetype\" (or the kind has one), the result is also checked against what that thing should be. Call godot_model_identify first and godot_model_spec for the format.",
+        "Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` or a model `spec`, write it to `out`, and lint it. Pass `collision` so Godot adds collision shapes when it imports the file (most models need one; nobody remembers to add it by hand). If the spec has an \"archetype\" (or the kind has one), the result is also checked against what that thing should be. Call godot_model_identify first and godot_model_spec for the format.",
       inputSchema: {
         out: z.string().describe("where to write the .glb, inside the project, e.g. models/car.glb"),
         kind: z.string().optional().describe(`a ready-made kind: ${allKinds().map((k) => k.kind).join(", ")}`),
@@ -333,11 +383,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
         spec_file: z.string().optional().describe("or a path to a spec JSON file inside the project"),
         params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("parameter values, e.g. { width: 9, roof: 'hip' }"),
         contract_out: z.string().optional().describe("also write a model.contract.json here (inside the project)"),
+        collision: z.enum(["convex", "trimesh"]).optional().describe("name the meshes so Godot makes collision shapes on import: convex (a hull per mesh, for props and vehicles) or trimesh (exact triangles, for buildings and terrain)"),
         detail: modelDetail,
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async ({ out, kind, spec, spec_file, params, contract_out, detail }) =>
+    async ({ out, kind, spec, spec_file, params, contract_out, collision, detail }) =>
       guard(() => {
         if (!out.toLowerCase().endsWith(".glb")) return failure("`out` must end in .glb");
         if (contract_out && !contract_out.toLowerCase().endsWith(".json")) return failure("`contract_out` must end in .json");
@@ -350,7 +401,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             return failure(`${spec_file}: cannot read the spec (${(error as Error).message})`);
           }
         }
-        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: output(out), ...(contract_out ? { contractOut: output(contract_out) } : {}) });
+        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: output(out), ...(contract_out ? { contractOut: output(contract_out) } : {}), ...(collision ? { collision } : {}) });
         const errors = outcome.report.categories.reduce((n, c) => n + c.errors, 0);
         const body = `${outcome.summary}\n${formatModelReport(outcome.report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);
@@ -380,11 +431,27 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(contract ? { contract: loadContractIn(contract) } : {}),
           ...(max_triangles ? { maxTriangles: max_triangles } : {}),
         });
-        const head = choice ? `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n` : "";
+        const head = choice ? formatChecked(choice, report.compared) : "";
         const errors = report.categories.reduce((n, c) => n + c.errors, 0);
         const body = `${head}${formatModelReport(report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);
       }),
+  );
+
+  server.registerTool(
+    "godot_model_view",
+    {
+      title: "See a 3D model as text",
+      description:
+        "Look at a .glb or .gltf without Godot or a picture: three views (front, side, top) drawn with letters, one letter per part, then a list of the parts with their sizes and heights, and which parts do not touch the rest of the model (a ladder away from its tree, a wheel without an axle, something floating). Use it after building to check the shape, proportions and that everything is attached.",
+      inputSchema: {
+        file: fileParam,
+        only: z.enum(["front", "side", "top"]).optional().describe("show one view only"),
+        width: z.number().int().min(20).max(120).optional().describe("width of the views in characters (default 48)"),
+      },
+      annotations: readOnly,
+    },
+    async ({ file, only, width }) => guard(() => text(viewModel(inspectModel(inside(file)), { ...(width ? { width } : {}), ...(only ? { only } : {}) }))),
   );
 
   server.registerTool(

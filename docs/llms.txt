@@ -1,0 +1,40 @@
+# Godotwright
+
+> Godotwright is an MCP server and CLI that makes coding agents (Claude Code, Codex, and any agent that speaks MCP or can run a shell command) better at Godot 4.7. It gives them the real Godot 4.7 API offline, a map of the project, headless Godot checks, an AAA review of GDScript, and tools to build, view and check 3D models (.glb) from code. MIT licensed, runs with `npx -y godotwright`.
+
+Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict steps, for small models) or `--tier premium` (full detail). It is also listed in the official MCP Registry as io.github.laaielichter/godotwright.
+
+## Docs
+
+- [README](https://github.com/laaielichter/Godotwright#readme): install, commands, MCP tools, FAQ
+- [AGENTS.md](https://github.com/laaielichter/Godotwright/blob/main/AGENTS.md): how an agent should work in a Godot project with Godotwright
+- [3D model gallery](https://laaielichter.github.io/Godotwright/models.html): 53 ready-made parametric models and the commands that build them
+- [Small, cheap models and 3D](https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md): a test with six small-model agents, what went wrong and what the tools do about it
+- [Benchmark](https://github.com/laaielichter/Godotwright/blob/main/bench/RESULTS.md): 168 agent runs with and without the tools, with the limits stated
+- [Roadmap](https://github.com/laaielichter/Godotwright/blob/main/ROADMAP.md)
+- [Privacy](https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md): nothing leaves the machine unless you opt in; no code, file names or paths are ever sent
+
+## Seeing the game run
+
+`godotwright check --scene res://x.tscn` (godot_check with scene or run_frames) runs a scene headless and returns what it printed: put print() calls in the code under test and read them back.
+## Porting Godot 3 scripts
+
+`godotwright migrate` (MCP: godot_migrate) shows the mechanical Godot 3 to 4 rewrites it would make, `--write` applies them, and it lists what still needs a hand. Then `godotwright review`.
+## Fix loop
+
+`godotwright review --only-new` (godot_review with only_new: true): after the first review, only the findings that are new since the last one in full, the rest as one short line each, and how many are fixed.
+
+## Workflow for 3D models
+
+0. `godotwright model brief "<thing>"` (godot_model_brief): one page with the kind to start from, parts, size, rules and the order of work. Start here if you are a small model.
+1. `godotwright model identify "<thing>"` (or the MCP tool godot_model_identify): what it is, its parts, typical size, pivots, what to anticipate.
+2. `godotwright model build <kind> -o out.glb --set name=value --collision convex|trimesh` (collision shapes on import) from a ready-made kind (`godotwright model kinds`), or `--spec file.json` for your own tree of named parts (`godotwright model spec` explains the format).
+3. `godotwright model view out.glb` (godot_model_view): front, side and top views as text, a table of the parts, and parts that do not touch the rest.
+4. `godotwright model lint out.glb --archetype <thing>` (godot_model_lint): score and what-it-should-be checks. Fix every error.
+
+Conventions: units are metres, +Y is up, the front of a model faces +Z, the model stands on y = 0, every moving part is its own node with its pivot at its origin.
+
+## Optional
+
+- [Source](https://github.com/laaielichter/Godotwright)
+- [npm package](https://www.npmjs.com/package/godotwright)

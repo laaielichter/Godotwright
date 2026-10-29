@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">Godotwright</h1>
 <p align="center"><b>MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4.</b><br>
-Offline Godot 4.7 API, a project map, headless checks and an AAA review of GDScript.</p>
+Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript, and 3D models built, viewed and checked from code.</p>
 <p align="center">
   <a href="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml"><img src="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
@@ -13,6 +13,7 @@ Offline Godot 4.7 API, a project map, headless checks and an AAA review of GDScr
 </p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
+  <a href="https://laaielichter.github.io/Godotwright/models.html">3D model gallery</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#use-with-claude-code-codex-and-other-coding-agents-mcp">MCP setup</a> ·
   <a href="bench/RESULTS.md">Benchmark</a> ·
@@ -28,6 +29,18 @@ are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a comp
 map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
+
+### And it builds 3D models
+
+<p align="center">
+  <a href="https://laaielichter.github.io/Godotwright/models.html"><img src="docs/gallery/overview.jpg" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" width="720"></a>
+</p>
+
+A coding agent can also **make, look at and check 3D models** for Godot with no Blender: `model identify` says what a
+thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
+[53 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
+terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
+It is set up to work with small, cheap models too: [what we tested and learned](docs/cheap-models.md).
 
 ## Quickstart
 
@@ -57,10 +70,14 @@ godotwright scan [path]               # compact project map, cheap to read
 godotwright scan [path] --detail full # node trees, signatures, line numbers
 godotwright scan [path] --json        # the full map as JSON
 godotwright check [path]              # run Godot headless, report errors as file:line
-godotwright check [path] --run        # also run the main scene for 120 frames
+godotwright check [path] --run        # also run the main scene for 120 frames and show what it printed
+godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put print() in the code and read it back here
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
+godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
+godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
+godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
 godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
@@ -68,11 +85,15 @@ godotwright model contract car.glb    # write a model.contract.json: node names,
 godotwright model contract --archetype car   # the same, from what a car usually is (no model yet)
 godotwright model lint car.glb --archetype car   # also check it is what it should be
 godotwright model lint car.glb --contract model.contract.json
+godotwright model brief "a tractor"    # one page before you build: kind to start from, parts, size, rules, order of work (for small models)
 godotwright model identify "a tractor" # what it is: parts, size, variants, what to anticipate
 godotwright model archetypes          # the family tree of things Godotwright knows
 godotwright model kinds               # what `model build` can make, with parameters
+godotwright model view car.glb       # see a model as text: front, side and top views, the parts, what does not touch
 godotwright model recipes             # the ready-made recipes and the archetype each one is checked against
+godotwright model recipes tractor     # print one recipe as a spec to edit
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
+godotwright model build house -o house.glb --collision trimesh   # Godot adds collision shapes on import (-col / -convcol names)
 godotwright learn                     # what Godotwright learned on this machine
 ```
 
@@ -135,10 +156,13 @@ same parameters. The result goes straight through `model lint`, and `--contract-
 `model.contract.json` for it. `model kinds` lists the kinds with their parameters, ranges and defaults;
 set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
 to be refined, not hand-sculpted art. Kinds today: `house`, the open-world kinds `terrain` (a heightmap tile from seeded
-noise whose neighbours continue it exactly, with an optional lake carved into it) and `sea` (a subdivided water plane at y = 0 with a floor), plus recipes, which are ready-made specs in
+noise whose neighbours continue it exactly, with an optional lake and an optional river carved into it) and `sea` (a subdivided water plane at y = 0 with a floor), plus recipes, which are ready-made specs in
 `data/recipes/`: `car`, `tractor`, `helicopter`, `airliner`, `ship`, `tree`, `conifer`,
 `wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
 it as it builds, and every recipe is tested to stay clean at the lowest and highest value of each parameter.
+
+Small, cheap models can work blind: see [docs/cheap-models.md](docs/cheap-models.md) for a test and what `model view` and the
+floating-part check do about it.
 
 `model identify` says **what a thing is** before you build it, from its name in English or Dutch (typos,
 plurals and Dutch compounds like "vrachtauto" included) or from a description ("something with wheels and
@@ -173,6 +197,35 @@ small car as an example; `model build --spec car.json --set width=1.9` builds it
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
 
+## Port Godot 3 scripts to Godot 4
+
+```sh
+godotwright migrate                 # shows every change it would make, and what still needs a hand
+godotwright migrate --write         # applies them
+godotwright review                  # what is still wrong, with line numbers
+```
+
+`migrate` rewrites the mechanical part of a port: `export`, `onready` and `tool` become annotations (with `@export_range`,
+`@export_enum`, `@export_file` and typed arrays where the hint is clear), renamed classes, functions, properties and
+constants get their Godot 4 names (only when the old name no longer exists in Godot 4 and is not defined in the script),
+`yield(x, "sig")` becomes `await x.sig`, `connect("sig", target, "method", [binds])` becomes
+`sig.connect(target.method.bind(...))`, `emit_signal` and `funcref` become signals and callables, and members that moved
+(`OS.get_ticks_msec()`) move to their new class. Strings, comments and node paths are left alone. What it cannot do safely
+it lists with the line: `setget`, `move_and_slide(velocity)`, `remote func`, export hints it does not know. Scenes and
+project settings are not touched; Godot's own `--convert-3to4` does those. Commit first; a second run makes no further
+changes.
+
+### Cheaper fix loops: only what changed
+
+```sh
+godotwright review --only-new
+```
+
+Every review remembers its findings in `.godot/godotwright/review-last.json` (Godot projects ignore `.godot/` in git). With
+`--only-new` (MCP: `only_new: true`) the next review prints the findings that are new since then in full, the ones you
+already saw as one short line each (`file:line [rule]`), and how many are fixed. A finding keeps its identity when its
+line moves. An agent fixing a long list reads the list once instead of after every edit.
+
 ## Review in GitHub Actions
 
 Save this as `.github/workflows/godot-review.yml` in your game repository. It
@@ -199,6 +252,28 @@ jobs:
 The toolkit is pinned to a revision; update that revision deliberately when you
 want a newer version. For a game in a subdirectory, set `working-directory` on
 the review step to the folder containing `project.godot`.
+
+To see the findings inline on pull requests, upload the review as SARIF to GitHub
+code scanning (this needs `security-events: write` and the repository's code
+scanning enabled):
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npx --yes godotwright review . --sarif > godotwright.sarif || true
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: godotwright.sarif
+```
 
 ## Mods and patches over a game
 
@@ -235,10 +310,12 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 | `godot_check` | Run Godot headless and report errors as file:line |
 | `godot_checklist` | Every AAA rule with its fix |
 | `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
+| `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules, the order of tools and a short spec cheat sheet |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants, what to anticipate (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (written inside the project), and lint it |
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
+| `godot_model_view` | See a `.glb` as text: front, side and top views, the parts with sizes, and parts that do not touch the rest |
 | `godot_model_inspect` | What is in a `.glb`: nodes, triangles, textures, size |
 
 Pick a profile with `--tier`:

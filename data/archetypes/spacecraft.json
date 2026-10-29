@@ -1,0 +1,515 @@
+[
+ {
+  "id": "spacecraft",
+  "name": "spacecraft",
+  "description": "Anything that flies in space: a rocket, a satellite or a spaceship.",
+  "aliases": [
+   "spacecraft",
+   "ruimtevaartuig",
+   "ruimtevaart"
+  ],
+  "extends": "thing",
+  "hints": [
+   "space",
+   "ruimte",
+   "orbit",
+   "baan",
+   "planet",
+   "planeet",
+   "galaxy",
+   "sterrenstelsel",
+   "alien",
+   "sci-fi",
+   "scifi",
+   "astronaut",
+   "thruster",
+   "thrusters",
+   "warp",
+   "laser"
+  ],
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "body",
+     "fuselage",
+     "romp",
+     "module",
+     "capsule"
+    ]
+   }
+  ],
+  "conventions": [
+   "Engines and thrusters are separate nodes with their pivot at the nozzle throat, so an effect and a thrust direction can sit on them.",
+   "A craft that is landed stands on y = 0 on its legs or its engines; in orbit there is no up, so the model keeps +Y as its top."
+  ],
+  "anticipate": [
+   "A marker for each thruster (position and direction) for particle effects and for a physics script.",
+   "Emissive materials for lights and engine glow."
+  ],
+  "pitfalls": [
+   "Engines baked into the hull cannot gimbal or glow on their own.",
+   "A spacecraft with no scale references (a door, a window) reads as a toy."
+  ]
+ },
+ {
+  "id": "spacecraft.rocket",
+  "name": "rocket",
+  "description": "A launch vehicle: a tall cylinder with a nose cone, stages, engines at the bottom and fins or legs.",
+  "aliases": [
+   "rocket",
+   "raket",
+   "launcher",
+   "draagraket",
+   "falcon 9",
+   "saturn v",
+   "booster",
+   "space rocket",
+   "ruimteraket",
+   "lanceerraket"
+  ],
+  "extends": "spacecraft",
+  "hints": [
+   "launch",
+   "lancering",
+   "stage",
+   "trap",
+   "nose cone",
+   "neuskegel",
+   "booster",
+   "fuel",
+   "brandstof",
+   "engines at the bottom"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "stage",
+     "first stage",
+     "tank",
+     "fuselage",
+     "romp",
+     "trap",
+     "core"
+    ],
+    "replaces": [
+     "Hull"
+    ]
+   },
+   {
+    "name": "NoseCone",
+    "role": "cone",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "nose cone",
+     "nosecone",
+     "nose",
+     "fairing",
+     "neuskegel",
+     "payload fairing",
+     "capsule"
+    ],
+    "note": "The pointed top: a cone, an ogive or a capsule with an escape tower."
+   },
+   {
+    "name": "Engine",
+    "role": "engine",
+    "required": true,
+    "count": [
+     1,
+     33
+    ],
+    "aliases": [
+     "engine",
+     "engines",
+     "motor",
+     "motoren",
+     "nozzle",
+     "mondstuk",
+     "thruster",
+     "raptor",
+     "merlin"
+    ],
+    "note": "At the bottom, in a ring or a cluster; the nozzle bell flares downward."
+   },
+   {
+    "name": "Fin",
+    "role": "fin",
+    "required": false,
+    "count": [
+     0,
+     8
+    ],
+    "aliases": [
+     "fin",
+     "fins",
+     "vin",
+     "vinnen",
+     "grid fin",
+     "landing leg",
+     "landing legs",
+     "landingspoot"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    1.0,
+    12
+   ],
+   "height": [
+    10,
+    125
+   ],
+   "source": "public data: Falcon 9 about 70 m x 3.7 m, Saturn V about 110 m x 10 m; sounding rockets are shorter",
+   "confidence": "B"
+  },
+  "conventions": [
+   "A rocket stands upright on y = 0, its axis along y; the nozzle at the bottom, the nose cone at the top."
+  ],
+  "anticipate": [
+   "The stages as separate nodes, so a stage can separate and fall away.",
+   "A marker at each nozzle for the flame effect, and a thin cylinder for the plume if it is meshed."
+  ],
+  "pitfalls": [
+   "A rocket modelled lying along z: it stands on y = 0, upright.",
+   "Engines the width of the stage: the bells are smaller than the tank and tuck under it."
+  ]
+ },
+ {
+  "id": "spacecraft.spaceship",
+  "name": "spaceship",
+  "description": "A crewed science-fiction ship: a hull, a cockpit or bridge, engines at the back, often wings and landing gear.",
+  "aliases": [
+   "star fighter",
+   "starfighter",
+   "space fighter",
+   "ruimtejager",
+   "sci-fi ship",
+   "science fiction ship",
+   "scifi ship",
+   "space cruiser",
+   "ruimtekruiser",
+   "shuttle",
+   "spaceship",
+   "ruimteschip",
+   "flying saucer",
+   "vliegende schotel",
+   "ufo",
+   "mothership",
+   "moederschip",
+   "freighter",
+   "vrachtschip ruimte"
+  ],
+  "extends": "spacecraft",
+  "hints": [
+   "cockpit",
+   "bridge",
+   "brug",
+   "warp",
+   "hyperdrive",
+   "lasers",
+   "laser",
+   "cannon",
+   "kanon",
+   "shield",
+   "schild",
+   "thrusters"
+  ],
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "body",
+     "fuselage",
+     "romp",
+     "saucer",
+     "disc",
+     "module"
+    ]
+   },
+   {
+    "name": "Cockpit",
+    "role": "glazing",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "cockpit",
+     "canopy",
+     "bridge",
+     "brug",
+     "cabin",
+     "kajuit",
+     "window",
+     "windows"
+    ],
+    "note": "Glazing or a bridge window at the front (+Z)."
+   },
+   {
+    "name": "Engine",
+    "role": "engine",
+    "required": true,
+    "count": [
+     1,
+     8
+    ],
+    "aliases": [
+     "engine",
+     "engines",
+     "thruster",
+     "thrusters",
+     "motor",
+     "motoren",
+     "nozzle",
+     "drive",
+     "exhaust"
+    ],
+    "note": "At the back (-Z), glowing."
+   },
+   {
+    "name": "Wing",
+    "role": "wing",
+    "required": false,
+    "count": [
+     0,
+     6
+    ],
+    "aliases": [
+     "wing",
+     "wings",
+     "vleugel",
+     "vleugels",
+     "fin",
+     "vin"
+    ]
+   },
+   {
+    "name": "LandingGear",
+    "role": "landing gear",
+    "required": false,
+    "count": [
+     0,
+     6
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "landing gear",
+     "landing leg",
+     "landing legs",
+     "gear",
+     "landingsgestel",
+     "poten",
+     "legs"
+    ],
+    "note": "Hinged where the leg meets the hull, so it retracts."
+   },
+   {
+    "name": "Weapon",
+    "role": "weapon",
+    "required": false,
+    "count": [
+     0,
+     12
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     },
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "mount",
+    "aliases": [
+     "weapon",
+     "cannon",
+     "turret",
+     "laser",
+     "gun",
+     "kanon",
+     "geschutskoepel"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    5,
+    400
+   ],
+   "width": [
+    3,
+    300
+   ],
+   "height": [
+    2,
+    120
+   ],
+   "source": "fiction: there is no real size; a wide range that only catches unit mistakes",
+   "confidence": "X"
+  },
+  "variants": [
+   {
+    "axis": "role",
+    "options": [
+     "fighter",
+     "shuttle",
+     "freighter",
+     "cruiser",
+     "saucer"
+    ]
+   },
+   {
+    "axis": "state",
+    "options": [
+     "landed",
+     "flying"
+    ]
+   }
+  ],
+  "anticipate": [
+   "Engine glow as an emissive material, and a marker per engine for the exhaust effect.",
+   "Landing gear that retracts: separate nodes with a hinge pivot."
+  ],
+  "pitfalls": [
+   "A hull that is one lump with details painted on: add panels, cockpit and engine bells as parts.",
+   "Left and right halves that differ by accident: mirror them exactly unless the ship is asymmetric on purpose."
+  ]
+ },
+ {
+  "id": "spacecraft.satellite",
+  "name": "satellite",
+  "description": "A satellite or space probe: a body (the bus), two solar panels, and antennas or dishes.",
+  "aliases": [
+   "satellite",
+   "satelliet",
+   "probe",
+   "ruimtesonde",
+   "space probe",
+   "space station",
+   "ruimtestation",
+   "iss",
+   "telescope in space",
+   "sputnik",
+   "communication satellite"
+  ],
+  "extends": "spacecraft",
+  "hints": [
+   "solar panel",
+   "solar panels",
+   "zonnepaneel",
+   "zonnepanelen",
+   "antenna",
+   "antenne",
+   "dish",
+   "schotel",
+   "orbiting",
+   "in orbit"
+  ],
+  "parts": [
+   {
+    "name": "Bus",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "bus",
+     "body",
+     "module",
+     "romp",
+     "hull",
+     "box"
+    ],
+    "replaces": [
+     "Hull"
+    ]
+   },
+   {
+    "name": "SolarPanel",
+    "role": "panel",
+    "required": true,
+    "count": [
+     2,
+     8
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "solar panel",
+     "solar panels",
+     "panel",
+     "panels",
+     "zonnepaneel",
+     "zonnepanelen",
+     "array",
+     "wing"
+    ],
+    "note": "Hinged at the bus, so the panels can unfold or turn to the sun."
+   },
+   {
+    "name": "Antenna",
+    "role": "antenna",
+    "required": false,
+    "count": [
+     0,
+     6
+    ],
+    "aliases": [
+     "antenna",
+     "antennas",
+     "antenne",
+     "dish",
+     "schotel",
+     "boom"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    1,
+    120
+   ],
+   "width": [
+    1,
+    110
+   ],
+   "height": [
+    1,
+    30
+   ],
+   "source": "general knowledge: small satellites a metre across to large stations (the ISS is about 109 m wide)",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "Solar panels as separate nodes that can turn to the sun."
+  ],
+  "pitfalls": [
+   "Panels as one fused wing: each panel is its own node so it can fold."
+  ]
+ }
+]
