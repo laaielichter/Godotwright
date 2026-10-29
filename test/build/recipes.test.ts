@@ -157,6 +157,18 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("sailboat: the mast top is mastHeight above the waterline, and the sails stay under it", () => {
+    const cases: Record<string, number>[] = [{}, { length: 4, mastHeight: 6 }, { length: 20, mastHeight: 6 }, { length: 20, mastHeight: 28 }];
+    for (const input of cases) {
+      const boxes = nodeBoxes("sailboat", input);
+      const top = boxes.get("Sailboat/Mast")!.max[1];
+      expect(top, JSON.stringify(input)).toBeCloseTo(input.mastHeight ?? 12, 2);
+      for (const sail of ["Sailboat/Sail_Main/Cloth", "Sailboat/Sail_Jib/Cloth"]) {
+        expect(boxes.get(sail)!.max[1], `${sail} ${JSON.stringify(input)}`).toBeLessThanOrEqual(top + 0.01);
+      }
+    }
+  });
+
   it("ship: the mast stands on the bridge roof at every length", () => {
     for (const length of [60, 200, 400]) {
       const boxes = nodeBoxes("ship", { length });
