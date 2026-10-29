@@ -267,6 +267,18 @@ describe("review robustness", () => {
     });
   });
 
+  it("does not report a group that add_to_group() names with a constant", () => {
+    const count = ["func count() -> int:", '\treturn get_tree().get_nodes_in_group("players").size()', ""].join("\n");
+    const named = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": ["extends Node", "", 'const PLAYERS := "players"', "", "func _ready() -> void:", "\tadd_to_group(PLAYERS)", "", "", count].join("\n"),
+    });
+    const unassigned = makeProject({ "project.godot": PROJECT, "main.gd": ["extends Node", "", "", count].join("\n") });
+    const groups = (root: string) => reviewProject(root).findings.filter((f) => f.rule === "structure/unknown-group").map(formatFinding);
+    expect(groups(named)).toEqual([]);
+    expect(groups(unassigned)).toEqual(['res://main.gd:5: warning [structure/unknown-group] Group "players" is never assigned to a node in a scene or with add_to_group().']);
+  });
+
   it("does not give a value the type of a literal it only starts with", () => {
     const root = makeProject({
       "project.godot": PROJECT,
