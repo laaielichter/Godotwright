@@ -157,6 +157,18 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("table: the apron has a front rail and a back rail", () => {
+    for (const length of [0.6, 1.4, 3]) {
+      const boxes = nodeBoxes("table", { length });
+      const centerZ = (path: string): number => {
+        const b = boxes.get(path);
+        expect(b, `${path} at length ${length}`).toBeDefined();
+        return (b!.min[2] + b!.max[2]) / 2;
+      };
+      expect(centerZ("Table/Apron_B"), `length ${length}`).toBeCloseTo(-centerZ("Table/Apron_F"), 3);
+    }
+  });
+
   it("power pylon: the back of each square frame is braced too, not a copy of the front", () => {
     for (const height of [15, 30, 70]) {
       const boxes = nodeBoxes("power-pylon", { height });
