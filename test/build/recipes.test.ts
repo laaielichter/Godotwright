@@ -157,6 +157,13 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("light aircraft: the wing tips sit at the wingspan, tip to tip", () => {
+    for (const wingSpan of [8, 11, 13]) {
+      const info = inspectModel(writeScene(buildKind("light-aircraft", { wingSpan })));
+      expect(info.bounds!.size[0], `wingSpan ${wingSpan}`).toBeCloseTo(wingSpan, 1);
+    }
+  });
+
   it("light aircraft: the tailplane has a half on each side, mirror images of each other", () => {
     const boxes = nodeBoxes("light-aircraft", {});
     const left = boxes.get("LightAircraft/Stabilizer")!;
