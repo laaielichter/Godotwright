@@ -1,5 +1,6 @@
 import type { ArchetypeLibrary } from "./library.js";
 import type { IdentifyResult } from "./identify.js";
+import type { Comparison } from "./check.js";
 import type { ArchetypePart, Range, ResolvedArchetype } from "./types.js";
 
 export const range = (r?: Range): string => (r ? (r[0] === r[1] ? `${r[0]}` : `${r[0]}-${r[1]}`) : "?");
@@ -50,5 +51,23 @@ export function formatTree(library: ArchetypeLibrary): string {
     for (const c of library.children(id)) walk(c.id, depth + 1);
   };
   walk("thing", 0);
+  return `${out.join("\n")}\n`;
+}
+
+/** The head of a `lint --archetype` report: what the model was checked as, and what that check really compared. */
+export function formatChecked(choice: { archetype: ResolvedArchetype; generic: boolean }, compared?: Comparison): string {
+  const a = choice.archetype;
+  const out = [`checked as: ${a.name} (${a.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}`];
+  if (!compared) {
+    out.push("  compared: nothing. No archetype matched, so only the general geometry rules ran; parts, pivots and size were not compared with anything.", "  A high score then says the file is clean, not that it is the right thing. Name it with `model identify` and check again.");
+    return `${out.join("\n")}\n`;
+  }
+  const found = compared.required.filter((r) => r.found > 0);
+  const missing = compared.required.filter((r) => r.found === 0);
+  out.push(`  required parts found: ${found.length} of ${compared.required.length}${found.length ? ` (${found.map((r) => `${r.part} x${r.found}`).join(", ")})` : ""}${missing.length ? `; not found: ${missing.map((r) => r.part).join(", ")}` : ""}`);
+  if (compared.optionalFound.length) out.push(`  optional parts found: ${compared.optionalFound.join(", ")}`);
+  if (compared.unmatchedNodes.length) out.push(`  nodes that match no part: ${compared.unmatchedNodes.slice(0, 8).join(", ")}${compared.unmatchedNodes.length > 8 ? ` (+${compared.unmatchedNodes.length - 8} more)` : ""}  (fine for extra detail; rename one if it is a part)`);
+  out.push(`  size: ${compared.sizeChecked ? "compared with the typical range" : "not compared (no typical size known)"}`);
+  if (choice.generic) out.push("  This is a guess from the words. If it is not what you are making, these checks mean little: say what it is with `model identify`.");
   return `${out.join("\n")}\n`;
 }

@@ -15,10 +15,13 @@ describe("model brief", () => {
     expect(b.text).toContain("model view m.glb");
   });
 
-  it("says plainly when a kind only matches the archetype, and does not claim more", () => {
+  it("says plainly when a kind only matches the family, and does not claim more", () => {
     const b = briefFor("a rowing boat");
-    expect(b.text).toContain("Check it is what you want");
-    expect(b.text).not.toContain("makes exactly this");
+    expect(b.result.best.id).toBe("vessel.boat.rowing-boat");
+    expect(b.relation).toBe("family");
+    expect(b.text).toContain("Nothing makes exactly this");
+    expect(b.text).toContain("godotwright model build boat");
+    expect(briefFor("a boat").text).toContain("Check it is what you want");
   });
 
   it("offers specific kinds for a family, and the nearest family kind for a thing without one", () => {
@@ -30,7 +33,7 @@ describe("model brief", () => {
   });
 
   it("does not suggest unrelated kinds for something unknown", () => {
-    const b = briefFor("dragon");
+    const b = briefFor("flurbo");
     expect(b.result.generic).toBe(true);
     expect(b.relation).toBe("none");
     expect(b.kinds).toEqual([]);

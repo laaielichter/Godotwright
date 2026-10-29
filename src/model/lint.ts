@@ -1,4 +1,4 @@
-import { checkArchetype } from "../archetype/check.js";
+import { checkArchetype, compareArchetype, type Comparison } from "../archetype/check.js";
 import { separateParts } from "./view.js";
 import type { ResolvedArchetype } from "../archetype/types.js";
 import { checkContract, type ModelContract } from "./contract.js";
@@ -32,6 +32,8 @@ export interface ModelReport {
   overall: number;
   /** The archetype id the model was checked against, when one was given. */
   archetype?: string;
+  /** What the archetype check compared (parts found, nodes that matched nothing), when one was given. */
+  compared?: Comparison;
   categories: ModelCategoryScore[];
   findings: ModelFinding[];
 }
@@ -75,7 +77,7 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
   // With an archetype check, it takes a fifth of the score and the other categories share the rest.
   const weight = (c: ModelCategory): number => (!checked ? MODEL_WEIGHTS[c] : c === "archetype" ? MODEL_WEIGHTS.archetype : MODEL_WEIGHTS[c] * (1 - MODEL_WEIGHTS.archetype));
   const overall = Math.round(categories.reduce((sum, c) => sum + c.score * weight(c.category), 0));
-  return { file: info.file, triangles: info.triangles, nodes: info.nodes.length, overall, ...(checked && options.archetype ? { archetype: options.archetype.id } : {}), categories, findings };
+  return { file: info.file, triangles: info.triangles, nodes: info.nodes.length, overall, ...(checked && options.archetype ? { archetype: options.archetype.id, compared: compareArchetype(info, options.archetype) } : {}), categories, findings };
 }
 
 type Add = (rule: string, message: string, node?: string, severity?: ModelSeverity) => void;

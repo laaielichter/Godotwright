@@ -190,10 +190,6 @@
    "boten",
    "motorboat",
    "speedboat",
-   "rowing boat",
-   "roeiboot",
-   "sloep",
-   "dinghy",
    "jacht",
    "yacht",
    "canoe",
@@ -359,5 +355,154 @@
    "source": "general knowledge: typical production range, not a standard: hull length; height is the mast above the waterline",
    "confidence": "C"
   }
+ },
+ {
+  "id": "vessel.boat.rowing-boat",
+  "name": "rowing boat",
+  "description": "A small open boat moved by oars: a hull with bench seats and a pair of oars in oarlocks.",
+  "aliases": [
+   "rowing boat",
+   "rowboat",
+   "roeiboot",
+   "roeiboten",
+   "sloep",
+   "dinghy",
+   "skiff",
+   "roeibootje",
+   "oar boat"
+  ],
+  "extends": "vessel.boat",
+  "hints": [
+   "oar",
+   "oars",
+   "roeispaan",
+   "riem",
+   "riemen",
+   "row",
+   "rowing",
+   "roeien",
+   "oarlock",
+   "dol"
+  ],
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "romp",
+     "body"
+    ],
+    "note": "Open on top, with a flat or pointed transom; the waterline is y = 0."
+   },
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "seat",
+     "thwart",
+     "bench",
+     "bank",
+     "roeibank",
+     "zitplaats"
+    ],
+    "note": "Thwarts run across the boat and brace the sides."
+   },
+   {
+    "name": "Oar",
+    "role": "oar",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     },
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "oar",
+     "oars",
+     "roeispaan",
+     "riem"
+    ],
+    "note": "Pivot at the oarlock on the gunwale (y = turn through the water, x = lift the blade), not at the middle of the oar. The handle points inboard."
+   },
+   {
+    "name": "Oarlock",
+    "role": "oarlock",
+    "required": false,
+    "count": 2,
+    "aliases": [
+     "oarlock",
+     "rowlock",
+     "dol",
+     "dollen"
+    ],
+    "note": "The fitting that holds the oar on the gunwale."
+   },
+   {
+    "name": "Rudder",
+    "role": "rudder",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "rudder",
+     "roer"
+    ],
+    "note": "Only on larger rowing boats, hinged on the transom."
+   }
+  ],
+  "scale": {
+   "length": [
+    2.5,
+    5.5
+   ],
+   "width": [
+    1.0,
+    1.8
+   ],
+   "height": [
+    0.3,
+    0.9
+   ],
+   "source": "general knowledge: typical range, not a standard",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "kind",
+    "options": [
+     "dinghy",
+     "skiff",
+     "lifeboat",
+     "sculling boat"
+    ]
+   }
+  ],
+  "anticipate": [
+   "The oars as separate nodes with their pivot at the oarlock, so a script can row.",
+   "Wake and splash points at the oar blades."
+  ]
  }
 ]

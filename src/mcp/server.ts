@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
 import { briefFor } from "../archetype/brief.js";
-import { formatIdentify } from "../archetype/format.js";
+import { formatChecked, formatIdentify } from "../archetype/format.js";
 import { identify } from "../archetype/identify.js";
 import { loadLibrary } from "../archetype/library.js";
 import { GodotApi } from "../api/api.js";
@@ -376,7 +376,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(contract ? { contract: loadContract(inside(contract)) } : {}),
           ...(max_triangles ? { maxTriangles: max_triangles } : {}),
         });
-        const head = choice ? `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n` : "";
+        const head = choice ? formatChecked(choice, report.compared) : "";
         const errors = report.categories.reduce((n, c) => n + c.errors, 0);
         const body = `${head}${formatModelReport(report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);

@@ -20,8 +20,11 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
   crate, barrel, chair, table, shipping container, and open-world terrain and sea.
 - **Terrain** with plains, hills, mountains or an island, tiles that continue each other exactly, an optional lake and an
   optional river that always runs downhill, and a water plane at sea level.
-- **69 archetypes**, including an open-world family (terrain, mountain, island, coast, sea, lake, river, biome, settlement),
-  and a check of a model against its archetype: missing parts, pivots, wheel axes, size (unit mistakes), direction.
+- **80 archetypes**, including an open-world family (terrain, mountain, island, coast, sea, lake, river, biome, settlement),
+  fortifications, creatures (quadruped, humanoid, dragon), spacecraft (rocket, spaceship, satellite), a rowing boat and a
+  campfire, and a check of a model against its archetype: missing parts, pivots, wheel axes, size (unit mistakes), direction.
+- **`model lint --archetype` says what it compared**: required parts found, nodes that matched no part, and whether the size was
+  checked; for a guess or an unknown thing it says that only the general rules ran, so a high score is not read as more than it is.
 - **A check for parts that do not touch the rest** of a model (a ladder away from its tree, a wheel without an axle).
 - MCP tools `godot_model_identify`, `godot_model_spec`, `godot_model_build`, `godot_model_lint`, `godot_model_inspect`
   and `godot_model_view`, with the workflow in the server instructions.
