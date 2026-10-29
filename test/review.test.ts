@@ -266,4 +266,18 @@ describe("review robustness", () => {
       expect(bad).toEqual(['res://main.tscn:6: error [structure/bad-connection] Connection Gizmo.tapped: MyGizmo has no signal "tapped".']);
     });
   });
+
+  it("does not call a script or group unused or unassigned when a scene does not parse", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      ".gitignore": ".godot/\n",
+      "broken.tscn": '[gd_scene load_steps=2 format=3]\n[ext_resource type="Script" path="res://enemy.gd" id="1"]\n[node name="Root" type="Node2D" groups=["players"]]\nscript = ExtResource("1")\n[node name="Broken" type="Node2D" parent="."\n',
+      "enemy.gd": "extends Node2D\n\nfunc _ready() -> void:\n\tpass\n",
+      "main.gd": 'extends Node\n\nfunc _ready() -> void:\n\tget_tree().get_nodes_in_group("players")\n',
+    });
+    const structure = reviewProject(root).findings.filter((f) => f.category === "structure").map(formatFinding);
+    expect(structure.filter((l) => l.includes("could not parse file"))).toHaveLength(1);
+    expect(structure.some((l) => l.includes("enemy.gd") && l.includes("structure/unused-script"))).toBe(false);
+    expect(structure.some((l) => l.includes("structure/unknown-group"))).toBe(false);
+  });
 });

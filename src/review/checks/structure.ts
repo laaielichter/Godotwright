@@ -75,11 +75,14 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
     if (deepest > MAX_DEPTH) out.push(finding("structure/deep-tree", scene.path, undefined, `Node tree is ${deepest} levels deep.`));
   }
 
+  // A scene or resource that does not parse may use any script or group, so neither can be called unused or unassigned.
+  const unreadable = map.warnings.some((w) => /^could not parse file/.test(w.message) && /\.(tscn|tres)$/.test(w.file));
+
   // Groups used in code but never assigned.
   const assigned = new Set(map.scenes.flatMap((s) => s.nodes.flatMap((n) => n.groups)));
   const code = [...pm.data.sources.values()].join("\n");
   for (const m of code.matchAll(/\badd_to_group\s*\(\s*&?"([^"]+)"/g)) assigned.add(m[1]!);
-  for (const [path, outline] of pm.data.scripts) {
+  for (const [path, outline] of unreadable ? [] : pm.data.scripts) {
     for (const ll of outline.logicalLines) {
       for (const m of ll.text.matchAll(/\b(get_nodes_in_group|get_first_node_in_group|is_in_group|call_group|call_group_flags|set_group|notify_group|get_node_count_in_group)\s*\(\s*(?:\d+\s*,\s*)?&?"([^"]+)"/g)) {
         if (!assigned.has(m[2]!)) {
@@ -126,7 +129,7 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
   for (const a of map.autoloads) referenced.add(a.path);
   const text = code + [...pm.data.resources.values()].map((r) => r.extResources.map((e) => e.path).join("\n")).join("\n");
   for (const [path, outline] of pm.data.scripts) {
-    if (path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
+    if (unreadable || path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
     const base = path.slice(path.lastIndexOf("/") + 1);
     if (text.includes(base)) continue;
     const ext = outline.extends ?? "";
