@@ -157,6 +157,18 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("light aircraft: the tailplane has a half on each side, mirror images of each other", () => {
+    const boxes = nodeBoxes("light-aircraft", {});
+    const left = boxes.get("LightAircraft/Stabilizer")!;
+    const right = boxes.get("LightAircraft/Stabilizer_R")!;
+    expect(right, "no tailplane on the -x side").toBeDefined();
+    expect(right.min[0]).toBeCloseTo(-left.max[0], 3);
+    expect(right.max[0]).toBeCloseTo(-left.min[0], 3);
+    expect(right.min[1]).toBeCloseTo(left.min[1], 3);
+    expect(right.min[2]).toBeCloseTo(left.min[2], 3);
+    expect(right.max[2]).toBeCloseTo(left.max[2], 3);
+  });
+
   it("bridge: an abutment stands at each end of the deck", () => {
     for (const length of [10, 60, 300]) {
       const L2 = length / 2;

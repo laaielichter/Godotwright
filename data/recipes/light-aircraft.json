@@ -241,7 +241,8 @@
       0,
       90,
       0
-     ]
+     ],
+     "mirror": "Stabilizer_R"
     },
     {
      "name": "Elevator_L",
