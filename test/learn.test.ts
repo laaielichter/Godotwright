@@ -265,6 +265,17 @@ describe("turning learning off", () => {
     delete process.env["GODOTWRIGHT_LEARN"];
   });
 
+  it("keeps learning off after learn reset, until learn on", async () => {
+    await runCli(["learn", "off"]);
+    const { output } = await runCli(["learn", "reset"]);
+    expect(output).toContain("local learning stays off");
+    expect(readLearning().enabled).toBe(false);
+    recordFeedback(finding(), "wrong");
+    expect(readLearning().dismissed).toEqual({});
+    expect((await runCli(["learn", "on"])).output).toContain("local learning is on");
+    expect(readLearning().enabled).toBe(true);
+  });
+
   it("records nothing with GODOTWRIGHT_LEARN=0", () => {
     process.env["GODOTWRIGHT_LEARN"] = "0";
     reviewLearning(project());

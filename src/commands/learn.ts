@@ -94,10 +94,17 @@ export function learnCommand(): Command {
 
   learn
     .command("reset")
-    .description("forget everything learned on this machine (sharing goes back to off)")
+    .description("forget everything learned on this machine (sharing goes back to off; local learning stays on or off)")
     .action((_o: unknown, command: Command) => {
+      const wasOn = readLearning().enabled;
       resetLearning();
-      writeOut(command, `deleted ${learningFile()}\n`);
+      // A reset forgets what was learned, not the choice to stop learning.
+      if (wasOn) {
+        writeOut(command, `deleted ${learningFile()}\n`);
+        return;
+      }
+      setEnabled(false);
+      writeOut(command, `deleted ${learningFile()}\nlocal learning stays off (learn on turns it back on)\n`);
     });
 
   learn
