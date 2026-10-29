@@ -251,6 +251,44 @@ describe("identify reads a letter-and-number code as one word", () => {
   });
 });
 
+describe("identify reads the subject, not the place or a word it borrows", () => {
+  it("takes the thing a location word points at as the place, not the subject", () => {
+    expect(best("a house by the river")).toBe("building.house");
+    expect(best("a house on the hill")).toBe("building.house");
+    expect(identify("a house on the hill", library).ambiguous).toEqual([]);
+    expect(best("a road next to a bridge")).toBe("infrastructure.road");
+    expect(best("a bridge over the river")).toBe("infrastructure.bridge");
+    expect(identify("a bridge over the river", library).ambiguous).toEqual([]);
+  });
+
+  it("does not let a word boost the archetype it names", () => {
+    // The world chain has "river" as a hint, so the word alone used to add a boost to the river itself.
+    expect(identify("river", library).matches[0]!.score).toBe(1);
+  });
+
+  it("breaks a tie by the position of the words in the text, not by the length of the id", () => {
+    expect(best("a boat and a house")).toBe("vessel.boat");
+    expect(identify("a boat and a house", library).ambiguous.sort()).toEqual(["building.house", "vessel.boat"]);
+  });
+
+  it("prefers the alias that is spelled exactly like the text", () => {
+    const lib = new ArchetypeLibrary([root, child({ id: "thing.mountain", aliases: ["hill"] }), child({ id: "thing.zz", aliases: ["hills"] })]);
+    expect(identify("hills", lib).best.id).toBe("thing.zz");
+  });
+
+  it("says 'means more than one thing' only when the same word names two archetypes", () => {
+    expect(identify("windmolen", library).notes.join(" ")).toMatch(/means more than one thing/);
+    expect(identify("a boat and a house", library).notes.join(" ")).not.toMatch(/means more than one thing/);
+    expect(identify("a boat and a house", library).notes.join(" ")).toMatch(/names more than one thing/);
+  });
+
+  it("does not read a compound by a head word that means something else", () => {
+    const r = identify("motorhome", library);
+    expect(r.best.id).not.toBe("building.house");
+    expect(r.matches.some((m) => m.via === "suffix" && m.id === "building.house")).toBe(false);
+  });
+});
+
 describe("the alias rules compare words the way identify does", () => {
   const twin = (id: string, alias: string): Archetype => ({ id: `thing.${id}`, extends: "thing", name: id, description: "d", aliases: [alias] });
 
