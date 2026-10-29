@@ -8,7 +8,8 @@
  * The class reference is MIT licensed, like the engine.
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 interface XmlNode {
@@ -250,4 +251,5 @@ function main(): void {
   console.log(`${classes.length} classes, ${renameCount} renames, ${(json.length / 1e6).toFixed(1)} MB JSON -> ${out}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+// Compare file paths, not URLs: a URL is percent-encoded (spaces) and differs on Windows.
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();

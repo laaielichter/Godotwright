@@ -1,5 +1,43 @@
+import { spawnSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { docText, parseXml } from "../scripts/build-api.js";
+
+const SCRIPT = fileURLToPath(new URL("../scripts/build-api.ts", import.meta.url));
+
+describe("build-api command", () => {
+  it("prints usage and exits 1 without a Godot source directory", () => {
+    const result = spawnSync(process.execPath, [SCRIPT], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("usage: node scripts/build-api.ts <godot-source-dir>");
+  });
+
+  it("builds the data when the script runs from a path with spaces", () => {
+    // A copy of the script in a folder whose name has a space, with its own data folder to write to.
+    const root = mkdtempSync(join(tmpdir(), "build api "));
+    try {
+      mkdirSync(join(root, "scripts"));
+      mkdirSync(join(root, "data"));
+      writeFileSync(join(root, "package.json"), '{"type":"module"}\n');
+      copyFileSync(SCRIPT, join(root, "scripts", "build-api.ts"));
+      const source = join(root, "godot source");
+      mkdirSync(join(source, "doc", "classes"), { recursive: true });
+      writeFileSync(
+        join(source, "doc", "classes", "Foo.xml"),
+        '<?xml version="1.0" encoding="UTF-8" ?>\n<class name="Foo" inherits="Object"><brief_description>Hi.</brief_description></class>\n',
+      );
+      const result = spawnSync(process.execPath, [join(root, "scripts", "build-api.ts"), source, "4.7.2-stable", "abc123"], { encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("1 classes");
+      expect(existsSync(join(root, "data", "godot-api.json.gz"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("build-api", () => {
   it("parses class reference XML", () => {
