@@ -110,6 +110,11 @@ describe("search", () => {
     expect(api.search("timer wait", 3)[0]).toMatchObject({ owner: "Timer", name: "wait_time" });
     expect(api.search("change scene", 5).map((h) => h.name)).toContain("change_scene_to_file");
   });
+
+  it("finds enum values by their exact name", () => {
+    expect(api.search("PROCESS_MODE_ALWAYS", 3)[0]).toMatchObject({ kind: "constant", owner: "Node", name: "PROCESS_MODE_ALWAYS" });
+    expect(api.search("KEY_ESCAPE", 3)[0]).toMatchObject({ kind: "constant", owner: "@GlobalScope", name: "KEY_ESCAPE" });
+  });
 });
 
 describe("closest", () => {

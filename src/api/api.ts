@@ -297,7 +297,7 @@ export class GodotApi {
       for (const m of cls.members ?? []) add("property", m);
       for (const s of cls.signals ?? []) add("signal", s);
       for (const a of cls.annotations ?? []) add("annotation", a);
-      for (const c of cls.constants ?? []) if (!c.enum) add("constant", c);
+      for (const c of cls.constants ?? []) add("constant", c);
       for (const e of this.enums(cls)) add("enum", e);
     }
     this.index = rows;
