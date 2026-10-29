@@ -290,6 +290,15 @@ describe("identify reads the subject, not the place or a word it borrows", () =>
 });
 
 describe("identify gives each family its own words", () => {
+  it("gives a fuel or water tank to the barrel family, and a bare 'tank' or 'ton' to nothing in particular", () => {
+    expect(best("fuel tank")).toBe("prop.barrel");
+    expect(best("water tank")).toBe("prop.barrel");
+    expect(best("battle tank")).toBe("vehicle.tracked.tank");
+    expect(best("tank")).not.toBe("vehicle.tracked.tank");
+    expect(identify("a 10 ton truck", library).ambiguous).toEqual([]);
+    expect(best("a 10 ton truck")).toBe("vehicle.wheeled.truck");
+  });
+
   it("knows a glider as an unpowered aeroplane, not as a light aircraft that needs a propeller", () => {
     expect(best("glider")).toBe("aircraft.fixed-wing.glider");
     expect(best("zweefvliegtuig")).toBe("aircraft.fixed-wing.glider");
