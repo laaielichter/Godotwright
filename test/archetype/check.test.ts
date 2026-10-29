@@ -116,8 +116,6 @@ describe("pivots and wheel axes", () => {
 });
 
 describe("size and direction", () => {
-  const scaled = (factor: number) => car((n) => { n[0]!["at"] = [0, 0, 0]; (n[0] as Node)["children"] = (n[0]!["children"] as Node[]); const root = n[0]!; root["name"] = "Scaled"; root["children"] = [{ name: "Car", children: root["children"] }]; });
-
   it("flags a car that is ten times too big or too small, with the likely factor", () => {
     const big = buildSpec({ version: 1, nodes: [{ name: "Car", material: "paint", children: [{ name: "Body", shape: "box", size: [18, 6, 44], at: [0, 3, 0] }, { name: "Wheel_A", shape: "cylinder", axis: "x", radius: 3, height: 2, at: [9, 3, 12] }] }] });
     const f = check(writeScene(big), "car").filter((x) => x.rule === "archetype/size");
@@ -125,7 +123,6 @@ describe("size and direction", () => {
     expect(f[0]!.message).toMatch(/about 10 times too big, likely a unit mistake/);
     const small = buildSpec({ version: 1, nodes: [{ name: "Car", material: "paint", children: [{ name: "Body", shape: "box", size: [0.18, 0.14, 0.44], at: [0, 0.07, 0] }] }] });
     expect(check(writeScene(small), "car").find((x) => x.rule === "archetype/size")!.message).toMatch(/times too small/);
-    expect(scaled(1)).toBeTruthy();
   });
 
   it("does not flag a size inside the range, or a helicopter whose rotor is wider than its body", () => {
