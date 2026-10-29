@@ -485,7 +485,7 @@ function parseMember(text: string, ll: LogicalLine, annotations: string[]): Memb
       },
     };
   }
-  if ((match = /^class\s+([A-Za-z_]\w*)(?:\s+extends\s+("[^"]*"|'[^']*'|[^:]+?))?\s*:\s*$/.exec(text))) {
+  if ((match = /^class\s+([A-Za-z_]\w*)(?:\s+extends\s+((?:"[^"]*"|'[^']*')(?:\.[A-Za-z_]\w*)*|[^:]+?))?\s*:\s*$/.exec(text))) {
     return { kind: "class", name: match[1]!, extends: match[2] ? unquote(match[2]) : undefined };
   }
   return undefined;

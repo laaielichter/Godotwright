@@ -171,4 +171,22 @@ describe("outlineScript", () => {
     expect(quoted.extends).toBe("res://base.gd");
     expect(outlineScript("extends 'res://base.gd'\n").extends).toBe("res://base.gd");
   });
+
+  it("keeps inner classes that extend a quoted path with a dotted tail", () => {
+    const script = outlineScript(
+      [
+        'class Foo extends "res://base.gd".Bar:',
+        "\tvar x := 1",
+        "\tfunc f() -> void:",
+        "\t\tpass",
+        "",
+        "class Baz extends 'res://base.gd':",
+        "\tvar y := 2",
+      ].join("\n"),
+    );
+    expect(script.innerClasses.map((c) => [c.name, c.extends, c.variables.map((v) => v.name), c.functions.map((f) => f.name)])).toEqual([
+      ["Foo", "res://base.gd.Bar", ["x"], ["f"]],
+      ["Baz", "res://base.gd", ["y"], []],
+    ]);
+  });
 });
