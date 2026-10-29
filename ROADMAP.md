@@ -90,8 +90,10 @@ Godotwright gets better with every use, without collecting anything personal.
 18. **Recipes.** Ready-made specs in `data/recipes/` (car, tractor, helicopter, airliner, ship, trees,
     wind turbine, container, truck, bus, motorcycle, bicycle, train, tank, light aircraft, fighter, drone, boat, sailboat, piston and jet engine, barn, tower, church, windmill, apartment, bridge, road, railway track, street lamp, fence, power pylon, palm, bush, grass, flower, crate, barrel, chair, table so far), each checked
     against its archetype and tested at the edges of its parameters.
-19. **Recipes are complete** (every archetype can be built), `model recipes` lists them and
-    `model contract --archetype` starts a contract from an archetype. Still to do: a contact-sheet render.
+19. **Recipes for most archetypes.** `model recipes` lists the 41 recipes, and `model contract --archetype` starts a
+    contract from an archetype. The `terrain` kind covers mountains, islands and lakes; `house` and `sea` are kinds too.
+    Not buildable yet: `aircraft.fixed-wing.airplane` (no recipe or kind), and the knowledge-only open-world archetypes
+    coast, river, biome and settlement. Still to do: a contact-sheet render.
 20. **Open worlds.** Step 1 (done): the knowledge, as archetypes in `data/archetypes/world.json`: terrain, mountain,
     island, coast, sea, lake, river, biome and settlement, with the rules of world building (tiles that share their
     border heights, y = 0 as sea level, collision from the same heights, levels of detail, instanced scatter, floating
@@ -126,4 +128,23 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 11: Shared knowledge (`data/learned.json`, empty until reports come in)
 - [x] Learning from public projects for free (weekly Learn workflow on the official demos)
 - [x] Released on npm (`godotwright`)
-- [ ] Listed in the MCP Registry
+- [x] Listed in the MCP Registry
+- [x] Step 12: Model inspect and lint (`model inspect`, `model lint`)
+- [x] Step 13: Model contract (`model.contract.json`)
+- [x] Step 14: Model builder (kinds `house`, `terrain`, `sea`; `model build`)
+- [x] Step 15: Model spec (`model spec`)
+- [x] Step 16: Object knowledge (`model identify`, `model archetypes`)
+- [x] Step 16b: Checks against an archetype (`model lint --archetype`)
+- [x] Step 17: MCP tools for models (`godot_model_identify`, `_spec`, `_build`, `_lint`, `_inspect`)
+- [x] Step 18: Recipes (41 so far, in `data/recipes/`)
+- [ ] Step 19: Recipes for most archetypes
+  - [ ] Contact-sheet render
+  - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement
+- [ ] Step 20: Open worlds
+  - [x] Open worlds 1: the knowledge (archetypes in `data/archetypes/world.json`)
+  - [x] Open worlds 2: `terrain` and `sea`
+  - [x] Open worlds 3: a lake
+  - [ ] Rivers that run downhill
+  - [ ] Collision data (`HeightMapShape3D` heights) written next to the tile
+  - [ ] Scatter points for plants and settlements
+  - [ ] Checks for streaming budgets
