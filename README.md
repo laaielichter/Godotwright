@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">Godotwright</h1>
 <p align="center"><b>MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4.</b><br>
-Offline Godot 4.7 API, a project map, headless checks and an AAA review of GDScript.</p>
+Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript, and 3D models built, viewed and checked from code.</p>
 <p align="center">
   <a href="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml"><img src="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
@@ -13,6 +13,7 @@ Offline Godot 4.7 API, a project map, headless checks and an AAA review of GDScr
 </p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
+  <a href="https://laaielichter.github.io/Godotwright/models.html">3D model gallery</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#use-with-claude-code-codex-and-other-coding-agents-mcp">MCP setup</a> ·
   <a href="bench/RESULTS.md">Benchmark</a> ·
@@ -28,6 +29,18 @@ are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a comp
 map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
+
+### And it builds 3D models
+
+<p align="center">
+  <a href="https://laaielichter.github.io/Godotwright/models.html"><img src="docs/gallery/overview.jpg" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" width="720"></a>
+</p>
+
+A coding agent can also **make, look at and check 3D models** for Godot with no Blender: `model identify` says what a
+thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
+[44 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
+terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
+It is set up to work with small, cheap models too: [what we tested and learned](docs/cheap-models.md).
 
 ## Quickstart
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Godotwright: Godot 4 MCP server and CLI for coding agents</title>
-<meta name="description" content="Godotwright makes Claude Code, Codex and other coding agents better at Godot 4.7: an MCP server and CLI with an offline Godot API, a project map, headless checks and an AAA code review for GDScript.">
+<meta name="description" content="Godotwright makes Claude Code, Codex and other coding agents better at Godot 4.7: an MCP server and CLI with an offline Godot API, a project map, headless checks, an AAA code review for GDScript, and 3D models built and checked from code.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
@@ -31,7 +31,8 @@
   "name": "Godotwright",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "description": "MCP server and CLI that makes coding agents better at Godot 4.7: offline API lookup, project map, headless checks and an AAA review of GDScript.",
+  "description": "MCP server and CLI that makes coding agents better at Godot 4.7: offline API lookup, project map, headless checks, an AAA review of GDScript, and 3D models built, viewed and checked from code.",
+  "featureList": ["Offline Godot 4.7 API lookup", "Project map without starting Godot", "AAA review of GDScript with scores", "Headless Godot checks", "44 ready-made parametric 3D models (.glb)", "3D model viewer as text and model lint"],
   "url": "https://laaielichter.github.io/Godotwright/",
   "codeRepository": "https://github.com/laaielichter/Godotwright",
   "downloadUrl": "https://www.npmjs.com/package/godotwright",
@@ -227,6 +228,7 @@ footer a { color: var(--muted); }
     <nav aria-label="Main">
       <a href="#install">Install</a>
       <a href="#tools">Tools</a>
+      <a href="models.html">3D models</a>
       <a href="#benchmark">Benchmark</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
@@ -330,6 +332,15 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>Mods and patches</span><p>Review a mod against the game it patches, from its source folder or a <code>.pck</code> file list.</p><code>godotwright review mod/ --base game/</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>Local learning</span><p>Rules real Godot keeps contradicting turn into hints. Nothing leaves your machine unless you opt in.</p><code>godotwright learn</code></li>
       </ul>
+    </div>
+  </section>
+
+  <section id="models">
+    <div class="wrap">
+      <h2>It builds 3D models too</h2>
+      <p class="sub">Agents can make, look at and check 3D models for Godot without Blender. <code>model identify</code> says what a thing is (parts, sizes, pivots), <code>model build</code> makes a clean <code>.glb</code> from one of 44 ready-made kinds or your own JSON spec, <code>model view</code> draws it as text for agents that cannot see pictures, and <code>model lint</code> scores it and checks it is what it should be. It is set up to work with small, cheap models as well (<a href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">what we tested</a>).</p>
+      <a href="models.html"><img src="gallery/overview.jpg" width="1200" height="600" loading="lazy" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)"></a>
+      <div class="cta"><a class="btn primary" href="models.html">See all 44 models</a></div>
     </div>
   </section>
 
