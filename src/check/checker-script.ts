@@ -46,13 +46,17 @@ func _collect(dir: String, scripts: PackedStringArray, scenes: PackedStringArray
 			_collect(dir.path_join(sub), scripts, scenes)
 `;
 
+/** The res:// folder an exclude argument names: "addons/" and "res://addons" both give "res://addons". */
+export function excludePath(path: string): string {
+  return `res://${path.replace(/^res:\/\//, "").replace(/^\/+|\/+$/g, "")}`;
+}
+
 /** Fills in the settings the checker reads as constants. */
 export function checkerSource(options: { instantiate: boolean; exclude: string[] }): string {
-  const exclude = options.exclude
-    .map((p) => JSON.stringify(`res://${p.replace(/^res:\/\//, "").replace(/^\/+|\/+$/g, "")}`))
-    .join(", ");
+  const exclude = options.exclude.map((p) => JSON.stringify(excludePath(p))).join(", ");
+  // A replacer function, so "$" sequences in folder names are inserted as written.
   return CHECKER_SCRIPT.replace(
     'const MARKER: String = "GODOTWRIGHT"\n',
-    `const MARKER: String = "GODOTWRIGHT"\nconst INSTANTIATE: bool = ${options.instantiate}\nconst EXCLUDE: Array[String] = [${exclude}]\n`,
+    () => `const MARKER: String = "GODOTWRIGHT"\nconst INSTANTIATE: bool = ${options.instantiate}\nconst EXCLUDE: Array[String] = [${exclude}]\n`,
   );
 }

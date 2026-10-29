@@ -1,14 +1,37 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { dirname, join, relative } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
 import { checkProject } from "../src/check/check.js";
+import { checkerSource } from "../src/check/checker-script.js";
 import { findGodot, GodotNotFoundError } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
 
+/** Temp folders this file creates; removed once the tests are done. */
+const tempDirs: string[] = [];
+
+function tempDir(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+}
+
+afterAll(() => {
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 /** A stand-in for the Godot binary that replays canned output. */
-function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string }): string {
-  const dir = mkdtempSync(join(tmpdir(), "fake-godot-"));
+function fakeGodot(behavior: {
+  version?: string;
+  checkLog?: string;
+  finish?: boolean;
+  runLog?: string;
+  holdPipes?: boolean;
+  importLog?: string;
+  importExit?: number | "signal";
+  runExit?: number | "signal";
+}): string {
+  const dir = tempDir("fake-godot-");
   const bin = join(dir, "godot");
   const script = `#!/usr/bin/env node
 const fs = require("node:fs");
@@ -17,9 +40,16 @@ const args = process.argv.slice(2);
 const b = ${JSON.stringify(behavior)};
 fs.appendFileSync(${JSON.stringify(join(dir, "calls.log"))}, JSON.stringify(args) + "\\n");
 if (args.includes("--version")) { console.log(b.version ?? "4.7.2.stable.official.fake"); process.exit(0); }
-if (args.includes("--import")) { console.log("Godot Engine v4.7.2.stable.official.fake - https://godotengine.org"); process.exit(0); }
+function exitWith(code) { if (code === "signal") process.kill(process.pid, "SIGKILL"); else process.exit(code); }
+if (args.includes("--import")) { console.log("Godot Engine v4.7.2.stable.official.fake - https://godotengine.org"); process.stderr.write(b.importLog ?? ""); exitWith(b.importExit ?? 0); }
 const scriptAt = args.indexOf("--script");
-if (scriptAt >= 0) {
+if (scriptAt >= 0 && b.holdPipes) {
+  // Like OS.create_process: a child that inherits the output pipes and outlives this run. Godot itself never finishes.
+  const grandchild = require("node:child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 20000)"], { stdio: "inherit" });
+  fs.writeFileSync(${JSON.stringify(join(dir, "grandchild.pid"))}, String(grandchild.pid));
+  setInterval(() => {}, 1000);
+  return;
+} else if (scriptAt >= 0) {
   const root = args[args.indexOf("--path") + 1];
   const checker = path.join(root, args[scriptAt + 1].replace("res://", ""));
   if (!fs.existsSync(checker)) { console.error("ERROR: checker missing"); process.exit(1); }
@@ -27,7 +57,7 @@ if (scriptAt >= 0) {
   if (b.finish !== false) process.stderr.write("\\nGODOTWRIGHT_DONE 3 1\\n");
   process.exit(0);
 }
-if (args.includes("--quit-after")) { process.stderr.write(b.runLog ?? ""); process.exit(0); }
+if (args.includes("--quit-after")) { process.stderr.write(b.runLog ?? ""); exitWith(b.runExit ?? 0); }
 process.exit(0);
 `;
   writeFileSync(bin, script);
@@ -36,7 +66,7 @@ process.exit(0);
 }
 
 function copyFixture(name: string): string {
-  const dir = mkdtempSync(join(tmpdir(), `godotwright-${name}-`));
+  const dir = tempDir(`godotwright-${name}-`);
   cpSync(join(FIXTURES, name), dir, { recursive: true });
   return dir;
 }
@@ -95,6 +125,58 @@ describe("checkProject", () => {
     expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
   });
 
+  it("ends a run at its timeout even when a process Godot started keeps the output open", async () => {
+    const root = copyFixture("demo");
+    const godot = fakeGodot({ holdPipes: true });
+    try {
+      const result = await checkProject(root, { godot, import: false, timeoutMs: 1000 });
+      expect(result.steps).toEqual([{ name: "check", ms: expect.any(Number), exitCode: null, timedOut: true }]);
+      expect(result.diagnostics).toEqual([expect.objectContaining({ severity: "error", message: "check timed out after 1s" })]);
+    } finally {
+      try {
+        process.kill(Number(readFileSync(join(dirname(godot), "grandchild.pid"), "utf8")), "SIGKILL");
+      } catch {
+        // The grandchild was already gone.
+      }
+    }
+  });
+
+  it("skips scan warnings from excluded folders", async () => {
+    const root = copyFixture("broken");
+    mkdirSync(join(root, "addons", "plugin"), { recursive: true });
+    writeFileSync(
+      join(root, "addons", "plugin", "bad.tscn"),
+      '[gd_scene format=3]\n\n[ext_resource type="Texture2D" path="res://gone.png" id="1"]\n\n[node name="Root" type="Node2D"]\n',
+    );
+    const godot = fakeGodot({});
+    const scanFiles = async (exclude?: string[]) => {
+      const result = await checkProject(root, { godot, import: false, exclude });
+      return result.diagnostics.filter((d) => d.source === "scan").map((d) => d.file);
+    };
+    expect(await scanFiles()).toEqual(["res://addons/plugin/bad.tscn", "res://main.tscn"]);
+    expect(await scanFiles(["addons"])).toEqual(["res://main.tscn"]);
+    expect(await scanFiles(["res://addons/"])).toEqual(["res://main.tscn"]);
+  });
+
+  it("reports an import or run step that exits badly without an error line", async () => {
+    const root = copyFixture("demo");
+    const godot = fakeGodot({ importExit: 3, runExit: "signal" });
+    const result = await checkProject(root, { godot, runFrames: 10 });
+    expect(result.diagnostics.filter((d) => d.source === "import" || d.source === "run")).toEqual([
+      { severity: "error", message: "import exited with code 3", source: "import" },
+      { severity: "error", message: "run was killed by a signal", source: "run" },
+    ]);
+    // An exit that Godot explained with an error is not reported twice.
+    const explained = fakeGodot({
+      importLog: "ERROR: Failed loading resource: res://missing.png.\n   at: _load (core/io/resource_loader.cpp:317)\n",
+      importExit: 1,
+    });
+    const again = await checkProject(copyFixture("demo"), { godot: explained, runFrames: 0 });
+    expect(again.diagnostics.filter((d) => d.source === "import")).toEqual([
+      { severity: "error", file: "res://missing.png", message: "Failed loading resource: res://missing.png.", source: "import" },
+    ]);
+  });
+
   it("warns about other Godot versions and a checker that does not finish", async () => {
     const root = copyFixture("demo");
     const godot = fakeGodot({ version: "4.6.1.stable.official.fake", finish: false, checkLog: "boom" });
@@ -117,9 +199,26 @@ describe("findGodot", () => {
     expect(() => findGodot("/no/such/godot", {})).toThrow(/not found or not executable/);
   });
 
+  it("returns an absolute path, so a relative --godot still works when Godot runs from the project", () => {
+    const godot = fakeGodot({});
+    // Godot is spawned from the project folder, so a path relative to the shell's folder would not resolve there.
+    const rel = relative(process.cwd(), godot);
+    expect(findGodot(rel, {})).toBe(godot);
+    expect(findGodot(undefined, { GODOT: rel })).toBe(godot);
+    expect(findGodot(undefined, { PATH: relative(process.cwd(), dirname(godot)) })).toBe(godot);
+  });
+
+  it("looks up a bare command name such as godot on PATH", () => {
+    const godot = fakeGodot({});
+    const dir = dirname(godot);
+    expect(findGodot("godot", { PATH: dir })).toBe(godot);
+    expect(findGodot(undefined, { GODOT: "godot", PATH: dir })).toBe(godot);
+    expect(() => findGodot("godot", { PATH: "" })).toThrow(/not found or not executable: godot/);
+  });
+
   /** Creates empty executables at the given paths under a fresh home folder. */
   function home(files: string[]): string {
-    const root = mkdtempSync(join(tmpdir(), "godot-home-"));
+    const root = tempDir("godot-home-");
     for (const file of files) {
       mkdirSync(join(root, file, ".."), { recursive: true });
       writeFileSync(join(root, file), "");
@@ -166,5 +265,13 @@ describe("godotwright check", () => {
     expect(output).toContain("1 error, 1 warning (Godot 4.7.2.stable.official.fake, 3 scripts, 1 scenes)");
     expect(process.exitCode).toBe(1);
     process.exitCode = previous;
+  });
+});
+
+describe("checkerSource", () => {
+  it("writes exclude paths literally, even when they contain $ sequences", () => {
+    const source = checkerSource({ instantiate: true, exclude: ["vendor/a$&b", "tools/$$"] });
+    expect(source).toContain('const INSTANTIATE: bool = true\nconst EXCLUDE: Array[String] = ["res://vendor/a$&b", "res://tools/$$"]\n');
+    expect(source.split("const MARKER").length).toBe(2);
   });
 });

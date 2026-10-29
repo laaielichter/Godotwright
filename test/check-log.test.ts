@@ -46,6 +46,21 @@ describe("parseGodotLog on real Godot 4.7.2 output", () => {
   });
 });
 
+describe("cleanup of a broken scene", () => {
+  it("reports a scene once when Godot also says it failed to load", () => {
+    const log = [
+      "GODOTWRIGHT_BEGIN res://main.tscn",
+      "ERROR: res://main.tscn:10 - Parse Error: [ext_resource] referenced non-existent resource at: res://missing.png.",
+      "   at: _printerr (scene/resources/resource_format_text.cpp:41)",
+      "ERROR: Failed to load scene: res://main.tscn",
+      "GODOTWRIGHT_END res://main.tscn",
+    ].join("\n");
+    expect(cleanup(parseGodotLog(log, "check")).map(formatDiagnostic)).toEqual([
+      "res://main.tscn:10: error: Parse Error: [ext_resource] referenced non-existent resource at: res://missing.png.",
+    ]);
+  });
+});
+
 describe("parseGodotLog", () => {
   it("reads script parse errors with file and line", () => {
     const log = [
