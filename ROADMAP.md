@@ -71,6 +71,7 @@ Godotwright gets better with every use, without collecting anything personal.
     *Done when:* every rule has a test with a good and a bad model.
 13. **Model contract.** A small file that lists the node names, sizes and triangle budget a
     model must keep, so renamed nodes or drifting sizes are caught.
+    *Done when:* a renamed node or a model that grows past its tolerance is reported.
 14. **MCP tools for models**, a contact-sheet render, and a reusable mesh builder kit.
 
 ## After layer 1

@@ -64,6 +64,8 @@ godotwright review [path]             # AAA review with a score per category
 godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
+godotwright model contract car.glb    # write a model.contract.json: node names, size, budget
+godotwright model lint car.glb --contract model.contract.json
 godotwright learn                     # what Godotwright learned on this machine
 ```
 
@@ -110,6 +112,11 @@ point. `model lint` scores four categories from 0 to 100:
 
 Findings are grouped per node, and their severity follows how much of the surface is
 affected, so one stray triangle is an info and a flipped panel is an error.
+A **model contract** (`model.contract.json`) pins what a model must keep, so a renamed node or a
+hull that grows 3 cm wider is caught. `model contract` writes one from the model as it is now;
+review it, add a `source` to each size, and keep it next to the model. With `--contract`, `model lint`
+reports `contract-missing-node`, `contract-order`, `contract-extra-node`, `contract-size`,
+`contract-ground` and `contract-triangles`. Sizes default to a 1% tolerance, or set `tolerance` in metres.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.
 
 ## Review in GitHub Actions

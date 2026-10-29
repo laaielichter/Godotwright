@@ -1,3 +1,4 @@
+import { checkContract, type ModelContract } from "./contract.js";
 import { inspectModel, transformPoint, type ModelInfo, type PrimitiveInfo } from "./inspect.js";
 import { at } from "./num.js";
 import { MODEL_CATEGORIES, MODEL_RULES, MODEL_WEIGHTS, type ModelCategory, type ModelFinding, type ModelSeverity } from "./rules.js";
@@ -7,6 +8,8 @@ export interface LintOptions {
   maxTriangles?: number;
   /** Texture memory budget in MB; default 512. */
   maxTextureMb?: number;
+  /** Node names, sizes and budget the model must keep. */
+  contract?: ModelContract;
 }
 
 export interface ModelCategoryScore {
@@ -47,6 +50,7 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
   reportEdges(edgeTotals, add);
   checkTextures(info, options, add);
   checkSymmetry(info, add);
+  if (options.contract) findings.push(...checkContract(info, options.contract));
 
   if (options.maxTriangles !== undefined && info.triangles > options.maxTriangles) {
     add("model/triangle-budget", `${info.triangles.toLocaleString("en-US")} triangles; the budget is ${options.maxTriangles.toLocaleString("en-US")}.`);
