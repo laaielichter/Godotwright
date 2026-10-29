@@ -32,6 +32,7 @@ import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
+import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { TestRunError, formatTests, runTests, testsPassed } from "../test/run.js";
 import { SceneError, editScene, formatScenePlan, type SceneEdit } from "../scene/edit.js";
 import { SettingsError, editProjectSettings, formatSettingsPlan, type SettingsEdit } from "../settings/edit.js";
@@ -94,6 +95,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
+      "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
@@ -424,6 +426,44 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return failure(`${error.message}\nUse godot_review for checks without Godot.`);
         }
         return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_play",
+    {
+      title: "Play a scene with input",
+      description:
+        'Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. Timeline: "10 press jump; 30 release jump; 40 hold right 20; 50 tap Key:Space". Watch: Node/Path.property, e.g. Player.position, Player.velocity.y, Player.is_on_floor().',
+      inputSchema: {
+        path: pathParam,
+        scene: z.string().optional().describe("the res:// scene to run (default: the main scene)"),
+        input: z.string().optional().describe('timeline: "10 press jump; 30 release jump; 40 hold right 20; 50 tap Key:Space"'),
+        watch: z.array(z.string()).optional().describe("values to sample: Player.position, Player.velocity.y, Player.is_on_floor()"),
+        frames: z.number().int().min(1).max(100_000).optional().describe("physics frames to run (default 120)"),
+        every: z.number().int().min(1).optional().describe("sample every n frames (default 10); frames with input and the last frame are always sampled"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout of the run (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, scene, input, watch, frames, every, timeout_seconds }) => {
+      try {
+        const report = await playScene(where(path), {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          ...(input ? { input } : {}),
+          ...(watch ? { watch } : {}),
+          ...(frames ? { frames } : {}),
+          ...(every ? { every } : {}),
+          timeoutMs: (timeout_seconds ?? 300) * 1000,
+        });
+        const body = formatPlay(report);
+        return !report.finished || report.diagnostics.some((d) => d.severity === "error") ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );

@@ -8,6 +8,13 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`play`** (MCP `godot_play`): run a scene headless for a number of physics frames, play an input timeline into it
+  (`10 press jump; 30 release jump; 40 hold right 20; 50 tap Key:Space`; actions, keys, mouse and joypad buttons and
+  axes), and print a table of the values you watch (`Player.position`, `Player.velocity.y`, `Player.is_on_floor()`)
+  per frame, with errors and prints. The game sees each input on exactly that physics frame
+  (`is_action_just_pressed()` included), and runs are deterministic (fixed frame rate). Warns about actions that are not
+  in the input map and watched nodes that are not in the scene.
+
 - **`test`** (MCP `godot_test`): run a project's GUT or GdUnit4 tests in Godot headless and read their JUnit report,
   so the result is one line of totals and one line per failing test (`res://file:line  test  message`), plus script
   errors from the run. Finds the framework in `res://addons`, uses `.gutconfig.json` when there is one, else
