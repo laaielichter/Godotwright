@@ -119,6 +119,12 @@ describe("the report", () => {
     expect(report.unparsed).toEqual({ "Cannot open <path> <path> for reading": 1 });
   });
 
+  it("never shares a verdict of right as a Godot confirmation", () => {
+    recordFeedback({ rule: "api/unknown-member", file: "res://a.gd", message: "m" }, "right");
+    expect(readLearning().rules["api/unknown-member"]).toMatchObject({ verified: 1, confirmed: 0 });
+    expect(buildReport(readLearning(), api, "id")).toBeUndefined();
+  });
+
   it("only sends what is new since the last report", () => {
     recordApiLookup("Node2D.lookat", false);
     const first = buildReport(readLearning(), api, "id")!;

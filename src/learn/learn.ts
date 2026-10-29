@@ -165,7 +165,8 @@ export function recordFeedback(finding: Pick<Finding, "rule" | "file" | "message
       stats.dismissed++;
       data.dismissed[fingerprint(finding)] = Date.now();
     } else {
-      stats.confirmed++;
+      // A verdict from a user or agent is not Godot's confirmation: it never unlocks a downgrade.
+      stats.verified = (stats.verified ?? 0) + 1;
     }
   });
 }

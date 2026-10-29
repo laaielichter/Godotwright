@@ -84,7 +84,9 @@ export function scrubTemplate(template: string, api: GodotApi): string {
 /** The counters that may leave the machine, filtered for privacy. */
 export function shareableSnapshot(data: LearningData, api: GodotApi): Snapshot {
   const rules: Record<string, RuleStats> = {};
-  for (const [rule, stats] of Object.entries(data.rules)) if (RULES[rule]) rules[rule] = { ...stats };
+  for (const [rule, s] of Object.entries(data.rules)) {
+    if (RULES[rule]) rules[rule] = { reported: s.reported, confirmed: s.confirmed, contradicted: s.contradicted, dismissed: s.dismissed };
+  }
 
   const apiMisses: Record<string, ApiMiss> = {};
   for (const [query, miss] of top(Object.entries(data.apiMisses), ([, m]) => m.count)) {
@@ -110,14 +112,13 @@ export function snapshotDelta(current: Snapshot, sent: Snapshot | undefined): Sn
   const rules: Record<string, RuleStats> = {};
   for (const [rule, s] of Object.entries(current.rules)) {
     const before = sent?.rules[rule];
-    const d: RuleStats = {
-      reported: s.reported - (before?.reported ?? 0),
-      confirmed: s.confirmed - (before?.confirmed ?? 0),
-      contradicted: s.contradicted - (before?.contradicted ?? 0),
-      dismissed: s.dismissed - (before?.dismissed ?? 0),
+    const d = {
+      reported: Math.max(0, s.reported - (before?.reported ?? 0)),
+      confirmed: Math.max(0, s.confirmed - (before?.confirmed ?? 0)),
+      contradicted: Math.max(0, s.contradicted - (before?.contradicted ?? 0)),
+      dismissed: Math.max(0, s.dismissed - (before?.dismissed ?? 0)),
     };
-    for (const k of Object.keys(d) as (keyof RuleStats)[]) d[k] = Math.max(0, d[k]);
-    if (Object.values(d).some((v) => v > 0)) rules[rule] = d;
+    if (d.reported + d.confirmed + d.contradicted + d.dismissed > 0) rules[rule] = d;
   }
   const apiMisses: Record<string, ApiMiss> = {};
   for (const [query, m] of Object.entries(current.apiMisses)) {

@@ -17,6 +17,8 @@ export interface RuleStats {
   contradicted: number;
   /** Times a user or agent marked a finding of this rule as wrong. */
   dismissed: number;
+  /** Times a user or agent marked a finding of this rule as right. Local only: not a Godot confirmation. */
+  verified?: number;
 }
 
 export interface ApiMiss {
@@ -154,6 +156,7 @@ function recordOf<T>(v: unknown, item: (x: unknown) => T | undefined): Record<st
 function ruleFrom(v: unknown): RuleStats | undefined {
   if (!isRecord(v)) return undefined;
   const stats: RuleStats = { reported: count(v["reported"]), confirmed: count(v["confirmed"]), contradicted: count(v["contradicted"]), dismissed: count(v["dismissed"]) };
+  if (v["verified"] !== undefined) stats.verified = count(v["verified"]);
   return stats;
 }
 

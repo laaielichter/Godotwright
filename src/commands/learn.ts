@@ -34,7 +34,7 @@ export function learnCommand(): Command {
           : []),
         "",
         `rules seen: ${rules.length}`,
-        ...rules.map(([rule, s]) => `  ${rule}: reported ${s.reported}, confirmed by Godot ${s.confirmed}, contradicted ${s.contradicted}, marked wrong ${s.dismissed}`),
+        ...rules.map(([rule, s]) => `  ${rule}: reported ${s.reported}, confirmed by Godot ${s.confirmed}, contradicted ${s.contradicted}, marked wrong ${s.dismissed}, marked right ${s.verified ?? 0}`),
         `API lookups that found nothing: ${Object.keys(data.apiMisses).length}`,
         `Godot errors the review missed: ${Object.values(data.missedByReview).reduce((a, b) => a + b, 0)}`,
         `Godot messages not tied to a file: ${Object.values(data.unparsed).reduce((a, b) => a + b, 0)}`,

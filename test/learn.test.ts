@@ -254,9 +254,15 @@ describe("getting smarter over time", () => {
     expect(parseFindingLine("res://a.gd: warning [quality/todo] TODO here")).toEqual({ rule: "quality/todo", file: "res://a.gd", line: undefined, message: "TODO here" });
   });
 
-  it("counts a confirmed finding when it was marked as right", () => {
+  it("counts a verdict of right as verified, not as a Godot confirmation", () => {
     recordFeedback(finding(), "right");
-    expect(readLearning().rules["api/unknown-member"]?.confirmed).toBe(1);
+    expect(readLearning().rules["api/unknown-member"]).toMatchObject({ verified: 1, confirmed: 0 });
+  });
+
+  it("does not let a verdict of right unlock a rule that Godot keeps contradicting", () => {
+    for (let i = 0; i < DOWNGRADE_AFTER; i++) recordCheck(godot([]), { findings: [finding()] });
+    recordFeedback(finding(), "right");
+    expect(adjustFindings([finding()], readLearning()).findings[0]!.severity).toBe("warning");
   });
 });
 
