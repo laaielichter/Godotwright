@@ -447,6 +447,12 @@ describe("model malformed files", () => {
     refuses(editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0].bufferView = 99; }), /image 0 points at a missing buffer view/);
   });
 
+  it("refuses a texture uri that is not text, and ignores a mime type that is not", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0] = { uri: 5 }; }), /a uri must be text/);
+    const odd = editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0] = { uri: "missing.png", mimeType: 5 }; });
+    expect(() => inspectModel(odd)).not.toThrow();
+  });
+
   it("says the file is not glTF when the JSON is not an object", () => {
     const root = makeProject({ "null.gltf": "null" });
     expect(() => loadGltf(`${root}/null.gltf`)).toThrow(/not a glTF 2.0 file/);

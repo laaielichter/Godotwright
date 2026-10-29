@@ -135,7 +135,6 @@ function parseJson(file: string, text: string): Gltf {
 
 function resolveBuffer(file: string, uri: string | undefined, dir: string): Buffer {
   if (!uri) return Buffer.alloc(0);
-  if (typeof uri !== "string") throw new ModelError(`${file}: buffer uri must be text`);
   const bytes = readUri(file, uri, dir);
   if (!bytes) throw new ModelError(`${file}: buffer file not found: ${uri}`);
   return bytes;
@@ -143,6 +142,7 @@ function resolveBuffer(file: string, uri: string | undefined, dir: string): Buff
 
 /** Reads a data: URI, or a file inside the model's folder. Returns undefined when that file is missing. */
 export function readUri(file: string, uri: string, dir: string): Buffer | undefined {
+  if (typeof uri !== "string") throw new ModelError(`${file}: a uri must be text`);
   if (uri.startsWith("data:")) {
     const comma = uri.indexOf(",");
     return comma < 0 ? undefined : Buffer.from(uri.slice(comma + 1), uri.slice(0, comma).includes(";base64") ? "base64" : "utf8");

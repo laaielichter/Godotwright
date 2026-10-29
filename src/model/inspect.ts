@@ -165,10 +165,10 @@ function readTextures(model: LoadedGltf): TextureInfo[] {
     const size = bytes && imageSize(bytes);
     return {
       index,
-      name: image?.name ?? image?.uri?.slice(0, 40) ?? `texture_${index}`,
+      name: image?.name ?? (typeof image?.uri === "string" ? image.uri.slice(0, 40) : undefined) ?? `texture_${index}`,
       width: size?.width,
       height: size?.height,
-      format: size?.format ?? image?.mimeType?.replace("image/", ""),
+      format: size?.format ?? (typeof image?.mimeType === "string" ? image.mimeType.replace("image/", "") : undefined),
       megabytes: size ? (size.width * size.height * 4 * (4 / 3)) / 1048576 : 0,
       roles: roles.get(index) ?? [],
     };
