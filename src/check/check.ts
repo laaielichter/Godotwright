@@ -99,7 +99,10 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
 
   if (options.import !== false) {
     const result = await run("import", ["--import"]);
-    diagnostics.push(...parseGodotLog(result.stderr + "\n" + result.stdout, "import"));
+    const found = parseGodotLog(result.stderr + "\n" + result.stdout, "import");
+    diagnostics.push(...found);
+    const exit = unexplainedExit("import", result, found);
+    if (exit) diagnostics.push(exit);
   }
 
   const checkerDir = join(root, ...CHECKER_DIR.split("/"));
@@ -135,14 +138,17 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
 
   if (options.runFrames && options.runFrames > 0) {
     const result = await run("run", ["--quit-after", String(options.runFrames)]);
-    for (const d of parseGodotLog(result.stderr, "run")) {
+    const found = parseGodotLog(result.stderr, "run");
+    for (const d of found) {
       // Stopping after N frames can leave objects alive; report leaks, but not as errors.
       if (EXIT_LEAK.test(d.message)) {
         d.severity = "warning";
         d.message = `at exit: ${d.message}`;
       }
-      diagnostics.push(d);
     }
+    diagnostics.push(...found);
+    const exit = unexplainedExit("run", result, found);
+    if (exit) diagnostics.push(exit);
   }
 
   const clean = cleanup(diagnostics);
@@ -157,6 +163,13 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     warnings: clean.filter((d) => d.severity === "warning").length,
     ...(options.keepLogs ? { logs } : {}),
   };
+}
+
+/** A step that exits badly must not pass as clean just because Godot printed no error for it. */
+function unexplainedExit(name: string, result: RunResult, found: Diagnostic[]): Diagnostic | undefined {
+  if (result.timedOut || result.code === 0 || cleanup(found).some((d) => d.severity === "error")) return undefined;
+  const how = result.code === null ? "was killed by a signal" : `exited with code ${result.code}`;
+  return { severity: "error", message: `${name} ${how}`, source: name };
 }
 
 function tail(text: string): string {
