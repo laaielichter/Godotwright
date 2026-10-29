@@ -1,0 +1,11 @@
+{
+ "side": {
+  "iou": 0.7,
+  "scale": 1.03,
+  "iou_front_half": 0.7405
+ },
+ "front": {
+  "iou": 0.8842,
+  "scale": 0.92
+ }
+}

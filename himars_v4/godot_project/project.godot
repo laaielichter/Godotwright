@@ -1,0 +1,21 @@
+; Engine configuration file.
+; M142 HIMARS v2 — gameplay build (Godotwright cloud build). Visual + working rockets, non-operational sim.
+
+config_version=5
+
+[application]
+
+config/name="M142 HIMARS v2"
+config/description="M142 HIMARS with working rockets, follow and impact cameras, airbase among mountains."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7")
+
+[display]
+
+window/size/viewport_width=1440
+window/size/viewport_height=900
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

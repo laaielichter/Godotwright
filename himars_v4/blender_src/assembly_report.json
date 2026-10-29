@@ -1,0 +1,298 @@
+{
+ "engine": "bpy 5.2.3 LTS",
+ "total_tris_instanced": 1695544,
+ "total_tris_unique_mesh": 1058264,
+ "node_tris": {
+  "Body": 193272,
+  "FrontL": 69504,
+  "FrontR": 69504,
+  "MiddleL": 69504,
+  "MiddleR": 69504,
+  "RearL": 69504,
+  "RearR": 69504,
+  "DoorL": 8056,
+  "DoorR": 8056,
+  "Interior": 80232,
+  "LauncherYaw": 11868,
+  "LauncherPitch": 45056,
+  "PodSix": 63496,
+  "PodSingle": 49004,
+  "PodDual": 54744,
+  "Rocket1": 127456,
+  "Rocket2": 127456,
+  "Rocket3": 127456,
+  "Rocket4": 127456,
+  "Rocket5": 127456,
+  "Rocket6": 127456
+ },
+ "bbox_lo": [
+  -1.590000033378601,
+  -3.4800000190734863,
+  -3.5762788286319847e-09
+ ],
+ "bbox_hi": [
+  1.590000033378601,
+  3.4800000190734863,
+  3.0999999046325684
+ ],
+ "length_Y": 6.960000038146973,
+ "width_X": 3.180000066757202,
+ "top_Z": 3.0999999046325684,
+ "objects": 96,
+ "tris": {
+  "chassis_paint_od": 21260,
+  "chassis_steel": 55476,
+  "chassis_lens_amber": 944,
+  "chassis_steel_dark": 29384,
+  "chassis_lens_white": 384,
+  "chassis_lens_red": 1504,
+  "chassis_hose": 8704,
+  "chassis_rubber": 1188,
+  "chassis_chrome": 264,
+  "chassis_decal_white": 36,
+  "tyre_FrontL": 58336,
+  "rim_FrontL": 7248,
+  "nuts_FrontL": 3920,
+  "tyre_FrontR": 58336,
+  "rim_FrontR": 7248,
+  "nuts_FrontR": 3920,
+  "tyre_MiddleL": 58336,
+  "rim_MiddleL": 7248,
+  "nuts_MiddleL": 3920,
+  "tyre_MiddleR": 58336,
+  "rim_MiddleR": 7248,
+  "nuts_MiddleR": 3920,
+  "tyre_RearL": 58336,
+  "rim_RearL": 7248,
+  "nuts_RearL": 3920,
+  "tyre_RearR": 58336,
+  "rim_RearR": 7248,
+  "nuts_RearR": 3920,
+  "cab_body": 51076,
+  "cab_glass": 216,
+  "cab_fittings": 15840,
+  "DoorL.001": 8056,
+  "DoorR.001": 8056,
+  "cab_int_shell": 30384,
+  "cab_int_dash": 12148,
+  "cab_int_seats": 11076,
+  "cab_int_equip": 16668,
+  "fcc_screen_1": 2,
+  "fcc_screen_2": 2,
+  "cab_int_fcc": 9952,
+  "launcher_elev_barrel_R": 504,
+  "launcher_elev_barrel_L": 504,
+  "launcher_elev_rod_R": 80,
+  "launcher_elev_rod_L": 80,
+  "pod_cap_rear_1": 960,
+  "pod_cap_front_1": 480,
+  "pod_cap_rear_2": 960,
+  "pod_cap_front_2": 480,
+  "pod_cap_rear_3": 960,
+  "pod_cap_front_3": 480,
+  "pod_cap_rear_4": 960,
+  "pod_cap_front_4": 480,
+  "pod_cap_rear_5": 960,
+  "pod_cap_front_5": 480,
+  "pod_cap_rear_6": 960,
+  "pod_cap_front_6": 480,
+  "pod_single_cap_rear_1": 960,
+  "pod_single_cap_front_1": 480,
+  "pod_dual_cap_rear_1": 960,
+  "pod_dual_cap_front_1": 480,
+  "pod_dual_cap_rear_2": 960,
+  "pod_dual_cap_front_2": 480,
+  "launcher_Body_paint_od": 3792,
+  "launcher_Body_steel": 3180,
+  "launcher_Body_rubber": 24,
+  "launcher_LauncherYaw_paint_od": 5568,
+  "launcher_LauncherYaw_steel": 2496,
+  "launcher_LauncherYaw_rubber": 1536,
+  "launcher_LauncherYaw_chrome": 192,
+  "launcher_LauncherYaw_steel_dark": 380,
+  "launcher_LauncherYaw_hose": 688,
+  "launcher_LauncherPitch_paint_od": 36296,
+  "launcher_LauncherPitch_steel": 2480,
+  "launcher_LauncherPitch_rubber": 72,
+  "launcher_LauncherPitch_steel_dark": 2016,
+  "launcher_LauncherPitch_hose": 3296,
+  "launcher_LauncherPitch_paint_tan": 628,
+  "launcher_LauncherPitch_chrome": 108,
+  "launcher_PodSix_paint_od": 42440,
+  "launcher_PodSix_steel_dark": 5368,
+  "launcher_PodSix_steel": 6076,
+  "launcher_PodSix_paint_tan": 972,
+  "launcher_PodSingle_paint_od": 40392,
+  "launcher_PodSingle_steel_dark": 2168,
+  "launcher_PodSingle_steel": 4032,
+  "launcher_PodSingle_paint_tan": 972,
+  "launcher_PodDual_paint_od": 42952,
+  "launcher_PodDual_steel_dark": 2808,
+  "launcher_PodDual_steel": 5132,
+  "launcher_PodDual_paint_tan": 972,
+  "gmlrs_master": 127456,
+  "gmlrs_master_2": 127456,
+  "gmlrs_master_3": 127456,
+  "gmlrs_master_4": 127456,
+  "gmlrs_master_5": 127456,
+  "gmlrs_master_6": 127456
+ },
+ "doors": {
+  "DoorL": {
+   "origin": [
+    -1.06,
+    3.05,
+    2.1
+   ],
+   "bbox_lo": [
+    -1.06,
+    2.35,
+    1.53
+   ],
+   "bbox_hi": [
+    -0.823,
+    3.078,
+    2.7191
+   ],
+   "origin_to_door_end_Y": 0.028
+  },
+  "DoorR": {
+   "origin": [
+    1.06,
+    3.05,
+    2.1
+   ],
+   "bbox_lo": [
+    0.823,
+    2.35,
+    1.53
+   ],
+   "bbox_hi": [
+    1.06,
+    3.078,
+    2.7191
+   ],
+   "origin_to_door_end_Y": 0.028
+  }
+ },
+ "problems": [],
+ "checks": [
+  {
+   "name": "bbox_length_Y",
+   "status": "OK",
+   "detail": "got=6.960 spec=6.96 dev=+0.0%"
+  },
+  {
+   "name": "bbox_width_X",
+   "status": "MISS",
+   "detail": "got=3.180 spec=2.44 dev=+30.3%"
+  },
+  {
+   "name": "bbox_height_top_Z",
+   "status": "MISS",
+   "detail": "got=3.100 spec=2.81 dev=+10.3%"
+  },
+  {
+   "name": "wheel_radius_FrontL",
+   "status": "OK",
+   "detail": "outer_r=0.5900 spec=0.59 hub=(-1.02,2.25,0.59)"
+  },
+  {
+   "name": "wheel_radius_FrontR",
+   "status": "OK",
+   "detail": "outer_r=0.5900 spec=0.59 hub=(1.02,2.25,0.59)"
+  },
+  {
+   "name": "wheel_radius_MiddleL",
+   "status": "OK",
+   "detail": "outer_r=0.5900 spec=0.59 hub=(-1.02,-1.25,0.59)"
+  },
+  {
+   "name": "wheel_radius_MiddleR",
+   "status": "OK",
+   "detail": "outer_r=0.5900 spec=0.59 hub=(1.02,-1.25,0.59)"
+  },
+  {
+   "name": "wheel_radius_RearL",
+   "status": "OK",
+   "detail": "outer_r=0.5900 spec=0.59 hub=(-1.02,-2.58,0.59)"
+  },
+  {
+   "name": "wheel_radius_RearR",
+   "status": "OK",
+   "detail": "outer_r=0.5900 spec=0.59 hub=(1.02,-2.58,0.59)"
+  },
+  {
+   "name": "door_origin_DoorL",
+   "status": "OK",
+   "detail": "origin=(-1.060,3.050,2.100) spec=(-1.06, 3.05, 2.1) door_Y=(2.350,3.078) door_X=(-1.060,-0.823) door_Z=(1.530,2.719)"
+  },
+  {
+   "name": "door_origin_DoorR",
+   "status": "OK",
+   "detail": "origin=(1.060,3.050,2.100) spec=(1.06, 3.05, 2.1) door_Y=(2.350,3.078) door_X=(0.823,1.060) door_Z=(1.530,2.719)"
+  },
+  {
+   "name": "hr_node_matches_empty",
+   "status": "OK",
+   "detail": "objects=96 bad=[]"
+  },
+  {
+   "name": "bbox_limit_abs_X_1p3",
+   "status": "MISS",
+   "detail": "outside=['cab_fittings']"
+  },
+  {
+   "name": "names_unique",
+   "status": "MISS",
+   "detail": "count=122 suffixed=['DoorL.001', 'DoorR.001']"
+  },
+  {
+   "name": "glb_himars_nodes",
+   "status": "OK",
+   "detail": "nodes=122 meshes=96 missing_empties=[]"
+  },
+  {
+   "name": "glb_gmlrs_node",
+   "status": "OK",
+   "detail": "nodes=['gmlrs'] meshes=1"
+  }
+ ],
+ "exports": {
+  "himars": "/tmp/claude-0/-home-user-Godotwright/7ae2e237-e8ec-5fe8-a3ff-1443b29100bf/scratchpad/v4/build/out/himars_v4.glb",
+  "gmlrs": "/tmp/claude-0/-home-user-Godotwright/7ae2e237-e8ec-5fe8-a3ff-1443b29100bf/scratchpad/v4/build/out/gmlrs_v3.glb"
+ },
+ "rocket_positions": [
+  [
+   -0.335,
+   -1.4700000000000002,
+   2.12
+  ],
+  [
+   0.0,
+   -1.4700000000000002,
+   2.12
+  ],
+  [
+   0.335,
+   -1.4700000000000002,
+   2.12
+  ],
+  [
+   -0.335,
+   -1.4700000000000002,
+   1.81
+  ],
+  [
+   0.0,
+   -1.4700000000000002,
+   1.81
+  ],
+  [
+   0.335,
+   -1.4700000000000002,
+   1.81
+  ]
+ ],
+ "elapsed_s": 134.5
+}
