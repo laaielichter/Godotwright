@@ -9,7 +9,8 @@ export function formatFinding(f: Finding): string {
   return `${where}: ${f.severity} [${f.rule}] ${f.message}`;
 }
 
-export function formatReview(report: ReviewReport, detail: Detail = "brief"): string {
+/** The project, the scores and the typing line: everything above the findings. */
+export function formatReviewSummary(report: ReviewReport): string {
   const out: string[] = [];
   out.push(`AAA review: ${report.project} (Godot ${report.godot}, ${report.scripts} scripts, ${report.scenes} scenes)`);
   out.push(`overall: ${report.overall}/100`);
@@ -18,6 +19,11 @@ export function formatReview(report: ReviewReport, detail: Detail = "brief"): st
     out.push(`  ${c.category.padEnd(12)} ${String(c.score).padStart(3)}  ${counts || "no findings"}`);
   }
   out.push(`  static typing: ${report.typing.percent}% (${report.typing.typed}/${report.typing.total} declarations)`);
+  return `${out.join("\n")}\n`;
+}
+
+export function formatReview(report: ReviewReport, detail: Detail = "brief"): string {
+  const out: string[] = [formatReviewSummary(report).trimEnd()];
 
   const shown = detail === "full" ? report.findings : report.findings.filter((f) => f.severity !== "info").slice(0, BRIEF_FINDINGS);
   const hidden = report.findings.length - shown.length;
