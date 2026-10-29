@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Port Godot 3 projects to Godot 4 with Godotwright</title>
-<meta name="description" content="Find Godot 3 syntax, renamed classes and moved APIs while porting to Godot 4: review your project with Godotwright and follow the replacement reference.">
+<meta name="description" content="Port Godot 3 scripts to Godot 4: Godotwright rewrites the mechanical part (annotations, renames, yield, connect), reviews the rest and lists every replacement.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/godot-3-to-4.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
@@ -191,11 +191,14 @@ footer a { color: var(--muted); }
 <div class="wrap hero">
 <p class="eyebrow">Godot 3 to Godot 4</p>
 <h1>Port your project with the <em>real Godot 4 API.</em></h1>
-<p class="lede">Find old syntax and names before they become runtime surprises. Godotwright reviews GDScript against its bundled Godot 4.7 reference and gives replacement hints; it does not convert your project automatically.</p>
+<p class="lede">Find old syntax and names before they become runtime surprises. Godotwright rewrites the mechanical part of a port with <code>migrate</code>, reviews GDScript against its bundled Godot 4.7 reference and gives replacement hints for the rest.</p>
 </div>
 <section id="review"><div class="wrap"><h2>Review a project you are porting</h2>
 <p class="sub">Back up or commit your Godot 3 project first, then follow the <a href="https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html">official Godot migration guide</a>. Use Node.js 22.12 or newer to review the project without installing Godot or configuring a model/API key:</p>
-<div class="cmd"><pre><code>npx -y godotwright review /path/to/your-project</code></pre></div>
+<div class="cmd"><pre><code>npx -y godotwright migrate /path/to/your-project          # shows the rewrites and what is left
+npx -y godotwright migrate /path/to/your-project --write  # applies them
+npx -y godotwright review /path/to/your-project</code></pre></div>
+<p class="sub"><code>migrate</code> turns <code>export</code>, <code>onready</code> and <code>tool</code> into annotations, renames classes, functions, properties and constants that no longer exist in Godot 4, rewrites <code>yield()</code> to <code>await</code> and <code>connect()</code>, <code>emit_signal()</code> and <code>funcref()</code> to signals and callables, and moves members such as <code>OS.get_ticks_msec()</code>. It leaves strings, comments and node paths alone and lists what still needs a hand (<code>setget</code>, <code>move_and_slide(velocity)</code>, RPC keywords). Scenes and project settings are not converted; Godot's own <code>--convert-3to4</code> does those.</p>
 <p class="sub">Pass the directory containing <code>project.godot</code>. Follow each finding's file and line number, update the code, and run the review again. Look up a replacement with <code>npx -y godotwright api CharacterBody2D</code>. A review is static analysis; it does not replace opening the converted project in the matching Godot version and testing gameplay. Native validation with <code>godotwright check</code> requires Godot 4.7.</p>
 </div></section>
 <section id="syntax"><div class="wrap"><h2>GDScript syntax changes</h2>

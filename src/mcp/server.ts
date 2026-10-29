@@ -10,6 +10,7 @@ import { loadLibrary } from "../archetype/library.js";
 import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
 import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
+import { formatMigration, migrateProject } from "../migrate/migrate.js";
 import { parseFindingLine, recordFeedback } from "../learn/learn.js";
 import { allKinds } from "../build/generators/index.js";
 import { buildModel } from "../build/run.js";
@@ -66,6 +67,7 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
+      "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
       "To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
@@ -82,6 +84,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
       "- godot_checklist lists every AAA rule with its fix.",
+      "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
       "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
@@ -197,6 +200,27 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const report = reviewLearning(where(path), { base: options.base, baseFiles: options.baseFiles, overrides: code !== undefined && target ? { [target]: code } : undefined });
         const focus = [...(files ?? []), ...(target ? [target] : [])].map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`));
         return text(formatReviewFor(report, detail ?? profile.detail, profile, focus));
+      }),
+  );
+
+  server.registerTool(
+    "godot_migrate",
+    {
+      title: "Port Godot 3 scripts to Godot 4",
+      description:
+        "Rewrite Godot 3 GDScript to Godot 4 where that is mechanical: @export/@onready/@tool, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, members that moved (OS.get_ticks_msec() to Time). Strings, comments and node paths are left alone. Without `write` it only reports the changes; with `write: true` it rewrites the scripts. It also lists what still needs a hand (setget, move_and_slide arguments, rpc keywords, export hints it does not know). Scenes and project settings are not migrated; Godot's --convert-3to4 does those. Run godot_review afterwards.",
+      inputSchema: {
+        path: pathParam,
+        write: z.boolean().optional().describe("rewrite the scripts on disk (default false: report only)"),
+        files: z.array(z.string()).optional().describe("only these res:// scripts"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, write, files, detail }) =>
+      guard(() => {
+        const result = migrateProject(where(path), { write: write === true, ...(files ? { files: files.map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`)) } : {}) });
+        return text(formatMigration(result, detail ?? profile.detail));
       }),
   );
 
