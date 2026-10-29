@@ -35,11 +35,12 @@ A report holds only:
 - a random install id that is replaced every 30 days, so the collector can
   count distinct installs; it is not tied to you or your project;
 - counts per review rule (built-in rule ids only);
-- mistyped Godot API names (only names a few letters away from a real Godot
-  class or member, so your own class and function names are left out) and the
-  real Godot name that was looked up next;
-- Godot error templates, after a second pass that replaces any word that looks
-  like an identifier with `<id>` (Godot class names stay).
+- mistyped Godot API names: a `Class.member` a few letters from a real Godot
+  member, sent only with the real name it was looked up as next, and only when
+  it is a typo of that name. Bare names and your own names are never sent;
+- Godot error templates, after a second pass that replaces every word that is
+  not a Godot class name or engine wording with `<id>`. A template that still
+  holds a path is never sent.
 
 Each report holds only what is new since the last one. Nothing is sent when
 sharing is off, when `GODOTWRIGHT_LEARN=0` or `DO_NOT_TRACK` is set, or when no
