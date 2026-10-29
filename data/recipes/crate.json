@@ -1,0 +1,119 @@
+{
+ "version": 1,
+ "name": "crate",
+ "archetype": "prop.crate",
+ "description": "A wooden crate: a box of planks with a corner post at each vertical edge, a slightly overhanging lid and a base frame. Length is along z.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 1.0,
+   "min": 0.3,
+   "max": 1.5,
+   "description": "Length along z in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 0.8,
+   "min": 0.3,
+   "max": 1.2,
+   "description": "Width along x in metres."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 0.8,
+   "min": 0.3,
+   "max": 1.2,
+   "description": "Height in metres."
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Crate",
+   "material": "wood",
+   "vars": {
+    "L": "$length",
+    "W": "$width",
+    "H": "$height",
+    "t": 0.04,
+    "p": "min(0.06, min($length, $width) * 0.12)"
+   },
+   "children": [
+    {
+     "name": "Base",
+     "shape": "box",
+     "size": [
+      "$W",
+      "$t * 1.5",
+      "$L"
+     ],
+     "at": [
+      0,
+      "$t * 0.75",
+      0
+     ]
+    },
+    {
+     "name": "Body",
+     "shape": "box",
+     "size": [
+      "$W - 2 * $t",
+      "$H - $t * 3",
+      "$L - 2 * $t"
+     ],
+     "at": [
+      0,
+      "$H / 2",
+      0
+     ]
+    },
+    {
+     "name": "Lid",
+     "shape": "box",
+     "size": [
+      "$W + 0.02",
+      "$t * 1.5",
+      "$L + 0.02"
+     ],
+     "at": [
+      0,
+      "$H - $t * 0.75",
+      0
+     ]
+    },
+    {
+     "name": "Post_FL",
+     "shape": "box",
+     "size": [
+      "$p",
+      "$H - $t * 3",
+      "$p"
+     ],
+     "at": [
+      "$W / 2 - $p / 2",
+      "$H / 2",
+      "$L / 2 - $p / 2"
+     ],
+     "mirror": "Post_FR"
+    },
+    {
+     "name": "Post_BL",
+     "shape": "box",
+     "size": [
+      "$p",
+      "$H - $t * 3",
+      "$p"
+     ],
+     "at": [
+      "$W / 2 - $p / 2",
+      "$H / 2",
+      "-$L / 2 + $p / 2"
+     ],
+     "mirror": "Post_BR"
+    }
+   ]
+  }
+ ]
+}

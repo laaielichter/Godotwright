@@ -62,7 +62,7 @@ describe("ring and offset in the spec language", () => {
 describe("the recipes", () => {
   it("are listed with the built-in kinds, with parameters and an archetype", () => {
     const kinds = allKinds();
-    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower"]));
+    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower", "crate", "barrel", "chair", "table"]));
     for (const r of recipes) {
       expect(r.archetype, r.kind).toBeDefined();
       expect(library.get(r.archetype!), r.kind).toBeDefined();
@@ -84,7 +84,7 @@ describe("the recipes", () => {
       const info = inspectModel(writeScene(buildKind(kind)));
       const s = library.resolve(recipe.archetype!).scale!;
       const largest = Math.max(...info.bounds!.size);
-      expect(largest).toBeLessThan(3 * Math.max(...[s.length, s.width, s.height].map((r) => r![1])));
+      expect(largest).toBeLessThan(3 * Math.max(...[s.length, s.width, s.height].flatMap((r) => (r ? [r[1]] : []))));
       // A vessel sits on its waterline: y = 0 is the water and the hull goes below it.
       if (recipe.archetype!.startsWith("vessel")) expect(info.bounds!.min[1]).toBeLessThan(-0.5);
       else {
