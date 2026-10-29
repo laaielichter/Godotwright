@@ -28,7 +28,7 @@ const MOVED: Record<string, string> = {
   "OS.get_ticks_msec": "Time.get_ticks_msec()",
   "OS.get_ticks_usec": "Time.get_ticks_usec()",
   "OS.get_unix_time": "Time.get_unix_time_from_system()",
-  "OS.get_system_time_msecs": "Time.get_unix_time_from_system()",
+  "OS.get_system_time_msecs": "int(Time.get_unix_time_from_system() * 1000)",
   "OS.get_datetime": "Time.get_datetime_dict_from_system()",
   "OS.get_date": "Time.get_date_dict_from_system()",
   "OS.get_time": "Time.get_time_dict_from_system()",

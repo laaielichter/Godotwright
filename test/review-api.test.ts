@@ -111,6 +111,14 @@ describe("Godot 3 syntax", () => {
   });
 });
 
+describe("moved Godot 3 time functions", () => {
+  it("suggests a millisecond timestamp for OS.get_system_time_msecs()", () => {
+    expect(findings("extends Node\n\nfunc _ready() -> void:\n\tvar ms := OS.get_system_time_msecs()\n\tprint(ms)\n")).toEqual([
+      'res://main.gd:4: error [api/unknown-member] Method "get_system_time_msecs()" does not exist on OS in Godot 4.7. In Godot 4 use int(Time.get_unix_time_from_system() * 1000).',
+    ]);
+  });
+});
+
 describe("argument counts", () => {
   const twoParams = "extends Node\n\nfunc f(a, b) -> int:\n\treturn 0\n\n";
 
