@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { identify, stem, tokens } from "../../src/archetype/identify.js";
-import { ArchetypeLibrary, loadLibrary, validateArchetypes } from "../../src/archetype/library.js";
+import { ArchetypeLibrary, loadLibrary, SHARED_ALIASES, validateArchetypes } from "../../src/archetype/library.js";
 import type { Archetype } from "../../src/archetype/types.js";
 import { runCli } from "../helpers.js";
 
@@ -240,5 +240,85 @@ describe("model identify and model archetypes", () => {
     const one = await runCli(["model", "archetypes", "prop.shipping-container"]);
     expect(one.output).toContain("class A: ISO 668");
     expect((await runCli(["model", "archetypes", "no.such"])).exitCode).toBe(1);
+  });
+});
+
+describe("identify reads a letter-and-number code as one word", () => {
+  it("reads letter-and-number codes such as F-16 as one word, not as a bare number", () => {
+    expect(tokens("F-16 and su-27")).toEqual(["f16", "su27"]);
+    expect(best("F-16")).toBe("aircraft.fixed-wing.fighter");
+    expect(best("a 15 metre boat")).toBe("vessel.boat");
+  });
+});
+
+describe("identify reads the subject, not the place or a word it borrows", () => {
+  it("takes the thing a location word points at as the place, not the subject", () => {
+    expect(best("a house by the river")).toBe("building.house");
+    expect(best("a house on the hill")).toBe("building.house");
+    expect(identify("a house on the hill", library).ambiguous).toEqual([]);
+    expect(best("a road next to a bridge")).toBe("infrastructure.road");
+    expect(best("a bridge over the river")).toBe("infrastructure.bridge");
+    expect(identify("a bridge over the river", library).ambiguous).toEqual([]);
+  });
+
+  it("does not let a word boost the archetype it names", () => {
+    // The world chain has "river" as a hint, so the word alone used to add a boost to the river itself.
+    expect(identify("river", library).matches[0]!.score).toBe(1);
+  });
+
+  it("breaks a tie by the position of the words in the text, not by the length of the id", () => {
+    expect(best("a boat and a house")).toBe("vessel.boat");
+    expect(identify("a boat and a house", library).ambiguous.sort()).toEqual(["building.house", "vessel.boat"]);
+  });
+
+  it("prefers the alias that is spelled exactly like the text", () => {
+    const lib = new ArchetypeLibrary([root, child({ id: "thing.mountain", aliases: ["hill"] }), child({ id: "thing.zz", aliases: ["hills"] })]);
+    expect(identify("hills", lib).best.id).toBe("thing.zz");
+  });
+
+  it("says 'means more than one thing' only when the same word names two archetypes", () => {
+    expect(identify("windmolen", library).notes.join(" ")).toMatch(/means more than one thing/);
+    expect(identify("a boat and a house", library).notes.join(" ")).not.toMatch(/means more than one thing/);
+    expect(identify("a boat and a house", library).notes.join(" ")).toMatch(/names more than one thing/);
+  });
+
+  it("does not read a compound by a head word that means something else", () => {
+    const r = identify("motorhome", library);
+    expect(r.best.id).not.toBe("building.house");
+    expect(r.matches.some((m) => m.via === "suffix" && m.id === "building.house")).toBe(false);
+  });
+});
+
+describe("identify gives each family its own words", () => {
+  it("gives a fuel or water tank to the barrel family, and a bare 'tank' or 'ton' to nothing in particular", () => {
+    expect(best("fuel tank")).toBe("prop.barrel");
+    expect(best("water tank")).toBe("prop.barrel");
+    expect(best("battle tank")).toBe("vehicle.tracked.tank");
+    expect(best("tank")).not.toBe("vehicle.tracked.tank");
+    expect(identify("a 10 ton truck", library).ambiguous).toEqual([]);
+    expect(best("a 10 ton truck")).toBe("vehicle.wheeled.truck");
+  });
+
+  it("knows a glider as an unpowered aeroplane, not as a light aircraft that needs a propeller", () => {
+    expect(best("glider")).toBe("aircraft.fixed-wing.glider");
+    expect(best("zweefvliegtuig")).toBe("aircraft.fixed-wing.glider");
+    expect(library.resolve("aircraft.fixed-wing.glider").parts.map((p) => p.name)).not.toContain("Propeller");
+  });
+});
+
+describe("the alias rules compare words the way identify does", () => {
+  const twin = (id: string, alias: string): Archetype => ({ id: `thing.${id}`, extends: "thing", name: id, description: "d", aliases: [alias] });
+
+  it("treats a singular and a plural of one word as the same alias", () => {
+    expect(validateArchetypes([root, child({ aliases: ["widget"] }), twin("gadget", "widgets")]).join("\n")).toMatch(/"widgets" is also used by thing.widget/);
+  });
+
+  it("shares only the aliases that really name two things", () => {
+    expect(validateArchetypes([root, twin("a", "windmolen"), twin("b", "windmolen")])).toEqual([]);
+    expect(validateArchetypes([root, twin("a", "wall"), twin("b", "wall")]).join("\n")).toMatch(/"wall" is also used by/);
+  });
+
+  it("keeps the shared aliases to the ones that really have two meanings", () => {
+    expect([...SHARED_ALIASES].sort()).toEqual(["bike", "motor", "windmolen"]);
   });
 });

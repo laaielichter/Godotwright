@@ -11,9 +11,9 @@ interface Box {
   max: V3;
 }
 
-/** Words of a node or part name: "WheelFL" -> wheel, fl. */
+/** Words of a node or part name: "WheelFL" -> wheel, fl; "Wheel2" -> wheel (a number on its own is not a word). */
 function words(text: string): string[] {
-  return tokens(text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[_\-.]+/g, " ")).map(stem);
+  return tokens(text.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([a-z])([0-9])/gi, "$1 $2").replace(/[_\-.]+/g, " ")).map(stem);
 }
 
 /** How well a node name fits a part: the number of words of the longest phrase found in it, or 0. */
@@ -99,8 +99,16 @@ export function checkArchetype(info: ModelInfo, arch: ResolvedArchetype): ModelF
   const unused: string[] = [];
   for (const part of arch.parts) {
     let found = candidates.get(part.name) ?? [];
-    // A group such as "Wheels" is not one more wheel when the wheels are inside it.
-    found = found.filter((c) => !found.some((o) => o !== c && o.path.startsWith(`${c.path}/`)));
+    const inside = (outer: NodeInfo, inner: NodeInfo): boolean => inner.path.startsWith(`${outer.path}/`);
+    // A group such as "Wheels" is not one more wheel when the wheels are inside it. A plural name holding one
+    // wheel is a group too.
+    found = found.filter((c) => {
+      const inner = found.filter((o) => o !== c && inside(c, o)).length;
+      return !(inner >= 2 || (inner === 1 && tokens(c.name).some((t) => t.endsWith("s") && stem(t) !== t)));
+    });
+    // A node inside a part that is already counted is only that part's geometry: the part's node is the one that
+    // moves (the spinning wheel), so the pivot is checked there, not on a mesh child that happens to have its name.
+    found = found.filter((c) => !found.some((o) => o !== c && inside(o, c)));
     const [min, max] = countRange(part);
     if (found.length === 0) {
       if (part.required && min >= 1) {
