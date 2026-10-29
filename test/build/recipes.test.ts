@@ -157,6 +157,16 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("fence: a post stands at each end of the section", () => {
+    for (const length of [1, 3, 5]) {
+      const posts = [...nodeBoxes("fence", { length }).entries()].filter(([path]) => path.startsWith("Fence/Post_")).map(([, box]) => (box.min[2] + box.max[2]) / 2);
+      expect(posts.length, `length ${length}`).toBe(2);
+      const [start, end] = posts.sort((a, b) => a - b);
+      expect(start).toBeCloseTo(-(length / 2 - 0.05), 3);
+      expect(end).toBeCloseTo(length / 2 - 0.05, 3);
+    }
+  });
+
   it("table: the apron has a front rail and a back rail", () => {
     for (const length of [0.6, 1.4, 3]) {
       const boxes = nodeBoxes("table", { length });
