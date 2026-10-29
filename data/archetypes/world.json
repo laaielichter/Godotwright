@@ -147,7 +147,8 @@
   ],
   "pitfalls": [
    "Noise-only terrain looks the same everywhere: combine large smooth shapes (domain) with a ridged or fractal detail layer, and flatten where roads and buildings go."
-  ]
+  ],
+  "sheet": true
  },
  {
   "id": "world.terrain.mountain",
@@ -386,7 +387,8 @@
   ],
   "pitfalls": [
    "A straight coast looks artificial: bend it with large and small bays, and make cliffs and beaches alternate."
-  ]
+  ],
+  "sheet": true
  },
  {
   "id": "world.water",
@@ -441,7 +443,8 @@
   "pitfalls": [
    "Modelling waves in geometry: it costs triangles and cannot move; use a shader.",
    "A water plane that ends in the view: make it follow the camera or extend it far beyond the visible area."
-  ]
+  ],
+  "sheet": true
  },
  {
   "id": "world.water.sea",

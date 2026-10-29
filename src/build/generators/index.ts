@@ -3,6 +3,7 @@ import { BuildError, resolveParams, type ParamDef, type Params } from "../params
 import { buildSpec } from "../spec.js";
 import { loadRecipes } from "../recipes.js";
 import { house } from "./house.js";
+import { sea, terrain } from "./terrain.js";
 
 export interface Generator {
   kind: string;
@@ -13,7 +14,7 @@ export interface Generator {
   build(params: Params): BuildScene;
 }
 
-export const GENERATORS: Record<string, Generator> = { house };
+export const GENERATORS: Record<string, Generator> = { house, terrain, sea };
 
 /** Every kind `model build` accepts: the built-in generators and the recipes in data/recipes. */
 export function allKinds(): { kind: string; description: string; params: ParamDef[]; archetype?: string }[] {

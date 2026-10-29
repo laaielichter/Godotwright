@@ -58,10 +58,14 @@ export interface Archetype {
   conventions?: string[];
   anticipate?: string[];
   pitfalls?: string[];
+  /** True when the thing is a surface by nature (terrain, water): its outer border is open on purpose. */
+  sheet?: boolean;
 }
 
 /** An archetype with everything its ancestors define merged in. */
-export interface ResolvedArchetype extends Omit<Archetype, "extends" | "parts" | "variants" | "conventions" | "anticipate" | "pitfalls"> {
+export interface ResolvedArchetype extends Omit<Archetype, "extends" | "parts" | "variants" | "conventions" | "anticipate" | "pitfalls" | "sheet"> {
+  /** True when this archetype or one of its ancestors is a sheet (see Archetype.sheet). */
+  sheet?: boolean;
   /** From the root down to this archetype. */
   chain: string[];
   parts: ArchetypePart[];

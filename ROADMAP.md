@@ -95,8 +95,12 @@ Godotwright gets better with every use, without collecting anything personal.
 20. **Open worlds.** Step 1 (done): the knowledge, as archetypes in `data/archetypes/world.json`: terrain, mountain,
     island, coast, sea, lake, river, biome and settlement, with the rules of world building (tiles that share their
     border heights, y = 0 as sea level, collision from the same heights, levels of detail, instanced scatter, floating
-    origin). Next: a heightmap terrain tile as a recipe (deterministic noise, seams that match, collision data) and a
-    sea plane, then checks for seams, scale and streaming budgets. Same method as models: archetypes first, then recipes.
+    origin). Step 2 (done): `terrain` (a heightmap tile from seeded noise: plains, hills, mountains or an island; tiles
+    with the same seed match on every border, tested) and `sea` (a water plane and a floor); surfaces by nature are
+    marked `sheet` in the archetypes, so the open border of a tile is not reported as open edges but a hole is.
+    Next: a rivers-and-lakes piece that carves into the terrain, collision data (`HeightMapShape3D` heights) written
+    next to the tile, scatter points for plants and settlements, and checks for streaming budgets.
+    Same method as models: archetypes first, then recipes.
 
 ## After layer 1
 
