@@ -61,9 +61,12 @@ A node has a "name" and any of these (every node becomes a Godot node with the s
   shape      box | cylinder | ellipsoid | lathe | loft | extrude | roof   (no shape = an empty pivot or group)
   material   a preset (see below) or one from "materials"; children inherit it
   at         [x, y, z] position of the node (its pivot) in its parent
+  offset     [x, y, z]: move the shape inside the node without moving the node's pivot (a blade whose pivot is its root)
   rotate     [rx, ry, rz] degrees, applied x, then y, then z
   mirror     "Name": also add a mirror image of this node and its children in the x = 0 plane, with that name
-  repeat     { "count": n, "step": [dx, dy, dz] }: n copies; name them with {i} (1, 2, 3, ...) or get _1, _2, ...
+  repeat     { "count": n, "step": [dx, dy, dz] }: a row of n copies; or { "count": n, "around": "y", "phase": degrees }: a ring of n
+             copies turned about that axis through the parent's origin (rotor blades, wheel spokes, branches).
+             Name them with {i} (1, 2, 3, ...) or they get _1, _2, ...
   vars       { "x": "$width / 2" }: variables for this node and its children
   children   [ <node>, ... ]
 

@@ -121,7 +121,8 @@ export function checkArchetype(info: ModelInfo, arch: ResolvedArchetype): ModelF
       const tol = Math.max(0.02, 0.04 * Math.hypot(...size));
       if (part.moves?.length && part.pivot) {
         const o = node.origin;
-        if ((part.pivot === "hub" || part.pivot === "center") && dist(o, centre) > tol) {
+        // A hub is only the middle of the bounding box for a wheel; a rotor with three blades has its hub elsewhere.
+        if (((part.pivot === "hub" && part.role === "wheel") || part.pivot === "center") && dist(o, centre) > tol) {
           add("archetype/pivot", `The origin of "${node.name}" is ${m(dist(o, centre))} m from its centre, but a ${part.role} turns about its ${part.pivot === "hub" ? "hub" : "centre"}. Move the node origin there.`, node.path);
         } else if (part.pivot === "hinge") {
           // The hinge line is an edge of the part, so the origin lies against faces in at least two directions.

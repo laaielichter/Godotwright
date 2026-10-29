@@ -526,10 +526,35 @@
     "note": "Spins about a horizontal axis across the tail (x), often canted slightly."
    },
    {
+    "name": "TailBlade",
+    "role": "blade",
+    "required": false,
+    "count": [
+     2,
+     6
+    ],
+    "moves": [
+     {
+      "kind": "pitch",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "tail blade",
+     "staartrotorblad",
+     "staartblad"
+    ],
+    "note": "Blade pivot at the root, on the tail rotor hub."
+   },
+   {
     "name": "Skids",
     "role": "gear",
     "required": false,
-    "count": 1,
+    "count": [
+     1,
+     2
+    ],
     "aliases": [
      "skids",
      "landing gear",

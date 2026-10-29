@@ -108,7 +108,8 @@ function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: 
   if (!prim.hasNormals) add("model/missing-normals", "The mesh has no NORMAL data.", prim.nodeName);
   if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, prim.nodeName);
   if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, prim.nodeName);
-  if (prim.uvOutOfRange && !uvReported.has(prim.nodeName)) {
+  // UVs outside 0..1 only matter when a texture is sampled with them.
+  if (prim.uvOutOfRange && mat?.textured && !uvReported.has(prim.nodeName)) {
     uvReported.add(prim.nodeName);
     add("model/uv-out-of-range", "Some UVs lie outside 0..1.", prim.nodeName);
   }
