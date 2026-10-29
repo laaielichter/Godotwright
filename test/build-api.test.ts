@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { docText, parseXml } from "../scripts/build-api.js";
+import { docText, parseXml, readRenames } from "../scripts/build-api.js";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/build-api.ts", import.meta.url));
 
@@ -40,6 +40,31 @@ describe("build-api command", () => {
 });
 
 describe("build-api", () => {
+  it("reads the constant renames as Godot 3 name -> Godot 4 name", () => {
+    const root = mkdtempSync(join(tmpdir(), "godot-src-"));
+    try {
+      mkdirSync(join(root, "editor", "project_upgrade"), { recursive: true });
+      writeFileSync(
+        join(root, "editor", "project_upgrade", "renames_map_3_to_4.cpp"),
+        [
+          "const char *RenamesMap3To4::enum_renames[][2] = {",
+          '\t{ "BUTTON_LEFT", "MOUSE_BUTTON_LEFT" },',
+          '\t{ "SIDE_LEFT", "MARGIN_LEFT" },',
+          '\t{ "SIDE_TOP", "MARGIN_TOP" },',
+          "};",
+          "",
+        ].join("\n"),
+      );
+      expect(readRenames(root).constants).toEqual({
+        BUTTON_LEFT: "MOUSE_BUTTON_LEFT",
+        MARGIN_LEFT: "SIDE_LEFT",
+        MARGIN_TOP: "SIDE_TOP",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("parses class reference XML", () => {
     const node = parseXml(
       '<?xml version="1.0" encoding="UTF-8" ?>\n<class name="A" inherits="B"><methods><method name="f" qualifiers="const"><return type="int" /><param index="0" name="x" type="float" default="1.0" /></method></methods><brief_description>Hi &amp; bye</brief_description></class>',

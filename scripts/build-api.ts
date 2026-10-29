@@ -220,8 +220,15 @@ const RENAME_TABLES: Record<string, string> = {
   projectSettings: "project_settings_renames",
 };
 
+/**
+ * Godot's table lists these four backwards (SIDE_* first, MARGIN_* second), unlike every other row.
+ * They are swapped as they are read, so every rename reads Godot 3 name -> Godot 4 name.
+ * Drop this if Godot corrects the table.
+ */
+const SWAPPED_CONSTANTS = new Set(["SIDE_LEFT", "SIDE_TOP", "SIDE_RIGHT", "SIDE_BOTTOM"]);
+
 /** Reads Godot's official 3.x to 4.x rename tables (editor/project_upgrade/renames_map_3_to_4.cpp). */
-function readRenames(source: string): Record<string, Record<string, string>> {
+export function readRenames(source: string): Record<string, Record<string, string>> {
   const file = [join(source, "editor", "project_upgrade", "renames_map_3_to_4.cpp"), join(source, "editor", "renames_map_3_to_4.cpp")].find(existsSync);
   if (!file) return {};
   const cpp = readFileSync(file, "utf8");
@@ -233,7 +240,10 @@ function readRenames(source: string): Record<string, Record<string, string>> {
     const pairs: Record<string, string> = {};
     for (const line of body.split("\n")) {
       const m = /^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},?/.exec(line);
-      if (m && !(m[1]! in pairs)) pairs[m[1]!] = m[2]!;
+      if (!m) continue;
+      const swap = key === "constants" && SWAPPED_CONSTANTS.has(m[1]!);
+      const [from, to] = swap ? [m[2]!, m[1]!] : [m[1]!, m[2]!];
+      if (!(from in pairs)) pairs[from] = to;
     }
     out[key] = pairs;
   }
