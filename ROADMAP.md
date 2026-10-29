@@ -72,7 +72,11 @@ Godotwright gets better with every use, without collecting anything personal.
 13. **Model contract.** A small file that lists the node names, sizes and triangle budget a
     model must keep, so renamed nodes or drifting sizes are caught.
     *Done when:* a renamed node or a model that grows past its tolerance is reported.
-14. **MCP tools for models**, a contact-sheet render, and a reusable mesh builder kit.
+14. **Model builder.** A small mesh kit (boxes, extrusions, roofs, surfaces of revolution, UVs,
+    tangents, deterministic GLB writer) and `model build <kind>`, starting with `house`.
+    *Done when:* every kind passes `model lint` without errors and loads in Godot.
+15. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
+    **MCP tools for models**, and a contact-sheet render.
 
 ## After layer 1
 
