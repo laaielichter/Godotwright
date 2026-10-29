@@ -108,13 +108,13 @@ export function identify(text: string, library: ArchetypeLibrary = loadLibrary()
   const spelled = text.trim().toLowerCase().replace(/\s+/g, " ");
   const best = new Map<string, Match>();
   const hits = new Map<string, Hit>();
-  const offer = (id: string, score: number, via: MatchKind, matched: string, pos: number, place: boolean, exact = false): void => {
+  const offer = (id: string, score: number, via: MatchKind, matched: string, pos: number, place: boolean, spelledOut = false): void => {
     const old = hits.get(id);
-    if (old && !(score > old.base || (score === old.base && exact && !old.spelled))) return;
-    hits.set(id, { base: score, pos, place, spelled: exact });
+    if (old && !(score > old.base || (score === old.base && spelledOut && !old.spelled))) return;
+    hits.set(id, { base: score, pos, place, spelled: spelledOut });
     best.set(id, { id, score: Math.round(score * 1000) / 1000, via, matched });
   };
-  const key = (words: string[]) => words.join(" ");
+  const key = (parts: string[]) => parts.join(" ");
   const supportOf = new Map<string, number>();
 
   if (q.length > 0) {
