@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contractFromModel, loadContract } from "../src/model/contract.js";
 import { formatModelReport } from "../src/model/format.js";
 import { inspectModel } from "../src/model/inspect.js";
 import { ModelError, loadGltf } from "../src/model/gltf.js";
@@ -146,5 +147,62 @@ describe("model command", () => {
   it("reports a missing file without a stack trace", async () => {
     const run = await runCli(["model", "/nonexistent/x.glb"]);
     expect(run.exitCode).toBe(1);
+  });
+});
+
+describe("model contract", () => {
+  const named = (names: string[]) => writeGlb({ meshes: [box(2, 1, 4)], nodes: names.map((name) => ({ name, mesh: 0 })), roots: names.map((_, i) => i) });
+  const contractFile = (contract: object) => makeProject({ "model.contract.json": JSON.stringify({ version: 1, ...contract }) }) + "/model.contract.json";
+  const rules = (path: string, contract: object) => lintModelFile(path, { contract: loadContract(contractFile(contract)) }).findings.map((f) => f.rule);
+
+  it("passes a model that keeps its contract", () => {
+    const path = named(["Body", "Wheel"]);
+    expect(rules(path, { nodes: ["Body", "Wheel"], ordered: true, size: { x: { value: 2 }, y: { value: 1 }, z: { value: 4 } }, lowestY: { value: 0 } }).filter((r) => r.startsWith("model/contract"))).toEqual([]);
+  });
+
+  it("reports a missing or renamed node, extra nodes and a changed order", () => {
+    const path = named(["Wheel", "Body", "Extra"]);
+    expect(rules(path, { nodes: ["Body", "Door"] })).toContain("model/contract-missing-node");
+    expect(rules(path, { nodes: ["Body", "Wheel"], ordered: true })).toContain("model/contract-order");
+    expect(rules(path, { nodes: ["Body", "Wheel"], exact: true })).toContain("model/contract-extra-node");
+  });
+
+  it("reports a size outside the tolerance, and accepts one inside it", () => {
+    const path = named(["Body"]);
+    expect(rules(path, { size: { x: { value: 2.03, tolerance: 0.01 } } })).toContain("model/contract-size");
+    expect(rules(path, { size: { x: { value: 2.03, tolerance: 0.05 } } })).not.toContain("model/contract-size");
+    expect(rules(path, { size: { z: { value: 4.04 } } })).not.toContain("model/contract-size");
+    expect(rules(path, { size: { z: { value: 4.2 } } })).toContain("model/contract-size");
+  });
+
+  it("reports the ground level and the triangle budget", () => {
+    const path = named(["Body"]);
+    expect(rules(path, { lowestY: { value: 0.5 } })).toContain("model/contract-ground");
+    expect(rules(path, { maxTriangles: 5 })).toContain("model/contract-triangles");
+  });
+
+  it("writes a starting contract that the same model passes", () => {
+    const path = named(["Body", "Wheel"]);
+    const contract = contractFromModel(inspectModel(path));
+    expect(contract.nodes).toEqual(["Body", "Wheel"]);
+    const report = lintModelFile(path, { contract });
+    expect(report.findings.filter((f) => f.rule.startsWith("model/contract"))).toEqual([]);
+  });
+
+  it("rejects a file that is not a contract", () => {
+    const root = makeProject({ "bad.json": "{ nope", "other.json": JSON.stringify({ hello: 1 }) });
+    expect(() => loadContract(`${root}/bad.json`)).toThrow(/invalid JSON/);
+    expect(() => loadContract(`${root}/other.json`)).toThrow(/not a model contract/);
+    expect(() => loadContract(`${root}/missing.json`)).toThrow(/not found/);
+  });
+
+  it("works from the command line", async () => {
+    const path = named(["Body"]);
+    const made = await runCli(["model", "contract", path]);
+    expect(JSON.parse(made.output).nodes).toEqual(["Body"]);
+    const file = contractFile({ nodes: ["Body", "Gone"] });
+    const run = await runCli(["model", "lint", path, "--contract", file]);
+    expect(run.exitCode).toBe(1);
+    expect(run.output).toContain("contract-missing-node");
   });
 });

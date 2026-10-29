@@ -43,6 +43,12 @@ const list: ModelRule[] = [
   { id: "model/duplicate-node-names", category: "rig", severity: "error", title: "Two siblings with the same name", fix: "Give every sibling a unique name; Godot renames the second one and node paths break." },
   { id: "model/unnamed-node", category: "rig", severity: "info", title: "Node without a name", fix: "Name the node; scripts and animations find nodes by name." },
   { id: "model/ground-offset", category: "rig", severity: "info", title: "Model does not sit on y = 0", fix: "Move the origin so the lowest point is at y = 0, unless that is intended." },
+  { id: "model/contract-missing-node", category: "rig", severity: "error", title: "Node required by the contract is missing", fix: "Restore or rename the node, or update the contract if the change is intended." },
+  { id: "model/contract-extra-node", category: "rig", severity: "warning", title: "Node the contract does not list", fix: "Remove the node, or add it to the contract." },
+  { id: "model/contract-order", category: "rig", severity: "warning", title: "Nodes are in a different order than the contract", fix: "Restore the order, or update the contract; scripts that use child indices depend on it." },
+  { id: "model/contract-size", category: "geometry", severity: "error", title: "Size differs from the contract", fix: "Rescale the model, or update the contract with the new measured value and its source." },
+  { id: "model/contract-triangles", category: "performance", severity: "warning", title: "Triangle count over the contract", fix: "Reduce the detail, or raise the budget in the contract on purpose." },
+  { id: "model/contract-ground", category: "geometry", severity: "warning", title: "Lowest point differs from the contract", fix: "Move the origin so the model sits where the contract says." },
   { id: "model/empty-geometry", category: "rig", severity: "warning", title: "No geometry in the file", fix: "Check the export: the file holds no triangles." },
 ];
 
