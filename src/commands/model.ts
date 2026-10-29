@@ -16,7 +16,7 @@ import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
 import { ModelError } from "../model/gltf.js";
 import type { Detail } from "../scan/format.js";
-import { collect, writeOut } from "./output.js";
+import { collect, parseNumber, writeOut } from "./output.js";
 
 const detailOption = () => new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief");
 
@@ -55,25 +55,25 @@ export function modelCommand(): Command {
     .description("AAA model review with scores: flipped faces, open edges, normals, UVs, tangents, textures, node names")
     .argument("<file>", "a .glb or .gltf file")
     .addOption(detailOption())
-    .option("--max-triangles <n>", "flag a model with more triangles than this")
-    .option("--max-texture-mb <n>", "texture memory budget in MB (default 512)")
+    .option("--max-triangles <n>", "flag a model with more triangles than this", parseNumber)
+    .option("--max-texture-mb <n>", "texture memory budget in MB (default 512)", parseNumber)
     .option("--contract <file>", "also check the model against a model.contract.json")
     .option("--archetype <text>", "also check the model against what it should be, e.g. car or helikopter (see `model identify`)")
-    .option("--min-score <score>", "exit with code 1 when the overall score is lower")
+    .option("--min-score <score>", "exit with code 1 when the overall score is lower", parseNumber)
     .option("--json", "print the report as JSON")
-    .action((file: string, options: { detail: Detail; maxTriangles?: string; maxTextureMb?: string; contract?: string; archetype?: string; minScore?: string; json?: boolean }, command: Command) => {
+    .action((file: string, options: { detail: Detail; maxTriangles?: number; maxTextureMb?: number; contract?: string; archetype?: string; minScore?: number; json?: boolean }, command: Command) => {
       guard(() => {
         const choice = options.archetype === undefined ? undefined : chooseArchetype(options.archetype);
         const report = lintModelFile(file, {
           ...(choice ? { archetype: choice.archetype } : {}),
-          maxTriangles: options.maxTriangles === undefined ? undefined : Number(options.maxTriangles),
-          maxTextureMb: options.maxTextureMb === undefined ? undefined : Number(options.maxTextureMb),
+          maxTriangles: options.maxTriangles,
+          maxTextureMb: options.maxTextureMb,
           contract: options.contract === undefined ? undefined : loadContract(options.contract),
         });
         if (choice && !options.json) writeOut(command, `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n`);
         writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatModelReport(report, options.detail));
         const errors = report.categories.reduce((n, c) => n + c.errors, 0);
-        if (errors > 0 || (options.minScore !== undefined && report.overall < Number(options.minScore))) process.exitCode = 1;
+        if (errors > 0 || (options.minScore !== undefined && report.overall < options.minScore)) process.exitCode = 1;
       });
     });
 

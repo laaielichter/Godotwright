@@ -3,6 +3,7 @@ import { CommanderError, type Command } from "commander";
 import { createProgram } from "../src/program.js";
 import { VERSION } from "../src/version.js";
 import { DEMO } from "./helpers.js";
+import { box, writeGlb } from "./model-helpers.js";
 
 /**
  * Runs the CLI in-process and captures its output. Every command gets exitOverride, not just the root,
@@ -62,5 +63,21 @@ describe("number options", () => {
     const { output, exitCode } = await run(["review", DEMO, "--min-score", "8O"]);
     expect(exitCode).toBe(1);
     expect(output).toContain("expected a number");
+  });
+
+  it("model lint --max-triangles flags a model over the budget", async () => {
+    const glb = writeGlb({ meshes: [box()] });
+    const { output } = await run(["model", "lint", glb, "--max-triangles", "4", "--json"]);
+    expect(JSON.parse(output).findings.map((f: { rule: string }) => f.rule)).toContain("model/triangle-budget");
+  });
+
+  it("model lint refuses a budget or score that is not a number, instead of dropping the check", async () => {
+    const glb = writeGlb({ meshes: [box()] });
+    const budget = await run(["model", "lint", glb, "--max-triangles", "2O000"]);
+    expect(budget.exitCode).toBe(1);
+    expect(budget.output).toContain("expected a number");
+    const score = await run(["model", "lint", glb, "--min-score", "8O"]);
+    expect(score.exitCode).toBe(1);
+    expect(score.output).toContain("expected a number");
   });
 });
