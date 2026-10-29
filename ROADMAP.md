@@ -92,9 +92,11 @@ Godotwright gets better with every use, without collecting anything personal.
     against its archetype and tested at the edges of its parameters.
 19. **Recipes are complete** (every archetype can be built), `model recipes` lists them and
     `model contract --archetype` starts a contract from an archetype. Still to do: a contact-sheet render.
-20. **Open worlds (later).** Knowledge and tools for world building: landmass and terrain (heightmaps, biomes,
-    erosion), seas, coasts and rivers, plus roads, settlements and vegetation scattered over them, with checks
-    for scale, seams between tiles and streaming budgets. Same method as models: archetypes first, then recipes.
+20. **Open worlds.** Step 1 (done): the knowledge, as archetypes in `data/archetypes/world.json`: terrain, mountain,
+    island, coast, sea, lake, river, biome and settlement, with the rules of world building (tiles that share their
+    border heights, y = 0 as sea level, collision from the same heights, levels of detail, instanced scatter, floating
+    origin). Next: a heightmap terrain tile as a recipe (deterministic noise, seams that match, collision data) and a
+    sea plane, then checks for seams, scale and streaming budgets. Same method as models: archetypes first, then recipes.
 
 ## After layer 1
 

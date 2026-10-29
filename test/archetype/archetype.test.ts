@@ -17,7 +17,7 @@ describe("the library data", () => {
   });
 
   it("covers every family of things people build", () => {
-    for (const id of ["vehicle.wheeled.car", "vehicle.wheeled.truck", "vehicle.wheeled.tractor", "vehicle.tracked.tank", "vehicle.rail.train", "aircraft.fixed-wing.airliner", "aircraft.rotorcraft.helicopter", "aircraft.rotorcraft.drone", "vessel.ship", "vessel.sailboat", "machine.piston-engine", "machine.wind-turbine", "building.house", "building.windmill", "infrastructure.road", "infrastructure.bridge", "plant.tree.conifer", "plant.grass", "prop.shipping-container", "prop.barrel"]) {
+    for (const id of ["vehicle.wheeled.car", "vehicle.wheeled.truck", "vehicle.wheeled.tractor", "vehicle.tracked.tank", "vehicle.rail.train", "aircraft.fixed-wing.airliner", "aircraft.rotorcraft.helicopter", "aircraft.rotorcraft.drone", "vessel.ship", "vessel.sailboat", "machine.piston-engine", "machine.wind-turbine", "building.house", "building.windmill", "infrastructure.road", "infrastructure.bridge", "plant.tree.conifer", "plant.grass", "prop.shipping-container", "prop.barrel", "world.terrain", "world.terrain.island", "world.coast", "world.water.sea", "world.water.river", "world.biome", "world.settlement"]) {
       expect(library.get(id), id).toBeDefined();
     }
   });
@@ -121,6 +121,30 @@ describe("identify", () => {
     expect(best("WINDTURBINES")).toBe("machine.wind-turbine");
     expect(best("café")).not.toBe("vehicle.wheeled.car");
     expect(best("de zeecontainer")).toBe("prop.shipping-container");
+  });
+
+  it("knows the pieces an open world is made of, and keeps the things that share a word apart", () => {
+    expect(best("eiland")).toBe("world.terrain.island");
+    expect(best("a volcano")).toBe("world.terrain.mountain");
+    expect(best("noordzee")).toBe("world.water.sea");
+    expect(best("rivier")).toBe("world.water.river");
+    expect(best("meer")).toBe("world.water.lake");
+    expect(best("strand")).toBe("world.coast");
+    expect(best("woestijn")).toBe("world.biome");
+    expect(best("een dorp")).toBe("world.settlement");
+    expect(best("heightmap")).toBe("world.terrain");
+    expect(best("sea container")).toBe("prop.shipping-container");
+    expect(best("ground vehicle")).toBe("vehicle");
+  });
+
+  it("gives the world family its own rules: tiles, sea level, shared borders and instanced scatter", () => {
+    const world = library.resolve("world.terrain.island");
+    expect(world.chain).toEqual(["thing", "world", "world.terrain", "world.terrain.island"]);
+    const text = [...world.conventions, ...world.anticipate].join(" ");
+    expect(text).toMatch(/y = 0 is sea level/);
+    expect(text).toMatch(/HeightMapShape3D/);
+    expect(text).toMatch(/MultiMesh/);
+    expect(world.parts.map((p) => p.name)).toEqual(expect.arrayContaining(["Land", "SeaFloor", "Collision"]));
   });
 
   it("prefers the longer, more specific name", () => {

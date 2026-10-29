@@ -147,6 +147,9 @@ which axis, with the pivot where), a typical size range with its source and a co
 anticipate (collision, LODs, lights) and the usual mistakes. A word that means two things (the Dutch
 "windmolen") is reported as ambiguous, and something it does not know gets the nearest family, marked
 generic, instead of a made-up answer. The library is data in `data/archetypes/` and grows with pull requests.
+It also knows the pieces an **open world** is made of: terrain tiles, mountains, islands, coasts, seas, lakes, rivers,
+biomes and settlements, with their own rules (tiles that share border heights, y = 0 as sea level, collision from
+the same heights, levels of detail, instanced scatter, a floating origin for very large worlds).
 
 `model lint --archetype <what>` (or `"archetype": "vehicle.wheeled.car"` in a spec, or any built-in kind)
 holds a model against what `identify` says that thing is, as a fifth category, `archetype`, worth a fifth
