@@ -137,17 +137,16 @@ export function ringSurface(rings: V3[][], options: SurfaceOptions): MeshBuilder
     const a = grid(i, j), c = grid(i + 1, j + 1);
     return cross(sub(grid(i + 1, j), a), sub(c, a));
   };
-  const normals: V3[][] = rings.map((ring, i) =>
-    ring.map((_, j) => {
-      let sum: V3 = [0, 0, 0];
-      for (const [di, dj] of [[-1, -1], [-1, 0], [0, -1], [0, 0]] as const) {
-        const fi = i + di;
-        if (fi < 0 || fi >= rings.length - 1) continue;
-        sum = add(sum, add(faceNormal(fi, j + dj), cross(sub(grid(fi + 1, j + dj + 1), grid(fi, j + dj)), sub(grid(fi, j + dj + 1), grid(fi, j + dj)))));
-      }
-      return normalize(sum);
-    }),
-  );
+  // The two triangles of the quad at stripe i (between ring i and i + 1), column j.
+  const quadNormal = (i: number, j: number): V3 => add(faceNormal(i, j), cross(sub(grid(i + 1, j + 1), grid(i, j)), sub(grid(i, j + 1), grid(i, j))));
+  /** Smooth normal of ring r at column j, as seen from stripe s: neighbouring columns are always blended, the other stripe only when the angle is gentle. */
+  const normalFor = (r: number, j: number, s: number): V3 => {
+    const own = normalize(add(quadNormal(s, j - 1), quadNormal(s, j)));
+    const o = s === r ? r - 1 : r;
+    if (o < 0 || o >= rings.length - 1) return own;
+    const other = normalize(add(quadNormal(o, j - 1), quadNormal(o, j)));
+    return dot(own, other) > 0.5 ? normalize(add(own, other)) : own;
+  };
 
   // Arc length along each ring and between rings gives even texture density.
   const along: number[] = [0];
@@ -155,22 +154,24 @@ export function ringSurface(rings: V3[][], options: SurfaceOptions): MeshBuilder
   const ringLength = (i: number): number => rings[i]!.reduce((acc, _, j) => acc + length(sub(grid(i, j + 1), grid(i, j))), 0);
 
   const p = b.prim(options.material);
-  const index: number[][] = [];
-  rings.forEach((ring, i) => {
-    const total = ringLength(i);
+  // Each stripe has its own two rows of vertices, so a sharp edge between stripes keeps a sharp edge.
+  const row = (r: number, s: number): number[] => {
+    const total = ringLength(r);
     let run = 0;
-    const row: number[] = [];
+    const out: number[] = [];
     for (let j = 0; j <= n; j++) {
-      const point = grid(i, j);
-      if (j > 0) run += length(sub(point, grid(i, j - 1)));
-      row.push(b.vertex(p, point, (normals[i] as V3[])[j % n] as V3, [(run || (j === n ? total : 0)) * UV_PER_METER, -at(along, i) * UV_PER_METER]));
+      const point = grid(r, j);
+      if (j > 0) run += length(sub(point, grid(r, j - 1)));
+      out.push(b.vertex(p, point, normalFor(r, j, s), [(run || (j === n ? total : 0)) * UV_PER_METER, -at(along, r) * UV_PER_METER]));
     }
-    index.push(row);
-  });
+    return out;
+  };
   for (let i = 0; i + 1 < rings.length; i++) {
+    const top = row(i, i);
+    const bottom = row(i + 1, i);
     for (let j = 0; j < n; j++) {
-      const a = (index[i] as number[])[j] as number, c = (index[i] as number[])[j + 1] as number;
-      const d = (index[i + 1] as number[])[j] as number, e = (index[i + 1] as number[])[j + 1] as number;
+      const a = top[j] as number, c = top[j + 1] as number;
+      const d = bottom[j] as number, e = bottom[j + 1] as number;
       const degenerateStart = length(sub(grid(i, j), grid(i, j + 1))) < 1e-9;
       const degenerateEnd = length(sub(grid(i + 1, j), grid(i + 1, j + 1))) < 1e-9;
       if (!degenerateStart) p.indices.push(a, d, c);

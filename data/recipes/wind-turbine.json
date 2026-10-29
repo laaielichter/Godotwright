@@ -1,0 +1,134 @@
+{
+ "version": 1,
+ "name": "wind-turbine",
+ "archetype": "machine.wind-turbine",
+ "description": "A wind turbine: a tapered tower, a nacelle that yaws on top of it, and a three-blade rotor that spins about the horizontal axis. Blades pitch about their root.",
+ "params": [
+  {
+   "name": "hubHeight",
+   "type": "number",
+   "default": 90,
+   "min": 60,
+   "max": 140,
+   "description": "Height of the hub above the ground."
+  },
+  {
+   "name": "rotorRadius",
+   "type": "number",
+   "default": 50,
+   "min": 25,
+   "max": 80,
+   "description": "Length of a blade."
+  }
+ ],
+ "materials": {
+  "turbine_white": {
+   "color": [
+    0.92,
+    0.93,
+    0.94
+   ],
+   "metallic": 0.1,
+   "roughness": 0.4
+  }
+ },
+ "nodes": [
+  {
+   "name": "WindTurbine",
+   "material": "turbine_white",
+   "vars": {
+    "rb": "$hubHeight * 0.025",
+    "rt": "$hubHeight * 0.017",
+    "nh": "$hubHeight * 0.04",
+    "nl": "$hubHeight * 0.12"
+   },
+   "children": [
+    {
+     "name": "Tower",
+     "shape": "lathe",
+     "segments": 32,
+     "profile": [
+      [
+       "$rb",
+       0
+      ],
+      [
+       "$rt",
+       "$hubHeight"
+      ]
+     ]
+    },
+    {
+     "name": "Yaw",
+     "at": [
+      0,
+      "$hubHeight",
+      0
+     ],
+     "children": [
+      {
+       "name": "Nacelle",
+       "shape": "box",
+       "size": [
+        "$rb * 1.7",
+        "$nh",
+        "$nl"
+       ],
+       "offset": [
+        0,
+        "$nh / 2",
+        0
+       ],
+       "anchor": "center"
+      },
+      {
+       "name": "Rotor",
+       "at": [
+        0,
+        "$nh / 2",
+        "$nl / 2 + $rb * 0.6"
+       ],
+       "children": [
+        {
+         "name": "Hub",
+         "shape": "ellipsoid",
+         "radii": [
+          "$rb * 0.75",
+          "$rb * 0.75",
+          "$rb * 1.1"
+         ],
+         "segments": 20
+        },
+        {
+         "name": "Blade",
+         "shape": "ellipsoid",
+         "radii": [
+          "$rotorRadius * 0.03",
+          "$rotorRadius / 2",
+          "$rotorRadius * 0.008"
+         ],
+         "segments": 16,
+         "offset": [
+          0,
+          "$rotorRadius / 2",
+          0
+         ],
+         "at": [
+          0,
+          0,
+          "$rb * 0.4"
+         ],
+         "repeat": {
+          "count": 3,
+          "around": "z",
+          "phase": 90
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
