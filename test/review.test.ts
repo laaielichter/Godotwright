@@ -340,6 +340,29 @@ describe("review robustness", () => {
     expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
   });
 
+  it("checks signals declared in inner classes for emission", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "class Inner:",
+        "\tsignal never_emitted",
+        "\tsignal done",
+        "",
+        "\tfunc run() -> void:",
+        "\t\tdone.emit()",
+        "",
+        "",
+        "func _ready() -> void:",
+        "\tpass",
+        "",
+      ].join("\n"),
+    });
+    const unused = reviewProject(root).findings.filter((f) => f.rule === "quality/unused-signal").map(formatFinding);
+    expect(unused).toEqual(['res://main.gd:4: warning [quality/unused-signal] Signal "never_emitted" is declared but never emitted.']);
+  });
+
   it("gives string-signal advice only where the suggested code compiles", () => {
     const root = makeProject({
       "project.godot": PROJECT,

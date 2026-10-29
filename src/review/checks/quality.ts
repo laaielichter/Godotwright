@@ -105,19 +105,19 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
   return { findings: out, typing };
 }
 
-/** Signals declared in the project but never emitted anywhere. */
+/** Signals declared in the project (also in inner classes) but never emitted anywhere. */
 export function checkUnusedSignals(pm: ProjectModel): Finding[] {
   const code = [...pm.data.sources.values()].join("\n");
   const out: Finding[] = [];
-  for (const [path, outline] of pm.data.scripts) {
-    if (path.startsWith("res://addons/")) continue;
-    for (const s of outline.signals) {
+  for (const model of pm.allModels()) {
+    if (model.path.startsWith("res://addons/")) continue;
+    for (const s of model.outline.signals) {
       const name = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const emitted =
         new RegExp(`\\b${name}\\s*\\.\\s*emit\\s*\\(`).test(code) ||
         new RegExp(`emit_signal\\s*\\(\\s*&?"${name}"`).test(code) ||
         new RegExp(`\\b${name}\\s*\\.\\s*emit\\b`).test(code);
-      if (!emitted) out.push(finding("quality/unused-signal", path, s.line, `Signal "${s.name}" is declared but never emitted.`));
+      if (!emitted) out.push(finding("quality/unused-signal", model.path, s.line, `Signal "${s.name}" is declared but never emitted.`));
     }
   }
   return out;
