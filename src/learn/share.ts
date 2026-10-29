@@ -58,16 +58,21 @@ export function shareBlocked(data: LearningData, env: NodeJS.ProcessEnv = proces
   return undefined;
 }
 
-/** A query is shared only when it is a near-typo of a real Godot name, not a project's own name. */
+/**
+ * A query is kept only as `Class.member`: an exact Godot class and a member a few letters from a real one.
+ * A bare name is never kept, since it may be the project's own class or variable.
+ */
 export function shareableQuery(query: string, api: GodotApi): boolean {
-  if (!/^@?[A-Za-z_][\w]{0,40}(\.[A-Za-z_][\w]{0,40})?$/.test(query)) return false;
-  const dot = query.indexOf(".");
-  const close = (name: string, candidates: string[]) => candidates.some((c) => distance(name.toLowerCase(), c.toLowerCase(), 2) <= 2);
-  if (dot < 0) return close(query, api.closeClassNames(query));
-  const cls = api.classes.get(query.slice(0, dot));
-  if (!cls) return false;
-  const member = query.slice(dot + 1);
-  return close(member, api.closeMemberNames(cls.name, member));
+  const m = /^(@?[A-Za-z_]\w{0,40})\.([A-Za-z_]\w{0,40})$/.exec(query);
+  const cls = m ? api.classes.get(m[1]!) : undefined;
+  if (!m || !cls) return false;
+  const member = m[2]!.toLowerCase();
+  return api.closeMemberNames(cls.name, m[2]!).some((name) => distance(member, name.toLowerCase(), 2) <= 2);
+}
+
+/** Whether a mistyped query is a few edits away from the Godot name it was resolved to. */
+export function typoOf(query: string, target: string): boolean {
+  return distance(query.toLowerCase(), target.toLowerCase(), 2) <= 2;
 }
 
 /**
@@ -107,8 +112,11 @@ export function shareableSnapshot(data: LearningData, api: GodotApi): Snapshot {
   const apiMisses: Record<string, ApiMiss> = {};
   for (const [query, miss] of top(Object.entries(data.apiMisses), ([, m]) => m.count)) {
     if (!shareableQuery(query, api)) continue;
-    const resolved = Object.fromEntries(Object.entries(miss.resolved).filter(([target]) => api.lookup(target).entries.length > 0));
-    apiMisses[query] = { count: miss.count, resolved };
+    // Only what the query was resolved to, when that is a real Godot name it is a typo of.
+    const resolved: Record<string, number> = {};
+    for (const [target, n] of Object.entries(miss.resolved)) if (typoOf(query, target) && api.lookup(target).entries.length > 0) resolved[target] = n;
+    // A miss that was never answered says nothing the collector can use, so it is not sent.
+    if (Object.keys(resolved).length) apiMisses[query] = { count: miss.count, resolved };
   }
 
   const templates = (source: Record<string, number>) => {

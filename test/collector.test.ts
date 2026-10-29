@@ -35,6 +35,7 @@ describe("checking reports again on the collector", () => {
   it("accepts what the client builds", () => {
     resetLearning();
     recordApiLookup("Node2D.lookat", false);
+    recordApiLookup("Node2D.look_at", true);
     const built = buildReport(readLearning(), api, id(1))!;
     expect(validateReport(JSON.parse(JSON.stringify(built.report)))).toBeDefined();
     expect(validateReport(report(1))).toBeDefined();
@@ -92,6 +93,7 @@ describe("collector server", () => {
   it("receives what a client with sharing on sends", async () => {
     setSharing(true);
     recordApiLookup("Node2D.lookat", false);
+    recordApiLookup("Node2D.look_at", true);
     expect(await maybeShare({ env: { GODOTWRIGHT_SHARE_URL: `${url}/v1/report` } })).toBe("sent");
     expect(readReports(dir).some((r) => r.install === readLearning().sharing.installId)).toBe(true);
   });
