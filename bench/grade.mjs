@@ -11,7 +11,7 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkProject, reviewProject } from "../dist/index.js";
 import { loadRuns, summarize, table } from "./summarize.mjs";
@@ -114,7 +114,7 @@ async function gradeRuns(root) {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Benchmark\n\n${summary}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   if (!process.env.GODOT) {
     console.error("Set $GODOT to a Godot 4.7 binary.");
     process.exit(2);
