@@ -61,7 +61,7 @@ describe.skipIf(!enabled)("agent CLIs talk to godotwright mcp", () => {
       const status = await call("mcpServerStatus/list", { serverName: "godotwright" });
       const tools = Object.keys(status.result?.data?.[0]?.tools ?? {}).sort();
       console.log("codex sees:", tools.join(", "));
-      expect(tools).toEqual(["godot_api", "godot_api_search", "godot_check", "godot_checklist", "godot_feedback", "godot_migrate", "godot_model_brief", "godot_model_build", "godot_model_identify", "godot_model_inspect", "godot_model_lint", "godot_model_spec", "godot_model_view", "godot_project_edit", "godot_rename", "godot_review", "godot_scan", "godot_scene_edit", "godot_test", "godot_usages"]);
+      expect(tools).toEqual(["godot_api", "godot_api_search", "godot_check", "godot_checklist", "godot_feedback", "godot_migrate", "godot_model_brief", "godot_model_build", "godot_model_identify", "godot_model_inspect", "godot_model_lint", "godot_model_spec", "godot_model_view", "godot_play", "godot_project_edit", "godot_rename", "godot_review", "godot_scan", "godot_scene_edit", "godot_test", "godot_usages"]);
       const thread = await call("thread/start", { cwd });
       const threadId = thread.result?.thread?.id;
       expect(threadId).toBeTruthy();
