@@ -168,9 +168,12 @@ export class GodotApi {
         if (enumEntry) {
           const values = (enumEntry.item as EnumInfo).values;
           const value = values.find((v) => v.name === valueName);
-          if (value) result.entries = [{ kind: "constant", owner: enumEntry.owner, name: value.name, item: value }];
-          // The enum exists but has no such value: its values are the names to suggest.
-          else enumSuggestions = closest(valueName, values.map((v) => v.name));
+          if (value) {
+            result.entries = [{ kind: "constant", owner: enumEntry.owner, name: value.name, item: value }];
+          } else {
+            // The enum exists but has no such value: its value names are the suggestions.
+            enumSuggestions = closest(valueName, values.map((v) => v.name));
+          }
         }
       }
       if (result.entries.length === 0) {
@@ -332,8 +335,8 @@ export function formatMethodSignature(method: ApiMethod, owner?: string): string
 
 /**
  * Up to five names closest to `name` by edit distance (case-insensitive).
- * A name that contains the query, or sits inside it, ranks first, but only for names of at least
- * three letters: `r` is inside `bright` and says nothing about it.
+ * A name that contains the query, or sits inside it, counts as one edit away, but only for names of
+ * at least three letters: `r` sits inside `bright` and says nothing about it.
  */
 export function closest(name: string, candidates: string[], max = 5): string[] {
   const target = name.toLowerCase();
