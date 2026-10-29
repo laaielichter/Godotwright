@@ -130,6 +130,14 @@ export class GodotApi {
     return undefined;
   }
 
+  /** True when @GlobalScope or @GDScript defines a member with exactly this name. */
+  private globalNamed(name: string): boolean {
+    return GLOBAL_SCOPES.some((scope) => {
+      const scopeClass = this.classes.get(scope);
+      return scopeClass !== undefined && this.ownMembers(scopeClass, name).length > 0;
+    });
+  }
+
   /** Every class that defines a method with this name. */
   classesWithMethod(name: string): string[] {
     return [...this.classes.values()].filter((c) => c.methods?.some((m) => m.name === name)).map((c) => c.name);
@@ -167,7 +175,8 @@ export class GodotApi {
       return result;
     }
 
-    const cls = this.getClass(query);
+    // A class matched only by case (range -> Range) must not hide a global of that name.
+    const cls = this.classes.get(query) ?? (this.globalNamed(query) ? undefined : this.getClass(query));
     if (cls) {
       result.entries = [{ kind: "class", owner: cls.name, name: cls.name, item: cls }];
       return result;

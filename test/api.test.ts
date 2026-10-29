@@ -77,6 +77,13 @@ describe("lookup", () => {
     expect(api.lookup("preload").entries[0]).toMatchObject({ kind: "method", owner: "@GDScript" });
   });
 
+  it("finds a global function before a class with the same name in another case", () => {
+    expect(api.lookup("range").entries[0]).toMatchObject({ kind: "method", owner: "@GDScript", name: "range" });
+    expect(api.lookup("weakref").entries[0]).toMatchObject({ kind: "method", owner: "@GlobalScope", name: "weakref" });
+    expect(api.lookup("Range").entries[0]).toMatchObject({ kind: "class", owner: "Range" });
+    expect(api.lookup("object").entries[0]).toMatchObject({ kind: "class", owner: "Object" });
+  });
+
   it("does not treat Object.prototype names as Godot 3 renames", () => {
     for (const name of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
       expect(api.lookup(name).renamed, name).toBeUndefined();
