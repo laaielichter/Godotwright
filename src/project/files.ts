@@ -22,20 +22,22 @@ export function findProjectRoot(start: string): string | undefined {
 }
 
 /**
- * Lists project files as `res://` paths, sorted, skipping ignored directories. A folder that cannot be
- * read is left out and passed to `onError`, so one locked folder does not stop the rest of the project.
+ * Lists project files as `res://` paths, sorted, skipping ignored directories. Folder links are followed
+ * (Godot does too), each real folder once, so a link loop ends. Real folders are walked first and links
+ * after, so a folder inside the project keeps its own path whatever its links are called. A folder that
+ * cannot be read is left out and passed to `onError`, so one locked folder does not stop the rest.
  */
 export function listProjectFiles(root: string, onError?: (folder: string, error: unknown) => void): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
+  const links: string[] = [];
   const walk = (dir: string) => {
     let entries: Dirent[];
     try {
-      // Symlinked folders are followed (Godot does too); each real folder once, so a link loop ends.
       const real = realpathSync(dir);
       if (seen.has(real)) return;
       seen.add(real);
-      entries = readdirSync(dir, { withFileTypes: true });
+      entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1));
     } catch (error) {
       onError?.(toResPath(root, dir), error);
       return;
@@ -53,6 +55,10 @@ export function listProjectFiles(root: string, onError?: (folder: string, error:
         } catch {
           continue; // broken link
         }
+        if (isDir) {
+          if (!isSkippedDir(entry.name)) links.push(full);
+          continue;
+        }
       }
       if (isDir) {
         if (!isSkippedDir(entry.name)) walk(full);
@@ -62,6 +68,7 @@ export function listProjectFiles(root: string, onError?: (folder: string, error:
     }
   };
   walk(root);
+  for (let i = 0; i < links.length; i++) walk(links[i]!);
   return out.sort();
 }
 

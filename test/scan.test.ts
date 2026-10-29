@@ -152,6 +152,20 @@ describe("scanProject warnings", () => {
 });
 
 describe("project files", () => {
+  it("lists a folder linked into the project once, under its real path", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n',
+      "z_shared/enemy.gd": "class_name Enemy\nextends Node\n",
+      "z_shared/enemy.gd.uid": "uid://benemy0script\n",
+      "main.tscn": '[gd_scene format=3]\n[ext_resource type="Script" path="res://a_link/enemy.gd" id="1"]\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n',
+    });
+    symlinkSync(join(root, "z_shared"), join(root, "a_link"), "dir");
+    const map = scanProject(root);
+    expect(map.scripts.map((s) => [s.path, s.usedBy])).toEqual([["res://z_shared/enemy.gd", ["res://main.tscn"]]]);
+    expect(map.scenes[0]!.rootScript).toBe("res://z_shared/enemy.gd");
+    expect(map.warnings).toEqual([]);
+  });
+
   it("skips hidden folders, as Godot does", () => {
     const root = makeProject({
       "project.godot": '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n',

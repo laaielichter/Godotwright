@@ -220,12 +220,14 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   const listed = listedFiles(root, options.baseFiles);
   /**
    * Where a `res://` path points: a listed file, or a file on disk inside the project or a base (which
-   * covers folders the listing skips, such as .gdignore ones). Nothing outside those roots is looked up.
+   * covers folders the listing skips, such as .gdignore ones). A path through a folder link resolves to
+   * the listed file it reaches. Nothing outside those roots is looked up.
    */
   const locate = (res: string): string | undefined => {
     if (fileSet.has(res) || listed.has(res)) return res;
     for (const dir of [root, ...bases]) {
-      if (realResPath(dir, res) !== undefined) return res;
+      const real = realResPath(dir, res);
+      if (real !== undefined) return fileSet.has(real) ? real : res;
     }
     return undefined;
   };
