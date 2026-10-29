@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Option } from "commander";
+import { chooseArchetype } from "../archetype/check.js";
 import { formatArchetype, formatIdentify, formatTree } from "../archetype/format.js";
 import { identify } from "../archetype/identify.js";
 import { ArchetypeError, loadLibrary } from "../archetype/library.js";
@@ -56,15 +57,19 @@ export function modelCommand(): Command {
     .option("--max-triangles <n>", "flag a model with more triangles than this")
     .option("--max-texture-mb <n>", "texture memory budget in MB (default 512)")
     .option("--contract <file>", "also check the model against a model.contract.json")
+    .option("--archetype <text>", "also check the model against what it should be, e.g. car or helikopter (see `model identify`)")
     .option("--min-score <score>", "exit with code 1 when the overall score is lower")
     .option("--json", "print the report as JSON")
-    .action((file: string, options: { detail: Detail; maxTriangles?: string; maxTextureMb?: string; contract?: string; minScore?: string; json?: boolean }, command: Command) => {
+    .action((file: string, options: { detail: Detail; maxTriangles?: string; maxTextureMb?: string; contract?: string; archetype?: string; minScore?: string; json?: boolean }, command: Command) => {
       guard(() => {
+        const choice = options.archetype === undefined ? undefined : chooseArchetype(options.archetype);
         const report = lintModelFile(file, {
+          ...(choice ? { archetype: choice.archetype } : {}),
           maxTriangles: options.maxTriangles === undefined ? undefined : Number(options.maxTriangles),
           maxTextureMb: options.maxTextureMb === undefined ? undefined : Number(options.maxTextureMb),
           contract: options.contract === undefined ? undefined : loadContract(options.contract),
         });
+        if (choice && !options.json) writeOut(command, `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n`);
         writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatModelReport(report, options.detail));
         const errors = report.categories.reduce((n, c) => n + c.errors, 0);
         if (errors > 0 || (options.minScore !== undefined && report.overall < Number(options.minScore))) process.exitCode = 1;
@@ -157,11 +162,14 @@ export function modelCommand(): Command {
         }
         const name = kind ?? ((spec as { name?: unknown }).name as string | undefined) ?? "model";
         const file = options.out ?? `${name}.glb`;
-        writeFileSync(file, buildGlb(kind ? buildKind(kind, input) : buildSpec(spec, input)));
+        const scene = kind ? buildKind(kind, input) : buildSpec(spec, input);
+        writeFileSync(file, buildGlb(scene));
         const info = inspectModel(file);
-        const report = lintModelFile(file);
+        const library = loadLibrary();
+        if (scene.archetype && !library.get(scene.archetype)) throw new BuildError(`unknown archetype "${scene.archetype}" (see \`model archetypes\`)`);
+        const report = lintModelFile(file, scene.archetype ? { archetype: library.resolve(scene.archetype) } : {});
         const size = info.bounds?.size.map((v) => v.toFixed(2)).join(" x ") ?? "?";
-        writeOut(command, `built ${file}: ${info.triangles.toLocaleString("en-US")} triangles, ${info.nodes.length} nodes, ${size} m (x y z), lint ${report.overall}/100\n`);
+        writeOut(command, `built ${file}: ${info.triangles.toLocaleString("en-US")} triangles, ${info.nodes.length} nodes, ${size} m (x y z), lint ${report.overall}/100${report.archetype ? ` (checked as ${report.archetype})` : ""}\n`);
         if (options.contractOut) writeFileSync(options.contractOut, `${JSON.stringify(contractFromModel(info), null, 2)}\n`);
         if (report.categories.some((c) => c.errors > 0)) process.exitCode = 1;
       });

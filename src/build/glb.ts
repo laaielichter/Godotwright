@@ -16,6 +16,8 @@ export interface BuildScene {
   nodes: BuildNode[];
   /** Overrides or additions to the preset materials, by name. */
   materials?: Record<string, Material>;
+  /** What the model is, as an archetype id; `model build` checks the result against it. */
+  archetype?: string;
 }
 
 interface Chunk {

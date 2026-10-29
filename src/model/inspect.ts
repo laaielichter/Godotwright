@@ -12,6 +12,8 @@ export interface NodeInfo {
   scale: [number, number, number];
   /** True when the world transform mirrors the mesh (negative determinant). */
   mirrored: boolean;
+  /** Where the node's origin (its pivot) is in the world. */
+  origin: [number, number, number];
 }
 
 export interface PrimitiveInfo {
@@ -200,7 +202,7 @@ export function inspectModel(file: string): ModelInfo {
         });
       }
     }
-    nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: scaleOf(world), mirrored: determinant3(world) < 0 });
+    nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: scaleOf(world), mirrored: determinant3(world) < 0, origin: [at(world, 12), at(world, 13), at(world, 14)] });
     for (const child of node.children ?? []) walk(child, world, path, depth + 1);
   };
 

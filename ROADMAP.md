@@ -81,8 +81,9 @@ Godotwright gets better with every use, without collecting anything personal.
 16. **Object knowledge.** An archetype library (what a thing is, its parts, sizes, variants, pivots) with
     `model identify` and `model archetypes`.
     *Done when:* "tractor", "helikopter", "windmill", "boot" and nonsense each get a sensible, tested answer.
-16b. **Checks against an archetype**: a model without wheels, with a wheel pivot off the hub, or ten
-    times too big is reported.
+16b. **Checks against an archetype** (`model lint --archetype`): a model without wheels, with a wheel
+    pivot off the hub, or ten times too big is reported.
+    *Done when:* a good car passes and each of those mistakes is reported.
 17. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
     **MCP tools for models**, and a contact-sheet render.
 

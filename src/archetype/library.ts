@@ -48,6 +48,11 @@ export function validateArchetypes(list: Archetype[]): string[] {
       }
       if (p.pivot && !PIVOTS.includes(p.pivot)) pt(`unknown pivot "${p.pivot}"`);
       if (p.moves?.length && !p.pivot) pt("a moving part needs a pivot rule");
+      for (const r of p.replaces ?? []) {
+        const inherited: Archetype[] = [];
+        for (let up = a.extends ? byId.get(a.extends) : undefined; up; up = up.extends ? byId.get(up.extends) : undefined) inherited.push(up);
+        if (!inherited.some((x) => (x.parts ?? []).some((q) => q.name === r))) pt(`replaces "${r}", which no ancestor has`);
+      }
     }
     const s = a.scale;
     if (s) {
@@ -94,7 +99,12 @@ export class ArchetypeLibrary {
     for (let cur: Archetype | undefined = leaf; cur; cur = cur.extends ? this.byId.get(cur.extends) : undefined) chain.unshift(cur);
     const parts = new Map<string, ArchetypePart>();
     const join = (pick: (a: Archetype) => string[] | undefined): string[] => [...new Set(chain.flatMap((a) => pick(a) ?? []))];
-    for (const a of chain) for (const p of a.parts ?? []) parts.set(p.name, p);
+    for (const a of chain) {
+      for (const p of a.parts ?? []) {
+        for (const r of p.replaces ?? []) parts.delete(r);
+        parts.set(p.name, p);
+      }
+    }
     const variants = new Map<string, string[]>();
     for (const a of chain) for (const v of a.variants ?? []) variants.set(v.axis, v.options);
     const scale = [...chain].reverse().find((a) => a.scale)?.scale;

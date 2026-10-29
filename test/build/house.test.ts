@@ -17,7 +17,7 @@ describe("house", () => {
     expect(report.findings.filter((f) => f.severity !== "info")).toEqual([]);
     expect(report.overall).toBeGreaterThanOrEqual(95);
     const info = inspectModel(path);
-    expect(info.nodes.map((n) => n.path)).toEqual(["House", "House/Walls", "House/Roof", "House/Windows", "House/Door", "House/Chimney"]);
+    expect(info.nodes.map((n) => n.path)).toEqual(["House", "House/Walls", "House/Roof", "House/Windows", "House/Doorway", "House/Door", "House/Chimney"]);
     expect(info.bounds?.min[1]).toBeCloseTo(0);
   });
 
@@ -93,7 +93,7 @@ describe("model build and model kinds", () => {
     const dir = writeScene(buildKind("house")).replace("model.glb", "");
     const run = await runCli(["model", "build", "house", "-o", `${dir}h.glb`, "--set", "floors=3", "--set", "roof=hip", "--contract-out", `${dir}c.json`]);
     expect(run.exitCode).toBe(0);
-    expect(run.output).toMatch(/built .*h\.glb: .* triangles, 6 nodes, .* lint (9\d|100)\/100/);
+    expect(run.output).toMatch(/built .*h\.glb: .* triangles, 7 nodes, .* lint (9\d|100)\/100/);
     const lint = await runCli(["model", "lint", `${dir}h.glb`, "--contract", `${dir}c.json`, "--min-score", "95"]);
     expect(lint.exitCode).toBe(0);
   });

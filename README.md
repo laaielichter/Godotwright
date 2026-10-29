@@ -65,6 +65,7 @@ godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
 godotwright model contract car.glb    # write a model.contract.json: node names, size, budget
+godotwright model lint car.glb --archetype car   # also check it is what it should be
 godotwright model lint car.glb --contract model.contract.json
 godotwright model identify "a tractor" # what it is: parts, size, variants, what to anticipate
 godotwright model archetypes          # the family tree of things Godotwright knows
@@ -139,6 +140,20 @@ which axis, with the pivot where), a typical size range with its source and a co
 anticipate (collision, LODs, lights) and the usual mistakes. A word that means two things (the Dutch
 "windmolen") is reported as ambiguous, and something it does not know gets the nearest family, marked
 generic, instead of a made-up answer. The library is data in `data/archetypes/` and grows with pull requests.
+
+`model lint --archetype <what>` (or `"archetype": "vehicle.wheeled.car"` in a spec, or any built-in kind)
+holds a model against what `identify` says that thing is, as a fifth category, `archetype`, worth a fifth
+of the score:
+
+| Rule | What it catches |
+| --- | --- |
+| `archetype/missing-part` | a car without wheels, a helicopter without a rotor (parts are recognised by node name in English or Dutch) |
+| `archetype/part-count` | two wheels on a car, five on a bicycle |
+| `archetype/pivot` | a wheel not turning about its hub, a door not pivoting on its hinge line, a turret not on its base |
+| `archetype/wheel-axis` | a wheel lying the wrong way |
+| `archetype/size` | a model about 10 times too big or small, which is nearly always a unit mistake (it only flags a difference of more than 3 times, since the ranges are typical, not exact) |
+| `archetype/orientation` | a car that points sideways instead of along z |
+| `archetype/optional-part` | the usual parts that are not there (info) |
 
 Anything else is built from a **model spec**: a JSON tree of named parts (box, cylinder, ellipsoid,
 lathe, loft, extrude, roof) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic

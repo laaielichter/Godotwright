@@ -22,6 +22,8 @@ export interface ArchetypePart {
   /** Lowercase words that identify this part by node name (English and Dutch). */
   aliases?: string[];
   note?: string;
+  /** Parts of an ancestor that this one stands in for (a Frame replaces the Body of a wheeled vehicle). */
+  replaces?: string[];
 }
 
 export interface ArchetypeScale {

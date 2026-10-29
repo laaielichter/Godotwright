@@ -2,6 +2,7 @@
 export const EXAMPLE_SPEC = {
   version: 1,
   name: "car",
+  archetype: "vehicle.wheeled.car",
   params: [
     { name: "width", type: "number", default: 1.8, min: 1.4, max: 2.6, description: "Body width in metres." },
     { name: "wheelbase", type: "number", default: 2.6, min: 1.8, max: 4, description: "Distance between the axles." },
@@ -49,10 +50,12 @@ export const EXAMPLE_SPEC = {
 
 export const SPEC_HELP = `A model spec is JSON that describes a model as a tree of named parts.
 
-  { "version": 1,
+  { "version": 1, "archetype": "vehicle.wheeled.car",
     "params":    [ { "name": "width", "type": "number", "default": 1.8, "min": 1, "max": 3 } ],
     "materials": { "my_paint": { "color": [0.1, 0.2, 0.6], "metallic": 0.3, "roughness": 0.4 } },
     "nodes":     [ <node>, ... ] }
+
+"archetype" (optional) says what the model is; \`model build\` then checks it against what \`model identify\` told you about that thing.
 
 A node has a "name" and any of these (every node becomes a Godot node with the same name):
   shape      box | cylinder | ellipsoid | lathe | loft | extrude | roof   (no shape = an empty pivot or group)
