@@ -2,28 +2,40 @@ import { BuildError } from "./params.js";
 
 export type Scope = Record<string, number>;
 
-const FUNCTIONS: Record<string, (...args: number[]) => number> = {
-  min: Math.min,
-  max: Math.max,
-  abs: Math.abs,
-  sqrt: Math.sqrt,
-  sin: Math.sin,
-  cos: Math.cos,
-  tan: Math.tan,
-  floor: Math.floor,
-  ceil: Math.ceil,
-  round: Math.round,
-  pow: Math.pow,
-  rad: (degrees = 0) => (degrees * Math.PI) / 180,
-  deg: (radians = 0) => (radians * 180) / Math.PI,
-  atan: Math.atan,
-  atan2: Math.atan2,
-  asin: Math.asin,
-  acos: Math.acos,
-  hypot: Math.hypot,
-  clamp: (v = 0, lo = 0, hi = 0) => Math.min(hi, Math.max(lo, v)),
-  lerp: (a = 0, b = 0, t = 0) => a + (b - a) * t,
+/** A function of numbers, with the fewest and the most numbers it takes. */
+interface Fn {
+  args: [number, number];
+  call: (...values: number[]) => number;
+}
+
+const FUNCTIONS: Record<string, Fn> = {
+  min: { args: [2, 8], call: Math.min },
+  max: { args: [2, 8], call: Math.max },
+  abs: { args: [1, 1], call: Math.abs },
+  sqrt: { args: [1, 1], call: Math.sqrt },
+  sin: { args: [1, 1], call: Math.sin },
+  cos: { args: [1, 1], call: Math.cos },
+  tan: { args: [1, 1], call: Math.tan },
+  floor: { args: [1, 1], call: Math.floor },
+  ceil: { args: [1, 1], call: Math.ceil },
+  round: { args: [1, 1], call: Math.round },
+  pow: { args: [2, 2], call: Math.pow },
+  rad: { args: [1, 1], call: (degrees) => (degrees * Math.PI) / 180 },
+  deg: { args: [1, 1], call: (radians) => (radians * 180) / Math.PI },
+  atan: { args: [1, 1], call: Math.atan },
+  atan2: { args: [2, 2], call: Math.atan2 },
+  asin: { args: [1, 1], call: Math.asin },
+  acos: { args: [1, 1], call: Math.acos },
+  hypot: { args: [2, 3], call: Math.hypot },
+  clamp: { args: [3, 3], call: (v, lo, hi) => Math.min(hi, Math.max(lo, v)) },
+  lerp: { args: [3, 3], call: (a, b, t) => a + (b - a) * t },
 };
+
+/** "3 numbers", "1 number", "2 to 8 numbers". */
+function countOf([lo, hi]: [number, number]): string {
+  const numbers = (n: number): string => `${n} number${n === 1 ? "" : "s"}`;
+  return lo === hi ? numbers(lo) : `${lo} to ${numbers(hi)}`;
+}
 const CONSTANTS: Record<string, number> = { pi: Math.PI };
 
 const MAX_LENGTH = 500;
@@ -111,7 +123,8 @@ export function evaluate(text: string, scope: Scope): number {
           while (isOp(",")) { pos++; args.push(expression(depth + 1)); }
         }
         eat(")");
-        return fn(...args);
+        if (args.length < fn.args[0] || args.length > fn.args[1]) fail(`${t.name}() takes ${countOf(fn.args)}, got ${args.length}`);
+        return fn.call(...args);
       }
       const c = Object.hasOwn(CONSTANTS, t.name) ? CONSTANTS[t.name] : undefined;
       return c === undefined ? fail(`unknown name "${t.name}" (variables start with $)`) : c;

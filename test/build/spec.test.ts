@@ -47,6 +47,15 @@ describe("expressions", () => {
     expect(() => evaluate("pow(10, 999)", {})).toThrow(/not a finite number/);
   });
 
+  it("checks how many numbers each function takes", () => {
+    expect(() => evaluate("clamp($w, 0.2)", { w: 1 })).toThrow(/clamp\(\) takes 3 numbers, got 2 in expression/);
+    expect(() => evaluate("abs()", {})).toThrow(/abs\(\) takes 1 number, got 0/);
+    expect(() => evaluate("rad()", {})).toThrow(/rad\(\) takes 1 number, got 0/);
+    expect(() => evaluate("pow(2, 3, 4)", {})).toThrow(/pow\(\) takes 2 numbers, got 3/);
+    expect(() => evaluate("min(1)", {})).toThrow(/min\(\) takes 2 to 8 numbers, got 1/);
+    expect(evaluate("hypot(3, 4) + min(1, 2, 3) + clamp(5, 0, 1)", {})).toBe(5 + 1 + 1);
+  });
+
   it("looks names up as the names of this spec, never ones inherited from Object", () => {
     expect(() => evaluate("constructor", {})).toThrow(/unknown name "constructor"/);
     expect(() => evaluate("$constructor", {})).toThrow(/unknown variable \$constructor/);
@@ -189,6 +198,7 @@ describe("mistakes get a path and a reason", () => {
     fail(spec([{ name: "L", shape: "loft", material: "paint", sections: [{ z: 0, superellipse: { width: 1, height: 1, count: 9 } }, { z: 1, superellipse: { width: 1, height: 1 } }] }]), /must be even/);
     fail(spec([{ name: "R", shape: "roof", material: "paint", x0: 0, x1: 1, z0: 0, z1: 1, y: 0, rise: 1, kind: "dome" }]), /use "gable" or "hip"/);
     fail(spec([solid({ at: [1, 2] })]), /expected a list of 3 numbers/);
+    fail(spec([solid({ at: ["clamp(1, 0.2)", 0, 0] })]), /at\[0\]: clamp\(\) takes 3 numbers, got 2/);
   });
 
   it("refuses shapes, materials and variables named like Object.prototype members", () => {
