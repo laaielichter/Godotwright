@@ -129,6 +129,13 @@ same parameters. The result goes straight through `model lint`, and `--contract-
 set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
 to be refined, not hand-sculpted art. Kinds today: `house`.
 
+Anything else is built from a **model spec**: a JSON tree of named parts (box, cylinder, ellipsoid,
+lathe, loft, extrude, roof) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic
+expressions (`"$width / 2 - 0.1"`, never executed as code). `model spec` explains the format and prints a
+small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
+its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
+with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
+
 ## Review in GitHub Actions
 
 Save this as `.github/workflows/godot-review.yml` in your game repository. It
