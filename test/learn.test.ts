@@ -74,6 +74,40 @@ describe("learning store", () => {
     expect(readdirSync(dirname(learningFile())).filter((f) => f.endsWith(".tmp"))).toEqual([]);
   });
 
+  it("ignores fields of the wrong type instead of failing on them", () => {
+    writeFileSync(
+      learningFile(),
+      JSON.stringify({
+        version: 1,
+        enabled: "yes",
+        rules: null,
+        dismissed: [],
+        apiMisses: { "Node2D.lookat": null, "Node2D.look_at": { count: "x", resolved: [] } },
+        lastMiss: "oops",
+        missedByReview: { a: "b" },
+        unparsed: null,
+        sharing: { enabled: true, sent: { rules: null } },
+      }),
+    );
+    const data = readLearning();
+    expect(data.enabled).toBe(true);
+    expect(data.rules).toEqual({});
+    expect(data.dismissed).toEqual({});
+    expect(data.apiMisses).toEqual({ "Node2D.look_at": { count: 0, resolved: {} } });
+    expect(data.lastMiss).toBeUndefined();
+    expect(data.missedByReview).toEqual({});
+    expect(data.unparsed).toEqual({});
+    expect(data.sharing).toEqual({ enabled: true, sent: { rules: {}, apiMisses: {}, missedByReview: {}, unparsed: {} } });
+  });
+
+  it("keeps review, api and learn working on such a file", async () => {
+    writeFileSync(learningFile(), JSON.stringify({ version: 1, enabled: true, rules: null, apiMisses: null, sharing: null }));
+    expect(reviewLearning(project()).findings.length).toBeGreaterThan(0);
+    expect(lookupLearning(GodotApi.load(), "Node2D.look_at").result.entries.length).toBeGreaterThan(0);
+    recordFeedback(finding(), "wrong");
+    expect((await runCli(["learn", "status"])).output).toContain("local learning: on");
+  });
+
   it("fills in defaults for fields a file does not have", () => {
     updateLearning(() => {});
     writeFileSync(learningFile(), JSON.stringify({ version: 1, enabled: true, rules: {} }));

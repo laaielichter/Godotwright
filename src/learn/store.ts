@@ -101,13 +101,84 @@ export function learningAllowed(data: LearningData, env: NodeJS.ProcessEnv = pro
 export function readLearning(file = learningFile()): LearningData {
   try {
     if (!existsSync(file)) return emptyLearning();
-    const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<LearningData>;
-    const base = emptyLearning();
-    return { ...base, ...parsed, sharing: { ...base.sharing, ...(parsed.sharing ?? {}) } } as LearningData;
+    return normalizeLearning(JSON.parse(readFileSync(file, "utf8")));
   } catch {
     // A broken file must never break a tool; start fresh.
     return emptyLearning();
   }
+}
+
+/** Keeps each field only in the shape it has; anything else falls back to its default (a hand edit must not break a tool). */
+function normalizeLearning(parsed: unknown): LearningData {
+  const base = emptyLearning();
+  const top = isRecord(parsed) ? parsed : {};
+  return {
+    version: 1,
+    enabled: typeof top["enabled"] === "boolean" ? top["enabled"] : base.enabled,
+    rules: recordOf(top["rules"], ruleFrom),
+    dismissed: counts(top["dismissed"]),
+    apiMisses: recordOf(top["apiMisses"], missFrom),
+    lastMiss: lastMissFrom(top["lastMiss"]),
+    missedByReview: counts(top["missedByReview"]),
+    unparsed: counts(top["unparsed"]),
+    sharing: sharingFrom(top["sharing"]),
+  };
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function count(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 0;
+}
+
+function counts(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (isRecord(v)) for (const [k, n] of Object.entries(v)) if (typeof n === "number" && Number.isFinite(n) && n >= 0) out[k] = n;
+  return out;
+}
+
+function recordOf<T>(v: unknown, item: (x: unknown) => T | undefined): Record<string, T> {
+  const out: Record<string, T> = {};
+  if (isRecord(v)) for (const [k, x] of Object.entries(v)) {
+    const value = item(x);
+    if (value !== undefined) out[k] = value;
+  }
+  return out;
+}
+
+function ruleFrom(v: unknown): RuleStats | undefined {
+  if (!isRecord(v)) return undefined;
+  const stats: RuleStats = { reported: count(v["reported"]), confirmed: count(v["confirmed"]), contradicted: count(v["contradicted"]), dismissed: count(v["dismissed"]) };
+  return stats;
+}
+
+function missFrom(v: unknown): ApiMiss | undefined {
+  return isRecord(v) ? { count: count(v["count"]), resolved: counts(v["resolved"]) } : undefined;
+}
+
+function lastMissFrom(v: unknown): LearningData["lastMiss"] {
+  if (!isRecord(v) || typeof v["query"] !== "string" || typeof v["at"] !== "number") return undefined;
+  return { query: v["query"], at: v["at"] };
+}
+
+function snapshotFrom(v: unknown): Snapshot | undefined {
+  if (!isRecord(v)) return undefined;
+  return { rules: recordOf(v["rules"], ruleFrom), apiMisses: recordOf(v["apiMisses"], missFrom), missedByReview: counts(v["missedByReview"]), unparsed: counts(v["unparsed"]) };
+}
+
+function sharingFrom(v: unknown): SharingState {
+  const s = isRecord(v) ? v : {};
+  const out: SharingState = { enabled: s["enabled"] === true };
+  for (const key of ["decidedAt", "installId", "installIdSince", "lastSentAt", "endpoint"] as const) {
+    const text = s[key];
+    if (typeof text === "string") out[key] = text;
+  }
+  if (typeof s["noticeShown"] === "boolean") out.noticeShown = s["noticeShown"];
+  const sent = snapshotFrom(s["sent"]);
+  if (sent) out.sent = sent;
+  return out;
 }
 
 /**
