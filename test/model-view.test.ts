@@ -15,6 +15,12 @@ const model = (nodes: unknown[]) => writeScene(buildSpec({ version: 1, nodes: [{
 describe("model view", () => {
   const path = model([box("Base", [0, 0.5, 0], [4, 1, 2]), box("Tower", [0, 2, 0], [1, 2, 1])]);
 
+  it("draws every view at one scale, said once", () => {
+    const text = viewModel(inspectModel(writeScene(buildKind("dragon"))));
+    expect(text.match(/Scale: 1 character = [\d.]+ m wide and [\d.]+ m tall, the same in every view\./g)).toHaveLength(1);
+    expect(text).not.toMatch(/\(1 character = /);
+  });
+
   it("draws three views with one letter per part, a ground line and a table of the parts", () => {
     const text = viewModel(inspectModel(path));
     for (const title of ["FRONT", "SIDE", "TOP"]) expect(text).toContain(title);

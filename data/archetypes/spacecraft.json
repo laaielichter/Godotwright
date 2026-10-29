@@ -207,7 +207,14 @@
    "mothership",
    "moederschip",
    "freighter",
-   "vrachtschip ruimte"
+   "vrachtschip ruimte",
+   "spaceship fighter",
+   "sci-fi fighter",
+   "scifi fighter",
+   "space fighter jet",
+   "x-wing",
+   "tie fighter",
+   "interceptor spaceship"
   ],
   "extends": "spacecraft",
   "hints": [

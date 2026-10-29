@@ -8,6 +8,9 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`building.watchtower`** archetype; `spaceship fighter` and `sci-fi fighter` now mean the spaceship; `model view` draws
+  all views at one scale. Found in a second run of the small-model test, written up in `docs/cheap-models.md`.
+
 - **`model brief`** points to the option of a kind that makes the thing: a lake is `terrain --set lakeRadius=60`,
   a river `--set riverWidth=6`, an island `--set relief=island`, a mountain `--set relief=mountains`, with the
   parameters to tune it.
