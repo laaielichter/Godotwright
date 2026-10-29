@@ -111,6 +111,40 @@ describe("Godot 3 syntax", () => {
   });
 });
 
+describe("signals added at runtime", () => {
+  const RUNTIME_SIGNAL = [
+    "extends Node",
+    "",
+    "func _ready() -> void:",
+    '\tadd_user_signal("hit", [{"name": "amount", "type": TYPE_INT}])',
+    '\tconnect("hit", _on_hit)',
+    '\tself.hit.connect(_on_hit)',
+    '\temit_signal("hit", 3)',
+    "",
+    "func _on_hit(amount: int) -> void:",
+    "\tprint(amount)",
+  ].join("\n");
+
+  it("accepts signals created with add_user_signal() in connect, emit and member access", () => {
+    expect(findings(RUNTIME_SIGNAL).filter((l) => l.includes("[api/"))).toEqual([]);
+  });
+
+  it("accepts a signal that a base script adds with add_user_signal()", () => {
+    expect(
+      findings("extends \"res://base.gd\"\n\nfunc _ready() -> void:\n\tconnect(\"died\", _on_died)\n\nfunc _on_died() -> void:\n\tpass\n", {
+        "base.gd": 'extends Node\n\nfunc _init() -> void:\n\tadd_user_signal("died")\n',
+      }).filter((l) => l.includes("[api/")),
+    ).toEqual([]);
+  });
+
+  it("still reports a signal that no script adds or declares", () => {
+    const lines = findings(`${RUNTIME_SIGNAL}\n\nfunc _later() -> void:\n\temit_signal("missing")\n`);
+    expect(lines.filter((l) => l.includes("[api/"))).toEqual([
+      'res://main.gd:13: error [api/unknown-signal] Signal "missing" is not declared on this class or its parents.',
+    ]);
+  });
+});
+
 describe("Variant enums", () => {
   it("reads Variant.Type and Variant.Operator members without calling Variant unknown", () => {
     expect(

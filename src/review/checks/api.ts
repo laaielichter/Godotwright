@@ -51,6 +51,7 @@ const INPUT_ONE = /\b(?:is_action_pressed|is_action_just_pressed|is_action_just_
 const INPUT_AXIS = /\bget_axis\s*\(\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"/g;
 const INPUT_VECTOR = /\bget_vector\s*\(\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"/g;
 const SIGNAL_BY_NAME = /(^|[^.\w])(emit_signal|connect|disconnect|is_connected)\s*\(\s*&?"([^"]+)"/g;
+const ADD_USER_SIGNAL = /\badd_user_signal\s*\(\s*&?"([^"]+)"/g;
 
 export interface ApiCheckOptions {
   /** Project uses C# or GDExtension, so unknown class names may be real. */
@@ -111,6 +112,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
 
   const source = pm.data.sources.get(path) ?? "";
   const duckTyped = new Set([...source.matchAll(/\b(?:has_method|has_signal|has_meta)\s*\(\s*&?"(\w+)"/g)].map((m) => m[1]!));
+  /** Signals that a script adds at runtime with add_user_signal(), in it or in a script it extends. */
+  const runtimeSignals = (model: ClassModel): Set<string> =>
+    new Set(pm.chain(model).flatMap((c) => [...(pm.data.sources.get(c.path) ?? "").matchAll(ADD_USER_SIGNAL)].map((m) => m[1]!)));
   // Without a receiver type, `x.instance()` is Godot 3 only when no script (or foreign class) in the project defines `instance`.
   let definesInstance: boolean | undefined;
   const hasInstanceMethod = (): boolean =>
@@ -151,7 +155,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     for (const m of ll.text.matchAll(SIGNAL_BY_NAME)) {
       const name = m[3]!;
       const member = pm.memberOf(selfType, name);
-      if (!member && !model.dynamic) {
+      if (!member && !model.dynamic && !runtimeSignals(model).has(name)) {
         report("api/unknown-signal", ll.line, `Signal "${name}" is not declared on this class or its parents.${suggestSignals(pm, selfType, name)}`);
       } else if (member && member.kind !== "signal") {
         report("api/unknown-signal", ll.line, `"${name}" is a ${member.kind}, not a signal.`);
@@ -448,6 +452,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         if (found.kind === "class") return { type: found.type, exact: true };
         return { type: found.type, exact: false };
       }
+      if (type.kind === "script" && runtimeSignals(type.model).has(name)) return { type: native("Signal"), exact: false };
       if (name === "new" && type.meta) return { type: { ...type, meta: false }, exact: false };
       if (type.kind === "script" && pm.chain(type.model).some((c) => c.dynamic)) return undefined;
       const label = typeLabel(type);
