@@ -14,6 +14,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 - [Roadmap](https://github.com/laaielichter/Godotwright/blob/main/ROADMAP.md)
 - [Privacy](https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md): nothing leaves the machine unless you opt in; no code, file names or paths are ever sent
 
+## Seeing the game run
+
+`godotwright check --scene res://x.tscn` (godot_check with scene or run_frames) runs a scene headless and returns what it printed: put print() calls in the code under test and read them back.
+
 ## Workflow for 3D models
 
 0. `godotwright model brief "<thing>"` (godot_model_brief): one page with the kind to start from, parts, size, rules and the order of work. Start here if you are a small model.
