@@ -89,6 +89,11 @@ describe("model lint", () => {
     expect(ids(writeGlb({ meshes: [mesh] }))).toContain("model/degenerate-triangles");
   });
 
+  it("finds a flat triangle whose three distinct vertices lie on one line", () => {
+    const sliver: TestMesh = { positions: [0, 0, 0, 1, 0, 0, 2, 0, 0], indices: [0, 1, 2], normals: [0, 0, 1, 0, 0, 1, 0, 0, 1] };
+    expect(ids(writeGlb({ meshes: [sliver] }))).toContain("model/degenerate-triangles");
+  });
+
   it("finds missing normals, UVs and tangents", () => {
     const mesh: TestMesh = { ...box(), material: 0 };
     delete mesh.normals;

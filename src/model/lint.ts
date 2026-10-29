@@ -160,6 +160,18 @@ function reportEdges(node: string, e: EdgeStats, add: Add): void {
   if (e.degenerate > 0) add("model/degenerate-triangles", `${e.degenerate.toLocaleString("en-US")} triangles have no area.`, node);
 }
 
+/** Squared length of the cross product below which a triangle has no area (a sliver of a square millimetre or less). */
+const FLAT_CROSS_SQUARED = 1e-18;
+
+/** True when the triangle at these three indices has no area: its points repeat or lie on one line. */
+function flatTriangle(p: Float64Array, i: number, j: number, k: number): boolean {
+  const a = i * 3, b = j * 3, c = k * 3;
+  const ux = at(p, b) - at(p, a), uy = at(p, b + 1) - at(p, a + 1), uz = at(p, b + 2) - at(p, a + 2);
+  const vx = at(p, c) - at(p, a), vy = at(p, c + 1) - at(p, a + 1), vz = at(p, c + 2) - at(p, a + 2);
+  const gx = uy * vz - uz * vy, gy = uz * vx - ux * vz, gz = ux * vy - uy * vx;
+  return gx * gx + gy * gy + gz * gz < FLAT_CROSS_SQUARED;
+}
+
 /** Counts triangles whose geometric normal points against the sum of their vertex normals. */
 export function trianglesAgainstNormals(prim: PrimitiveInfo): number {
   const n = prim.normals;
@@ -171,7 +183,7 @@ export function trianglesAgainstNormals(prim: PrimitiveInfo): number {
     const ux = at(p, j) - at(p, i), uy = at(p, j + 1) - at(p, i + 1), uz = at(p, j + 2) - at(p, i + 2);
     const vx = at(p, k) - at(p, i), vy = at(p, k + 1) - at(p, i + 1), vz = at(p, k + 2) - at(p, i + 2);
     const gx = uy * vz - uz * vy, gy = uz * vx - ux * vz, gz = ux * vy - uy * vx;
-    if (gx * gx + gy * gy + gz * gz < 1e-18) continue;
+    if (gx * gx + gy * gy + gz * gz < FLAT_CROSS_SQUARED) continue;
     const dot = gx * (at(n, i) + at(n, j) + at(n, k)) + gy * (at(n, i + 1) + at(n, j + 1) + at(n, k + 1)) + gz * (at(n, i + 2) + at(n, j + 2) + at(n, k + 2));
     if (dot < 0) count++;
   }
@@ -217,10 +229,9 @@ export function analyseEdges(prims: PrimitiveInfo[], sheet = false): { edges: nu
     const id = ids[p] as Uint32Array;
     const flags = (prim.doubleSided ? 4 : 0) | (prim.hasNormals ? 8 : 0);
     for (let t = 0; t < prim.indices.length; t += 3) {
-      const a = at(id, at(prim.indices, t));
-      const b = at(id, at(prim.indices, t + 1));
-      const c = at(id, at(prim.indices, t + 2));
-      if (a === b || b === c || a === c) { degenerate++; continue; }
+      const i = at(prim.indices, t), j = at(prim.indices, t + 1), k = at(prim.indices, t + 2);
+      const a = at(id, i), b = at(id, j), c = at(id, k);
+      if (a === b || b === c || a === c || flatTriangle(prim.positions, i, j, k)) { degenerate++; continue; }
       for (const [from, to] of [[a, b], [b, c], [c, a]] as const) {
         const key = Math.min(from, to) * stride + Math.max(from, to);
         const dir = from < to ? 1 : 2;
