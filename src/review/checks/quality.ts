@@ -33,9 +33,11 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
     else untyped.push({ line, what });
   };
 
+  // `var x: set = _set_x` has no type: the parser reads the accessor keyword as the type.
+  const declaredType = (type: string | undefined) => Boolean(type) && type !== "set" && type !== "get";
   for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
     const o = model.outline;
-    for (const v of o.variables) count(Boolean(v.type) || v.inferred, v.line, `var ${v.name}`);
+    for (const v of o.variables) count(declaredType(v.type) || v.inferred, v.line, `var ${v.name}`);
     for (const fn of o.functions) {
       for (const p of fn.params) count(Boolean(p.type) || p.inferred, fn.line, `parameter ${p.name} of ${fn.name}()`);
       count(Boolean(fn.returnType) || fn.name === "_init", fn.line, `return type of ${fn.name}()`);

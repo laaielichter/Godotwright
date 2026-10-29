@@ -340,6 +340,15 @@ describe("review robustness", () => {
     expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
   });
 
+  it("does not count a property with only a setter as statically typed", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "speed.gd": "extends Node\n\nvar speed: set = _set_speed\nvar count := 0\n\n\nfunc _set_speed(value) -> void:\n\tspeed = value\n",
+    });
+    // Declarations: speed (untyped), count (inferred), value (untyped), the return type of _set_speed (typed).
+    expect(reviewProject(root).typing).toEqual({ typed: 2, total: 4, percent: 50 });
+  });
+
   it("does not call a script or group unused or unassigned when a scene does not parse", () => {
     const root = makeProject({
       "project.godot": PROJECT,
