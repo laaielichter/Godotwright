@@ -73,7 +73,8 @@ jobs:
           path: frameworks/gdunit4
           sparse-checkout: addons/gdUnit4
       - name: Integration tests
-        run: npx vitest run test/integration
+        # One Godot at a time: several at once can run the runner out of memory, and the system then kills an import.
+        run: npx vitest run test/integration --no-file-parallelism
         env:
           GODOT_DEMOS: ${{ github.workspace }}/demos
           GUT_ADDON: ${{ github.workspace }}/frameworks/gut/addons/gut
