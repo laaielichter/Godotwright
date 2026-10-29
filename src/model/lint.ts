@@ -84,7 +84,7 @@ function checkRig(info: ModelInfo, add: Add): void {
     if (/^node_\d+$/.test(n.name)) add("model/unnamed-node", `Node ${n.index} has no name.`, n.path);
     if (seen.has(n.path)) add("model/duplicate-node-names", `Another node at ${n.path} has the same name.`, n.path);
     seen.add(n.path);
-    if (n.mirrored) add("model/mirrored-node", `Scale ${n.scale.map((v) => v.toFixed(2)).join(", ")} mirrors the mesh.`, n.path);
+    if (n.mirrored) add("model/mirrored-node", `Scale ${n.scale.map((v) => v.toFixed(2)).join(", ")} mirrors this node and everything under it.`, n.path);
   }
   if (info.bounds && info.triangles > 0 && Math.abs(info.bounds.min[1]) > 0.05) {
     add("model/ground-offset", `The lowest point is at y = ${info.bounds.min[1].toFixed(3)}.`);

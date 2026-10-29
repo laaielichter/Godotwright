@@ -1,4 +1,4 @@
-import { type Gltf, type GltfMaterial, type GltfPrimitive, type LoadedGltf, ModelError, isIndex, loadGltf, readAccessor, readUri } from "./gltf.js";
+import { type Gltf, type GltfMaterial, type GltfNode, type GltfPrimitive, type LoadedGltf, ModelError, isIndex, loadGltf, readAccessor, readUri } from "./gltf.js";
 import { imageSize } from "./images.js";
 import { at } from "./num.js";
 
@@ -9,8 +9,9 @@ export interface NodeInfo {
   depth: number;
   mesh?: string;
   triangles: number;
+  /** The node's own scale as the file has it; a negative axis mirrors along that axis. */
   scale: [number, number, number];
-  /** True when the world transform mirrors the mesh (negative determinant). */
+  /** True where a mirror starts: the world transform mirrors and the parent's does not. Everything below it is mirrored too. */
   mirrored: boolean;
   /** Where the node's origin (its pivot) is in the world. */
   origin: [number, number, number];
@@ -101,6 +102,16 @@ function scaleOf(m: Mat): [number, number, number] {
   return [Math.hypot(g(0), g(1), g(2)), Math.hypot(g(4), g(5), g(6)), Math.hypot(g(8), g(9), g(10))];
 }
 
+/** The node's own scale, signed as the file has it. A matrix has no separate scale, so a mirror is put on x. */
+function ownScale(node: GltfNode, local: Mat): [number, number, number] {
+  if (node.matrix?.length !== 16 && node.scale !== undefined) {
+    const [x = 1, y = 1, z = 1] = node.scale;
+    return [x, y, z];
+  }
+  const [x, y, z] = scaleOf(local);
+  return determinant3(local) < 0 ? [-x, y, z] : [x, y, z];
+}
+
 function triangleIndices(model: LoadedGltf, prim: GltfPrimitive, vertexCount: number): Uint32Array {
   let raw: number[];
   if (prim.indices !== undefined) raw = Array.from(readAccessor(model, prim.indices).data);
@@ -175,7 +186,8 @@ export function inspectModel(file: string): ModelInfo {
     if (!node) throw new ModelError(`${file}: node ${index} does not exist`);
     if (seen.has(index)) throw new ModelError(`${file}: node ${index} is reached twice (cycle or shared child)`);
     seen.add(index);
-    const world = multiply(parent, localMatrix(node));
+    const local = localMatrix(node);
+    const world = multiply(parent, local);
     const name = node.name ?? `node_${index}`;
     const path = parentPath ? `${parentPath}/${name}` : name;
     let triangles = 0;
@@ -208,7 +220,7 @@ export function inspectModel(file: string): ModelInfo {
         });
       }
     }
-    nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: scaleOf(world), mirrored: determinant3(world) < 0, origin: [at(world, 12), at(world, 13), at(world, 14)] });
+    nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: ownScale(node, local), mirrored: determinant3(world) < 0 && determinant3(parent) >= 0, origin: [at(world, 12), at(world, 13), at(world, 14)] });
     if (node.children !== undefined && !Array.isArray(node.children)) throw new ModelError(`${file}: node ${index} children must be a list`);
     for (const child of node.children ?? []) walk(child, world, path, depth + 1);
   };

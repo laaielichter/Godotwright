@@ -116,6 +116,18 @@ describe("model lint", () => {
     expect(ids(writeGlb({ meshes: [box()], nodes: [{ name: "Up", mesh: 0, translation: [0, 3, 0] }] }))).toContain("model/ground-offset");
   });
 
+  it("reports a mirror once, where it starts, with its signed scale", () => {
+    const path = writeGlb({
+      meshes: [box()],
+      nodes: [{ name: "Left", children: [1, 2], scale: [-1, 1, 1] }, { name: "A", mesh: 0 }, { name: "B", mesh: 0, translation: [2, 0, 0] }],
+      roots: [0],
+    });
+    const mirrored = lintModelFile(path).findings.filter((f) => f.rule === "model/mirrored-node");
+    expect(mirrored).toHaveLength(1);
+    expect(mirrored[0]?.node).toBe("Left");
+    expect(mirrored[0]?.message).toContain("-1.00, 1.00, 1.00");
+  });
+
   it("flags the triangle budget only when asked", () => {
     const path = writeGlb({ meshes: [box()] });
     expect(ids(path)).not.toContain("model/triangle-budget");
