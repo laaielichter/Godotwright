@@ -53,8 +53,8 @@ export function shareBlocked(data: LearningData, env: NodeJS.ProcessEnv = proces
   if (env["GODOTWRIGHT_LEARN"] === "0" || !data.enabled) return "learning is off";
   if (env["DO_NOT_TRACK"] && env["DO_NOT_TRACK"] !== "0") return "DO_NOT_TRACK is set";
   if (!shareEndpoint(data, env)) return "no collector is set up yet, so nothing is sent";
-  const last = data.sharing.lastSentAt ? Date.parse(data.sharing.lastSentAt) : NaN;
-  if (now - last < SEND_EVERY_MS) return "a report went out less than a day ago";
+  const last = Date.parse(data.sharing.lastAttemptAt ?? data.sharing.lastSentAt ?? "");
+  if (now - last < SEND_EVERY_MS) return "a report was sent or tried less than a day ago";
   return undefined;
 }
 
@@ -173,8 +173,9 @@ export async function maybeShare(options: ShareOptions = {}): Promise<"sent" | "
       outcome = response?.ok ? "sent" : "failed";
     }
     updateLearning((d) => {
-      d.sharing.lastSentAt = new Date(now).toISOString();
+      d.sharing.lastAttemptAt = new Date(now).toISOString();
       if (outcome !== "sent") return;
+      d.sharing.lastSentAt = d.sharing.lastAttemptAt;
       d.sharing.sent = built!.snapshot;
       if (rotate) {
         d.sharing.installId = install;

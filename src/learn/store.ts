@@ -53,7 +53,10 @@ export interface SharingState {
   /** Random id, replaced every 30 days, so the collector can count distinct installs. */
   installId?: string;
   installIdSince?: string;
+  /** When the collector last accepted a report. */
   lastSentAt?: string;
+  /** When a send was last tried, accepted or not: a failed try also waits a day. */
+  lastAttemptAt?: string;
   /** Counts already sent, so each report holds only what is new. */
   sent?: Snapshot;
   /** Where to send; overrides the built-in collector URL. */
@@ -171,7 +174,7 @@ function snapshotFrom(v: unknown): Snapshot | undefined {
 function sharingFrom(v: unknown): SharingState {
   const s = isRecord(v) ? v : {};
   const out: SharingState = { enabled: s["enabled"] === true };
-  for (const key of ["decidedAt", "installId", "installIdSince", "lastSentAt", "endpoint"] as const) {
+  for (const key of ["decidedAt", "installId", "installIdSince", "lastSentAt", "lastAttemptAt", "endpoint"] as const) {
     const text = s[key];
     if (typeof text === "string") out[key] = text;
   }

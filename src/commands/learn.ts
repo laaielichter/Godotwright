@@ -25,7 +25,13 @@ export function learnCommand(): Command {
         `learning file: ${learningFile()}`,
         `local learning: ${data.enabled && process.env["GODOTWRIGHT_LEARN"] !== "0" ? "on" : "off"} (stays on this machine)`,
         `sharing: ${data.sharing.enabled ? "on" : "off"} (opt-in; godotwright learn share on|off)`,
-        ...(data.sharing.enabled ? [`  collector: ${shareEndpoint(data) || "none set up yet, nothing is sent"}`, `  last report: ${data.sharing.lastSentAt ?? "never"}`] : []),
+        ...(data.sharing.enabled
+          ? [
+              `  collector: ${shareEndpoint(data) || "none set up yet, nothing is sent"}`,
+              `  last report sent: ${data.sharing.lastSentAt ?? "never"}`,
+              ...(data.sharing.lastAttemptAt && data.sharing.lastAttemptAt !== data.sharing.lastSentAt ? [`  last attempt: ${data.sharing.lastAttemptAt}`] : []),
+            ]
+          : []),
         "",
         `rules seen: ${rules.length}`,
         ...rules.map(([rule, s]) => `  ${rule}: reported ${s.reported}, confirmed by Godot ${s.confirmed}, contradicted ${s.contradicted}, marked wrong ${s.dismissed}`),

@@ -166,6 +166,19 @@ describe("sending", () => {
     expect((c.bodies[1] as typeof preview).install).toBe(sent.install);
   });
 
+  it("shows a last report only once the collector accepted one, but still waits a day after a failure", async () => {
+    setSharing(true);
+    const now = Date.parse("2026-11-01T12:00:00Z");
+    expect(await maybeShare({ env, fetch: collector(false).fetch, now })).toBe("failed");
+    expect(readLearning().sharing.lastSentAt).toBeUndefined();
+    expect((await runCli(["learn", "status"])).output).toContain("last report sent: never");
+    expect(shareBlocked(readLearning(), env, now + 60_000)).toContain("less than a day");
+    const c = collector();
+    expect(await maybeShare({ env, fetch: c.fetch, now: now + SEND_EVERY_MS })).toBe("sent");
+    expect(readLearning().sharing.lastSentAt).toBe(new Date(now + SEND_EVERY_MS).toISOString());
+    expect((await runCli(["learn", "status"])).output).toContain(`last report sent: ${new Date(now + SEND_EVERY_MS).toISOString()}`);
+  });
+
   it("uses a new random install id every 30 days, and forgets it when sharing is turned off", async () => {
     setSharing(true);
     const c = collector();
