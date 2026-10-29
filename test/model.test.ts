@@ -365,6 +365,44 @@ describe("model accessors", () => {
   });
 });
 
+/** The given faces of a box() as a mesh of their own, with one material slot. */
+function faces(mesh: TestMesh, which: number[], material: number): TestMesh {
+  const out: TestMesh = { positions: [], indices: [], normals: [], uv: [], material };
+  which.forEach((face, n) => {
+    for (let k = 0; k < 4; k++) {
+      const v = face * 4 + k;
+      out.positions.push(...mesh.positions.slice(v * 3, v * 3 + 3));
+      out.normals?.push(...(mesh.normals ?? []).slice(v * 3, v * 3 + 3));
+      out.uv?.push(...(mesh.uv ?? []).slice(v * 2, v * 2 + 2));
+    }
+    out.indices.push(n * 4, n * 4 + 1, n * 4 + 2, n * 4, n * 4 + 2, n * 4 + 3);
+  });
+  return out;
+}
+
+/** Writes a .glb whose one node draws every part, one primitive each, as a mesh with several material slots does. */
+function writeOneNode(parts: TestMesh[], materials: object[] = []): string {
+  return editGlbJson(writeGlb({ meshes: parts, materials }), (j) => {
+    j.meshes = [{ primitives: j.meshes.map((m: { primitives: unknown[] }) => m.primitives[0]) }];
+    j.nodes = [{ name: "Body", mesh: 0 }];
+    j.scenes[0].nodes = [0];
+  });
+}
+
+describe("model surfaces split over primitives", () => {
+  const cube = box();
+
+  it("welds a closed mesh split into two primitives, so it has no open edges", () => {
+    const split = writeOneNode([faces(cube, [0, 1, 2], 0), faces(cube, [3, 4, 5], 1)], [{}, {}]);
+    expect(lintModelFile(split).findings.map((f) => f.rule)).toEqual([]);
+  });
+
+  it("reports missing normals once per node, not once per primitive", () => {
+    const bare = writeOneNode([{ ...faces(cube, [0, 1, 2], 0), normals: undefined }, { ...faces(cube, [3, 4, 5], 1), normals: undefined }], [{}, {}]);
+    expect(ids(bare).filter((rule) => rule === "model/missing-normals")).toHaveLength(1);
+  });
+});
+
 describe("model malformed files", () => {
   /** Expects the error to be a ModelError that says `message`, so the user sees the file and the cause. */
   const refuses = (path: string, message: RegExp) => {

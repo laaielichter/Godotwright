@@ -26,6 +26,8 @@ export interface PrimitiveInfo {
   hasNormals: boolean;
   hasUv: boolean;
   hasTangents: boolean;
+  /** True when the material is double sided: its edges are not holes when they are open. */
+  doubleSided: boolean;
   uvOutOfRange: boolean;
   /** Triangle indices into `positions` (local space). */
   indices: Uint32Array;
@@ -215,7 +217,8 @@ export function inspectModel(file: string): ModelInfo {
         primitives.push({
           node: index, nodeName: path, material: prim.material, triangles: indices.length / 3, vertices: pos.count,
           hasNormals: prim.attributes.NORMAL !== undefined, hasUv: prim.attributes.TEXCOORD_0 !== undefined,
-          hasTangents: prim.attributes.TANGENT !== undefined, uvOutOfRange, indices, positions: pos.data, world,
+          hasTangents: prim.attributes.TANGENT !== undefined, doubleSided: Boolean(prim.material !== undefined && json.materials?.[prim.material]?.doubleSided),
+          uvOutOfRange, indices, positions: pos.data, world,
           ...(prim.attributes.NORMAL === undefined ? {} : { normals: readAccessor(model, prim.attributes.NORMAL).data }),
         });
       }

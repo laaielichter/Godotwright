@@ -51,11 +51,9 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
 
   if (info.triangles === 0) add("model/empty-geometry", "The file holds no triangles.");
   checkRig(info, add);
-  const edgeTotals = new Map<string, EdgeStats>();
   const uvReported = new Set<string>();
   const sheet = options.archetype?.sheet === true;
-  for (const prim of info.primitives) checkPrimitive(info, prim, add, edgeTotals, uvReported, sheet);
-  reportEdges(edgeTotals, add);
+  for (const prims of primitivesByNode(info.primitives)) checkNode(info, prims, add, uvReported, sheet);
   checkTextures(info, options, add);
   checkSymmetry(info, add);
   if (options.contract) findings.push(...checkContract(info, options.contract));
@@ -100,54 +98,55 @@ interface EdgeStats {
   triangles: number;
   nonManifold: number;
   degenerate: number;
-  /** True when every primitive of the node uses a double-sided material. */
-  doubleSided: boolean;
 }
 
-function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: Map<string, EdgeStats>, uvReported: Set<string>, sheet: boolean): void {
-  const mat = prim.material === undefined ? undefined : info.materials[prim.material];
-  if (!prim.hasNormals) add("model/missing-normals", "The mesh has no NORMAL data.", prim.nodeName);
-  if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, prim.nodeName);
-  if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, prim.nodeName);
-  // UVs outside 0..1 only matter when a texture is sampled with them.
-  if (prim.uvOutOfRange && mat?.textured && !uvReported.has(prim.nodeName)) {
-    uvReported.add(prim.nodeName);
-    add("model/uv-out-of-range", "Some UVs lie outside 0..1.", prim.nodeName);
+/** The primitives of each node, in file order. A mesh's parts join each other, so they are checked together. */
+function primitivesByNode(prims: PrimitiveInfo[]): PrimitiveInfo[][] {
+  const groups = new Map<number, PrimitiveInfo[]>();
+  for (const prim of prims) {
+    const group = groups.get(prim.node);
+    if (group) group.push(prim);
+    else groups.set(prim.node, [prim]);
   }
+  return [...groups.values()];
+}
 
-  const e = analyseEdges(prim, sheet);
-  const sum = totals.get(prim.nodeName) ?? { edges: 0, open: 0, flipped: 0, againstNormals: 0, triangles: 0, nonManifold: 0, degenerate: 0, doubleSided: true };
-  sum.edges += e.edges;
-  sum.triangles += prim.triangles;
-  if (prim.normals) sum.againstNormals += trianglesAgainstNormals(prim);
-  else sum.flipped += e.flipped;
-  sum.nonManifold += e.nonManifold;
-  sum.degenerate += e.degenerate;
-  if (!mat?.doubleSided) {
-    sum.doubleSided = false;
-    sum.open += e.open;
+/** Checks one node: its primitives are welded together, so a closed mesh split by material is still closed. */
+function checkNode(info: ModelInfo, prims: PrimitiveInfo[], add: Add, uvReported: Set<string>, sheet: boolean): void {
+  const node = prims[0]?.nodeName ?? "";
+  if (prims.some((p) => !p.hasNormals)) add("model/missing-normals", "The mesh has no NORMAL data.", node);
+  for (const prim of prims) {
+    const mat = prim.material === undefined ? undefined : info.materials[prim.material];
+    if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, node);
+    if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, node);
+    // UVs outside 0..1 only matter when a texture is sampled with them.
+    if (prim.uvOutOfRange && mat?.textured && !uvReported.has(node)) {
+      uvReported.add(node);
+      add("model/uv-out-of-range", "Some UVs lie outside 0..1.", node);
+    }
   }
-  totals.set(prim.nodeName, sum);
+  const edges = analyseEdges(prims, sheet);
+  const triangles = prims.reduce((n, p) => n + p.triangles, 0);
+  const againstNormals = prims.reduce((n, p) => n + trianglesAgainstNormals(p), 0);
+  reportEdges(node, { ...edges, triangles, againstNormals }, add);
 }
 
 /** One finding per node and rule; the severity follows how much of the surface is affected. */
-function reportEdges(totals: Map<string, EdgeStats>, add: Add): void {
+function reportEdges(node: string, e: EdgeStats, add: Add): void {
   const pct = (n: number, of: number) => `${((n / Math.max(of, 1)) * 100).toFixed(2)}%`;
-  for (const [node, e] of totals) {
-    const severity = (ratio: number): ModelSeverity => (ratio >= 0.01 ? "error" : ratio >= 0.0005 ? "warning" : "info");
-    if (e.againstNormals > 0) {
-      add("model/flipped-faces", `${e.againstNormals.toLocaleString("en-US")} triangles (${pct(e.againstNormals, e.triangles)}) face against their own normals, so they light wrong and show as backfaces.`, node, severity(e.againstNormals / Math.max(e.triangles, 1)));
-    }
-    if (e.flipped > 0) {
-      add("model/flipped-faces", `${e.flipped.toLocaleString("en-US")} edges (${pct(e.flipped, e.edges)}) join triangles that face opposite ways (the mesh has no normals to compare with).`, node, severity(e.flipped / Math.max(e.edges, 1)));
-    }
-    if (e.open > 0) {
-      const ratio = e.open / Math.max(e.edges, 1);
-      add("model/open-edges", `${e.open.toLocaleString("en-US")} open edges (${pct(e.open, e.edges)}) on a single-sided surface; seen from behind it is see-through.`, node, ratio >= 0.01 ? "warning" : "info");
-    }
-    if (e.nonManifold > 0) add("model/non-manifold", `${e.nonManifold.toLocaleString("en-US")} edges are shared by more than two triangles.`, node);
-    if (e.degenerate > 0) add("model/degenerate-triangles", `${e.degenerate.toLocaleString("en-US")} triangles have no area.`, node);
+  const severity = (ratio: number): ModelSeverity => (ratio >= 0.01 ? "error" : ratio >= 0.0005 ? "warning" : "info");
+  if (e.againstNormals > 0) {
+    add("model/flipped-faces", `${e.againstNormals.toLocaleString("en-US")} triangles (${pct(e.againstNormals, e.triangles)}) face against their own normals, so they light wrong and show as backfaces.`, node, severity(e.againstNormals / Math.max(e.triangles, 1)));
   }
+  if (e.flipped > 0) {
+    add("model/flipped-faces", `${e.flipped.toLocaleString("en-US")} edges (${pct(e.flipped, e.edges)}) join triangles that face opposite ways (the mesh has no normals to compare with).`, node, severity(e.flipped / Math.max(e.edges, 1)));
+  }
+  if (e.open > 0) {
+    const ratio = e.open / Math.max(e.edges, 1);
+    add("model/open-edges", `${e.open.toLocaleString("en-US")} open edges (${pct(e.open, e.edges)}) on a single-sided surface; seen from behind it is see-through.`, node, ratio >= 0.01 ? "warning" : "info");
+  }
+  if (e.nonManifold > 0) add("model/non-manifold", `${e.nonManifold.toLocaleString("en-US")} edges are shared by more than two triangles.`, node);
+  if (e.degenerate > 0) add("model/degenerate-triangles", `${e.degenerate.toLocaleString("en-US")} triangles have no area.`, node);
 }
 
 /** Counts triangles whose geometric normal points against the sum of their vertex normals. */
@@ -169,56 +168,65 @@ export function trianglesAgainstNormals(prim: PrimitiveInfo): number {
 }
 
 /**
- * Welds vertices by position and counts edge problems for one primitive.
+ * Welds vertices by position across the primitives of one node and counts edge problems.
  * With `sheet`, an open edge that lies on the outer border of the surface (along x or z) is expected and not counted:
  * a terrain tile or a water plane ends there, and its neighbour continues it.
  */
-export function analyseEdges(prim: PrimitiveInfo, sheet = false): { edges: number; open: number; flipped: number; nonManifold: number; degenerate: number } {
+export function analyseEdges(prims: PrimitiveInfo[], sheet = false): { edges: number; open: number; flipped: number; nonManifold: number; degenerate: number } {
   const weld = new Map<string, number>();
-  const ids = new Uint32Array(prim.vertices);
   /** x and z of each welded vertex, to tell border edges from holes. */
   const gx: number[] = [], gz: number[] = [];
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (let v = 0; v < prim.vertices; v++) {
-    const x = at(prim.positions, v * 3), z = at(prim.positions, v * 3 + 2);
-    const key = `${Math.round(x * 1e5)},${Math.round(at(prim.positions, v * 3 + 1) * 1e5)},${Math.round(z * 1e5)}`;
-    let id = weld.get(key);
-    if (id === undefined) { id = weld.size; weld.set(key, id); gx.push(x); gz.push(z); }
-    ids[v] = id;
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (z < minZ) minZ = z;
-    if (z > maxZ) maxZ = z;
-  }
+  // Every primitive of a node shares the node's transform, so their local positions can be welded together.
+  const ids = prims.map((prim) => {
+    const id = new Uint32Array(prim.vertices);
+    for (let v = 0; v < prim.vertices; v++) {
+      const x = at(prim.positions, v * 3), z = at(prim.positions, v * 3 + 2);
+      const key = `${Math.round(x * 1e5)},${Math.round(at(prim.positions, v * 3 + 1) * 1e5)},${Math.round(z * 1e5)}`;
+      let w = weld.get(key);
+      if (w === undefined) { w = weld.size; weld.set(key, w); gx.push(x); gz.push(z); }
+      id[v] = w;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z;
+      if (z > maxZ) maxZ = z;
+    }
+    return id;
+  });
   const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-4;
   const onBorder = (a: number, b: number): boolean => {
     const ax = at(gx, a), bx = at(gx, b), az = at(gz, a), bz = at(gz, b);
     return (near(ax, minX) && near(bx, minX)) || (near(ax, maxX) && near(bx, maxX)) || (near(az, minZ) && near(bz, minZ)) || (near(az, maxZ) && near(bz, maxZ));
   };
-  // value = uses * 4 + direction mask (1: low->high, 2: high->low)
+  // value = uses * 16 + flags: 1 low->high, 2 high->low (the direction), 4 a use from a double-sided primitive, 8 a use from one with normals
   const edges = new Map<number, number>();
   const stride = 67108864;
   let degenerate = 0;
-  for (let t = 0; t < prim.indices.length; t += 3) {
-    const a = at(ids, at(prim.indices, t));
-    const b = at(ids, at(prim.indices, t + 1));
-    const c = at(ids, at(prim.indices, t + 2));
-    if (a === b || b === c || a === c) { degenerate++; continue; }
-    for (const [from, to] of [[a, b], [b, c], [c, a]] as const) {
-      const key = Math.min(from, to) * stride + Math.max(from, to);
-      const dir = from < to ? 1 : 2;
-      const old = edges.get(key) ?? 0;
-      edges.set(key, (Math.floor(old / 4) + 1) * 4 + ((old % 4) | dir));
+  prims.forEach((prim, p) => {
+    const id = ids[p] as Uint32Array;
+    const flags = (prim.doubleSided ? 4 : 0) | (prim.hasNormals ? 8 : 0);
+    for (let t = 0; t < prim.indices.length; t += 3) {
+      const a = at(id, at(prim.indices, t));
+      const b = at(id, at(prim.indices, t + 1));
+      const c = at(id, at(prim.indices, t + 2));
+      if (a === b || b === c || a === c) { degenerate++; continue; }
+      for (const [from, to] of [[a, b], [b, c], [c, a]] as const) {
+        const key = Math.min(from, to) * stride + Math.max(from, to);
+        const dir = from < to ? 1 : 2;
+        const old = edges.get(key) ?? 0;
+        edges.set(key, (Math.floor(old / 16) + 1) * 16 + ((old % 16) | flags | dir));
+      }
     }
-  }
+  });
   let open = 0, flipped = 0, nonManifold = 0;
   for (const [key, value] of edges) {
-    const uses = Math.floor(value / 4);
+    const uses = Math.floor(value / 16);
     const mask = value % 4;
     if (uses === 1) {
-      if (!(sheet && onBorder(Math.floor(key / stride), key % stride))) open++;
+      // Only a single-sided surface has holes: seen from behind, a double-sided one is still closed.
+      if ((value & 4) === 0 && !(sheet && onBorder(Math.floor(key / stride), key % stride))) open++;
     }
-    else if (uses === 2 && mask !== 3) flipped++;
+    else if (uses === 2 && mask !== 3 && (value & 8) === 0) flipped++;
     else if (uses > 2) nonManifold++;
   }
   return { edges: edges.size, open, flipped, nonManifold, degenerate };
