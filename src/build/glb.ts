@@ -113,6 +113,7 @@ export function buildGlb(scene: BuildScene): Buffer {
       pbrMetallicRoughness: { baseColorFactor: m.color, metallicFactor: m.metallic, roughnessFactor: m.roughness },
       ...(m.alpha ? { alphaMode: m.alpha } : {}),
       ...(m.doubleSided ? { doubleSided: true } : {}),
+      ...(m.emissive ? { emissiveFactor: m.emissive } : {}),
     });
     materialIndex.set(name, materials.length - 1);
     return materials.length - 1;

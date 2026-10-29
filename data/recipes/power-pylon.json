@@ -1,0 +1,173 @@
+{
+ "version": 1,
+ "name": "power-pylon",
+ "archetype": "infrastructure.power-pylon",
+ "description": "A lattice transmission pylon: four tapering legs braced by square frames at regular heights, three crossarms near the top with a hanging insulator at each end and a peak.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 30,
+   "min": 15,
+   "max": 70,
+   "description": "Height of the pylon (the peak) in metres."
+  }
+ ],
+ "materials": {
+  "pylon_steel": {
+   "color": [
+    0.55,
+    0.58,
+    0.6
+   ],
+   "metallic": 0.8,
+   "roughness": 0.5
+  },
+  "insulator": {
+   "color": [
+    0.5,
+    0.6,
+    0.55
+   ],
+   "metallic": 0,
+   "roughness": 0.4
+  }
+ },
+ "nodes": [
+  {
+   "name": "Pylon",
+   "material": "pylon_steel",
+   "vars": {
+    "H": "$height",
+    "b": "$height * 0.12",
+    "t": "$height * 0.025 + 0.2",
+    "bodyH": "$height * 0.85",
+    "tilt": "deg(atan(($height * 0.12 - ($height * 0.025 + 0.2)) / ($height * 0.85)))"
+   },
+   "children": [
+    {
+     "name": "Leg_{i}",
+     "shape": "box",
+     "size": [
+      0.18,
+      "hypot($bodyH, $b - $t)",
+      0.18
+     ],
+     "at": [
+      "($b + $t) / 2",
+      "$bodyH / 2",
+      "($b + $t) / 2"
+     ],
+     "rotate": [
+      "-$tilt",
+      0,
+      "$tilt"
+     ],
+     "repeat": {
+      "count": 4,
+      "around": "y"
+     }
+    },
+    {
+     "name": "Brace_F{i}",
+     "shape": "box",
+     "size": [
+      "2 * ($b - ($b - $t) * ($i + 1) / 7)",
+      0.1,
+      0.1
+     ],
+     "at": [
+      0,
+      "$bodyH / 7",
+      "($b - ($b - $t) * ($i + 1) / 7)"
+     ],
+     "repeat": {
+      "count": 6,
+      "step": [
+       0,
+       "$bodyH / 7",
+       0
+      ]
+     },
+     "mirror": "Brace_B{i}"
+    },
+    {
+     "name": "Brace_L{i}",
+     "shape": "box",
+     "size": [
+      0.1,
+      0.1,
+      "2 * ($b - ($b - $t) * ($i + 1) / 7)"
+     ],
+     "at": [
+      "($b - ($b - $t) * ($i + 1) / 7)",
+      "$bodyH / 7",
+      0
+     ],
+     "repeat": {
+      "count": 6,
+      "step": [
+       0,
+       "$bodyH / 7",
+       0
+      ]
+     },
+     "mirror": "Brace_R{i}"
+    },
+    {
+     "name": "Crossarm_{i}",
+     "at": [
+      0,
+      "$bodyH - $i * $H * 0.07",
+      0
+     ],
+     "repeat": {
+      "count": 3,
+      "step": [
+       0,
+       0,
+       0
+      ]
+     },
+     "children": [
+      {
+       "name": "Beam",
+       "shape": "box",
+       "size": [
+        "$H * 0.28 * (1 - $i * 0.25)",
+        0.2,
+        0.2
+       ]
+      },
+      {
+       "name": "Insulator_L",
+       "shape": "cylinder",
+       "material": "insulator",
+       "radius": 0.08,
+       "height": 1.0,
+       "segments": 8,
+       "at": [
+        "$H * 0.14 * (1 - $i * 0.25) - 0.1",
+        -0.6,
+        0
+       ],
+       "mirror": "Insulator_R"
+      }
+     ]
+    },
+    {
+     "name": "Peak",
+     "shape": "cylinder",
+     "radius": 0.08,
+     "height": "$H - $bodyH",
+     "segments": 8,
+     "at": [
+      0,
+      "($H + $bodyH) / 2",
+      0
+     ]
+    }
+   ]
+  }
+ ]
+}

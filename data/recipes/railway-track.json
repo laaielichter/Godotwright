@@ -1,0 +1,104 @@
+{
+ "version": 1,
+ "name": "railway-track",
+ "archetype": "infrastructure.railway-track",
+ "description": "A length of standard-gauge railway track along z: a ballast bed, concrete sleepers every 0.6 m and two rails with their heads 1.435 m apart.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 20,
+   "min": 5,
+   "max": 50,
+   "description": "Length of the track along z in metres."
+  }
+ ],
+ "materials": {
+  "rail_steel": {
+   "color": [
+    0.5,
+    0.5,
+    0.52
+   ],
+   "metallic": 0.9,
+   "roughness": 0.45
+  },
+  "ballast": {
+   "color": [
+    0.35,
+    0.34,
+    0.32
+   ],
+   "metallic": 0,
+   "roughness": 1
+  }
+ },
+ "nodes": [
+  {
+   "name": "Track",
+   "material": "concrete",
+   "vars": {
+    "L2": "$length / 2",
+    "gauge": 1.435,
+    "ball": 0.15,
+    "slp": 0.12,
+    "railH": 0.15
+   },
+   "children": [
+    {
+     "name": "Ballast",
+     "shape": "box",
+     "material": "ballast",
+     "size": [
+      3.3,
+      "$ball",
+      "$length"
+     ],
+     "at": [
+      0,
+      "$ball / 2",
+      0
+     ]
+    },
+    {
+     "name": "Sleeper_{i}",
+     "shape": "box",
+     "size": [
+      2.6,
+      "$slp",
+      0.26
+     ],
+     "at": [
+      0,
+      "$ball + $slp / 2",
+      "-$L2 + 0.3"
+     ],
+     "repeat": {
+      "count": "floor(($length - 0.3) / 0.6)",
+      "step": [
+       0,
+       0,
+       0.6
+      ]
+     }
+    },
+    {
+     "name": "Rail_L",
+     "shape": "box",
+     "material": "rail_steel",
+     "size": [
+      0.07,
+      "$railH",
+      "$length"
+     ],
+     "at": [
+      "$gauge / 2 + 0.035",
+      "$ball + $slp + $railH / 2",
+      0
+     ],
+     "mirror": "Rail_R"
+    }
+   ]
+  }
+ ]
+}

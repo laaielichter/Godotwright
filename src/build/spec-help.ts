@@ -83,7 +83,7 @@ Shapes and their keys:
 Numbers can be expressions: "$width / 2 - 0.1", "max($a, 1) * 2", "pi", "rad(45)", "$i * 0.5" inside repeat.
 Functions: min max abs sqrt sin cos tan asin acos atan atan2 hypot floor ceil round pow rad deg clamp lerp (angles in radians; rad() and deg() convert). Variables start with $.
 Conventions: +y is up, the front of a model faces +z (Godot's Vector3.MODEL_FRONT, also the glTF convention; the model's left is then +x), the model stands on y = 0, a moving part gets its own node with its pivot at its origin
-(a wheel at its hub). Presets: plaster brick concrete asphalt roof_tile roof_slate wood frame_white glass metal rubber paint bark leaf.
+(a wheel at its hub). A custom material may also have "emissive": [r, g, b] (a lamp that glows) and "alpha": "BLEND". Presets: plaster brick concrete asphalt roof_tile roof_slate wood frame_white glass metal rubber paint bark leaf.
 
 Example (a car); save it, then: godotwright model build --spec car.json --set width=1.9 -o car.glb
 `;
