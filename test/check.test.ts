@@ -1,13 +1,13 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkProject } from "../src/check/check.js";
+import { checkProject, runOutput } from "../src/check/check.js";
 import { findGodot, GodotNotFoundError } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
 
 /** A stand-in for the Godot binary that replays canned output. */
-function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string }): string {
+function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string; runOut?: string }): string {
   const dir = mkdtempSync(join(tmpdir(), "fake-godot-"));
   const bin = join(dir, "godot");
   const script = `#!/usr/bin/env node
@@ -27,7 +27,7 @@ if (scriptAt >= 0) {
   if (b.finish !== false) process.stderr.write("\\nGODOTWRIGHT_DONE 3 1\\n");
   process.exit(0);
 }
-if (args.includes("--quit-after")) { process.stderr.write(b.runLog ?? ""); process.exit(0); }
+if (args.includes("--quit-after")) { process.stdout.write(b.runOut ?? ""); process.stderr.write(b.runLog ?? ""); process.exit(0); }
 process.exit(0);
 `;
   writeFileSync(bin, script);
@@ -166,5 +166,32 @@ describe("godotwright check", () => {
     expect(output).toContain("1 error, 1 warning (Godot 4.7.2.stable.official.fake, 3 scripts, 1 scenes)");
     expect(process.exitCode).toBe(1);
     process.exitCode = previous;
+  });
+});
+
+describe("running a scene and reading its output", () => {
+  it("runs the scene asked for, returns what the game printed without engine noise, and keeps the tail", async () => {
+    const root = copyFixture("demo");
+    const godot = fakeGodot({ runOut: ["Godot Engine v4.7.2.stable.official.fake - https://godotengine.org", "", ...Array.from({ length: 250 }, (_, i) => `frame ${i}`), "score 3"].join("\n") });
+    const result = await checkProject(root, { godot, scene: "scenes/Main.tscn" });
+    const calls = readFileSync(join(godot, "..", "calls.log"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as string[]);
+    const run = calls.find((c) => c.includes("--quit-after"))!;
+    expect(run.slice(run.indexOf("--quit-after"))).toEqual(["--quit-after", "120", "res://scenes/Main.tscn"]);
+    expect(result.output).toContain("score 3");
+    expect(result.output).toContain("(first 51 lines left out)");
+    expect(result.output).not.toContain("Godot Engine v");
+    expect(result.output!.split("\n").length).toBe(201);
+    expect(runOutput("")).toBe("");
+  });
+
+  it("shows the output from the CLI with --scene, and not without --run", async () => {
+    const root = copyFixture("demo");
+    const godot = fakeGodot({ runOut: "hello from _ready\n" });
+    const run = await runCli(["check", root, "--godot", godot, "--scene", "res://scenes/Main.tscn"]);
+    expect(run.output).toContain("--- output of the run ---\nhello from _ready\n---");
+    const plain = await runCli(["check", root, "--godot", godot]);
+    expect(plain.output).not.toContain("output of the run");
+    const json = JSON.parse((await runCli(["check", root, "--godot", godot, "--run", "10", "--json"])).output) as { output?: string };
+    expect(json.output).toBe("hello from _ready");
   });
 });
