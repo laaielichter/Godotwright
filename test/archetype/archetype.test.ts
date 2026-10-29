@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { identify, stem, tokens } from "../../src/archetype/identify.js";
-import { ArchetypeLibrary, loadLibrary, validateArchetypes } from "../../src/archetype/library.js";
+import { ArchetypeLibrary, loadLibrary, SHARED_ALIASES, validateArchetypes } from "../../src/archetype/library.js";
 import type { Archetype } from "../../src/archetype/types.js";
 import { runCli } from "../helpers.js";
 
@@ -240,5 +240,30 @@ describe("model identify and model archetypes", () => {
     const one = await runCli(["model", "archetypes", "prop.shipping-container"]);
     expect(one.output).toContain("class A: ISO 668");
     expect((await runCli(["model", "archetypes", "no.such"])).exitCode).toBe(1);
+  });
+});
+
+describe("identify reads a letter-and-number code as one word", () => {
+  it("reads letter-and-number codes such as F-16 as one word, not as a bare number", () => {
+    expect(tokens("F-16 and su-27")).toEqual(["f16", "su27"]);
+    expect(best("F-16")).toBe("aircraft.fixed-wing.fighter");
+    expect(best("a 15 metre boat")).toBe("vessel.boat");
+  });
+});
+
+describe("the alias rules compare words the way identify does", () => {
+  const twin = (id: string, alias: string): Archetype => ({ id: `thing.${id}`, extends: "thing", name: id, description: "d", aliases: [alias] });
+
+  it("treats a singular and a plural of one word as the same alias", () => {
+    expect(validateArchetypes([root, child({ aliases: ["widget"] }), twin("gadget", "widgets")]).join("\n")).toMatch(/"widgets" is also used by thing.widget/);
+  });
+
+  it("shares only the aliases that really name two things", () => {
+    expect(validateArchetypes([root, twin("a", "windmolen"), twin("b", "windmolen")])).toEqual([]);
+    expect(validateArchetypes([root, twin("a", "wall"), twin("b", "wall")]).join("\n")).toMatch(/"wall" is also used by/);
+  });
+
+  it("keeps the shared aliases to the ones that really have two meanings", () => {
+    expect([...SHARED_ALIASES].sort()).toEqual(["bike", "motor", "windmolen"]);
   });
 });
