@@ -8,6 +8,10 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`rename`** (MCP `godot_rename`): rename a function, signal, variable, class, autoload, input action, group or node
+  everywhere, or move a `res://` file with its `.uid` and `.import` files and every reference. Dry run first, refuses a
+  name that is taken, and reports the review errors before and after.
+
 - **`usages`** (MCP `godot_usages`): find every place a function, signal, variable, class, autoload, input action, group,
   node or `res://` path / `uid://` is used, offline and without the editor: GDScript code (not comments), names Godot looks
   up in strings (connect, emit_signal, actions, groups, get_node, load), scene connections, node names and groups, project

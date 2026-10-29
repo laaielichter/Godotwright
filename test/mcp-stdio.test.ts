@@ -24,7 +24,7 @@ describe.skipIf(!existsSync(CLI))("godotwright mcp over stdio", () => {
     try {
       expect(client.getServerVersion()?.name).toBe("godotwright");
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(16);
+      expect(tools).toHaveLength(17);
       const result = (await client.callTool({ name: "godot_review", arguments: {} })) as { content: { text: string }[] };
       expect(result.content[0]!.text).toContain("overall 100/100");
     } finally {

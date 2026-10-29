@@ -12,6 +12,7 @@ import { formatLookup, formatSearch } from "../api/format.js";
 import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
 import { findUsages, formatUsages } from "../usages/usages.js";
+import { RenameError, formatRename, renameInProject } from "../rename/rename.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import { parseFindingLine, recordFeedback } from "../learn/learn.js";
 import { allKinds } from "../build/generators/index.js";
@@ -30,7 +31,7 @@ import { formatFinding } from "../review/format.js";
 import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
-import { scanProject } from "../scan/scan.js";
+import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
 
 export type Tier = "cheap" | "premium";
@@ -88,6 +89,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
       "- godot_checklist lists every AAA rule with its fix.",
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
+      "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
@@ -233,6 +235,32 @@ export function createServer(options: ServerOptions = {}): McpServer {
       annotations: readOnly,
     },
     async ({ name, path }) => guard(() => text(formatUsages(findUsages(where(path), name, { base: options.base, baseFiles: options.baseFiles }), profile.findings * 4))),
+  );
+
+  server.registerTool(
+    "godot_rename",
+    {
+      title: "Rename everywhere",
+      description:
+        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. Without `write` it returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after. Refuses when the new name is already taken.",
+      inputSchema: {
+        from: z.string().describe("the current name, or a res:// path"),
+        to: z.string().describe("the new name, or the new res:// path"),
+        write: z.boolean().optional().describe("apply the rename (default false: show the plan only)"),
+        path: pathParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ from, to, write, path }) => {
+      try {
+        const plan = renameInProject(where(path), from, to, { write: write === true });
+        const body = formatRename(plan);
+        return plan.review && plan.review.after > plan.review.before ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof RenameError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
   );
 
   server.registerTool(

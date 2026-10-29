@@ -55,7 +55,7 @@ const TREE_SIGNALS: Record<string, string> = { idle_frame: "process_frame" };
  * True at every index of `line` that is code: not inside a string or a comment.
  * `state.triple` carries an open triple-quoted string across lines.
  */
-function codeMask(line: string, state: { triple?: string }): boolean[] {
+export function codeMask(line: string, state: { triple?: string }): boolean[] {
   const mask = new Array<boolean>(line.length).fill(false);
   let i = 0;
   while (i < line.length) {
