@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>49 ready-made 3D models for Godot, built from code | Godotwright</title>
-<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 49 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
+<title>53 ready-made 3D models for Godot, built from code | Godotwright</title>
+<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 53 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/models.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
-<meta property="og:title" content="49 ready-made 3D models for Godot, built from code">
+<meta property="og:title" content="53 ready-made 3D models for Godot, built from code">
 <meta property="og:description" content="Parametric .glb models a coding agent can build, view and check: vehicles, aircraft, ships, buildings, plants, terrain. MIT, no Blender.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/models.html">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="49 ready-made 3D models for Godot, built from code">
+<meta name="twitter:title" content="53 ready-made 3D models for Godot, built from code">
 <meta name="twitter:description" content="Parametric .glb models a coding agent can build, view and check. MIT, no Blender.">
 <meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -218,6 +218,7 @@ footer a { color: var(--muted); }
       <a href="#roads-rails-and-bridges">Roads, rails and bridges</a>
       <a href="#plants">Plants</a>
       <a href="#terrain-and-water">Terrain and water</a>
+      <a href="#creatures">Creatures</a>
       <a href="#spacecraft">Spacecraft</a>
       <a href="#props">Props</a>
       <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
@@ -228,7 +229,7 @@ footer a { color: var(--muted); }
 <main>
   <div class="wrap hero">
     <p class="eyebrow">3D models from code</p>
-    <h1>49 ready-made models for <em>Godot&nbsp;4</em>.</h1>
+    <h1>53 ready-made models for <em>Godot&nbsp;4</em>.</h1>
     <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with UVs, tangents, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/laaielichter/Godotwright#readme">Install in 1 minute</a>
@@ -666,6 +667,38 @@ footer a { color: var(--muted); }
     </div>
   </section>
 
+  <section id="creatures">
+    <div class="wrap">
+      <h2>Creatures</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/dragon.jpg" width="400" height="300" loading="lazy" alt="Dragon: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Dragon</h3>
+            <p>A four-legged dragon: a long body, a neck rising to a horned head with a hinged jaw, two wings hinged at the shoulders, four legs and a long tapering tail; every moving part a node with its pivot at its joint.</p>
+            <code>npx -y godotwright model build dragon -o dragon.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/horse.jpg" width="400" height="300" loading="lazy" alt="Horse: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Horse</h3>
+            <p>A horse-shaped four-legged animal: a barrel body, a neck leaning forward, a head with ears, four legs with hooves and a hanging tail; every leg, the head and the tail a node with its pivot at the joint.</p>
+            <code>npx -y godotwright model build horse -o horse.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/humanoid.jpg" width="400" height="300" loading="lazy" alt="Humanoid: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Humanoid</h3>
+            <p>A person-shaped character in a T-pose for rigging: torso, neck and head, arms straight out with hands, legs with feet; every limb a node with its pivot at the joint (shoulder, hip, neck).</p>
+            <code>npx -y godotwright model build humanoid -o humanoid.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section id="spacecraft">
     <div class="wrap">
       <h2>Spacecraft</h2>
@@ -684,6 +717,14 @@ footer a { color: var(--muted); }
             <h3>Satellite</h3>
             <p>A communications satellite: a box-shaped bus with gold foil, a solar panel wing on each side that hinges at the bus, and a dish antenna facing +Z.</p>
             <code>npx -y godotwright model build satellite -o satellite.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/spaceship.jpg" width="400" height="300" loading="lazy" alt="Spaceship: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Spaceship</h3>
+            <p>A small science-fiction fighter: a tapered hull with a glass cockpit at the front (+Z), two glowing engines at the back, swept wings with a cannon at each tip, and three landing legs it stands on (y = 0), hinged at the hull.</p>
+            <code>npx -y godotwright model build spaceship -o spaceship.glb</code>
           </figcaption>
         </figure>
       </div>

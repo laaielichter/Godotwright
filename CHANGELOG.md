@@ -25,10 +25,11 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
   is: parts, pivots, typical size with its source and confidence, variants, what to anticipate; English and Dutch),
   `model spec` and `model build` (a JSON tree of named parts to a clean `.glb`, deterministic), `model kinds`,
   `model recipes` (also `model recipes <kind>` to print a recipe's spec), `model view` (front, side and top views as text, a table of the parts, parts that do not touch), and `model brief` (one page for small models before they build: the kind to start from, parts, size, rules, mistakes, the order of tools and a short spec cheat sheet; MCP tool `godot_model_brief`).
-- **49 ready-made, parametric kinds**: house, car, truck, bus, motorcycle, bicycle, tractor, tank, train, airliner, light
+- **53 ready-made, parametric kinds**: house, car, truck, bus, motorcycle, bicycle, tractor, tank, train, airliner, light
   aircraft, fighter, helicopter, drone, ship, boat, sailboat, piston and jet engine, wind turbine, barn, tower, church,
   windmill, apartment, bridge, road, railway track, street lamp, fence, power pylon, trees, palm, bush, grass, flower,
-  crate, barrel, chair, table, shipping container, campfire, rowing boat, rocket, satellite, castle, and open-world
+  crate, barrel, chair, table, shipping container, campfire, rowing boat, rocket, satellite, castle, humanoid, horse, dragon,
+  spaceship, and open-world
   terrain and sea.
 - **Terrain** with plains, hills, mountains or an island, tiles that continue each other exactly, an optional lake and an
   optional river that always runs downhill, and a water plane at sea level.

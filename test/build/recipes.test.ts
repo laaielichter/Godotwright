@@ -62,7 +62,7 @@ describe("ring and offset in the spec language", () => {
 describe("the recipes", () => {
   it("are listed with the built-in kinds, with parameters and an archetype", () => {
     const kinds = allKinds();
-    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower", "crate", "barrel", "chair", "table", "campfire", "rowing-boat", "rocket", "satellite", "castle"]));
+    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower", "crate", "barrel", "chair", "table", "campfire", "rowing-boat", "rocket", "satellite", "castle", "humanoid", "horse", "dragon", "spaceship"]));
     for (const r of recipes) {
       expect(r.archetype, r.kind).toBeDefined();
       expect(library.get(r.archetype!), r.kind).toBeDefined();
@@ -126,6 +126,6 @@ describe("the recipes", () => {
     const kinds = await runCli(["model", "kinds"]);
     expect(kinds.output).toContain("tractor:");
     expect(kinds.output).toContain("rearWheelRadius = 0.85");
-    expect((await runCli(["model", "build", "starfighter"])).exitCode).toBe(1);
+    expect((await runCli(["model", "build", "unicorn"])).exitCode).toBe(1);
   });
 });
