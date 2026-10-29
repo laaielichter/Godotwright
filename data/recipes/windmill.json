@@ -1,0 +1,215 @@
+{
+ "version": 1,
+ "name": "windmill",
+ "archetype": "building.windmill",
+ "description": "A traditional Dutch tower mill: a tapering eight-sided brick tower with a gallery and a door, a domed cap that turns about the tower axis, and four sails on a slightly tilted axle that spin about their hub.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 18,
+   "min": 8,
+   "max": 40,
+   "description": "Height of the tower (to the underside of the cap) in metres."
+  },
+  {
+   "name": "baseRadius",
+   "type": "number",
+   "default": 4.2,
+   "min": 3,
+   "max": 7,
+   "description": "Radius of the tower at the ground."
+  },
+  {
+   "name": "sailLength",
+   "type": "number",
+   "default": 10,
+   "min": 6,
+   "max": 20,
+   "description": "Length of each sail from the hub."
+  }
+ ],
+ "materials": {
+  "mill_brick": {
+   "color": [
+    0.55,
+    0.3,
+    0.22
+   ],
+   "metallic": 0,
+   "roughness": 0.9
+  },
+  "mill_cap": {
+   "color": [
+    0.18,
+    0.18,
+    0.2
+   ],
+   "metallic": 0,
+   "roughness": 0.8
+  }
+ },
+ "nodes": [
+  {
+   "name": "Windmill",
+   "material": "mill_brick",
+   "vars": {
+    "H": "$height",
+    "Rb": "$baseRadius",
+    "Rt": "$baseRadius * 0.6",
+    "capH": "$baseRadius * 0.55",
+    "S": "$sailLength"
+   },
+   "children": [
+    {
+     "name": "Tower",
+     "shape": "lathe",
+     "segments": 8,
+     "rotate": [
+      0,
+      22.5,
+      0
+     ],
+     "profile": [
+      [
+       "$Rb",
+       0
+      ],
+      [
+       "$Rt",
+       "$H"
+      ]
+     ]
+    },
+    {
+     "name": "Gallery",
+     "shape": "cylinder",
+     "material": "wood",
+     "radius": "$Rb * 0.85 + 1.3",
+     "height": 0.18,
+     "segments": 16,
+     "at": [
+      0,
+      "$H * 0.3",
+      0
+     ]
+    },
+    {
+     "name": "Door",
+     "shape": "box",
+     "material": "wood",
+     "size": [
+      1.2,
+      2.2,
+      0.12
+     ],
+     "at": [
+      0,
+      1.1,
+      "$Rb * 0.9239 - 0.01"
+     ]
+    },
+    {
+     "name": "Cap",
+     "shape": "lathe",
+     "material": "mill_cap",
+     "segments": 16,
+     "at": [
+      0,
+      "$H",
+      0
+     ],
+     "profile": [
+      [
+       "$Rt * 1.1",
+       0
+      ],
+      [
+       "$Rt * 1.1",
+       "$capH * 0.35"
+      ],
+      [
+       "$Rt * 0.8",
+       "$capH * 0.75"
+      ],
+      [
+       "$Rt * 0.3",
+       "$capH"
+      ],
+      [
+       0.1,
+       "$capH * 1.05"
+      ]
+     ]
+    },
+    {
+     "name": "Sails",
+     "at": [
+      0,
+      "$H + $capH * 0.45",
+      "$Rt * 1.1 + 0.3"
+     ],
+     "rotate": [
+      -5,
+      0,
+      0
+     ],
+     "children": [
+      {
+       "name": "Axle",
+       "shape": "cylinder",
+       "material": "wood",
+       "rotate": [
+        90,
+        0,
+        0
+       ],
+       "radius": 0.2,
+       "height": 1.2,
+       "segments": 10
+      },
+      {
+       "name": "Vane_{i}",
+       "repeat": {
+        "count": 4,
+        "around": "z"
+       },
+       "children": [
+        {
+         "name": "Stock",
+         "shape": "box",
+         "material": "wood",
+         "size": [
+          0.3,
+          "$S",
+          0.2
+         ],
+         "offset": [
+          0,
+          "$S / 2",
+          0.3
+         ]
+        },
+        {
+         "name": "Lattice",
+         "shape": "box",
+         "material": "frame_white",
+         "size": [
+          "$S * 0.2",
+          "$S * 0.75",
+          0.06
+         ],
+         "offset": [
+          "$S * 0.1 + 0.15",
+          "$S * 0.55",
+          0.3
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

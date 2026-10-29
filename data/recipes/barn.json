@@ -1,0 +1,152 @@
+{
+ "version": 1,
+ "name": "barn",
+ "archetype": "building.barn",
+ "description": "A farm barn: a long box with a gable roof, a big double door in the +Z gable end, a hayloft hatch above it and a row of small windows along both long sides.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 18,
+   "min": 10,
+   "max": 40,
+   "description": "Length along z in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 10,
+   "min": 8,
+   "max": 25,
+   "description": "Width along x in metres."
+  },
+  {
+   "name": "wallHeight",
+   "type": "number",
+   "default": 4.5,
+   "min": 3,
+   "max": 8,
+   "description": "Height of the side walls."
+  },
+  {
+   "name": "roofRise",
+   "type": "number",
+   "default": 3.5,
+   "min": 2,
+   "max": 7,
+   "description": "Height of the roof ridge above the walls."
+  }
+ ],
+ "materials": {
+  "barn_wood": {
+   "color": [
+    0.45,
+    0.2,
+    0.15
+   ],
+   "metallic": 0,
+   "roughness": 0.85
+  },
+  "barn_dark": {
+   "color": [
+    0.12,
+    0.09,
+    0.07
+   ],
+   "metallic": 0,
+   "roughness": 0.9
+  }
+ },
+ "nodes": [
+  {
+   "name": "Barn",
+   "material": "barn_wood",
+   "vars": {
+    "L2": "$length / 2",
+    "W2": "$width / 2"
+   },
+   "children": [
+    {
+     "name": "Walls",
+     "shape": "box",
+     "size": [
+      "$width",
+      "$wallHeight",
+      "$length"
+     ],
+     "at": [
+      0,
+      "$wallHeight / 2",
+      0
+     ]
+    },
+    {
+     "name": "Roof",
+     "shape": "roof",
+     "material": "roof_slate",
+     "x0": "-$W2 - 0.4",
+     "x1": "$W2 + 0.4",
+     "z0": "-$L2 - 0.4",
+     "z1": "$L2 + 0.4",
+     "y": "$wallHeight",
+     "rise": "$roofRise",
+     "kind": "gable"
+    },
+    {
+     "name": "Door",
+     "shape": "box",
+     "material": "barn_dark",
+     "size": [
+      "min($width * 0.5, 4.5)",
+      "min($wallHeight * 0.8, 3.6)",
+      0.12
+     ],
+     "at": [
+      0,
+      "min($wallHeight * 0.8, 3.6) / 2",
+      "$L2 + 0.04"
+     ]
+    },
+    {
+     "name": "Hatch",
+     "shape": "box",
+     "material": "barn_dark",
+     "size": [
+      1.2,
+      1.2,
+      0.1
+     ],
+     "at": [
+      0,
+      "$wallHeight + $roofRise * 0.35",
+      "$L2 + 0.1"
+     ]
+    },
+    {
+     "name": "Window_L{i}",
+     "shape": "box",
+     "material": "barn_dark",
+     "size": [
+      0.1,
+      0.6,
+      0.8
+     ],
+     "at": [
+      "$W2 + 0.02",
+      "$wallHeight * 0.65",
+      "-$L2 + 2.0"
+     ],
+     "repeat": {
+      "count": "floor(($length - 3) / 3.5)",
+      "step": [
+       0,
+       0,
+       3.5
+      ]
+     },
+     "mirror": "Window_R{i}"
+    }
+   ]
+  }
+ ]
+}

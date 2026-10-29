@@ -1,0 +1,154 @@
+{
+ "version": 1,
+ "name": "apartment",
+ "archetype": "building.apartment",
+ "description": "A block of flats: a long rectangular block with a flat roof and parapet, a glazed band of windows on every floor, a glass entrance with a canopy on the +Z side and a stair core that rises above the roof.",
+ "params": [
+  {
+   "name": "floors",
+   "type": "integer",
+   "default": 5,
+   "min": 2,
+   "max": 15,
+   "description": "Number of floors."
+  },
+  {
+   "name": "length",
+   "type": "number",
+   "default": 30,
+   "min": 12,
+   "max": 80,
+   "description": "Length along x in metres."
+  },
+  {
+   "name": "depth",
+   "type": "number",
+   "default": 12,
+   "min": 10,
+   "max": 20,
+   "description": "Depth along z in metres."
+  }
+ ],
+ "materials": {
+  "apt_brick": {
+   "color": [
+    0.65,
+    0.4,
+    0.3
+   ],
+   "metallic": 0,
+   "roughness": 0.9
+  }
+ },
+ "nodes": [
+  {
+   "name": "Apartment",
+   "material": "apt_brick",
+   "vars": {
+    "fh": 3.0,
+    "H": "$floors * 3.0",
+    "L2": "$length / 2",
+    "D2": "$depth / 2"
+   },
+   "children": [
+    {
+     "name": "Walls",
+     "shape": "box",
+     "size": [
+      "$length",
+      "$H",
+      "$depth"
+     ],
+     "at": [
+      0,
+      "$H / 2",
+      0
+     ]
+    },
+    {
+     "name": "Roof",
+     "shape": "box",
+     "material": "concrete",
+     "size": [
+      "$length + 0.4",
+      0.3,
+      "$depth + 0.4"
+     ],
+     "at": [
+      0,
+      "$H + 0.15",
+      0
+     ]
+    },
+    {
+     "name": "Windows_{i}",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$length * 0.9",
+      1.3,
+      "$depth + 0.08"
+     ],
+     "at": [
+      0,
+      "$fh * 0.65 + 0.6",
+      0
+     ],
+     "repeat": {
+      "count": "$floors",
+      "step": [
+       0,
+       "$fh",
+       0
+      ]
+     }
+    },
+    {
+     "name": "Core",
+     "shape": "box",
+     "material": "concrete",
+     "size": [
+      3.5,
+      2.8,
+      3.5
+     ],
+     "at": [
+      0,
+      "$H + 0.3 + 1.4",
+      0
+     ]
+    },
+    {
+     "name": "Entrance",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      3.0,
+      2.4,
+      0.15
+     ],
+     "at": [
+      0,
+      1.2,
+      "$D2 + 0.05"
+     ]
+    },
+    {
+     "name": "Canopy",
+     "shape": "box",
+     "material": "concrete",
+     "size": [
+      4.0,
+      0.2,
+      1.6
+     ],
+     "at": [
+      0,
+      2.7,
+      "$D2 + 0.8"
+     ]
+    }
+   ]
+  }
+ ]
+}

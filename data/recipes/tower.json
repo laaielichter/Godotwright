@@ -1,0 +1,180 @@
+{
+ "version": 1,
+ "name": "tower",
+ "archetype": "building.tower",
+ "description": "A high-rise office tower: a wide podium with a glass entrance on the +Z side, a tall shaft with a band of glass at every floor, a setback upper block and a crown with an antenna.",
+ "params": [
+  {
+   "name": "width",
+   "type": "number",
+   "default": 25,
+   "min": 15,
+   "max": 60,
+   "description": "Width of the shaft (square footprint) in metres."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 100,
+   "min": 30,
+   "max": 300,
+   "description": "Height of the roof (not counting the antenna) in metres."
+  }
+ ],
+ "materials": {
+  "tower_concrete": {
+   "color": [
+    0.6,
+    0.62,
+    0.65
+   ],
+   "metallic": 0.1,
+   "roughness": 0.6
+  }
+ },
+ "nodes": [
+  {
+   "name": "Tower",
+   "material": "tower_concrete",
+   "vars": {
+    "W": "$width",
+    "H": "$height",
+    "podium": "min(12, $height * 0.15)",
+    "upperStart": "$height * 0.75"
+   },
+   "children": [
+    {
+     "name": "Podium",
+     "shape": "box",
+     "size": [
+      "$W * 1.5",
+      "$podium",
+      "$W * 1.5"
+     ],
+     "at": [
+      0,
+      "$podium / 2",
+      0
+     ]
+    },
+    {
+     "name": "Entrance",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$W * 0.4",
+      "min(5, $podium)",
+      0.2
+     ],
+     "at": [
+      0,
+      "min(5, $podium) / 2",
+      "$W * 0.75 + 0.05"
+     ]
+    },
+    {
+     "name": "Shaft",
+     "shape": "box",
+     "size": [
+      "$W",
+      "$upperStart - $podium",
+      "$W"
+     ],
+     "at": [
+      0,
+      "($upperStart + $podium) / 2",
+      0
+     ]
+    },
+    {
+     "name": "Upper",
+     "shape": "box",
+     "size": [
+      "$W * 0.8",
+      "$H - $upperStart",
+      "$W * 0.8"
+     ],
+     "at": [
+      0,
+      "($H + $upperStart) / 2",
+      0
+     ]
+    },
+    {
+     "name": "Band_{i}",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$W + 0.1",
+      1.6,
+      "$W + 0.1"
+     ],
+     "at": [
+      0,
+      "$podium + 2.2",
+      0
+     ],
+     "repeat": {
+      "count": "floor(($upperStart - $podium - 2.5) / 4)",
+      "step": [
+       0,
+       4,
+       0
+      ]
+     }
+    },
+    {
+     "name": "UpperBand_{i}",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$W * 0.8 + 0.1",
+      1.6,
+      "$W * 0.8 + 0.1"
+     ],
+     "at": [
+      0,
+      "$upperStart + 1.7",
+      0
+     ],
+     "repeat": {
+      "count": "max(1, floor(($H - $upperStart - 2.5) / 4))",
+      "step": [
+       0,
+       4,
+       0
+      ]
+     }
+    },
+    {
+     "name": "Crown",
+     "shape": "box",
+     "material": "metal",
+     "size": [
+      "$W * 0.4",
+      3,
+      "$W * 0.4"
+     ],
+     "at": [
+      0,
+      "$H + 1.5",
+      0
+     ]
+    },
+    {
+     "name": "Antenna",
+     "shape": "cylinder",
+     "material": "metal",
+     "radius": 0.25,
+     "height": "$H * 0.12",
+     "segments": 8,
+     "at": [
+      0,
+      "$H + 3 + $H * 0.06",
+      0
+     ]
+    }
+   ]
+  }
+ ]
+}
