@@ -1,0 +1,227 @@
+{
+ "version": 1,
+ "name": "boat",
+ "archetype": "vessel.boat",
+ "description": "A small motorboat: a pointed hull floating on the waterline (y = 0), a windscreen and console, two bench seats and an outboard engine on the transom.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 6,
+   "min": 3,
+   "max": 12,
+   "description": "Hull length in metres."
+  },
+  {
+   "name": "beam",
+   "type": "number",
+   "default": 2.2,
+   "min": 1.3,
+   "max": 4.0,
+   "description": "Width of the hull."
+  }
+ ],
+ "materials": {
+  "boat_hull": {
+   "color": [
+    0.9,
+    0.9,
+    0.92
+   ],
+   "metallic": 0.1,
+   "roughness": 0.35
+  },
+  "boat_trim": {
+   "color": [
+    0.1,
+    0.25,
+    0.5
+   ],
+   "metallic": 0.1,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "Boat",
+   "material": "boat_hull",
+   "vars": {
+    "L2": "$length / 2",
+    "B": "$beam",
+    "fb": 0.65,
+    "dp": 0.35
+   },
+   "children": [
+    {
+     "name": "Hull",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "$L2",
+       "superellipse": {
+        "width": "$B * 0.08",
+        "height": "$fb + $dp - 0.1",
+        "n": 2.4,
+        "count": 28,
+        "cy": "($fb - $dp) / 2 + 0.1"
+       }
+      },
+      {
+       "z": "$L2 - $length * 0.15",
+       "superellipse": {
+        "width": "$B * 0.6",
+        "height": "$fb + $dp",
+        "n": 2.6,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      },
+      {
+       "z": "0",
+       "superellipse": {
+        "width": "$B",
+        "height": "$fb + $dp",
+        "n": 3,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      },
+      {
+       "z": "-$L2 + 0.1",
+       "superellipse": {
+        "width": "$B * 0.92",
+        "height": "$fb + $dp",
+        "n": 3,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      },
+      {
+       "z": "-$L2",
+       "superellipse": {
+        "width": "$B * 0.9",
+        "height": "$fb + $dp - 0.05",
+        "n": 3,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Deck",
+     "shape": "box",
+     "material": "boat_trim",
+     "size": [
+      "$B * 0.62",
+      0.04,
+      "$length * 0.45"
+     ],
+     "at": [
+      0,
+      "$fb - 0.1",
+      "-$length * 0.12"
+     ]
+    },
+    {
+     "name": "Windscreen",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$B * 0.7",
+      0.4,
+      0.04
+     ],
+     "at": [
+      0,
+      "$fb + 0.3",
+      "$length * 0.1"
+     ],
+     "rotate": [
+      -20,
+      0,
+      0
+     ]
+    },
+    {
+     "name": "Console",
+     "shape": "box",
+     "material": "boat_trim",
+     "size": [
+      "$B * 0.35",
+      0.5,
+      0.4
+     ],
+     "at": [
+      0,
+      "$fb + 0.1",
+      "$length * 0.05"
+     ]
+    },
+    {
+     "name": "Seat_{i}",
+     "shape": "box",
+     "material": "boat_trim",
+     "size": [
+      "$B * 0.7",
+      0.18,
+      0.4
+     ],
+     "at": [
+      0,
+      "$fb + 0.0",
+      "-$length * 0.1"
+     ],
+     "repeat": {
+      "count": 2,
+      "step": [
+       0,
+       0,
+       "-$length * 0.17"
+      ]
+     }
+    },
+    {
+     "name": "Engine",
+     "at": [
+      0,
+      "$fb - 0.1",
+      "-$L2 - 0.1"
+     ],
+     "children": [
+      {
+       "name": "Cowl",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        0.35,
+        0.6,
+        0.35
+       ],
+       "offset": [
+        0,
+        0.1,
+        -0.1
+       ]
+      },
+      {
+       "name": "Leg",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        0.12,
+        0.9,
+        0.15
+       ],
+       "offset": [
+        0,
+        -0.65,
+        -0.1
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

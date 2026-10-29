@@ -1,0 +1,179 @@
+{
+ "version": 1,
+ "name": "drone",
+ "archetype": "aircraft.rotorcraft.drone",
+ "description": "A quadcopter: a flat body with a camera gimbal, four arms in an X, a motor and a two-blade propeller on each arm, and short landing legs.",
+ "params": [
+  {
+   "name": "armLength",
+   "type": "number",
+   "default": 0.22,
+   "min": 0.08,
+   "max": 0.7,
+   "description": "Distance from the centre to each motor in metres."
+  },
+  {
+   "name": "propRadius",
+   "type": "number",
+   "default": 0.12,
+   "min": 0.04,
+   "max": 0.3,
+   "description": "Propeller radius."
+  }
+ ],
+ "materials": {
+  "drone_body": {
+   "color": [
+    0.15,
+    0.15,
+    0.17
+   ],
+   "metallic": 0.4,
+   "roughness": 0.4
+  },
+  "drone_accent": {
+   "color": [
+    0.9,
+    0.35,
+    0.05
+   ],
+   "metallic": 0.3,
+   "roughness": 0.4
+  }
+ },
+ "nodes": [
+  {
+   "name": "Drone",
+   "material": "drone_body",
+   "vars": {
+    "A": "$armLength",
+    "P": "$propRadius",
+    "legH": "$armLength * 0.25 + 0.03",
+    "y0": "$armLength * 0.25 + 0.03"
+   },
+   "children": [
+    {
+     "name": "Body",
+     "shape": "ellipsoid",
+     "radii": [
+      "$A * 0.45",
+      "$A * 0.2",
+      "$A * 0.55"
+     ],
+     "at": [
+      0,
+      "$y0 + $A * 0.15",
+      0
+     ],
+     "segments": 20
+    },
+    {
+     "name": "Gimbal",
+     "shape": "ellipsoid",
+     "material": "drone_accent",
+     "radii": [
+      "$A * 0.12",
+      "$A * 0.12",
+      "$A * 0.14"
+     ],
+     "at": [
+      0,
+      "$y0 + $A * 0.02",
+      "$A * 0.45"
+     ],
+     "segments": 12
+    },
+    {
+     "name": "Arm_{i}",
+     "shape": "box",
+     "size": [
+      "$A * 0.08",
+      "$A * 0.06",
+      "$A"
+     ],
+     "offset": [
+      0,
+      0,
+      "$A / 2"
+     ],
+     "at": [
+      0,
+      "$y0 + $A * 0.15",
+      0
+     ],
+     "rotate": [
+      0,
+      45,
+      0
+     ],
+     "repeat": {
+      "count": 4,
+      "around": "y"
+     }
+    },
+    {
+     "name": "Motor_{i}",
+     "shape": "cylinder",
+     "material": "metal",
+     "radius": "$A * 0.07",
+     "height": "$A * 0.14",
+     "segments": 12,
+     "at": [
+      "$A * 0.7071",
+      "$y0 + $A * 0.15 + $A * 0.1",
+      "$A * 0.7071"
+     ],
+     "repeat": {
+      "count": 4,
+      "around": "y"
+     }
+    },
+    {
+     "name": "Propeller_{i}",
+     "at": [
+      "$A * 0.7071",
+      "$y0 + $A * 0.15 + $A * 0.21",
+      "$A * 0.7071"
+     ],
+     "repeat": {
+      "count": 4,
+      "around": "y"
+     },
+     "children": [
+      {
+       "name": "Blade",
+       "shape": "box",
+       "material": "drone_accent",
+       "size": [
+        "$P * 2",
+        "$A * 0.012",
+        "$P * 0.18"
+       ],
+       "at": [
+        0,
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Leg_{i}",
+     "shape": "cylinder",
+     "radius": "$A * 0.025",
+     "height": "$legH",
+     "segments": 8,
+     "at": [
+      "$A * 0.3",
+      "$legH / 2",
+      "$A * 0.3"
+     ],
+     "repeat": {
+      "count": 4,
+      "around": "y"
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,256 @@
+{
+ "version": 1,
+ "name": "sailboat",
+ "archetype": "vessel.sailboat",
+ "description": "A small sailing yacht: a slim hull with cabin, a fin keel below the waterline, a tall mast, a mainsail on a boom that swings about the mast and a jib at the bow.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 9,
+   "min": 4,
+   "max": 20,
+   "description": "Hull length in metres."
+  },
+  {
+   "name": "beam",
+   "type": "number",
+   "default": 3.0,
+   "min": 1.5,
+   "max": 5.0,
+   "description": "Hull width."
+  },
+  {
+   "name": "mastHeight",
+   "type": "number",
+   "default": 12,
+   "min": 6,
+   "max": 28,
+   "description": "Mast height above the waterline."
+  }
+ ],
+ "materials": {
+  "sail_hull": {
+   "color": [
+    0.92,
+    0.92,
+    0.9
+   ],
+   "metallic": 0.1,
+   "roughness": 0.35
+  },
+  "sail_cloth": {
+   "color": [
+    0.97,
+    0.97,
+    0.95
+   ],
+   "metallic": 0,
+   "roughness": 0.9
+  }
+ },
+ "nodes": [
+  {
+   "name": "Sailboat",
+   "material": "sail_hull",
+   "vars": {
+    "L2": "$length / 2",
+    "B": "$beam",
+    "fb": "$length * 0.07",
+    "dp": "$length * 0.04",
+    "M": "$mastHeight"
+   },
+   "children": [
+    {
+     "name": "Hull",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "$L2",
+       "superellipse": {
+        "width": "$B * 0.05",
+        "height": "$fb + $dp - 0.05",
+        "n": 2.2,
+        "count": 28,
+        "cy": "($fb - $dp) / 2 + 0.05"
+       }
+      },
+      {
+       "z": "$L2 - $length * 0.2",
+       "superellipse": {
+        "width": "$B * 0.7",
+        "height": "$fb + $dp",
+        "n": 2.6,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      },
+      {
+       "z": "-$length * 0.05",
+       "superellipse": {
+        "width": "$B",
+        "height": "$fb + $dp",
+        "n": 3,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      },
+      {
+       "z": "-$L2 + 0.1",
+       "superellipse": {
+        "width": "$B * 0.8",
+        "height": "$fb + $dp",
+        "n": 3,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      },
+      {
+       "z": "-$L2",
+       "superellipse": {
+        "width": "$B * 0.7",
+        "height": "$fb + $dp - 0.05",
+        "n": 3,
+        "count": 28,
+        "cy": "($fb - $dp) / 2"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Cabin",
+     "shape": "box",
+     "material": "sail_cloth",
+     "size": [
+      "$B * 0.55",
+      "$fb * 0.7",
+      "$length * 0.35"
+     ],
+     "at": [
+      0,
+      "$fb + $fb * 0.3",
+      "$length * 0.05"
+     ]
+    },
+    {
+     "name": "Keel",
+     "shape": "box",
+     "material": "metal",
+     "size": [
+      0.08,
+      "$dp * 4",
+      "$length * 0.14"
+     ],
+     "at": [
+      0,
+      "-$dp * 2",
+      "$length * 0.03"
+     ]
+    },
+    {
+     "name": "Mast",
+     "shape": "cylinder",
+     "material": "metal",
+     "radius": 0.06,
+     "height": "$M",
+     "segments": 12,
+     "at": [
+      0,
+      "$fb + $M / 2",
+      "$length * 0.08"
+     ]
+    },
+    {
+     "name": "Sail_Main",
+     "at": [
+      0,
+      "$fb + $M * 0.12",
+      "$length * 0.08"
+     ],
+     "children": [
+      {
+       "name": "Boom",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        -90,
+        0,
+        0
+       ],
+       "radius": 0.04,
+       "height": "$length * 0.4",
+       "segments": 8,
+       "offset": [
+        0,
+        "$length * 0.2",
+        0
+       ]
+      },
+      {
+       "name": "Cloth",
+       "shape": "extrude",
+       "material": "sail_cloth",
+       "plan": [
+        [
+         0,
+         0
+        ],
+        [
+         "$M * 0.85",
+         0
+        ],
+        [
+         0,
+         "-$length * 0.4"
+        ]
+       ],
+       "y0": -0.01,
+       "y1": 0.01,
+       "rotate": [
+        0,
+        0,
+        90
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Sail_Jib",
+     "at": [
+      0,
+      "$fb",
+      "$L2 - 0.2"
+     ],
+     "children": [
+      {
+       "name": "Cloth",
+       "shape": "extrude",
+       "material": "sail_cloth",
+       "plan": [
+        [
+         0,
+         0
+        ],
+        [
+         "$M * 0.8",
+         0
+        ],
+        [
+         0,
+         "-$length * 0.35"
+        ]
+       ],
+       "y0": -0.01,
+       "y1": 0.01,
+       "rotate": [
+        0,
+        0,
+        90
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
