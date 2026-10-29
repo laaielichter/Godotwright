@@ -317,7 +317,7 @@ footer a { color: var(--muted); }
 
   <section id="tools">
     <div class="wrap">
-      <h2>Seven MCP tools, one CLI</h2>
+      <h2>Twelve MCP tools, one CLI</h2>
       <p class="sub">Each tool is also a CLI command, so it works from any shell or agent. Output is compact and stable, so it is cheap for a model to read.</p>
       <ul class="tree">
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scan</span><p>Map the project without starting Godot: scenes and node trees, scripts with signals and exports, autoloads, input map, broken references.</p><code>godotwright scan</code></li>
@@ -327,6 +327,11 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_check</span><p>Run Godot headless: import, load and instantiate every script and scene, optionally run the main scene. Errors come back as <code>file:line</code>.</p><code>godotwright check --run</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_checklist</span><p>Every AAA rule with its fix, so the agent knows the bar before it starts.</p><code>godotwright mcp</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nres)"></span>godot_feedback</span><p>Mark a finding as wrong or right. Later reviews on this machine learn from it.</p><code>godotwright learn feedback</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_model_identify</span><p>What a thing is: parts, pivots, typical size with its source, variants and what to anticipate. English or Dutch.</p><code>godotwright model identify "a tractor"</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_model_spec</span><p>The model spec format, an example and the ready-made kinds.</p><code>godotwright model spec</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_model_build</span><p>Build a clean <code>.glb</code> from a kind or a spec, with UVs, tangents and a node per part, then lint it.</p><code>godotwright model build house -o house.glb</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_model_lint</span><p>Score a <code>.glb</code>. With an archetype it also checks the model is what it should be.</p><code>godotwright model lint car.glb --archetype car</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_model_inspect</span><p>What is in a <code>.glb</code>: nodes, triangles, textures and size.</p><code>godotwright model inspect car.glb</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>Mods and patches</span><p>Review a mod against the game it patches, from its source folder or a <code>.pck</code> file list.</p><code>godotwright review mod/ --base game/</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>Local learning</span><p>Rules real Godot keeps contradicting turn into hints. Nothing leaves your machine unless you opt in.</p><code>godotwright learn</code></li>
       </ul>

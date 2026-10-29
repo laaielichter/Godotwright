@@ -224,7 +224,7 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 
 ## Use with Claude Code, Codex and other coding agents (MCP)
 
-`godotwright mcp` runs an MCP server over stdio with seven tools:
+`godotwright mcp` runs an MCP server over stdio with twelve tools:
 
 | Tool | What it does |
 | --- | --- |
