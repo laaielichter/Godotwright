@@ -7,15 +7,22 @@ This page says exactly what it keeps and what it can send.
 
 The learning file (`godotwright learn` shows where it is) holds:
 
-- per review rule: how often it fired, and how often real Godot confirmed or
-  contradicted it, or someone marked it as wrong;
-- API lookups that found nothing, and what was looked up right after;
-- Godot error messages as templates, with names, paths and numbers replaced
-  (`Identifier "<s>" not declared in the current scope.`);
+- per review rule: how often it fired, how often real Godot confirmed or
+  contradicted it, and how often someone marked a finding of it as wrong or
+  right (a verdict of right is never counted as a Godot confirmation);
+- failed API lookups, and the real name looked up right after. Only a Godot
+  class and a member a few letters from a real one are kept (`Node2D.lookat`):
+  a bare name, or a class Godot does not have, is not;
+- Godot error messages as templates, with quoted text, paths and numbers
+  replaced (`Identifier "<s>" not declared in the current scope.`). Every other
+  word that is not Godot or engine wording becomes `<id>`, and a message that
+  still holds a path or a name is not kept;
 - hashes of findings marked as wrong (so they stay hidden), local only.
 
-It never holds code or project names. Turn it off with `godotwright learn off`
-or `GODOTWRIGHT_LEARN=0`; delete it with `godotwright learn reset`.
+It is built not to hold code, paths or project names. A method of your own on
+a Godot class can still look like a Godot name, so keep the file local.
+Turn learning off with `godotwright learn off` or `GODOTWRIGHT_LEARN=0`. Delete
+the file with `godotwright learn reset`; a reset keeps learning off if it was off.
 
 ## Sharing (off until you say yes)
 
