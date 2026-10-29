@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { isAbsolute, join, posix, relative, resolve } from "node:path";
+import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
@@ -266,12 +266,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
     async () => text(checklist(tier)),
   );
 
-  /** A path the tools may read or write: inside the project (or the root when there is no project). */
+  /** A path the tools may read: its real place (links followed) must be inside the project, or the root when there is no project. */
   const inside = (path: string): string => {
     const full = where(path);
     const root = findProjectRoot(base) ?? base;
-    const rel = relative(root, full);
+    const real = realLocation(full);
+    const rel = real === undefined ? ".." : relative(realLocation(root) ?? root, real);
     if (rel.startsWith("..") || isAbsolute(rel)) throw new ModelError(`${path} is outside the project (${root}); use a path inside it`);
+    return full;
+  };
+  /** A path the tools write: inside the project, and not a link, since writing through one changes the file it points to. */
+  const output = (path: string): string => {
+    const full = inside(path);
+    if (isSymlink(full)) throw new ModelError(`${path} is a symbolic link; write a regular file inside the project`);
     return full;
   };
   const fileParam = z.string().describe("Path to a .glb or .gltf file, inside the project.");
@@ -337,7 +344,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             return failure(`${spec_file}: cannot read the spec (${(error as Error).message})`);
           }
         }
-        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: inside(out), ...(contract_out ? { contractOut: inside(contract_out) } : {}) });
+        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: output(out), ...(contract_out ? { contractOut: output(contract_out) } : {}) });
         const errors = outcome.report.categories.reduce((n, c) => n + c.errors, 0);
         const body = `${outcome.summary}\n${formatModelReport(outcome.report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);
@@ -386,6 +393,35 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   return server;
+}
+
+/**
+ * Where a path really is: symbolic links are followed in the part that exists, and the rest is kept as written.
+ * Undefined for a link whose target does not exist, since its real place cannot be known.
+ */
+function realLocation(path: string): string | undefined {
+  const rest: string[] = [];
+  let dir = path;
+  for (;;) {
+    try {
+      return join(realpathSync(dir), ...rest);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      if (isSymlink(dir)) return undefined;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return path;
+    rest.unshift(basename(dir));
+    dir = parent;
+  }
+}
+
+function isSymlink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
 }
 
 function guard(fn: () => ReturnType<typeof text> | ReturnType<typeof failure>) {
