@@ -22,6 +22,8 @@ const MAX_ROOT_FILES = 12;
 const MAX_AUTOLOADS = 10;
 const MAX_DEPTH = 12;
 const SNAKE_FILE = /^[a-z0-9_]+(\.[a-z0-9_]+)*$/;
+/** Scan's message for a file it could not read or parse. */
+const PARSE_FAILED = /^could not parse file/;
 
 export interface StructureOptions {
   /** Project uses C# or GDExtension, so node types the bundled API does not know may be real. */
@@ -37,7 +39,7 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
   const files = pm.data.files.filter((f) => !pm.data.external.has(f));
 
   // Broken references found while scanning.
-  for (const w of map.warnings) out.push(finding("structure/broken-reference", w.file, w.line, w.message));
+  for (const w of map.warnings) out.push(finding(PARSE_FAILED.test(w.message) ? "structure/parse-error" : "structure/broken-reference", w.file, w.line, w.message));
 
   // Signal connections saved in scenes.
   for (const scene of map.scenes) {
@@ -76,7 +78,7 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
   }
 
   // A scene or resource that does not parse may use any script or group, so neither can be called unused or unassigned.
-  const unreadable = map.warnings.some((w) => /^could not parse file/.test(w.message) && /\.(tscn|tres)$/.test(w.file));
+  const unreadable = map.warnings.some((w) => PARSE_FAILED.test(w.message) && /\.(tscn|tres)$/.test(w.file));
 
   // Groups used in code but never assigned. Not checked when add_to_group() takes a constant or variable: it may add any group.
   const assigned = new Set(map.scenes.flatMap((s) => s.nodes.flatMap((n) => n.groups)));

@@ -340,6 +340,19 @@ describe("review robustness", () => {
     expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
   });
 
+  it("reports a file that does not parse with the syntax fix, not the missing-file one", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene load_steps=2 format=3]\n[node name="Main" type="Node2D"\n',
+    });
+    const report = reviewProject(root);
+    const parse = report.findings.filter((f) => f.rule === "structure/parse-error");
+    expect(parse.map((f) => f.file)).toEqual(["res://main.tscn"]);
+    expect(report.findings.some((f) => f.message.includes("could not parse file"))).toBe(true);
+    expect(report.findings.filter((f) => f.rule === "structure/broken-reference").some((f) => f.file === "res://main.tscn")).toBe(false);
+    expect(formatReview(report, "full")).toContain("fix: Fix the syntax error at the line shown");
+  });
+
   it("does not count a property with only a setter as statically typed", () => {
     const root = makeProject({
       "project.godot": PROJECT,
