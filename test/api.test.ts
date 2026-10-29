@@ -95,7 +95,7 @@ describe("lookup", () => {
   it("maps Godot 3 MARGIN_* constants to the Godot 4 SIDE_* names", () => {
     expect(api.lookup("Control.MARGIN_LEFT").renamed).toEqual({ kind: "constant", from: "MARGIN_LEFT", to: "SIDE_LEFT" });
     expect(api.lookup("MARGIN_BOTTOM").renamed).toEqual({ kind: "constant", from: "MARGIN_BOTTOM", to: "SIDE_BOTTOM" });
-    expect(api.lookup("Control.SIDE_LEFT").entries[0]).toMatchObject({ kind: "constant", owner: "@GlobalScope", name: "SIDE_LEFT" });
+    expect(api.lookup("SIDE_LEFT").entries[0]).toMatchObject({ kind: "constant", owner: "@GlobalScope", name: "SIDE_LEFT" });
   });
 
   it("does not treat Object.prototype names as Godot 3 renames", () => {
