@@ -66,6 +66,8 @@ godotwright model car.glb             # what is in a 3D model: nodes, triangles,
 godotwright model lint car.glb        # model review with a score per category
 godotwright model contract car.glb    # write a model.contract.json: node names, size, budget
 godotwright model lint car.glb --contract model.contract.json
+godotwright model kinds               # what `model build` can make, with parameters
+godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright learn                     # what Godotwright learned on this machine
 ```
 
@@ -118,6 +120,13 @@ review it, add a `source` to each size, and keep it next to the model. With `--c
 reports `contract-missing-node`, `contract-order`, `contract-extra-node`, `contract-size`,
 `contract-ground` and `contract-triangles`. Sizes default to a 1% tolerance, or set `tolerance` in metres.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.
+
+`model build` makes a model from code, with no Blender or other tool: a clean `.glb` with UVs and
+tangents, named parts with sensible pivots, standing on y = 0, and the same bytes every time for the
+same parameters. The result goes straight through `model lint`, and `--contract-out` writes a
+`model.contract.json` for it. `model kinds` lists the kinds with their parameters, ranges and defaults;
+set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
+to be refined, not hand-sculpted art. Kinds today: `house`.
 
 ## Review in GitHub Actions
 

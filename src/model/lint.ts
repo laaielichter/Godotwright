@@ -46,7 +46,8 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
   if (info.triangles === 0) add("model/empty-geometry", "The file holds no triangles.");
   checkRig(info, add);
   const edgeTotals = new Map<string, EdgeStats>();
-  for (const prim of info.primitives) checkPrimitive(info, prim, add, edgeTotals);
+  const uvReported = new Set<string>();
+  for (const prim of info.primitives) checkPrimitive(info, prim, add, edgeTotals, uvReported);
   reportEdges(edgeTotals, add);
   checkTextures(info, options, add);
   checkSymmetry(info, add);
@@ -92,12 +93,15 @@ interface EdgeStats {
   doubleSided: boolean;
 }
 
-function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: Map<string, EdgeStats>): void {
+function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: Map<string, EdgeStats>, uvReported: Set<string>): void {
   const mat = prim.material === undefined ? undefined : info.materials[prim.material];
   if (!prim.hasNormals) add("model/missing-normals", "The mesh has no NORMAL data.", prim.nodeName);
   if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, prim.nodeName);
   if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, prim.nodeName);
-  if (prim.uvOutOfRange) add("model/uv-out-of-range", "Some UVs lie outside 0..1.", prim.nodeName);
+  if (prim.uvOutOfRange && !uvReported.has(prim.nodeName)) {
+    uvReported.add(prim.nodeName);
+    add("model/uv-out-of-range", "Some UVs lie outside 0..1.", prim.nodeName);
+  }
 
   const e = analyseEdges(prim);
   const sum = totals.get(prim.nodeName) ?? { edges: 0, open: 0, flipped: 0, againstNormals: 0, triangles: 0, nonManifold: 0, degenerate: 0, doubleSided: true };

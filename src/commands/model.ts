@@ -1,11 +1,15 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Option } from "commander";
+import { BuildError } from "../build/params.js";
+import { buildKind, GENERATORS } from "../build/generators/index.js";
+import { buildGlb } from "../build/glb.js";
 import { contractFromModel, loadContract } from "../model/contract.js";
 import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
 import { ModelError } from "../model/gltf.js";
 import type { Detail } from "../scan/format.js";
-import { writeOut } from "./output.js";
+import { collect, writeOut } from "./output.js";
 
 const detailOption = () => new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief");
 
@@ -68,6 +72,55 @@ export function modelCommand(): Command {
     .argument("<file>", "a .glb or .gltf file")
     .action((file: string, _options: object, command: Command) => {
       guard(() => writeOut(command, `${JSON.stringify(contractFromModel(inspectModel(file)), null, 2)}\n`));
+    });
+
+  model
+    .command("kinds")
+    .description("list the model kinds that `model build` can make, with their parameters")
+    .action((_options: object, command: Command) => {
+      const out: string[] = [];
+      for (const g of Object.values(GENERATORS)) {
+        out.push(`${g.kind}: ${g.description}`);
+        for (const d of g.params) {
+          const range = d.options ? d.options.join("|") : [d.min !== undefined && `min ${d.min}`, d.max !== undefined && `max ${d.max}`].filter(Boolean).join(", ");
+          out.push(`  ${d.name} = ${String(d.default)}${range ? ` (${range})` : ""}  ${d.description}`);
+        }
+      }
+      writeOut(command, `${out.join("\n")}\n`);
+    });
+
+  model
+    .command("build")
+    .description("make a model from code: a clean .glb with UVs, tangents, named parts and a lint-ready build")
+    .argument("<kind>", `what to build (${Object.keys(GENERATORS).join(", ")}); see \`model kinds\``)
+    .option("-o, --out <file>", "output file (default <kind>.glb)")
+    .option("--spec <file>", "a JSON file with parameters")
+    .option("--set <name=value>", "set one parameter (repeatable)", collect, [])
+    .option("--contract-out <file>", "also write a model.contract.json for the result")
+    .action((kind: string, options: { out?: string; spec?: string; set: string[]; contractOut?: string }, command: Command) => {
+      guard(() => {
+        const input: Record<string, unknown> = {};
+        if (options.spec) {
+          try {
+            Object.assign(input, JSON.parse(readFileSync(options.spec, "utf8")) as object);
+          } catch (error) {
+            throw new BuildError(`${options.spec}: cannot read the spec (${(error as Error).message})`);
+          }
+        }
+        for (const pair of options.set) {
+          const at = pair.indexOf("=");
+          if (at < 1) throw new BuildError(`--set needs name=value, got "${pair}"`);
+          input[pair.slice(0, at)] = pair.slice(at + 1);
+        }
+        const file = options.out ?? `${kind}.glb`;
+        writeFileSync(file, buildGlb(buildKind(kind, input)));
+        const info = inspectModel(file);
+        const report = lintModelFile(file);
+        const size = info.bounds?.size.map((v) => v.toFixed(2)).join(" x ") ?? "?";
+        writeOut(command, `built ${file}: ${info.triangles.toLocaleString("en-US")} triangles, ${info.nodes.length} nodes, ${size} m (x y z), lint ${report.overall}/100\n`);
+        if (options.contractOut) writeFileSync(options.contractOut, `${JSON.stringify(contractFromModel(info), null, 2)}\n`);
+        if (report.categories.some((c) => c.errors > 0)) process.exitCode = 1;
+      });
     });
 
   return model;
