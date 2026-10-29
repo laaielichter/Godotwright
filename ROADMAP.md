@@ -98,7 +98,9 @@ Godotwright gets better with every use, without collecting anything personal.
     origin). Step 2 (done): `terrain` (a heightmap tile from seeded noise: plains, hills, mountains or an island; tiles
     with the same seed match on every border, tested) and `sea` (a water plane and a floor); surfaces by nature are
     marked `sheet` in the archetypes, so the open border of a tile is not reported as open edges but a hole is.
-    Next: a rivers-and-lakes piece that carves into the terrain, collision data (`HeightMapShape3D` heights) written
+    Step 3 (done): a lake: a bowl carved into the terrain from world coordinates (so it can span tiles) and a water
+    surface at a level half a metre under the lowest point of its rim.
+    Next: rivers that run downhill, collision data (`HeightMapShape3D` heights) written
     next to the tile, scatter points for plants and settlements, and checks for streaming budgets.
     Same method as models: archetypes first, then recipes.
 

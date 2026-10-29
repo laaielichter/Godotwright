@@ -1,5 +1,5 @@
 import type { Material } from "../materials.js";
-import type { BuildScene } from "../glb.js";
+import type { BuildNode, BuildScene } from "../glb.js";
 import { MeshBuilder, normalize, type V3 } from "../mesh.js";
 import type { ParamDef, Params } from "../params.js";
 import type { Generator } from "./index.js";
@@ -60,10 +60,14 @@ export const TERRAIN_PARAMS: ParamDef[] = [
   { name: "tileX", type: "integer", default: 0, min: -1000, max: 1000, description: "Place of the tile in the world grid, along x. The tile centre is at tileX * tileSize." },
   { name: "tileZ", type: "integer", default: 0, min: -1000, max: 1000, description: "Place of the tile in the world grid, along z. The tile centre is at tileZ * tileSize." },
   { name: "seed", type: "integer", default: 1, min: 0, max: 1000000, description: "The same seed gives the same landscape in every tile, so neighbouring tiles continue each other." },
+  { name: "lakeRadius", type: "number", default: 0, min: 0, max: 2000, description: "Radius of a lake in metres; 0 means no lake. The lake is part of the world, so it can span several tiles." },
+  { name: "lakeX", type: "number", default: 0, min: -100000, max: 100000, description: "World x of the lake centre in metres." },
+  { name: "lakeZ", type: "number", default: 0, min: -100000, max: 100000, description: "World z of the lake centre in metres." },
+  { name: "lakeDepth", type: "number", default: 4, min: 0.5, max: 100, description: "How deep the lake is below its water level at the centre, in metres." },
 ];
 
-/** The ground height at a world position, in metres above sea level. The same function serves every tile, which is what makes borders match. */
-export function terrainHeight(p: Params, wx: number, wz: number): number {
+/** The ground height before a lake is carved, in metres above sea level. */
+function baseHeight(p: Params, wx: number, wz: number): number {
   const size = p["tileSize"] as number, relief = p["relief"] as string;
   const amp = p["maxHeight"] as number, base = p["baseLevel"] as number, seed = p["seed"] as number;
   const feature = p["featureSize"] as number;
@@ -91,6 +95,53 @@ export function terrainHeight(p: Params, wx: number, wz: number): number {
   }
 }
 
+export interface Lake {
+  x: number;
+  z: number;
+  radius: number;
+  depth: number;
+  /** Height of the water surface in metres above sea level. */
+  level: number;
+}
+
+const lakes = new WeakMap<Params, Lake | null>();
+
+/** The lake of these parameters, if there is one. Its water level is half a metre under the lowest point of its rim, so the water never spills. */
+export function lakeOf(p: Params): Lake | undefined {
+  const known = lakes.get(p);
+  if (known !== undefined) return known ?? undefined;
+  const radius = p["lakeRadius"] as number;
+  let lake: Lake | null = null;
+  if (radius > 0) {
+    const x = p["lakeX"] as number, z = p["lakeZ"] as number;
+    let rim = Infinity;
+    for (let k = 0; k < 32; k++) {
+      const a = (k / 32) * Math.PI * 2;
+      rim = Math.min(rim, baseHeight(p, x + radius * Math.cos(a), z + radius * Math.sin(a)));
+    }
+    lake = { x, z, radius, depth: p["lakeDepth"] as number, level: rim - 0.5 };
+  }
+  lakes.set(p, lake);
+  return lake ?? undefined;
+}
+
+/**
+ * The ground height at a world position, in metres above sea level, with the lake basin carved in.
+ * The same function serves every tile, which is what makes borders match, also across a lake.
+ */
+export function terrainHeight(p: Params, wx: number, wz: number): number {
+  const ground = baseHeight(p, wx, wz);
+  const lake = lakeOf(p);
+  if (!lake) return ground;
+  const r = Math.hypot(wx - lake.x, wz - lake.z);
+  // A parabolic bowl under the water level, blended into the surrounding ground between 0.8 and 1.4 radii.
+  const bowl = lake.level - lake.depth * Math.max(0, 1 - (r / lake.radius) ** 2);
+  const weight = 1 - smoothstep(0.8 * lake.radius, 1.4 * lake.radius, r);
+  return ground - (ground - bowl) * weight;
+}
+
+const LAKE_WATER: Material = { name: "lake_water", color: [0.08, 0.3, 0.42, 0.7], metallic: 0, roughness: 0.08, alpha: "BLEND", doubleSided: true };
+
 const GROUND: Material = { name: "terrain_ground", color: [0.28, 0.4, 0.17, 1], metallic: 0, roughness: 0.95 };
 /** One texture repeat per this many metres, counted from the world origin so a texture runs on across tiles. */
 const UV_METERS = 8;
@@ -98,7 +149,7 @@ const UV_METERS = 8;
 export const terrain: Generator = {
   kind: "terrain",
   archetype: "world.terrain",
-  description: "A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals. Tiles with the same seed continue each other exactly, so a world can be cut into tiles.",
+  description: "A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals and an optional lake. Tiles with the same seed continue each other exactly, so a world can be cut into tiles.",
   params: TERRAIN_PARAMS,
   build(p: Params): BuildScene {
     const size = p["tileSize"] as number, n = Number(p["resolution"]);
@@ -139,7 +190,38 @@ export const terrain: Generator = {
         prim.indices.push(index(i + 1, j), index(i, j + 1), index(i + 1, j + 1));
       }
     }
-    return { materials: { terrain_ground: GROUND }, nodes: [{ name: "Terrain", children: [{ name: "Surface", mesh }] }] };
+    const children: BuildNode[] = [{ name: "Surface", mesh }];
+    const materials: Record<string, Material> = { terrain_ground: GROUND };
+    const lake = lakeOf(p);
+    if (lake) {
+      // Water on every grid cell that has a corner under the water level. Cells that stick out over the shore are hidden by the ground.
+      const water = new MeshBuilder();
+      const wp = water.prim("lake_water");
+      const vertex = new Map<number, number>();
+      const corner = (i: number, j: number): number => {
+        const key = j * n + i;
+        let id = vertex.get(key);
+        if (id === undefined) {
+          id = water.vertex(wp, [-size / 2 + i * step, lake.level, -size / 2 + j * step], [0, 1, 0], [(cx - size / 2 + i * step) / UV_METERS, (cz - size / 2 + j * step) / UV_METERS]);
+          vertex.set(key, id);
+        }
+        return id;
+      };
+      for (let j = 0; j < n - 1; j++) {
+        for (let i = 0; i < n - 1; i++) {
+          // Only near the lake: low ground elsewhere is not part of it.
+          if (Math.hypot(cx - size / 2 + (i + 0.5) * step - lake.x, cz - size / 2 + (j + 0.5) * step - lake.z) > lake.radius * 1.1 + step) continue;
+          if (Math.min(H(i, j), H(i + 1, j), H(i, j + 1), H(i + 1, j + 1)) >= lake.level) continue;
+          wp.indices.push(corner(i, j), corner(i, j + 1), corner(i + 1, j));
+          wp.indices.push(corner(i + 1, j), corner(i, j + 1), corner(i + 1, j + 1));
+        }
+      }
+      if (!water.empty) {
+        children.push({ name: "Water", mesh: water });
+        materials["lake_water"] = LAKE_WATER;
+      }
+    }
+    return { materials, nodes: [{ name: "Terrain", children }] };
   },
 };
 
