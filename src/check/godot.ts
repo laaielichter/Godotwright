@@ -162,22 +162,43 @@ export function runGodot(bin: string, args: string[], options: { cwd?: string; t
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let exitCode: number | null | undefined;
+    let done = false;
+    let timer: NodeJS.Timeout | undefined;
+    // 'close' waits for every process that holds the pipes, and a process Godot started can keep them open.
+    // So after a timeout, or once Godot has exited on its own, the run is taken as finished at 'exit'.
+    const finish = (code: number | null) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
+    };
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
-    const timer = options.timeoutMs
-      ? setTimeout(() => {
+    if (options.timeoutMs) {
+      timer = setTimeout(() => {
+        if (exitCode === undefined) {
           timedOut = true;
           child.kill("SIGKILL");
-        }, options.timeoutMs)
-      : undefined;
+        } else {
+          // Godot had already exited; only a process it started was still holding the output.
+          finish(exitCode);
+        }
+      }, options.timeoutMs);
+    }
     child.on("error", (error) => {
+      if (done) return;
+      done = true;
       if (timer) clearTimeout(timer);
       reject(error);
     });
-    child.on("close", (code) => {
-      if (timer) clearTimeout(timer);
-      resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
+    child.on("exit", (code) => {
+      exitCode = code;
+      if (timedOut) finish(code);
     });
+    child.on("close", (code) => finish(code));
   });
 }
 

@@ -1,4 +1,4 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -21,7 +21,7 @@ afterAll(() => {
 });
 
 /** A stand-in for the Godot binary that replays canned output. */
-function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string }): string {
+function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string; holdPipes?: boolean }): string {
   const dir = tempDir("fake-godot-");
   const bin = join(dir, "godot");
   const script = `#!/usr/bin/env node
@@ -33,7 +33,13 @@ fs.appendFileSync(${JSON.stringify(join(dir, "calls.log"))}, JSON.stringify(args
 if (args.includes("--version")) { console.log(b.version ?? "4.7.2.stable.official.fake"); process.exit(0); }
 if (args.includes("--import")) { console.log("Godot Engine v4.7.2.stable.official.fake - https://godotengine.org"); process.exit(0); }
 const scriptAt = args.indexOf("--script");
-if (scriptAt >= 0) {
+if (scriptAt >= 0 && b.holdPipes) {
+  // Like OS.create_process: a child that inherits the output pipes and outlives this run. Godot itself never finishes.
+  const grandchild = require("node:child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 20000)"], { stdio: "inherit" });
+  fs.writeFileSync(${JSON.stringify(join(dir, "grandchild.pid"))}, String(grandchild.pid));
+  setInterval(() => {}, 1000);
+  return;
+} else if (scriptAt >= 0) {
   const root = args[args.indexOf("--path") + 1];
   const checker = path.join(root, args[scriptAt + 1].replace("res://", ""));
   if (!fs.existsSync(checker)) { console.error("ERROR: checker missing"); process.exit(1); }
@@ -107,6 +113,22 @@ describe("checkProject", () => {
     expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
     // The checker script is removed afterwards.
     expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
+  });
+
+  it("ends a run at its timeout even when a process Godot started keeps the output open", async () => {
+    const root = copyFixture("demo");
+    const godot = fakeGodot({ holdPipes: true });
+    try {
+      const result = await checkProject(root, { godot, import: false, timeoutMs: 1000 });
+      expect(result.steps).toEqual([{ name: "check", ms: expect.any(Number), exitCode: null, timedOut: true }]);
+      expect(result.diagnostics).toEqual([expect.objectContaining({ severity: "error", message: "check timed out after 1s" })]);
+    } finally {
+      try {
+        process.kill(Number(readFileSync(join(dirname(godot), "grandchild.pid"), "utf8")), "SIGKILL");
+      } catch {
+        // The grandchild was already gone.
+      }
+    }
   });
 
   it("skips scan warnings from excluded folders", async () => {
