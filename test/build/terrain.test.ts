@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadLibrary } from "../../src/archetype/library.js";
 import { buildGlb } from "../../src/build/glb.js";
 import { buildKind } from "../../src/build/generators/index.js";
-import { noise2, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
+import { lakeOf, noise2, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
 import { resolveParams } from "../../src/build/params.js";
 import { lintModelFile } from "../../src/model/lint.js";
 import { runCli } from "../helpers.js";
@@ -106,6 +106,76 @@ describe("terrain", () => {
     prim.indices.splice(500 * 3, 6);
     const report = lintModelFile(writeScene(scene), { archetype: library.resolve("world.terrain") });
     expect(report.findings.map((f) => f.rule)).toContain("model/open-edges");
+  });
+});
+
+describe("a lake in the terrain", () => {
+  const water = (input: Record<string, unknown>) => buildKind("terrain", input).nodes[0]!.children!.find((c) => c.name === "Water");
+  const lakeInput = { relief: "hills", resolution: "129", tileSize: 256, lakeRadius: 50, lakeDepth: 8, seed: 3 };
+
+  it("is absent by default and present when a radius is given, as a flat water surface under the rim of the lake", () => {
+    expect(water({})).toBeUndefined();
+    const node = water(lakeInput)!;
+    expect(node).toBeDefined();
+    const ys = new Set(node.mesh!.prims.get("lake_water")!.positions.filter((_, i) => i % 3 === 1));
+    expect(ys.size).toBe(1);
+    const p = resolveParams(TERRAIN_PARAMS, lakeInput, "terrain");
+    const lake = lakeOf(p)!;
+    expect([...ys][0]).toBeCloseTo(lake.level, 9);
+    // The water sits half a metre under the lowest point of the rim, so it never runs over.
+    for (let k = 0; k < 64; k++) {
+      const a = (k / 64) * Math.PI * 2;
+      expect(terrainHeight(p, lake.x + lake.radius * 1.05 * Math.cos(a), lake.z + lake.radius * 1.05 * Math.sin(a))).toBeGreaterThanOrEqual(lake.level - 1e-6);
+    }
+  });
+
+  it("digs a basin: the ground at the centre is below the water, by about the depth", () => {
+    const p = resolveParams(TERRAIN_PARAMS, lakeInput, "terrain");
+    const lake = lakeOf(p)!;
+    expect(terrainHeight(p, lake.x, lake.z)).toBeCloseTo(lake.level - 8, 6);
+    expect(terrainHeight(p, lake.x + 25, lake.z)).toBeLessThan(lake.level);
+  });
+
+  it("is made of whole grid cells near the lake, and only there", () => {
+    const g = grid(lakeInput);
+    const prim = water(lakeInput)!.mesh!.prims.get("lake_water")!;
+    for (let v = 0; v < prim.positions.length; v += 3) expect(Math.hypot(prim.positions[v]!, prim.positions[v + 2]!)).toBeLessThan(50 * 1.1 + 2 * (256 / 128) + 1);
+    expect(prim.indices.length / 3).toBeGreaterThan(100);
+    expect(g.n).toBe(129);
+  });
+
+  it("carries on across a tile border: a lake on the border shows in both tiles and the heights match", () => {
+    const base = { ...lakeInput, lakeX: 128, lakeZ: 0 };
+    const west = grid({ ...base, tileX: 0, tileZ: 0 });
+    const east = grid({ ...base, tileX: 1, tileZ: 0 });
+    const n = west.n;
+    for (let k = 0; k < n; k++) expect(west.y[k * n + (n - 1)]).toBeCloseTo(east.y[k * n]!, 9);
+    expect(water({ ...base, tileX: 0, tileZ: 0 })).toBeDefined();
+    expect(water({ ...base, tileX: 1, tileZ: 0 })).toBeDefined();
+    // Every border vertex that lies under water has water in both tiles at the same place.
+    const level = lakeOf(resolveParams(TERRAIN_PARAMS, base, "terrain"))!.level;
+    const wetBorder = (tile: Record<string, unknown>, x: number) => {
+      const prim = water({ ...base, ...tile })!.mesh!.prims.get("lake_water")!;
+      const zs = new Set<number>();
+      for (let v = 0; v < prim.positions.length; v += 3) if (Math.abs(prim.positions[v]! - x) < 1e-6) zs.add(Math.round(prim.positions[v + 2]! * 1e6));
+      return zs;
+    };
+    const a = wetBorder({ tileX: 0 }, 128), b = wetBorder({ tileX: 1 }, -128);
+    // Low ground far from the lake is not lake, so look at the border near the lake only (z within 40 m of its centre).
+    let wet = 0;
+    for (let k = 0; k < n; k++) if (west.y[k * n + (n - 1)]! < level - 1e-6 && Math.abs(west.z[k * n + (n - 1)]!) <= 40) {
+      wet++;
+      const z = Math.round(west.z[k * n + (n - 1)]! * 1e6);
+      expect(a.has(z), `west ${k}`).toBe(true);
+      expect(b.has(z), `east ${k}`).toBe(true);
+    }
+    expect(wet).toBeGreaterThan(5);
+  });
+
+  it("stays clean as a model, at the smallest and the largest lake", () => {
+    for (const input of [{ lakeRadius: 5, lakeDepth: 0.5 }, { lakeRadius: 2000, lakeDepth: 100, tileSize: 1024 }, { lakeRadius: 40, lakeX: 30, lakeZ: -40, relief: "mountains" }, { lakeRadius: 60, relief: "plains", resolution: "65" }]) {
+      expect(problems("terrain", input), JSON.stringify(input)).toEqual([]);
+    }
   });
 });
 
