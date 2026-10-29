@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { reviewProject } from "../src/review/review.js";
+import { formatProjectMap } from "../src/scan/format.js";
 import { scanProject } from "../src/scan/scan.js";
 import { DEMO, makeProject, runCli } from "./helpers.js";
 
@@ -144,6 +146,27 @@ describe("project files", () => {
     const map = scanProject(root);
     expect(map.scripts.map((s) => s.path)).toEqual(["res://main.gd"]);
     expect(map.assets).toEqual({});
+  });
+});
+
+describe("C# scripts", () => {
+  const game = makeProject({ "project.godot": '[application]\nconfig/name="Game"\n', "Util.cs": "public class Util {}\n" });
+  const mod = makeProject({ "project.godot": '[application]\nconfig/name="Mod"\n', "Mine.cs": "public class Mine {}\n", "rescue.gd": "extends Node\n" });
+
+  it("lists and counts only the project's own, flagging a base's", () => {
+    const map = scanProject(mod, { base: [game] });
+    expect(map.csharpScripts).toEqual([{ path: "res://Mine.cs" }, { path: "res://Util.cs", external: true }]);
+    expect(formatProjectMap(map)).toMatch(/files: .*, 1 C# script\n/);
+  });
+
+  it("still lets GDScript use the base's C# classes", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="Mod"\n',
+      "rescue.gd": "extends Node\n\n\nfunc _ready() -> void:\n\tvar u: Util = null\n\tprint(u)\n",
+    });
+    const unknown = (base: string[]) => reviewProject(root, { base }).findings.filter((f) => f.rule === "api/unknown-type");
+    expect(unknown([])).toHaveLength(1);
+    expect(unknown([game])).toEqual([]);
   });
 });
 

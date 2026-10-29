@@ -13,7 +13,7 @@ import {
   listProjectFiles,
   resolveResPath,
 } from "../project/files.js";
-import type { ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
+import type { CSharpScriptInfo, ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
 
 export class ProjectNotFoundError extends Error {
   constructor(path: string) {
@@ -370,7 +370,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
 
   // Shaders, C# scripts and other assets.
   const shaders: ShaderInfo[] = [];
-  const csharpScripts: string[] = [];
+  const csharpScripts: CSharpScriptInfo[] = [];
   const assets: Record<string, number> = {};
   for (const file of files) {
     const ext = extension(file);
@@ -378,7 +378,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(read(file));
       shaders.push({ ...(external.has(file) ? { external: true } : {}), path: file, shaderType: match?.[1] });
     } else if (ext === "cs") {
-      csharpScripts.push(file);
+      csharpScripts.push({ ...(external.has(file) ? { external: true } : {}), path: file });
     } else if (!external.has(file)) {
       const kind = ext === "scn" ? "binary_scene" : ext === "res" ? "binary_resource" : ASSET_KINDS[ext];
       if (kind) assets[kind] = (assets[kind] ?? 0) + 1;
