@@ -157,6 +157,13 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("ship: the mast stands on the bridge roof at every length", () => {
+    for (const length of [60, 200, 400]) {
+      const boxes = nodeBoxes("ship", { length });
+      expect(boxes.get("Ship/Mast")!.min[1], `length ${length}`).toBeCloseTo(boxes.get("Ship/Bridge")!.max[1], 2);
+    }
+  });
+
   it("fence: a post stands at each end of the section", () => {
     for (const length of [1, 3, 5]) {
       const posts = [...nodeBoxes("fence", { length }).entries()].filter(([path]) => path.startsWith("Fence/Post_")).map(([, box]) => (box.min[2] + box.max[2]) / 2);
