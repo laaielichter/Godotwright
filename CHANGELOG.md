@@ -8,6 +8,11 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`usages`** (MCP `godot_usages`): find every place a function, signal, variable, class, autoload, input action, group,
+  node or `res://` path / `uid://` is used, offline and without the editor: GDScript code (not comments), names Godot looks
+  up in strings (connect, emit_signal, actions, groups, get_node, load), scene connections, node names and groups, project
+  settings. A resource also says whether the file exists.
+
 - **`building.watchtower`** archetype; `spaceship fighter` and `sci-fi fighter` now mean the spaceship; `model view` draws
   all views at one scale. Found in a second run of the small-model test, written up in `docs/cheap-models.md`.
 
