@@ -47,6 +47,14 @@ describe("expressions", () => {
     expect(() => evaluate("pow(10, 999)", {})).toThrow(/not a finite number/);
   });
 
+  it("refuses a NaN or an infinite value where it arises, even when a later step would hide it", () => {
+    expect(() => evaluate("min(pow(10, 999), 5)", {})).toThrow(/not a finite number/);
+    expect(() => evaluate("sqrt(-1) ^ 0", {})).toThrow(/not a finite number/);
+    expect(() => evaluate("min(1e999, 5)", {})).toThrow(/not a finite number/);
+    expect(() => evaluate("max(0, 1e300 * 1e300 - 1e300 * 1e300)", {})).toThrow(/not a finite number/);
+    expect(evaluate("min(2, 5) ^ 2", {})).toBe(4);
+  });
+
   it("checks how many numbers each function takes", () => {
     expect(() => evaluate("clamp($w, 0.2)", { w: 1 })).toThrow(/clamp\(\) takes 3 numbers, got 2 in expression/);
     expect(() => evaluate("abs()", {})).toThrow(/abs\(\) takes 1 number, got 0/);

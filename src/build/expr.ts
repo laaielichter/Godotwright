@@ -75,6 +75,8 @@ export function evaluate(text: string, scope: Scope): number {
     if (!isOp(op)) fail(`expected "${op}"`);
     pos++;
   };
+  // Every value is checked as it is made, so that a later min() or ^ cannot hide a NaN or an infinity.
+  const finite = (v: number): number => (Number.isFinite(v) ? v : fail("the result is not a finite number"));
 
   const expression = (depth: number): number => {
     if (depth > 40) fail("too deeply nested");
@@ -82,7 +84,7 @@ export function evaluate(text: string, scope: Scope): number {
     while (isOp("+") || isOp("-")) {
       const op = (tokens[pos++] as { op: string }).op;
       const right = term(depth);
-      value = op === "+" ? value + right : value - right;
+      value = finite(op === "+" ? value + right : value - right);
     }
     return value;
   };
@@ -92,7 +94,7 @@ export function evaluate(text: string, scope: Scope): number {
       const op = (tokens[pos++] as { op: string }).op;
       const right = unary(depth);
       if ((op === "/" || op === "%") && right === 0) fail("division by zero");
-      value = op === "*" ? value * right : op === "/" ? value / right : value % right;
+      value = finite(op === "*" ? value * right : op === "/" ? value / right : value % right);
     }
     return value;
   };
@@ -100,17 +102,17 @@ export function evaluate(text: string, scope: Scope): number {
     if (isOp("-")) { pos++; return -unary(depth); }
     if (isOp("+")) { pos++; return unary(depth); }
     const base = atom(depth);
-    if (isOp("^")) { pos++; return Math.pow(base, unary(depth)); }
+    if (isOp("^")) { pos++; return finite(Math.pow(base, unary(depth))); }
     return base;
   };
   const atom = (depth: number): number => {
     const t = tokens[pos++];
     if (!t) return fail("the expression ends too early");
-    if (t.kind === "num") return t.value;
+    if (t.kind === "num") return finite(t.value);
     if (t.kind === "var") {
       const v = Object.hasOwn(scope, t.name) ? scope[t.name] : undefined;
       if (v === undefined) return fail(`unknown variable $${t.name} (known: ${Object.keys(scope).map((k) => `$${k}`).join(", ") || "none"})`);
-      return v;
+      return finite(v);
     }
     if (t.kind === "name") {
       if (isOp("(")) {
@@ -124,10 +126,10 @@ export function evaluate(text: string, scope: Scope): number {
         }
         eat(")");
         if (args.length < fn.args[0] || args.length > fn.args[1]) fail(`${t.name}() takes ${countOf(fn.args)}, got ${args.length}`);
-        return fn.call(...args);
+        return finite(fn.call(...args));
       }
       const c = Object.hasOwn(CONSTANTS, t.name) ? CONSTANTS[t.name] : undefined;
-      return c === undefined ? fail(`unknown name "${t.name}" (variables start with $)`) : c;
+      return c === undefined ? fail(`unknown name "${t.name}" (variables start with $)`) : finite(c);
     }
     if (t.op === "(") {
       const v = expression(depth + 1);
