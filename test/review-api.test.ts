@@ -111,6 +111,29 @@ describe("Godot 3 syntax", () => {
   });
 });
 
+describe("Variant enums", () => {
+  it("reads Variant.Type and Variant.Operator members without calling Variant unknown", () => {
+    expect(
+      findings(
+        [
+          "extends Node",
+          "",
+          "func _ready() -> void:",
+          "\tvar t := Variant.Type.TYPE_INT",
+          "\tvar op: Variant.Operator = Variant.Operator.OP_ADD",
+          "\tprint(t, op, Variant.Operator.OP_MULTIPLY)",
+        ].join("\n"),
+      ).filter((l) => l.includes("[api/")),
+    ).toEqual([]);
+  });
+
+  it("still reports a misspelled class in front of an enum", () => {
+    const lines = findings("extends Node\n\nfunc _ready() -> void:\n\tprint(Varient.Type.TYPE_INT)\n");
+    expect(lines.filter((l) => l.includes("[api/"))).toHaveLength(1);
+    expect(lines[0]).toContain('"Varient" is not a class, singleton, autoload or variable in Godot 4.7');
+  });
+});
+
 describe("moved Godot 3 time functions", () => {
   it("suggests a millisecond timestamp for OS.get_system_time_msecs()", () => {
     expect(findings("extends Node\n\nfunc _ready() -> void:\n\tvar ms := OS.get_system_time_msecs()\n\tprint(ms)\n")).toEqual([

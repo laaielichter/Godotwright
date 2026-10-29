@@ -422,7 +422,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const cls = pm.resolveTypeName(name, model, true);
       if (cls) return { type: cls, exact: true };
       if (api.lookup(name).entries.some((e) => e.owner === "@GlobalScope" || e.owner === "@GDScript")) return undefined;
-      if (followedByDot && /^[A-Z]/.test(name) && !options.foreignClasses) {
+      // `Variant` is the namespace of the dotted global enums (`Variant.Type`, `Variant.Operator`), not a missing class.
+      const enumNamespace = [...pm.globalEnums].some((e) => e.startsWith(`${name}.`));
+      if (followedByDot && /^[A-Z]/.test(name) && !options.foreignClasses && !enumNamespace) {
         const hint = renameHint(name, "type");
         report(
           "api/unknown-type",
