@@ -24,6 +24,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright usages <name>` (godot_usages): every place a function, signal, node, group, input action, autoload or res:// path is used, offline. Call it before renaming, moving or deleting.
 
+## Rename and move
+
+`godotwright rename <from> <to> [--write]` (godot_rename): renames a name or moves a res:// file everywhere at once, with a dry run first, and checks the review before and after.
+
 ## Fix loop
 
 `godotwright review --only-new` (godot_review with only_new: true): after the first review, only the findings that are new since the last one in full, the rest as one short line each, and how many are fixed.
