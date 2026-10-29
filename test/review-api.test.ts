@@ -58,6 +58,40 @@ describe("Godot 3 syntax", () => {
     ).toEqual([]);
   });
 
+  it("does not call a project's own instance() method Godot 3 syntax", () => {
+    expect(
+      findings(
+        [
+          "extends Node",
+          "",
+          "var _pool: Node",
+          "",
+          "func instance() -> Node:",
+          "\treturn _pool",
+          "",
+          "func _ready() -> void:",
+          "\tprint(self.instance())",
+        ].join("\n"),
+      ).filter((l) => l.includes("[api/godot3-syntax]")),
+    ).toEqual([]);
+  });
+
+  it("still reports PackedScene.instance() when the project has no instance() method", () => {
+    expect(
+      findings(
+        [
+          "extends Node",
+          "",
+          "func _ready() -> void:",
+          '\tadd_child(preload("res://player.tscn").instance())',
+        ].join("\n"),
+        { "player.tscn": '[gd_scene format=3]\n[node name="Player" type="Node"]\n' },
+      ).filter((l) => l.includes("[api/godot3-syntax]")),
+    ).toEqual([
+      "res://main.gd:4: error [api/godot3-syntax] Godot 3 syntax: `PackedScene.instance()` is `instantiate()` in Godot 4.",
+    ]);
+  });
+
   it("still reports Godot 3 syntax in code", () => {
     expect(
       findings(

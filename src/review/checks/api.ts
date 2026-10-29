@@ -17,7 +17,6 @@ const GODOT3_SYNTAX: [RegExp, string][] = [
   [/^tool\s*$/, "`tool` is `@tool` in Godot 4"],
   [/\bsetget\b/, "`setget` is gone in Godot 4; use `var x: T: set = _set_x, get = _get_x` or set()/get blocks"],
   [/\byield\s*\(/, "`yield()` is `await` in Godot 4, e.g. `await get_tree().create_timer(1.0).timeout`"],
-  [/\.instance\(\s*\)/, "`PackedScene.instance()` is `instantiate()` in Godot 4"],
   [/^(remote|master|puppet|remotesync|mastersync|puppetsync|sync|slave)\s+(func|var)\b/, "network keywords are `@rpc(...)` annotations in Godot 4"],
   [/\bfuncref\s*\(/, "`funcref()` is a Callable in Godot 4: `object.method` or `Callable(object, \"method\")`"],
   [/\bconnect\(\s*"[^"]*"\s*,\s*[^,()"]+\s*,\s*"[^"]*"/, "`connect(\"signal\", target, \"method\")` is `signal_name.connect(target.method)` in Godot 4"],
@@ -44,6 +43,9 @@ const MOVED: Record<string, string> = {
   "OS.vsync_enabled": "DisplayServer.window_set_vsync_mode()",
   "Engine.editor_hint": "Engine.is_editor_hint()",
 };
+
+/** `.instance()` is Godot 3's PackedScene call. Scripts may define their own `instance()`, so see checkScriptApi. */
+const PACKED_INSTANCE = /\.instance\(\s*\)/;
 
 const INPUT_ONE = /\b(?:is_action_pressed|is_action_just_pressed|is_action_just_released|is_action_released|get_action_strength|get_action_raw_strength|is_action|action_press|action_release)\s*\(\s*&?"([^"]+)"/g;
 const INPUT_AXIS = /\bget_axis\s*\(\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"/g;
@@ -109,6 +111,10 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
 
   const source = pm.data.sources.get(path) ?? "";
   const duckTyped = new Set([...source.matchAll(/\b(?:has_method|has_signal|has_meta)\s*\(\s*&?"(\w+)"/g)].map((m) => m[1]!));
+  // Without a receiver type, `x.instance()` is Godot 3 only when no script (or foreign class) in the project defines `instance`.
+  let definesInstance: boolean | undefined;
+  const hasInstanceMethod = (): boolean =>
+    (definesInstance ??= options.foreignClasses || [...pm.allModels()].some((m) => m.outline.functions.some((f) => f.name === "instance")));
 
   // --- per statement ----------------------------------------------------
   let currentFn: FunctionInfo | undefined;
@@ -128,9 +134,12 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       }
     }
 
+    // Matched on the blanked code, so words inside string literals are not syntax.
     for (const [re, message] of GODOT3_SYNTAX) {
-      // Matched on the blanked code, so words inside string literals are not syntax.
       if (re.test(ll.code)) report("api/godot3-syntax", ll.line, `Godot 3 syntax: ${message}.`);
+    }
+    if (PACKED_INSTANCE.test(ll.code) && !hasInstanceMethod()) {
+      report("api/godot3-syntax", ll.line, "Godot 3 syntax: `PackedScene.instance()` is `instantiate()` in Godot 4.");
     }
     for (const name of inputActions(ll.text)) {
       if (!options.inputActions.has(name) && !name.startsWith("ui_")) {
