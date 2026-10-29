@@ -39,19 +39,19 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
 
 ## Manual to-dos (only you can do these)
 
-1. **About box** (repo page, gear icon next to About):
+1. ~~**About box**~~: done (description, website, 12 topics).
+   Original text, for reference:
    - Description: `MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4: offline API, project map, headless checks, AAA GDScript review.`
    - Website: `https://laaielichter.github.io/Godotwright/`
    - Topics: `godot godot4 gdscript gamedev godot-engine mcp mcp-server claude-code codex ai-agents linter static-analysis`
 2. ~~**Pages**~~: done, the site is live.
-3. **Social preview**: Settings > General > Social preview > upload `docs/og.png`.
+3. ~~**Social preview**~~: done, custom image is live.
 4. ~~**Discussions**~~: done, linked from the issue forms.
-5. ~~**npm**~~: done, `godotwright` 0.0.1 is live; README and site use `npx -y godotwright`.
+5. ~~**npm**~~: done, `godotwright` is live (0.0.2 on 29 Oct, published by GitHub with trusted publishing and provenance).
 6. **Release v0.1.0** on GitHub with short notes (what each command does).
-7. **MCP Registry**: `mcpName` and `server.json` are in place, and the Publish workflow
-   lists every tagged version. Set up npm trusted publishing (see `.github/workflows/publish.yml`),
-   then push tag `v0.0.2`.
-8. ~~**Good first issues**~~: done, issues #2-#5.
+7. ~~**MCP Registry**~~: done, the Publish workflow listed 0.0.2. Every next version is
+   listed by the same workflow.
+8. **Good first issues**: #2 and #4 are done, only #3 and #5 are left. Add 1-3 new ones.
 9. **Record a real demo**: 20-30 s screen capture of Claude Code fixing a Godot 3 script
    with Godotwright (prompt, `godot_review` call, fixed code, score going up). MP4 for posts,
    GIF or WebP under 5 MB for the README.
@@ -61,14 +61,14 @@ Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to ab
 - [x] One-command install works (`npx -y godotwright`)
 - [ ] Release v0.1.0
 - [ ] Real screen-recorded demo
-- [ ] Social preview uploaded
+- [x] Social preview uploaded
 - [x] Site live
-- [x] 3-5 good first issues
+- [ ] 3-5 good first issues (2 open on 29 Oct)
 - [ ] You can be online 6-8 hours on launch day to answer every comment
 
 ## Listings (after npm)
 
-1. Official MCP Registry (step 7 above).
+1. ~~Official MCP Registry~~: done.
 2. Glama (glama.ai/mcp/servers, "Add MCP Server"), then a one-line PR to
    punkpeye/awesome-mcp-servers (needs the Glama badge).
 3. mcp.so and Smithery.
@@ -127,3 +127,9 @@ Stars 0 · forks 0 · watchers 0 · open issues 0 · npm downloads n/a (not publ
 
 Weekly (20 min): stars, forks, npm downloads, top referrers from Insights > Traffic
 (kept only 14 days), reply to every issue, label one new good first issue, note what moved.
+
+## Status 29 Oct 2026
+
+Stars 1 · forks 1 · npm 0.0.2 live · MCP Registry listed · 0 releases · 2 open good first issues.
+Since the audit the repo grew 3D model tools (inspect, lint, contract, build, spec, recipes).
+Left before launch: release v0.1.0, 1-3 good first issues, real screen-recorded demo, a launch day.
