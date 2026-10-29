@@ -58,7 +58,7 @@ describe("Godot 3 syntax", () => {
     ).toEqual([]);
   });
 
-  it("does not call a project's own instance() method Godot 3 syntax", () => {
+  it("does not flag a project's own instance() method as Godot 3 syntax", () => {
     expect(
       findings(
         [
@@ -118,7 +118,7 @@ describe("signals added at runtime", () => {
     "func _ready() -> void:",
     '\tadd_user_signal("hit", [{"name": "amount", "type": TYPE_INT}])',
     '\tconnect("hit", _on_hit)',
-    '\tself.hit.connect(_on_hit)',
+    "\tself.hit.connect(_on_hit)",
     '\temit_signal("hit", 3)',
     "",
     "func _on_hit(amount: int) -> void:",
@@ -131,9 +131,10 @@ describe("signals added at runtime", () => {
 
   it("accepts a signal that a base script adds with add_user_signal()", () => {
     expect(
-      findings("extends \"res://base.gd\"\n\nfunc _ready() -> void:\n\tconnect(\"died\", _on_died)\n\nfunc _on_died() -> void:\n\tpass\n", {
-        "base.gd": 'extends Node\n\nfunc _init() -> void:\n\tadd_user_signal("died")\n',
-      }).filter((l) => l.includes("[api/")),
+      findings(
+        ['extends "res://base.gd"', "", "func _ready() -> void:", '\tconnect("died", _on_died)', "", "func _on_died() -> void:", "\tpass"].join("\n"),
+        { "base.gd": 'extends Node\n\nfunc _init() -> void:\n\tadd_user_signal("died")\n' },
+      ).filter((l) => l.includes("[api/")),
     ).toEqual([]);
   });
 
