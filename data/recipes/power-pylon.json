@@ -156,6 +156,32 @@
      ]
     },
     {
+     "name": "Top",
+     "shape": "box",
+     "size": [
+      "2 * $t + 0.3",
+      0.4,
+      "2 * $t + 0.3"
+     ],
+     "at": [
+      0,
+      "$bodyH - 0.2",
+      0
+     ]
+    },
+    {
+     "name": "Mast",
+     "shape": "cylinder",
+     "radius": 0.12,
+     "height": "$H * 0.14 + 0.4",
+     "segments": 8,
+     "at": [
+      0,
+      "$bodyH - ($H * 0.14 + 0.4) / 2 + 0.1",
+      0
+     ]
+    },
+    {
      "name": "Peak",
      "shape": "cylinder",
      "radius": 0.08,

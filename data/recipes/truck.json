@@ -152,13 +152,55 @@
      "material": "metal",
      "size": [
       "$width * 0.55",
-      0.35,
+      0.7,
       "$length - 0.4"
      ],
      "at": [
       0,
-      "$frame",
+      "$wheelRadius + 0.4",
       0
+     ]
+    },
+    {
+     "name": "Axle_F",
+     "shape": "cylinder",
+     "material": "metal",
+     "axis": "x",
+     "radius": 0.09,
+     "height": "$width - 0.3",
+     "segments": 10,
+     "at": [
+      0,
+      "$R",
+      "$L2 - 0.95"
+     ]
+    },
+    {
+     "name": "Axle_M",
+     "shape": "cylinder",
+     "material": "metal",
+     "axis": "x",
+     "radius": 0.09,
+     "height": "$width - 0.3",
+     "segments": 10,
+     "at": [
+      0,
+      "$R",
+      "-$L2 + 2.6"
+     ]
+    },
+    {
+     "name": "Axle_R",
+     "shape": "cylinder",
+     "material": "metal",
+     "axis": "x",
+     "radius": 0.09,
+     "height": "$width - 0.3",
+     "segments": 10,
+     "at": [
+      0,
+      "$R",
+      "-$L2 + 1.2"
      ]
     },
     {
@@ -418,7 +460,7 @@
       0.08
      ],
      "at": [
-      "$width / 2 + 0.12",
+      "$width * 0.49 + 0.03",
       "$boxBottom + 1.5",
       "$L2 - 0.5"
      ],

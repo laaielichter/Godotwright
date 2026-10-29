@@ -114,7 +114,7 @@
      "name": "Cab",
      "at": [
       0,
-      "$hood + 0.1",
+      "$hood * 0.6 + 0.75",
       "$zr - 0.1"
      ],
      "children": [
@@ -198,7 +198,7 @@
      ],
      "at": [
       "$xr",
-      "$rearWheelRadius * 2 + 0.2",
+      "$rearWheelRadius * 2 + 0.03",
       "$zr"
      ],
      "mirror": "Fender_R"
@@ -366,11 +366,54 @@
      "mirror": "WheelFront_R"
     },
     {
+     "name": "Axle_R",
+     "shape": "cylinder",
+     "material": "metal",
+     "axis": "x",
+     "radius": 0.1,
+     "height": "$track",
+     "segments": 12,
+     "at": [
+      0,
+      "$rearWheelRadius",
+      "$zr"
+     ]
+    },
+    {
+     "name": "Axle_F",
+     "shape": "cylinder",
+     "material": "metal",
+     "axis": "x",
+     "radius": 0.08,
+     "height": "$track * 0.85",
+     "segments": 12,
+     "at": [
+      0,
+      "$frontWheelRadius",
+      "$zf"
+     ]
+    },
+    {
+     "name": "FrontMount",
+     "shape": "box",
+     "material": "metal",
+     "size": [
+      0.25,
+      "max(0.3, $hood * 0.5 - $frontWheelRadius + 0.1)",
+      0.25
+     ],
+     "at": [
+      0,
+      "$frontWheelRadius + max(0.3, $hood * 0.5 - $frontWheelRadius + 0.1) / 2",
+      "$zf"
+     ]
+    },
+    {
      "name": "Hitch",
      "at": [
       0,
       "$hood * 0.5 - 0.1",
-      "$zr - 0.9"
+      "$zr - 0.45"
      ],
      "children": [
       {

@@ -1,4 +1,5 @@
 import { checkArchetype } from "../archetype/check.js";
+import { separateParts } from "./view.js";
 import type { ResolvedArchetype } from "../archetype/types.js";
 import { checkContract, type ModelContract } from "./contract.js";
 import { inspectModel, transformPoint, type ModelInfo, type PrimitiveInfo } from "./inspect.js";
@@ -58,6 +59,7 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
   reportEdges(edgeTotals, add);
   checkTextures(info, options, add);
   checkSymmetry(info, add);
+  if (options.archetype?.sheet !== true) checkSeparateParts(info, add);
   if (options.contract) findings.push(...checkContract(info, options.contract));
   if (options.archetype && options.archetype.id !== "thing") findings.push(...checkArchetype(info, options.archetype));
 
@@ -77,6 +79,19 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
 }
 
 type Add = (rule: string, message: string, node?: string, severity?: ModelSeverity) => void;
+
+/** A part that hangs in the air (a warning) or stands apart on the ground (an info) is usually a part put in the wrong place. */
+function checkSeparateParts(info: ModelInfo, add: Add): void {
+  for (const s of separateParts(info)) {
+    const names = s.nodes.length > 3 ? `${s.nodes.slice(0, 3).join(", ")} and ${s.nodes.length - 3} more` : s.nodes.join(", ");
+    add(
+      "model/floating-part",
+      `${names} ${s.nodes.length > 1 ? "do" : "does"} not touch the rest of the model: ${s.gap.toFixed(2)} m away${s.grounded ? ", standing on the ground" : ", in the air"} (compared by bounding boxes).`,
+      s.nodes[0],
+      s.grounded ? "info" : "warning",
+    );
+  }
+}
 
 function checkRig(info: ModelInfo, add: Add): void {
   const seen = new Set<string>();

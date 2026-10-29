@@ -104,6 +104,12 @@ Godotwright gets better with every use, without collecting anything personal.
     next to the tile, scatter points for plants and settlements, and checks for streaming budgets.
     Same method as models: archetypes first, then recipes.
 
+21. **Support for small, cheap models.** Step 1 (done): `model view` (three letter views, a parts table) and the
+    floating-part check, from a test with six small-model agents ([docs/cheap-models.md](docs/cheap-models.md)). Next: a
+    briefing tool (`model brief`) with the closest recipe to start from, recipes placeable inside a spec, an honest report of
+    what `lint --archetype` compared, archetypes for fantasy, creatures, fortifications and spacecraft, then the same six
+    tasks again to measure the difference.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.

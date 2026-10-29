@@ -71,6 +71,7 @@ godotwright model lint car.glb --contract model.contract.json
 godotwright model identify "a tractor" # what it is: parts, size, variants, what to anticipate
 godotwright model archetypes          # the family tree of things Godotwright knows
 godotwright model kinds               # what `model build` can make, with parameters
+godotwright model view car.glb       # see a model as text: front, side and top views, the parts, what does not touch
 godotwright model recipes             # the ready-made recipes and the archetype each one is checked against
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright learn                     # what Godotwright learned on this machine
@@ -139,6 +140,9 @@ noise whose neighbours continue it exactly, with an optional lake carved into it
 `data/recipes/`: `car`, `tractor`, `helicopter`, `airliner`, `ship`, `tree`, `conifer`,
 `wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
 it as it builds, and every recipe is tested to stay clean at the lowest and highest value of each parameter.
+
+Small, cheap models can work blind: see [docs/cheap-models.md](docs/cheap-models.md) for a test and what `model view` and the
+floating-part check do about it.
 
 `model identify` says **what a thing is** before you build it, from its name in English or Dutch (typos,
 plurals and Dutch compounds like "vrachtauto" included) or from a description ("something with wheels and
@@ -239,6 +243,7 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (written inside the project), and lint it |
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
+| `godot_model_view` | See a `.glb` as text: front, side and top views, the parts with sizes, and parts that do not touch the rest |
 | `godot_model_inspect` | What is in a `.glb`: nodes, triangles, textures, size |
 
 Pick a profile with `--tier`:
