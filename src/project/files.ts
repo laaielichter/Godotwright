@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 /** Folders Godot never treats as project content: hidden ones (.godot, .git, a Python venv) and node_modules. */
@@ -21,16 +21,25 @@ export function findProjectRoot(start: string): string | undefined {
   }
 }
 
-/** Lists project files as `res://` paths, sorted, skipping ignored directories. */
-export function listProjectFiles(root: string): string[] {
+/**
+ * Lists project files as `res://` paths, sorted, skipping ignored directories. A folder that cannot be
+ * read is left out and passed to `onError`, so one locked folder does not stop the rest of the project.
+ */
+export function listProjectFiles(root: string, onError?: (folder: string, error: unknown) => void): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   const walk = (dir: string) => {
-    // Symlinked folders are followed (Godot does too); each real folder once, so a link loop ends.
-    const real = realpathSync(dir);
-    if (seen.has(real)) return;
-    seen.add(real);
-    const entries = readdirSync(dir, { withFileTypes: true });
+    let entries: Dirent[];
+    try {
+      // Symlinked folders are followed (Godot does too); each real folder once, so a link loop ends.
+      const real = realpathSync(dir);
+      if (seen.has(real)) return;
+      seen.add(real);
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch (error) {
+      onError?.(toResPath(root, dir), error);
+      return;
+    }
     if (dir !== root && entries.some((e) => e.name === ".gdignore" && e.isFile())) return;
     for (const entry of entries) {
       const full = join(dir, entry.name);

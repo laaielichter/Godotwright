@@ -59,6 +59,12 @@ export interface LoadOptions {
 /** Config file in a project root, e.g. {"base": ["../game"]}; paths are relative to the root. */
 export const CONFIG_FILE = "godotwright.json";
 
+/** The system error code of a failed file operation, such as EACCES, when `error` is one. */
+function errorCode(error: unknown): string | undefined {
+  const code = (error as { code?: unknown } | undefined)?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
 /** Reads a list of paths from godotwright.json, resolved against the project root. */
 function configPaths(root: string, key: "base" | "baseFiles"): string[] {
   const config = resolvePath(root, CONFIG_FILE);
@@ -138,17 +144,26 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   if (!root) throw new ProjectNotFoundError(path);
 
   const overrides = options.overrides ?? {};
+  const warnings: Warning[] = [];
   // Which root each file comes from: base projects first, the project's own files win.
   const bases = baseRoots(root, options.base);
   const origin = new Map<string, string>();
-  for (const dir of [...bases, root]) for (const file of listProjectFiles(dir)) origin.set(file, dir);
+  for (const dir of bases) for (const file of listProjectFiles(dir)) origin.set(file, dir);
+  const unreadable = (folder: string, error: unknown) => {
+    warnings.push({ file: folder, message: `could not read folder (${errorCode(error) ?? "error"})` });
+  };
+  for (const file of listProjectFiles(root, unreadable)) origin.set(file, root);
   for (const file of Object.keys(overrides)) origin.set(file, root);
   const files = [...origin.keys()].sort();
   const external = new Set(files.filter((f) => origin.get(f) !== root && f !== "res://project.godot"));
   const fileSet = new Set(files);
-  const warnings: Warning[] = [];
   const read = (res: string) => overrides[res] ?? readFileSync(fromResPath(origin.get(res) ?? root, res), "utf8");
   const fail = (file: string, error: unknown) => {
+    const code = errorCode(error);
+    if (code) {
+      warnings.push({ file, message: `could not read file (${code})` });
+      return;
+    }
     const line = error instanceof VariantParseError ? error.line : undefined;
     const message = error instanceof Error ? error.message.replace(/ \(line \d+\)$/, "") : String(error);
     warnings.push({ file, line, message: `could not parse file: ${message}` });
@@ -375,7 +390,14 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   for (const file of files) {
     const ext = extension(file);
     if (ext === "gdshader") {
-      const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(read(file));
+      let source: string;
+      try {
+        source = read(file);
+      } catch (error) {
+        fail(file, error);
+        continue;
+      }
+      const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(source);
       shaders.push({ ...(external.has(file) ? { external: true } : {}), path: file, shaderType: match?.[1] });
     } else if (ext === "cs") {
       csharpScripts.push({ ...(external.has(file) ? { external: true } : {}), path: file });

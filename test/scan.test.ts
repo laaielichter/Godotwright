@@ -1,8 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import { reviewProject } from "../src/review/review.js";
 import { formatProjectMap } from "../src/scan/format.js";
 import { scanProject } from "../src/scan/scan.js";
 import { DEMO, makeProject, runCli } from "./helpers.js";
+
+/** Paths (substrings) that fail with EACCES. Tests run as root, which can read anything, so the fs calls are guarded. */
+const denied = vi.hoisted(() => [] as string[]);
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  const guard = <F extends (...args: never[]) => unknown>(fn: F): F =>
+    ((...args: unknown[]) => {
+      const name = String(args[0]);
+      if (denied.some((path) => name.includes(path))) {
+        throw Object.assign(new Error(`EACCES: permission denied, '${name}'`), { code: "EACCES" });
+      }
+      return (fn as unknown as (...rest: unknown[]) => unknown)(...args);
+    }) as unknown as F;
+  return { ...actual, readdirSync: guard(actual.readdirSync), readFileSync: guard(actual.readFileSync) };
+});
 
 describe("scanProject on the demo project", () => {
   const map = scanProject(DEMO);
@@ -146,6 +163,46 @@ describe("project files", () => {
     const map = scanProject(root);
     expect(map.scripts.map((s) => s.path)).toEqual(["res://main.gd"]);
     expect(map.assets).toEqual({});
+  });
+});
+
+describe("unreadable files and folders", () => {
+  const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n';
+  /** Runs `fn` with `paths` unreadable, then makes them readable again. */
+  const withDenied = <T>(paths: string[], fn: () => T): T => {
+    denied.push(...paths);
+    try {
+      return fn();
+    } finally {
+      denied.length = 0;
+    }
+  };
+
+  it("skips a folder it cannot read, warns, and scans the rest", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n',
+      "locked/secret.gd": "extends Node\n",
+    });
+    const map = withDenied([join(root, "locked")], () => scanProject(root));
+    expect(map.scripts).toEqual([]);
+    expect(map.scenes.map((s) => s.path)).toEqual(["res://main.tscn"]);
+    expect(map.warnings).toEqual([{ file: "res://locked", message: "could not read folder (EACCES)" }]);
+  });
+
+  it("reports an unreadable script, scene or project.godot as a read error", () => {
+    const root = makeProject({ "project.godot": PROJECT, "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n', "broken.gd": "extends Node\n" });
+    const map = withDenied([join(root, "broken.gd")], () => scanProject(root));
+    expect(map.warnings).toEqual([{ file: "res://broken.gd", message: "could not read file (EACCES)" }]);
+    const own = withDenied([join(root, "project.godot")], () => scanProject(root));
+    expect(own.warnings).toEqual([{ file: "res://project.godot", message: "could not read file (EACCES)" }]);
+  });
+
+  it("skips an unreadable shader with a warning instead of failing the scan", () => {
+    const root = makeProject({ "project.godot": PROJECT, "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n', "flash.gdshader": "shader_type canvas_item;\n" });
+    const map = withDenied([join(root, "flash.gdshader")], () => scanProject(root));
+    expect(map.shaders).toEqual([]);
+    expect(map.warnings).toEqual([{ file: "res://flash.gdshader", message: "could not read file (EACCES)" }]);
   });
 });
 
