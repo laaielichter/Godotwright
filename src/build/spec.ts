@@ -209,6 +209,23 @@ export function mirrorNode(node: BuildNode, name: string): BuildNode {
   return out;
 }
 
+/** Nodes and triangles in a built node and everything under it. */
+function sizeOf(node: BuildNode): { nodes: number; triangles: number } {
+  let nodes = 1;
+  let triangles = node.mesh?.triangles ?? 0;
+  for (const child of node.children ?? []) {
+    const size = sizeOf(child);
+    nodes += size.nodes;
+    triangles += size.triangles;
+  }
+  return { nodes, triangles };
+}
+
+/** True when a list of spec nodes has a mirror anywhere in it. */
+function hasMirror(list: unknown): boolean {
+  return Array.isArray(list) && list.some((n) => isObj(n) && (n["mirror"] !== undefined || hasMirror(n["children"])));
+}
+
 /** Counts nodes that will be written, and refuses the spec once they pass the limit. */
 function spendNodes(counters: Ctx["counters"], amount: number, path: string): void {
   counters.nodes += amount;
@@ -299,6 +316,13 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
     out.push(node);
     if (raw["mirror"] !== undefined) {
       if (typeof raw["mirror"] !== "string" || raw["mirror"] === "") throw new BuildError(`${path}.mirror: give the name of the mirrored node, e.g. "Wheel_R"`);
+      // A copy of a subtree that already holds a mirror would double that mirror's parts, so refuse it.
+      if (hasMirror(raw["children"])) throw new BuildError(`${path}.mirror: its children already have a mirror, so mirroring it again would double them`);
+      // The copy is a whole subtree of its own: count it before building it.
+      const size = sizeOf(node);
+      spendNodes(parent.counters, size.nodes, path);
+      parent.counters.triangles += size.triangles;
+      checkTriangles(parent.counters.triangles, path);
       out.push(mirrorNode(node, expandName(raw["mirror"], i, repeat !== undefined)));
     }
   }

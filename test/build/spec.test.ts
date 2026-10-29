@@ -203,6 +203,28 @@ describe("mistakes get a path and a reason", () => {
     }
   });
 
+  it("counts mirror copies against the node and triangle limits", () => {
+    // 500 pairs of 6 nodes is 3,000 nodes; mirrored, it is 6,000.
+    const pair = { name: "Pair{i}", repeat: { count: 500, step: [2, 0, 0] }, mirror: "Twin{i}", children: [1, 2, 3, 4, 5].map((k) => solid({ name: `P${k}` })) };
+    expect(() => buildSpec(spec([pair]))).toThrow(/too many nodes \(max 5000\)/);
+    // Each mirror copy is a model of its own: 2 domes of 128 segments are fine, but their mirrors are not.
+    const saved = LIMITS.triangles;
+    LIMITS.triangles = 50_000;
+    try {
+      const dome = { name: "Dome{i}", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: 128, repeat: { count: 2, step: [3, 0, 0] }, mirror: "Mirror{i}" };
+      expect(() => buildSpec(spec([dome]))).toThrow(/grew past 50,000 triangles/);
+      expect(() => buildSpec(spec([{ ...dome, mirror: undefined, name: "Solo{i}" }]))).not.toThrow();
+    } finally {
+      LIMITS.triangles = saved;
+    }
+  });
+
+  it("refuses a mirror inside a mirrored node, which would double its parts", () => {
+    const raw = spec([{ name: "Arm_L", mirror: "Arm_R", children: [solid({ name: "Hand", mirror: "Hand_R" })] }]);
+    expect(() => buildSpec(raw)).toThrow(/already have a mirror, so mirroring it again would double them/);
+    expect(() => buildSpec(spec([{ name: "Arm_L", mirror: "Arm_R", children: [solid({ name: "Hand" })] }]))).not.toThrow();
+  });
+
   it("counts every copy of a repeated node against the node limit", () => {
     // 200 rows of 200 cells is 40,000 nodes; the inner repeat must count each of its copies, not just one.
     const cells = { name: "Cell{i}", shape: "box", size: [1, 1, 1], material: "paint", repeat: { count: 200, step: [0, 1, 0] } };
