@@ -302,6 +302,9 @@
      "romp",
      "lichaam",
      "borst"
+    ],
+    "replaces": [
+     "Body"
     ]
    },
    {

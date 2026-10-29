@@ -38,7 +38,7 @@ map of your project, real Godot checks and a fixed AAA review, as MCP tools and 
 
 A coding agent can also **make, look at and check 3D models** for Godot with no Blender: `model identify` says what a
 thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
-[44 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
+[49 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
 terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
 It is set up to work with small, cheap models too: [what we tested and learned](docs/cheap-models.md).
 

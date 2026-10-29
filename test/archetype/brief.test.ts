@@ -16,11 +16,12 @@ describe("model brief", () => {
   });
 
   it("says plainly when a kind only matches the family, and does not claim more", () => {
-    const b = briefFor("a rowing boat");
-    expect(b.result.best.id).toBe("vessel.boat.rowing-boat");
+    const b = briefFor("a spaceship");
+    expect(b.result.best.id).toBe("spacecraft.spaceship");
     expect(b.relation).toBe("family");
     expect(b.text).toContain("Nothing makes exactly this");
-    expect(b.text).toContain("godotwright model build boat");
+    expect(b.text).toContain("godotwright model build rocket");
+    expect(briefFor("a rowing boat").kinds[0]?.kind).toBe("rowing-boat");
     expect(briefFor("a boat").text).toContain("Check it is what you want");
   });
 
