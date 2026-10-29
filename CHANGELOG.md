@@ -13,6 +13,7 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 - **`migrate`** (CLI and MCP tool `godot_migrate`): rewrites Godot 3 GDScript to Godot 4 where that is mechanical
   (annotations, renamed classes, functions, properties and constants, `yield` to `await`, `connect`/`emit_signal`/`funcref`
   to signals and callables, moved members) with a dry run first, and lists what still needs a hand.
+- **`review --sarif`**: the review as SARIF 2.1.0 for GitHub code scanning, so findings show inline on pull requests.
 
 - **Model tools** (CLI and MCP): `model inspect` and `model lint` for `.glb`/`.gltf` (flipped faces, open edges, normals, UVs,
   tangents, textures, node names, budgets, with a score), `model contract` (pin node names, size and triangle budget,
