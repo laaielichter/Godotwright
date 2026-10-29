@@ -84,6 +84,14 @@ describe("lookup", () => {
     expect(api.lookup("object").entries[0]).toMatchObject({ kind: "class", owner: "Object" });
   });
 
+  it("suggests the values of a misspelled enum value, not the enum's name", () => {
+    const result = api.lookup("Node.ProcessMode.PROCES_MODE_ALWAYS");
+    expect(result.entries).toEqual([]);
+    expect(result.suggestions).toContain("PROCESS_MODE_ALWAYS");
+    expect(result.suggestions).not.toContain("process_mode");
+    expect(api.lookup("Node.ProcessMode.PROCESS_MODE_ALWAYS").entries[0]).toMatchObject({ kind: "constant", name: "PROCESS_MODE_ALWAYS" });
+  });
+
   it("does not treat Object.prototype names as Godot 3 renames", () => {
     for (const name of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
       expect(api.lookup(name).renamed, name).toBeUndefined();

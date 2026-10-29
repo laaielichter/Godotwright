@@ -151,7 +151,7 @@ export class GodotApi {
 
     if (dot > 0) {
       const className = query.slice(0, dot);
-      let memberName = query.slice(dot + 1);
+      const memberName = query.slice(dot + 1);
       const cls = this.getClass(className);
       if (!cls) {
         result.renamed = this.renamedClass(className);
@@ -161,16 +161,21 @@ export class GodotApi {
       // Property names may contain dots (EditorSettings); otherwise `Enum.VALUE`.
       result.entries = this.member(cls.name, memberName);
       const lastDot = memberName.lastIndexOf(".");
+      let enumSuggestions: string[] | undefined;
       if (result.entries.length === 0 && lastDot > 0) {
         const valueName = memberName.slice(lastDot + 1);
-        memberName = memberName.slice(0, lastDot);
-        const enumEntry = this.member(cls.name, memberName).find((e) => e.kind === "enum");
-        const value = enumEntry ? (enumEntry.item as EnumInfo).values.find((v) => v.name === valueName) : undefined;
-        result.entries = value ? [{ kind: "constant", owner: enumEntry!.owner, name: value.name, item: value }] : [];
+        const enumEntry = this.member(cls.name, memberName.slice(0, lastDot)).find((e) => e.kind === "enum");
+        if (enumEntry) {
+          const values = (enumEntry.item as EnumInfo).values;
+          const value = values.find((v) => v.name === valueName);
+          if (value) result.entries = [{ kind: "constant", owner: enumEntry.owner, name: value.name, item: value }];
+          // The enum exists but has no such value: its values are the names to suggest.
+          else enumSuggestions = closest(valueName, values.map((v) => v.name));
+        }
       }
       if (result.entries.length === 0) {
         result.renamed = this.renamedMember(memberName);
-        result.suggestions = this.closeMemberNames(cls.name, memberName);
+        result.suggestions = enumSuggestions ?? this.closeMemberNames(cls.name, memberName);
       }
       return result;
     }
