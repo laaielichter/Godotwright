@@ -155,6 +155,7 @@ describe("outlineScript", () => {
         "@export var speed := 1.0",
         '@export_subgroup ("Tuning")',
         "@export_range (0, 10) var level := 1",
+        "@export_range\t(0, 10) var tabbed := 2",
       ].join("\n"),
     );
     expect(spaced.tool).toBe(true);
@@ -162,6 +163,7 @@ describe("outlineScript", () => {
     expect(spaced.variables.map((v) => [v.name, v.exportAnnotation])).toEqual([
       ["speed", "@export"],
       ["level", "@export_range (0, 10)"],
+      ["tabbed", "@export_range\t(0, 10)"],
     ]);
   });
 
