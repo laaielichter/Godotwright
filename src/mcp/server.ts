@@ -3,6 +3,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
+import { briefFor } from "../archetype/brief.js";
 import { formatIdentify } from "../archetype/format.js";
 import { identify } from "../archetype/identify.js";
 import { loadLibrary } from "../archetype/library.js";
@@ -67,7 +68,7 @@ const PROFILES: Record<Tier, Profile> = {
       "5. If Godot is installed, call godot_check before you finish.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
-      "To make or check a 3D model (.glb): 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
+      "To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
     ].join("\n"),
   },
   premium: {
@@ -82,6 +83,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
       "- godot_checklist lists every AAA rule with its fix.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
+      "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
       "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
       "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, with expressions, mirror and repeat) and lists the ready-made kinds.",
       "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
@@ -286,6 +288,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const library = loadLibrary();
         return text(formatIdentify(identify(query, library), library));
       }),
+  );
+
+  server.registerTool(
+    "godot_model_brief",
+    {
+      title: "Briefing before you build a model",
+      description:
+        "One page to read before building a 3D model, made for small models: what the thing is, the ready-made kind to start from (with its build command), the parts to name your nodes after, typical size, rules, the usual mistakes, the order of tools to call, and a short spec cheat sheet. Replaces calling godot_model_identify and godot_model_spec separately when you just want to start.",
+      inputSchema: { text: z.string().describe("what you want to make, e.g. 'a rowing boat', 'dragon', 'castle wall'") },
+      annotations: readOnly,
+    },
+    async ({ text: query }) => guard(() => text(briefFor(query).text)),
   );
 
   server.registerTool(

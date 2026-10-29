@@ -267,6 +267,29 @@ describe("model contract --archetype", () => {
   });
 });
 
+describe("model brief and recipe specs", () => {
+  it("prints a briefing and the short spec help", async () => {
+    const brief = await runCli(["model", "brief", "a", "windmill"]);
+    expect(brief.exitCode).toBe(0);
+    expect(brief.output).toContain("godotwright model build windmill");
+    const json = JSON.parse((await runCli(["model", "brief", "tractor", "--json"])).output) as { archetype: string; kinds: { kind: string }[] };
+    expect(json.archetype).toBe("vehicle.wheeled.tractor");
+    expect(json.kinds[0]?.kind).toBe("tractor");
+    const short = (await runCli(["model", "spec", "--short"])).output;
+    expect(short).toContain("shapes:");
+    expect(short.length).toBeLessThan(2500);
+  });
+
+  it("prints one recipe's spec as JSON to edit, and builds from it", async () => {
+    const spec = JSON.parse((await runCli(["model", "recipes", "crate"])).output) as { name: string; nodes: unknown[] };
+    expect(spec.name).toBeTruthy();
+    expect(spec.nodes.length).toBeGreaterThan(0);
+    const missing = await runCli(["model", "recipes", "nope"]);
+    expect(missing.exitCode).toBe(1);
+    process.exitCode = undefined;
+  });
+});
+
 describe("model recipes", () => {
   it("lists every recipe with its archetype, and as JSON", async () => {
     const { loadRecipes } = await import("../src/build/recipes.js");

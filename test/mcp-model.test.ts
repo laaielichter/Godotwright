@@ -32,12 +32,13 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     expect(text).toContain("godot_model_build");
     expect(text).toContain("godot_model_lint");
     expect(text).toContain("godot_model_view");
+    expect(text).toContain("godot_model_brief");
     expect(text).toContain("+Z");
   });
 
   it("marks the read-only tools, and the build tool as a writer", async () => {
     const { tools } = await client.listTools();
-    for (const name of ["godot_model_identify", "godot_model_spec", "godot_model_lint", "godot_model_inspect", "godot_model_view"]) expect(tools.find((t) => t.name === name)?.annotations?.readOnlyHint, name).toBe(true);
+    for (const name of ["godot_model_identify", "godot_model_brief", "godot_model_spec", "godot_model_lint", "godot_model_inspect", "godot_model_view"]) expect(tools.find((t) => t.name === name)?.annotations?.readOnlyHint, name).toBe(true);
     expect(tools.find((t) => t.name === "godot_model_build")?.annotations?.readOnlyHint).toBe(false);
     expect(tools.find((t) => t.name === "godot_model_build")?.inputSchema.required).toEqual(["out"]);
   });
@@ -121,6 +122,14 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     const res = await call("godot_model_lint", { file: "models/ok.glb", contract: "models/car.contract.json" });
     expect(failed(res)).toBe(false);
     expect(textOf(await call("godot_model_lint", { file: "models/ok.glb", contract: "models/missing.json" }))).toContain("not found");
+  });
+
+  it("gives a briefing: the kind to start from, parts, order of work and the cheat sheet", async () => {
+    const out = textOf(await call("godot_model_brief", { text: "a tractor" }));
+    expect(out).toContain("godotwright model build tractor");
+    expect(out).toContain("WheelRear");
+    expect(out).toContain("SPEC CHEAT SHEET");
+    expect(textOf(await call("godot_model_brief", { text: "asdfgh" }))).toContain("No ready-made kind is near this");
   });
 
   it("shows a model as text, with views, parts and what does not touch", async () => {

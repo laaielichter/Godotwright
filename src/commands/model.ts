@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Option } from "commander";
+import { briefFor } from "../archetype/brief.js";
 import { chooseArchetype } from "../archetype/check.js";
 import { formatArchetype, formatIdentify, formatTree } from "../archetype/format.js";
 import { identify } from "../archetype/identify.js";
@@ -9,7 +10,7 @@ import { allKinds, buildKind } from "../build/generators/index.js";
 import { loadRecipes } from "../build/recipes.js";
 import { buildModel } from "../build/run.js";
 import { buildSpec } from "../build/spec.js";
-import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
+import { EXAMPLE_SPEC, SPEC_CHEAT, SPEC_HELP } from "../build/spec-help.js";
 import { contractFromArchetype, contractFromModel, loadContract } from "../model/contract.js";
 import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { inspectModel } from "../model/inspect.js";
@@ -109,16 +110,25 @@ export function modelCommand(): Command {
 
   model
     .command("recipes")
-    .description("list the ready-made recipes (data/recipes) with the archetype each one is checked against")
-    .option("--json", "print as JSON")
-    .action((options: { json?: boolean }, command: Command) => {
-      const recipes = [...loadRecipes().values()];
-      if (options.json) {
-        const rows = recipes.map((r) => ({ kind: r.kind, archetype: r.archetype ?? null, description: r.description, params: r.params.map((p) => ({ name: p.name, default: p.default, min: p.min ?? null, max: p.max ?? null })) }));
-        return writeOut(command, `${JSON.stringify(rows, null, 2)}\n`);
-      }
-      const out = recipes.map((r) => `${r.kind}  (${r.archetype ?? "no archetype"}, ${r.params.length} parameter${r.params.length === 1 ? "" : "s"})\n  ${r.description}`);
-      writeOut(command, `${out.join("\n")}\n\nBuild one with: godotwright model build <kind> -o <file>.glb   (parameters: godotwright model kinds)\n`);
+    .description("list the ready-made recipes (data/recipes) with the archetype each one is checked against, or print one recipe's spec to edit")
+    .argument("[kind]", "a recipe: print its full spec (JSON) as a base for your own")
+    .option("--json", "print the list as JSON")
+    .action((kind: string | undefined, options: { json?: boolean }, command: Command) => {
+      guard(() => {
+        const all = loadRecipes();
+        if (kind !== undefined) {
+          const recipe = all.get(kind);
+          if (!recipe) throw new BuildError(`no recipe "${kind}" (known: ${[...all.keys()].join(", ")}; house, terrain and sea are generators without a spec)`);
+          return writeOut(command, `${JSON.stringify(recipe.spec, null, 2)}\n`);
+        }
+        const recipes = [...all.values()];
+        if (options.json) {
+          const rows = recipes.map((r) => ({ kind: r.kind, archetype: r.archetype ?? null, description: r.description, params: r.params.map((p) => ({ name: p.name, default: p.default, min: p.min ?? null, max: p.max ?? null })) }));
+          return writeOut(command, `${JSON.stringify(rows, null, 2)}\n`);
+        }
+        const out = recipes.map((r) => `${r.kind}  (${r.archetype ?? "no archetype"}, ${r.params.length} parameter${r.params.length === 1 ? "" : "s"})\n  ${r.description}`);
+        writeOut(command, `${out.join("\n")}\n\nBuild one with: godotwright model build <kind> -o <file>.glb   (parameters: godotwright model kinds)\nEdit one: godotwright model recipes <kind> > my.spec.json\n`);
+      });
     });
 
   model
@@ -134,6 +144,18 @@ export function modelCommand(): Command {
         }
       }
       writeOut(command, `${out.join("\n")}\n`);
+    });
+
+  model
+    .command("brief")
+    .description("one page to read before you build: what the thing is, the ready-made kind to start from, parts, size, rules, usual mistakes, the commands in order and a spec cheat sheet (made for small models)")
+    .argument("<what...>", 'what you want to make, e.g. "a rowing boat" or "dragon"')
+    .option("--json", "print as JSON")
+    .action((what: string[], options: { json?: boolean }, command: Command) => {
+      guard(() => {
+        const brief = briefFor(what.join(" "));
+        writeOut(command, options.json ? `${JSON.stringify({ archetype: brief.result.best.id, generic: brief.result.generic, relation: brief.relation, kinds: brief.kinds }, null, 2)}\n` : brief.text);
+      });
     });
 
   model
@@ -167,8 +189,9 @@ export function modelCommand(): Command {
   model
     .command("spec")
     .description("explain the model spec format (a JSON tree of parts) and print an example")
-    .action((_options: object, command: Command) => {
-      writeOut(command, `${SPEC_HELP}\n${JSON.stringify(EXAMPLE_SPEC, null, 2)}\n`);
+    .option("--short", "a dozen lines instead of the full explanation (for small models)")
+    .action((options: { short?: boolean }, command: Command) => {
+      writeOut(command, options.short ? `${SPEC_CHEAT}\n` : `${SPEC_HELP}\n${JSON.stringify(EXAMPLE_SPEC, null, 2)}\n`);
     });
 
   model

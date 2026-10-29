@@ -2,9 +2,9 @@ import type { ArchetypeLibrary } from "./library.js";
 import type { IdentifyResult } from "./identify.js";
 import type { ArchetypePart, Range, ResolvedArchetype } from "./types.js";
 
-const range = (r?: Range): string => (r ? (r[0] === r[1] ? `${r[0]}` : `${r[0]}-${r[1]}`) : "?");
+export const range = (r?: Range): string => (r ? (r[0] === r[1] ? `${r[0]}` : `${r[0]}-${r[1]}`) : "?");
 
-function formatPart(p: ArchetypePart): string {
+export function formatPart(p: ArchetypePart): string {
   const count = p.count === undefined ? "" : Array.isArray(p.count) ? ` x${p.count[0]}-${p.count[1]}` : ` x${p.count}`;
   const moves = p.moves?.length ? `; ${p.moves.map((m) => `${m.kind} about ${m.axis}`).join(", ")}` : "";
   const pivot = p.pivot ? `; pivot at the ${p.pivot}` : "";

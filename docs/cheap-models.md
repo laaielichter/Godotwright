@@ -42,9 +42,13 @@ This is six runs of one model on one tool version: an indication, not a benchmar
    truck and tractor, a motorcycle engine not joined to its frame, pylon crossarms), which are fixed, and a test now keeps
    every ready-made kind in one piece.
 
-More is planned: a briefing tool that hands a small model the context a large one would carry in its head (what the thing is,
-its parts, sizes, the closest ready-made recipe to start from, a checklist), recipes that can be placed inside a spec,
-an honest account in `lint --archetype` of what was compared, and archetypes for fantasy, creatures, fortifications and
+3. **`model brief <what>`** (and the MCP tool `godot_model_brief`): one page that hands a small model the context a large one
+   would carry in its head. What the thing is, the ready-made kind to start from (and how to print its spec to edit with
+   `model recipes <kind>`), the parts to name its nodes after, a typical size with its source, the rules and usual mistakes
+   of that thing (the rules every model shares are said once), the order of tools to call, and a short spec cheat sheet
+   (`model spec --short`). When nothing is near, it says so instead of offering unrelated kinds.
+
+More is planned: recipes that can be placed inside a spec, an honest account in `lint --archetype` of what was compared, and archetypes for fantasy, creatures, fortifications and
 spacecraft. See the roadmap.
 
 ## What this does not claim
