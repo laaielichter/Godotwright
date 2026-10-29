@@ -131,6 +131,22 @@ describe("scanProject warnings", () => {
   });
 });
 
+describe("project files", () => {
+  it("skips hidden folders, as Godot does", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n',
+      "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n',
+      "main.gd": "extends Node\n",
+      ".venv/lib/tool.gd": "extends Node\n",
+      ".github/ci.gd": "extends Node\n",
+      ".cache/texture.png": "",
+    });
+    const map = scanProject(root);
+    expect(map.scripts.map((s) => s.path)).toEqual(["res://main.gd"]);
+    expect(map.assets).toEqual({});
+  });
+});
+
 describe("godotwright scan", () => {
   it("prints a brief map", async () => {
     const { output, exitCode } = await runCli(["scan", DEMO]);

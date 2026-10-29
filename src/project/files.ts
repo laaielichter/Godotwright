@@ -1,8 +1,10 @@
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
-/** Directories Godot never treats as project content. */
-const SKIP_DIRS = new Set([".godot", ".import", ".git", ".svn", ".hg", "node_modules", ".vs", ".vscode", ".idea"]);
+/** Folders Godot never treats as project content: hidden ones (.godot, .git, a Python venv) and node_modules. */
+function isSkippedDir(name: string): boolean {
+  return name.startsWith(".") || name === "node_modules";
+}
 
 /**
  * Finds the directory holding project.godot, starting at `start` and walking up.
@@ -44,7 +46,7 @@ export function listProjectFiles(root: string): string[] {
         }
       }
       if (isDir) {
-        if (!SKIP_DIRS.has(entry.name)) walk(full);
+        if (!isSkippedDir(entry.name)) walk(full);
       } else if (isFile) {
         out.push(toResPath(root, full));
       }
