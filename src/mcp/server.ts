@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
@@ -20,7 +20,7 @@ import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
-import { findProjectRoot } from "../project/files.js";
+import { findProjectRoot, listProjectFiles } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
 import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
@@ -95,6 +95,7 @@ const failure = (value: string) => ({ content: [{ type: "text" as const, text: v
 
 export function createServer(options: ServerOptions = {}): McpServer {
   const tier: Tier = options.tier ?? "cheap";
+  if (!Object.hasOwn(PROFILES, tier)) throw new Error(`tier must be cheap or premium, got "${tier}"`);
   const profile = PROFILES[tier];
   const base = resolve(options.root ?? process.cwd());
 
@@ -119,6 +120,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     .describe(`Output detail (default for this ${tier} profile: ${profile.detail}).`);
   const pathParam = z.string().optional().describe("Project directory or a path inside it (default: the current project).");
   const readOnly = { readOnlyHint: true, openWorldHint: false };
+  // These tools answer from the project but record counters in the local learning file.
+  const writesLearning = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 
   server.registerTool(
     "godot_scan",
@@ -142,7 +145,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         query: z.string().describe("e.g. CharacterBody2D.move_and_slide, Node.ready, @export_range, lerp, Tween"),
         detail: detailParam,
       },
-      annotations: readOnly,
+      annotations: writesLearning,
     },
     async ({ query, detail }) =>
       guard(() => {
@@ -162,7 +165,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         query: z.string().describe("words, e.g. 'raycast 3d', 'change scene', 'is on floor'"),
         limit: z.number().int().min(1).max(50).optional().describe("max results (default 10)"),
       },
-      annotations: readOnly,
+      annotations: writesLearning,
     },
     async ({ query, limit }) =>
       guard(() => {
@@ -184,15 +187,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
         file: z.string().optional().describe("res:// path the code belongs to (required with code)"),
         detail: detailParam,
       },
-      annotations: readOnly,
+      annotations: writesLearning,
     },
     async ({ path, files, code, file, detail }) =>
       guard(() => {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
-        const target = file && !file.startsWith("res://") ? `res://${file.replace(/^\/+/, "")}` : file;
-        const report = reviewLearning(where(path), { base: options.base, baseFiles: options.baseFiles, overrides: code !== undefined && target ? { [target]: code } : undefined });
-        const focus = [...(files ?? []), ...(target ? [target] : [])].map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`));
-        return text(formatReviewFor(report, detail ?? profile.detail, profile, focus));
+        const target = file ? resPath(file) : undefined;
+        const overrides = code !== undefined && target ? { [target]: code } : undefined;
+        const dir = where(path);
+        const report = reviewLearning(dir, { base: options.base, baseFiles: options.baseFiles, overrides });
+        const focus = [...(files ?? []), ...(target ? [target] : [])].map(resPath);
+        const missing = focus.length ? unknownFiles(dir, focus, overrides ?? {}) : [];
+        const body = formatReviewFor(report, detail ?? profile.detail, profile, focus, missing);
+        return missing.length ? failure(body) : text(body);
       }),
   );
 
@@ -259,13 +266,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
     async () => text(checklist(tier)),
   );
 
-  /** A path the tools may read or write: inside the project (or the root when there is no project). */
+  /** A path the tools may read: its real place (links followed) must be inside the project, or the root when there is no project. */
   const inside = (path: string): string => {
     const full = where(path);
     const root = findProjectRoot(base) ?? base;
-    const rel = relative(root, full);
-    if (rel.startsWith("..") || isAbsolute(rel)) throw new ModelError(`${path} is outside the project (${root}); use a path inside it`);
+    const real = realLocation(full);
+    const rel = real === undefined ? ".." : relative(realLocation(root) ?? root, real);
+    if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new ModelError(`${path} is outside the project (${root}); use a path inside it`);
     return full;
+  };
+  /** A path the tools write: inside the project, and not a link, since writing through one changes the file it points to. */
+  const output = (path: string): string => {
+    const full = inside(path);
+    if (isSymlink(full)) throw new ModelError(`${path} is a symbolic link; write a regular file inside the project`);
+    return full;
+  };
+  /** A model contract inside the project. Its syntax is checked first, because loadContract quotes the text around an error. */
+  const loadContractIn = (path: string) => {
+    const full = inside(path);
+    if (existsSync(full)) parseJsonFile(full, path);
+    return loadContract(full);
   };
   const fileParam = z.string().describe("Path to a .glb or .gltf file, inside the project.");
   const modelDetail = detailParam;
@@ -315,7 +335,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         contract_out: z.string().optional().describe("also write a model.contract.json here (inside the project)"),
         detail: modelDetail,
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async ({ out, kind, spec, spec_file, params, contract_out, detail }) =>
       guard(() => {
@@ -324,13 +344,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
         let source: unknown = spec;
         if (spec_file) {
           try {
-            source = JSON.parse(readFileSync(inside(spec_file), "utf8"));
+            source = parseJsonFile(inside(spec_file), spec_file);
           } catch (error) {
             if (error instanceof ModelError) throw error;
             return failure(`${spec_file}: cannot read the spec (${(error as Error).message})`);
           }
         }
-        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: inside(out), ...(contract_out ? { contractOut: inside(contract_out) } : {}) });
+        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: output(out), ...(contract_out ? { contractOut: output(contract_out) } : {}) });
         const errors = outcome.report.categories.reduce((n, c) => n + c.errors, 0);
         const body = `${outcome.summary}\n${formatModelReport(outcome.report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);
@@ -357,7 +377,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const choice = archetype === undefined ? undefined : chooseArchetype(archetype);
         const report = lintModelFile(inside(file), {
           ...(choice ? { archetype: choice.archetype } : {}),
-          ...(contract ? { contract: loadContract(inside(contract)) } : {}),
+          ...(contract ? { contract: loadContractIn(contract) } : {}),
           ...(max_triangles ? { maxTriangles: max_triangles } : {}),
         });
         const head = choice ? `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n` : "";
@@ -381,6 +401,45 @@ export function createServer(options: ServerOptions = {}): McpServer {
   return server;
 }
 
+/**
+ * Where a path really is: symbolic links are followed in the part that exists, and the rest is kept as written.
+ * Undefined for a link whose target does not exist, since its real place cannot be known.
+ */
+function realLocation(path: string): string | undefined {
+  const rest: string[] = [];
+  let dir = path;
+  for (;;) {
+    try {
+      return join(realpathSync(dir), ...rest);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      if (isSymlink(dir)) return undefined;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return path;
+    rest.unshift(basename(dir));
+    dir = parent;
+  }
+}
+
+/** Reads and parses a JSON file. A syntax error names the file only: V8's message quotes the text around the error. */
+function parseJsonFile(full: string, path: string): unknown {
+  const text = readFileSync(full, "utf8");
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new ModelError(`${path}: not valid JSON`);
+  }
+}
+
+function isSymlink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 function guard(fn: () => ReturnType<typeof text> | ReturnType<typeof failure>) {
   try {
     return fn();
@@ -389,7 +448,18 @@ function guard(fn: () => ReturnType<typeof text> | ReturnType<typeof failure>) {
   }
 }
 
-function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile, focus: string[]): string {
+/** A file the tools name, as the res:// path the review uses: no leading ./ or /, no .. segments. */
+function resPath(file: string): string {
+  return `res://${posix.normalize(file.replace(/^res:\/\//, "").replace(/^\/+/, ""))}`;
+}
+
+/** The focus paths that are not files of the project or unsaved code under review (a typo, or a path outside the project). */
+function unknownFiles(dir: string, focus: string[], unsaved: Record<string, string>): string[] {
+  const known = new Set([...listProjectFiles(findProjectRoot(dir) ?? dir), ...Object.keys(unsaved)]);
+  return focus.filter((f) => !known.has(f));
+}
+
+function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile, focus: string[], missing: string[]): string {
   const out: string[] = [];
   out.push(`AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100`);
   out.push(report.categories.map((c) => `${c.category} ${c.score}`).join(", ") + `; static typing ${report.typing.percent}%`);
@@ -404,7 +474,8 @@ function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile,
     if (detail === "full") out.push(`  fix: ${RULES[f.rule]?.fix ?? ""}`);
   }
   if (list.length > shown.length) out.push(`+${list.length - shown.length} more`);
-  if (errors === 0 && focus.length) out.push("No errors in these files.");
+  if (errors === 0 && focus.length && missing.length === 0) out.push("No errors in these files.");
+  for (const file of missing) out.push(`no such file in the project: ${file}`);
   if (report.learning?.hidden) out.push(`${report.learning.hidden} ${report.learning.hidden === 1 ? "finding" : "findings"} hidden: marked as wrong earlier.`);
   if (report.learning?.downgraded.length) out.push(`Learned: ${report.learning.downgraded.join(", ")} shown as warnings; Godot did not confirm them.`);
   return `${out.join("\n")}\n`;

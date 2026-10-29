@@ -42,6 +42,15 @@ describe("MCP server (cheap profile)", () => {
     expect(tools.find((t) => t.name === "godot_api")?.inputSchema.required).toEqual(["query"]);
   });
 
+  it("does not call the tools that write learning read-only", async () => {
+    const { tools } = await client.listTools();
+    for (const name of ["godot_review", "godot_api", "godot_api_search"]) {
+      const annotations = tools.find((t) => t.name === name)?.annotations;
+      expect(annotations?.readOnlyHint, name).toBe(false);
+      expect(annotations?.destructiveHint, name).toBe(false);
+    }
+  });
+
   it("sends step-by-step instructions", () => {
     expect(client.getInstructions()).toContain("Never guess API names");
   });
@@ -102,6 +111,28 @@ describe("MCP server (premium profile)", () => {
     expect(rules).toContain("[api/wrong-arguments] (error)");
   });
 
+  it("reads focus paths as the project names its files", async () => {
+    const exact = textOf(await client.callTool({ name: "godot_review", arguments: { files: ["res://scripts/enemy.gd"] } }));
+    expect(exact).toContain("res://scripts/enemy.gd:");
+    for (const file of ["./scripts/enemy.gd", "scripts/../scripts/enemy.gd", "/scripts/enemy.gd"]) {
+      const out = textOf(await client.callTool({ name: "godot_review", arguments: { files: [file] } }));
+      expect(out, file).toBe(exact);
+    }
+    const code = "extends CharacterBody2D\n\n\nfunc _physics_process(delta: float) -> void:\n\tvelocity = move_and_slide(velocity, Vector2.UP)\n";
+    const fresh = await client.callTool({ name: "godot_review", arguments: { code, file: "./scripts/new_player.gd" } });
+    expect(textOf(fresh)).toContain("res://scripts/new_player.gd:5: error [api/wrong-arguments]");
+    expect(textOf(fresh)).not.toContain("res://./");
+  });
+
+  it("does not report a clean verdict for a file that is not in the project", async () => {
+    const missing = (await client.callTool({ name: "godot_review", arguments: { files: ["./scripts/nope.gd"] } })) as Result;
+    expect(missing.isError).toBe(true);
+    expect(textOf(missing)).toContain("no such file in the project: res://scripts/nope.gd");
+    expect(textOf(missing)).not.toContain("No errors");
+    const escape = (await client.callTool({ name: "godot_review", arguments: { files: ["../scripts/enemy.gd"] } })) as Result;
+    expect(textOf(escape)).toContain("no such file in the project: res://../scripts/enemy.gd");
+  });
+
   it("describes all tools in its instructions", () => {
     expect(client.getInstructions()).toContain("godot_checklist lists every AAA rule");
     expect(client.getInstructions()).toContain("godot_feedback marks a review finding");
@@ -119,6 +150,14 @@ describe("MCP server (premium profile)", () => {
     expect(after).toContain("1 finding hidden");
     const bad = (await client.callTool({ name: "godot_feedback", arguments: { finding: "nonsense", verdict: "wrong" } })) as Result;
     expect(bad.isError).toBe(true);
+  });
+});
+
+describe("MCP server tier", () => {
+  it("names the valid tiers when the tier is neither cheap nor premium", () => {
+    for (const tier of ["Premium", "fast", "", "toString"]) {
+      expect(() => createServer({ tier: tier as Tier, root: DEMO }), tier).toThrow(`tier must be cheap or premium, got "${tier}"`);
+    }
   });
 });
 
