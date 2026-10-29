@@ -233,8 +233,11 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
       if (typeof raw["shape"] !== "string") throw new BuildError(`${path}.shape: expected a shape name`);
       const mesh = makeShape(raw, local, path);
       parent.counters.triangles += mesh.triangles;
+      // Every copy of a repeated node is the same size, so refuse early instead of building them all.
+      if (i === 0 && count > 1) parent.counters.triangles += mesh.triangles * (count - 1);
       if (parent.counters.triangles > LIMITS.triangles) throw new BuildError(`${path}: the model grew past ${LIMITS.triangles.toLocaleString("en-US")} triangles`);
       node.mesh = mesh;
+      if (i > 0 && count > 1) parent.counters.triangles -= mesh.triangles;
     } else checkKeys(raw, COMMON_KEYS, path);
     if (raw["children"] !== undefined) {
       const children = list(raw["children"], `${path}.children`, LIMITS.nodes, 0).flatMap((c, k) => buildNodes(c, local, `${path}.children[${k}]`));
