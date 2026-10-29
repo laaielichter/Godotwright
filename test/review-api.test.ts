@@ -12,6 +12,36 @@ function findings(gd: string, files: Record<string, string> = {}): string[] {
   return reviewProject(root).findings.filter((f) => f.severity !== "info").map(formatFinding);
 }
 
+describe("unique-name nodes after keywords", () => {
+  const PLAYER_SCENE = `${SCENE}[node name="Player" type="Node" parent="."]\nunique_name_in_owner = true\n`;
+  const script = [
+    "extends Node",
+    "",
+    "var state := 0",
+    "",
+    "func _ready() -> void:",
+    "\tawait %Player.ready",
+    "\tvar s := 1 if state else %Player.get_index()",
+    "\tmatch %Player.name:",
+    "\t\t_:",
+    "\t\t\tpass",
+    "\tvar n := 10 % 3",
+    "\tprint(n, state % 2, s)",
+  ].join("\n");
+
+  it("reads %Name after await, else and match as a unique-name node, and keeps % as modulo", () => {
+    expect(findings(script, { "main.tscn": PLAYER_SCENE })).toEqual([]);
+  });
+
+  it("checks %Name after await, else and match against the scene", () => {
+    expect(findings(script).filter((l) => l.includes("[structure/"))).toEqual([
+      "res://main.gd:6: warning [structure/missing-node] %Player is not a unique-name node in res://main.tscn.",
+      "res://main.gd:7: warning [structure/missing-node] %Player is not a unique-name node in res://main.tscn.",
+      "res://main.gd:8: warning [structure/missing-node] %Player is not a unique-name node in res://main.tscn.",
+    ]);
+  });
+});
+
 describe("argument counts", () => {
   const twoParams = "extends Node\n\nfunc f(a, b) -> int:\n\treturn 0\n\n";
 
