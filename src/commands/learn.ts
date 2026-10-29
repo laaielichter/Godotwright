@@ -2,8 +2,15 @@ import { Command } from "commander";
 import { GodotApi } from "../api/api.js";
 import { parseFindingLine, recordFeedback, type Verdict } from "../learn/learn.js";
 import { buildReport, setSharing, shareBlocked, shareEndpoint } from "../learn/share.js";
-import { learningFile, readLearning, resetLearning, updateLearning } from "../learn/store.js";
+import { learningFile, readLearning, resetLearning, saveLearning, type LearningData } from "../learn/store.js";
 import { writeOut } from "./output.js";
+
+/** Saves the local learning switch, or fails with the reason: a choice that did not stick must not be reported as made. */
+function setEnabled(enabled: boolean): LearningData {
+  const { data, error } = saveLearning((d) => (d.enabled = enabled));
+  if (error) throw new Error(`local learning not saved (${learningFile()}): ${error}`);
+  return data;
+}
 
 export function learnCommand(): Command {
   const learn = new Command("learn").description("what Godotwright learned on this machine, and sharing it (opt-in)");
@@ -34,15 +41,16 @@ export function learnCommand(): Command {
     .command("on")
     .description("turn local learning on")
     .action((_o: unknown, command: Command) => {
-      updateLearning((d) => (d.enabled = true));
-      writeOut(command, "local learning is on\n");
+      setEnabled(true);
+      const note = process.env["GODOTWRIGHT_LEARN"] === "0" ? " (GODOTWRIGHT_LEARN=0 still turns it off in this shell)" : "";
+      writeOut(command, `local learning is on${note}\n`);
     });
 
   learn
     .command("off")
     .description("turn local learning off (nothing is recorded)")
     .action((_o: unknown, command: Command) => {
-      updateLearning((d) => (d.enabled = false));
+      setEnabled(false);
       writeOut(command, "local learning is off\n");
     });
 

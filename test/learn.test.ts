@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GodotApi } from "../src/api/api.js";
 import type { CheckResult } from "../src/check/check.js";
@@ -287,6 +287,23 @@ describe("turning learning off", () => {
     lookupLearning(GodotApi.load(), "Node2D.lookat");
     expect(readLearning()).toEqual({ ...before, enabled: false });
     expect((await runCli(["learn"])).output).toContain("local learning: off");
+  });
+});
+
+describe("saving the choice", () => {
+  it("fails with the reason when the learning file cannot be written", async () => {
+    // A file where the state folder should be: no write can succeed, not even as root.
+    const home = process.env["GODOTWRIGHT_HOME"]!;
+    const blocker = join(home, "not-a-folder");
+    writeFileSync(blocker, "x");
+    process.env["GODOTWRIGHT_HOME"] = blocker;
+    try {
+      await expect(runCli(["learn", "off"])).rejects.toThrow("not saved");
+      await expect(runCli(["learn", "on"])).rejects.toThrow("not saved");
+      await expect(runCli(["learn", "share", "on"])).rejects.toThrow("not saved");
+    } finally {
+      process.env["GODOTWRIGHT_HOME"] = home;
+    }
   });
 });
 

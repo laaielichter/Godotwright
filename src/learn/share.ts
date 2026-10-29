@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { distance, GodotApi } from "../api/api.js";
 import { RULES } from "../review/rules.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
-import { readLearning, updateLearning, type ApiMiss, type LearningData, type RuleStats, type Snapshot } from "./store.js";
+import { learningFile, readLearning, saveLearning, updateLearning, type ApiMiss, type LearningData, type RuleStats, type Snapshot } from "./store.js";
 import { shareableTemplate } from "./template.js";
 
 /**
@@ -205,7 +205,7 @@ export function takeShareNotice(env: NodeJS.ProcessEnv = process.env, interactiv
 
 /** Turns sharing on or off. Off also forgets the install id. */
 export function setSharing(enabled: boolean, now = Date.now()): LearningData {
-  return updateLearning((d) => {
+  const { data, error } = saveLearning((d) => {
     d.sharing.enabled = enabled;
     d.sharing.decidedAt = new Date(now).toISOString();
     if (!enabled) {
@@ -213,6 +213,8 @@ export function setSharing(enabled: boolean, now = Date.now()): LearningData {
       delete d.sharing.installIdSince;
     }
   });
+  if (error) throw new Error(`sharing not saved (${learningFile()}): ${error}`);
+  return data;
 }
 
 function counterDelta(current: Record<string, number>, before: Record<string, number> | undefined): Record<string, number> {

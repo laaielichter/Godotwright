@@ -184,20 +184,31 @@ function sharingFrom(v: unknown): SharingState {
 /**
  * Reads, changes and writes the learning file. Writes go to a temp file first,
  * so a crash or a second process never leaves a half-written file.
- * Errors are swallowed: learning is a side effect and must not break tools.
+ * Returns the data, and why the write failed when it did (read-only home, full disk, ...).
  */
-export function updateLearning(change: (data: LearningData) => void, file = learningFile()): LearningData {
+export function saveLearning(change: (data: LearningData) => void, file = learningFile()): { data: LearningData; error?: string } {
   const data = readLearning(file);
+  let tmp: string | undefined;
   try {
     change(data);
     mkdirSync(dirname(file), { recursive: true });
-    const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+    tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
     writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
     renameSync(tmp, file);
-  } catch {
-    // Read-only home, full disk, ...: carry on without learning.
+    return { data };
+  } catch (error) {
+    try {
+      if (tmp) rmSync(tmp, { force: true });
+    } catch {
+      // Nothing more to clean up.
+    }
+    return { data, error: error instanceof Error ? error.message : String(error) };
   }
-  return data;
+}
+
+/** saveLearning for tools: errors are swallowed, since learning is a side effect and must not break a tool. */
+export function updateLearning(change: (data: LearningData) => void, file = learningFile()): LearningData {
+  return saveLearning(change, file).data;
 }
 
 export function resetLearning(file = learningFile()): void {
