@@ -115,6 +115,7 @@ export class ArchetypeLibrary {
       aliases: leaf.aliases,
       ...(leaf.hints ? { hints: leaf.hints } : {}),
       ...(scale ? { scale } : {}),
+      ...(chain.some((a) => a.sheet) ? { sheet: true } : {}),
       chain: chain.map((a) => a.id),
       parts: [...parts.values()],
       variants: [...variants].map(([axis, options]) => ({ axis, options })),

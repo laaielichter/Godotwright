@@ -53,7 +53,8 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
   checkRig(info, add);
   const edgeTotals = new Map<string, EdgeStats>();
   const uvReported = new Set<string>();
-  for (const prim of info.primitives) checkPrimitive(info, prim, add, edgeTotals, uvReported);
+  const sheet = options.archetype?.sheet === true;
+  for (const prim of info.primitives) checkPrimitive(info, prim, add, edgeTotals, uvReported, sheet);
   reportEdges(edgeTotals, add);
   checkTextures(info, options, add);
   checkSymmetry(info, add);
@@ -103,7 +104,7 @@ interface EdgeStats {
   doubleSided: boolean;
 }
 
-function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: Map<string, EdgeStats>, uvReported: Set<string>): void {
+function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: Map<string, EdgeStats>, uvReported: Set<string>, sheet: boolean): void {
   const mat = prim.material === undefined ? undefined : info.materials[prim.material];
   if (!prim.hasNormals) add("model/missing-normals", "The mesh has no NORMAL data.", prim.nodeName);
   if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, prim.nodeName);
@@ -114,7 +115,7 @@ function checkPrimitive(info: ModelInfo, prim: PrimitiveInfo, add: Add, totals: 
     add("model/uv-out-of-range", "Some UVs lie outside 0..1.", prim.nodeName);
   }
 
-  const e = analyseEdges(prim);
+  const e = analyseEdges(prim, sheet);
   const sum = totals.get(prim.nodeName) ?? { edges: 0, open: 0, flipped: 0, againstNormals: 0, triangles: 0, nonManifold: 0, degenerate: 0, doubleSided: true };
   sum.edges += e.edges;
   sum.triangles += prim.triangles;
@@ -167,16 +168,33 @@ export function trianglesAgainstNormals(prim: PrimitiveInfo): number {
   return count;
 }
 
-/** Welds vertices by position and counts edge problems for one primitive. */
-export function analyseEdges(prim: PrimitiveInfo): { edges: number; open: number; flipped: number; nonManifold: number; degenerate: number } {
+/**
+ * Welds vertices by position and counts edge problems for one primitive.
+ * With `sheet`, an open edge that lies on the outer border of the surface (along x or z) is expected and not counted:
+ * a terrain tile or a water plane ends there, and its neighbour continues it.
+ */
+export function analyseEdges(prim: PrimitiveInfo, sheet = false): { edges: number; open: number; flipped: number; nonManifold: number; degenerate: number } {
   const weld = new Map<string, number>();
   const ids = new Uint32Array(prim.vertices);
+  /** x and z of each welded vertex, to tell border edges from holes. */
+  const gx: number[] = [], gz: number[] = [];
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (let v = 0; v < prim.vertices; v++) {
-    const key = `${Math.round(at(prim.positions, v * 3) * 1e5)},${Math.round(at(prim.positions, v * 3 + 1) * 1e5)},${Math.round(at(prim.positions, v * 3 + 2) * 1e5)}`;
+    const x = at(prim.positions, v * 3), z = at(prim.positions, v * 3 + 2);
+    const key = `${Math.round(x * 1e5)},${Math.round(at(prim.positions, v * 3 + 1) * 1e5)},${Math.round(z * 1e5)}`;
     let id = weld.get(key);
-    if (id === undefined) { id = weld.size; weld.set(key, id); }
+    if (id === undefined) { id = weld.size; weld.set(key, id); gx.push(x); gz.push(z); }
     ids[v] = id;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (z < minZ) minZ = z;
+    if (z > maxZ) maxZ = z;
   }
+  const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-4;
+  const onBorder = (a: number, b: number): boolean => {
+    const ax = at(gx, a), bx = at(gx, b), az = at(gz, a), bz = at(gz, b);
+    return (near(ax, minX) && near(bx, minX)) || (near(ax, maxX) && near(bx, maxX)) || (near(az, minZ) && near(bz, minZ)) || (near(az, maxZ) && near(bz, maxZ));
+  };
   // value = uses * 4 + direction mask (1: low->high, 2: high->low)
   const edges = new Map<number, number>();
   const stride = 67108864;
@@ -194,10 +212,12 @@ export function analyseEdges(prim: PrimitiveInfo): { edges: number; open: number
     }
   }
   let open = 0, flipped = 0, nonManifold = 0;
-  for (const value of edges.values()) {
+  for (const [key, value] of edges) {
     const uses = Math.floor(value / 4);
     const mask = value % 4;
-    if (uses === 1) open++;
+    if (uses === 1) {
+      if (!(sheet && onBorder(Math.floor(key / stride), key % stride))) open++;
+    }
     else if (uses === 2 && mask !== 3) flipped++;
     else if (uses > 2) nonManifold++;
   }

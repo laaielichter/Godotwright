@@ -147,6 +147,11 @@ describe("identify", () => {
     expect(world.parts.map((p) => p.name)).toEqual(expect.arrayContaining(["Land", "SeaFloor", "Collision"]));
   });
 
+  it("marks surfaces by nature (terrain, coast, water) as sheets, and nothing else", () => {
+    for (const id of ["world.terrain", "world.terrain.island", "world.coast", "world.water.sea", "world.water.river"]) expect(library.resolve(id).sheet, id).toBe(true);
+    for (const id of ["vehicle.wheeled.car", "world.biome", "world.settlement", "prop.crate"]) expect(library.resolve(id).sheet, id).toBeUndefined();
+  });
+
   it("prefers the longer, more specific name", () => {
     expect(best("fighter jet")).toBe("aircraft.fixed-wing.fighter");
     expect(best("a jet engine")).toBe("machine.jet-engine");
