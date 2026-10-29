@@ -51,6 +51,21 @@ describe("build-api", () => {
     expect(node.children[1]!.text).toBe("Hi & bye");
   });
 
+  it("keeps GDScript code blocks literal", () => {
+    const raw = [
+      "\t\t[codeblock]",
+      "\t\tvar arr: Array[int] = [1, 2]",
+      "\t\tprint(arr[0])",
+      "\t\t[/codeblock]",
+      "\t\t[gdscript]",
+      "\t\tfor x in arr: print(x[i])",
+      "\t\t[/gdscript]",
+    ].join("\n");
+    expect(docText(raw)).toBe(
+      ["```gdscript", "var arr: Array[int] = [1, 2]", "print(arr[0])", "```", "", "```gdscript", "for x in arr: print(x[i])", "```"].join("\n"),
+    );
+  });
+
   it("turns BBCode into compact text", () => {
     const raw = [
       "\t\tCalls [method foo] on [Node2D] with [param delta], see [member Node.name] and [constant FOO].",

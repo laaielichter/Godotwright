@@ -74,11 +74,17 @@ export function docText(raw: string): string {
   // Escaped brackets must not turn into tags; restore them at the end.
   text = text.replace(/\[lb\]/g, "\u0001").replace(/\[rb\]/g, "\u0002");
 
-  // Keep GDScript examples, drop C# ones.
+  // Keep GDScript examples, drop C# ones. Code is literal: it is held back as placeholders
+  // so the BBCode rewrites below leave `Array[int]` and `arr[i]` alone.
+  const blocks: string[] = [];
+  const hold = (code: string) => {
+    blocks.push(fence(code));
+    return `\u0003${blocks.length - 1}\u0003`;
+  };
   text = text.replace(/\[csharp(?: [^\]]*)?\][\s\S]*?\[\/csharp\]/g, "");
   text = text.replace(/\[\/?codeblocks\]/g, "");
-  text = text.replace(/\[gdscript(?: [^\]]*)?\]\n?([\s\S]*?)\[\/gdscript\]/g, (_, code: string) => fence(code));
-  text = text.replace(/\[codeblock(?: [^\]]*)?\]\n?([\s\S]*?)\[\/codeblock\]/g, (_, code: string) => fence(code));
+  text = text.replace(/\[gdscript(?: [^\]]*)?\]\n?([\s\S]*?)\[\/gdscript\]/g, (_, code: string) => hold(code));
+  text = text.replace(/\[codeblock(?: [^\]]*)?\]\n?([\s\S]*?)\[\/codeblock\]/g, (_, code: string) => hold(code));
 
   text = text
     .replace(/\[(method|member|signal|constant|enum|annotation|theme_item|constructor|operator) ([^\]]+)\]/g, (_, kind: string, name: string) =>
@@ -93,6 +99,7 @@ export function docText(raw: string): string {
     .replace(/\[font=[^\]]+\]([\s\S]*?)\[\/font\]/g, "$1")
     .replace(/\[br\]/g, "\n")
     .replace(/\[([A-Za-z@][A-Za-z0-9_@]*)\]/g, "`$1`")
+    .replace(/\u0003(\d+)\u0003/g, (_, i: string) => blocks[Number(i)]!)
     .replace(/\u0001/g, "[")
     .replace(/\u0002/g, "]")
     .replace(/\$DOCS_URL/g, "https://docs.godotengine.org/en/4.7")
