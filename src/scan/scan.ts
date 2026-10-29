@@ -154,12 +154,16 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     warnings.push({ file, line, message: `could not parse file: ${message}` });
   };
 
-  let settings = parseProjectSettings("");
+  // The project's own settings, and those with its bases' merged in underneath.
+  let ownSettings = parseProjectSettings("");
+  let ownFailed = false;
   try {
-    settings = parseProjectSettings(overrides["res://project.godot"] ?? readFileSync(fromResPath(root, "res://project.godot"), "utf8"));
+    ownSettings = parseProjectSettings(overrides["res://project.godot"] ?? readFileSync(fromResPath(root, "res://project.godot"), "utf8"));
   } catch (error) {
+    ownFailed = true;
     fail("res://project.godot", error);
   }
+  let settings = ownSettings;
   for (const dir of [...bases].reverse()) {
     try {
       settings = mergeSettings(parseProjectSettings(readFileSync(fromResPath(dir, "res://project.godot"), "utf8")), settings);
@@ -208,23 +212,23 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     return undefined;
   };
 
-  // Project-level references.
+  // Project-level references. A broken one inherited from a base is the base's problem: only the project's own settings are reported.
   let mainScene: string | undefined;
   if (settings.mainScene) {
     mainScene = resolve({ path: settings.mainScene });
-    if (!mainScene) {
+    if (!mainScene && ownSettings.mainScene) {
       warnings.push({
         file: "res://project.godot",
         line: settings.lines["application/run/main_scene"],
         message: `main scene not found: ${settings.mainScene}`,
       });
     }
-  } else {
+  } else if (!ownFailed) {
     warnings.push({ file: "res://project.godot", message: "no main scene set (application/run/main_scene)" });
   }
   const autoloads = settings.autoloads.map((autoload) => {
     const resolved = resolve({ path: autoload.path });
-    if (!resolved) {
+    if (!resolved && ownSettings.autoloads.some((own) => own.name === autoload.name)) {
       warnings.push({
         file: "res://project.godot",
         line: settings.lines[`autoload/${autoload.name}`],

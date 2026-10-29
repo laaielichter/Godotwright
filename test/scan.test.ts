@@ -147,6 +147,32 @@ describe("project files", () => {
   });
 });
 
+describe("project.godot warnings", () => {
+  it("reports an unparseable project.godot once, not as a missing main scene", () => {
+    const root = makeProject({ "project.godot": '[application]\nconfig/name="T\n' });
+    expect(scanProject(root).warnings).toEqual([{ file: "res://project.godot", line: 3, message: "could not parse file: unterminated string" }]);
+  });
+
+  it("does not report a base project's broken main scene or autoload as its own", () => {
+    const game = makeProject({ "project.godot": '[application]\nconfig/name="Game"\nrun/main_scene="res://gone.tscn"\n\n[autoload]\nWorld="*res://world.gd"\n' });
+    const mod = makeProject({ "project.godot": '[application]\nconfig/name="Mod"\n', "mod.gd": "extends Node\n" });
+    const map = scanProject(mod, { base: [game] });
+    expect(map.warnings).toEqual([]);
+    expect(map.project.mainScene).toBeUndefined();
+  });
+
+  it("still reports a broken main scene or autoload the project sets itself", () => {
+    const game = makeProject({ "project.godot": '[application]\nconfig/name="Game"\nrun/main_scene="res://main.tscn"\n' });
+    const mod = makeProject({
+      "project.godot": '[application]\nconfig/name="Mod"\nrun/main_scene="res://gone.tscn"\n\n[autoload]\nBus="*res://bus.gd"\n',
+    });
+    expect(scanProject(mod, { base: [game] }).warnings).toEqual([
+      { file: "res://project.godot", line: 3, message: "main scene not found: res://gone.tscn" },
+      { file: "res://project.godot", line: 6, message: "autoload Bus not found: res://bus.gd" },
+    ]);
+  });
+});
+
 describe("godotwright scan", () => {
   it("prints a brief map", async () => {
     const { output, exitCode } = await runCli(["scan", DEMO]);
