@@ -1,4 +1,4 @@
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -281,6 +281,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     if (isSymlink(full)) throw new ModelError(`${path} is a symbolic link; write a regular file inside the project`);
     return full;
   };
+  /** A model contract inside the project. Its syntax is checked first, because loadContract quotes the text around an error. */
+  const loadContractIn = (path: string) => {
+    const full = inside(path);
+    if (existsSync(full)) parseJsonFile(full, path);
+    return loadContract(full);
+  };
   const fileParam = z.string().describe("Path to a .glb or .gltf file, inside the project.");
   const modelDetail = detailParam;
 
@@ -338,7 +344,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         let source: unknown = spec;
         if (spec_file) {
           try {
-            source = JSON.parse(readFileSync(inside(spec_file), "utf8"));
+            source = parseJsonFile(inside(spec_file), spec_file);
           } catch (error) {
             if (error instanceof ModelError) throw error;
             return failure(`${spec_file}: cannot read the spec (${(error as Error).message})`);
@@ -371,7 +377,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const choice = archetype === undefined ? undefined : chooseArchetype(archetype);
         const report = lintModelFile(inside(file), {
           ...(choice ? { archetype: choice.archetype } : {}),
-          ...(contract ? { contract: loadContract(inside(contract)) } : {}),
+          ...(contract ? { contract: loadContractIn(contract) } : {}),
           ...(max_triangles ? { maxTriangles: max_triangles } : {}),
         });
         const head = choice ? `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n` : "";
@@ -413,6 +419,16 @@ function realLocation(path: string): string | undefined {
     if (parent === dir) return path;
     rest.unshift(basename(dir));
     dir = parent;
+  }
+}
+
+/** Reads and parses a JSON file. A syntax error names the file only: V8's message quotes the text around the error. */
+function parseJsonFile(full: string, path: string): unknown {
+  const text = readFileSync(full, "utf8");
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new ModelError(`${path}: not valid JSON`);
   }
 }
 

@@ -100,6 +100,20 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     expect(failed(await call("godot_model_lint", { file: "/etc/hostname" }))).toBe(true);
   });
 
+  it("says a spec or contract is not valid JSON without quoting its text", async () => {
+    writeFileSync(`${root}/broken.json`, '{"note": "SECRET-TEXT" x}');
+    const spec = await call("godot_model_build", { out: "models/broken.glb", spec_file: "broken.json" });
+    expect(failed(spec)).toBe(true);
+    expect(textOf(spec)).toContain("broken.json: not valid JSON");
+    expect(textOf(spec)).not.toContain("SECRET-TEXT");
+    writeFileSync(`${root}/broken.contract.json`, '{"version": 1, "nodes": SECRET-TEXT');
+    await call("godot_model_build", { out: "broken-lint.glb", kind: "house" });
+    const lint = await call("godot_model_lint", { file: "broken-lint.glb", contract: "broken.contract.json" });
+    expect(failed(lint)).toBe(true);
+    expect(textOf(lint)).toContain("broken.contract.json: not valid JSON");
+    expect(textOf(lint)).not.toContain("SECRET-TEXT");
+  });
+
   it("accepts folders inside the project whose names start with two dots", async () => {
     const res = await call("godot_model_build", { out: "..cache/car.glb", kind: "house" });
     expect(failed(res)).toBe(false);
