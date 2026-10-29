@@ -48,7 +48,7 @@
    "vars": {
     "d": 1.25,
     "c": "1.0 + 0.55",
-    "h": "$wingSpan / 2 - 0.5",
+    "h": "$wingSpan / 2 - 0.35",
     "rc": "$length * 0.14",
     "tc": "$length * 0.09",
     "L2": "$length / 2",
@@ -241,7 +241,8 @@
       0,
       90,
       0
-     ]
+     ],
+     "mirror": "Stabilizer_R"
     },
     {
      "name": "Elevator_L",

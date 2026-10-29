@@ -5,8 +5,9 @@ import { buildGlb } from "../../src/build/glb.js";
 import { allKinds, buildKind } from "../../src/build/generators/index.js";
 import { loadRecipes } from "../../src/build/recipes.js";
 import { buildSpec } from "../../src/build/spec.js";
-import { inspectModel } from "../../src/model/inspect.js";
+import { inspectModel, transformPoint } from "../../src/model/inspect.js";
 import { lintModelFile } from "../../src/model/lint.js";
+import type { V3 } from "../../src/build/mesh.js";
 import { runCli } from "../helpers.js";
 import { sha, writeScene } from "./helpers.js";
 
@@ -20,6 +21,24 @@ function problems(kind: string, input: Record<string, unknown> = {}): string[] {
   const arch = scene.archetype ? library.resolve(scene.archetype) : undefined;
   const report = lintModelFile(path, arch ? { archetype: arch } : {});
   return report.findings.filter((f) => f.severity !== "info").map((f) => `${f.rule} ${f.node ?? ""} ${f.message}`);
+}
+
+/** The world-space box of every node with geometry, by its path in the file (such as "Church/Roof"). */
+function nodeBoxes(kind: string, input: Record<string, unknown>): Map<string, { min: V3; max: V3 }> {
+  const info = inspectModel(writeScene(buildKind(kind, input)));
+  const out = new Map<string, { min: V3; max: V3 }>();
+  for (const p of info.primitives) {
+    const box = out.get(p.nodeName) ?? { min: [Infinity, Infinity, Infinity] as V3, max: [-Infinity, -Infinity, -Infinity] as V3 };
+    for (let i = 0; i < p.vertices; i++) {
+      const q = transformPoint(p.world, p.positions[i * 3]!, p.positions[i * 3 + 1]!, p.positions[i * 3 + 2]!);
+      for (let a = 0; a < 3; a++) {
+        box.min[a] = Math.min(box.min[a]!, q[a]!);
+        box.max[a] = Math.max(box.max[a]!, q[a]!);
+      }
+    }
+    out.set(p.nodeName, box);
+  }
+  return out;
 }
 
 describe("ring and offset in the spec language", () => {
@@ -127,5 +146,99 @@ describe("the recipes", () => {
     expect(kinds.output).toContain("tractor:");
     expect(kinds.output).toContain("rearWheelRadius = 0.85");
     expect((await runCli(["model", "build", "spaceship"])).exitCode).toBe(1);
+  });
+});
+
+describe("recipe geometry", () => {
+  it("church: the roof reaches the belfry's back face at every nave width", () => {
+    for (const naveWidth of [8, 10, 25]) {
+      const boxes = nodeBoxes("church", { naveWidth });
+      expect(boxes.get("Church/Roof")!.max[2], `naveWidth ${naveWidth}`).toBeCloseTo(boxes.get("Church/Belfry")!.min[2], 1);
+    }
+  });
+
+  it("sailboat: the mast top is mastHeight above the waterline, and the sails stay under it", () => {
+    const cases: Record<string, number>[] = [{}, { length: 4, mastHeight: 6 }, { length: 20, mastHeight: 6 }, { length: 20, mastHeight: 28 }];
+    for (const input of cases) {
+      const boxes = nodeBoxes("sailboat", input);
+      const top = boxes.get("Sailboat/Mast")!.max[1];
+      expect(top, JSON.stringify(input)).toBeCloseTo(input.mastHeight ?? 12, 2);
+      for (const sail of ["Sailboat/Sail_Main/Cloth", "Sailboat/Sail_Jib/Cloth"]) {
+        expect(boxes.get(sail)!.max[1], `${sail} ${JSON.stringify(input)}`).toBeLessThanOrEqual(top + 0.01);
+      }
+    }
+  });
+
+  it("ship: the mast stands on the bridge roof at every length", () => {
+    for (const length of [60, 200, 400]) {
+      const boxes = nodeBoxes("ship", { length });
+      expect(boxes.get("Ship/Mast")!.min[1], `length ${length}`).toBeCloseTo(boxes.get("Ship/Bridge")!.max[1], 2);
+    }
+  });
+
+  it("fence: a post stands at each end of the section", () => {
+    for (const length of [1, 3, 5]) {
+      const posts = [...nodeBoxes("fence", { length }).entries()].filter(([path]) => path.startsWith("Fence/Post_")).map(([, box]) => (box.min[2] + box.max[2]) / 2);
+      expect(posts.length, `length ${length}`).toBe(2);
+      const [start, end] = posts.sort((a, b) => a - b);
+      expect(start).toBeCloseTo(-(length / 2 - 0.05), 3);
+      expect(end).toBeCloseTo(length / 2 - 0.05, 3);
+    }
+  });
+
+  it("table: the apron has a front rail and a back rail", () => {
+    for (const length of [0.6, 1.4, 3]) {
+      const boxes = nodeBoxes("table", { length });
+      const centerZ = (path: string): number => {
+        const b = boxes.get(path);
+        expect(b, `${path} at length ${length}`).toBeDefined();
+        return (b!.min[2] + b!.max[2]) / 2;
+      };
+      expect(centerZ("Table/Apron_B"), `length ${length}`).toBeCloseTo(-centerZ("Table/Apron_F"), 3);
+    }
+  });
+
+  it("power pylon: the back of each square frame is braced too, not a copy of the front", () => {
+    for (const height of [15, 30, 70]) {
+      const boxes = nodeBoxes("power-pylon", { height });
+      const z = (path: string): number => {
+        const b = boxes.get(path);
+        expect(b, path).toBeDefined();
+        return (b!.min[2] + b!.max[2]) / 2;
+      };
+      for (let i = 1; i <= 6; i++) {
+        expect(z(`Pylon/Brace_F${i}`), `height ${height}, frame ${i}`).toBeGreaterThan(0);
+        expect(z(`Pylon/Brace_B${i}`), `height ${height}, frame ${i}`).toBeCloseTo(-z(`Pylon/Brace_F${i}`), 3);
+      }
+    }
+  });
+
+  it("light aircraft: the wing tips sit at the wingspan, tip to tip", () => {
+    for (const wingSpan of [8, 11, 13]) {
+      const info = inspectModel(writeScene(buildKind("light-aircraft", { wingSpan })));
+      expect(info.bounds!.size[0], `wingSpan ${wingSpan}`).toBeCloseTo(wingSpan, 1);
+    }
+  });
+
+  it("light aircraft: the tailplane has a half on each side, mirror images of each other", () => {
+    const boxes = nodeBoxes("light-aircraft", {});
+    const left = boxes.get("LightAircraft/Stabilizer")!;
+    const right = boxes.get("LightAircraft/Stabilizer_R")!;
+    expect(right, "no tailplane on the -x side").toBeDefined();
+    expect(right.min[0]).toBeCloseTo(-left.max[0], 3);
+    expect(right.max[0]).toBeCloseTo(-left.min[0], 3);
+    expect(right.min[1]).toBeCloseTo(left.min[1], 3);
+    expect(right.min[2]).toBeCloseTo(left.min[2], 3);
+    expect(right.max[2]).toBeCloseTo(left.max[2], 3);
+  });
+
+  it("bridge: an abutment stands at each end of the deck", () => {
+    for (const length of [10, 60, 300]) {
+      const L2 = length / 2;
+      const abutments = [...nodeBoxes("bridge", { length }).entries()].filter(([path]) => path.startsWith("Bridge/Abutment")).map(([, box]) => box);
+      expect(abutments.length, `length ${length}`).toBe(2);
+      expect(abutments.some((b) => Math.abs(b.min[2] + L2) < 0.01), `length ${length}: no abutment at -z`).toBe(true);
+      expect(abutments.some((b) => Math.abs(b.max[2] - L2) < 0.01), `length ${length}: no abutment at +z`).toBe(true);
+    }
   });
 });
