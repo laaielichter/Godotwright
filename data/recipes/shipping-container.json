@@ -1,0 +1,119 @@
+{
+ "version": 1,
+ "name": "shipping-container",
+ "archetype": "prop.shipping-container",
+ "description": "An ISO shipping container: 8 ft wide, 8 ft 6 in tall (9 ft 6 in high cube), corrugated sides and double doors on hinges at the rear (-z).",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 6.058,
+   "min": 6.0,
+   "max": 12.2,
+   "description": "6.058 m is a 20 ft container, 12.192 m a 40 ft one."
+  },
+  {
+   "name": "highCube",
+   "type": "boolean",
+   "default": false,
+   "min": 0,
+   "max": 1,
+   "description": "A high cube container is 0.305 m taller."
+  }
+ ],
+ "materials": {
+  "container_paint": {
+   "color": [
+    0.55,
+    0.12,
+    0.08
+   ],
+   "metallic": 0.3,
+   "roughness": 0.55
+  }
+ },
+ "nodes": [
+  {
+   "name": "Container",
+   "material": "container_paint",
+   "vars": {
+    "W": 2.438,
+    "H": "2.591 + $highCube * 0.305"
+   },
+   "children": [
+    {
+     "name": "Body",
+     "shape": "box",
+     "size": [
+      "$W - 0.1",
+      "$H",
+      "$length"
+     ],
+     "at": [
+      0,
+      "$H / 2",
+      0
+     ]
+    },
+    {
+     "name": "Ribs_L",
+     "at": [
+      "$W / 2 - 0.05",
+      "$H / 2",
+      0
+     ],
+     "mirror": "Ribs_R",
+     "children": [
+      {
+       "name": "Rib",
+       "shape": "box",
+       "size": [
+        0.1,
+        "$H - 0.3",
+        0.08
+       ],
+       "at": [
+        0,
+        0,
+        "-$length / 2 + 0.3"
+       ],
+       "repeat": {
+        "count": "floor(($length - 0.6) / 0.24)",
+        "step": [
+         0,
+         0,
+         0.24
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Door_L",
+     "at": [
+      "$W / 2 - 0.02",
+      "$H / 2",
+      "-$length / 2 - 0.02"
+     ],
+     "mirror": "Door_R",
+     "children": [
+      {
+       "name": "Panel",
+       "shape": "box",
+       "size": [
+        "$W / 2 - 0.1",
+        "$H - 0.12",
+        0.05
+       ],
+       "at": [
+        "-($W / 2 - 0.1) / 2",
+        0,
+        0
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

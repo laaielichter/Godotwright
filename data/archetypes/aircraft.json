@@ -152,7 +152,7 @@
       "axis": "x"
      }
     ],
-    "pivot": "hinge",
+    "pivot": "mount",
     "aliases": [
      "landing gear",
      "undercarriage",

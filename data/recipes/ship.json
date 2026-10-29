@@ -1,0 +1,298 @@
+{
+ "version": 1,
+ "name": "ship",
+ "archetype": "vessel.ship",
+ "description": "A cargo ship: a lofted hull with the waterline at y = 0, an aft superstructure with bridge, funnel and mast, container stacks on deck, a rudder and a propeller.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 200,
+   "min": 60,
+   "max": 400,
+   "description": "Length overall in metres."
+  },
+  {
+   "name": "beam",
+   "type": "number",
+   "default": 32,
+   "min": 9,
+   "max": 61,
+   "description": "Beam (width). Panamax locks allow 32.31 m."
+  },
+  {
+   "name": "draught",
+   "type": "number",
+   "default": 9.5,
+   "min": 3,
+   "max": 16,
+   "description": "How deep the hull sits below the waterline."
+  }
+ ],
+ "materials": {
+  "hull_paint": {
+   "color": [
+    0.08,
+    0.1,
+    0.2
+   ],
+   "metallic": 0.2,
+   "roughness": 0.55
+  },
+  "white_paint": {
+   "color": [
+    0.88,
+    0.88,
+    0.85
+   ],
+   "metallic": 0.1,
+   "roughness": 0.5
+  },
+  "cargo_red": {
+   "color": [
+    0.55,
+    0.12,
+    0.08
+   ],
+   "metallic": 0.2,
+   "roughness": 0.6
+  },
+  "cargo_blue": {
+   "color": [
+    0.1,
+    0.22,
+    0.5
+   ],
+   "metallic": 0.2,
+   "roughness": 0.6
+  }
+ },
+ "nodes": [
+  {
+   "name": "Ship",
+   "material": "hull_paint",
+   "vars": {
+    "free": "$length * 0.04",
+    "depth": "$draught + $length * 0.04",
+    "deck": "$length * 0.04"
+   },
+   "children": [
+    {
+     "name": "Hull",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "-$length * 0.5",
+       "superellipse": {
+        "width": "$beam * 0.78",
+        "height": "$depth",
+        "n": 6,
+        "count": 32,
+        "cy": "$depth / 2 - $draught"
+       }
+      },
+      {
+       "z": "-$length * 0.42",
+       "superellipse": {
+        "width": "$beam * 0.98",
+        "height": "$depth",
+        "n": 6,
+        "count": 32,
+        "cy": "$depth / 2 - $draught"
+       }
+      },
+      {
+       "z": "$length * 0.18",
+       "superellipse": {
+        "width": "$beam",
+        "height": "$depth",
+        "n": 6,
+        "count": 32,
+        "cy": "$depth / 2 - $draught"
+       }
+      },
+      {
+       "z": "$length * 0.4",
+       "superellipse": {
+        "width": "$beam * 0.86",
+        "height": "$depth",
+        "n": 6,
+        "count": 32,
+        "cy": "$depth / 2 - $draught"
+       }
+      },
+      {
+       "z": "$length * 0.485",
+       "superellipse": {
+        "width": "$beam * 0.34",
+        "height": "$depth",
+        "n": 6,
+        "count": 32,
+        "cy": "$depth / 2 - $draught"
+       }
+      },
+      {
+       "z": "$length * 0.5",
+       "superellipse": {
+        "width": "$beam * 0.06",
+        "height": "$depth",
+        "n": 6,
+        "count": 32,
+        "cy": "$depth / 2 - $draught"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Superstructure",
+     "shape": "box",
+     "material": "white_paint",
+     "size": [
+      "$beam * 0.66",
+      "$length * 0.09",
+      "$length * 0.1"
+     ],
+     "at": [
+      0,
+      "$deck + $length * 0.045",
+      "-$length * 0.36"
+     ]
+    },
+    {
+     "name": "Bridge",
+     "shape": "box",
+     "material": "white_paint",
+     "size": [
+      "$beam * 0.8",
+      "$length * 0.018",
+      "$length * 0.04"
+     ],
+     "at": [
+      0,
+      "$deck + $length * 0.099",
+      "-$length * 0.34"
+     ]
+    },
+    {
+     "name": "Funnel",
+     "shape": "lathe",
+     "material": "cargo_red",
+     "segments": 24,
+     "profile": [
+      [
+       "$length * 0.022",
+       0
+      ],
+      [
+       "$length * 0.016",
+       "$length * 0.06"
+      ]
+     ],
+     "at": [
+      0,
+      "$deck + $length * 0.09",
+      "-$length * 0.4"
+     ]
+    },
+    {
+     "name": "Mast",
+     "shape": "cylinder",
+     "material": "metal",
+     "radius": "$length * 0.0025",
+     "height": "$length * 0.07",
+     "anchor": "base",
+     "segments": 12,
+     "at": [
+      0,
+      "$deck + $length * 0.117",
+      "-$length * 0.33"
+     ]
+    },
+    {
+     "name": "Cargo",
+     "shape": "box",
+     "material": "cargo_red",
+     "size": [
+      "$beam * 0.8",
+      "$length * 0.045",
+      "$length * 0.105"
+     ],
+     "at": [
+      0,
+      "$deck + $length * 0.0225",
+      "-$length * 0.14"
+     ],
+     "repeat": {
+      "count": 3,
+      "step": [
+       0,
+       0,
+       "$length * 0.125"
+      ]
+     }
+    },
+    {
+     "name": "Rudder",
+     "material": "metal",
+     "at": [
+      0,
+      "-$draught * 0.5",
+      "-$length * 0.5 + 0.2"
+     ],
+     "children": [
+      {
+       "name": "Blade",
+       "shape": "box",
+       "size": [
+        "$draught * 0.04 + 0.1",
+        "$draught * 0.85",
+        "$length * 0.03"
+       ],
+       "at": [
+        0,
+        0,
+        "-$length * 0.015"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Propeller",
+     "material": "metal",
+     "at": [
+      0,
+      "-$draught * 0.5",
+      "-$length * 0.5 - $length * 0.012"
+     ],
+     "children": [
+      {
+       "name": "Boss",
+       "shape": "cylinder",
+       "radius": "$draught * 0.05",
+       "height": "$draught * 0.1",
+       "axis": "z"
+      },
+      {
+       "name": "Blade",
+       "shape": "ellipsoid",
+       "radii": [
+        "$draught * 0.06",
+        "$draught * 0.17",
+        "$draught * 0.015"
+       ],
+       "offset": [
+        0,
+        "$draught * 0.17",
+        0
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "z"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -87,7 +87,8 @@ Godotwright gets better with every use, without collecting anything personal.
 17. **MCP tools for models** (`godot_model_identify`, `_spec`, `_build`, `_lint`, `_inspect`) with the
     workflow in the server instructions. Files are read and written only inside the project.
     *Done when:* an agent can go from a name to a checked `.glb` with these tools alone.
-18. **Recipes.** Ready-made specs in `data/recipes/` (car, tractor, helicopter first), each checked
+18. **Recipes.** Ready-made specs in `data/recipes/` (car, tractor, helicopter, airliner, ship, trees,
+    wind turbine, container so far), each checked
     against its archetype and tested at the edges of its parameters.
 19. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
     **MCP tools for models**, and a contact-sheet render.

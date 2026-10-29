@@ -1,0 +1,113 @@
+{
+ "version": 1,
+ "name": "conifer",
+ "archetype": "plant.tree.conifer",
+ "description": "A conifer: a slim trunk and a crown of five stacked tiers of needles.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 12,
+   "min": 4,
+   "max": 40,
+   "description": "Total height in metres."
+  },
+  {
+   "name": "crownRadius",
+   "type": "number",
+   "default": 3,
+   "min": 1.2,
+   "max": 8,
+   "description": "Radius of the lowest tier."
+  },
+  {
+   "name": "trunkRadius",
+   "type": "number",
+   "default": 0.25,
+   "min": 0.1,
+   "max": 0.8,
+   "description": "Trunk radius at the base."
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Conifer",
+   "material": "bark",
+   "vars": {
+    "R": "$crownRadius",
+    "H": "$height * 0.86",
+    "tr": "$trunkRadius"
+   },
+   "children": [
+    {
+     "name": "Trunk",
+     "shape": "lathe",
+     "segments": 12,
+     "profile": [
+      [
+       "$tr * 1.4",
+       0
+      ],
+      [
+       "$tr",
+       "$height * 0.1"
+      ],
+      [
+       "$tr * 0.5",
+       "$height * 0.4"
+      ]
+     ]
+    },
+    {
+     "name": "Crown",
+     "shape": "lathe",
+     "material": "leaf",
+     "segments": 20,
+     "at": [
+      0,
+      "$height * 0.14",
+      0
+     ],
+     "profile": [
+      [
+       0,
+       "$H"
+      ],
+      [
+       "$R * 0.34",
+       "$H * 0.8"
+      ],
+      [
+       "$R * 0.2",
+       "$H * 0.8"
+      ],
+      [
+       "$R * 0.62",
+       "$H * 0.58"
+      ],
+      [
+       "$R * 0.38",
+       "$H * 0.58"
+      ],
+      [
+       "$R * 0.86",
+       "$H * 0.34"
+      ],
+      [
+       "$R * 0.55",
+       "$H * 0.34"
+      ],
+      [
+       "$R",
+       "$H * 0.08"
+      ],
+      [
+       "$R * 0.2",
+       0
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

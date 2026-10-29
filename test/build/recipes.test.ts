@@ -62,7 +62,7 @@ describe("ring and offset in the spec language", () => {
 describe("the recipes", () => {
   it("are listed with the built-in kinds, with parameters and an archetype", () => {
     const kinds = allKinds();
-    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter"]));
+    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container"]));
     for (const r of recipes) {
       expect(r.archetype, r.kind).toBeDefined();
       expect(library.get(r.archetype!), r.kind).toBeDefined();
@@ -85,8 +85,12 @@ describe("the recipes", () => {
       const s = library.resolve(recipe.archetype!).scale!;
       const largest = Math.max(...info.bounds!.size);
       expect(largest).toBeLessThan(3 * Math.max(...[s.length, s.width, s.height].map((r) => r![1])));
-      expect(info.bounds!.min[1]).toBeGreaterThan(-0.01);
-      expect(info.bounds!.min[1]).toBeLessThan(0.05);
+      // A vessel sits on its waterline: y = 0 is the water and the hull goes below it.
+      if (recipe.archetype!.startsWith("vessel")) expect(info.bounds!.min[1]).toBeLessThan(-0.5);
+      else {
+        expect(info.bounds!.min[1]).toBeGreaterThan(-0.01);
+        expect(info.bounds!.min[1]).toBeLessThan(0.05);
+      }
       expect(info.bounds!.size[0]).toBeGreaterThan(0);
     });
 
