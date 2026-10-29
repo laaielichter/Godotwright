@@ -84,9 +84,13 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
 
   for (const ll of script.logicalLines) {
     for (const m of ll.text.matchAll(/(^|[^.\w])emit_signal\s*\(\s*&?"(\w+)"/g)) {
+      // `name.emit()` only works for a signal this class declares or inherits; for anything else the advice would not compile.
+      const model = pm.scopeAt(path, ll.line)?.model;
+      if (!model || pm.memberOf({ kind: "script", model, meta: false }, m[2]!)?.kind !== "signal") continue;
       out.push(finding("quality/string-signal", path, ll.line, `emit_signal("${m[2]}") can be ${m[2]}.emit().`));
     }
-    if (/\bconnect\s*\(\s*&?"\w+"\s*,/.test(ll.text) || /\bCallable\s*\(\s*self\s*,\s*&?"/.test(ll.text)) {
+    // A method given as Callable(self, "name") only needs the connect advice when it is passed to connect().
+    if (/\bconnect\s*\(\s*&?"\w+"\s*,/.test(ll.text) || /\bconnect\s*\(\s*Callable\s*\(\s*self\s*,\s*&?"/.test(ll.text)) {
       out.push(finding("quality/string-signal", path, ll.line, "Connect with the signal object and a method reference: my_signal.connect(_on_event)."));
     }
     const up = /(?:get_node(?:_or_null)?\s*\(\s*&?\^?"|\$")((?:\.\.\/){2,}[^"]*)"/.exec(ll.text);

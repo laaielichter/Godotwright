@@ -340,6 +340,33 @@ describe("review robustness", () => {
     expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
   });
 
+  it("gives string-signal advice only where the suggested code compiles", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "signal declared",
+        "",
+        "func _ready() -> void:",
+        '\tcall_deferred(Callable(self, "_tick"))',
+        '\temit_signal("ghost")',
+        '\temit_signal("declared")',
+        '\tdeclared.connect(Callable(self, "_tick"))',
+        "",
+        "",
+        "func _tick() -> void:",
+        "\tpass",
+        "",
+      ].join("\n"),
+    });
+    const advice = reviewProject(root).findings.filter((f) => f.rule === "quality/string-signal").map(formatFinding);
+    expect(advice).toEqual([
+      'res://main.gd:8: info [quality/string-signal] emit_signal("declared") can be declared.emit().',
+      "res://main.gd:9: info [quality/string-signal] Connect with the signal object and a method reference: my_signal.connect(_on_event).",
+    ]);
+  });
+
   it("reports a file that does not parse with the syntax fix, not the missing-file one", () => {
     const root = makeProject({
       "project.godot": PROJECT,
