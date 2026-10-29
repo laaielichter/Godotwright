@@ -77,6 +77,14 @@ describe("lookup", () => {
     expect(api.lookup("preload").entries[0]).toMatchObject({ kind: "method", owner: "@GDScript" });
   });
 
+  it("does not treat Object.prototype names as Godot 3 renames", () => {
+    for (const name of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
+      expect(api.lookup(name).renamed, name).toBeUndefined();
+      expect(api.lookup(`Node.${name}`).renamed, `Node.${name}`).toBeUndefined();
+      expect(api.lookup(`Node.${name}()`).renamed, `Node.${name}()`).toBeUndefined();
+    }
+  });
+
   it("explains Godot 3 names and suggests close names", () => {
     expect(api.lookup("KinematicBody2D")).toMatchObject({
       entries: [],

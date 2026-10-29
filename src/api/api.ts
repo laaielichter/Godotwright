@@ -199,8 +199,9 @@ export class GodotApi {
 
   renamedClass(name: string): Rename | undefined {
     const r = this.data.renames;
-    const to = r.classes?.[name] ?? r.builtinTypes?.[name];
-    if (to && !this.classes.has(name)) return { kind: r.classes?.[name] ? "class" : "type", from: name, to };
+    const fromClasses = ownRename(r.classes, name);
+    const to = fromClasses ?? ownRename(r.builtinTypes, name);
+    if (to && !this.classes.has(name)) return { kind: fromClasses ? "class" : "type", from: name, to };
     return undefined;
   }
 
@@ -213,7 +214,7 @@ export class GodotApi {
       ["constant", r.constants],
     ];
     for (const [kind, map] of table) {
-      const to = map?.[name];
+      const to = ownRename(map, name);
       if (to) return { kind, from: name, to };
     }
     return undefined;
@@ -293,6 +294,11 @@ export class GodotApi {
     this.index = rows;
     return rows;
   }
+}
+
+/** A rename by its own key only: a plain lookup would also find `constructor` or `toString` on Object.prototype. */
+function ownRename(table: Record<string, string> | undefined, name: string): string | undefined {
+  return table && Object.hasOwn(table, name) ? table[name] : undefined;
 }
 
 /** Formats parameters GDScript-style: `point: Vector2, up: Vector3 = Vector3(0, 1, 0)`. */
