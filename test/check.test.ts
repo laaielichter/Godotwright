@@ -109,6 +109,23 @@ describe("checkProject", () => {
     expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
   });
 
+  it("skips scan warnings from excluded folders", async () => {
+    const root = copyFixture("broken");
+    mkdirSync(join(root, "addons", "plugin"), { recursive: true });
+    writeFileSync(
+      join(root, "addons", "plugin", "bad.tscn"),
+      '[gd_scene format=3]\n\n[ext_resource type="Texture2D" path="res://gone.png" id="1"]\n\n[node name="Root" type="Node2D"]\n',
+    );
+    const godot = fakeGodot({});
+    const scanFiles = async (exclude?: string[]) => {
+      const result = await checkProject(root, { godot, import: false, exclude });
+      return result.diagnostics.filter((d) => d.source === "scan").map((d) => d.file);
+    };
+    expect(await scanFiles()).toEqual(["res://addons/plugin/bad.tscn", "res://main.tscn"]);
+    expect(await scanFiles(["addons"])).toEqual(["res://main.tscn"]);
+    expect(await scanFiles(["res://addons/"])).toEqual(["res://main.tscn"]);
+  });
+
   it("warns about other Godot versions and a checker that does not finish", async () => {
     const root = copyFixture("demo");
     const godot = fakeGodot({ version: "4.6.1.stable.official.fake", finish: false, checkLog: "boom" });

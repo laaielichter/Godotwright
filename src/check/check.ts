@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { findProjectRoot } from "../project/files.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
-import { checkerSource } from "./checker-script.js";
+import { checkerSource, excludePath } from "./checker-script.js";
 import { findGodot, godotVersion, runGodot, type RunResult } from "./godot.js";
 import { MARKER, parseGodotLog, type Diagnostic } from "./log.js";
 
@@ -79,7 +79,11 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     });
   }
 
+  // Folders the user excluded are skipped by the checker, so their scan warnings are not wanted either.
+  const excluded = (options.exclude ?? []).map(excludePath);
   for (const w of scanProject(root).warnings) {
+    const file = w.file.replace(/::.*$/, "");
+    if (excluded.some((folder) => file.startsWith(`${folder}/`))) continue;
     diagnostics.push({ severity: "warning", file: w.file, line: w.line, message: w.message, source: "scan" });
   }
 
