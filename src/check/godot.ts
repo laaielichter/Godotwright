@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { accessSync, constants, existsSync, readdirSync, statSync } from "node:fs";
-import { basename, delimiter, join } from "node:path";
+import { basename, delimiter, join, resolve as resolvePath } from "node:path";
 
 export class GodotNotFoundError extends Error {
   constructor() {
@@ -118,30 +118,30 @@ function installDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[
   ];
 }
 
-/** Finds the Godot binary: explicit path, then $GODOT / $GODOT_BIN, then PATH, then common install spots. */
+/** Finds the Godot binary: explicit path, then $GODOT / $GODOT_BIN, then PATH, then common install spots. Always absolute. */
 export function findGodot(explicit?: string, env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string {
   for (const candidate of [explicit, env["GODOT"], env["GODOT_BIN"]]) {
     if (candidate) {
       // A bare name such as "godot" is looked up on PATH; a path is checked where it points.
       const bare = !/[\\/]/.test(candidate);
       const found = bare ? onPath(candidate, env, platform) : isExecutable(candidate) ? candidate : undefined;
-      if (found) return found;
+      if (found) return resolvePath(found);
       throw new Error(`Godot binary not found or not executable: ${candidate}`);
     }
   }
   for (const dir of pathDirs(env, platform)) {
     const found = godotIn(dir, platform, false);
-    if (found) return found;
+    if (found) return resolvePath(found);
   }
   if (platform === "darwin") {
     for (const app of ["/Applications", ...installDirs(env, platform)]) {
       const mac = join(app, "Godot.app", "Contents", "MacOS", "Godot");
-      if (existsSync(mac)) return mac;
+      if (existsSync(mac)) return resolvePath(mac);
     }
   }
   for (const dir of installDirs(env, platform)) {
     const found = godotIn(dir, platform, true);
-    if (found) return found;
+    if (found) return resolvePath(found);
   }
   throw new GodotNotFoundError();
 }

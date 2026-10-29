@@ -1,6 +1,6 @@
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { checkProject } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
@@ -146,6 +146,15 @@ describe("findGodot", () => {
     expect(findGodot(undefined, { PATH: join(godot, "..") })).toBe(godot);
     expect(() => findGodot(undefined, { PATH: "" })).toThrow(GodotNotFoundError);
     expect(() => findGodot("/no/such/godot", {})).toThrow(/not found or not executable/);
+  });
+
+  it("returns an absolute path, so a relative --godot still works when Godot runs from the project", () => {
+    const godot = fakeGodot({});
+    // Godot is spawned from the project folder, so a path relative to the shell's folder would not resolve there.
+    const rel = relative(process.cwd(), godot);
+    expect(findGodot(rel, {})).toBe(godot);
+    expect(findGodot(undefined, { GODOT: rel })).toBe(godot);
+    expect(findGodot(undefined, { PATH: relative(process.cwd(), dirname(godot)) })).toBe(godot);
   });
 
   it("looks up a bare command name such as godot on PATH", () => {
