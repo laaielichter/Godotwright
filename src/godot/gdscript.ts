@@ -310,7 +310,7 @@ export function parseParams(text: string): Param[] {
 /** Strips one pair of quotes (either style) and keeps any text after the closing quote. */
 function unquote(text: string): string {
   const match = /^(["'])(.*)\1(.*)$/.exec(text);
-  return match ? match[1]! + match[2]! : text;
+  return match ? match[2]! + match[3]! : text;
 }
 
 function emptyClass(): ClassOutline {
