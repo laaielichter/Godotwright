@@ -1,3 +1,5 @@
+import { checkArchetype } from "../archetype/check.js";
+import type { ResolvedArchetype } from "../archetype/types.js";
 import { checkContract, type ModelContract } from "./contract.js";
 import { inspectModel, transformPoint, type ModelInfo, type PrimitiveInfo } from "./inspect.js";
 import { at } from "./num.js";
@@ -10,6 +12,8 @@ export interface LintOptions {
   maxTextureMb?: number;
   /** Node names, sizes and budget the model must keep. */
   contract?: ModelContract;
+  /** What the model should be (see `model identify`): adds the archetype checks and category. */
+  archetype?: ResolvedArchetype;
 }
 
 export interface ModelCategoryScore {
@@ -25,6 +29,8 @@ export interface ModelReport {
   triangles: number;
   nodes: number;
   overall: number;
+  /** The archetype id the model was checked against, when one was given. */
+  archetype?: string;
   categories: ModelCategoryScore[];
   findings: ModelFinding[];
 }
@@ -52,6 +58,7 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
   checkTextures(info, options, add);
   checkSymmetry(info, add);
   if (options.contract) findings.push(...checkContract(info, options.contract));
+  if (options.archetype && options.archetype.id !== "thing") findings.push(...checkArchetype(info, options.archetype));
 
   if (options.maxTriangles !== undefined && info.triangles > options.maxTriangles) {
     add("model/triangle-budget", `${info.triangles.toLocaleString("en-US")} triangles; the budget is ${options.maxTriangles.toLocaleString("en-US")}.`);
@@ -60,9 +67,12 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
 
   const order: Record<ModelSeverity, number> = { error: 0, warning: 1, info: 2 };
   findings.sort((a, b) => order[a.severity] - order[b.severity] || a.rule.localeCompare(b.rule));
-  const categories = MODEL_CATEGORIES.map((c) => score(c, findings));
-  const overall = Math.round(categories.reduce((sum, c) => sum + c.score * MODEL_WEIGHTS[c.category], 0));
-  return { file: info.file, triangles: info.triangles, nodes: info.nodes.length, overall, categories, findings };
+  const checked = options.archetype !== undefined && options.archetype.id !== "thing";
+  const categories = (checked ? [...MODEL_CATEGORIES, "archetype" as const] : MODEL_CATEGORIES).map((c) => score(c, findings));
+  // With an archetype check, it takes a fifth of the score and the other categories share the rest.
+  const weight = (c: ModelCategory): number => (!checked ? MODEL_WEIGHTS[c] : c === "archetype" ? MODEL_WEIGHTS.archetype : MODEL_WEIGHTS[c] * (1 - MODEL_WEIGHTS.archetype));
+  const overall = Math.round(categories.reduce((sum, c) => sum + c.score * weight(c.category), 0));
+  return { file: info.file, triangles: info.triangles, nodes: info.nodes.length, overall, ...(checked && options.archetype ? { archetype: options.archetype.id } : {}), categories, findings };
 }
 
 type Add = (rule: string, message: string, node?: string, severity?: ModelSeverity) => void;

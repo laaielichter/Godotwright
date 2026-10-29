@@ -310,12 +310,13 @@ function readMaterials(raw: unknown): Record<string, Material> {
 /** Turns a model spec (parsed JSON) into a scene. Throws BuildError with the path of the first problem. */
 export function buildSpec(raw: unknown, overrides: Record<string, unknown> = {}): BuildScene {
   if (!isObj(raw)) throw new BuildError("the spec must be a JSON object");
-  checkKeys(raw, ["version", "name", "description", "params", "materials", "nodes"], "spec");
+  checkKeys(raw, ["version", "name", "description", "archetype", "params", "materials", "nodes"], "spec");
   if (raw["version"] !== 1) throw new BuildError('the spec needs "version": 1');
   const { scope } = readParams(raw["params"], overrides);
   const materials = readMaterials(raw["materials"]);
   const ctx: Ctx = { scope, materials, counters: { nodes: 0, triangles: 0 } };
   const roots = list(raw["nodes"], "nodes", LIMITS.nodes).flatMap((n, i) => buildNodes(n, ctx, `nodes[${i}]`));
   assertUnique(roots, "nodes");
-  return { nodes: roots, materials };
+  if (raw["archetype"] !== undefined && typeof raw["archetype"] !== "string") throw new BuildError('"archetype" must be an archetype id such as "vehicle.wheeled.car"');
+  return { nodes: roots, materials, ...(typeof raw["archetype"] === "string" ? { archetype: raw["archetype"] } : {}) };
 }

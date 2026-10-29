@@ -43,6 +43,7 @@ function wallBox(w: Wall, u0: number, u1: number, y0: number, y1: number, t0: nu
 
 export const house: Generator = {
   kind: "house",
+  archetype: "building.house",
   description: "A house or small building: walls, roof, windows, a door and an optional chimney.",
   params: HOUSE_PARAMS,
   build(p: Params): BuildScene {
@@ -98,16 +99,18 @@ export const house: Generator = {
       }
     });
 
+    // The door swings on its left edge, so that edge is the pivot of the Door node; the frame stays put.
     const front = wallList[1] as Wall;
-    const door = new MeshBuilder()
-      .merge(wallBox(front, doorU0 - 0.08, doorU0 + doorWidth + 0.08, 0.45, doorHeight + 0.45 + 0.08, -0.02, 0.06, "frame_white"))
-      .merge(wallBox(front, doorU0, doorU0 + doorWidth, 0.45, doorHeight + 0.45, -0.02, 0.1, "door"));
+    const hinge: [number, number, number] = [front.origin[0] + front.along[0] * doorU0, 0.45, front.origin[1] + front.along[1] * doorU0];
+    const doorway = wallBox(front, doorU0 - 0.08, doorU0 + doorWidth + 0.08, 0.45, doorHeight + 0.45 + 0.08, -0.02, 0.06, "frame_white");
+    const door = wallBox(front, doorU0, doorU0 + doorWidth, 0.45, doorHeight + 0.45, -0.02, 0.1, "door").translate(-hinge[0], -hinge[1], -hinge[2]);
 
     const nodes: BuildNode[] = [
       { name: "Walls", mesh: walls },
       { name: "Roof", mesh: roofMesh },
       { name: "Windows", mesh: windows },
-      { name: "Door", mesh: door },
+      { name: "Doorway", mesh: doorway },
+      { name: "Door", translation: hinge, mesh: door },
     ];
     if (p["chimney"] === true && kind !== "flat") {
       // On the ridge, and on x = 0 so that left and right stay mirror images.

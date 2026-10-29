@@ -1,4 +1,4 @@
-export type ModelCategory = "geometry" | "materials" | "performance" | "rig";
+export type ModelCategory = "geometry" | "materials" | "performance" | "rig" | "archetype";
 export type ModelSeverity = "error" | "warning" | "info";
 
 export interface ModelRule {
@@ -20,9 +20,10 @@ export interface ModelFinding {
   message: string;
 }
 
+/** The categories every lint reports. "archetype" is added when a model is checked against what it should be. */
 export const MODEL_CATEGORIES: ModelCategory[] = ["geometry", "materials", "performance", "rig"];
 
-export const MODEL_WEIGHTS: Record<ModelCategory, number> = { geometry: 0.4, materials: 0.25, performance: 0.15, rig: 0.2 };
+export const MODEL_WEIGHTS: Record<ModelCategory, number> = { geometry: 0.4, materials: 0.25, performance: 0.15, rig: 0.2, archetype: 0.2 };
 
 const list: ModelRule[] = [
   { id: "model/flipped-faces", category: "geometry", severity: "error", title: "Faces turned the wrong way", fix: "Flip the winding of the marked triangles (neighbours must share an edge in opposite directions); they show as holes or pink backfaces." },
@@ -49,6 +50,13 @@ const list: ModelRule[] = [
   { id: "model/contract-size", category: "geometry", severity: "error", title: "Size differs from the contract", fix: "Rescale the model, or update the contract with the new measured value and its source." },
   { id: "model/contract-triangles", category: "performance", severity: "warning", title: "Triangle count over the contract", fix: "Reduce the detail, or raise the budget in the contract on purpose." },
   { id: "model/contract-ground", category: "geometry", severity: "warning", title: "Lowest point differs from the contract", fix: "Move the origin so the model sits where the contract says." },
+  { id: "archetype/missing-part", category: "archetype", severity: "error", title: "A part this kind of thing needs is missing", fix: "Add the part as its own node with a name the archetype recognises (see `model identify`)." },
+  { id: "archetype/part-count", category: "archetype", severity: "warning", title: "Too few or too many of a part", fix: "Add or remove nodes so the count matches what this kind of thing has." },
+  { id: "archetype/pivot", category: "archetype", severity: "warning", title: "A moving part has its pivot in the wrong place", fix: "Move the node origin: a wheel to its hub, a hinged part to its hinge, a turret to its base." },
+  { id: "archetype/wheel-axis", category: "archetype", severity: "warning", title: "A wheel lies the wrong way", fix: "Turn the wheel so its short side is along its axle." },
+  { id: "archetype/size", category: "archetype", severity: "warning", title: "Size far from what this kind of thing is", fix: "Check the unit: this is probably a scale mistake. Rescale to metres." },
+  { id: "archetype/orientation", category: "archetype", severity: "warning", title: "The model points sideways", fix: "Turn the model so its front faces +Z and its length runs along z." },
+  { id: "archetype/optional-part", category: "archetype", severity: "info", title: "Usual parts this model does not have", fix: "Add the parts you want; they are optional." },
   { id: "model/empty-geometry", category: "rig", severity: "warning", title: "No geometry in the file", fix: "Check the export: the file holds no triangles." },
 ];
 

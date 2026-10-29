@@ -5,6 +5,8 @@ import { house } from "./house.js";
 export interface Generator {
   kind: string;
   description: string;
+  /** The archetype this kind makes, so a build is checked against it. */
+  archetype?: string;
   params: ParamDef[];
   build(params: Params): BuildScene;
 }
@@ -20,5 +22,6 @@ export function generatorFor(kind: string): Generator {
 /** Resolves and checks the parameters, then builds the scene. */
 export function buildKind(kind: string, input: Record<string, unknown> = {}): BuildScene {
   const g = generatorFor(kind);
-  return g.build(resolveParams(g.params, input, kind));
+  const scene = g.build(resolveParams(g.params, input, kind));
+  return g.archetype ? { ...scene, archetype: g.archetype } : scene;
 }

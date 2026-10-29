@@ -378,6 +378,9 @@
      "laadbak",
      "cargo bed",
      "box"
+    ],
+    "replaces": [
+     "Body"
     ]
    },
    {
@@ -591,6 +594,9 @@
      "body",
      "chassis",
      "tank"
+    ],
+    "replaces": [
+     "Body"
     ]
    },
    {
@@ -614,7 +620,10 @@
      "voorwiel",
      "wheel"
     ],
-    "note": "Steers with the fork: put it under the Fork node."
+    "note": "Steers with the fork: put it under the Fork node.",
+    "replaces": [
+     "Wheel"
+    ]
    },
    {
     "name": "WheelRear",
@@ -698,6 +707,9 @@
     "aliases": [
      "frame",
      "body"
+    ],
+    "replaces": [
+     "Body"
     ]
    },
    {
@@ -720,6 +732,9 @@
      "front wheel",
      "voorwiel",
      "wheel"
+    ],
+    "replaces": [
+     "Wheel"
     ]
    },
    {
@@ -858,7 +873,10 @@
      "front wheel",
      "voorwiel"
     ],
-    "note": "The smaller pair, about 0.8-1.4 m diameter; they steer."
+    "note": "The smaller pair, about 0.8-1.4 m diameter; they steer.",
+    "replaces": [
+     "Wheel"
+    ]
    },
    {
     "name": "Hitch",
