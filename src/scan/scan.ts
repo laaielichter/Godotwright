@@ -11,9 +11,10 @@ import {
   findProjectRoot,
   fromResPath,
   listProjectFiles,
+  realResPath,
   resolveResPath,
 } from "../project/files.js";
-import type { ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
+import type { CSharpScriptInfo, ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
 
 export class ProjectNotFoundError extends Error {
   constructor(path: string) {
@@ -58,6 +59,12 @@ export interface LoadOptions {
 
 /** Config file in a project root, e.g. {"base": ["../game"]}; paths are relative to the root. */
 export const CONFIG_FILE = "godotwright.json";
+
+/** The system error code of a failed file operation, such as EACCES, when `error` is one. */
+function errorCode(error: unknown): string | undefined {
+  const code = (error as { code?: unknown } | undefined)?.code;
+  return typeof code === "string" ? code : undefined;
+}
 
 /** Reads a list of paths from godotwright.json, resolved against the project root. */
 function configPaths(root: string, key: "base" | "baseFiles"): string[] {
@@ -138,28 +145,41 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   if (!root) throw new ProjectNotFoundError(path);
 
   const overrides = options.overrides ?? {};
+  const warnings: Warning[] = [];
   // Which root each file comes from: base projects first, the project's own files win.
   const bases = baseRoots(root, options.base);
   const origin = new Map<string, string>();
-  for (const dir of [...bases, root]) for (const file of listProjectFiles(dir)) origin.set(file, dir);
+  for (const dir of bases) for (const file of listProjectFiles(dir)) origin.set(file, dir);
+  const unreadable = (folder: string, error: unknown) => {
+    warnings.push({ file: folder, message: `could not read folder (${errorCode(error) ?? "error"})` });
+  };
+  for (const file of listProjectFiles(root, unreadable)) origin.set(file, root);
   for (const file of Object.keys(overrides)) origin.set(file, root);
   const files = [...origin.keys()].sort();
   const external = new Set(files.filter((f) => origin.get(f) !== root && f !== "res://project.godot"));
   const fileSet = new Set(files);
-  const warnings: Warning[] = [];
   const read = (res: string) => overrides[res] ?? readFileSync(fromResPath(origin.get(res) ?? root, res), "utf8");
   const fail = (file: string, error: unknown) => {
+    const code = errorCode(error);
+    if (code) {
+      warnings.push({ file, message: `could not read file (${code})` });
+      return;
+    }
     const line = error instanceof VariantParseError ? error.line : undefined;
     const message = error instanceof Error ? error.message.replace(/ \(line \d+\)$/, "") : String(error);
     warnings.push({ file, line, message: `could not parse file: ${message}` });
   };
 
-  let settings = parseProjectSettings("");
+  // The project's own settings, and those with its bases' merged in underneath.
+  let ownSettings = parseProjectSettings("");
+  let ownFailed = false;
   try {
-    settings = parseProjectSettings(overrides["res://project.godot"] ?? readFileSync(fromResPath(root, "res://project.godot"), "utf8"));
+    ownSettings = parseProjectSettings(overrides["res://project.godot"] ?? readFileSync(fromResPath(root, "res://project.godot"), "utf8"));
   } catch (error) {
+    ownFailed = true;
     fail("res://project.godot", error);
   }
+  let settings = ownSettings;
   for (const dir of [...bases].reverse()) {
     try {
       settings = mergeSettings(parseProjectSettings(readFileSync(fromResPath(dir, "res://project.godot"), "utf8")), settings);
@@ -198,33 +218,45 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   }
 
   const listed = listedFiles(root, options.baseFiles);
-  const exists = (res: string) => fileSet.has(res) || listed.has(res) || [root, ...bases].some((dir) => existsSync(fromResPath(dir, res)));
+  /**
+   * Where a `res://` path points: a listed file, or a file on disk inside the project or a base (which
+   * covers folders the listing skips, such as .gdignore ones). A path through a folder link resolves to
+   * the listed file it reaches. Nothing outside those roots is looked up.
+   */
+  const locate = (res: string): string | undefined => {
+    if (fileSet.has(res) || listed.has(res)) return res;
+    for (const dir of [root, ...bases]) {
+      const real = realResPath(dir, res);
+      if (real !== undefined) return fileSet.has(real) ? real : res;
+    }
+    return undefined;
+  };
   /** Resolves a uid or path reference; returns undefined when neither points to a file. */
   const resolve = (ref: { uid?: string; path?: string }): string | undefined => {
     const byUid = ref.uid ? uids.get(ref.uid) : undefined;
     if (byUid) return byUid;
     if (ref.path?.startsWith("uid://")) return uids.get(ref.path);
-    if (ref.path && exists(ref.path)) return ref.path;
+    if (ref.path) return locate(ref.path);
     return undefined;
   };
 
-  // Project-level references.
+  // Project-level references. A broken one the project inherits from a base is the base's problem.
   let mainScene: string | undefined;
   if (settings.mainScene) {
     mainScene = resolve({ path: settings.mainScene });
-    if (!mainScene) {
+    if (!mainScene && ownSettings.mainScene) {
       warnings.push({
         file: "res://project.godot",
         line: settings.lines["application/run/main_scene"],
         message: `main scene not found: ${settings.mainScene}`,
       });
     }
-  } else {
+  } else if (!ownFailed) {
     warnings.push({ file: "res://project.godot", message: "no main scene set (application/run/main_scene)" });
   }
   const autoloads = settings.autoloads.map((autoload) => {
     const resolved = resolve({ path: autoload.path });
-    if (!resolved) {
+    if (!resolved && ownSettings.autoloads.some((own) => own.name === autoload.name)) {
       warnings.push({
         file: "res://project.godot",
         line: settings.lines[`autoload/${autoload.name}`],
@@ -366,15 +398,22 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
 
   // Shaders, C# scripts and other assets.
   const shaders: ShaderInfo[] = [];
-  const csharpScripts: string[] = [];
+  const csharpScripts: CSharpScriptInfo[] = [];
   const assets: Record<string, number> = {};
   for (const file of files) {
     const ext = extension(file);
     if (ext === "gdshader") {
-      const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(read(file));
+      let source: string;
+      try {
+        source = read(file);
+      } catch (error) {
+        fail(file, error);
+        continue;
+      }
+      const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(source);
       shaders.push({ ...(external.has(file) ? { external: true } : {}), path: file, shaderType: match?.[1] });
     } else if (ext === "cs") {
-      csharpScripts.push(file);
+      csharpScripts.push({ ...(external.has(file) ? { external: true } : {}), path: file });
     } else if (!external.has(file)) {
       const kind = ext === "scn" ? "binary_scene" : ext === "res" ? "binary_resource" : ASSET_KINDS[ext];
       if (kind) assets[kind] = (assets[kind] ?? 0) + 1;

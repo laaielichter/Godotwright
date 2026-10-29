@@ -1,6 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { symlinkSync } from "node:fs";
+import { basename, join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import { reviewProject } from "../src/review/review.js";
+import { formatProjectMap } from "../src/scan/format.js";
 import { scanProject } from "../src/scan/scan.js";
 import { DEMO, makeProject, runCli } from "./helpers.js";
+
+/** Paths (substrings) whose reads fail with EACCES: a test run as root can read anything, so the failure is simulated. */
+const denied = vi.hoisted(() => [] as string[]);
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  const guard = <F extends (...args: never[]) => unknown>(fn: F): F =>
+    ((...args: unknown[]) => {
+      const name = String(args[0]);
+      if (denied.some((path) => name.includes(path))) {
+        throw Object.assign(new Error(`EACCES: permission denied, '${name}'`), { code: "EACCES" });
+      }
+      return (fn as unknown as (...rest: unknown[]) => unknown)(...args);
+    }) as unknown as F;
+  return { ...actual, readdirSync: guard(actual.readdirSync), readFileSync: guard(actual.readFileSync) };
+});
 
 describe("scanProject on the demo project", () => {
   const map = scanProject(DEMO);
@@ -128,6 +148,146 @@ describe("scanProject warnings", () => {
 
   it("fails clearly outside a project", () => {
     expect(() => scanProject(makeProject({ "readme.txt": "" }))).toThrow(/No project.godot found/);
+  });
+});
+
+describe("project files", () => {
+  it("lists a folder linked into the project once, under its real path", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n',
+      "z_shared/enemy.gd": "class_name Enemy\nextends Node\n",
+      "z_shared/enemy.gd.uid": "uid://benemy0script\n",
+      "main.tscn": '[gd_scene format=3]\n[ext_resource type="Script" path="res://a_link/enemy.gd" id="1"]\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n',
+    });
+    symlinkSync(join(root, "z_shared"), join(root, "a_link"), "dir");
+    const map = scanProject(root);
+    expect(map.scripts.map((s) => [s.path, s.usedBy])).toEqual([["res://z_shared/enemy.gd", ["res://main.tscn"]]]);
+    expect(map.scenes[0]!.rootScript).toBe("res://z_shared/enemy.gd");
+    expect(map.warnings).toEqual([]);
+  });
+
+  it("skips hidden folders, as Godot does", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n',
+      "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n',
+      "main.gd": "extends Node\n",
+      ".venv/lib/tool.gd": "extends Node\n",
+      ".github/ci.gd": "extends Node\n",
+      ".cache/texture.png": "",
+    });
+    const map = scanProject(root);
+    expect(map.scripts.map((s) => s.path)).toEqual(["res://main.gd"]);
+    expect(map.assets).toEqual({});
+  });
+});
+
+describe("unreadable files and folders", () => {
+  const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n';
+  /** Runs `fn` with `paths` unreadable, then makes them readable again. */
+  const withDenied = <T>(paths: string[], fn: () => T): T => {
+    denied.push(...paths);
+    try {
+      return fn();
+    } finally {
+      denied.length = 0;
+    }
+  };
+
+  it("skips a folder it cannot read, warns, and scans the rest", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n',
+      "locked/secret.gd": "extends Node\n",
+    });
+    const map = withDenied([join(root, "locked")], () => scanProject(root));
+    expect(map.scripts).toEqual([]);
+    expect(map.scenes.map((s) => s.path)).toEqual(["res://main.tscn"]);
+    expect(map.warnings).toEqual([{ file: "res://locked", message: "could not read folder (EACCES)" }]);
+  });
+
+  it("reports an unreadable script, scene or project.godot as a read error", () => {
+    const root = makeProject({ "project.godot": PROJECT, "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n', "broken.gd": "extends Node\n" });
+    const map = withDenied([join(root, "broken.gd")], () => scanProject(root));
+    expect(map.warnings).toEqual([{ file: "res://broken.gd", message: "could not read file (EACCES)" }]);
+    const own = withDenied([join(root, "project.godot")], () => scanProject(root));
+    expect(own.warnings).toEqual([{ file: "res://project.godot", message: "could not read file (EACCES)" }]);
+  });
+
+  it("skips an unreadable shader with a warning instead of failing the scan", () => {
+    const root = makeProject({ "project.godot": PROJECT, "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n', "flash.gdshader": "shader_type canvas_item;\n" });
+    const map = withDenied([join(root, "flash.gdshader")], () => scanProject(root));
+    expect(map.shaders).toEqual([]);
+    expect(map.warnings).toEqual([{ file: "res://flash.gdshader", message: "could not read file (EACCES)" }]);
+  });
+});
+
+describe("references that leave the project", () => {
+  const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n';
+  const sceneWith = (path: string) => `[gd_scene format=3]\n[ext_resource type="Script" path="${path}" id="1"]\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n`;
+
+  it("does not look for files outside the project through ../", () => {
+    const outside = makeProject({ "secret.gd": "extends Node\n" });
+    const root = makeProject({ "project.godot": PROJECT, "main.tscn": sceneWith(`res://../${basename(outside)}/secret.gd`) });
+    expect(scanProject(root).warnings).toEqual([{ file: "res://main.tscn", line: 2, message: `missing Script: res://../${basename(outside)}/secret.gd` }]);
+  });
+
+  it("does not look through a folder link out of the project, even in an ignored folder", () => {
+    const outside = makeProject({ "secret.gd": "extends Node\n" });
+    const root = makeProject({ "project.godot": PROJECT, "docs/.gdignore": "", "main.tscn": sceneWith("res://docs/out/secret.gd") });
+    symlinkSync(outside, join(root, "docs", "out"), "dir");
+    expect(scanProject(root).warnings.map((w) => w.message)).toEqual(["missing Script: res://docs/out/secret.gd"]);
+  });
+
+  it("still resolves a file in an ignored folder of the project", () => {
+    const root = makeProject({ "project.godot": PROJECT, "docs/.gdignore": "", "docs/notes.gd": "extends Node\n", "main.tscn": sceneWith("res://docs/notes.gd") });
+    expect(scanProject(root).warnings).toEqual([]);
+  });
+});
+
+describe("C# scripts", () => {
+  const game = makeProject({ "project.godot": '[application]\nconfig/name="Game"\n', "Util.cs": "public class Util {}\n" });
+  const mod = makeProject({ "project.godot": '[application]\nconfig/name="Mod"\n', "Mine.cs": "public class Mine {}\n", "rescue.gd": "extends Node\n" });
+
+  it("lists and counts only the project's own, flagging a base's", () => {
+    const map = scanProject(mod, { base: [game] });
+    expect(map.csharpScripts).toEqual([{ path: "res://Mine.cs" }, { path: "res://Util.cs", external: true }]);
+    expect(formatProjectMap(map)).toMatch(/files: .*, 1 C# script\n/);
+  });
+
+  it("still lets GDScript use the base's C# classes", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="Mod"\n',
+      "rescue.gd": "extends Node\n\n\nfunc _ready() -> void:\n\tvar u: Util = null\n\tprint(u)\n",
+    });
+    const unknown = (base: string[]) => reviewProject(root, { base }).findings.filter((f) => f.rule === "api/unknown-type");
+    expect(unknown([])).toHaveLength(1);
+    expect(unknown([game])).toEqual([]);
+  });
+});
+
+describe("project.godot warnings", () => {
+  it("reports an unparseable project.godot once, not as a missing main scene", () => {
+    const root = makeProject({ "project.godot": '[application]\nconfig/name="T\n' });
+    expect(scanProject(root).warnings).toEqual([{ file: "res://project.godot", line: 3, message: "could not parse file: unterminated string" }]);
+  });
+
+  it("does not report a base project's broken main scene or autoload as its own", () => {
+    const game = makeProject({ "project.godot": '[application]\nconfig/name="Game"\nrun/main_scene="res://gone.tscn"\n\n[autoload]\nWorld="*res://world.gd"\n' });
+    const mod = makeProject({ "project.godot": '[application]\nconfig/name="Mod"\n', "mod.gd": "extends Node\n" });
+    const map = scanProject(mod, { base: [game] });
+    expect(map.warnings).toEqual([]);
+    expect(map.project.mainScene).toBeUndefined();
+  });
+
+  it("still reports a broken main scene or autoload the project sets itself", () => {
+    const game = makeProject({ "project.godot": '[application]\nconfig/name="Game"\nrun/main_scene="res://main.tscn"\n' });
+    const mod = makeProject({
+      "project.godot": '[application]\nconfig/name="Mod"\nrun/main_scene="res://gone.tscn"\n\n[autoload]\nBus="*res://bus.gd"\n',
+    });
+    expect(scanProject(mod, { base: [game] }).warnings).toEqual([
+      { file: "res://project.godot", line: 3, message: "main scene not found: res://gone.tscn" },
+      { file: "res://project.godot", line: 6, message: "autoload Bus not found: res://bus.gd" },
+    ]);
   });
 });
 
