@@ -1,6 +1,6 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tempFolder } from "./helpers.js";
 
 export interface TestMesh {
   positions: number[];
@@ -96,7 +96,7 @@ export function writeGlb(model: TestModel): string {
   const bh = Buffer.alloc(8);
   bh.writeUInt32LE(bin.length, 0);
   bh.writeUInt32LE(0x004e4942, 4);
-  const path = join(mkdtempSync(join(tmpdir(), "godotwright-glb-")), "model.glb");
+  const path = join(tempFolder("godotwright-glb-"), "model.glb");
   writeFileSync(path, Buffer.concat([header, jh, jsonChunk, bh, bin]));
   return path;
 }

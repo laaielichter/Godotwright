@@ -1,5 +1,15 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { runCli } from "./helpers.js";
+import { makeProject, removeTempFolders, runCli } from "./helpers.js";
+
+describe("makeProject", () => {
+  it("makes folders that removeTempFolders deletes", () => {
+    const root = makeProject({ "project.godot": "config_version=5\n" });
+    expect(existsSync(root)).toBe(true);
+    removeTempFolders();
+    expect(existsSync(root)).toBe(false);
+  });
+});
 
 describe("runCli", () => {
   it("reports the exit code of its own call, not one left in process.exitCode", async () => {

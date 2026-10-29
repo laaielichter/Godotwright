@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { afterAll } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,9 +8,25 @@ import { createProgram } from "../src/program.js";
 export const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 export const DEMO = join(FIXTURES, "demo");
 
+const tempFolders: string[] = [];
+
+/** Makes a temp folder that removeTempFolders deletes once the test file has finished. */
+export function tempFolder(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempFolders.push(dir);
+  return dir;
+}
+
+/** Deletes every temp folder the helpers have made so far. */
+export function removeTempFolders(): void {
+  for (const dir of tempFolders.splice(0)) rmSync(dir, { recursive: true, force: true });
+}
+
+afterAll(removeTempFolders);
+
 /** Writes a throwaway project from a map of relative path to file content. */
 export function makeProject(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), "godotwright-"));
+  const root = tempFolder("godotwright-");
   for (const [path, content] of Object.entries(files)) {
     const full = join(root, path);
     mkdirSync(dirname(full), { recursive: true });
