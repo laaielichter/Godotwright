@@ -191,3 +191,25 @@ describe("godotwright check options", () => {
     expect(output).toContain("check timed out");
   }, 20_000);
 });
+
+describe("godotwright mcp options", () => {
+  it("takes the default --tier from GODOTWRIGHT_TIER only when it names a tier", () => {
+    const tierDefault = () => createProgram().commands.find((c) => c.name() === "mcp")?.options.find((o) => o.long === "--tier")?.defaultValue;
+    const previous = process.env["GODOTWRIGHT_TIER"];
+    try {
+      process.env["GODOTWRIGHT_TIER"] = "premium";
+      expect(tierDefault()).toBe("premium");
+      process.env["GODOTWRIGHT_TIER"] = "Premium";
+      expect(tierDefault()).toBe("cheap");
+    } finally {
+      if (previous === undefined) delete process.env["GODOTWRIGHT_TIER"];
+      else process.env["GODOTWRIGHT_TIER"] = previous;
+    }
+  });
+
+  it("refuses an unknown --tier before starting the server", async () => {
+    const { output, exitCode } = await run(["mcp", "--tier", "Premium"]);
+    expect(exitCode).toBe(1);
+    expect(output).toContain("Allowed choices are cheap, premium");
+  });
+});
