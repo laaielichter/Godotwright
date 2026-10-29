@@ -1,0 +1,188 @@
+{
+ "version": 1,
+ "name": "campfire",
+ "archetype": "prop.campfire",
+ "description": "A campfire: logs leaning together in a cone over a glowing bed of embers, a low flame and a ring of stones around it, on y = 0.",
+ "params": [
+  {
+   "name": "logs",
+   "type": "integer",
+   "default": 6,
+   "min": 3,
+   "max": 12,
+   "description": "Number of logs in the cone."
+  },
+  {
+   "name": "logLength",
+   "type": "number",
+   "default": 0.8,
+   "min": 0.4,
+   "max": 1.2,
+   "description": "Length of a log in metres."
+  },
+  {
+   "name": "stones",
+   "type": "integer",
+   "default": 10,
+   "min": 6,
+   "max": 16,
+   "description": "Number of stones in the ring."
+  }
+ ],
+ "materials": {
+  "fire_stone": {
+   "color": [
+    0.42,
+    0.4,
+    0.38,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.95
+  },
+  "ember": {
+   "color": [
+    0.25,
+    0.06,
+    0.02,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "emissive": [
+    1.0,
+    0.28,
+    0.05
+   ]
+  },
+  "flame": {
+   "color": [
+    1.0,
+    0.55,
+    0.1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1,
+   "emissive": [
+    1.0,
+    0.6,
+    0.15
+   ]
+  }
+ },
+ "nodes": [
+  {
+   "name": "Campfire",
+   "vars": {
+    "L": "$logLength",
+    "lr": "$logLength * 0.07",
+    "tilt": 55,
+    "r0": "$logLength * sin(rad(55)) * 0.85",
+    "R": "$logLength * sin(rad(55)) * 0.85 + 0.08"
+   },
+   "children": [
+    {
+     "name": "Logs",
+     "material": "bark",
+     "children": [
+      {
+       "name": "Log_{i}",
+       "shape": "cylinder",
+       "radius": "$lr",
+       "height": "$L",
+       "segments": 10,
+       "at": [
+        "$r0",
+        "$lr * sin(rad($tilt))",
+        0
+       ],
+       "rotate": [
+        0,
+        0,
+        "$tilt"
+       ],
+       "offset": [
+        0,
+        "$L / 2",
+        0
+       ],
+       "repeat": {
+        "count": "$logs",
+        "around": "y"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Embers",
+     "shape": "cylinder",
+     "material": "ember",
+     "radius": "$r0 * 0.95",
+     "height": 0.04,
+     "segments": 20,
+     "at": [
+      0,
+      0.02,
+      0
+     ]
+    },
+    {
+     "name": "Flame",
+     "shape": "lathe",
+     "material": "flame",
+     "segments": 12,
+     "at": [
+      0,
+      0.03,
+      0
+     ],
+     "profile": [
+      [
+       "$r0 * 0.3",
+       0
+      ],
+      [
+       "$r0 * 0.32",
+       "$L * 0.12"
+      ],
+      [
+       "$r0 * 0.14",
+       "$L * 0.3"
+      ],
+      [
+       0,
+       "$L * 0.42"
+      ]
+     ]
+    },
+    {
+     "name": "Stones",
+     "material": "fire_stone",
+     "children": [
+      {
+       "name": "Stone_{i}",
+       "shape": "ellipsoid",
+       "radii": [
+        0.13,
+        0.08,
+        0.1
+       ],
+       "segments": 10,
+       "at": [
+        "$R",
+        0.08,
+        0
+       ],
+       "repeat": {
+        "count": "$stones",
+        "around": "y",
+        "phase": 9
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

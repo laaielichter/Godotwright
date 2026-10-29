@@ -224,6 +224,13 @@ describe("identify", () => {
     expect(library.resolve("spacecraft.spaceship").scale?.confidence).toBe("X");
   });
 
+  it("never asks for two required bodies: a child that names its body differently replaces the parent's", () => {
+    for (const a of library.archetypes) {
+      const bodies = library.resolve(a.id).parts.filter((p) => p.required && p.role === "body").map((p) => p.name);
+      expect(bodies.length, `${a.id}: ${bodies.join(", ")}`).toBeLessThanOrEqual(1);
+    }
+  });
+
   it("lets the rest of the description support a named match", () => {
     expect(best("iets met wielen en een motor")).toBe("vehicle.wheeled.motorcycle");
     expect(best("a car with a trailer")).toBe("vehicle.wheeled.car");

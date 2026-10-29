@@ -74,7 +74,7 @@
    },
    {
     "name": "Superstructure",
-    "role": "body",
+    "role": "superstructure",
     "required": true,
     "aliases": [
      "superstructure",

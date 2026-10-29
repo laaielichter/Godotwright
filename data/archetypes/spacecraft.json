@@ -98,6 +98,9 @@
      "romp",
      "trap",
      "core"
+    ],
+    "replaces": [
+     "Hull"
     ]
    },
    {
@@ -436,6 +439,9 @@
      "romp",
      "hull",
      "box"
+    ],
+    "replaces": [
+     "Hull"
     ]
    },
    {

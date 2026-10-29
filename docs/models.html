@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>44 ready-made 3D models for Godot, built from code | Godotwright</title>
-<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 44 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
+<title>49 ready-made 3D models for Godot, built from code | Godotwright</title>
+<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 49 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/models.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
-<meta property="og:title" content="44 ready-made 3D models for Godot, built from code">
+<meta property="og:title" content="49 ready-made 3D models for Godot, built from code">
 <meta property="og:description" content="Parametric .glb models a coding agent can build, view and check: vehicles, aircraft, ships, buildings, plants, terrain. MIT, no Blender.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/models.html">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="44 ready-made 3D models for Godot, built from code">
+<meta name="twitter:title" content="49 ready-made 3D models for Godot, built from code">
 <meta name="twitter:description" content="Parametric .glb models a coding agent can build, view and check. MIT, no Blender.">
 <meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -218,6 +218,7 @@ footer a { color: var(--muted); }
       <a href="#roads-rails-and-bridges">Roads, rails and bridges</a>
       <a href="#plants">Plants</a>
       <a href="#terrain-and-water">Terrain and water</a>
+      <a href="#spacecraft">Spacecraft</a>
       <a href="#props">Props</a>
       <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
     </nav>
@@ -227,7 +228,7 @@ footer a { color: var(--muted); }
 <main>
   <div class="wrap hero">
     <p class="eyebrow">3D models from code</p>
-    <h1>44 ready-made models for <em>Godot&nbsp;4</em>.</h1>
+    <h1>49 ready-made models for <em>Godot&nbsp;4</em>.</h1>
     <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with UVs, tangents, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/laaielichter/Godotwright#readme">Install in 1 minute</a>
@@ -382,6 +383,14 @@ footer a { color: var(--muted); }
           </figcaption>
         </figure>
         <figure class="model">
+          <img src="gallery/rowing-boat.jpg" width="400" height="300" loading="lazy" alt="Rowing boat: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Rowing boat</h3>
+            <p>A double-ended wooden rowing boat: an open hull with its waterline at y = 0, two thwarts, and a pair of oars that pivot in their oarlocks on the gunwale.</p>
+            <code>npx -y godotwright model build rowing-boat -o rowing-boat.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
           <img src="gallery/sailboat.jpg" width="400" height="300" loading="lazy" alt="Sailboat: a 3D model built by Godotwright">
           <figcaption>
             <h3>Sailboat</h3>
@@ -451,6 +460,14 @@ footer a { color: var(--muted); }
             <h3>Barn</h3>
             <p>A farm barn: a long box with a gable roof, a big double door in the +Z gable end, a hayloft hatch above it and a row of small windows along both long sides.</p>
             <code>npx -y godotwright model build barn -o barn.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/castle.jpg" width="400" height="300" loading="lazy" alt="Castle: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Castle</h3>
+            <p>A square stone castle: four curtain walls with battlements, a round tower at each corner with a conical roof, a gatehouse with a gate and a drawbridge in the +Z face, and a keep against the back wall.</p>
+            <code>npx -y godotwright model build castle -o castle.glb</code>
           </figcaption>
         </figure>
         <figure class="model">
@@ -649,6 +666,30 @@ footer a { color: var(--muted); }
     </div>
   </section>
 
+  <section id="spacecraft">
+    <div class="wrap">
+      <h2>Spacecraft</h2>
+      <div class="models">
+        <figure class="model">
+          <img src="gallery/rocket.jpg" width="400" height="300" loading="lazy" alt="Rocket: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Rocket</h3>
+            <p>A two-stage launch rocket standing upright on its engines: a ring of nozzle bells, four fins at the base, a first and a second stage and an ogive nose cone.</p>
+            <code>npx -y godotwright model build rocket -o rocket.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/satellite.jpg" width="400" height="300" loading="lazy" alt="Satellite: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Satellite</h3>
+            <p>A communications satellite: a box-shaped bus with gold foil, a solar panel wing on each side that hinges at the bus, and a dish antenna facing +Z.</p>
+            <code>npx -y godotwright model build satellite -o satellite.glb</code>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section id="props">
     <div class="wrap">
       <h2>Props</h2>
@@ -659,6 +700,14 @@ footer a { color: var(--muted); }
             <h3>Barrel</h3>
             <p>A 55-gallon steel drum: a cylindrical body with rolling hoops, a separate lid disc on top and a rim, standing on y = 0.</p>
             <code>npx -y godotwright model build barrel -o barrel.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/campfire.jpg" width="400" height="300" loading="lazy" alt="Campfire: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Campfire</h3>
+            <p>A campfire: logs leaning together in a cone over a glowing bed of embers, a low flame and a ring of stones around it, on y = 0.</p>
+            <code>npx -y godotwright model build campfire -o campfire.glb</code>
           </figcaption>
         </figure>
         <figure class="model">
