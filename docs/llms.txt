@@ -32,6 +32,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright project set <key> <value>`, `project input add <action> --key Space --joy-button A`, `project autoload add <Name> <res://file>` (godot_project_edit with op set, unset, input_add, input_remove, autoload_add, autoload_remove): changes project.godot with checks, touching only that entry. Dry run first, `--write` (write: true) applies.
 
+## Screenshots
+
+`godotwright screenshot [path] --scene res://x.tscn` or `--model car.glb --view front,side,top,iso` (godot_screenshot, returns the PNG): renders with Godot's Compatibility renderer (software OpenGL works; xvfb-run on Linux without a display) and says how much of each view is drawn and where.
+
 ## Play input and watch values
 
 `godotwright play [path] --scene res://x.tscn --input "10 tap jump; 20 hold right 30" --watch Player.position --watch Player.is_on_floor()` (godot_play): runs the scene headless, gives each input on exactly that physics frame, and returns the watched values per frame. Deterministic. Use it to see that the game does what the code says.

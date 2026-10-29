@@ -32,6 +32,7 @@ import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
+import { ScreenshotError, VIEWS, formatScreenshot, takeScreenshot, type View } from "../screenshot/screenshot.js";
 import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { TestRunError, formatTests, runTests, testsPassed } from "../test/run.js";
 import { SceneError, editScene, formatScenePlan, type SceneEdit } from "../scene/edit.js";
@@ -95,6 +96,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
+      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
@@ -426,6 +428,48 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return failure(`${error.message}\nUse godot_review for checks without Godot.`);
         }
         return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_screenshot",
+    {
+      title: "Screenshot a scene or model",
+      description:
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. Use it to look at what you built.",
+      inputSchema: {
+        path: pathParam,
+        scene: z.string().optional().describe("the res:// scene to render (default: the main scene)"),
+        model: z.string().optional().describe("a .glb or .gltf file to look at instead of a scene"),
+        views: z.array(z.enum(VIEWS as [string, ...string[]])).optional().describe("camera views for a model or a 3D scene without a camera (default [iso])"),
+        width: z.number().int().min(16).max(3840).optional().describe("width of one view (default 640)"),
+        height: z.number().int().min(16).max(2160).optional().describe("height of one view (default 360)"),
+        frames: z.number().int().min(3).max(10_000).optional().describe("frames to run before the picture (default 10)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, scene, model, views, width, height, frames }) => {
+      try {
+        const report = await takeScreenshot(where(path), {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          ...(model ? { model: where(model) } : {}),
+          ...(views ? { views: views as View[] } : {}),
+          ...(width ? { width } : {}),
+          ...(height ? { height } : {}),
+          ...(frames ? { frames } : {}),
+        });
+        return {
+          content: [
+            { type: "text" as const, text: formatScreenshot(report) },
+            { type: "image" as const, data: readFileSync(report.file).toString("base64"), mimeType: "image/png" },
+          ],
+        };
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(error.message);
+        if (error instanceof ScreenshotError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );

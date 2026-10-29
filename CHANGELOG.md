@@ -8,6 +8,13 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`screenshot`** (MCP `godot_screenshot`, which returns the image): render a scene, or a `.glb`/`.gltf` model, to a
+  PNG with Godot's Compatibility renderer, which also runs on software OpenGL; on Linux without a display it uses
+  `xvfb-run`. A model (or a 3D scene without a camera) gets a camera that fits it exactly, a light and ambient light, in
+  the views `front` (from +Z, where models face), `back`, `side`, `top` and `iso`; several make a grid. It also says,
+  per view, how much of the picture is drawn and where, so an empty or off-screen picture shows even to a model that
+  cannot read images.
+
 - **`play`** (MCP `godot_play`): run a scene headless for a number of physics frames, play an input timeline into it
   (`10 press jump; 30 release jump; 40 hold right 20; 50 tap Key:Space`; actions, keys, mouse and joypad buttons and
   axes), and print a table of the values you watch (`Player.position`, `Player.velocity.y`, `Player.is_on_floor()`)
