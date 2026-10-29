@@ -32,11 +32,10 @@ export function tokenize(code: string): Token[] {
 
 /** Index of the token that closes the bracket at `open`, or the last index. */
 export function closeIndex(tokens: Token[], open: number): number {
-  const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
   let depth = 0;
   for (let j = open; j < tokens.length; j++) {
     const t = tokens[j]!.t;
-    if (t in pairs) depth++;
+    if (t === "(" || t === "[" || t === "{") depth++;
     else if (t === ")" || t === "]" || t === "}") {
       depth--;
       if (depth === 0) return j;
