@@ -10,7 +10,7 @@ import { loadRecipes } from "../build/recipes.js";
 import { buildModel } from "../build/run.js";
 import { buildSpec } from "../build/spec.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
-import { contractFromArchetype, contractFromModel, loadContract } from "../model/contract.js";
+import { contractFromArchetype, contractFromModel, loadContract, type ModelContract } from "../model/contract.js";
 import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
@@ -82,17 +82,26 @@ export function modelCommand(): Command {
     .description("write a model.contract.json: from a model as it is now (node names, size, triangle budget), or from what a thing usually is (--archetype), to review and keep")
     .argument("[file]", "a .glb or .gltf file")
     .option("--archetype <what>", 'start from an archetype id or a name instead of a file, e.g. "helicopter"')
-    .action((file: string | undefined, options: { archetype?: string }, command: Command) => {
+    .option("-o, --out <file>", 'where to write the contract ("-" prints it instead)', "model.contract.json")
+    .action((file: string | undefined, options: { archetype?: string; out: string }, command: Command) => {
       guard(() => {
+        let contract: ModelContract;
         if (options.archetype !== undefined) {
           if (file) throw new ModelError("give a model file or --archetype, not both");
           const choice = chooseArchetype(options.archetype);
           for (const note of choice.notes) process.stderr.write(`note: ${note}\n`);
           if (choice.generic) process.stderr.write(`note: no exact match for "${options.archetype}"; this contract is for the closest family, ${choice.archetype.id}\n`);
-          return writeOut(command, `${JSON.stringify(contractFromArchetype(choice.archetype), null, 2)}\n`);
+          contract = contractFromArchetype(choice.archetype);
+        } else {
+          if (!file) throw new ModelError("give a model file, or --archetype <what> to start from what a thing usually is");
+          contract = contractFromModel(inspectModel(file));
         }
-        if (!file) throw new ModelError("give a model file, or --archetype <what> to start from what a thing usually is");
-        writeOut(command, `${JSON.stringify(contractFromModel(inspectModel(file)), null, 2)}\n`);
+        const json = `${JSON.stringify(contract, null, 2)}\n`;
+        if (options.out === "-") writeOut(command, json);
+        else {
+          writeFileSync(options.out, json);
+          writeOut(command, `wrote ${options.out}\n`);
+        }
       });
     });
 
