@@ -4,6 +4,7 @@ import { checkCommand } from "./commands/check.js";
 import { collectorCommand } from "./commands/collector.js";
 import { learnCommand } from "./commands/learn.js";
 import { mcpCommand } from "./commands/mcp.js";
+import { modelCommand } from "./commands/model.js";
 import { reviewCommand } from "./commands/review.js";
 import { scanCommand } from "./commands/scan.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
@@ -22,6 +23,7 @@ export function createProgram(): Command {
     .addCommand(checkCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
+    .addCommand(modelCommand())
     .addCommand(mcpCommand())
     .addCommand(learnCommand())
     .addCommand(collectorCommand())

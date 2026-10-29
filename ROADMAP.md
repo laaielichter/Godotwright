@@ -63,6 +63,16 @@ Godotwright gets better with every use, without collecting anything personal.
 11. **Shared knowledge.** Aggregated results ship with each release, so every user
     benefits.
 
+## 3D models
+
+12. **Model inspect and lint.** Read `.glb` and `.gltf` without Godot and review them with
+    the same scores and exit codes as `review`: flipped faces, open edges, normals, UVs,
+    tangents, textures, node names and budgets.
+    *Done when:* every rule has a test with a good and a bad model.
+13. **Model contract.** A small file that lists the node names, sizes and triangle budget a
+    model must keep, so renamed nodes or drifting sizes are caught.
+14. **MCP tools for models**, a contact-sheet render, and a reusable mesh builder kit.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
