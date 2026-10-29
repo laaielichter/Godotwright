@@ -1,0 +1,117 @@
+{
+ "version": 1,
+ "name": "road",
+ "archetype": "infrastructure.road",
+ "description": "A straight road segment along z: an asphalt surface, a dashed centre line, solid edge lines and a raised curb on each side.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 30,
+   "min": 5,
+   "max": 50,
+   "description": "Segment length along z in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 7,
+   "min": 3,
+   "max": 20,
+   "description": "Width of the asphalt between the curbs (a lane is about 3.5 m)."
+  }
+ ],
+ "materials": {
+  "line_white": {
+   "color": [
+    0.85,
+    0.85,
+    0.8
+   ],
+   "metallic": 0,
+   "roughness": 0.7
+  }
+ },
+ "nodes": [
+  {
+   "name": "Road",
+   "material": "asphalt",
+   "vars": {
+    "L2": "$length / 2",
+    "W2": "$width / 2",
+    "top": 0.15
+   },
+   "children": [
+    {
+     "name": "Surface",
+     "shape": "box",
+     "size": [
+      "$width",
+      "$top",
+      "$length"
+     ],
+     "at": [
+      0,
+      "$top / 2",
+      0
+     ]
+    },
+    {
+     "name": "Marking_{i}",
+     "shape": "box",
+     "material": "line_white",
+     "size": [
+      0.15,
+      0.01,
+      2.0
+     ],
+     "at": [
+      0,
+      "$top + 0.005",
+      "-$L2 + 1.5"
+     ],
+     "repeat": {
+      "count": "max(1, floor(($length - 1) / 5))",
+      "step": [
+       0,
+       0,
+       5
+      ]
+     }
+    },
+    {
+     "name": "EdgeLine_L",
+     "shape": "box",
+     "material": "line_white",
+     "size": [
+      0.12,
+      0.01,
+      "$length"
+     ],
+     "at": [
+      "$W2 - 0.3",
+      "$top + 0.005",
+      0
+     ],
+     "mirror": "EdgeLine_R"
+    },
+    {
+     "name": "Curb_L",
+     "shape": "box",
+     "material": "concrete",
+     "size": [
+      0.3,
+      "$top + 0.1",
+      "$length"
+     ],
+     "at": [
+      "$W2 + 0.15",
+      "($top + 0.1) / 2",
+      0
+     ],
+     "mirror": "Curb_R"
+    }
+   ]
+  }
+ ]
+}

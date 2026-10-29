@@ -7,6 +7,8 @@ export interface Material {
   /** BLEND for glass; opaque otherwise. */
   alpha?: "BLEND";
   doubleSided?: boolean;
+  /** Light the surface gives off, linear RGB (a lamp, a window at night). */
+  emissive?: [number, number, number];
 }
 
 const list: Material[] = [

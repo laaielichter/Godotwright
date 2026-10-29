@@ -1,0 +1,95 @@
+{
+ "version": 1,
+ "name": "fence",
+ "archetype": "infrastructure.fence",
+ "description": "A section of wooden picket fence along z: a post at each end, two horizontal rails and evenly spaced pickets. Tile sections end to end to fence a longer line.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 3,
+   "min": 1,
+   "max": 5,
+   "description": "Length of the section along z in metres."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 1.2,
+   "min": 0.6,
+   "max": 2.5,
+   "description": "Height of the pickets in metres."
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Fence",
+   "material": "wood",
+   "vars": {
+    "L2": "$length / 2",
+    "H": "$height"
+   },
+   "children": [
+    {
+     "name": "Post_L",
+     "shape": "box",
+     "size": [
+      0.1,
+      "$H + 0.1",
+      0.1
+     ],
+     "at": [
+      0,
+      "($H + 0.1) / 2",
+      "$L2 - 0.05"
+     ],
+     "mirror": "Post_R"
+    },
+    {
+     "name": "Rail_{i}",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.08,
+      "$length - 0.2"
+     ],
+     "at": [
+      0.06,
+      "$H * 0.25",
+      0
+     ],
+     "repeat": {
+      "count": 2,
+      "step": [
+       0,
+       "$H * 0.5",
+       0
+      ]
+     }
+    },
+    {
+     "name": "Picket_{i}",
+     "shape": "box",
+     "size": [
+      0.03,
+      "$H",
+      0.07
+     ],
+     "at": [
+      0.1,
+      "$H / 2",
+      "-$L2 + 0.2"
+     ],
+     "repeat": {
+      "count": "floor(($length - 0.3) / 0.13)",
+      "step": [
+       0,
+       0,
+       0.13
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

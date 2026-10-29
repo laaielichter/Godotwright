@@ -325,7 +325,7 @@ function readMaterials(raw: unknown): Record<string, Material> {
   for (const [name, m] of Object.entries(raw)) {
     const path = `materials.${name}`;
     if (!isObj(m)) throw new BuildError(`${path}: expected an object`);
-    checkKeys(m, ["color", "metallic", "roughness", "alpha", "doubleSided"], path);
+    checkKeys(m, ["color", "metallic", "roughness", "alpha", "doubleSided", "emissive"], path);
     const color = m["color"];
     if (!Array.isArray(color) || color.length < 3 || color.length > 4 || color.some((c) => typeof c !== "number" || c < 0 || c > 1)) throw new BuildError(`${path}.color: expected [r, g, b] or [r, g, b, a] with values from 0 to 1`);
     const unit = (key: string, fallback: number): number => {
@@ -333,6 +333,8 @@ function readMaterials(raw: unknown): Record<string, Material> {
       if (typeof v !== "number" || v < 0 || v > 1) throw new BuildError(`${path}.${key}: expected a number from 0 to 1`);
       return v;
     };
+    const emissive = m["emissive"];
+    if (emissive !== undefined && (!Array.isArray(emissive) || emissive.length !== 3 || emissive.some((c) => typeof c !== "number" || c < 0 || c > 1))) throw new BuildError(`${path}.emissive: expected [r, g, b] with values from 0 to 1`);
     out[name] = {
       name,
       color: [color[0] as number, color[1] as number, color[2] as number, (color[3] as number | undefined) ?? 1],
@@ -340,6 +342,7 @@ function readMaterials(raw: unknown): Record<string, Material> {
       roughness: unit("roughness", 0.8),
       ...(m["alpha"] === "BLEND" ? { alpha: "BLEND" as const } : {}),
       ...(m["doubleSided"] === true ? { doubleSided: true } : {}),
+      ...(emissive ? { emissive: emissive as [number, number, number] } : {}),
     };
   }
   return out;

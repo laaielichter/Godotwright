@@ -149,6 +149,15 @@ describe("nodes", () => {
     expect(() => buildSpec(raw, { w: 9 })).toThrow(/at most 5/);
     expect(() => buildSpec(raw, { q: 1 })).toThrow(/unknown parameter "q"/);
   });
+
+  it("writes the emissive colour of a material, and refuses a wrong one", () => {
+    const raw = (emissive: unknown) => spec([{ name: "Lamp", shape: "box", size: [1, 1, 1], material: "glow" }], { materials: { glow: { color: [1, 1, 0.8], emissive } } });
+    const glb = buildGlb(buildSpec(raw([1, 0.9, 0.6])));
+    const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString("utf8")) as { materials: { name: string; emissiveFactor?: number[] }[] };
+    expect(json.materials.find((m) => m.name === "glow")!.emissiveFactor).toEqual([1, 0.9, 0.6]);
+    expect(() => buildSpec(raw([1, 2, 0]))).toThrow(/materials.glow.emissive: expected \[r, g, b\]/);
+    expect(() => buildSpec(raw([1, 0]))).toThrow(/materials.glow.emissive/);
+  });
 });
 
 describe("mistakes get a path and a reason", () => {
