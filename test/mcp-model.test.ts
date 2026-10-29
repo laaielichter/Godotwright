@@ -26,6 +26,10 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
   beforeAll(async () => ({ client, close } = await connect(tier, root)));
   afterAll(() => close());
   const call = (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args });
+  // The shared model and contract, so each test passes alone and in any order.
+  beforeAll(async () => {
+    await call("godot_model_build", { out: "models/ok.glb", spec: EXAMPLE_SPEC, contract_out: "models/car.contract.json" });
+  });
 
   it("tells agents the workflow in its instructions", () => {
     const text = client.getInstructions() ?? "";
@@ -122,7 +126,6 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
   });
 
   it("lints a model, and with an archetype catches a car without wheels", async () => {
-    await call("godot_model_build", { out: "models/ok.glb", spec: EXAMPLE_SPEC });
     const plain = textOf(await call("godot_model_lint", { file: "models/ok.glb" }));
     expect(plain).toContain("overall:");
     expect(plain).not.toContain("archetype");
