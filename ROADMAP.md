@@ -84,7 +84,10 @@ Godotwright gets better with every use, without collecting anything personal.
 16b. **Checks against an archetype** (`model lint --archetype`): a model without wheels, with a wheel
     pivot off the hub, or ten times too big is reported.
     *Done when:* a good car passes and each of those mistakes is reported.
-17. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
+17. **MCP tools for models** (`godot_model_identify`, `_spec`, `_build`, `_lint`, `_inspect`) with the
+    workflow in the server instructions. Files are read and written only inside the project.
+    *Done when:* an agent can go from a name to a checked `.glb` with these tools alone.
+18. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
     **MCP tools for models**, and a contact-sheet render.
 
 ## After layer 1
