@@ -23,23 +23,22 @@ function problems(kind: string, input: Record<string, unknown> = {}): string[] {
   return report.findings.filter((f) => f.severity !== "info").map((f) => `${f.rule} ${f.node ?? ""} ${f.message}`);
 }
 
-/** The world-space box of one node's geometry, by its path in the file (such as "Church/Roof"). */
-function partBox(kind: string, input: Record<string, unknown>, nodePath: string): { min: V3; max: V3 } {
+/** The world-space box of every node with geometry, by its path in the file (such as "Church/Roof"). */
+function nodeBoxes(kind: string, input: Record<string, unknown>): Map<string, { min: V3; max: V3 }> {
   const info = inspectModel(writeScene(buildKind(kind, input)));
-  const prims = info.primitives.filter((p) => p.nodeName === nodePath);
-  expect(prims.length, nodePath).toBeGreaterThan(0);
-  const min: V3 = [Infinity, Infinity, Infinity];
-  const max: V3 = [-Infinity, -Infinity, -Infinity];
-  for (const p of prims) {
+  const out = new Map<string, { min: V3; max: V3 }>();
+  for (const p of info.primitives) {
+    const box = out.get(p.nodeName) ?? { min: [Infinity, Infinity, Infinity] as V3, max: [-Infinity, -Infinity, -Infinity] as V3 };
     for (let i = 0; i < p.vertices; i++) {
       const q = transformPoint(p.world, p.positions[i * 3]!, p.positions[i * 3 + 1]!, p.positions[i * 3 + 2]!);
       for (let a = 0; a < 3; a++) {
-        min[a] = Math.min(min[a]!, q[a]!);
-        max[a] = Math.max(max[a]!, q[a]!);
+        box.min[a] = Math.min(box.min[a]!, q[a]!);
+        box.max[a] = Math.max(box.max[a]!, q[a]!);
       }
     }
+    out.set(p.nodeName, box);
   }
-  return { min, max };
+  return out;
 }
 
 describe("ring and offset in the spec language", () => {
@@ -153,9 +152,18 @@ describe("the recipes", () => {
 describe("recipe geometry", () => {
   it("church: the roof reaches the belfry's back face at every nave width", () => {
     for (const naveWidth of [8, 10, 25]) {
-      const roof = partBox("church", { naveWidth }, "Church/Roof");
-      const belfry = partBox("church", { naveWidth }, "Church/Belfry");
-      expect(roof.max[2], `naveWidth ${naveWidth}`).toBeCloseTo(belfry.min[2], 1);
+      const boxes = nodeBoxes("church", { naveWidth });
+      expect(boxes.get("Church/Roof")!.max[2], `naveWidth ${naveWidth}`).toBeCloseTo(boxes.get("Church/Belfry")!.min[2], 1);
+    }
+  });
+
+  it("bridge: an abutment stands at each end of the deck", () => {
+    for (const length of [10, 60, 300]) {
+      const L2 = length / 2;
+      const abutments = [...nodeBoxes("bridge", { length }).entries()].filter(([path]) => path.startsWith("Bridge/Abutment")).map(([, box]) => box);
+      expect(abutments.length, `length ${length}`).toBe(2);
+      expect(abutments.some((b) => Math.abs(b.min[2] + L2) < 0.01), `length ${length}: no abutment at -z`).toBe(true);
+      expect(abutments.some((b) => Math.abs(b.max[2] - L2) < 0.01), `length ${length}: no abutment at +z`).toBe(true);
     }
   });
 });

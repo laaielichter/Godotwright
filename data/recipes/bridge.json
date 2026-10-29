@@ -136,8 +136,21 @@
       0,
       "($height - $gird) / 2",
       "$L2 - 1.5"
+     ]
+    },
+    {
+     "name": "Abutment_B",
+     "shape": "box",
+     "size": [
+      "$width",
+      "$height - $gird",
+      3
      ],
-     "mirror": "Abutment_B"
+     "at": [
+      0,
+      "($height - $gird) / 2",
+      "-$L2 + 1.5"
+     ]
     }
    ]
   }
