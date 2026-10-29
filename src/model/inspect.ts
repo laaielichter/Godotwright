@@ -21,6 +21,8 @@ export interface PrimitiveInfo {
   node: number;
   nodeName: string;
   material?: number;
+  /** glTF primitive mode: 0 to 3 are points and lines, 4 to 6 are triangles (list, strip, fan). */
+  mode: number;
   triangles: number;
   vertices: number;
   hasNormals: boolean;
@@ -215,7 +217,7 @@ export function inspectModel(file: string): ModelInfo {
         }
         triangles += indices.length / 3;
         primitives.push({
-          node: index, nodeName: path, material: prim.material, triangles: indices.length / 3, vertices: pos.count,
+          node: index, nodeName: path, material: prim.material, mode: prim.mode ?? 4, triangles: indices.length / 3, vertices: pos.count,
           hasNormals: prim.attributes.NORMAL !== undefined, hasUv: prim.attributes.TEXCOORD_0 !== undefined,
           hasTangents: prim.attributes.TANGENT !== undefined, doubleSided: Boolean(prim.material !== undefined && json.materials?.[prim.material]?.doubleSided),
           uvOutOfRange, indices, positions: pos.data, world,

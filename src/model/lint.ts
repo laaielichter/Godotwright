@@ -49,7 +49,11 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
     if (def) findings.push({ rule, category: def.category, severity: severity ?? def.severity, file: info.file, ...(node ? { node } : {}), message });
   };
 
-  if (info.triangles === 0) add("model/empty-geometry", "The file holds no triangles.");
+  if (info.triangles === 0) {
+    // Lines and points are a legal file with no surfaces to check, so they are not reported as a broken export.
+    if (info.primitives.length > 0 && info.primitives.every((p) => !isSurface(p))) add("model/empty-geometry", "The file holds only lines or points, so it has no surfaces.", undefined, "info");
+    else add("model/empty-geometry", "The file holds no triangles.");
+  }
   checkRig(info, add);
   const uvReported = new Set<string>();
   const sheet = options.archetype?.sheet === true;
@@ -111,8 +115,15 @@ function primitivesByNode(prims: PrimitiveInfo[]): PrimitiveInfo[][] {
   return [...groups.values()];
 }
 
+/** Triangle primitives (list, strip, fan): the ones with a surface to check. */
+function isSurface(prim: PrimitiveInfo): boolean {
+  return prim.mode >= 4 && prim.mode <= 6;
+}
+
 /** Checks one node: its primitives are welded together, so a closed mesh split by material is still closed. */
-function checkNode(info: ModelInfo, prims: PrimitiveInfo[], add: Add, uvReported: Set<string>, sheet: boolean): void {
+function checkNode(info: ModelInfo, all: PrimitiveInfo[], add: Add, uvReported: Set<string>, sheet: boolean): void {
+  const prims = all.filter(isSurface);
+  if (prims.length === 0) return;
   const node = prims[0]?.nodeName ?? "";
   if (prims.some((p) => !p.hasNormals)) add("model/missing-normals", "The mesh has no NORMAL data.", node);
   for (const prim of prims) {

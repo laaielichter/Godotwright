@@ -397,6 +397,21 @@ describe("model surfaces split over primitives", () => {
     expect(lintModelFile(split).findings.map((f) => f.rule)).toEqual([]);
   });
 
+  it("does not check a line or point primitive as a surface", () => {
+    const textured = [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }];
+    const images = [{ width: 64, height: 64 }];
+    const bare: TestMesh = { ...box(), material: 0, normals: undefined, uv: undefined };
+    const asTriangles = writeGlb({ meshes: [bare], materials: textured, images });
+    expect(ids(asTriangles)).toEqual(expect.arrayContaining(["model/missing-normals", "model/missing-uv"]));
+    const asLines = editGlbJson(writeGlb({ meshes: [bare], materials: textured, images }), (j) => {
+      j.meshes[0].primitives[0].mode = 1;
+    });
+    const found = lintModelFile(asLines).findings;
+    expect(found.map((f) => f.rule)).toEqual(["model/empty-geometry"]);
+    expect(found[0]?.severity).toBe("info");
+    expect(found[0]?.message).toMatch(/only lines or points/);
+  });
+
   it("reports missing normals once per node, not once per primitive", () => {
     const bare = writeOneNode([{ ...faces(cube, [0, 1, 2], 0), normals: undefined }, { ...faces(cube, [3, 4, 5], 1), normals: undefined }], [{}, {}]);
     expect(ids(bare).filter((rule) => rule === "model/missing-normals")).toHaveLength(1);
