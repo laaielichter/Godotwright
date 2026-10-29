@@ -1,3 +1,5 @@
+import { readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadLibrary } from "../src/archetype/library.js";
 import { contractFromArchetype, contractFromModel, loadContract } from "../src/model/contract.js";
@@ -9,6 +11,24 @@ import { box, writeGlb, type TestMesh } from "./model-helpers.js";
 import { makeProject, runCli } from "./helpers.js";
 
 const ids = (path: string, options = {}) => lintModelFile(path, options).findings.map((f) => f.rule);
+
+/** Rewrites the JSON chunk of a .glb written by writeGlb, so a test can break one field of it. */
+function editGlbJson(path: string, edit: (json: any) => void): string {
+  const data = readFileSync(path);
+  const jsonLength = data.readUInt32LE(12);
+  const json = JSON.parse(data.subarray(20, 20 + jsonLength).toString("utf8"));
+  edit(json);
+  const body = Buffer.from(JSON.stringify(json));
+  const padded = Buffer.concat([body, Buffer.alloc((4 - (body.length % 4)) % 4, 0x20)]);
+  const header = Buffer.from(data.subarray(0, 12));
+  const jsonHead = Buffer.alloc(8);
+  jsonHead.writeUInt32LE(padded.length, 0);
+  jsonHead.writeUInt32LE(0x4e4f534a, 4);
+  const rest = data.subarray(20 + jsonLength);
+  header.writeUInt32LE(12 + 8 + padded.length + rest.length, 8);
+  writeFileSync(path, Buffer.concat([header, jsonHead, padded, rest]));
+  return path;
+}
 
 describe("model inspect", () => {
   it("counts triangles, nodes and size", () => {
@@ -69,6 +89,11 @@ describe("model lint", () => {
     expect(ids(writeGlb({ meshes: [mesh] }))).toContain("model/degenerate-triangles");
   });
 
+  it("finds a flat triangle whose three distinct vertices lie on one line", () => {
+    const sliver: TestMesh = { positions: [0, 0, 0, 1, 0, 0, 2, 0, 0], indices: [0, 1, 2], normals: [0, 0, 1, 0, 0, 1, 0, 0, 1] };
+    expect(ids(writeGlb({ meshes: [sliver] }))).toContain("model/degenerate-triangles");
+  });
+
   it("finds missing normals, UVs and tangents", () => {
     const mesh: TestMesh = { ...box(), material: 0 };
     delete mesh.normals;
@@ -94,6 +119,18 @@ describe("model lint", () => {
     const found = ids(path);
     expect(found).toEqual(expect.arrayContaining(["model/duplicate-node-names", "model/mirrored-node"]));
     expect(ids(writeGlb({ meshes: [box()], nodes: [{ name: "Up", mesh: 0, translation: [0, 3, 0] }] }))).toContain("model/ground-offset");
+  });
+
+  it("reports a mirror once, where it starts, with its signed scale", () => {
+    const path = writeGlb({
+      meshes: [box()],
+      nodes: [{ name: "Left", children: [1, 2], scale: [-1, 1, 1] }, { name: "A", mesh: 0 }, { name: "B", mesh: 0, translation: [2, 0, 0] }],
+      roots: [0],
+    });
+    const mirrored = lintModelFile(path).findings.filter((f) => f.rule === "model/mirrored-node");
+    expect(mirrored).toHaveLength(1);
+    expect(mirrored[0]?.node).toBe("Left");
+    expect(mirrored[0]?.message).toContain("-1.00, 1.00, 1.00");
   });
 
   it("flags the triangle budget only when asked", () => {
@@ -197,6 +234,25 @@ describe("model contract", () => {
     expect(() => loadContract(`${root}/missing.json`)).toThrow(/not found/);
   });
 
+  it("refuses a value of the wrong type, instead of crashing or silently ignoring it", () => {
+    const loads = (contract: object) => () => loadContract(makeProject({ "c.json": JSON.stringify({ version: 1, ...contract }) }) + "/c.json");
+    expect(loads({ lowestY: null })).toThrow(ModelError);
+    expect(loads({ lowestY: null })).toThrow(/"lowestY" must be an object/);
+    expect(loads({ size: 5 })).toThrow(/"size" must be an object/);
+    expect(loads({ size: { x: null } })).toThrow(/"size.x" must be an object/);
+    expect(loads({ size: { X: { value: 2 } } })).toThrow(/unknown axis "X"/);
+    expect(loads({ size: { x: { value: "2" } } })).toThrow(/needs a finite numeric "value"/);
+    expect(loads({ size: { x: { value: 2, tolerance: -1 } } })).toThrow(/"tolerance"/);
+    expect(loads({ ordered: "yes" })).toThrow(/"ordered" must be true or false/);
+    expect(loads({ exact: 1 })).toThrow(/"exact" must be true or false/);
+    expect(loads({ maxTriangles: "many" })).toThrow(/"maxTriangles" must be a number/);
+  });
+
+  it("loads a contract with every field as the checker expects it", () => {
+    const file = contractFile({ nodes: ["Body"], ordered: true, exact: false, size: { x: { value: 2, tolerance: 0.1, source: "spec" } }, lowestY: { value: 0 }, maxTriangles: 100 });
+    expect(loadContract(file)).toMatchObject({ version: 1, maxTriangles: 100, size: { x: { value: 2 } } });
+  });
+
   it("works from the command line", async () => {
     const path = named(["Body"]);
     const made = await runCli(["model", "contract", path]);
@@ -277,5 +333,161 @@ describe("model recipes", () => {
     const json = JSON.parse((await runCli(["model", "recipes", "--json"])).output) as { kind: string; archetype: string | null; params: { name: string }[] }[];
     expect(json.map((r) => r.kind)).toEqual(recipes.map((r) => r.kind));
     expect(json.every((r) => r.archetype && r.params.length > 0)).toBe(true);
+  });
+});
+
+describe("model accessors", () => {
+  it("refuses sparse accessors instead of reading them as zeros", () => {
+    const path = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {
+      j.accessors[0].sparse = { count: 1, indices: { bufferView: 0, componentType: 5125 }, values: { bufferView: 0 } };
+    });
+    expect(() => inspectModel(path)).toThrow(ModelError);
+    expect(() => inspectModel(path)).toThrow(/sparse/);
+  });
+
+  it("refuses an index past the last vertex", () => {
+    const mesh = box();
+    mesh.indices.push(0, 1, 99);
+    expect(() => inspectModel(writeGlb({ meshes: [mesh] }))).toThrow(ModelError);
+    expect(() => inspectModel(writeGlb({ meshes: [mesh] }))).toThrow(/index 99 is not one of the 24 vertices/);
+  });
+
+  it("refuses an accessor that reads past its buffer view", () => {
+    const short = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {
+      j.bufferViews[0].byteLength = 12;
+    });
+    expect(() => inspectModel(short)).toThrow(/reads past the end of its buffer view/);
+  });
+
+  it("gives a clear error for a count that is negative, fractional or too large", () => {
+    for (const count of [-1, 1.5, 1e12]) {
+      const path = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {
+        j.accessors[0].count = count;
+      });
+      expect(() => inspectModel(path), String(count)).toThrow(ModelError);
+      expect(() => inspectModel(path), String(count)).toThrow(/accessor 0/);
+    }
+  });
+});
+
+/** The given faces of a box() as a mesh of their own, with one material slot. */
+function faces(mesh: TestMesh, which: number[], material: number): TestMesh {
+  const out: TestMesh = { positions: [], indices: [], normals: [], uv: [], material };
+  which.forEach((face, n) => {
+    for (let k = 0; k < 4; k++) {
+      const v = face * 4 + k;
+      out.positions.push(...mesh.positions.slice(v * 3, v * 3 + 3));
+      out.normals?.push(...(mesh.normals ?? []).slice(v * 3, v * 3 + 3));
+      out.uv?.push(...(mesh.uv ?? []).slice(v * 2, v * 2 + 2));
+    }
+    out.indices.push(n * 4, n * 4 + 1, n * 4 + 2, n * 4, n * 4 + 2, n * 4 + 3);
+  });
+  return out;
+}
+
+/** Writes a .glb whose one node draws every part, one primitive each, as a mesh with several material slots does. */
+function writeOneNode(parts: TestMesh[], materials: object[] = []): string {
+  return editGlbJson(writeGlb({ meshes: parts, materials }), (j) => {
+    j.meshes = [{ primitives: j.meshes.map((m: { primitives: unknown[] }) => m.primitives[0]) }];
+    j.nodes = [{ name: "Body", mesh: 0 }];
+    j.scenes[0].nodes = [0];
+  });
+}
+
+describe("model surfaces split over primitives", () => {
+  const cube = box();
+
+  it("welds a closed mesh split into two primitives, so it has no open edges", () => {
+    const split = writeOneNode([faces(cube, [0, 1, 2], 0), faces(cube, [3, 4, 5], 1)], [{}, {}]);
+    expect(lintModelFile(split).findings.map((f) => f.rule)).toEqual([]);
+  });
+
+  it("does not check a line or point primitive as a surface", () => {
+    const textured = [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }];
+    const images = [{ width: 64, height: 64 }];
+    const bare: TestMesh = { ...box(), material: 0, normals: undefined, uv: undefined };
+    const asTriangles = writeGlb({ meshes: [bare], materials: textured, images });
+    expect(ids(asTriangles)).toEqual(expect.arrayContaining(["model/missing-normals", "model/missing-uv"]));
+    const asLines = editGlbJson(writeGlb({ meshes: [bare], materials: textured, images }), (j) => {
+      j.meshes[0].primitives[0].mode = 1;
+    });
+    const found = lintModelFile(asLines).findings;
+    expect(found.map((f) => f.rule)).toEqual(["model/empty-geometry"]);
+    expect(found[0]?.severity).toBe("info");
+    expect(found[0]?.message).toMatch(/only lines or points/);
+  });
+
+  it("reports missing normals once per node, not once per primitive", () => {
+    const bare = writeOneNode([{ ...faces(cube, [0, 1, 2], 0), normals: undefined }, { ...faces(cube, [3, 4, 5], 1), normals: undefined }], [{}, {}]);
+    expect(ids(bare).filter((rule) => rule === "model/missing-normals")).toHaveLength(1);
+  });
+});
+
+describe("model malformed files", () => {
+  /** Expects the error to be a ModelError that says `message`, so the user sees the file and the cause. */
+  const refuses = (path: string, message: RegExp) => {
+    expect(() => inspectModel(path)).toThrow(ModelError);
+    expect(() => inspectModel(path)).toThrow(message);
+  };
+
+  it("names the file and the broken part, instead of a bare TypeError", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.meshes[0].primitives = "nope"; }), /mesh 0 has no primitive list/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { delete j.meshes[0].primitives[0].attributes; }), /primitive 0 of mesh 0 has no attributes/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { delete j.meshes[0].primitives[0].attributes.POSITION; }), /primitive 0 of mesh 0 has no POSITION/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.nodes[0].children = 5; }), /node 0 children must be a list/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.buffers = "x"; }), /"buffers" must be a list/);
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.materials = [null]; }), /"materials" must be a list of objects/);
+  });
+
+  it("refuses a scene that does not exist, instead of drawing nothing", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()] }), (j) => { j.scene = 5; }), /scene 5 does not exist/);
+  });
+
+  it("refuses an image that points at a missing buffer view", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0].bufferView = 99; }), /image 0 points at a missing buffer view/);
+  });
+
+  it("refuses a texture uri that is not text, and ignores a mime type that is not", () => {
+    refuses(editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0] = { uri: 5 }; }), /a uri must be text/);
+    const odd = editGlbJson(writeGlb({ meshes: [box()], images: [{ width: 4, height: 4 }] }), (j) => { j.images[0] = { uri: "missing.png", mimeType: 5 }; });
+    expect(() => inspectModel(odd)).not.toThrow();
+  });
+
+  it("says the file is not glTF when the JSON is not an object", () => {
+    const root = makeProject({ "null.gltf": "null" });
+    expect(() => loadGltf(`${root}/null.gltf`)).toThrow(/not a glTF 2.0 file/);
+  });
+});
+
+describe("model files outside the model's folder", () => {
+  /** A one-triangle .gltf whose only buffer has the given uri. */
+  const gltfWith = (uri: string) =>
+    JSON.stringify({
+      asset: { version: "2.0" }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+      accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+      bufferViews: [{ buffer: 0, byteLength: 36 }],
+      buffers: [{ uri, byteLength: 36 }],
+    });
+
+  it("reads buffers next to the model, and refuses files outside its folder", () => {
+    const root = makeProject({
+      "outside.bin": "\0".repeat(36),
+      "models/inside.bin": "\0".repeat(36),
+      "models/inside.gltf": gltfWith("inside.bin"),
+      "models/escape.gltf": gltfWith("../outside.bin"),
+      "models/encoded.gltf": gltfWith("..%2Foutside.bin"),
+      "models/malformed.gltf": gltfWith("%E0%A4%A"),
+    });
+    writeFileSync(join(root, "models", "absolute.gltf"), gltfWith(join(root, "outside.bin")));
+    symlinkSync(join(root, "outside.bin"), join(root, "models", "link.bin"));
+    writeFileSync(join(root, "models", "link.gltf"), gltfWith("link.bin"));
+    const model = (name: string) => join(root, "models", name);
+    expect(() => inspectModel(model("inside.gltf"))).not.toThrow();
+    for (const name of ["escape.gltf", "encoded.gltf", "absolute.gltf", "malformed.gltf", "link.gltf"]) {
+      expect(() => inspectModel(model(name)), name).toThrow(ModelError);
+    }
+    expect(() => inspectModel(model("escape.gltf"))).toThrow(/inside the model's folder/);
+    expect(() => inspectModel(model("malformed.gltf"))).toThrow(/not valid percent-encoding/);
   });
 });

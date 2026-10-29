@@ -30,7 +30,7 @@ const list: ModelRule[] = [
   { id: "model/open-edges", category: "geometry", severity: "warning", title: "Open edges on a single-sided surface", fix: "Close the gap, or mark the material double sided if the surface is meant to be thin." },
   { id: "model/non-manifold", category: "geometry", severity: "info", title: "Edge shared by more than two triangles", fix: "Split the surfaces or remove the stray triangle." },
   { id: "model/degenerate-triangles", category: "geometry", severity: "warning", title: "Triangles without area", fix: "Merge or delete the vertices of the flat triangles." },
-  { id: "model/mirrored-node", category: "geometry", severity: "warning", title: "Node with a negative scale", fix: "Apply the mirror to the mesh (bake the scale) so the winding stays right." },
+  { id: "model/mirrored-node", category: "geometry", severity: "warning", title: "Node with a negative scale", fix: "Bake the negative scale into the meshes under it, or remove it, so the winding stays right." },
   { id: "model/asymmetry", category: "geometry", severity: "info", title: "Almost symmetric, but not quite", fix: "Mirror one half onto the other so left and right match, unless the difference is meant (an exhaust on one side)." },
   { id: "model/missing-normals", category: "materials", severity: "warning", title: "Mesh without normals", fix: "Export the normals, or the surface shades flat and wrong." },
   { id: "model/missing-uv", category: "materials", severity: "error", title: "Textured material on a mesh without UVs", fix: "Add UV coordinates (TEXCOORD_0) to the mesh." },

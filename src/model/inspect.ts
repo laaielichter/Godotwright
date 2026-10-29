@@ -1,4 +1,4 @@
-import { type Gltf, type GltfMaterial, type GltfPrimitive, type LoadedGltf, ModelError, loadGltf, readAccessor, readUri } from "./gltf.js";
+import { type Gltf, type GltfMaterial, type GltfNode, type GltfPrimitive, type LoadedGltf, ModelError, isIndex, loadGltf, readAccessor, readUri } from "./gltf.js";
 import { imageSize } from "./images.js";
 import { at } from "./num.js";
 
@@ -9,8 +9,9 @@ export interface NodeInfo {
   depth: number;
   mesh?: string;
   triangles: number;
+  /** The node's own scale as the file has it; a negative axis mirrors along that axis. */
   scale: [number, number, number];
-  /** True when the world transform mirrors the mesh (negative determinant). */
+  /** True where a mirror starts: the world transform mirrors and the parent's does not. Everything below it is mirrored too. */
   mirrored: boolean;
   /** Where the node's origin (its pivot) is in the world. */
   origin: [number, number, number];
@@ -20,11 +21,15 @@ export interface PrimitiveInfo {
   node: number;
   nodeName: string;
   material?: number;
+  /** glTF primitive mode: 0 to 3 are points and lines, 4 to 6 are triangles (list, strip, fan). */
+  mode: number;
   triangles: number;
   vertices: number;
   hasNormals: boolean;
   hasUv: boolean;
   hasTangents: boolean;
+  /** True when the material is double sided: its edges are not holes when they are open. */
+  doubleSided: boolean;
   uvOutOfRange: boolean;
   /** Triangle indices into `positions` (local space). */
   indices: Uint32Array;
@@ -101,10 +106,22 @@ function scaleOf(m: Mat): [number, number, number] {
   return [Math.hypot(g(0), g(1), g(2)), Math.hypot(g(4), g(5), g(6)), Math.hypot(g(8), g(9), g(10))];
 }
 
+/** The node's own scale, signed as the file has it. A matrix has no separate scale, so a mirror is put on x. */
+function ownScale(node: GltfNode, local: Mat): [number, number, number] {
+  if (node.matrix?.length !== 16 && node.scale !== undefined) {
+    const [x = 1, y = 1, z = 1] = node.scale;
+    return [x, y, z];
+  }
+  const [x, y, z] = scaleOf(local);
+  return determinant3(local) < 0 ? [-x, y, z] : [x, y, z];
+}
+
 function triangleIndices(model: LoadedGltf, prim: GltfPrimitive, vertexCount: number): Uint32Array {
   let raw: number[];
   if (prim.indices !== undefined) raw = Array.from(readAccessor(model, prim.indices).data);
   else raw = Array.from({ length: vertexCount }, (_, i) => i);
+  const bad = raw.find((i) => !Number.isInteger(i) || i < 0 || i >= vertexCount);
+  if (bad !== undefined) throw new ModelError(`${model.file}: index ${bad} is not one of the ${vertexCount} vertices`);
   const mode = prim.mode ?? 4;
   if (mode === 4) return Uint32Array.from(raw.slice(0, raw.length - (raw.length % 3)));
   const out: number[] = [];
@@ -142,15 +159,16 @@ function readTextures(model: LoadedGltf): TextureInfo[] {
     if (image?.bufferView !== undefined) {
       const view = model.json.bufferViews?.[image.bufferView];
       const buffer = view && model.buffers[view.buffer];
-      if (view && buffer) bytes = buffer.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength);
-    } else if (image?.uri) bytes = readUri(image.uri, model.dir);
+      if (!view || !buffer) throw new ModelError(`${model.file}: image ${t.source} points at a missing buffer view or buffer`);
+      bytes = buffer.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength);
+    } else if (image?.uri) bytes = readUri(model.file, image.uri, model.dir);
     const size = bytes && imageSize(bytes);
     return {
       index,
-      name: image?.name ?? image?.uri?.slice(0, 40) ?? `texture_${index}`,
+      name: image?.name ?? (typeof image?.uri === "string" ? image.uri.slice(0, 40) : undefined) ?? `texture_${index}`,
       width: size?.width,
       height: size?.height,
-      format: size?.format ?? image?.mimeType?.replace("image/", ""),
+      format: size?.format ?? (typeof image?.mimeType === "string" ? image.mimeType.replace("image/", "") : undefined),
       megabytes: size ? (size.width * size.height * 4 * (4 / 3)) / 1048576 : 0,
       roles: roles.get(index) ?? [],
     };
@@ -172,16 +190,20 @@ export function inspectModel(file: string): ModelInfo {
     if (!node) throw new ModelError(`${file}: node ${index} does not exist`);
     if (seen.has(index)) throw new ModelError(`${file}: node ${index} is reached twice (cycle or shared child)`);
     seen.add(index);
-    const world = multiply(parent, localMatrix(node));
+    const local = localMatrix(node);
+    const world = multiply(parent, local);
     const name = node.name ?? `node_${index}`;
     const path = parentPath ? `${parentPath}/${name}` : name;
     let triangles = 0;
     if (node.mesh !== undefined) {
       const mesh = json.meshes?.[node.mesh];
       if (!mesh) throw new ModelError(`${file}: mesh ${node.mesh} does not exist`);
-      for (const prim of mesh.primitives) {
-        const posIndex = prim.attributes.POSITION;
-        if (posIndex === undefined) continue;
+      if (!Array.isArray(mesh.primitives)) throw new ModelError(`${file}: mesh ${node.mesh} has no primitive list`);
+      for (const [primIndex, prim] of mesh.primitives.entries()) {
+        const attributes = prim?.attributes;
+        if (typeof attributes !== "object" || attributes === null) throw new ModelError(`${file}: primitive ${primIndex} of mesh ${node.mesh} has no attributes`);
+        const posIndex = attributes.POSITION;
+        if (!isIndex(posIndex)) throw new ModelError(`${file}: primitive ${primIndex} of mesh ${node.mesh} has no POSITION`);
         const pos = readAccessor(model, posIndex);
         const indices = triangleIndices(model, prim, pos.count);
         let uvOutOfRange = false;
@@ -195,18 +217,22 @@ export function inspectModel(file: string): ModelInfo {
         }
         triangles += indices.length / 3;
         primitives.push({
-          node: index, nodeName: path, material: prim.material, triangles: indices.length / 3, vertices: pos.count,
+          node: index, nodeName: path, material: prim.material, mode: prim.mode ?? 4, triangles: indices.length / 3, vertices: pos.count,
           hasNormals: prim.attributes.NORMAL !== undefined, hasUv: prim.attributes.TEXCOORD_0 !== undefined,
-          hasTangents: prim.attributes.TANGENT !== undefined, uvOutOfRange, indices, positions: pos.data, world,
+          hasTangents: prim.attributes.TANGENT !== undefined, doubleSided: Boolean(prim.material !== undefined && json.materials?.[prim.material]?.doubleSided),
+          uvOutOfRange, indices, positions: pos.data, world,
           ...(prim.attributes.NORMAL === undefined ? {} : { normals: readAccessor(model, prim.attributes.NORMAL).data }),
         });
       }
     }
-    nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: scaleOf(world), mirrored: determinant3(world) < 0, origin: [at(world, 12), at(world, 13), at(world, 14)] });
+    nodes.push({ index, name, path, depth, mesh: node.mesh === undefined ? undefined : (json.meshes?.[node.mesh]?.name ?? `mesh_${node.mesh}`), triangles, scale: ownScale(node, local), mirrored: determinant3(world) < 0 && determinant3(parent) >= 0, origin: [at(world, 12), at(world, 13), at(world, 14)] });
+    if (node.children !== undefined && !Array.isArray(node.children)) throw new ModelError(`${file}: node ${index} children must be a list`);
     for (const child of node.children ?? []) walk(child, world, path, depth + 1);
   };
 
+  if (json.scene !== undefined && !json.scenes?.[json.scene]) throw new ModelError(`${file}: scene ${json.scene} does not exist`);
   const roots = json.scenes?.[json.scene ?? 0]?.nodes ?? [];
+  if (!Array.isArray(roots)) throw new ModelError(`${file}: the scene's nodes must be a list`);
   for (const root of roots) walk(root, identity(), "", 0);
 
   const hasBounds = Number.isFinite(min[0]);
