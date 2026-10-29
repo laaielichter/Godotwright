@@ -11,6 +11,7 @@ import { usagesCommand } from "./commands/usages.js";
 import { renameCommand } from "./commands/rename.js";
 import { projectCommand } from "./commands/project.js";
 import { sceneCommand } from "./commands/scene.js";
+import { testCommand } from "./commands/test.js";
 import { scanCommand } from "./commands/scan.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
@@ -26,6 +27,7 @@ export function createProgram(): Command {
     .showHelpAfterError()
     .addCommand(scanCommand())
     .addCommand(checkCommand())
+    .addCommand(testCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
     .addCommand(migrateCommand())

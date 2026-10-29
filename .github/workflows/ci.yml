@@ -58,10 +58,26 @@ jobs:
             2d/finite_state_machine
             3d/platformer
             3d/squash_the_creeps
+      - name: Check out GUT
+        uses: actions/checkout@v5
+        with:
+          repository: bitwes/Gut
+          ref: v9.7.1
+          path: frameworks/gut
+          sparse-checkout: addons/gut
+      - name: Check out GdUnit4
+        uses: actions/checkout@v5
+        with:
+          repository: MikeSchulze/gdUnit4
+          ref: v6.2.2
+          path: frameworks/gdunit4
+          sparse-checkout: addons/gdUnit4
       - name: Integration tests
         run: npx vitest run test/integration
         env:
           GODOT_DEMOS: ${{ github.workspace }}/demos
+          GUT_ADDON: ${{ github.workspace }}/frameworks/gut/addons/gut
+          GDUNIT_ADDON: ${{ github.workspace }}/frameworks/gdunit4/addons/gdUnit4
 
   agents:
     name: Claude Code and Codex

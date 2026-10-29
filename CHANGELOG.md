@@ -8,6 +8,12 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`test`** (MCP `godot_test`): run a project's GUT or GdUnit4 tests in Godot headless and read their JUnit report,
+  so the result is one line of totals and one line per failing test (`res://file:line  test  message`), plus script
+  errors from the run. Finds the framework in `res://addons`, uses `.gutconfig.json` when there is one, else
+  `res://test` and `res://tests`; `--dir` and (GUT) `--filter` narrow it. Exit code 1 when a test fails. Tested in CI
+  against GUT 9.7.1 and GdUnit4 6.2.2 on Godot 4.7.2.
+
 - **`scene add|remove|set|connect|disconnect|script`** (MCP `godot_scene_edit`): change a `.tscn` without the editor.
   Node classes, properties (with enums by name and resources as `res://` files) and signals are checked against
   Godot 4.7 and the node's script; a connection warns when the method is missing or takes other arguments and gives the
