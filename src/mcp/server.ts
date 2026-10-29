@@ -18,6 +18,7 @@ import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { ModelError } from "../model/gltf.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
+import { viewModel } from "../model/view.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { findProjectRoot } from "../project/files.js";
@@ -66,7 +67,7 @@ const PROFILES: Record<Tier, Profile> = {
       "5. If Godot is installed, call godot_check before you finish.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
-      "To make or check a 3D model (.glb): 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
+      "To make or check a 3D model (.glb): 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put \"archetype\" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.",
     ].join("\n"),
   },
   premium: {
@@ -84,8 +85,9 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
       "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, with expressions, mirror and repeat) and lists the ready-made kinds.",
       "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
+      "- godot_model_view draws a .glb as text: front, side and top views made of letters (one letter per part), a table of the parts with sizes, and the parts that do not touch the rest (a ladder away from its tree, a wheel without an axle). You cannot see a picture, so use it after every build to check shape, proportions and that everything is attached.",
       "- godot_model_lint scores a .glb (geometry, materials, performance, rig), and with `archetype` also checks it is what it should be: parts, pivots, wheel axes, size, direction. godot_model_inspect shows what is in a .glb.",
-      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, lint with the archetype, fix, repeat.",
+      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, view, lint with the archetype, fix, repeat.",
     ].join("\n"),
   },
 };
@@ -365,6 +367,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const body = `${head}${formatModelReport(report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);
       }),
+  );
+
+  server.registerTool(
+    "godot_model_view",
+    {
+      title: "See a 3D model as text",
+      description:
+        "Look at a .glb or .gltf without Godot or a picture: three views (front, side, top) drawn with letters, one letter per part, then a list of the parts with their sizes and heights, and which parts do not touch the rest of the model (a ladder away from its tree, a wheel without an axle, something floating). Use it after building to check the shape, proportions and that everything is attached.",
+      inputSchema: {
+        file: fileParam,
+        only: z.enum(["front", "side", "top"]).optional().describe("show one view only"),
+        width: z.number().int().min(20).max(120).optional().describe("width of the views in characters (default 48)"),
+      },
+      annotations: readOnly,
+    },
+    async ({ file, only, width }) => guard(() => text(viewModel(inspectModel(inside(file)), { ...(width ? { width } : {}), ...(only ? { only } : {}) }))),
   );
 
   server.registerTool(

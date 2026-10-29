@@ -14,6 +14,7 @@ import { contractFromArchetype, contractFromModel, loadContract } from "../model
 import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
+import { viewModel } from "../model/view.js";
 import { ModelError } from "../model/gltf.js";
 import type { Detail } from "../scan/format.js";
 import { collect, writeOut } from "./output.js";
@@ -75,6 +76,16 @@ export function modelCommand(): Command {
         const errors = report.categories.reduce((n, c) => n + c.errors, 0);
         if (errors > 0 || (options.minScore !== undefined && report.overall < Number(options.minScore))) process.exitCode = 1;
       });
+    });
+
+  model
+    .command("view")
+    .description("see a model as text: three views (front, side, top) made of letters, the parts with their sizes, and which parts do not touch the rest")
+    .argument("<file>", "a .glb or .gltf file")
+    .addOption(new Option("--only <view>", "show one view only").choices(["front", "side", "top"]))
+    .option("--width <n>", "width of the views in characters (default 48)")
+    .action((file: string, options: { width?: string; only?: "front" | "side" | "top" }, command: Command) => {
+      guard(() => writeOut(command, viewModel(inspectModel(file), { ...(options.width === undefined ? {} : { width: Number(options.width) }), ...(options.only ? { only: options.only } : {}) })));
     });
 
   model

@@ -32,6 +32,7 @@ const list: ModelRule[] = [
   { id: "model/degenerate-triangles", category: "geometry", severity: "warning", title: "Triangles without area", fix: "Merge or delete the vertices of the flat triangles." },
   { id: "model/mirrored-node", category: "geometry", severity: "warning", title: "Node with a negative scale", fix: "Apply the mirror to the mesh (bake the scale) so the winding stays right." },
   { id: "model/asymmetry", category: "geometry", severity: "info", title: "Almost symmetric, but not quite", fix: "Mirror one half onto the other so left and right match, unless the difference is meant (an exhaust on one side)." },
+  { id: "model/floating-part", category: "geometry", severity: "info", title: "Part that does not touch the rest of the model", fix: "Move the part so it touches (or overlaps) what it is attached to, or make it a separate model if it is meant to stand alone." },
   { id: "model/missing-normals", category: "materials", severity: "warning", title: "Mesh without normals", fix: "Export the normals, or the surface shades flat and wrong." },
   { id: "model/missing-uv", category: "materials", severity: "error", title: "Textured material on a mesh without UVs", fix: "Add UV coordinates (TEXCOORD_0) to the mesh." },
   { id: "model/missing-tangents", category: "materials", severity: "warning", title: "Normal map without tangents", fix: "Export tangents so the normal map lights the same in every engine." },

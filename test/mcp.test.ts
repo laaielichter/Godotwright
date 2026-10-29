@@ -35,6 +35,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_model_inspect",
       "godot_model_lint",
       "godot_model_spec",
+      "godot_model_view",
       "godot_review",
       "godot_scan",
     ]);
