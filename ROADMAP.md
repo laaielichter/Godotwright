@@ -129,3 +129,22 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Learning from public projects for free (weekly Learn workflow on the official demos)
 - [x] Released on npm (`godotwright`)
 - [x] Listed in the MCP Registry
+- [x] Step 12: Model inspect and lint (`model inspect`, `model lint`)
+- [x] Step 13: Model contract (`model.contract.json`)
+- [x] Step 14: Model builder (kinds `house`, `terrain`, `sea`; `model build`)
+- [x] Step 15: Model spec (`model spec`)
+- [x] Step 16: Object knowledge (`model identify`, `model archetypes`)
+- [x] Step 16b: Checks against an archetype (`model lint --archetype`)
+- [x] Step 17: MCP tools for models (`godot_model_identify`, `_spec`, `_build`, `_lint`, `_inspect`)
+- [x] Step 18: Recipes (41 so far, in `data/recipes/`)
+- [ ] Step 19: Recipes for most archetypes
+  - [ ] Contact-sheet render
+  - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement
+- [ ] Step 20: Open worlds
+  - [x] Open worlds 1: the knowledge (archetypes in `data/archetypes/world.json`)
+  - [x] Open worlds 2: `terrain` and `sea`
+  - [x] Open worlds 3: a lake
+  - [ ] Rivers that run downhill
+  - [ ] Collision data (`HeightMapShape3D` heights) written next to the tile
+  - [ ] Scatter points for plants and settlements
+  - [ ] Checks for streaming budgets
