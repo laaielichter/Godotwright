@@ -130,6 +130,14 @@ export class GodotApi {
     return undefined;
   }
 
+  /** True when @GlobalScope or @GDScript defines a member with exactly this name. */
+  private globalNamed(name: string): boolean {
+    return GLOBAL_SCOPES.some((scope) => {
+      const scopeClass = this.classes.get(scope);
+      return scopeClass !== undefined && this.ownMembers(scopeClass, name).length > 0;
+    });
+  }
+
   /** Every class that defines a method with this name. */
   classesWithMethod(name: string): string[] {
     return [...this.classes.values()].filter((c) => c.methods?.some((m) => m.name === name)).map((c) => c.name);
@@ -143,7 +151,7 @@ export class GodotApi {
 
     if (dot > 0) {
       const className = query.slice(0, dot);
-      let memberName = query.slice(dot + 1);
+      const memberName = query.slice(dot + 1);
       const cls = this.getClass(className);
       if (!cls) {
         result.renamed = this.renamedClass(className);
@@ -153,21 +161,30 @@ export class GodotApi {
       // Property names may contain dots (EditorSettings); otherwise `Enum.VALUE`.
       result.entries = this.member(cls.name, memberName);
       const lastDot = memberName.lastIndexOf(".");
+      let enumSuggestions: string[] | undefined;
       if (result.entries.length === 0 && lastDot > 0) {
         const valueName = memberName.slice(lastDot + 1);
-        memberName = memberName.slice(0, lastDot);
-        const enumEntry = this.member(cls.name, memberName).find((e) => e.kind === "enum");
-        const value = enumEntry ? (enumEntry.item as EnumInfo).values.find((v) => v.name === valueName) : undefined;
-        result.entries = value ? [{ kind: "constant", owner: enumEntry!.owner, name: value.name, item: value }] : [];
+        const enumEntry = this.member(cls.name, memberName.slice(0, lastDot)).find((e) => e.kind === "enum");
+        if (enumEntry) {
+          const values = (enumEntry.item as EnumInfo).values;
+          const value = values.find((v) => v.name === valueName);
+          if (value) {
+            result.entries = [{ kind: "constant", owner: enumEntry.owner, name: value.name, item: value }];
+          } else {
+            // The enum exists but has no such value: its value names are the suggestions.
+            enumSuggestions = closest(valueName, values.map((v) => v.name));
+          }
+        }
       }
       if (result.entries.length === 0) {
         result.renamed = this.renamedMember(memberName);
-        result.suggestions = this.closeMemberNames(cls.name, memberName);
+        result.suggestions = enumSuggestions ?? this.closeMemberNames(cls.name, memberName);
       }
       return result;
     }
 
-    const cls = this.getClass(query);
+    // A class matched only by case (range -> Range) must not hide a global of that name.
+    const cls = this.classes.get(query) ?? (this.globalNamed(query) ? undefined : this.getClass(query));
     if (cls) {
       result.entries = [{ kind: "class", owner: cls.name, name: cls.name, item: cls }];
       return result;
@@ -199,8 +216,9 @@ export class GodotApi {
 
   renamedClass(name: string): Rename | undefined {
     const r = this.data.renames;
-    const to = r.classes?.[name] ?? r.builtinTypes?.[name];
-    if (to && !this.classes.has(name)) return { kind: r.classes?.[name] ? "class" : "type", from: name, to };
+    const fromClasses = ownRename(r.classes, name);
+    const to = fromClasses ?? ownRename(r.builtinTypes, name);
+    if (to && !this.classes.has(name)) return { kind: fromClasses ? "class" : "type", from: name, to };
     return undefined;
   }
 
@@ -213,7 +231,7 @@ export class GodotApi {
       ["constant", r.constants],
     ];
     for (const [kind, map] of table) {
-      const to = map?.[name];
+      const to = ownRename(map, name);
       if (to) return { kind, from: name, to };
     }
     return undefined;
@@ -287,12 +305,17 @@ export class GodotApi {
       for (const m of cls.members ?? []) add("property", m);
       for (const s of cls.signals ?? []) add("signal", s);
       for (const a of cls.annotations ?? []) add("annotation", a);
-      for (const c of cls.constants ?? []) if (!c.enum) add("constant", c);
+      for (const c of cls.constants ?? []) add("constant", c);
       for (const e of this.enums(cls)) add("enum", e);
     }
     this.index = rows;
     return rows;
   }
+}
+
+/** A rename by its own key only: a plain lookup would also find `constructor` or `toString` on Object.prototype. */
+function ownRename(table: Record<string, string> | undefined, name: string): string | undefined {
+  return table && Object.hasOwn(table, name) ? table[name] : undefined;
 }
 
 /** Formats parameters GDScript-style: `point: Vector2, up: Vector3 = Vector3(0, 1, 0)`. */
@@ -310,12 +333,21 @@ export function formatMethodSignature(method: ApiMethod, owner?: string): string
   return `${prefix}${name}(${formatApiParams(method.params, q.includes("vararg"))}) -> ${method.returnEnum ?? method.returns}${suffix}`;
 }
 
-/** Up to five names closest to `name` by edit distance (case-insensitive). */
+/**
+ * Up to five names closest to `name` by edit distance (case-insensitive).
+ * A name that contains the query, or sits inside it, counts as one edit away, but only for names of
+ * at least three letters: `r` sits inside `bright` and says nothing about it.
+ */
 export function closest(name: string, candidates: string[], max = 5): string[] {
   const target = name.toLowerCase();
+  if (!target) return [];
   const limit = Math.max(2, Math.floor(target.length / 3));
   return candidates
-    .map((c) => ({ c, d: c.toLowerCase().includes(target) || target.includes(c.toLowerCase()) ? 1 : distance(target, c.toLowerCase(), limit) }))
+    .map((c) => {
+      const lower = c.toLowerCase();
+      const related = lower.length >= 3 && (lower.includes(target) || target.includes(lower));
+      return { c, d: related ? 1 : distance(target, lower, limit) };
+    })
     .filter((x) => x.d <= limit)
     .sort((a, b) => a.d - b.d || a.c.length - b.c.length || a.c.localeCompare(b.c))
     .slice(0, max)

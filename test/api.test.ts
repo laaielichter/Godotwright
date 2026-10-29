@@ -77,6 +77,35 @@ describe("lookup", () => {
     expect(api.lookup("preload").entries[0]).toMatchObject({ kind: "method", owner: "@GDScript" });
   });
 
+  it("finds a global function before a class with the same name in another case", () => {
+    expect(api.lookup("range").entries[0]).toMatchObject({ kind: "method", owner: "@GDScript", name: "range" });
+    expect(api.lookup("weakref").entries[0]).toMatchObject({ kind: "method", owner: "@GlobalScope", name: "weakref" });
+    expect(api.lookup("Range").entries[0]).toMatchObject({ kind: "class", owner: "Range" });
+    expect(api.lookup("object").entries[0]).toMatchObject({ kind: "class", owner: "Object" });
+  });
+
+  it("suggests the values of a misspelled enum value, not the enum's name", () => {
+    const result = api.lookup("Node.ProcessMode.PROCES_MODE_ALWAYS");
+    expect(result.entries).toEqual([]);
+    expect(result.suggestions).toContain("PROCESS_MODE_ALWAYS");
+    expect(result.suggestions).not.toContain("process_mode");
+    expect(api.lookup("Node.ProcessMode.PROCESS_MODE_ALWAYS").entries[0]).toMatchObject({ kind: "constant", name: "PROCESS_MODE_ALWAYS" });
+  });
+
+  it("maps Godot 3 MARGIN_* constants to the Godot 4 SIDE_* names", () => {
+    expect(api.lookup("Control.MARGIN_LEFT").renamed).toEqual({ kind: "constant", from: "MARGIN_LEFT", to: "SIDE_LEFT" });
+    expect(api.lookup("MARGIN_BOTTOM").renamed).toEqual({ kind: "constant", from: "MARGIN_BOTTOM", to: "SIDE_BOTTOM" });
+    expect(api.lookup("SIDE_LEFT").entries[0]).toMatchObject({ kind: "constant", owner: "@GlobalScope", name: "SIDE_LEFT" });
+  });
+
+  it("does not treat Object.prototype names as Godot 3 renames", () => {
+    for (const name of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
+      expect(api.lookup(name).renamed, name).toBeUndefined();
+      expect(api.lookup(`Node.${name}`).renamed, `Node.${name}`).toBeUndefined();
+      expect(api.lookup(`Node.${name}()`).renamed, `Node.${name}()`).toBeUndefined();
+    }
+  });
+
   it("explains Godot 3 names and suggests close names", () => {
     expect(api.lookup("KinematicBody2D")).toMatchObject({
       entries: [],
@@ -95,12 +124,24 @@ describe("search", () => {
     expect(api.search("timer wait", 3)[0]).toMatchObject({ owner: "Timer", name: "wait_time" });
     expect(api.search("change scene", 5).map((h) => h.name)).toContain("change_scene_to_file");
   });
+
+  it("finds enum values by their exact name", () => {
+    expect(api.search("PROCESS_MODE_ALWAYS", 3)[0]).toMatchObject({ kind: "constant", owner: "Node", name: "PROCESS_MODE_ALWAYS" });
+    expect(api.search("KEY_ESCAPE", 3)[0]).toMatchObject({ kind: "constant", owner: "@GlobalScope", name: "KEY_ESCAPE" });
+  });
 });
 
 describe("closest", () => {
   it("uses edit distance", () => {
     expect(distance("kitten", "sitting")).toBe(3);
     expect(closest("Sprit2D", ["Sprite2D", "Sprite3D", "Node"])).toEqual(["Sprite2D", "Sprite3D"]);
+  });
+
+  it("does not suggest short names just because the query contains them", () => {
+    expect(closest("bright", ["r", "g", "b"])).toEqual([]);
+    expect(closest("Color.bright", ["r", "g", "b", "a"])).toEqual([]);
+    expect(closest("", ["r", "g", "b", "a"])).toEqual([]);
+    expect(api.lookup("Color.bright").suggestions.filter((s) => s.length < 3)).toEqual([]);
   });
 });
 

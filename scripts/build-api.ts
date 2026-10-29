@@ -8,7 +8,8 @@
  * The class reference is MIT licensed, like the engine.
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 interface XmlNode {
@@ -73,11 +74,17 @@ export function docText(raw: string): string {
   // Escaped brackets must not turn into tags; restore them at the end.
   text = text.replace(/\[lb\]/g, "\u0001").replace(/\[rb\]/g, "\u0002");
 
-  // Keep GDScript examples, drop C# ones.
+  // Keep GDScript examples, drop C# ones. Code is literal: it is held back as placeholders
+  // so the BBCode rewrites below leave `Array[int]` and `arr[i]` alone.
+  const blocks: string[] = [];
+  const hold = (code: string) => {
+    blocks.push(fence(code));
+    return `\u0003${blocks.length - 1}\u0003`;
+  };
   text = text.replace(/\[csharp(?: [^\]]*)?\][\s\S]*?\[\/csharp\]/g, "");
   text = text.replace(/\[\/?codeblocks\]/g, "");
-  text = text.replace(/\[gdscript(?: [^\]]*)?\]\n?([\s\S]*?)\[\/gdscript\]/g, (_, code: string) => fence(code));
-  text = text.replace(/\[codeblock(?: [^\]]*)?\]\n?([\s\S]*?)\[\/codeblock\]/g, (_, code: string) => fence(code));
+  text = text.replace(/\[gdscript(?: [^\]]*)?\]\n?([\s\S]*?)\[\/gdscript\]/g, (_, code: string) => hold(code));
+  text = text.replace(/\[codeblock(?: [^\]]*)?\]\n?([\s\S]*?)\[\/codeblock\]/g, (_, code: string) => hold(code));
 
   text = text
     .replace(/\[(method|member|signal|constant|enum|annotation|theme_item|constructor|operator) ([^\]]+)\]/g, (_, kind: string, name: string) =>
@@ -92,6 +99,7 @@ export function docText(raw: string): string {
     .replace(/\[font=[^\]]+\]([\s\S]*?)\[\/font\]/g, "$1")
     .replace(/\[br\]/g, "\n")
     .replace(/\[([A-Za-z@][A-Za-z0-9_@]*)\]/g, "`$1`")
+    .replace(/\u0003(\d+)\u0003/g, (_, i: string) => blocks[Number(i)]!)
     .replace(/\u0001/g, "[")
     .replace(/\u0002/g, "]")
     .replace(/\$DOCS_URL/g, "https://docs.godotengine.org/en/4.7")
@@ -212,8 +220,15 @@ const RENAME_TABLES: Record<string, string> = {
   projectSettings: "project_settings_renames",
 };
 
+/**
+ * Godot's table lists these four backwards (SIDE_* first, MARGIN_* second), unlike every other row.
+ * They are swapped as they are read, so every rename reads Godot 3 name -> Godot 4 name.
+ * Drop this if Godot corrects the table.
+ */
+const SWAPPED_CONSTANTS = new Set(["SIDE_LEFT", "SIDE_TOP", "SIDE_RIGHT", "SIDE_BOTTOM"]);
+
 /** Reads Godot's official 3.x to 4.x rename tables (editor/project_upgrade/renames_map_3_to_4.cpp). */
-function readRenames(source: string): Record<string, Record<string, string>> {
+export function readRenames(source: string): Record<string, Record<string, string>> {
   const file = [join(source, "editor", "project_upgrade", "renames_map_3_to_4.cpp"), join(source, "editor", "renames_map_3_to_4.cpp")].find(existsSync);
   if (!file) return {};
   const cpp = readFileSync(file, "utf8");
@@ -225,7 +240,10 @@ function readRenames(source: string): Record<string, Record<string, string>> {
     const pairs: Record<string, string> = {};
     for (const line of body.split("\n")) {
       const m = /^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},?/.exec(line);
-      if (m && !(m[1]! in pairs)) pairs[m[1]!] = m[2]!;
+      if (!m) continue;
+      const swap = key === "constants" && SWAPPED_CONSTANTS.has(m[1]!);
+      const [from, to] = swap ? [m[2]!, m[1]!] : [m[1]!, m[2]!];
+      if (!(from in pairs)) pairs[from] = to;
     }
     out[key] = pairs;
   }
@@ -250,4 +268,5 @@ function main(): void {
   console.log(`${classes.length} classes, ${renameCount} renames, ${(json.length / 1e6).toFixed(1)} MB JSON -> ${out}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+// Compare file paths, not URLs: a URL is percent-encoded (spaces) and differs on Windows.
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();
