@@ -32,6 +32,7 @@ import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
+import { SettingsError, editProjectSettings, formatSettingsPlan, type SettingsEdit } from "../settings/edit.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
 
 export type Tier = "cheap" | "premium";
@@ -90,6 +91,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_checklist lists every AAA rule with its fix.",
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
+      "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
@@ -258,6 +260,55 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return plan.review && plan.review.after > plan.review.before ? failure(body) : text(body);
       } catch (error) {
         if (error instanceof RenameError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_project_edit",
+    {
+      title: "Change project settings, input map or autoloads",
+      description:
+        "Change project.godot safely, without the editor: set or unset a setting (name and type checked against the Godot 4.7 reference), add events to an input action or remove it, add or remove an autoload (the file must exist and be a Node script or a scene; the name must not clash with a class). Only the lines of that entry change. Events: Key:Space, Key:Ctrl+S, Mouse:Left, JoyButton:A, JoyAxis:left_y-. Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after. Use it instead of editing project.godot by hand: the input map format is easy to break.",
+      inputSchema: {
+        op: z.enum(["set", "unset", "input_add", "input_remove", "autoload_add", "autoload_remove"]).describe("what to change"),
+        key: z.string().optional().describe("set/unset: the setting path, e.g. display/window/size/viewport_width"),
+        value: z.string().optional().describe("set: the value, e.g. 1920, true, 1.5, a text, res://main.tscn or Vector2i(1920, 1080)"),
+        action: z.string().optional().describe("input_add/input_remove: the action name, e.g. jump"),
+        events: z.array(z.string()).optional().describe("input_add: events such as Key:Space, Mouse:Left, JoyButton:0, JoyAxis:1-"),
+        deadzone: z.number().optional().describe("input_add: deadzone of a new action (default 0.2)"),
+        name: z.string().optional().describe("autoload_add/autoload_remove: the autoload name, e.g. Game"),
+        file: z.string().optional().describe("autoload_add: res:// path of the script or scene"),
+        global: z.boolean().optional().describe("autoload_add: make a global variable (default true)"),
+        write: z.boolean().optional().describe("write the change (default false: show the diff only)"),
+        path: pathParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ op, key, value, action, events, deadzone, name, file, global, write, path }) => {
+      const need = (field: string, v: string | undefined): string => {
+        if (v === undefined || v === "") throw new SettingsError(`${op} needs ${field}`);
+        return v;
+      };
+      try {
+        const edit: SettingsEdit =
+          op === "set"
+            ? { op, key: need("key", key), value: need("value", value) }
+            : op === "unset"
+              ? { op, key: need("key", key) }
+              : op === "input_add"
+                ? { op, action: need("action", action), events: events ?? [], ...(deadzone !== undefined ? { deadzone } : {}) }
+                : op === "input_remove"
+                  ? { op, action: need("action", action) }
+                  : op === "autoload_add"
+                    ? { op, name: need("name", name), file: need("file", file), ...(global !== undefined ? { global } : {}) }
+                    : { op, name: need("name", name) };
+        const plan = editProjectSettings(where(path), edit, { write: write === true });
+        const body = formatSettingsPlan(plan);
+        return plan.review && plan.review.after > plan.review.before ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof SettingsError || error instanceof ProjectNotFoundError) return failure(error.message);
         throw error;
       }
     },

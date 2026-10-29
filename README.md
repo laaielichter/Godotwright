@@ -78,6 +78,9 @@ godotwright review [path]             # AAA review with a score per category
 godotwright usages take_damage       # every place a name or res:// path is used: code, scenes, connections, groups, settings
 godotwright rename take_damage apply_damage --write   # rename everywhere (code, scenes, connections, node paths); dry run without --write
 godotwright rename res://a.tscn res://scenes/a.tscn --write   # move a file with its .uid and .import, and every reference
+godotwright project set display/window/size/viewport_width 1920 --write   # change a setting; name and type checked against Godot 4.7
+godotwright project input add jump --key Space --joy-button A --write   # input map without hand-editing Object(InputEventKey,...)
+godotwright project autoload add Game res://game.gd --write   # checks the file is a Node and the name is free
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
