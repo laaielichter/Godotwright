@@ -226,3 +226,16 @@ describe("moved Godot 3 window properties", () => {
     })).toEqual([]);
   });
 });
+
+describe("review robustness", () => {
+  it("reports a self-referencing constant on its line instead of aborting the review", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": "extends Node\n\nconst Foo: Foo = 1\nconst A: B = 1\nconst B: A = 2\n\nfunc _ready() -> void:\n\tprint(A, B, Foo)\n",
+    });
+    const report = reviewProject(root);
+    const unknown = report.findings.filter((f) => f.rule === "api/unknown-type" && f.file === "res://main.gd");
+    expect(unknown.map((f) => f.line)).toContain(3);
+    expect(unknown.map(formatFinding)[0]).toContain('Type "Foo" does not exist');
+  });
+});

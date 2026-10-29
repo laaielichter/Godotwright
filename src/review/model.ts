@@ -84,6 +84,8 @@ export class ProjectModel {
   readonly globalEnums: Set<string>;
   private readonly belowNative = new Map<string, Set<string>>();
   private readonly belowScript = new Map<ClassModel, Set<string>>();
+  /** Constants whose type is being resolved, so `const A: A` stops instead of recursing. */
+  private readonly constsBusy = new Set<string>();
 
   constructor(
     readonly data: ProjectData,
@@ -278,10 +280,18 @@ export class ProjectModel {
     for (const m of this.chain(model)) {
       const c = m.outline.constants.find((k) => k.name === name);
       if (!c) continue;
-      if (c.type) return this.resolveTypeName(c.type, m);
-      const line = this.lineAt(m.script, c.line);
-      const value = line ? /=\s*(.*)$/.exec(line.text)?.[1] : undefined;
-      return value ? this.literalType(value, m) : undefined;
+      const key = `${m.id}\u0000${name}`;
+      // Invalid code such as `const A: A = 1` names itself: stop here, the type stays unknown.
+      if (this.constsBusy.has(key)) return undefined;
+      this.constsBusy.add(key);
+      try {
+        if (c.type) return this.resolveTypeName(c.type, m);
+        const line = this.lineAt(m.script, c.line);
+        const value = line ? /=\s*(.*)$/.exec(line.text)?.[1] : undefined;
+        return value ? this.literalType(value, m) : undefined;
+      } finally {
+        this.constsBusy.delete(key);
+      }
     }
     return undefined;
   }
