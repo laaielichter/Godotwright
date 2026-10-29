@@ -8,6 +8,10 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`model brief`** points to the option of a kind that makes the thing: a lake is `terrain --set lakeRadius=60`,
+  a river `--set riverWidth=6`, an island `--set relief=island`, a mountain `--set relief=mountains`, with the
+  parameters to tune it.
+
 - **`check --scene <res-path>`** and the run's output: `check --run` (MCP `godot_check` with `run_frames` or `scene`)
   now returns what the game printed, engine noise removed, so an agent can read its own `print()` calls back.
 - **`migrate`** (CLI and MCP tool `godot_migrate`): rewrites Godot 3 GDScript to Godot 4 where that is mechanical

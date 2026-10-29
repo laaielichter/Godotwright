@@ -1,7 +1,7 @@
 import { allKinds } from "../build/generators/index.js";
 import { SPEC_CHEAT } from "../build/spec-help.js";
 import { formatPart, range } from "./format.js";
-import { identify, type IdentifyResult } from "./identify.js";
+import { identify, stem, type IdentifyResult } from "./identify.js";
 import { loadLibrary, type ArchetypeLibrary } from "./library.js";
 import type { ResolvedArchetype } from "./types.js";
 
@@ -10,12 +10,16 @@ export interface KindRef {
   archetype: string;
   description: string;
   params: string;
+  /** The settings that make the thing, when a kind makes it as one of its options (`relief=island`, `lakeRadius=60`). */
+  set?: string[];
+  /** Other parameters of the same feature, to tune it (lakeDepth, lakeX, ...). */
+  related?: string[];
 }
 
 export interface Brief {
   result: IdentifyResult;
   /** How the nearest ready-made kind relates to the thing asked for. */
-  relation: "exact" | "narrower" | "family" | "none";
+  relation: "exact" | "feature" | "narrower" | "family" | "none";
   kinds: KindRef[];
   text: string;
 }
@@ -32,6 +36,8 @@ function nearestKinds(best: ResolvedArchetype, library: ArchetypeLibrary): { rel
   if (best.chain.length <= 1) return { relation: "none", kinds: [] };
   const exact = all.filter((k) => k.archetype === best.id);
   if (exact.length) return { relation: "exact", kinds: exact.map(ref) };
+  const features = byFeature(best, all).map(({ kind, set, related }) => ({ ...ref(kind), set, ...(related.length ? { related } : {}) }));
+  if (features.length) return { relation: "feature", kinds: features.slice(0, 3) };
   const below = all.filter((k) => library.get(k.archetype) && library.resolve(k.archetype).chain.includes(best.id));
   if (below.length) return { relation: "narrower", kinds: below.slice(0, 3).map(ref) };
   for (const id of [...best.chain].reverse().slice(1)) {
@@ -44,6 +50,39 @@ function nearestKinds(best: ResolvedArchetype, library: ArchetypeLibrary): { rel
     if (near.length) return { relation: "family", kinds: near.slice(0, 4).map(ref) };
   }
   return { relation: "none", kinds: [] };
+}
+
+/** First word of a camelCase parameter name: lakeRadius -> lake. */
+const head = (name: string): string => name.replace(/([a-z0-9])([A-Z]).*$/, "$1").toLowerCase();
+
+/**
+ * Kinds that make the thing as one of their options: an enum option named like it (relief=island) or a parameter
+ * whose name starts with its name (lakeRadius for a lake). A parameter that is off at 0 gets a value that turns it on.
+ */
+function byFeature<K extends { kind: string; params: { name: string; type: string; default: unknown; min?: number; max?: number; options?: string[] }[] }>(
+  best: ResolvedArchetype,
+  all: K[],
+): { kind: K; set: string[]; related: string[] }[] {
+  // The archetype's own name first, then its aliases: a mountain is relief=mountains, not the "hills" it also answers to.
+  const ordered = [...new Set([best.id.split(".").pop() as string, ...best.aliases].filter((a) => !a.includes(" ")).map((a) => stem(a.toLowerCase())))];
+  const words = new Set(ordered);
+  const out: { kind: K; set: string[]; related: string[] }[] = [];
+  for (const k of all) {
+    for (const p of k.params) {
+      const option = ordered.map((w) => p.options?.find((o) => stem(o.toLowerCase()) === w)).find((o) => o !== undefined);
+      if (option) {
+        out.push({ kind: k, set: [`${p.name}=${option}`], related: [] });
+        break;
+      }
+      if ((p.type === "number" || p.type === "integer") && p.name !== head(p.name) && words.has(stem(head(p.name)))) {
+        const on = p.default === 0 && p.max !== undefined ? Math.max(2, Math.round(p.max * 0.03)) : (p.default as number);
+        const related = k.params.filter((q) => q !== p && head(q.name) === head(p.name)).map((q) => q.name);
+        out.push({ kind: k, set: [`${p.name}=${on}`], related });
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 const cap = (items: string[], n: number): string[] => (items.length > n ? [...items.slice(0, n), `(+${items.length - n} more in \`model identify\`)`] : items);
@@ -68,12 +107,17 @@ export function briefFor(what: string, library: ArchetypeLibrary = loadLibrary()
   } else {
     const lead = {
       exact: "A ready-made kind exists for this archetype. Check it is what you want; change its parameters or edit its spec:",
+      feature: "A ready-made kind makes this as one of its options:",
       narrower: "No kind is this general. These are specific versions; use one only if it is close to what you want:",
       family: "Nothing makes exactly this. The nearest ready-made kind(s) in the same family; take the spec as a base and change it:",
       none: "",
     }[relation];
     out.push(`  ${lead}`);
-    for (const k of kinds.slice(0, 3)) out.push(`  - ${k.kind}: ${k.description.split(/(?<=\.)\s/)[0]}`, `      godotwright model build ${k.kind} -o ${k.kind}.glb   (${k.params})`);
+    for (const k of kinds.slice(0, 3)) {
+      const sets = (k.set ?? []).map((s) => ` --set ${s}`).join("");
+      out.push(`  - ${k.kind}: ${k.description.split(/(?<=\.)\s/)[0]}`, `      godotwright model build ${k.kind}${sets} -o ${k.kind}.glb   (${k.params})`);
+      if (k.related?.length) out.push(`      tune it with: ${k.related.join(", ")}`);
+    }
     out.push(`  To change the shape itself: godotwright model recipes ${(kinds[0] as KindRef).kind} > my.spec.json, edit it, then godotwright model build --spec my.spec.json -o m.glb`);
   }
 
