@@ -46,6 +46,29 @@ describe("expressions", () => {
     expect(() => evaluate("1".repeat(600), {})).toThrow(/too long/);
     expect(() => evaluate("pow(10, 999)", {})).toThrow(/not a finite number/);
   });
+
+  it("refuses a NaN or an infinite value where it arises, even when a later step would hide it", () => {
+    expect(() => evaluate("min(pow(10, 999), 5)", {})).toThrow(/not a finite number/);
+    expect(() => evaluate("sqrt(-1) ^ 0", {})).toThrow(/not a finite number/);
+    expect(() => evaluate("min(1e999, 5)", {})).toThrow(/not a finite number/);
+    expect(() => evaluate("max(0, 1e300 * 1e300 - 1e300 * 1e300)", {})).toThrow(/not a finite number/);
+    expect(evaluate("min(2, 5) ^ 2", {})).toBe(4);
+  });
+
+  it("checks how many numbers each function takes", () => {
+    expect(() => evaluate("clamp($w, 0.2)", { w: 1 })).toThrow(/clamp\(\) takes 3 numbers, got 2 in expression/);
+    expect(() => evaluate("abs()", {})).toThrow(/abs\(\) takes 1 number, got 0/);
+    expect(() => evaluate("rad()", {})).toThrow(/rad\(\) takes 1 number, got 0/);
+    expect(() => evaluate("pow(2, 3, 4)", {})).toThrow(/pow\(\) takes 2 numbers, got 3/);
+    expect(() => evaluate("min(1)", {})).toThrow(/min\(\) takes 2 to 8 numbers, got 1/);
+    expect(evaluate("hypot(3, 4) + min(1, 2, 3) + clamp(5, 0, 1)", {})).toBe(5 + 1 + 1);
+  });
+
+  it("looks names up as the names of this spec, never ones inherited from Object", () => {
+    expect(() => evaluate("constructor", {})).toThrow(/unknown name "constructor"/);
+    expect(() => evaluate("$constructor", {})).toThrow(/unknown variable \$constructor/);
+    expect(() => evaluate("toString(1)", {})).toThrow(/unknown function toString\(\)/);
+  });
 });
 
 describe("the example car", () => {
@@ -103,6 +126,35 @@ describe("nodes", () => {
     }
   });
 
+  it("caps a concave loft section with its own outline, not a fan that covers the notch", () => {
+    const u = [[0, 0], [3, 0], [3, 3], [2, 3], [2, 1], [1, 1], [1, 3], [0, 3]];
+    const mesh = buildSpec(spec([{ name: "U", shape: "loft", material: "paint", sections: [{ z: 0, points: u }, { z: 1, points: u }] }])).nodes[0]!.mesh!;
+    // The U has an area of 7. Each cap must cover it exactly once, facing out: a fan from the centroid (inside the notch) would overlap itself.
+    const cap = (z: number) => {
+      let signed = 0;
+      let unsigned = 0;
+      for (const p of mesh.prims.values()) {
+        for (let t = 0; t < p.indices.length; t += 3) {
+          const corner = (k: number): number[] => {
+            const i = (p.indices[t + k] as number) * 3;
+            return [p.positions[i] as number, p.positions[i + 1] as number, p.positions[i + 2] as number];
+          };
+          const [a, b, c] = [corner(0), corner(1), corner(2)] as [number[], number[], number[]];
+          if (![a, b, c].every((q) => Math.abs((q[2] as number) - z) < 1e-9)) continue;
+          const area = (((b[0] as number) - (a[0] as number)) * ((c[1] as number) - (a[1] as number)) - ((c[0] as number) - (a[0] as number)) * ((b[1] as number) - (a[1] as number))) / 2;
+          signed += area;
+          unsigned += Math.abs(area);
+        }
+      }
+      return { signed, unsigned };
+    };
+    expect(cap(0).unsigned).toBeCloseTo(7);
+    expect(cap(0).signed).toBeCloseTo(-7);
+    expect(cap(1).unsigned).toBeCloseTo(7);
+    expect(cap(1).signed).toBeCloseTo(7);
+    expect(volume(mesh)).toBeCloseTo(7);
+  });
+
   it("places, rotates and anchors", () => {
     const info = inspectModel(writeScene(buildSpec(spec([solid({ size: [2, 1, 1], anchor: "bottom", at: [0, 3, 0], rotate: [0, 90, 0] })]))));
     expect(info.bounds?.min[1]).toBeCloseTo(3);
@@ -158,6 +210,16 @@ describe("nodes", () => {
     expect(() => buildSpec(raw([1, 2, 0]))).toThrow(/materials.glow.emissive: expected \[r, g, b\]/);
     expect(() => buildSpec(raw([1, 0]))).toThrow(/materials.glow.emissive/);
   });
+
+  it("refuses an alpha or doubleSided it does not know, instead of dropping it", () => {
+    const raw = (m: object) => spec([solid({ name: "Pane", material: "glass" })], { materials: { glass: { color: [0.5, 0.6, 0.7], ...m } } });
+    expect(() => buildSpec(raw({ alpha: "blend" }))).toThrow(/materials\.glass\.alpha: use "BLEND" or "OPAQUE"/);
+    expect(() => buildSpec(raw({ doubleSided: "yes" }))).toThrow(/materials\.glass\.doubleSided: expected true or false/);
+    expect(() => buildSpec(raw({ alpha: "OPAQUE", doubleSided: false }))).not.toThrow();
+    const glb = buildGlb(buildSpec(raw({ alpha: "BLEND", doubleSided: true })));
+    const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString("utf8")) as { materials: object[] };
+    expect(json.materials).toEqual([expect.objectContaining({ name: "glass", alphaMode: "BLEND", doubleSided: true })]);
+  });
 });
 
 describe("mistakes get a path and a reason", () => {
@@ -183,12 +245,74 @@ describe("mistakes get a path and a reason", () => {
     fail(spec([{ name: "L", shape: "loft", material: "paint", sections: [{ z: 0, superellipse: { width: 1, height: 1, count: 9 } }, { z: 1, superellipse: { width: 1, height: 1 } }] }]), /must be even/);
     fail(spec([{ name: "R", shape: "roof", material: "paint", x0: 0, x1: 1, z0: 0, z1: 1, y: 0, rise: 1, kind: "dome" }]), /use "gable" or "hip"/);
     fail(spec([solid({ at: [1, 2] })]), /expected a list of 3 numbers/);
+    fail(spec([solid({ at: ["clamp(1, 0.2)", 0, 0] })]), /at\[0\]: clamp\(\) takes 3 numbers, got 2/);
+  });
+
+  it("refuses shapes, materials and variables named like Object.prototype members", () => {
+    fail(spec([solid({ shape: "constructor" })]), /unknown shape "constructor"/);
+    fail(spec([solid({ material: "toString" })]), /unknown material "toString"/);
+    fail(spec([solid({ size: ["$constructor", 1, 1] })]), /unknown variable \$constructor/);
+    // A name that is really declared works, including one that a JSON file may use for a key.
+    const declared = JSON.parse('{"version":1,"materials":{"__proto__":{"color":[1,0,0]}},"nodes":[{"name":"A","shape":"box","size":["$__proto__",1,1],"material":"__proto__","vars":{"__proto__":2}}]}');
+    expect(inspectModel(writeScene(buildSpec(declared))).bounds?.size[0]).toBeCloseTo(2);
   });
 
   it("stops specs that grow without bound", () => {
     const grid = { name: "Row{i}", repeat: { count: 400, step: [1, 0, 0] }, children: [{ name: "Cell{i}", repeat: { count: 400, step: [0, 1, 0] }, children: [solid({ name: "B" })] }] };
     expect(() => buildSpec(spec([grid]))).toThrow(new RegExp(`too many nodes \\(max ${LIMITS.nodes}\\)`));
     expect(() => buildSpec(spec([{ name: "E", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: 128, repeat: { count: 500, step: [1, 0, 0] } }]))).toThrow(/triangles/);
+  });
+
+  it("counts each copy of a repeat against the triangle limit, when the copies differ in size", () => {
+    // Copy 0 is tiny and later copies grow to 128 segments. The limit is lowered here so that the test stays quick.
+    const saved = LIMITS.triangles;
+    LIMITS.triangles = 50_000;
+    try {
+      const grow = { name: "E{i}", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: "min($i + 6, 128)", repeat: { count: 500, step: [3, 0, 0] } };
+      expect(() => buildSpec(spec([grow]))).toThrow(/grew past 50,000 triangles/);
+    } finally {
+      LIMITS.triangles = saved;
+    }
+  });
+
+  it("refuses nesting deeper than the limit, with a path, before the stack runs out", () => {
+    const chain = (levels: number): object => {
+      let node: object = solid({ name: "Leaf" });
+      for (let k = 1; k < levels; k++) node = { name: `N${k}`, children: [node] };
+      return node;
+    };
+    expect(() => buildSpec(spec([chain(LIMITS.depth)]))).not.toThrow();
+    expect(() => buildSpec(spec([chain(LIMITS.depth + 1)]))).toThrow(/nodes\[0\]\.children\[0\].*: nested too deeply \(max 100 levels\)/);
+    expect(() => buildSpec(spec([chain(3000)]))).toThrow(/nested too deeply/);
+  });
+
+  it("counts mirror copies against the node and triangle limits", () => {
+    // 500 pairs of 6 nodes is 3,000 nodes; mirrored, it is 6,000.
+    const pair = { name: "Pair{i}", repeat: { count: 500, step: [2, 0, 0] }, mirror: "Twin{i}", children: [1, 2, 3, 4, 5].map((k) => solid({ name: `P${k}` })) };
+    expect(() => buildSpec(spec([pair]))).toThrow(/too many nodes \(max 5000\)/);
+    // Each mirror copy is a model of its own: 2 domes of 128 segments are fine, but their mirrors are not.
+    const saved = LIMITS.triangles;
+    LIMITS.triangles = 50_000;
+    try {
+      const dome = { name: "Dome{i}", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: 128, repeat: { count: 2, step: [3, 0, 0] }, mirror: "Mirror{i}" };
+      expect(() => buildSpec(spec([dome]))).toThrow(/grew past 50,000 triangles/);
+      expect(() => buildSpec(spec([{ ...dome, mirror: undefined, name: "Solo{i}" }]))).not.toThrow();
+    } finally {
+      LIMITS.triangles = saved;
+    }
+  });
+
+  it("refuses a mirror inside a mirrored node, which would double its parts", () => {
+    const raw = spec([{ name: "Arm_L", mirror: "Arm_R", children: [solid({ name: "Hand", mirror: "Hand_R" })] }]);
+    expect(() => buildSpec(raw)).toThrow(/already have a mirror, so mirroring it again would double them/);
+    expect(() => buildSpec(spec([{ name: "Arm_L", mirror: "Arm_R", children: [solid({ name: "Hand" })] }]))).not.toThrow();
+  });
+
+  it("counts every copy of a repeated node against the node limit", () => {
+    // 200 rows of 200 cells is 40,000 nodes; the inner repeat must count each of its copies, not just one.
+    const cells = { name: "Cell{i}", shape: "box", size: [1, 1, 1], material: "paint", repeat: { count: 200, step: [0, 1, 0] } };
+    expect(() => buildSpec(spec([{ name: "Row{i}", repeat: { count: 200, step: [2, 0, 0] }, children: [cells] }]))).toThrow(/too many nodes \(max 5000\)/);
+    expect(() => buildSpec(spec([{ name: "Row", repeat: { count: 20, step: [2, 0, 0] }, children: [{ ...cells, repeat: { count: 20, step: [0, 1, 0] } }] }]))).not.toThrow();
   });
 });
 
