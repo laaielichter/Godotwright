@@ -50,5 +50,8 @@ failed send is retried a day later; it never slows a command down by more than a
 few seconds.
 
 Turn it off at any time with `godotwright learn share off`; that also forgets
-the install id. The collector does not store IP addresses and keeps only
-results that at least 3 installs reported.
+the install id.
+
+The collector does not store IP addresses or request headers. It keeps each
+report as it was received, with its install id, until its operator deletes it.
+It publishes only results that at least 3 installs reported.
