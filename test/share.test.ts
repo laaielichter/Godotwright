@@ -19,6 +19,11 @@ import {
 import { readLearning, resetLearning, updateLearning } from "../src/learn/store.js";
 import { makeProject, runCli } from "./helpers.js";
 
+// Same as learn.test.ts: the shipped data/learned.json must not change these results.
+vi.mock("../src/learn/bundled.js", () => ({
+  bundledLearning: () => ({ version: 1, installs: 0, apiHints: {}, rules: {}, missedByReview: {} }),
+}));
+
 const api = GodotApi.load();
 const URL = "https://collector.example/v1/report";
 const env = { GODOTWRIGHT_SHARE_URL: URL };
@@ -35,6 +40,12 @@ function collector(ok = true) {
 
 function godotClean(): CheckResult {
   return { godot: "godot", godotVersion: "4.7", scripts: 1, scenes: 0, diagnostics: [], steps: [{ name: "check", ms: 1, exitCode: 0, timedOut: false }], errors: 0, warnings: 0 };
+}
+
+/** A miss that a later lookup resolved to a real Godot name: the kind of miss that is shared. */
+function resolvedMiss(): void {
+  recordApiLookup("Node2D.lookat", false);
+  recordApiLookup("Node2D.look_at", true);
 }
 
 /** Learning data from a project full of names that must never leave the machine. */
@@ -70,7 +81,7 @@ describe("what may be shared", () => {
   it("keeps Godot names that were mistyped, not the project's own names", () => {
     expect(shareableQuery("Node2D.lookat", api)).toBe(true);
     expect(shareableQuery("CharacterBody2D.is_on_flor", api)).toBe(true);
-    expect(shareableQuery("Charactrbody2D", api)).toBe(true);
+    expect(shareableQuery("Charactrbody2D", api)).toBe(false);
     expect(shareableQuery("SecretVault.unlock", api)).toBe(false);
     expect(shareableQuery("Node.vault_codes", api)).toBe(false);
     expect(shareableQuery("heist_planner", api)).toBe(false);
@@ -78,10 +89,20 @@ describe("what may be shared", () => {
     expect(shareableQuery("res://x.gd", api)).toBe(false);
   });
 
+  it("never keeps a bare name, however close it is to a Godot name", () => {
+    for (const name of ["Level", "Boss", "Hud", "Label", "Charactrbody2D"]) expect(shareableQuery(name, api), name).toBe(false);
+    expect(shareableQuery("Node2D.my_position", api)).toBe(false);
+  });
+
   it("scrubs identifiers from templates but keeps Godot class names", () => {
     expect(scrubTemplate("Function unlockVault not found in base SecretVault", api)).toBe("Function <id> not found in base <id>");
     expect(scrubTemplate('Identifier "<s>" not declared in Node2D at <path>', api)).toBe('Identifier "<s>" not declared in Node2D at <path>');
     expect(scrubTemplate("call is_on_floor or vault_7 or HTTPRequest", api)).toBe("call <id> or <id> or HTTPRequest");
+  });
+
+  it("replaces every word that is not Godot or engine wording, not only identifier-looking ones", () => {
+    expect(scrubTemplate("Player John Smith not declared", api)).toBe("<id> <id> <id> not declared");
+    expect(scrubTemplate("Cannot open project Heist for reading", api)).toBe("Cannot open <id> <id> for reading");
   });
 
   it("only accepts https collectors, or http on this machine", () => {
@@ -111,21 +132,39 @@ describe("the report", () => {
     expect(report.rules["api/unknown-member"]).toMatchObject({ reported: 1, contradicted: 1 });
     expect(report.apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
     expect(report.missedByReview).toEqual({ 'Identifier "<s>" not declared. In <path>': 1, "Function <id> not found in base <id>": 1 });
-    expect(report.unparsed).toEqual({ "Cannot open <path> <path> for reading": 1 });
+    expect(report.unparsed).toEqual({ "Cannot open <path>": 1 });
+  });
+
+  it("never shares a verdict of right as a Godot confirmation", () => {
+    recordFeedback({ rule: "api/unknown-member", file: "res://a.gd", message: "m" }, "right");
+    expect(readLearning().rules["api/unknown-member"]).toMatchObject({ verified: 1, confirmed: 0 });
+    expect(buildReport(readLearning(), api, "id")).toBeUndefined();
+  });
+
+  it("shares a miss only as a typo of the Godot name it was resolved to", () => {
+    // A bare name, a miss nothing answered, and a miss answered by an unrelated name are not shared.
+    recordApiLookup("Level", false);
+    recordApiLookup("Label", true);
+    recordApiLookup("Node2D.hp", false);
+    recordApiLookup("Node2D.visible", true);
+    recordApiLookup("Node2D.unanswered", false);
+    resolvedMiss();
+    const { report } = buildReport(readLearning(), api, "id")!;
+    expect(report.apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
   });
 
   it("only sends what is new since the last report", () => {
-    recordApiLookup("Node2D.lookat", false);
+    resolvedMiss();
     const first = buildReport(readLearning(), api, "id")!;
     updateLearning((d) => (d.sharing.sent = first.snapshot));
     expect(buildReport(readLearning(), api, "id")).toBeUndefined();
-    recordApiLookup("Node2D.lookat", false);
-    expect(buildReport(readLearning(), api, "id")!.report.apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: {} } });
+    resolvedMiss();
+    expect(buildReport(readLearning(), api, "id")!.report.apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
   });
 });
 
 describe("sending", () => {
-  beforeEach(() => recordApiLookup("Node2D.lookat", false));
+  beforeEach(() => resolvedMiss());
 
   it("sends nothing while sharing is off (the default)", async () => {
     const c = collector();
@@ -154,11 +193,24 @@ describe("sending", () => {
     const sent = c.bodies[0] as typeof preview;
     expect({ ...sent, install: "x" }).toEqual({ ...preview, install: "x" });
 
-    recordApiLookup("Node2D.lookat", false);
+    resolvedMiss();
     expect(await maybeShare({ env, fetch: c.fetch, now: now + 60_000 })).toBe("blocked");
     expect(await maybeShare({ env, fetch: c.fetch, now: now + SEND_EVERY_MS })).toBe("sent");
-    expect((c.bodies[1] as typeof preview).apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: {} } });
+    expect((c.bodies[1] as typeof preview).apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
     expect((c.bodies[1] as typeof preview).install).toBe(sent.install);
+  });
+
+  it("shows a last report only once the collector accepted one, but still waits a day after a failure", async () => {
+    setSharing(true);
+    const now = Date.parse("2026-11-01T12:00:00Z");
+    expect(await maybeShare({ env, fetch: collector(false).fetch, now })).toBe("failed");
+    expect(readLearning().sharing.lastSentAt).toBeUndefined();
+    expect((await runCli(["learn", "status"])).output).toContain("last report sent: never");
+    expect(shareBlocked(readLearning(), env, now + 60_000)).toContain("less than a day");
+    const c = collector();
+    expect(await maybeShare({ env, fetch: c.fetch, now: now + SEND_EVERY_MS })).toBe("sent");
+    expect(readLearning().sharing.lastSentAt).toBe(new Date(now + SEND_EVERY_MS).toISOString());
+    expect((await runCli(["learn", "status"])).output).toContain(`last report sent: ${new Date(now + SEND_EVERY_MS).toISOString()}`);
   });
 
   it("uses a new random install id every 30 days, and forgets it when sharing is turned off", async () => {
@@ -168,7 +220,7 @@ describe("sending", () => {
     await maybeShare({ env, fetch: c.fetch, now });
     const first = readLearning().sharing.installId;
     expect(first).toMatch(/^[0-9a-f-]{36}$/);
-    recordApiLookup("Node2D.lookat", false);
+    resolvedMiss();
     await maybeShare({ env, fetch: c.fetch, now: now + ROTATE_ID_MS + 1 });
     expect(readLearning().sharing.installId).not.toBe(first);
     setSharing(false);
@@ -186,7 +238,7 @@ describe("sending", () => {
     expect(readLearning().sharing.sent).toBeUndefined();
     const c = collector();
     expect(await maybeShare({ env, fetch: c.fetch, now: now + 2 * SEND_EVERY_MS })).toBe("sent");
-    expect((c.bodies[0] as { apiMisses: unknown }).apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: {} } });
+    expect((c.bodies[0] as { apiMisses: unknown }).apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
   });
 });
 
@@ -204,7 +256,7 @@ describe("asking once", () => {
 
 describe("learn share and preview", () => {
   it("turns sharing on and off, and previews the report", async () => {
-    recordApiLookup("Node2D.lookat", false);
+    resolvedMiss();
     const preview = await runCli(["learn", "preview"]);
     expect(preview.output).toContain("not sent now: sharing is off");
     expect(preview.output).toContain('"Node2D.lookat"');

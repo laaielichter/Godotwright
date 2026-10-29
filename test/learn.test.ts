@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GodotApi } from "../src/api/api.js";
 import type { CheckResult } from "../src/check/check.js";
@@ -44,6 +44,12 @@ const finding = (over: Partial<Finding> = {}): Finding => ({
   ...over,
 });
 
+// The shipped data/learned.json changes every week: these tests must not depend on it.
+// (collector.test.ts keeps the one test that reads it.)
+vi.mock("../src/learn/bundled.js", () => ({
+  bundledLearning: () => ({ version: 1, installs: 0, apiHints: {}, rules: {}, missedByReview: {} }),
+}));
+
 beforeEach(() => resetLearning());
 
 describe("learning store", () => {
@@ -68,6 +74,40 @@ describe("learning store", () => {
     expect(readdirSync(dirname(learningFile())).filter((f) => f.endsWith(".tmp"))).toEqual([]);
   });
 
+  it("ignores fields of the wrong type instead of failing on them", () => {
+    writeFileSync(
+      learningFile(),
+      JSON.stringify({
+        version: 1,
+        enabled: "yes",
+        rules: null,
+        dismissed: [],
+        apiMisses: { "Node2D.lookat": null, "Node2D.look_at": { count: "x", resolved: [] } },
+        lastMiss: "oops",
+        missedByReview: { a: "b" },
+        unparsed: null,
+        sharing: { enabled: true, sent: { rules: null } },
+      }),
+    );
+    const data = readLearning();
+    expect(data.enabled).toBe(true);
+    expect(data.rules).toEqual({});
+    expect(data.dismissed).toEqual({});
+    expect(data.apiMisses).toEqual({ "Node2D.look_at": { count: 0, resolved: {} } });
+    expect(data.lastMiss).toBeUndefined();
+    expect(data.missedByReview).toEqual({});
+    expect(data.unparsed).toEqual({});
+    expect(data.sharing).toEqual({ enabled: true, sent: { rules: {}, apiMisses: {}, missedByReview: {}, unparsed: {} } });
+  });
+
+  it("keeps review, api and learn working on such a file", async () => {
+    writeFileSync(learningFile(), JSON.stringify({ version: 1, enabled: true, rules: null, apiMisses: null, sharing: null }));
+    expect(reviewLearning(project()).findings.length).toBeGreaterThan(0);
+    expect(lookupLearning(GodotApi.load(), "Node2D.look_at").result.entries.length).toBeGreaterThan(0);
+    recordFeedback(finding(), "wrong");
+    expect((await runCli(["learn", "status"])).output).toContain("local learning: on");
+  });
+
   it("fills in defaults for fields a file does not have", () => {
     updateLearning(() => {});
     writeFileSync(learningFile(), JSON.stringify({ version: 1, enabled: true, rules: {} }));
@@ -80,16 +120,18 @@ describe("learning store", () => {
 describe("message templates", () => {
   it("drops paths, names and numbers", () => {
     expect(messageTemplate('Identifier "secret_inventory" not declared in the current scope.')).toBe('Identifier "<s>" not declared in the current scope.');
-    expect(messageTemplate("Failed loading resource: res://levels/boss_7.tscn. Make sure resources have been imported")).toBe(
-      "Failed loading resource: <path> Make sure resources have been imported",
-    );
-    expect(messageTemplate("Cannot open file /home/roel/My Game/a.gd at line 12")).toBe("Cannot open file <path> <path> at line <n>");
+    expect(messageTemplate("Failed loading resource: res://levels/boss_7.tscn. Make sure resources have been imported")).toBe("Failed loading resource: <path>");
+    expect(messageTemplate("Cannot open file /home/roel/My Game/a.gd at line 12")).toBe("Cannot open file <path>");
+    // The last word of a path with a space must not survive as a plain word.
+    expect(messageTemplate("Cannot open project at C:\\Users\\John Smith")).toBe("Cannot open project at <path>");
     expect(messageTemplate("too   many\nspaces 0xFF -3.5")).toBe("too many spaces <n> <n>");
   });
 
   it("only calls a template shareable when nothing personal is left", () => {
     expect(shareableTemplate('Identifier "<s>" not declared in the current scope.')).toBe(true);
-    expect(shareableTemplate("Cannot open file <path> at line <n>")).toBe(true);
+    expect(shareableTemplate("Cannot open file <path>")).toBe(true);
+    // A path is the last thing in a template; words after one may belong to the path.
+    expect(shareableTemplate("Cannot open file <path> at line <n>")).toBe(false);
     expect(shareableTemplate("open C:\\Users")).toBe(false);
     expect(shareableTemplate("mail me at a.b@example.com now")).toBe(false);
     expect(shareableTemplate("short")).toBe(false);
@@ -143,14 +185,34 @@ describe("learning from real Godot checks", () => {
     expect(readLearning().rules).toEqual({});
   });
 
+  it("does not judge review errors in dot-folders, which Godot never loads", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "player.gd": "extends Node\n\n\nfunc _ready() -> void:\n\tprint(1)\n",
+      ".backup/old_player.gd": SCRIPT,
+    });
+    const review = reviewProject(root);
+    expect(review.findings.some((f) => f.file.startsWith("res://.backup/") && f.rule === "api/unknown-member")).toBe(true);
+    for (let i = 0; i < DOWNGRADE_AFTER; i++) recordCheck(godot([]), review);
+    expect(readLearning().rules["api/unknown-member"]?.contradicted ?? 0).toBe(0);
+  });
+
   it("remembers Godot errors the review missed, without names", () => {
     recordCheck(godot([{ severity: "error", file: "res://enemy.gd", line: 3, message: 'Identifier "secret_boss" not declared in the current scope.', source: "script" }]), review);
     expect(readLearning().missedByReview).toEqual({ 'Identifier "<s>" not declared in the current scope.': 1 });
   });
 
   it("remembers messages the log parser could not place", () => {
-    recordCheck(godot([{ severity: "error", message: "Unexpected thing 42", source: "import" }]), { findings: [] });
-    expect(readLearning().unparsed).toEqual({ "Unexpected thing <n>": 1 });
+    recordCheck(godot([{ severity: "error", message: "Unexpected end of file 42", source: "import" }]), { findings: [] });
+    expect(readLearning().unparsed).toEqual({ "Unexpected end of file <n>": 1 });
+  });
+
+  it("keeps no project name from a Godot message, and drops such names kept by an older version", () => {
+    recordCheck(godot([{ severity: "error", file: "res://enemy.gd", line: 3, message: "Function take_damage not found in base Enemy", source: "script" }]), { findings: [] });
+    expect(readLearning().missedByReview).toEqual({ "Function <id> not found in base <id>": 1 });
+    updateLearning((d) => (d.missedByReview["Function take_damage not found in base Enemy"] = 2));
+    recordCheck(godot([]), { findings: [] });
+    expect(readLearning().missedByReview).toEqual({ "Function <id> not found in base <id>": 1 });
   });
 });
 
@@ -202,21 +264,52 @@ describe("getting smarter over time", () => {
 
   it("only links lookups close in time, and only to names that exist", () => {
     const api = GodotApi.load();
-    recordApiLookup("Foo.bar", false, 0);
+    recordApiLookup("Node2D.lookat", false, 0);
     recordApiLookup("Node.get_node", true, 10 * 60_000);
-    expect(readLearning().apiMisses["Foo.bar"]?.resolved).toEqual({});
-    expect(learnedHints("Foo.bar", api, readLearning(), { "Foo.bar": { "Node.get_node": 2, "Nope.nothing": 9 } })).toEqual(["Node.get_node"]);
+    expect(readLearning().apiMisses["Node2D.lookat"]?.resolved).toEqual({});
+    expect(learnedHints("Node2D.lookat", api, readLearning(), { "Node2D.lookat": { "Node.get_node": 2, "Nope.nothing": 9 } })).toEqual(["Node.get_node"]);
   });
 
-  it("counts a confirmed finding when it was marked as right", () => {
+  it("keeps no failed lookup of the project's own names, nor a bare name", () => {
+    const api = GodotApi.load();
+    for (const query of ["Enemy.take_damage", "Level", "Node2D.my_position"]) lookupLearning(api, query);
+    expect(readLearning().apiMisses).toEqual({});
+    expect(readLearning().lastMiss).toBeUndefined();
+    expect(existsSync(learningFile()) ? readFileSync(learningFile(), "utf8") : "").not.toMatch(/take_damage|my_position|Level/);
+  });
+
+  it("reads a finding line whose file path has a space", () => {
+    const line = 'res://My Scripts/player.gd:6: error [api/unknown-member] Method "empty()" does not exist on Array in Godot 4.7.';
+    expect(parseFindingLine(line)).toEqual({ rule: "api/unknown-member", file: "res://My Scripts/player.gd", line: 6, message: 'Method "empty()" does not exist on Array in Godot 4.7.' });
+    expect(parseFindingLine("res://a.gd: warning [quality/todo] TODO here")).toEqual({ rule: "quality/todo", file: "res://a.gd", line: undefined, message: "TODO here" });
+  });
+
+  it("counts a verdict of right as verified, not as a Godot confirmation", () => {
     recordFeedback(finding(), "right");
-    expect(readLearning().rules["api/unknown-member"]?.confirmed).toBe(1);
+    expect(readLearning().rules["api/unknown-member"]).toMatchObject({ verified: 1, confirmed: 0 });
+  });
+
+  it("does not let a verdict of right unlock a rule that Godot keeps contradicting", () => {
+    for (let i = 0; i < DOWNGRADE_AFTER; i++) recordCheck(godot([]), { findings: [finding()] });
+    recordFeedback(finding(), "right");
+    expect(adjustFindings([finding()], readLearning()).findings[0]!.severity).toBe("warning");
   });
 });
 
 describe("turning learning off", () => {
   afterEach(() => {
     delete process.env["GODOTWRIGHT_LEARN"];
+  });
+
+  it("keeps learning off after learn reset, until learn on", async () => {
+    await runCli(["learn", "off"]);
+    const { output } = await runCli(["learn", "reset"]);
+    expect(output).toContain("local learning stays off");
+    expect(readLearning().enabled).toBe(false);
+    recordFeedback(finding(), "wrong");
+    expect(readLearning().dismissed).toEqual({});
+    expect((await runCli(["learn", "on"])).output).toContain("local learning is on");
+    expect(readLearning().enabled).toBe(true);
   });
 
   it("records nothing with GODOTWRIGHT_LEARN=0", () => {
@@ -229,16 +322,35 @@ describe("turning learning off", () => {
   });
 
   it("records nothing and changes nothing after learn off", async () => {
+    recordFeedback(finding(), "wrong");
+    const before = readLearning();
     expect((await runCli(["learn", "off"])).output).toContain("off");
+    // Off: the local file no longer applies, so the finding is shown again.
+    const report = reviewLearning(project());
+    expect(report.findings.some((f) => f.rule === "api/unknown-member")).toBe(true);
+    expect(report.learning).toBeUndefined();
     recordFeedback(finding(), "wrong");
     recordCheck(godot([]), { findings: [finding()] });
-    const report = reviewLearning(project());
-    expect(report.learning).toBeUndefined();
-    const data = readLearning();
-    expect(data.enabled).toBe(false);
-    expect(data.rules).toEqual({});
-    expect(data.dismissed).toEqual({});
+    lookupLearning(GodotApi.load(), "Node2D.lookat");
+    expect(readLearning()).toEqual({ ...before, enabled: false });
     expect((await runCli(["learn"])).output).toContain("local learning: off");
+  });
+});
+
+describe("saving the choice", () => {
+  it("fails with the reason when the learning file cannot be written", async () => {
+    // A file where the state folder should be: no write can succeed, not even as root.
+    const home = process.env["GODOTWRIGHT_HOME"]!;
+    const blocker = join(home, "not-a-folder");
+    writeFileSync(blocker, "x");
+    process.env["GODOTWRIGHT_HOME"] = blocker;
+    try {
+      await expect(runCli(["learn", "off"])).rejects.toThrow("not saved");
+      await expect(runCli(["learn", "on"])).rejects.toThrow("not saved");
+      await expect(runCli(["learn", "share", "on"])).rejects.toThrow("not saved");
+    } finally {
+      process.env["GODOTWRIGHT_HOME"] = home;
+    }
   });
 });
 

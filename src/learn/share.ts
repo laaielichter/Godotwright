@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { distance, GodotApi } from "../api/api.js";
 import { RULES } from "../review/rules.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
-import { readLearning, updateLearning, type ApiMiss, type LearningData, type RuleStats, type Snapshot } from "./store.js";
+import { learningFile, readLearning, saveLearning, updateLearning, type ApiMiss, type LearningData, type RuleStats, type Snapshot } from "./store.js";
 import { shareableTemplate } from "./template.js";
 
 /**
@@ -53,44 +53,70 @@ export function shareBlocked(data: LearningData, env: NodeJS.ProcessEnv = proces
   if (env["GODOTWRIGHT_LEARN"] === "0" || !data.enabled) return "learning is off";
   if (env["DO_NOT_TRACK"] && env["DO_NOT_TRACK"] !== "0") return "DO_NOT_TRACK is set";
   if (!shareEndpoint(data, env)) return "no collector is set up yet, so nothing is sent";
-  const last = data.sharing.lastSentAt ? Date.parse(data.sharing.lastSentAt) : NaN;
-  if (now - last < SEND_EVERY_MS) return "a report went out less than a day ago";
+  const last = Date.parse(data.sharing.lastAttemptAt ?? data.sharing.lastSentAt ?? "");
+  if (now - last < SEND_EVERY_MS) return "a report was sent or tried less than a day ago";
   return undefined;
 }
 
-/** A query is shared only when it is a near-typo of a real Godot name, not a project's own name. */
+/**
+ * A query is kept only as `Class.member`: an exact Godot class and a member a few letters from a real one.
+ * A bare name is never kept, since it may be the project's own class or variable.
+ */
 export function shareableQuery(query: string, api: GodotApi): boolean {
-  if (!/^@?[A-Za-z_][\w]{0,40}(\.[A-Za-z_][\w]{0,40})?$/.test(query)) return false;
-  const dot = query.indexOf(".");
-  const close = (name: string, candidates: string[]) => candidates.some((c) => distance(name.toLowerCase(), c.toLowerCase(), 2) <= 2);
-  if (dot < 0) return close(query, api.closeClassNames(query));
-  const cls = api.classes.get(query.slice(0, dot));
-  if (!cls) return false;
-  const member = query.slice(dot + 1);
-  return close(member, api.closeMemberNames(cls.name, member));
+  const m = /^(@?[A-Za-z_]\w{0,40})\.([A-Za-z_]\w{0,40})$/.exec(query);
+  const cls = m ? api.classes.get(m[1]!) : undefined;
+  if (!m || !cls) return false;
+  const member = m[2]!.toLowerCase();
+  return api.closeMemberNames(cls.name, m[2]!).some((name) => distance(member, name.toLowerCase(), 2) <= 2);
+}
+
+/** Whether a mistyped query is a few edits away from the Godot name it was resolved to. */
+export function typoOf(query: string, target: string): boolean {
+  return distance(query.toLowerCase(), target.toLowerCase(), 2) <= 2;
 }
 
 /**
- * Replaces words that look like identifiers (snake_case, digits, camelCase)
- * with <id>, unless they are Godot class names.
+ * Wording of Godot's messages and of GDScript, in lowercase. A word of a template
+ * that is neither here nor a Godot class name is a name of the project's, so it is scrubbed.
+ */
+const ENGINE_WORDS = new Set(
+  `a about above add after all also an and any are as at base attempt warning warnings be been before being below between both but by call called can cannot
+  class classes const could current declared declaration did do does during each else end enum enums error errors
+  exist exists expect expected expecting export extends failed failure file files find following for found from func
+  function functions global godot gdscript has have how identifier identifiers if imported in index info instance instead
+  into invalid is it its just key line load loaded loading make many may mean meant message messages method methods missing
+  more must no not now null object of off on only open or other out over parse property read reading resource resources
+  return returns scene scenes scope script scripts signal signals sure statement static string than that the then there
+  this to too type types under unable unexpected unknown until up use used using value values var variable variables
+  was were what when where which while will with within without write writing yet you your`.split(/\s+/),
+);
+
+/**
+ * Replaces every word that is not a Godot class name or engine wording with <id>,
+ * so no name of the project survives in a template.
  */
 export function scrubTemplate(template: string, api: GodotApi): string {
   return template.replace(/<\w+>|[A-Za-z_@][\w@]*/g, (word) => {
-    if (/^<\w+>$/.test(word) || api.classes.has(word)) return word;
-    return /[_\d@]|[a-z][A-Z]|[A-Z]{2,}[a-z]/.test(word) ? "<id>" : word;
+    if (/^<\w+>$/.test(word) || api.classes.has(word) || ENGINE_WORDS.has(word.toLowerCase())) return word;
+    return "<id>";
   });
 }
 
 /** The counters that may leave the machine, filtered for privacy. */
 export function shareableSnapshot(data: LearningData, api: GodotApi): Snapshot {
   const rules: Record<string, RuleStats> = {};
-  for (const [rule, stats] of Object.entries(data.rules)) if (RULES[rule]) rules[rule] = { ...stats };
+  for (const [rule, s] of Object.entries(data.rules)) {
+    if (RULES[rule]) rules[rule] = { reported: s.reported, confirmed: s.confirmed, contradicted: s.contradicted, dismissed: s.dismissed };
+  }
 
   const apiMisses: Record<string, ApiMiss> = {};
   for (const [query, miss] of top(Object.entries(data.apiMisses), ([, m]) => m.count)) {
     if (!shareableQuery(query, api)) continue;
-    const resolved = Object.fromEntries(Object.entries(miss.resolved).filter(([target]) => api.lookup(target).entries.length > 0));
-    apiMisses[query] = { count: miss.count, resolved };
+    // Only what the query was resolved to, when that is a real Godot name it is a typo of.
+    const resolved: Record<string, number> = {};
+    for (const [target, n] of Object.entries(miss.resolved)) if (typoOf(query, target) && api.lookup(target).entries.length > 0) resolved[target] = n;
+    // A miss that was never answered says nothing the collector can use, so it is not sent.
+    if (Object.keys(resolved).length) apiMisses[query] = { count: miss.count, resolved };
   }
 
   const templates = (source: Record<string, number>) => {
@@ -110,14 +136,13 @@ export function snapshotDelta(current: Snapshot, sent: Snapshot | undefined): Sn
   const rules: Record<string, RuleStats> = {};
   for (const [rule, s] of Object.entries(current.rules)) {
     const before = sent?.rules[rule];
-    const d: RuleStats = {
-      reported: s.reported - (before?.reported ?? 0),
-      confirmed: s.confirmed - (before?.confirmed ?? 0),
-      contradicted: s.contradicted - (before?.contradicted ?? 0),
-      dismissed: s.dismissed - (before?.dismissed ?? 0),
+    const d = {
+      reported: Math.max(0, s.reported - (before?.reported ?? 0)),
+      confirmed: Math.max(0, s.confirmed - (before?.confirmed ?? 0)),
+      contradicted: Math.max(0, s.contradicted - (before?.contradicted ?? 0)),
+      dismissed: Math.max(0, s.dismissed - (before?.dismissed ?? 0)),
     };
-    for (const k of Object.keys(d) as (keyof RuleStats)[]) d[k] = Math.max(0, d[k]);
-    if (Object.values(d).some((v) => v > 0)) rules[rule] = d;
+    if (d.reported + d.confirmed + d.contradicted + d.dismissed > 0) rules[rule] = d;
   }
   const apiMisses: Record<string, ApiMiss> = {};
   for (const [query, m] of Object.entries(current.apiMisses)) {
@@ -173,8 +198,9 @@ export async function maybeShare(options: ShareOptions = {}): Promise<"sent" | "
       outcome = response?.ok ? "sent" : "failed";
     }
     updateLearning((d) => {
-      d.sharing.lastSentAt = new Date(now).toISOString();
+      d.sharing.lastAttemptAt = new Date(now).toISOString();
       if (outcome !== "sent") return;
+      d.sharing.lastSentAt = d.sharing.lastAttemptAt;
       d.sharing.sent = built!.snapshot;
       if (rotate) {
         d.sharing.installId = install;
@@ -205,7 +231,7 @@ export function takeShareNotice(env: NodeJS.ProcessEnv = process.env, interactiv
 
 /** Turns sharing on or off. Off also forgets the install id. */
 export function setSharing(enabled: boolean, now = Date.now()): LearningData {
-  return updateLearning((d) => {
+  const { data, error } = saveLearning((d) => {
     d.sharing.enabled = enabled;
     d.sharing.decidedAt = new Date(now).toISOString();
     if (!enabled) {
@@ -213,6 +239,8 @@ export function setSharing(enabled: boolean, now = Date.now()): LearningData {
       delete d.sharing.installIdSince;
     }
   });
+  if (error) throw new Error(`sharing not saved (${learningFile()}): ${error}`);
+  return data;
 }
 
 function counterDelta(current: Record<string, number>, before: Record<string, number> | undefined): Record<string, number> {
