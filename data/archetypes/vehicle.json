@@ -1,0 +1,1181 @@
+[
+ {
+  "id": "vehicle",
+  "name": "vehicle",
+  "description": "Something that carries people or goods from one place to another.",
+  "aliases": [
+   "vehicle",
+   "voertuig",
+   "transport"
+  ],
+  "extends": "thing",
+  "hints": [
+   "drive",
+   "driver",
+   "passenger",
+   "cargo",
+   "transport",
+   "engine",
+   "motor"
+  ],
+  "conventions": [
+   "A vehicle is longest along z, so its length is z, its width x and its height y."
+  ],
+  "anticipate": [
+   "A driver or cockpit position and camera point.",
+   "Lights (head, tail, brake) as separate emissive parts or nodes.",
+   "Collision as a simple box or convex hull around the body."
+  ]
+ },
+ {
+  "id": "vehicle.wheeled",
+  "name": "wheeled vehicle",
+  "description": "A vehicle on wheels.",
+  "aliases": [
+   "wheeled vehicle",
+   "wielvoertuig"
+  ],
+  "extends": "vehicle",
+  "hints": [
+   "wheel",
+   "wheels",
+   "wiel",
+   "wielen",
+   "tire",
+   "tyre",
+   "road",
+   "weg",
+   "drive"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "chassis",
+     "hull",
+     "frame",
+     "carrosserie"
+    ]
+   },
+   {
+    "name": "Wheel",
+    "role": "wheel",
+    "required": true,
+    "count": [
+     2,
+     18
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "wheel",
+     "tire",
+     "tyre",
+     "wiel",
+     "band"
+    ],
+    "note": "Spins about the axle (x). Front wheels also steer about y: add a Steer pivot node above the wheel node."
+   }
+  ],
+  "anticipate": [
+   "Wheel nodes with the pivot at the hub, so they can spin and steer.",
+   "Suspension travel: the body and wheels are separate nodes."
+  ],
+  "pitfalls": [
+   "Wheels merged into the body, or with the pivot at a corner, cannot spin.",
+   "Wheels that do not touch y = 0 make the vehicle float or sink."
+  ]
+ },
+ {
+  "id": "vehicle.wheeled.car",
+  "name": "car",
+  "description": "A passenger car.",
+  "aliases": [
+   "car",
+   "cars",
+   "auto",
+   "autos",
+   "personenauto",
+   "passenger car",
+   "sedan",
+   "hatchback",
+   "suv",
+   "estate car",
+   "stationwagen",
+   "coupe",
+   "cabriolet",
+   "automobile",
+   "wagen"
+  ],
+  "extends": "vehicle.wheeled",
+  "hints": [
+   "passenger",
+   "drive",
+   "sedan",
+   "road"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "chassis",
+     "carrosserie",
+     "hull"
+    ]
+   },
+   {
+    "name": "Wheel",
+    "role": "wheel",
+    "required": true,
+    "count": 4,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "wheel",
+     "tire",
+     "tyre",
+     "wiel",
+     "band"
+    ],
+    "note": "Front wheels also steer about y."
+   },
+   {
+    "name": "Glass",
+    "role": "glazing",
+    "required": true,
+    "aliases": [
+     "glass",
+     "window",
+     "windows",
+     "windshield",
+     "cabin",
+     "ruit",
+     "ruiten",
+     "raam",
+     "cockpit"
+    ],
+    "note": "Windscreen and windows, as a separate transparent material."
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": false,
+    "count": [
+     2,
+     5
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "door",
+     "deur"
+    ],
+    "note": "Hinged at the front edge, about a vertical axis."
+   },
+   {
+    "name": "Hood",
+    "role": "panel",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "hood",
+     "bonnet",
+     "motorkap"
+    ]
+   },
+   {
+    "name": "Trunk",
+    "role": "panel",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "trunk",
+     "boot",
+     "tailgate",
+     "kofferklep",
+     "achterklep"
+    ]
+   },
+   {
+    "name": "Headlight",
+    "role": "light",
+    "required": false,
+    "count": 2,
+    "aliases": [
+     "headlight",
+     "headlamp",
+     "koplamp"
+    ]
+   },
+   {
+    "name": "Taillight",
+    "role": "light",
+    "required": false,
+    "count": 2,
+    "aliases": [
+     "taillight",
+     "rear light",
+     "achterlicht"
+    ]
+   },
+   {
+    "name": "Mirror",
+    "role": "mirror",
+    "required": false,
+    "count": 2,
+    "aliases": [
+     "mirror",
+     "spiegel"
+    ]
+   },
+   {
+    "name": "SteeringWheel",
+    "role": "control",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "steering wheel",
+     "stuurwiel",
+     "stuur"
+    ],
+    "note": "Inside the cabin; the pivot is the column axis."
+   }
+  ],
+  "scale": {
+   "length": [
+    3.4,
+    5.3
+   ],
+   "width": [
+    1.6,
+    2.0
+   ],
+   "height": [
+    1.3,
+    1.9
+   ],
+   "source": "general knowledge: typical production range, not a standard for passenger cars (city car to large SUV); wheel diameter about 0.55-0.80 m",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "body style",
+    "options": [
+     "sedan",
+     "hatchback",
+     "estate",
+     "SUV",
+     "coupe",
+     "convertible",
+     "pickup",
+     "van"
+    ]
+   },
+   {
+    "axis": "era",
+    "options": [
+     "classic",
+     "modern",
+     "electric"
+    ]
+   }
+  ],
+  "anticipate": [
+   "Wheelbase about 55-60% of the length; wheels near the corners.",
+   "Four wheel nodes named by position (Wheel_FL, Wheel_FR, Wheel_RL, Wheel_RR); the front ones steer."
+  ],
+  "pitfalls": [
+   "Boxy 'brick' cars read as toys: give the body a loft with a tapered nose and tail.",
+   "Glass and body in one material cannot be transparent."
+  ]
+ },
+ {
+  "id": "vehicle.wheeled.truck",
+  "name": "truck",
+  "description": "A lorry or goods vehicle.",
+  "aliases": [
+   "truck",
+   "trucks",
+   "lorry",
+   "vrachtwagen",
+   "vrachtauto",
+   "semi",
+   "semi-trailer",
+   "pickup truck",
+   "bakwagen",
+   "tractor unit"
+  ],
+  "extends": "vehicle.wheeled",
+  "hints": [
+   "cargo",
+   "freight",
+   "goods",
+   "lading",
+   "haul"
+  ],
+  "parts": [
+   {
+    "name": "Cab",
+    "role": "cab",
+    "required": true,
+    "aliases": [
+     "cab",
+     "cabin",
+     "cabine",
+     "truck cab"
+    ]
+   },
+   {
+    "name": "Chassis",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "chassis",
+     "frame",
+     "body",
+     "laadbak",
+     "cargo bed",
+     "box"
+    ]
+   },
+   {
+    "name": "Wheel",
+    "role": "wheel",
+    "required": true,
+    "count": [
+     4,
+     18
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "wheel",
+     "tire",
+     "tyre",
+     "wiel",
+     "band"
+    ],
+    "note": "Dual rear wheels count as separate nodes; only the front axle steers."
+   },
+   {
+    "name": "Trailer",
+    "role": "trailer",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "trailer",
+     "oplegger",
+     "aanhanger"
+    ],
+    "note": "Coupled at the fifth wheel; pivot at the coupling."
+   }
+  ],
+  "scale": {
+   "length": [
+    6,
+    16.5
+   ],
+   "width": [
+    2.3,
+    2.6
+   ],
+   "height": [
+    2.5,
+    4.0
+   ],
+   "source": "EU Directive 96/53/EC limits 2.55 m width and 16.5 m articulated length; other sizes are general knowledge",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "kind",
+    "options": [
+     "rigid",
+     "tractor + trailer",
+     "tipper",
+     "tanker",
+     "box van",
+     "flatbed"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "Trailers must be separate nodes with a pivot at the coupling, or they cannot swing."
+  ]
+ },
+ {
+  "id": "vehicle.wheeled.bus",
+  "name": "bus",
+  "description": "A road bus or coach.",
+  "aliases": [
+   "bus",
+   "buses",
+   "coach",
+   "touringcar",
+   "stadsbus",
+   "streekbus",
+   "double decker",
+   "dubbeldekker",
+   "tram bus"
+  ],
+  "extends": "vehicle.wheeled",
+  "hints": [
+   "passengers",
+   "public",
+   "route",
+   "stop"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "chassis",
+     "carrosserie"
+    ]
+   },
+   {
+    "name": "Wheel",
+    "role": "wheel",
+    "required": true,
+    "count": [
+     4,
+     8
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "wheel",
+     "tire",
+     "tyre",
+     "wiel",
+     "band"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "x"
+     },
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "door",
+     "deur"
+    ],
+    "note": "Folding or sliding passenger doors."
+   },
+   {
+    "name": "Glass",
+    "role": "glazing",
+    "required": true,
+    "aliases": [
+     "glass",
+     "windows",
+     "ruiten"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    8,
+    18.75
+   ],
+   "width": [
+    2.4,
+    2.55
+   ],
+   "height": [
+    2.9,
+    4.2
+   ],
+   "source": "EU limits: 2.55 m width, 18.75 m articulated length; heights are general knowledge",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "vehicle.wheeled.motorcycle",
+  "name": "motorcycle",
+  "description": "A motorbike or scooter.",
+  "aliases": [
+   "motorcycle",
+   "motorbike",
+   "motor",
+   "motorfiets",
+   "scooter",
+   "bike",
+   "brommer",
+   "moped"
+  ],
+  "extends": "vehicle.wheeled",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "frame",
+     "body",
+     "chassis",
+     "tank"
+    ]
+   },
+   {
+    "name": "WheelFront",
+    "role": "wheel",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     },
+     {
+      "kind": "steer",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "front wheel",
+     "voorwiel",
+     "wheel"
+    ],
+    "note": "Steers with the fork: put it under the Fork node."
+   },
+   {
+    "name": "WheelRear",
+    "role": "wheel",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "rear wheel",
+     "achterwiel"
+    ]
+   },
+   {
+    "name": "Fork",
+    "role": "steering",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "steer",
+      "axis": "y"
+     }
+    ],
+    "pivot": "mount",
+    "aliases": [
+     "fork",
+     "voorvork",
+     "handlebar",
+     "stuur"
+    ],
+    "note": "Rotates about the steering axis, which leans back about 25-30 degrees."
+   }
+  ],
+  "scale": {
+   "length": [
+    1.7,
+    2.5
+   ],
+   "width": [
+    0.6,
+    1.0
+   ],
+   "height": [
+    0.9,
+    1.5
+   ],
+   "source": "general knowledge: typical production range, not a standard; wheel diameter about 0.5-0.7 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "The steering axis is tilted, not vertical: a vertical pivot makes the front wheel wobble sideways."
+  ]
+ },
+ {
+  "id": "vehicle.wheeled.bicycle",
+  "name": "bicycle",
+  "description": "A pedal bicycle.",
+  "aliases": [
+   "bicycle",
+   "bike",
+   "fiets",
+   "racefiets",
+   "mountainbike",
+   "mtb",
+   "cycle",
+   "e-bike",
+   "ebike"
+  ],
+  "extends": "vehicle.wheeled",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "frame",
+     "body"
+    ]
+   },
+   {
+    "name": "WheelFront",
+    "role": "wheel",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     },
+     {
+      "kind": "steer",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "front wheel",
+     "voorwiel",
+     "wheel"
+    ]
+   },
+   {
+    "name": "WheelRear",
+    "role": "wheel",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "rear wheel",
+     "achterwiel"
+    ]
+   },
+   {
+    "name": "Crank",
+    "role": "pedal",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "crank",
+     "pedals",
+     "trapas",
+     "pedaal"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    1.5,
+    2.0
+   ],
+   "width": [
+    0.5,
+    0.7
+   ],
+   "height": [
+    0.9,
+    1.2
+   ],
+   "source": "general knowledge: typical production range, not a standard; wheels 26-29 inch (about 0.66-0.73 m)",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "vehicle.wheeled.tractor",
+  "name": "tractor",
+  "description": "A farm tractor.",
+  "aliases": [
+   "tractor",
+   "tractors",
+   "trekker",
+   "landbouwtractor",
+   "farm tractor",
+   "boerentrekker"
+  ],
+  "extends": "vehicle.wheeled",
+  "hints": [
+   "farm",
+   "field",
+   "plough",
+   "boer",
+   "landbouw",
+   "akker"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "hood",
+     "engine cover",
+     "motorkap"
+    ]
+   },
+   {
+    "name": "Cab",
+    "role": "cab",
+    "required": true,
+    "aliases": [
+     "cab",
+     "cabin",
+     "cabine"
+    ]
+   },
+   {
+    "name": "WheelRear",
+    "role": "wheel",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "rear wheel",
+     "achterwiel",
+     "wheel"
+    ],
+    "note": "The large pair, about 1.4-2.1 m diameter."
+   },
+   {
+    "name": "WheelFront",
+    "role": "wheel",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     },
+     {
+      "kind": "steer",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "front wheel",
+     "voorwiel"
+    ],
+    "note": "The smaller pair, about 0.8-1.4 m diameter; they steer."
+   },
+   {
+    "name": "Hitch",
+    "role": "implement",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "hitch",
+     "linkage",
+     "hef",
+     "arm"
+    ],
+    "note": "Three-point linkage at the rear."
+   }
+  ],
+  "scale": {
+   "length": [
+    3.0,
+    6.5
+   ],
+   "width": [
+    1.8,
+    3.0
+   ],
+   "height": [
+    2.5,
+    3.6
+   ],
+   "source": "general knowledge: typical production range, not a standard; EU road width limit is 2.55 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Rear wheels are much larger than the front ones: equal wheels look like a toy."
+  ]
+ },
+ {
+  "id": "vehicle.tracked",
+  "name": "tracked vehicle",
+  "description": "A vehicle that runs on tracks.",
+  "aliases": [
+   "tracked vehicle",
+   "rupsvoertuig",
+   "crawler"
+  ],
+  "extends": "vehicle",
+  "hints": [
+   "track",
+   "tracks",
+   "rups",
+   "caterpillar"
+  ],
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "body",
+     "chassis"
+    ]
+   },
+   {
+    "name": "Track",
+    "role": "track",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "z"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "track",
+     "tracks",
+     "rups",
+     "rupsband"
+    ],
+    "note": "Animate by scrolling the track texture; the road wheels spin."
+   },
+   {
+    "name": "RoadWheel",
+    "role": "wheel",
+    "required": true,
+    "count": [
+     4,
+     16
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "road wheel",
+     "roller",
+     "wheel",
+     "wiel"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "Tracks modelled as a single solid slab cannot show motion: use a texture offset or separate link nodes."
+  ]
+ },
+ {
+  "id": "vehicle.tracked.tank",
+  "name": "tank",
+  "description": "A battle tank.",
+  "aliases": [
+   "tank",
+   "tanks",
+   "battle tank",
+   "main battle tank",
+   "mbt",
+   "tank vehicle",
+   "gevechtstank",
+   "pantser",
+   "panzer"
+  ],
+  "extends": "vehicle.tracked",
+  "hints": [
+   "turret",
+   "gun",
+   "cannon",
+   "kanon",
+   "armor",
+   "pantser"
+  ],
+  "parts": [
+   {
+    "name": "Turret",
+    "role": "turret",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "base",
+    "aliases": [
+     "turret",
+     "geschutskoepel",
+     "koepel"
+    ],
+    "note": "Rotates about the vertical axis through the turret ring."
+   },
+   {
+    "name": "Gun",
+    "role": "weapon",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "gun",
+     "barrel",
+     "cannon",
+     "kanon",
+     "loop"
+    ],
+    "note": "Elevates about the trunnion, a horizontal axis in the turret; recoil slides along z."
+   }
+  ],
+  "scale": {
+   "length": [
+    6.0,
+    11.0
+   ],
+   "width": [
+    3.0,
+    3.8
+   ],
+   "height": [
+    2.2,
+    3.0
+   ],
+   "source": "general knowledge: typical production range, not a standard; the low end is the hull, the high end includes a forward-pointing gun",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A gun fused to the turret cannot elevate: the turret, gun and mantlet are separate nodes."
+  ]
+ },
+ {
+  "id": "vehicle.rail",
+  "name": "rail vehicle",
+  "description": "A vehicle that runs on rails.",
+  "aliases": [
+   "rail vehicle",
+   "railway vehicle",
+   "spoorvoertuig"
+  ],
+  "extends": "vehicle",
+  "hints": [
+   "rail",
+   "rails",
+   "spoor",
+   "station",
+   "track"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "carriage",
+     "coach",
+     "wagon"
+    ]
+   },
+   {
+    "name": "Bogie",
+    "role": "bogie",
+    "required": true,
+    "count": [
+     2,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "bogie",
+     "draaistel",
+     "truck"
+    ],
+    "note": "Carries the wheelsets; pivots under the body."
+   },
+   {
+    "name": "Wheelset",
+    "role": "wheel",
+    "required": true,
+    "count": [
+     4,
+     8
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "wheelset",
+     "wheel",
+     "wiel",
+     "wielstel"
+    ]
+   }
+  ],
+  "anticipate": [
+   "Standard gauge is 1.435 m between the rail heads (UIC/IEC standard), so the wheelsets sit about 1.5 m apart (x)."
+  ]
+ },
+ {
+  "id": "vehicle.rail.train",
+  "name": "train",
+  "description": "A locomotive, railcar or train.",
+  "aliases": [
+   "train",
+   "trains",
+   "trein",
+   "locomotive",
+   "loc",
+   "railcar",
+   "tram",
+   "metro",
+   "subway",
+   "sneltrein",
+   "intercity",
+   "treinstel"
+  ],
+  "extends": "vehicle.rail",
+  "scale": {
+   "length": [
+    15,
+    27
+   ],
+   "width": [
+    2.8,
+    3.15
+   ],
+   "height": [
+    3.6,
+    4.4
+   ],
+   "source": "general knowledge: typical production range, not a standard for a single locomotive or railcar; UIC maximum width is about 3.15 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Wheelsets that do not sit on the rails (1.435 m gauge) float or clip: check the wheel positions."
+  ]
+ }
+]

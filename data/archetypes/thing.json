@@ -1,0 +1,32 @@
+[
+ {
+  "id": "thing",
+  "name": "thing",
+  "description": "Anything that can be a 3D model. The conventions here apply to every model.",
+  "aliases": [
+   "thing",
+   "object",
+   "item",
+   "model",
+   "ding",
+   "voorwerp",
+   "asset"
+  ],
+  "conventions": [
+   "Units are metres. +Y is up. The front of the model faces +Z (Godot's Vector3.MODEL_FRONT, also the glTF convention), so the model's left side is +X.",
+   "The origin sits on the ground (y = 0), under the centre of the model or under the point a user will place it by.",
+   "Every part that moves gets its own node, with the node origin at its pivot. Use PascalCase names and keep sibling names unique.",
+   "Apply scale and rotation before export: scale 1 on every node, no negative scale.",
+   "Left and right halves are exact mirror images unless the object is asymmetric by design."
+  ],
+  "anticipate": [
+   "A simple collision shape (a box or convex hull), not the visual mesh.",
+   "A triangle budget, and LODs for anything that will appear many times.",
+   "Few materials: every material is a draw call, so share textures where you can."
+  ],
+  "pitfalls": [
+   "A model that is 100 times too big or small (a unit mistake) is the most common error: check the size against the typical range.",
+   "A moving part baked into the body mesh cannot be animated later."
+  ]
+ }
+]

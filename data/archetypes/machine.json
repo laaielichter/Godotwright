@@ -1,0 +1,365 @@
+[
+ {
+  "id": "machine",
+  "name": "machine",
+  "description": "A mechanical device.",
+  "aliases": [
+   "machine",
+   "mechanism",
+   "apparaat",
+   "device",
+   "tool",
+   "gereedschap"
+  ],
+  "extends": "thing",
+  "hints": [
+   "gear",
+   "gears",
+   "piston",
+   "motor",
+   "turbine",
+   "rotates",
+   "spin",
+   "crane",
+   "kraan",
+   "excavator",
+   "graafmachine",
+   "pump",
+   "pomp",
+   "generator",
+   "lift"
+  ],
+  "anticipate": [
+   "Every rotating part is its own node with its pivot on the axis of rotation."
+  ]
+ },
+ {
+  "id": "machine.piston-engine",
+  "name": "piston engine",
+  "description": "A reciprocating combustion engine.",
+  "aliases": [
+   "piston engine",
+   "engine",
+   "motor",
+   "zuigermotor",
+   "combustion engine",
+   "verbrandingsmotor",
+   "v8",
+   "v6",
+   "diesel engine",
+   "dieselmotor",
+   "inline four",
+   "boxer engine",
+   "cilindermotor"
+  ],
+  "extends": "machine",
+  "parts": [
+   {
+    "name": "Block",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "block",
+     "engine block",
+     "motorblok",
+     "body"
+    ]
+   },
+   {
+    "name": "Cylinder",
+    "role": "cylinder",
+    "required": true,
+    "count": [
+     1,
+     12
+    ],
+    "aliases": [
+     "cylinder",
+     "cilinder"
+    ]
+   },
+   {
+    "name": "Piston",
+    "role": "piston",
+    "required": false,
+    "count": [
+     1,
+     12
+    ],
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "y"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "piston",
+     "zuiger"
+    ],
+    "note": "Moves along the cylinder axis; neighbouring pistons are out of phase."
+   },
+   {
+    "name": "Crankshaft",
+    "role": "shaft",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "crankshaft",
+     "krukas"
+    ],
+    "note": "Spins about the length axis."
+   },
+   {
+    "name": "Flywheel",
+    "role": "wheel",
+    "required": false,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "flywheel",
+     "vliegwiel"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.4,
+    1.3
+   ],
+   "width": [
+    0.4,
+    0.9
+   ],
+   "height": [
+    0.4,
+    0.9
+   ],
+   "source": "general knowledge: typical production range, not a standard for car and light-truck engines",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "layout",
+    "options": [
+     "inline",
+     "V",
+     "boxer",
+     "radial"
+    ]
+   },
+   {
+    "axis": "cylinders",
+    "options": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "6",
+     "8",
+     "12"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "machine.jet-engine",
+  "name": "jet engine",
+  "description": "A turbofan or turbojet.",
+  "aliases": [
+   "jet engine",
+   "turbofan",
+   "turbojet",
+   "straalmotor",
+   "gas turbine",
+   "gasturbine",
+   "turbine engine",
+   "turbine"
+  ],
+  "extends": "machine",
+  "parts": [
+   {
+    "name": "Nacelle",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "nacelle",
+     "casing",
+     "body",
+     "gondel"
+    ]
+   },
+   {
+    "name": "Fan",
+    "role": "rotor",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "fan",
+     "compressor",
+     "blower"
+    ],
+    "note": "Spins about the engine axis (z)."
+   },
+   {
+    "name": "Nozzle",
+    "role": "nozzle",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "nozzle",
+     "exhaust",
+     "uitlaat"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2,
+    7
+   ],
+   "width": [
+    0.8,
+    3.5
+   ],
+   "height": [
+    0.8,
+    3.5
+   ],
+   "source": "general knowledge: typical production range, not a standard; the GE90 fan is about 3.1 m across",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "machine.wind-turbine",
+  "name": "wind turbine",
+  "description": "A modern electricity-generating wind turbine.",
+  "aliases": [
+   "wind turbine",
+   "windturbine",
+   "wind turbines",
+   "windmolen",
+   "windmolens",
+   "turbine generator",
+   "windpark",
+   "wind generator"
+  ],
+  "extends": "machine",
+  "hints": [
+   "electricity",
+   "elektriciteit",
+   "generator",
+   "energy",
+   "stroom"
+  ],
+  "parts": [
+   {
+    "name": "Tower",
+    "role": "tower",
+    "required": true,
+    "aliases": [
+     "tower",
+     "mast",
+     "toren"
+    ]
+   },
+   {
+    "name": "Nacelle",
+    "role": "body",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "base",
+    "aliases": [
+     "nacelle",
+     "gondola",
+     "gondel"
+    ],
+    "note": "Rotates about the tower axis to face the wind."
+   },
+   {
+    "name": "Rotor",
+    "role": "rotor",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "rotor",
+     "hub",
+     "naaf"
+    ],
+    "note": "Spins about the horizontal axis (z) through the hub."
+   },
+   {
+    "name": "Blade",
+    "role": "blade",
+    "required": true,
+    "count": 3,
+    "moves": [
+     {
+      "kind": "pitch",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "blade",
+     "rotorblad",
+     "wiek"
+    ],
+    "note": "Three blades 120 degrees apart; pitch about their length axis."
+   }
+  ],
+  "scale": {
+   "length": [
+    5,
+    20
+   ],
+   "width": [
+    5,
+    20
+   ],
+   "height": [
+    60,
+    220
+   ],
+   "source": "general knowledge: typical production range, not a standard: height is hub height plus a blade; rotor diameter about 60-220 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "The tower tapers: a straight cylinder looks cheap.",
+   "Blades must spin about the horizontal axis through the nacelle, not the tower."
+  ]
+ }
+]

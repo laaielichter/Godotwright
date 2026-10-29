@@ -1,0 +1,478 @@
+[
+ {
+  "id": "building",
+  "name": "building",
+  "description": "A building or structure people can enter.",
+  "aliases": [
+   "building",
+   "gebouw",
+   "structure",
+   "bouwwerk",
+   "construction"
+  ],
+  "extends": "thing",
+  "hints": [
+   "room",
+   "rooms",
+   "floor",
+   "floors",
+   "door",
+   "window",
+   "windows",
+   "roof",
+   "dak",
+   "verdieping",
+   "kamer",
+   "wall",
+   "walls",
+   "castle",
+   "kasteel",
+   "fort",
+   "palace",
+   "paleis",
+   "shop",
+   "winkel",
+   "school",
+   "hospital",
+   "ziekenhuis",
+   "station",
+   "villa"
+  ],
+  "conventions": [
+   "A building's origin is at the centre of its footprint on the ground (y = 0); the main entrance faces +Z."
+  ],
+  "anticipate": [
+   "Windows and doors as separate parts, so they can be lit, opened or swapped.",
+   "LODs: houses appear in large numbers.",
+   "A footprint polygon for navigation and placement."
+  ],
+  "pitfalls": [
+   "A box with a hat reads as a toy: add a plinth, an overhang, window reveals and a chimney."
+  ]
+ },
+ {
+  "id": "building.house",
+  "name": "house",
+  "description": "A house or small home.",
+  "aliases": [
+   "house",
+   "houses",
+   "huis",
+   "huizen",
+   "home",
+   "cottage",
+   "villa",
+   "bungalow",
+   "woning",
+   "rijtjeshuis",
+   "terraced house",
+   "farmhouse",
+   "boerderij",
+   "hut"
+  ],
+  "extends": "building",
+  "parts": [
+   {
+    "name": "Walls",
+    "role": "walls",
+    "required": true,
+    "aliases": [
+     "walls",
+     "muren",
+     "body"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "door",
+     "deur"
+    ],
+    "note": "On the +Z (front) wall."
+   },
+   {
+    "name": "Windows",
+    "role": "glazing",
+    "required": true,
+    "aliases": [
+     "windows",
+     "window",
+     "ramen",
+     "raam"
+    ]
+   },
+   {
+    "name": "Chimney",
+    "role": "chimney",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "chimney",
+     "schoorsteen"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    6,
+    20
+   ],
+   "width": [
+    5,
+    15
+   ],
+   "height": [
+    5,
+    12
+   ],
+   "source": "general knowledge: typical production range, not a standard for a detached or terraced house; storey height about 2.6-3.0 m",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "roof",
+    "options": [
+     "gable",
+     "hip",
+     "flat",
+     "mansard"
+    ]
+   },
+   {
+    "axis": "floors",
+    "options": [
+     "1",
+     "2",
+     "3"
+    ]
+   },
+   {
+    "axis": "style",
+    "options": [
+     "modern",
+     "traditional",
+     "farmhouse"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "building.apartment",
+  "name": "apartment block",
+  "description": "A block of flats.",
+  "aliases": [
+   "apartment",
+   "apartment block",
+   "flat",
+   "flats",
+   "appartement",
+   "appartementencomplex",
+   "block of flats",
+   "woonblok",
+   "residential block",
+   "highrise",
+   "portiekflat"
+  ],
+  "extends": "building",
+  "scale": {
+   "length": [
+    12,
+    80
+   ],
+   "width": [
+    10,
+    20
+   ],
+   "height": [
+    12,
+    60
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "building.tower",
+  "name": "tower",
+  "description": "A tall building or tower.",
+  "aliases": [
+   "tower",
+   "skyscraper",
+   "wolkenkrabber",
+   "toren",
+   "office tower",
+   "kantoortoren",
+   "high-rise",
+   "hoogbouw",
+   "lighthouse",
+   "vuurtoren",
+   "watchtower",
+   "uitkijktoren",
+   "water tower",
+   "watertoren"
+  ],
+  "extends": "building",
+  "scale": {
+   "length": [
+    15,
+    100
+   ],
+   "width": [
+    15,
+    100
+   ],
+   "height": [
+    30,
+    830
+   ],
+   "source": "general knowledge: typical production range, not a standard; the tallest building is about 830 m (Burj Khalifa)",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Tall towers need a repeating facade (a few tiling textures), not unique modelling per floor."
+  ]
+ },
+ {
+  "id": "building.barn",
+  "name": "barn",
+  "description": "A barn or farm building.",
+  "aliases": [
+   "barn",
+   "schuur",
+   "stal",
+   "loods",
+   "shed",
+   "warehouse",
+   "magazijn",
+   "hangar",
+   "silo",
+   "farm building",
+   "boerenschuur"
+  ],
+  "extends": "building",
+  "scale": {
+   "length": [
+    10,
+    60
+   ],
+   "width": [
+    8,
+    30
+   ],
+   "height": [
+    6,
+    15
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "building.church",
+  "name": "church",
+  "description": "A church or similar landmark.",
+  "aliases": [
+   "church",
+   "kerk",
+   "chapel",
+   "kapel",
+   "cathedral",
+   "kathedraal",
+   "mosque",
+   "moskee",
+   "temple",
+   "tempel",
+   "synagogue",
+   "abbey",
+   "abdij"
+  ],
+  "extends": "building",
+  "parts": [
+   {
+    "name": "Nave",
+    "role": "walls",
+    "required": true,
+    "aliases": [
+     "nave",
+     "body",
+     "walls",
+     "schip"
+    ]
+   },
+   {
+    "name": "Spire",
+    "role": "tower",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "spire",
+     "steeple",
+     "tower",
+     "toren",
+     "torenspits"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    20,
+    120
+   ],
+   "width": [
+    10,
+    60
+   ],
+   "height": [
+    15,
+    150
+   ],
+   "source": "general knowledge: typical production range, not a standard; cathedral spires can pass 150 m",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "building.windmill",
+  "name": "windmill",
+  "description": "A traditional windmill that grinds grain or pumps water.",
+  "aliases": [
+   "windmill",
+   "windmolen",
+   "molen",
+   "korenmolen",
+   "poldermolen",
+   "standerdmolen",
+   "grondzeiler",
+   "stellingmolen",
+   "watermill",
+   "watermolen"
+  ],
+  "extends": "building",
+  "hints": [
+   "sails",
+   "wieken",
+   "grain",
+   "graan",
+   "polder"
+  ],
+  "parts": [
+   {
+    "name": "Tower",
+    "role": "tower",
+    "required": true,
+    "aliases": [
+     "tower",
+     "body",
+     "romp",
+     "toren"
+    ]
+   },
+   {
+    "name": "Cap",
+    "role": "roof",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "base",
+    "aliases": [
+     "cap",
+     "kap"
+    ],
+    "note": "Rotates about the tower axis to face the wind."
+   },
+   {
+    "name": "Sails",
+    "role": "rotor",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "sails",
+     "wieken",
+     "blades",
+     "rotor"
+    ],
+    "note": "Four sails on a horizontal axis (z) through the cap; the axle leans up a few degrees."
+   },
+   {
+    "name": "Gallery",
+    "role": "gallery",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "gallery",
+     "stage",
+     "galerij"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    6,
+    14
+   ],
+   "width": [
+    6,
+    14
+   ],
+   "height": [
+    8,
+    40
+   ],
+   "source": "general knowledge: typical production range, not a standard; sail span about 15-30 m",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "type",
+    "options": [
+     "tower mill",
+     "post mill",
+     "smock mill (grondzeiler)",
+     "watermill"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "'Windmolen' in Dutch can also mean a modern wind turbine: say which one you want."
+  ]
+ }
+]

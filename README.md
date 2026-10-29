@@ -66,6 +66,8 @@ godotwright model car.glb             # what is in a 3D model: nodes, triangles,
 godotwright model lint car.glb        # model review with a score per category
 godotwright model contract car.glb    # write a model.contract.json: node names, size, budget
 godotwright model lint car.glb --contract model.contract.json
+godotwright model identify "a tractor" # what it is: parts, size, variants, what to anticipate
+godotwright model archetypes          # the family tree of things Godotwright knows
 godotwright model kinds               # what `model build` can make, with parameters
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright learn                     # what Godotwright learned on this machine
@@ -128,6 +130,15 @@ same parameters. The result goes straight through `model lint`, and `--contract-
 `model.contract.json` for it. `model kinds` lists the kinds with their parameters, ranges and defaults;
 set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
 to be refined, not hand-sculpted art. Kinds today: `house`.
+
+`model identify` says **what a thing is** before you build it, from its name in English or Dutch (typos,
+plurals and Dutch compounds like "vrachtauto" included) or from a description ("something with wheels and
+an engine"). It answers with the family it belongs to, the parts a model of it needs (and which move, about
+which axis, with the pivot where), a typical size range with its source and a confidence class, the variants
+(a car can be a sedan, a hatchback, a pickup), the Godot conventions (+Y up, the front faces +Z), what to
+anticipate (collision, LODs, lights) and the usual mistakes. A word that means two things (the Dutch
+"windmolen") is reported as ambiguous, and something it does not know gets the nearest family, marked
+generic, instead of a made-up answer. The library is data in `data/archetypes/` and grows with pull requests.
 
 Anything else is built from a **model spec**: a JSON tree of named parts (box, cylinder, ellipsoid,
 lathe, loft, extrude, roof) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic
