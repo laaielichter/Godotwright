@@ -28,6 +28,8 @@ describe("expressions", () => {
     expect(evaluate("max($a, 1) * min(2, 3)", { a: 5 })).toBe(10);
     expect(evaluate("sin(rad(90)) + cos(0) + pi", {})).toBeCloseTo(2 + Math.PI);
     expect(evaluate("clamp(5, 0, 3) + lerp(0, 10, 0.5) + abs(-1) + sqrt(16)", {})).toBe(3 + 5 + 1 + 4);
+    expect(evaluate("deg(atan2(1, 1))", {})).toBeCloseTo(45);
+    expect(evaluate("hypot(3, 4) + deg(asin(1)) + deg(acos(1)) + deg(atan(1))", {})).toBeCloseTo(5 + 90 + 0 + 45);
   });
 
   it("explains mistakes, and never runs code", () => {

@@ -1,0 +1,629 @@
+{
+ "version": 1,
+ "name": "bicycle",
+ "archetype": "vehicle.wheeled.bicycle",
+ "description": "A city bicycle: a diamond frame of round tubes, a steering fork with handlebar that carries the front wheel, a rear wheel with spokes, a saddle and a crank with pedals.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 1.75,
+   "min": 1.5,
+   "max": 2.0,
+   "description": "Overall length in metres."
+  },
+  {
+   "name": "wheelRadius",
+   "type": "number",
+   "default": 0.34,
+   "min": 0.3,
+   "max": 0.37,
+   "description": "Wheel radius including the tyre (28 inch is about 0.34)."
+  }
+ ],
+ "materials": {
+  "bike_paint": {
+   "color": [
+    0.1,
+    0.35,
+    0.55
+   ],
+   "metallic": 0.4,
+   "roughness": 0.35
+  }
+ },
+ "nodes": [
+  {
+   "name": "Bicycle",
+   "material": "bike_paint",
+   "vars": {
+    "R": "$wheelRadius",
+    "wb": "$length * 0.62",
+    "bby": 0.3,
+    "bbz": "-$wb * 0.08",
+    "sty": "$R + 0.62",
+    "stz": "-$wb * 0.2",
+    "hty": "$R + 0.6",
+    "htz": "$wb / 2 - 0.1",
+    "hby": "$R + 0.42",
+    "hbz": "$wb / 2 - 0.06"
+   },
+   "children": [
+    {
+     "name": "Frame",
+     "children": [
+      {
+       "name": "DownTube",
+       "shape": "cylinder",
+       "radius": 0.017,
+       "segments": 10,
+       "height": "hypot(($hby) - ($bby), ($hbz) - ($bbz))",
+       "at": [
+        0,
+        "(($bby) + ($hby)) / 2",
+        "(($bbz) + ($hbz)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2(($hbz) - ($bbz), ($hby) - ($bby)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "TopTube",
+       "shape": "cylinder",
+       "radius": 0.015,
+       "segments": 10,
+       "height": "hypot(($hty) - ($sty - 0.05), ($htz) - ($stz))",
+       "at": [
+        0,
+        "(($sty - 0.05) + ($hty)) / 2",
+        "(($stz) + ($htz)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2(($htz) - ($stz), ($hty) - ($sty - 0.05)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "SeatTube",
+       "shape": "cylinder",
+       "radius": 0.015,
+       "segments": 10,
+       "height": "hypot(($sty) - ($bby), ($stz) - ($bbz))",
+       "at": [
+        0,
+        "(($bby) + ($sty)) / 2",
+        "(($bbz) + ($stz)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2(($stz) - ($bbz), ($sty) - ($bby)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "ChainStay",
+       "shape": "cylinder",
+       "radius": 0.011,
+       "segments": 8,
+       "height": "hypot(($R) - ($bby), (-$wb / 2) - ($bbz))",
+       "at": [
+        0,
+        "(($bby) + ($R)) / 2",
+        "(($bbz) + (-$wb / 2)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2((-$wb / 2) - ($bbz), ($R) - ($bby)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "SeatStay",
+       "shape": "cylinder",
+       "radius": 0.01,
+       "segments": 8,
+       "height": "hypot(($R) - ($sty - 0.04), (-$wb / 2) - ($stz))",
+       "at": [
+        0,
+        "(($sty - 0.04) + ($R)) / 2",
+        "(($stz) + (-$wb / 2)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2((-$wb / 2) - ($stz), ($R) - ($sty - 0.04)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "HeadTube",
+       "shape": "cylinder",
+       "radius": 0.02,
+       "segments": 10,
+       "height": "hypot(($hty) - ($hby), ($htz) - ($hbz))",
+       "at": [
+        0,
+        "(($hby) + ($hty)) / 2",
+        "(($hbz) + ($htz)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2(($htz) - ($hbz), ($hty) - ($hby)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Saddle",
+       "shape": "box",
+       "material": "rubber",
+       "size": [
+        0.14,
+        0.04,
+        0.26
+       ],
+       "at": [
+        0,
+        "$sty + 0.07",
+        "$stz - 0.03"
+       ]
+      },
+      {
+       "name": "Seatpost",
+       "shape": "cylinder",
+       "material": "metal",
+       "radius": 0.014,
+       "height": 0.16,
+       "segments": 8,
+       "at": [
+        0,
+        "$sty + 0.02",
+        "$stz"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Crank",
+     "at": [
+      0,
+      "$bby",
+      "$bbz"
+     ],
+     "children": [
+      {
+       "name": "Spindle",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.02,
+       "height": 0.2,
+       "segments": 10
+      },
+      {
+       "name": "Chainring",
+       "shape": "lathe",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "segments": 28,
+       "profile": [
+        [
+         0,
+         -0.05
+        ],
+        [
+         0.1,
+         -0.05
+        ],
+        [
+         0.1,
+         -0.044
+        ],
+        [
+         0,
+         -0.044
+        ]
+       ]
+      },
+      {
+       "name": "Arm_R",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        0.02,
+        0.17,
+        0.03
+       ],
+       "at": [
+        -0.09,
+        -0.08,
+        0
+       ]
+      },
+      {
+       "name": "Arm_L",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        0.02,
+        0.17,
+        0.03
+       ],
+       "at": [
+        0.09,
+        0.08,
+        0
+       ]
+      },
+      {
+       "name": "Footplate_R",
+       "shape": "box",
+       "material": "rubber",
+       "size": [
+        0.07,
+        0.025,
+        0.1
+       ],
+       "at": [
+        -0.13,
+        -0.16,
+        0
+       ]
+      },
+      {
+       "name": "Footplate_L",
+       "shape": "box",
+       "material": "rubber",
+       "size": [
+        0.07,
+        0.025,
+        0.1
+       ],
+       "at": [
+        0.13,
+        0.16,
+        0
+       ]
+      }
+     ]
+    },
+    {
+     "name": "WheelRear",
+     "at": [
+      0,
+      "$R",
+      "-$wb / 2"
+     ],
+     "children": [
+      {
+       "name": "Tread",
+       "shape": "lathe",
+       "material": "rubber",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "segments": 36,
+       "caps": false,
+       "profile": [
+        [
+         "($R) - 0.03 + 0.03*1.00000",
+         "0.03*0.00000"
+        ],
+        [
+         "($R) - 0.03 + 0.03*0.80902",
+         "0.03*0.58779"
+        ],
+        [
+         "($R) - 0.03 + 0.03*0.30902",
+         "0.03*0.95106"
+        ],
+        [
+         "($R) - 0.03 + 0.03*-0.30902",
+         "0.03*0.95106"
+        ],
+        [
+         "($R) - 0.03 + 0.03*-0.80902",
+         "0.03*0.58779"
+        ],
+        [
+         "($R) - 0.03 + 0.03*-1.00000",
+         "0.03*0.00000"
+        ],
+        [
+         "($R) - 0.03 + 0.03*-0.80902",
+         "0.03*-0.58779"
+        ],
+        [
+         "($R) - 0.03 + 0.03*-0.30902",
+         "0.03*-0.95106"
+        ],
+        [
+         "($R) - 0.03 + 0.03*0.30902",
+         "0.03*-0.95106"
+        ],
+        [
+         "($R) - 0.03 + 0.03*0.80902",
+         "0.03*-0.58779"
+        ],
+        [
+         "($R) - 0.03 + 0.03*1.00000",
+         "0.03*-0.00000"
+        ]
+       ]
+      },
+      {
+       "name": "Rim",
+       "shape": "lathe",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "segments": 36,
+       "caps": false,
+       "profile": [
+        [
+         "$R*0.9",
+         -0.012
+        ],
+        [
+         "$R*0.93",
+         -0.012
+        ],
+        [
+         "$R*0.93",
+         0.012
+        ],
+        [
+         "$R*0.9",
+         0.012
+        ],
+        [
+         "$R*0.9",
+         -0.012
+        ]
+       ]
+      },
+      {
+       "name": "Hub",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.025,
+       "height": 0.1,
+       "segments": 12
+      },
+      {
+       "name": "Spoke",
+       "shape": "cylinder",
+       "material": "metal",
+       "radius": 0.003,
+       "height": "$R*0.88",
+       "segments": 4,
+       "offset": [
+        0,
+        "$R*0.44",
+        0
+       ],
+       "repeat": {
+        "count": 12,
+        "around": "x"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Fork",
+     "at": [
+      0,
+      "$hby",
+      "$hbz"
+     ],
+     "children": [
+      {
+       "name": "Blade",
+       "shape": "cylinder",
+       "radius": 0.012,
+       "segments": 8,
+       "height": "hypot(($R - $hby) - (0), ($wb / 2 - $hbz) - (0))",
+       "at": [
+        0,
+        "((0) + ($R - $hby)) / 2",
+        "((0) + ($wb / 2 - $hbz)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2(($wb / 2 - $hbz) - (0), ($R - $hby) - (0)))",
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Stem",
+       "shape": "cylinder",
+       "radius": 0.012,
+       "segments": 8,
+       "height": "hypot(($hty - $hby + 0.1) - (0), ($htz - $hbz) - (0))",
+       "at": [
+        0,
+        "((0) + ($hty - $hby + 0.1)) / 2",
+        "((0) + ($htz - $hbz)) / 2"
+       ],
+       "rotate": [
+        "deg(atan2(($htz - $hbz) - (0), ($hty - $hby + 0.1) - (0)))",
+        0,
+        0
+       ],
+       "material": "metal"
+      },
+      {
+       "name": "Handlebar",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.011,
+       "height": 0.56,
+       "segments": 8,
+       "at": [
+        0,
+        "$hty - $hby + 0.1",
+        "$htz - $hbz"
+       ]
+      },
+      {
+       "name": "WheelFront",
+       "at": [
+        0,
+        "$R - $hby",
+        "$wb / 2 - $hbz"
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 36,
+         "caps": false,
+         "profile": [
+          [
+           "($R) - 0.03 + 0.03*1.00000",
+           "0.03*0.00000"
+          ],
+          [
+           "($R) - 0.03 + 0.03*0.80902",
+           "0.03*0.58779"
+          ],
+          [
+           "($R) - 0.03 + 0.03*0.30902",
+           "0.03*0.95106"
+          ],
+          [
+           "($R) - 0.03 + 0.03*-0.30902",
+           "0.03*0.95106"
+          ],
+          [
+           "($R) - 0.03 + 0.03*-0.80902",
+           "0.03*0.58779"
+          ],
+          [
+           "($R) - 0.03 + 0.03*-1.00000",
+           "0.03*0.00000"
+          ],
+          [
+           "($R) - 0.03 + 0.03*-0.80902",
+           "0.03*-0.58779"
+          ],
+          [
+           "($R) - 0.03 + 0.03*-0.30902",
+           "0.03*-0.95106"
+          ],
+          [
+           "($R) - 0.03 + 0.03*0.30902",
+           "0.03*-0.95106"
+          ],
+          [
+           "($R) - 0.03 + 0.03*0.80902",
+           "0.03*-0.58779"
+          ],
+          [
+           "($R) - 0.03 + 0.03*1.00000",
+           "0.03*-0.00000"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 36,
+         "caps": false,
+         "profile": [
+          [
+           "$R*0.9",
+           -0.012
+          ],
+          [
+           "$R*0.93",
+           -0.012
+          ],
+          [
+           "$R*0.93",
+           0.012
+          ],
+          [
+           "$R*0.9",
+           0.012
+          ],
+          [
+           "$R*0.9",
+           -0.012
+          ]
+         ]
+        },
+        {
+         "name": "Hub",
+         "shape": "cylinder",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "radius": 0.025,
+         "height": 0.1,
+         "segments": 12
+        },
+        {
+         "name": "Spoke",
+         "shape": "cylinder",
+         "material": "metal",
+         "radius": 0.003,
+         "height": "$R*0.88",
+         "segments": 4,
+         "offset": [
+          0,
+          "$R*0.44",
+          0
+         ],
+         "repeat": {
+          "count": 12,
+          "around": "x"
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

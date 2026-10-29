@@ -15,6 +15,12 @@ const FUNCTIONS: Record<string, (...args: number[]) => number> = {
   round: Math.round,
   pow: Math.pow,
   rad: (degrees = 0) => (degrees * Math.PI) / 180,
+  deg: (radians = 0) => (radians * 180) / Math.PI,
+  atan: Math.atan,
+  atan2: Math.atan2,
+  asin: Math.asin,
+  acos: Math.acos,
+  hypot: Math.hypot,
   clamp: (v = 0, lo = 0, hi = 0) => Math.min(hi, Math.max(lo, v)),
   lerp: (a = 0, b = 0, t = 0) => a + (b - a) * t,
 };
