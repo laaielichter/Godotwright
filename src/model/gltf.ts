@@ -175,21 +175,48 @@ function outsideFolder(file: string, uri: string): ModelError {
 const COMPONENTS: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT2: 4, MAT3: 9, MAT4: 16 };
 const BYTES: Record<number, number> = { 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
 
+/** A count, index or offset in a glTF file: a whole number from 0 up, exact in a double. */
+export function isIndex(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+/** A zeroed Float64Array. A length the machine cannot allocate is an error about the file, not an allocator message. */
+function allocate(model: LoadedGltf, index: number, length: number): Float64Array {
+  try {
+    return new Float64Array(length);
+  } catch {
+    throw new ModelError(`${model.file}: accessor ${index} is too large to read`);
+  }
+}
+
 /** Reads an accessor into a flat Float64Array (normalized integers become 0..1 or -1..1). */
 export function readAccessor(model: LoadedGltf, index: number): { data: Float64Array; width: number; count: number } {
   const acc = model.json.accessors?.[index];
   if (!acc) throw new ModelError(`${model.file}: accessor ${index} does not exist`);
-  const width = COMPONENTS[acc.type];
-  const size = BYTES[acc.componentType];
+  const width = Object.hasOwn(COMPONENTS, acc.type) ? COMPONENTS[acc.type] : undefined;
+  const size = typeof acc.componentType === "number" ? BYTES[acc.componentType] : undefined;
   if (!width || !size) throw new ModelError(`${model.file}: accessor ${index} has an unsupported type`);
-  const out = new Float64Array(acc.count * width);
-  if (acc.bufferView === undefined) return { data: out, width, count: acc.count };
+  if (!isIndex(acc.count)) throw new ModelError(`${model.file}: accessor ${index} has no valid count`);
+  // Sparse values would be substituted over zeros; reading without them gives wrong geometry, so refuse.
+  if (acc.sparse !== undefined) throw new ModelError(`${model.file}: accessor ${index} is sparse, and sparse accessors are not supported`);
+  if (acc.bufferView === undefined) return { data: allocate(model, index, acc.count * width), width, count: acc.count };
+  if (!isIndex(acc.bufferView)) throw new ModelError(`${model.file}: accessor ${index} has an invalid bufferView`);
   const view = model.json.bufferViews?.[acc.bufferView];
   const buffer = view && model.buffers[view.buffer];
   if (!view || !buffer) throw new ModelError(`${model.file}: accessor ${index} points at a missing buffer`);
-  const stride = view.byteStride ?? width * size;
-  const base = (view.byteOffset ?? 0) + (acc.byteOffset ?? 0);
-  if (base + (acc.count - 1) * stride + width * size > buffer.length) throw new ModelError(`${model.file}: accessor ${index} reads past the end of its buffer`);
+  const viewStart = view.byteOffset ?? 0;
+  if (!isIndex(viewStart) || !isIndex(view.byteLength)) throw new ModelError(`${model.file}: buffer view ${acc.bufferView} has an invalid byteOffset or byteLength`);
+  const viewEnd = viewStart + view.byteLength;
+  if (viewEnd > buffer.length) throw new ModelError(`${model.file}: buffer view ${acc.bufferView} reads past the end of its buffer`);
+  const element = width * size;
+  const stride = view.byteStride ?? element;
+  const accOffset = acc.byteOffset ?? 0;
+  if (!isIndex(accOffset) || !isIndex(stride) || stride < element) throw new ModelError(`${model.file}: accessor ${index} has an invalid byteOffset or byteStride`);
+  const base = viewStart + accOffset;
+  // Every element must lie inside its buffer view, and the view inside its buffer, before anything is allocated.
+  const last = acc.count === 0 ? base : base + (acc.count - 1) * stride + element;
+  if (last > viewEnd) throw new ModelError(`${model.file}: accessor ${index} reads past the end of its buffer view`);
+  const out = allocate(model, index, acc.count * width);
   for (let i = 0; i < acc.count; i++) {
     for (let c = 0; c < width; c++) {
       const at = base + i * stride + c * size;

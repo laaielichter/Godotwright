@@ -300,6 +300,26 @@ describe("model recipes", () => {
   });
 });
 
+describe("model accessors", () => {
+  it("refuses sparse accessors instead of reading them as zeros", () => {
+    const path = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {
+      j.accessors[0].sparse = { count: 1, indices: { bufferView: 0, componentType: 5125 }, values: { bufferView: 0 } };
+    });
+    expect(() => inspectModel(path)).toThrow(ModelError);
+    expect(() => inspectModel(path)).toThrow(/sparse/);
+  });
+
+  it("gives a clear error for a count that is negative, fractional or too large", () => {
+    for (const count of [-1, 1.5, 1e12]) {
+      const path = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {
+        j.accessors[0].count = count;
+      });
+      expect(() => inspectModel(path), String(count)).toThrow(ModelError);
+      expect(() => inspectModel(path), String(count)).toThrow(/accessor 0/);
+    }
+  });
+});
+
 describe("model files outside the model's folder", () => {
   /** A one-triangle .gltf whose only buffer has the given uri. */
   const gltfWith = (uri: string) =>
