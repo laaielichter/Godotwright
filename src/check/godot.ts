@@ -29,6 +29,23 @@ function isExecutable(path: string): boolean {
   }
 }
 
+/** The folders on PATH, in order. */
+function pathDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[] {
+  return (env["PATH"] ?? env["Path"] ?? "").split(platform === "win32" ? ";" : delimiter).filter(Boolean);
+}
+
+/** The first executable with a bare command name (no folder part) on PATH, as the shell would find it. */
+function onPath(name: string, env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string | undefined {
+  const exts = platform === "win32" ? [".exe", ".cmd", ""] : [""];
+  for (const dir of pathDirs(env, platform)) {
+    for (const ext of exts) {
+      const path = join(dir, name + ext);
+      if (isExecutable(path)) return path;
+    }
+  }
+  return undefined;
+}
+
 /** Sort key for a Godot download: minor, patch, console build first. */
 function rank(name: string): number[] | undefined {
   const official = OFFICIAL.exec(name);
@@ -105,11 +122,14 @@ function installDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[
 export function findGodot(explicit?: string, env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string {
   for (const candidate of [explicit, env["GODOT"], env["GODOT_BIN"]]) {
     if (candidate) {
-      if (isExecutable(candidate)) return candidate;
+      // A bare name such as "godot" is looked up on PATH; a path is checked where it points.
+      const bare = !/[\\/]/.test(candidate);
+      const found = bare ? onPath(candidate, env, platform) : isExecutable(candidate) ? candidate : undefined;
+      if (found) return found;
       throw new Error(`Godot binary not found or not executable: ${candidate}`);
     }
   }
-  for (const dir of (env["PATH"] ?? env["Path"] ?? "").split(platform === "win32" ? ";" : delimiter).filter(Boolean)) {
+  for (const dir of pathDirs(env, platform)) {
     const found = godotIn(dir, platform, false);
     if (found) return found;
   }

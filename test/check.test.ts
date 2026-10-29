@@ -1,6 +1,6 @@
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { checkProject } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
@@ -146,6 +146,14 @@ describe("findGodot", () => {
     expect(findGodot(undefined, { PATH: join(godot, "..") })).toBe(godot);
     expect(() => findGodot(undefined, { PATH: "" })).toThrow(GodotNotFoundError);
     expect(() => findGodot("/no/such/godot", {})).toThrow(/not found or not executable/);
+  });
+
+  it("looks up a bare command name such as godot on PATH", () => {
+    const godot = fakeGodot({});
+    const dir = dirname(godot);
+    expect(findGodot("godot", { PATH: dir })).toBe(godot);
+    expect(findGodot(undefined, { GODOT: "godot", PATH: dir })).toBe(godot);
+    expect(() => findGodot("godot", { PATH: "" })).toThrow(/not found or not executable: godot/);
   });
 
   /** Creates empty executables at the given paths under a fresh home folder. */
