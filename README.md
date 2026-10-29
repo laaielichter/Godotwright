@@ -76,6 +76,7 @@ godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods,
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
+godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
@@ -238,6 +239,28 @@ jobs:
 The toolkit is pinned to a revision; update that revision deliberately when you
 want a newer version. For a game in a subdirectory, set `working-directory` on
 the review step to the folder containing `project.godot`.
+
+To see the findings inline on pull requests, upload the review as SARIF to GitHub
+code scanning (this needs `security-events: write` and the repository's code
+scanning enabled):
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npx --yes godotwright review . --sarif > godotwright.sarif || true
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: godotwright.sarif
+```
 
 ## Mods and patches over a game
 
