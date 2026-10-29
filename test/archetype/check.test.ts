@@ -184,6 +184,31 @@ describe("the CLI", () => {
     expect(json.archetype).toBe("vehicle.wheeled.car");
   });
 
+  it("says what it compared: parts found, nodes that matched nothing, and whether size was checked", async () => {
+    const good = writeScene(buildSpec(EXAMPLE_SPEC));
+    const ok = (await runCli(["model", "lint", good, "--archetype", "car"])).output;
+    expect(ok).toContain("required parts found: ");
+    expect(ok).toContain("Wheel x4");
+    expect(ok).toContain("size: compared with the typical range");
+    const noWheels = car((n) => { const c = n[0]!["children"] as Node[]; n[0]!["children"] = c.filter((x) => x["name"] !== "Wheels"); });
+    expect((await runCli(["model", "lint", noWheels, "--archetype", "car"])).output).toMatch(/not found: Wheel/);
+    const extra = car((n) => { (n[0]!["children"] as Node[]).push({ name: "Antenna", shape: "box", material: "metal", size: [0.02, 0.4, 0.02], at: [0, 1.5, 0] }); });
+    expect((await runCli(["model", "lint", extra, "--archetype", "car"])).output).toContain("nodes that match no part: Car/Antenna");
+    const json = JSON.parse((await runCli(["model", "lint", good, "--archetype", "car", "--json"])).output) as { compared: { required: { part: string; found: number }[]; sizeChecked: boolean } };
+    expect(json.compared.required.every((r) => r.found > 0)).toBe(true);
+    expect(json.compared.sizeChecked).toBe(true);
+  });
+
+  it("does not let a guess or an unknown thing look like a real check", async () => {
+    const good = writeScene(buildSpec(EXAMPLE_SPEC));
+    const unknown = (await runCli(["model", "lint", good, "--archetype", "flurbo"])).output;
+    expect(unknown).toContain("compared: nothing");
+    expect(unknown).toContain("not that it is the right thing");
+    const family = (await runCli(["model", "lint", good, "--archetype", "something with wheels"])).output;
+    expect(family).toContain("This is a guess from the words");
+    expect(family).toContain("not compared (no typical size known)");
+  });
+
   it("build checks the result against the spec's archetype", async () => {
     const dir = writeScene(buildSpec(EXAMPLE_SPEC)).replace("model.glb", "");
     const { writeFileSync } = await import("node:fs");

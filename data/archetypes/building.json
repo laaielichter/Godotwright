@@ -474,5 +474,220 @@
   "pitfalls": [
    "'Windmolen' in Dutch can also mean a modern wind turbine: say which one you want."
   ]
+ },
+ {
+  "id": "building.fortification",
+  "name": "fortification",
+  "description": "A castle, fort or defensive wall: curtain walls with battlements, towers, a gate and often a keep.",
+  "aliases": [
+   "castle",
+   "kasteel",
+   "fortress",
+   "vesting",
+   "fort",
+   "citadel",
+   "citadelle",
+   "stronghold",
+   "burcht",
+   "castle wall",
+   "kasteelmuur",
+   "city wall",
+   "stadsmuur",
+   "fortification",
+   "versterking",
+   "curtain wall",
+   "ringmuur"
+  ],
+  "extends": "building",
+  "hints": [
+   "battlement",
+   "battlements",
+   "kantelen",
+   "tinnen",
+   "moat",
+   "slotgracht",
+   "drawbridge",
+   "ophaalbrug",
+   "siege",
+   "beleg",
+   "rampart",
+   "bastion",
+   "donjon"
+  ],
+  "parts": [
+   {
+    "name": "Wall",
+    "role": "wall",
+    "required": true,
+    "count": [
+     1,
+     40
+    ],
+    "aliases": [
+     "wall",
+     "walls",
+     "muur",
+     "muren",
+     "curtain",
+     "curtain wall",
+     "ringmuur",
+     "rampart"
+    ],
+    "note": "The curtain wall: tall, thick (1.5-4 m) and with a walkway on top."
+   },
+   {
+    "name": "Tower",
+    "role": "tower",
+    "required": true,
+    "count": [
+     1,
+     24
+    ],
+    "aliases": [
+     "tower",
+     "towers",
+     "toren",
+     "torens",
+     "turret",
+     "bastion"
+    ],
+    "note": "Towers stand out from the wall so defenders can fire along it; they are taller than the wall."
+   },
+   {
+    "name": "Gate",
+    "role": "gate",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "gate",
+     "gatehouse",
+     "poort",
+     "poortgebouw",
+     "entrance"
+    ],
+    "note": "The main entrance, in the +Z face. A gatehouse is a tower with a passage."
+   },
+   {
+    "name": "Battlements",
+    "role": "battlements",
+    "required": false,
+    "aliases": [
+     "battlements",
+     "battlement",
+     "crenellation",
+     "kantelen",
+     "tinnen",
+     "merlons",
+     "parapet"
+    ],
+    "note": "The notched top of walls and towers; one node, or one per wall."
+   },
+   {
+    "name": "Keep",
+    "role": "keep",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "keep",
+     "donjon",
+     "hoofdtoren",
+     "main tower"
+    ],
+    "note": "The strongest tower, usually inside the walls."
+   },
+   {
+    "name": "Drawbridge",
+    "role": "door",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "drawbridge",
+     "ophaalbrug",
+     "bridge"
+    ],
+    "note": "Hinged at the gate, so it can be raised."
+   },
+   {
+    "name": "Moat",
+    "role": "water",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "moat",
+     "slotgracht",
+     "gracht",
+     "ditch"
+    ],
+    "note": "A water surface in a ditch around the walls; a separate sheet so it can use a water shader."
+   }
+  ],
+  "scale": {
+   "length": [
+    30,
+    400
+   ],
+   "width": [
+    30,
+    300
+   ],
+   "height": [
+    6,
+    45
+   ],
+   "source": "general knowledge: small castle to large fortress; a single wall or tower is smaller than this range",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "type",
+    "options": [
+     "motte-and-bailey",
+     "tower house",
+     "concentric castle",
+     "walled town",
+     "star fort"
+    ]
+   },
+   {
+    "axis": "state",
+    "options": [
+     "intact",
+     "ruin"
+    ]
+   }
+  ],
+  "conventions": [
+   "A fortification's origin is at the centre of its footprint on the ground (y = 0); the main gate faces +Z.",
+   "Towers and walls are separate nodes, so damage and destruction can swap them."
+  ],
+  "anticipate": [
+   "Collision for the walls as simple boxes; defenders walk on top, so the wall-walk needs a flat top.",
+   "A ruined variant is a swap of the same nodes, not a new model.",
+   "The scale of a game: doors and stairs must stay human-sized (door about 2 m high), however big the walls."
+  ],
+  "pitfalls": [
+   "A castle made of one solid block has nothing to enter or animate: make the gate a node and the towers separate.",
+   "Walls without thickness look like paper from above: give them a walkway and parapet.",
+   "Towers the same height as the wall defeat their purpose: make them clearly taller."
+  ]
  }
 ]

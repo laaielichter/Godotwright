@@ -108,6 +108,7 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     const good = await call("godot_model_lint", { file: "models/ok.glb", archetype: "auto" });
     expect(failed(good)).toBe(false);
     expect(textOf(good)).toContain("checked as: car (vehicle.wheeled.car)");
+    expect(textOf(good)).toContain("required parts found");
     const noWheels = JSON.parse(JSON.stringify(EXAMPLE_SPEC)) as { nodes: { children: { name: string }[] }[] };
     noWheels.nodes[0]!.children = noWheels.nodes[0]!.children.filter((c) => c.name !== "Wheels");
     await call("godot_model_build", { out: "models/nowheels.glb", spec: noWheels });

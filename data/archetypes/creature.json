@@ -1,0 +1,656 @@
+[
+ {
+  "id": "creature",
+  "name": "creature",
+  "description": "A living thing or a monster: a body, a head, limbs, often a tail. Animals, people and fantasy creatures.",
+  "aliases": [
+   "creature",
+   "creatures",
+   "wezen",
+   "animal",
+   "dier",
+   "beast",
+   "monster",
+   "schepsel",
+   "character",
+   "karakter"
+  ],
+  "extends": "thing",
+  "hints": [
+   "animal",
+   "dier",
+   "beast",
+   "monster",
+   "creature",
+   "wezen",
+   "legs",
+   "benen",
+   "fur",
+   "vacht",
+   "claws",
+   "klauwen",
+   "tail",
+   "staart",
+   "skin",
+   "huid",
+   "eyes",
+   "ogen",
+   "head",
+   "kop",
+   "fantasy"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "torso",
+     "romp",
+     "lichaam",
+     "trunk"
+    ]
+   },
+   {
+    "name": "Head",
+    "role": "head",
+    "required": true,
+    "count": [
+     1,
+     3
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     },
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "head",
+     "kop",
+     "skull",
+     "hoofd"
+    ],
+    "note": "Pivot at the neck joint, so the head can turn and nod."
+   }
+  ],
+  "conventions": [
+   "A creature stands on y = 0 on its feet or paws, faces +Z, and its left side is +X.",
+   "Limbs are separate nodes with their pivot at the joint (shoulder, hip), so they can be animated or rigged.",
+   "A creature is built as parts joined at joints; a skin mesh for a skeleton comes from the art tool, not from this kit."
+  ],
+  "anticipate": [
+   "A skeleton or the joint nodes for animation, and a collision capsule rather than the visual mesh.",
+   "Symmetry: left and right limbs mirror exactly."
+  ],
+  "pitfalls": [
+   "A body of loose blobs: head, body and limbs must overlap at the joints.",
+   "A creature that floats: feet rest on y = 0.",
+   "Limbs with their pivot in the middle of the limb cannot swing from the joint."
+  ]
+ },
+ {
+  "id": "creature.quadruped",
+  "name": "quadruped",
+  "description": "A four-legged animal: a body, a neck and head, four legs and usually a tail.",
+  "aliases": [
+   "quadruped",
+   "four-legged animal",
+   "viervoeter",
+   "dog",
+   "hond",
+   "cat",
+   "kat",
+   "horse",
+   "paard",
+   "cow",
+   "koe",
+   "wolf",
+   "sheep",
+   "schaap",
+   "pig",
+   "varken",
+   "deer",
+   "hert",
+   "fox",
+   "vos",
+   "bear",
+   "beer",
+   "lion",
+   "leeuw",
+   "tiger",
+   "tijger"
+  ],
+  "extends": "creature",
+  "hints": [
+   "four legs",
+   "vier poten",
+   "paws",
+   "poten",
+   "hooves",
+   "hoeven",
+   "mane",
+   "manen",
+   "paw"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "torso",
+     "romp",
+     "lichaam",
+     "trunk"
+    ]
+   },
+   {
+    "name": "Neck",
+    "role": "neck",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "neck",
+     "nek",
+     "hals"
+    ]
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "count": 4,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "been",
+     "benen",
+     "limb"
+    ],
+    "note": "Pivot at the hip or shoulder: the top of the leg. Name them LegFrontLeft and so on, or use Leg with a side."
+   },
+   {
+    "name": "Tail",
+    "role": "tail",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "tail",
+     "staart"
+    ],
+    "note": "Pivot at the base of the tail."
+   },
+   {
+    "name": "Ear",
+    "role": "ear",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "aliases": [
+     "ear",
+     "ears",
+     "oor",
+     "oren"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.4,
+    3.5
+   ],
+   "width": [
+    0.15,
+    1.2
+   ],
+   "height": [
+    0.25,
+    2.4
+   ],
+   "source": "general knowledge: typical range, not a standard",
+   "confidence": "C"
+  },
+  "conventions": [
+   "A quadruped is longest along z (the head at +Z), width along x and height along y."
+  ],
+  "pitfalls": [
+   "Front and back legs the same: the back legs usually bend the other way."
+  ]
+ },
+ {
+  "id": "creature.humanoid",
+  "name": "humanoid",
+  "description": "A person or a person-shaped character: a torso, a head, two arms and two legs.",
+  "aliases": [
+   "humanoid",
+   "human",
+   "mens",
+   "person",
+   "persoon",
+   "man",
+   "woman",
+   "vrouw",
+   "character model",
+   "soldier",
+   "soldaat",
+   "knight",
+   "ridder",
+   "goblin",
+   "orc",
+   "elf",
+   "dwarf",
+   "dwerg",
+   "zombie",
+   "skeleton",
+   "skelet",
+   "giant",
+   "reus",
+   "robot",
+   "android"
+  ],
+  "extends": "creature",
+  "hints": [
+   "arms",
+   "armen",
+   "hands",
+   "handen",
+   "two legs",
+   "twee benen",
+   "humanoid"
+  ],
+  "parts": [
+   {
+    "name": "Torso",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "torso",
+     "body",
+     "chest",
+     "romp",
+     "lichaam",
+     "borst"
+    ]
+   },
+   {
+    "name": "Head",
+    "role": "head",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     },
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "head",
+     "kop",
+     "hoofd"
+    ],
+    "note": "Pivot at the neck."
+   },
+   {
+    "name": "Arm",
+    "role": "arm",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "arm",
+     "arms",
+     "armen"
+    ],
+    "note": "Pivot at the shoulder."
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "leg",
+     "legs",
+     "been",
+     "benen"
+    ],
+    "note": "Pivot at the hip."
+   },
+   {
+    "name": "Hand",
+    "role": "hand",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "aliases": [
+     "hand",
+     "hands",
+     "hand"
+    ]
+   },
+   {
+    "name": "Foot",
+    "role": "foot",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "aliases": [
+     "foot",
+     "feet",
+     "voet",
+     "voeten"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.4,
+    1.2
+   ],
+   "height": [
+    0.6,
+    2.4
+   ],
+   "source": "general knowledge: adult human height about 1.5-2.0 m; a goblin or dwarf is shorter and a giant taller, still within this range",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "build",
+    "options": [
+     "slim",
+     "average",
+     "heavy"
+    ]
+   },
+   {
+    "axis": "pose",
+    "options": [
+     "T-pose",
+     "A-pose"
+    ]
+   }
+  ],
+  "anticipate": [
+   "A T-pose or A-pose, the pose rigging tools expect, with the arms out from the body.",
+   "Eyes, hands and feet at a human height (eyes about 1.6 m) so doors and stairs fit."
+  ],
+  "pitfalls": [
+   "Arms fused to the torso cannot swing: the arm is its own node from the shoulder.",
+   "A head at the wrong height: the whole figure is about 7-8 heads tall."
+  ]
+ },
+ {
+  "id": "creature.dragon",
+  "name": "dragon",
+  "description": "A dragon or other winged beast: a long body and neck, a head with jaws, four legs, a tail and two big wings.",
+  "aliases": [
+   "dragon",
+   "draak",
+   "wyvern",
+   "drake",
+   "drakenkop"
+  ],
+  "extends": "creature",
+  "hints": [
+   "wings",
+   "vleugels",
+   "fire breathing",
+   "vuurspuwend",
+   "scales",
+   "schubben",
+   "horns",
+   "hoorns",
+   "flying beast"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "torso",
+     "romp",
+     "lichaam",
+     "trunk"
+    ]
+   },
+   {
+    "name": "Neck",
+    "role": "neck",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "neck",
+     "nek",
+     "hals"
+    ]
+   },
+   {
+    "name": "Head",
+    "role": "head",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     },
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "head",
+     "kop",
+     "skull"
+    ],
+    "note": "Pivot at the neck joint."
+   },
+   {
+    "name": "Jaw",
+    "role": "jaw",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "jaw",
+     "kaak",
+     "mouth",
+     "mond"
+    ],
+    "note": "Hinged at the back of the jaw, so the mouth can open."
+   },
+   {
+    "name": "Wing",
+    "role": "wing",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "wing",
+     "wings",
+     "vleugel",
+     "vleugels"
+    ],
+    "note": "Hinged at the shoulder, so the wings can flap; the left and right wings mirror exactly."
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "count": [
+     2,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "been",
+     "benen",
+     "limb"
+    ],
+    "note": "Pivot at the hip or shoulder. A wyvern has two legs, a dragon four."
+   },
+   {
+    "name": "Tail",
+    "role": "tail",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "tail",
+     "staart"
+    ],
+    "note": "Pivot at the base of the tail."
+   },
+   {
+    "name": "Horn",
+    "role": "horn",
+    "required": false,
+    "count": [
+     0,
+     12
+    ],
+    "aliases": [
+     "horn",
+     "horns",
+     "hoorn",
+     "hoorns",
+     "spike",
+     "spikes"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    3,
+    40
+   ],
+   "width": [
+    2,
+    40
+   ],
+   "height": [
+    1.5,
+    15
+   ],
+   "source": "fiction: there is no real size; a wide range that only catches unit mistakes",
+   "confidence": "X"
+  },
+  "variants": [
+   {
+    "axis": "legs",
+    "options": [
+     "four legs and two wings",
+     "two legs and two wings (wyvern)"
+    ]
+   },
+   {
+    "axis": "pose",
+    "options": [
+     "standing",
+     "wings out",
+     "flying"
+    ]
+   }
+  ],
+  "anticipate": [
+   "Wings as separate nodes hinged at the shoulder, so they can flap; the membrane is a thin surface, double-sided.",
+   "A fire effect from the mouth: a Marker3D at the jaw and an emissive mouth glow.",
+   "A big creature needs a simple collision shape (capsules or boxes), not the visual mesh."
+  ],
+  "pitfalls": [
+   "Wings baked into the body cannot flap.",
+   "A neck that does not join the body and head: overlap the segments at the joints.",
+   "Wing membranes modelled with no thickness vanish from the side unless the material is double-sided."
+  ]
+ }
+]

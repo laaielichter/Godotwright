@@ -268,5 +268,134 @@
    "source": "table and desk height is typically 0.72-0.76 m (general knowledge)",
    "confidence": "C"
   }
+ },
+ {
+  "id": "prop.campfire",
+  "name": "campfire",
+  "description": "A fire for cooking and warmth: logs in a pile or a tripod, usually a ring of stones, and a flame.",
+  "aliases": [
+   "campfire",
+   "camp fire",
+   "kampvuur",
+   "bonfire",
+   "vuurplaats",
+   "vuurtje",
+   "fire pit",
+   "vuurkorf"
+  ],
+  "extends": "prop",
+  "hints": [
+   "fire",
+   "vuur",
+   "flame",
+   "vlam",
+   "embers",
+   "gloeiend",
+   "logs",
+   "blokken",
+   "firewood",
+   "brandhout"
+  ],
+  "parts": [
+   {
+    "name": "Logs",
+    "role": "log",
+    "required": true,
+    "count": [
+     3,
+     12
+    ],
+    "aliases": [
+     "logs",
+     "log",
+     "wood",
+     "firewood",
+     "hout",
+     "brandhout",
+     "blokken",
+     "stam"
+    ],
+    "note": "Laid crossed or leaning in a cone; each log a cylinder with a slightly rough end."
+   },
+   {
+    "name": "Stones",
+    "role": "stone",
+    "required": false,
+    "count": [
+     0,
+     16
+    ],
+    "aliases": [
+     "stones",
+     "stone",
+     "ring",
+     "stenen",
+     "steen",
+     "fire ring"
+    ],
+    "note": "A ring of rocks around the fire; they sit on the ground."
+   },
+   {
+    "name": "Flame",
+    "role": "flame",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "flame",
+     "flames",
+     "fire",
+     "vlam",
+     "vlammen",
+     "fire glow"
+    ],
+    "note": "An emissive shape or a marker for a fire effect: a flame is not solid geometry."
+   },
+   {
+    "name": "Embers",
+    "role": "embers",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "embers",
+     "ash",
+     "as",
+     "gloed",
+     "coals",
+     "kolen"
+    ],
+    "note": "A glowing bed under the logs."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.5,
+    2.0
+   ],
+   "width": [
+    0.5,
+    2.0
+   ],
+   "height": [
+    0.2,
+    1.2
+   ],
+   "source": "general knowledge: typical range, not a standard",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "Fire is an effect, not a mesh: model the logs and stones, and put a Marker3D at the flame origin for particles and an OmniLight3D.",
+   "The flame's glow as an emissive material, so it shows in the dark without a light.",
+   "Logs and stones as separate nodes, so the fire can burn down by hiding logs."
+  ],
+  "pitfalls": [
+   "A fire modelled as a solid orange cone looks like a traffic cone; leave the flame to particles.",
+   "Logs sunk into the ground or floating above it: they rest on the ground or on each other."
+  ]
  }
 ]

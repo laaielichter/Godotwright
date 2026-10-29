@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Option } from "commander";
 import { briefFor } from "../archetype/brief.js";
 import { chooseArchetype } from "../archetype/check.js";
-import { formatArchetype, formatIdentify, formatTree } from "../archetype/format.js";
+import { formatArchetype, formatChecked, formatIdentify, formatTree } from "../archetype/format.js";
 import { identify } from "../archetype/identify.js";
 import { ArchetypeError, loadLibrary } from "../archetype/library.js";
 import { BuildError } from "../build/params.js";
@@ -72,7 +72,7 @@ export function modelCommand(): Command {
           maxTextureMb: options.maxTextureMb === undefined ? undefined : Number(options.maxTextureMb),
           contract: options.contract === undefined ? undefined : loadContract(options.contract),
         });
-        if (choice && !options.json) writeOut(command, `checked as: ${choice.archetype.name} (${choice.archetype.id})${choice.generic ? " - a guess, nothing names it exactly" : ""}\n`);
+        if (choice && !options.json) writeOut(command, formatChecked(choice, report.compared));
         writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatModelReport(report, options.detail));
         const errors = report.categories.reduce((n, c) => n + c.errors, 0);
         if (errors > 0 || (options.minScore !== undefined && report.overall < Number(options.minScore))) process.exitCode = 1;

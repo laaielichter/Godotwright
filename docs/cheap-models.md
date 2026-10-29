@@ -48,8 +48,15 @@ This is six runs of one model on one tool version: an indication, not a benchmar
    of that thing (the rules every model shares are said once), the order of tools to call, and a short spec cheat sheet
    (`model spec --short`). When nothing is near, it says so instead of offering unrelated kinds.
 
-More is planned: recipes that can be placed inside a spec, an honest account in `lint --archetype` of what was compared, and archetypes for fantasy, creatures, fortifications and
-spacecraft. See the roadmap.
+4. **An honest report in `lint --archetype`.** The report now starts with what the check really compared: how many required
+   parts were found, which nodes matched no part, and whether the size was checked. When the thing is a guess, or nothing
+   matched, it says that only the general rules ran and that a high score then says the file is clean, not that it is the
+   right thing. The test showed small models taking 100/100 as proof; this takes that away.
+5. **More things it knows.** Archetypes for fortifications (castle, wall, fort), creatures (quadruped, humanoid, dragon),
+   spacecraft (rocket, spaceship, satellite), a rowing boat and a campfire, so these get parts, sizes and rules instead of a
+   guess. Made-up sizes (a dragon, a spaceship) are marked class X: a wide range that only catches unit mistakes.
+
+More is planned: recipes that can be placed inside a spec, and a second run of the same six tasks to measure the difference. See the roadmap.
 
 ## What this does not claim
 
