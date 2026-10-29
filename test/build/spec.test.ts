@@ -126,6 +126,35 @@ describe("nodes", () => {
     }
   });
 
+  it("caps a concave loft section with its own outline, not a fan that covers the notch", () => {
+    const u = [[0, 0], [3, 0], [3, 3], [2, 3], [2, 1], [1, 1], [1, 3], [0, 3]];
+    const mesh = buildSpec(spec([{ name: "U", shape: "loft", material: "paint", sections: [{ z: 0, points: u }, { z: 1, points: u }] }])).nodes[0]!.mesh!;
+    // The U has an area of 7. Each cap must cover it exactly once, facing out: a fan from the centroid (inside the notch) would overlap itself.
+    const cap = (z: number) => {
+      let signed = 0;
+      let unsigned = 0;
+      for (const p of mesh.prims.values()) {
+        for (let t = 0; t < p.indices.length; t += 3) {
+          const corner = (k: number): number[] => {
+            const i = (p.indices[t + k] as number) * 3;
+            return [p.positions[i] as number, p.positions[i + 1] as number, p.positions[i + 2] as number];
+          };
+          const [a, b, c] = [corner(0), corner(1), corner(2)] as [number[], number[], number[]];
+          if (![a, b, c].every((q) => Math.abs((q[2] as number) - z) < 1e-9)) continue;
+          const area = (((b[0] as number) - (a[0] as number)) * ((c[1] as number) - (a[1] as number)) - ((c[0] as number) - (a[0] as number)) * ((b[1] as number) - (a[1] as number))) / 2;
+          signed += area;
+          unsigned += Math.abs(area);
+        }
+      }
+      return { signed, unsigned };
+    };
+    expect(cap(0).unsigned).toBeCloseTo(7);
+    expect(cap(0).signed).toBeCloseTo(-7);
+    expect(cap(1).unsigned).toBeCloseTo(7);
+    expect(cap(1).signed).toBeCloseTo(7);
+    expect(volume(mesh)).toBeCloseTo(7);
+  });
+
   it("places, rotates and anchors", () => {
     const info = inspectModel(writeScene(buildSpec(spec([solid({ size: [2, 1, 1], anchor: "bottom", at: [0, 3, 0], rotate: [0, 90, 0] })]))));
     expect(info.bounds?.min[1]).toBeCloseTo(3);
