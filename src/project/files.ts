@@ -82,8 +82,8 @@ export function fromResPath(root: string, resPath: string): string {
 
 /**
  * The `res://` path of the file that `resPath` names under `dir` (a project or base root), with folder
- * links resolved, or undefined when no such file is inside `dir`. The disk is only read inside `dir`:
- * a path that leaves it through `..` is refused before any lookup, and a link out of it is not followed.
+ * links resolved, or undefined when no such file is inside `dir`. A path that leaves `dir` through `..`
+ * is refused without touching the disk, and a folder link that leads out of `dir` does not count.
  */
 export function realResPath(dir: string, resPath: string): string | undefined {
   const path = fromResPath(dir, resPath);

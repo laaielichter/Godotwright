@@ -240,7 +240,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     return undefined;
   };
 
-  // Project-level references. A broken one inherited from a base is the base's problem: only the project's own settings are reported.
+  // Project-level references. A broken one the project inherits from a base is the base's problem.
   let mainScene: string | undefined;
   if (settings.mainScene) {
     mainScene = resolve({ path: settings.mainScene });
