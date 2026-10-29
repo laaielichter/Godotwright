@@ -199,11 +199,11 @@ export function inspectModel(file: string): ModelInfo {
       const mesh = json.meshes?.[node.mesh];
       if (!mesh) throw new ModelError(`${file}: mesh ${node.mesh} does not exist`);
       if (!Array.isArray(mesh.primitives)) throw new ModelError(`${file}: mesh ${node.mesh} has no primitive list`);
-      for (const [p, prim] of mesh.primitives.entries()) {
+      for (const [primIndex, prim] of mesh.primitives.entries()) {
         const attributes = prim?.attributes;
-        if (typeof attributes !== "object" || attributes === null) throw new ModelError(`${file}: primitive ${p} of mesh ${node.mesh} has no attributes`);
+        if (typeof attributes !== "object" || attributes === null) throw new ModelError(`${file}: primitive ${primIndex} of mesh ${node.mesh} has no attributes`);
         const posIndex = attributes.POSITION;
-        if (!isIndex(posIndex)) throw new ModelError(`${file}: primitive ${p} of mesh ${node.mesh} has no POSITION`);
+        if (!isIndex(posIndex)) throw new ModelError(`${file}: primitive ${primIndex} of mesh ${node.mesh} has no POSITION`);
         const pos = readAccessor(model, posIndex);
         const indices = triangleIndices(model, prim, pos.count);
         let uvOutOfRange = false;
