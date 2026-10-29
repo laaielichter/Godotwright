@@ -214,6 +214,12 @@ describe("getting smarter over time", () => {
     expect(learnedHints("Foo.bar", api, readLearning(), { "Foo.bar": { "Node.get_node": 2, "Nope.nothing": 9 } })).toEqual(["Node.get_node"]);
   });
 
+  it("reads a finding line whose file path has a space", () => {
+    const line = 'res://My Scripts/player.gd:6: error [api/unknown-member] Method "empty()" does not exist on Array in Godot 4.7.';
+    expect(parseFindingLine(line)).toEqual({ rule: "api/unknown-member", file: "res://My Scripts/player.gd", line: 6, message: 'Method "empty()" does not exist on Array in Godot 4.7.' });
+    expect(parseFindingLine("res://a.gd: warning [quality/todo] TODO here")).toEqual({ rule: "quality/todo", file: "res://a.gd", line: undefined, message: "TODO here" });
+  });
+
   it("counts a confirmed finding when it was marked as right", () => {
     recordFeedback(finding(), "right");
     expect(readLearning().rules["api/unknown-member"]?.confirmed).toBe(1);

@@ -172,7 +172,7 @@ export function recordFeedback(finding: Pick<Finding, "rule" | "file" | "message
 
 /** Parses a finding line as printed by `formatFinding` back into its parts. */
 export function parseFindingLine(line: string): Pick<Finding, "rule" | "file" | "message" | "line"> | undefined {
-  const m = /^(?<file>\S+?)(?::(?<line>\d+))?: (?:error|warning|info) \[(?<rule>[\w/-]+)\] (?<message>.*)$/.exec(line.trim());
+  const m = /^(?<file>.+?)(?::(?<line>\d+))?: (?:error|warning|info) \[(?<rule>[\w/-]+)\] (?<message>.*)$/.exec(line.trim());
   if (!m?.groups) return undefined;
   return { file: m.groups["file"]!, line: m.groups["line"] ? Number(m.groups["line"]) : undefined, rule: m.groups["rule"]!, message: m.groups["message"]! };
 }
