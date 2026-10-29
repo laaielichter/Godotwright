@@ -227,6 +227,115 @@ describe("moved Godot 3 window properties", () => {
   });
 });
 
+/** Findings of one rule, formatted, for a throwaway project. */
+function ruleLines(files: Record<string, string>, rule: string): string[] {
+  return reviewProject(makeProject(files)).findings.filter((f) => f.rule === rule).map(formatFinding);
+}
+
+describe("rules that had no test", () => {
+  it("performance/empty-callback: a per-frame function with only pass", () => {
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": "extends Node\n\nfunc _process(_delta: float) -> void:\n\tpass\n" }, "performance/empty-callback")).toEqual([
+      "res://main.gd:3: info [performance/empty-callback] _process() is empty; Godot still calls it every frame.",
+    ]);
+  });
+
+  it("performance/instantiate-per-frame: a scene instantiated every frame", () => {
+    const script = "extends Node\n\nvar _scene: PackedScene\n\n\nfunc _process(_delta: float) -> void:\n\t_scene.instantiate()\n";
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "performance/instantiate-per-frame")).toEqual([
+      "res://main.gd:7: info [performance/instantiate-per-frame] instantiate() in _process() can run every frame; spawn on events or use a pool.",
+    ]);
+  });
+
+  it("performance/huge-scene: more than 1500 nodes in one scene", () => {
+    const scene = ['[gd_scene format=3]', '[node name="Root" type="Node"]'];
+    for (let i = 0; i < 1500; i++) scene.push(`[node name="N${i}" type="Node" parent="."]`);
+    expect(ruleLines({ "project.godot": PROJECT, "main.tscn": scene.join("\n") + "\n" }, "performance/huge-scene")).toEqual([
+      "res://main.tscn: info [performance/huge-scene] 1501 nodes in one scene.",
+    ]);
+  });
+
+  it("performance/many-shadow-lights: a seventh light that casts shadows", () => {
+    const scene = ['[gd_scene format=3]', '[node name="Root" type="Node3D"]'];
+    for (let i = 1; i <= 7; i++) scene.push(`[node name="Light${i}" type="OmniLight3D" parent="."]`, "shadow_enabled = true");
+    const seventh = scene.findIndex((line) => line.includes('name="Light7"')) + 1;
+    expect(ruleLines({ "project.godot": PROJECT, "main.tscn": scene.join("\n") + "\n" }, "performance/many-shadow-lights")).toEqual([
+      `res://main.tscn:${seventh}: warning [performance/many-shadow-lights] 7 lights cast shadows in this scene; each one costs a shadow pass.`,
+    ]);
+  });
+
+  it("quality/deep-nesting: a statement seven levels deep", () => {
+    const script = [
+      "extends Node",
+      "",
+      "func f(x: int) -> void:",
+      "\tif x > 0:",
+      "\t\tif x > 1:",
+      "\t\t\tif x > 2:",
+      "\t\t\t\tif x > 3:",
+      "\t\t\t\t\tif x > 4:",
+      "\t\t\t\t\t\tif x > 5:",
+      "\t\t\t\t\t\t\tpass",
+      "",
+    ].join("\n");
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "quality/deep-nesting")).toEqual([
+      "res://main.gd:10: info [quality/deep-nesting] f() nests 7 levels deep.",
+    ]);
+  });
+
+  it("quality/fragile-path: a node path that climbs two levels", () => {
+    const script = 'extends Node\n\nfunc _ready() -> void:\n\tvar player := get_node("../../Player")\n\tprint(player)\n';
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "quality/fragile-path")).toEqual([
+      'res://main.gd:4: info [quality/fragile-path] Node path "../../Player" climbs 2 levels up the tree.',
+    ]);
+  });
+
+  it("quality/long-file: a script of more than 600 lines", () => {
+    const source = ["extends Node", ...Array.from({ length: 600 }, (_, i) => `# line ${i}`), ""].join("\n");
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": source }, "quality/long-file")).toEqual([
+      `res://main.gd: info [quality/long-file] ${source.split("\n").length} lines; consider splitting this script.`,
+    ]);
+  });
+
+  it("quality/long-function: a function with 61 statements", () => {
+    const script = ["extends Node", "", "func build() -> void:", ...Array.from({ length: 61 }, (_, i) => `\tprint(${i})`), ""].join("\n");
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "quality/long-function")).toEqual([
+      "res://main.gd:3: info [quality/long-function] build() has 61 statements; aim for under 60.",
+    ]);
+  });
+
+  it("structure/deep-tree: a node 13 levels below the root", () => {
+    const scene = ['[gd_scene format=3]', '[node name="Root" type="Node"]'];
+    let parent = ".";
+    for (let i = 1; i <= 13; i++) {
+      const name = `N${i}`;
+      scene.push(`[node name="${name}" type="Node" parent="${parent}"]`);
+      parent = parent === "." ? name : `${parent}/${name}`;
+    }
+    expect(ruleLines({ "project.godot": PROJECT, "main.tscn": scene.join("\n") + "\n" }, "structure/deep-tree")).toEqual([
+      "res://main.tscn: info [structure/deep-tree] Node tree is 13 levels deep.",
+    ]);
+  });
+
+  it("structure/engine-version: a project last saved with Godot 4.6", () => {
+    expect(ruleLines({ "project.godot": PROJECT.replace('"4.7"', '"4.6"') }, "structure/engine-version")).toEqual([
+      "res://project.godot: info [structure/engine-version] The project was last saved with Godot 4.6; Godotwright targets 4.7.",
+    ]);
+  });
+
+  it("structure/many-autoloads: eleven autoloads", () => {
+    const autoloads = Array.from({ length: 11 }, (_, i) => `Auto${i}="*res://auto${i}.gd"`);
+    const files: Record<string, string> = { "project.godot": `${PROJECT}\n[autoload]\n\n${autoloads.join("\n")}\n` };
+    for (let i = 0; i < 11; i++) files[`auto${i}.gd`] = "extends Node\n";
+    expect(ruleLines(files, "structure/many-autoloads")).toEqual(["res://project.godot: info [structure/many-autoloads] 11 autoloads."]);
+  });
+
+  it("structure/no-gitignore: a project without a .gitignore for .godot/", () => {
+    expect(ruleLines({ "project.godot": PROJECT }, "structure/no-gitignore")).toEqual([
+      "res://.gitignore: info [structure/no-gitignore] No .gitignore here or above ignores .godot/.",
+    ]);
+  });
+});
+
 describe("review robustness", () => {
   it("reports a self-referencing constant on its line instead of aborting the review", () => {
     const root = makeProject({
