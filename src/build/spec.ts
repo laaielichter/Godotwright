@@ -382,13 +382,17 @@ function readMaterials(raw: unknown): Record<string, Material> {
     };
     const emissive = m["emissive"];
     if (emissive !== undefined && (!Array.isArray(emissive) || emissive.length !== 3 || emissive.some((c) => typeof c !== "number" || c < 0 || c > 1))) throw new BuildError(`${path}.emissive: expected [r, g, b] with values from 0 to 1`);
+    const alpha = m["alpha"];
+    if (alpha !== undefined && alpha !== "BLEND" && alpha !== "OPAQUE") throw new BuildError(`${path}.alpha: use "BLEND" or "OPAQUE"`);
+    const doubleSided = m["doubleSided"];
+    if (doubleSided !== undefined && typeof doubleSided !== "boolean") throw new BuildError(`${path}.doubleSided: expected true or false`);
     out[name] = {
       name,
       color: [color[0] as number, color[1] as number, color[2] as number, (color[3] as number | undefined) ?? 1],
       metallic: unit("metallic", 0),
       roughness: unit("roughness", 0.8),
-      ...(m["alpha"] === "BLEND" ? { alpha: "BLEND" as const } : {}),
-      ...(m["doubleSided"] === true ? { doubleSided: true } : {}),
+      ...(alpha === "BLEND" ? { alpha: "BLEND" as const } : {}),
+      ...(doubleSided === true ? { doubleSided: true } : {}),
       ...(emissive ? { emissive: emissive as [number, number, number] } : {}),
     };
   }

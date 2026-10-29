@@ -181,6 +181,16 @@ describe("nodes", () => {
     expect(() => buildSpec(raw([1, 2, 0]))).toThrow(/materials.glow.emissive: expected \[r, g, b\]/);
     expect(() => buildSpec(raw([1, 0]))).toThrow(/materials.glow.emissive/);
   });
+
+  it("refuses an alpha or doubleSided it does not know, instead of dropping it", () => {
+    const raw = (m: object) => spec([solid({ name: "Pane", material: "glass" })], { materials: { glass: { color: [0.5, 0.6, 0.7], ...m } } });
+    expect(() => buildSpec(raw({ alpha: "blend" }))).toThrow(/materials\.glass\.alpha: use "BLEND" or "OPAQUE"/);
+    expect(() => buildSpec(raw({ doubleSided: "yes" }))).toThrow(/materials\.glass\.doubleSided: expected true or false/);
+    expect(() => buildSpec(raw({ alpha: "OPAQUE", doubleSided: false }))).not.toThrow();
+    const glb = buildGlb(buildSpec(raw({ alpha: "BLEND", doubleSided: true })));
+    const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString("utf8")) as { materials: object[] };
+    expect(json.materials).toEqual([expect.objectContaining({ name: "glass", alphaMode: "BLEND", doubleSided: true })]);
+  });
 });
 
 describe("mistakes get a path and a reason", () => {
