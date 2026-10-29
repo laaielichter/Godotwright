@@ -111,6 +111,28 @@ describe("MCP server (premium profile)", () => {
     expect(rules).toContain("[api/wrong-arguments] (error)");
   });
 
+  it("reads focus paths as the project names its files", async () => {
+    const exact = textOf(await client.callTool({ name: "godot_review", arguments: { files: ["res://scripts/enemy.gd"] } }));
+    expect(exact).toContain("res://scripts/enemy.gd:");
+    for (const file of ["./scripts/enemy.gd", "scripts/../scripts/enemy.gd", "/scripts/enemy.gd"]) {
+      const out = textOf(await client.callTool({ name: "godot_review", arguments: { files: [file] } }));
+      expect(out, file).toBe(exact);
+    }
+    const code = "extends CharacterBody2D\n\n\nfunc _physics_process(delta: float) -> void:\n\tvelocity = move_and_slide(velocity, Vector2.UP)\n";
+    const fresh = await client.callTool({ name: "godot_review", arguments: { code, file: "./scripts/new_player.gd" } });
+    expect(textOf(fresh)).toContain("res://scripts/new_player.gd:5: error [api/wrong-arguments]");
+    expect(textOf(fresh)).not.toContain("res://./");
+  });
+
+  it("does not report a clean verdict for a file that is not in the project", async () => {
+    const missing = (await client.callTool({ name: "godot_review", arguments: { files: ["./scripts/nope.gd"] } })) as Result;
+    expect(missing.isError).toBe(true);
+    expect(textOf(missing)).toContain("no such file in the project: res://scripts/nope.gd");
+    expect(textOf(missing)).not.toContain("No errors");
+    const escape = (await client.callTool({ name: "godot_review", arguments: { files: ["../scripts/enemy.gd"] } })) as Result;
+    expect(textOf(escape)).toContain("no such file in the project: res://../scripts/enemy.gd");
+  });
+
   it("describes all tools in its instructions", () => {
     expect(client.getInstructions()).toContain("godot_checklist lists every AAA rule");
     expect(client.getInstructions()).toContain("godot_feedback marks a review finding");

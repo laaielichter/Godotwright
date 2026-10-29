@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, posix, relative, resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
@@ -20,7 +20,7 @@ import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
-import { findProjectRoot } from "../project/files.js";
+import { findProjectRoot, listProjectFiles } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
 import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
@@ -192,10 +192,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
     async ({ path, files, code, file, detail }) =>
       guard(() => {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
-        const target = file && !file.startsWith("res://") ? `res://${file.replace(/^\/+/, "")}` : file;
-        const report = reviewLearning(where(path), { base: options.base, baseFiles: options.baseFiles, overrides: code !== undefined && target ? { [target]: code } : undefined });
-        const focus = [...(files ?? []), ...(target ? [target] : [])].map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`));
-        return text(formatReviewFor(report, detail ?? profile.detail, profile, focus));
+        const target = file ? resPath(file) : undefined;
+        const overrides = code !== undefined && target ? { [target]: code } : undefined;
+        const dir = where(path);
+        const report = reviewLearning(dir, { base: options.base, baseFiles: options.baseFiles, overrides });
+        const focus = [...(files ?? []), ...(target ? [target] : [])].map(resPath);
+        const missing = focus.length ? unknownFiles(dir, focus, overrides ?? {}) : [];
+        const body = formatReviewFor(report, detail ?? profile.detail, profile, focus, missing);
+        return missing.length ? failure(body) : text(body);
       }),
   );
 
@@ -392,7 +396,18 @@ function guard(fn: () => ReturnType<typeof text> | ReturnType<typeof failure>) {
   }
 }
 
-function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile, focus: string[]): string {
+/** A file the tools name, as the res:// path the review uses: no leading ./ or /, no .. segments. */
+function resPath(file: string): string {
+  return `res://${posix.normalize(file.replace(/^res:\/\//, "").replace(/^\/+/, ""))}`;
+}
+
+/** The focus paths that are not files of the project or unsaved code under review (a typo, or a path outside the project). */
+function unknownFiles(dir: string, focus: string[], unsaved: Record<string, string>): string[] {
+  const known = new Set([...listProjectFiles(findProjectRoot(dir) ?? dir), ...Object.keys(unsaved)]);
+  return focus.filter((f) => !known.has(f));
+}
+
+function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile, focus: string[], missing: string[]): string {
   const out: string[] = [];
   out.push(`AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100`);
   out.push(report.categories.map((c) => `${c.category} ${c.score}`).join(", ") + `; static typing ${report.typing.percent}%`);
@@ -407,7 +422,8 @@ function formatReviewFor(report: ReviewReport, detail: Detail, profile: Profile,
     if (detail === "full") out.push(`  fix: ${RULES[f.rule]?.fix ?? ""}`);
   }
   if (list.length > shown.length) out.push(`+${list.length - shown.length} more`);
-  if (errors === 0 && focus.length) out.push("No errors in these files.");
+  if (errors === 0 && focus.length && missing.length === 0) out.push("No errors in these files.");
+  for (const file of missing) out.push(`no such file in the project: ${file}`);
   if (report.learning?.hidden) out.push(`${report.learning.hidden} ${report.learning.hidden === 1 ? "finding" : "findings"} hidden: marked as wrong earlier.`);
   if (report.learning?.downgraded.length) out.push(`Learned: ${report.learning.downgraded.join(", ")} shown as warnings; Godot did not confirm them.`);
   return `${out.join("\n")}\n`;
