@@ -133,8 +133,9 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
   const text = code + [...pm.data.resources.values()].map((r) => r.extResources.map((e) => e.path).join("\n")).join("\n");
   for (const [path, outline] of pm.data.scripts) {
     if (unreadable || path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
-    const base = path.slice(path.lastIndexOf("/") + 1);
-    if (text.includes(base)) continue;
+    // Whole file name only: `old_enemy.gd` does not use `enemy.gd`.
+    const base = path.slice(path.lastIndexOf("/") + 1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`(^|[^\\w])${base}(?![\\w.])`).test(text)) continue;
     const ext = outline.extends ?? "";
     if (/^(EditorScript|EditorPlugin|SceneTree|MainLoop)$/.test(ext)) continue;
     out.push(finding("structure/unused-script", path, undefined, "No scene, resource, autoload or script refers to this script."));

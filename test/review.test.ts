@@ -340,6 +340,17 @@ describe("review robustness", () => {
     expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
   });
 
+  it("does not take a longer file name that ends the same way as a use of a script", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "scripts/enemy.gd": "extends Node\n\nfunc _ready() -> void:\n\tpass\n",
+      "scripts/old_enemy.gd": "extends Node\n\nfunc _ready() -> void:\n\tpass\n",
+      "main.gd": 'extends Node\n\nconst OLD = preload("res://scripts/old_enemy.gd")\n\nfunc _ready() -> void:\n\tpass\n',
+    });
+    const unused = reviewProject(root).findings.filter((f) => f.rule === "structure/unused-script").map((f) => f.file);
+    expect(unused).toEqual(["res://main.gd", "res://scripts/enemy.gd"]);
+  });
+
   it("checks signals declared in inner classes for emission", () => {
     const root = makeProject({
       "project.godot": PROJECT,
