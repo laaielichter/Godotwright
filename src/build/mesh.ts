@@ -134,8 +134,8 @@ export class MeshBuilder {
     return this.map((p) => [p[0] * factor, p[1] * factor, p[2] * factor], (n) => n);
   }
 
-  /** The mesh plus its mirror image in the x = 0 plane; left and right match exactly. */
-  withMirrorX(): MeshBuilder {
+  /** The mirror image in the x = 0 plane (winding flipped so faces still point out). */
+  mirroredX(): MeshBuilder {
     const mirrored = new MeshBuilder();
     for (const o of this.prims.values()) {
       const p = mirrored.prim(o.material);
@@ -145,7 +145,12 @@ export class MeshBuilder {
       p.indices = [];
       for (let i = 0; i < o.indices.length; i += 3) p.indices.push(at(o.indices, i), at(o.indices, i + 2), at(o.indices, i + 1));
     }
-    return new MeshBuilder().merge(this).merge(mirrored);
+    return mirrored;
+  }
+
+  /** The mesh plus its mirror image in the x = 0 plane; left and right match exactly. */
+  withMirrorX(): MeshBuilder {
+    return new MeshBuilder().merge(this).merge(this.mirroredX());
   }
 }
 

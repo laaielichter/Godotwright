@@ -3,6 +3,8 @@ import { Command, Option } from "commander";
 import { BuildError } from "../build/params.js";
 import { buildKind, GENERATORS } from "../build/generators/index.js";
 import { buildGlb } from "../build/glb.js";
+import { buildSpec } from "../build/spec.js";
+import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
 import { contractFromModel, loadContract } from "../model/contract.js";
 import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { inspectModel } from "../model/inspect.js";
@@ -90,30 +92,41 @@ export function modelCommand(): Command {
     });
 
   model
+    .command("spec")
+    .description("explain the model spec format (a JSON tree of parts) and print an example")
+    .action((_options: object, command: Command) => {
+      writeOut(command, `${SPEC_HELP}\n${JSON.stringify(EXAMPLE_SPEC, null, 2)}\n`);
+    });
+
+  model
     .command("build")
-    .description("make a model from code: a clean .glb with UVs, tangents, named parts and a lint-ready build")
-    .argument("<kind>", `what to build (${Object.keys(GENERATORS).join(", ")}); see \`model kinds\``)
-    .option("-o, --out <file>", "output file (default <kind>.glb)")
-    .option("--spec <file>", "a JSON file with parameters")
+    .description("make a model from code: a clean .glb with UVs, tangents, named parts, ready for lint")
+    .argument("[kind]", `a ready-made kind (${Object.keys(GENERATORS).join(", ")}); leave out when you give a full spec with --spec`)
+    .option("-o, --out <file>", "output file (default <kind>.glb, or the name in the spec)")
+    .option("--spec <file>", "with a kind: parameters as JSON. Without a kind: a full model spec (see `model spec`)")
     .option("--set <name=value>", "set one parameter (repeatable)", collect, [])
     .option("--contract-out <file>", "also write a model.contract.json for the result")
-    .action((kind: string, options: { out?: string; spec?: string; set: string[]; contractOut?: string }, command: Command) => {
+    .action((kind: string | undefined, options: { out?: string; spec?: string; set: string[]; contractOut?: string }, command: Command) => {
       guard(() => {
         const input: Record<string, unknown> = {};
+        let spec: unknown;
         if (options.spec) {
           try {
-            Object.assign(input, JSON.parse(readFileSync(options.spec, "utf8")) as object);
+            spec = JSON.parse(readFileSync(options.spec, "utf8"));
           } catch (error) {
             throw new BuildError(`${options.spec}: cannot read the spec (${(error as Error).message})`);
           }
         }
+        if (kind && spec) Object.assign(input, spec as object);
+        if (!kind && !spec) throw new BuildError("give a kind (see `model kinds`) or a full spec with --spec (see `model spec`)");
         for (const pair of options.set) {
           const at = pair.indexOf("=");
           if (at < 1) throw new BuildError(`--set needs name=value, got "${pair}"`);
           input[pair.slice(0, at)] = pair.slice(at + 1);
         }
-        const file = options.out ?? `${kind}.glb`;
-        writeFileSync(file, buildGlb(buildKind(kind, input)));
+        const name = kind ?? ((spec as { name?: unknown }).name as string | undefined) ?? "model";
+        const file = options.out ?? `${name}.glb`;
+        writeFileSync(file, buildGlb(kind ? buildKind(kind, input) : buildSpec(spec, input)));
         const info = inspectModel(file);
         const report = lintModelFile(file);
         const size = info.bounds?.size.map((v) => v.toFixed(2)).join(" x ") ?? "?";

@@ -75,7 +75,12 @@ Godotwright gets better with every use, without collecting anything personal.
 14. **Model builder.** A small mesh kit (boxes, extrusions, roofs, surfaces of revolution, UVs,
     tangents, deterministic GLB writer) and `model build <kind>`, starting with `house`.
     *Done when:* every kind passes `model lint` without errors and loads in Godot.
-15. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
+15. **Model spec.** A JSON description of any model as a tree of parts, with expressions, mirror and
+    repeat, so an agent can build things Godotwright has no ready-made kind for.
+    *Done when:* a 30-line car spec builds a clean model.
+16. **Object knowledge.** An archetype library (what a thing is, its parts, sizes, variants, pivots) with
+    `model identify`, and checks of a model against its archetype.
+17. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
     **MCP tools for models**, and a contact-sheet render.
 
 ## After layer 1

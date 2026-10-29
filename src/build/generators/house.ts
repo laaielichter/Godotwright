@@ -7,7 +7,7 @@ import type { Generator } from "./index.js";
 
 export const HOUSE_PARAMS: ParamDef[] = [
   { name: "width", type: "number", default: 8, min: 3, max: 40, description: "Width in metres (x)." },
-  { name: "depth", type: "number", default: 10, min: 3, max: 40, description: "Depth in metres (z). The front, with the door, faces -z." },
+  { name: "depth", type: "number", default: 10, min: 3, max: 40, description: "Depth in metres (z). The front, with the door, faces +z (Godot's MODEL_FRONT)." },
   { name: "floors", type: "integer", default: 2, min: 1, max: 12, description: "Number of floors." },
   { name: "floorHeight", type: "number", default: 2.8, min: 2.2, max: 5, description: "Height of one floor in metres." },
   { name: "roof", type: "enum", default: "gable", options: ["flat", "gable", "hip"], description: "Roof shape." },
@@ -89,7 +89,7 @@ export const house: Generator = {
       for (let f = 0; f < floors; f++) {
         for (let k = 0; k < n; k++) {
           const centre = ((k + 0.5) / n) * w.length;
-          if (wi === 0 && f === 0 && Math.abs(centre - width / 2) < doorWidth / 2 + windowW / 2 + 0.2) continue;
+          if (wi === 1 && f === 0 && Math.abs(centre - width / 2) < doorWidth / 2 + windowW / 2 + 0.2) continue;
           if (centre - windowW / 2 < 0.3 || centre + windowW / 2 > w.length - 0.3) continue;
           const y0 = f * floorHeight + sill + (f === 0 ? 0.3 : 0);
           windows.merge(wallBox(w, centre - windowW / 2 - 0.06, centre + windowW / 2 + 0.06, y0 - 0.06, y0 + windowH + 0.06, -0.02, 0.05, "frame_white"));
@@ -98,7 +98,7 @@ export const house: Generator = {
       }
     });
 
-    const front = wallList[0] as Wall;
+    const front = wallList[1] as Wall;
     const door = new MeshBuilder()
       .merge(wallBox(front, doorU0 - 0.08, doorU0 + doorWidth + 0.08, 0.45, doorHeight + 0.45 + 0.08, -0.02, 0.06, "frame_white"))
       .merge(wallBox(front, doorU0, doorU0 + doorWidth, 0.45, doorHeight + 0.45, -0.02, 0.1, "door"));
