@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CommanderError, type Command } from "commander";
 import { createProgram } from "../src/program.js";
@@ -79,5 +82,26 @@ describe("number options", () => {
     const score = await run(["model", "lint", glb, "--min-score", "8O"]);
     expect(score.exitCode).toBe(1);
     expect(score.output).toContain("expected a number");
+  });
+
+  it("collector aggregate refuses a --min-installs that is not a number, instead of keeping nothing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "godotwright-reports-"));
+    const { output, exitCode } = await run(["collector", "aggregate", dir, "--min-installs", "2O"]);
+    expect(exitCode).toBe(1);
+    expect(output).toContain("expected a number");
+  });
+
+  it("collector serve refuses a --port that is not a number", async () => {
+    const { output, exitCode } = await run(["collector", "serve", "--port", "2O"]);
+    expect(exitCode).toBe(1);
+    expect(output).toContain("expected a number");
+  });
+
+  it("api -n limits search results, and refuses a limit that is not a number", async () => {
+    const hits = JSON.parse((await run(["api", "--search", "is", "on", "floor", "-n", "3", "--json"])).output);
+    expect(hits).toHaveLength(3);
+    const bad = await run(["api", "--search", "is", "on", "floor", "-n", "3O"]);
+    expect(bad.exitCode).toBe(1);
+    expect(bad.output).toContain("expected a number");
   });
 });
