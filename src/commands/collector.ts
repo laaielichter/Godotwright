@@ -36,7 +36,7 @@ export function collectorCommand(): Command {
     .command("projects")
     .description("learn from public Godot projects (review + real Godot check) into data/learned.json")
     .argument("<dirs...>", "project directories, e.g. the official demos")
-    .option("--godot <path>", "Godot binary (default: $GODOT, then PATH)")
+    .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--out <file>", "where to write the result (default: print it)")
     .action(async (dirs: string[], options: { godot?: string; out?: string }, command: Command) => {
       const learned = await learnFromProjects(dirs, { godot: options.godot, timeoutMs: 5 * 60_000, log: (line) => process.stderr.write(`${line}\n`) });

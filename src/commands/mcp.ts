@@ -15,7 +15,7 @@ export function mcpCommand(): Command {
         .default(process.env["GODOTWRIGHT_TIER"] ?? "cheap"),
     )
     .option("--project <path>", "project directory the tools use by default (default: the working directory)")
-    .option("--godot <path>", "Godot binary for godot_check (default: $GODOT, then PATH)")
+    .option("--godot <path>", "Godot binary for godot_check (default: $GODOT, then PATH, then the usual install folders)")
     .option("--base <dir>", BASE_HELP, collect, [])
     .option("--base-files <file>", BASE_FILES_HELP, collect, [])
     .action(async (options: { tier: Tier; project?: string; godot?: string; base: string[]; baseFiles: string[] }) => {

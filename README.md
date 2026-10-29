@@ -74,7 +74,8 @@ It lists scenes with their node trees, scripts with signals, functions and expor
 autoloads, input actions and key settings, and warns about broken references
 (missing files, a missing main scene or autoload, bad `preload()` paths).
 
-`check` needs Godot 4.7 (`--godot <path>`, `$GODOT`, or `godot` on your PATH). It imports
+`check` needs Godot 4.7: `--godot <path>`, `$GODOT`, `godot` on your PATH, or a Godot 4 download
+it finds by itself (Program Files, Steam, Scoop, Downloads, Desktop). It imports
 the project, loads and instantiates every script and scene, and can run the main scene.
 Each problem comes back once, as `res://path/file.gd:12: error: ...`.
 The exit code is 1 when there are errors.
