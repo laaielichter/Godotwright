@@ -1,0 +1,261 @@
+{
+ "version": 1,
+ "name": "spaceship",
+ "archetype": "spacecraft.spaceship",
+ "description": "A small science-fiction fighter: a tapered hull with a glass cockpit at the front (+Z), two glowing engines at the back, swept wings with a cannon at each tip, and three landing legs it stands on (y = 0), hinged at the hull.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 14,
+   "min": 6,
+   "max": 40,
+   "description": "Length of the hull in metres."
+  },
+  {
+   "name": "wingSpan",
+   "type": "number",
+   "default": 1.0,
+   "min": 0.6,
+   "max": 1.6,
+   "description": "Wing size: 1 is a span about as wide as the hull is long."
+  }
+ ],
+ "materials": {
+  "hull_grey": {
+   "color": [
+    0.6,
+    0.62,
+    0.66,
+    1
+   ],
+   "metallic": 0.6,
+   "roughness": 0.4
+  },
+  "engine_glow": {
+   "color": [
+    0.3,
+    0.6,
+    1.0,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1,
+   "emissive": [
+    0.4,
+    0.75,
+    1.0
+   ]
+  }
+ },
+ "nodes": [
+  {
+   "name": "Spaceship",
+   "material": "hull_grey",
+   "vars": {
+    "L": "$length",
+    "g": "$length * 0.08",
+    "ws": "$length * 0.45 * $wingSpan"
+   },
+   "children": [
+    {
+     "name": "Hull",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "$L * 0.5",
+       "superellipse": {
+        "width": "$L * 0.03",
+        "height": "$L * 0.025",
+        "n": 2.2,
+        "count": 24,
+        "cy": "$g + $L * 0.05"
+       }
+      },
+      {
+       "z": "$L * 0.3",
+       "superellipse": {
+        "width": "$L * 0.14",
+        "height": "$L * 0.09",
+        "n": 2.5,
+        "count": 24,
+        "cy": "$g + $L * 0.06"
+       }
+      },
+      {
+       "z": "0",
+       "superellipse": {
+        "width": "$L * 0.24",
+        "height": "$L * 0.12",
+        "n": 3,
+        "count": 24,
+        "cy": "$g + $L * 0.065"
+       }
+      },
+      {
+       "z": "-$L * 0.35",
+       "superellipse": {
+        "width": "$L * 0.3",
+        "height": "$L * 0.12",
+        "n": 3.5,
+        "count": 24,
+        "cy": "$g + $L * 0.065"
+       }
+      },
+      {
+       "z": "-$L * 0.45",
+       "superellipse": {
+        "width": "$L * 0.26",
+        "height": "$L * 0.1",
+        "n": 3.5,
+        "count": 24,
+        "cy": "$g + $L * 0.065"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Cockpit",
+     "shape": "ellipsoid",
+     "material": "glass",
+     "segments": 16,
+     "radii": [
+      "$L * 0.045",
+      "$L * 0.04",
+      "$L * 0.11"
+     ],
+     "at": [
+      0,
+      "$g + $L * 0.11",
+      "$L * 0.18"
+     ]
+    },
+    {
+     "name": "Engine_L",
+     "at": [
+      "$L * 0.08",
+      "$g + $L * 0.065",
+      "-$L * 0.42"
+     ],
+     "mirror": "Engine_R",
+     "children": [
+      {
+       "name": "Nacelle",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$L * 0.045",
+       "height": "$L * 0.18",
+       "segments": 16
+      },
+      {
+       "name": "Exhaust",
+       "shape": "cylinder",
+       "axis": "z",
+       "material": "engine_glow",
+       "radius": "$L * 0.035",
+       "height": "$L * 0.01",
+       "segments": 16,
+       "at": [
+        0,
+        0,
+        "-$L * 0.095"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Wing_L",
+     "children": [
+      {
+       "name": "Panel",
+       "shape": "extrude",
+       "y0": "$g + $L * 0.05",
+       "y1": "$g + $L * 0.065",
+       "plan": [
+        [
+         "$L * 0.1",
+         "$L * 0.05"
+        ],
+        [
+         "$L * 0.1 + $ws",
+         "-$L * 0.22"
+        ],
+        [
+         "$L * 0.1 + $ws",
+         "-$L * 0.32"
+        ],
+        [
+         "$L * 0.1",
+         "-$L * 0.32"
+        ]
+       ]
+      }
+     ],
+     "mirror": "Wing_R"
+    },
+    {
+     "name": "Weapon_L",
+     "shape": "cylinder",
+     "axis": "z",
+     "material": "metal",
+     "radius": "$L * 0.01",
+     "height": "$L * 0.2",
+     "segments": 8,
+     "at": [
+      "$L * 0.1 + $ws",
+      "$g + $L * 0.058",
+      "-$L * 0.2"
+     ],
+     "mirror": "Weapon_R"
+    },
+    {
+     "name": "LandingGear_F",
+     "at": [
+      "$L * 0.012",
+      "$g + $L * 0.03",
+      "$L * 0.22"
+     ],
+     "children": [
+      {
+       "name": "Bone",
+       "shape": "cylinder",
+       "radius": "$L * 0.012",
+       "height": "$g + $L * 0.03",
+       "segments": 12,
+       "offset": [
+        "-($L * 0.012)",
+        "-($g + $L * 0.03) / 2",
+        0
+       ]
+      }
+     ],
+     "material": "metal"
+    },
+    {
+     "name": "LandingGear_L",
+     "at": [
+      "$L * 0.11",
+      "$g + $L * 0.03",
+      "-$L * 0.25"
+     ],
+     "children": [
+      {
+       "name": "Bone",
+       "shape": "cylinder",
+       "radius": "$L * 0.012",
+       "height": "$g + $L * 0.03",
+       "segments": 12,
+       "offset": [
+        "-($L * 0.012)",
+        "-($g + $L * 0.03) / 2",
+        0
+       ]
+      }
+     ],
+     "material": "metal",
+     "mirror": "LandingGear_R"
+    }
+   ]
+  }
+ ]
+}

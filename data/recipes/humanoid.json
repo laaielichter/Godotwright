@@ -1,0 +1,197 @@
+{
+ "version": 1,
+ "name": "humanoid",
+ "archetype": "creature.humanoid",
+ "description": "A person-shaped character in a T-pose for rigging: torso, neck and head, arms straight out with hands, legs with feet; every limb a node with its pivot at the joint (shoulder, hip, neck). Faces +Z, feet on y = 0.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 1.8,
+   "min": 1.2,
+   "max": 2.2,
+   "description": "Standing height in metres."
+  },
+  {
+   "name": "build",
+   "type": "number",
+   "default": 1.0,
+   "min": 0.8,
+   "max": 1.3,
+   "description": "Width of the body: 1 is average, below is slim, above is heavy."
+  }
+ ],
+ "materials": {
+  "skin": {
+   "color": [
+    0.78,
+    0.6,
+    0.48,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.7
+  },
+  "cloth": {
+   "color": [
+    0.2,
+    0.28,
+    0.42,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.85
+  }
+ },
+ "nodes": [
+  {
+   "name": "Humanoid",
+   "material": "cloth",
+   "vars": {
+    "H": "$height",
+    "w": "$build",
+    "legL": "$height * 0.47",
+    "rl": "$height * 0.045 * $build",
+    "hipX": "$height * 0.02 * $build",
+    "sh": "$height * 0.81",
+    "tx": "$height * 0.11 * $build",
+    "armL": "$height * 0.36",
+    "ra": "$height * 0.03 * $build"
+   },
+   "children": [
+    {
+     "name": "Torso",
+     "shape": "ellipsoid",
+     "segments": 20,
+     "radii": [
+      "$tx",
+      "($sh - $legL) / 2 + 0.04",
+      "$H * 0.065 * $w"
+     ],
+     "at": [
+      0,
+      "($sh + $legL) / 2",
+      0
+     ]
+    },
+    {
+     "name": "Neck",
+     "shape": "cylinder",
+     "material": "skin",
+     "radius": "$H * 0.028",
+     "height": "$H * 0.07",
+     "segments": 10,
+     "at": [
+      0,
+      "$sh + $H * 0.03",
+      0
+     ]
+    },
+    {
+     "name": "Head",
+     "material": "skin",
+     "at": [
+      0,
+      "$sh + $H * 0.055",
+      "-$H * 0.06"
+     ],
+     "children": [
+      {
+       "name": "Skull",
+       "shape": "ellipsoid",
+       "segments": 16,
+       "radii": [
+        "$H * 0.05",
+        "$H * 0.065",
+        "$H * 0.06"
+       ],
+       "offset": [
+        0,
+        "$H * 0.065",
+        "$H * 0.06"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Arm_L",
+     "at": [
+      "$tx * 0.85",
+      "$sh",
+      0
+     ],
+     "mirror": "Arm_R",
+     "children": [
+      {
+       "name": "Sleeve",
+       "shape": "cylinder",
+       "axis": "x",
+       "radius": "$ra",
+       "height": "$armL",
+       "segments": 10,
+       "offset": [
+        "$armL / 2",
+        "-$ra",
+        0
+       ]
+      },
+      {
+       "name": "Hand_L",
+       "shape": "ellipsoid",
+       "material": "skin",
+       "segments": 10,
+       "radii": [
+        "$H * 0.05",
+        "$ra * 0.9",
+        "$ra * 1.2"
+       ],
+       "at": [
+        "$armL + $H * 0.04",
+        "-$ra",
+        0
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Leg_L",
+     "at": [
+      "$hipX + 2 * $rl",
+      "$legL",
+      0
+     ],
+     "mirror": "Leg_R",
+     "children": [
+      {
+       "name": "Trouser",
+       "shape": "cylinder",
+       "radius": "$rl",
+       "height": "$legL",
+       "segments": 12,
+       "offset": [
+        "-$rl",
+        "-$legL / 2",
+        0
+       ]
+      },
+      {
+       "name": "Foot_L",
+       "shape": "box",
+       "material": "skin",
+       "size": [
+        "$rl * 1.8",
+        "$H * 0.035",
+        "$H * 0.14"
+       ],
+       "at": [
+        "-$rl",
+        "-$legL + $H * 0.0175",
+        "$H * 0.035"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

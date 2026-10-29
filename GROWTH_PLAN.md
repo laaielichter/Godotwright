@@ -136,7 +136,7 @@ Left before launch: release v0.1.0, 1-3 good first issues, real screen-recorded 
 
 ## Update 29 Oct 2026: 3D models are the second story
 
-Godotwright now also builds, views and checks 3D models (49 ready-made kinds, terrain with lakes and rivers, a text
+Godotwright now also builds, views and checks 3D models (53 ready-made kinds, terrain with lakes and rivers, a text
 viewer, a loose-part check) and has a written test of how small models cope with it. That gives two audiences and two
 stories, which should be told one at a time and not mixed in a single post:
 
@@ -146,7 +146,7 @@ stories, which should be told one at a time and not mixed in a single post:
 
 ### Done in the repo (free)
 
-- Site: `docs/models.html` gallery (49 kinds plus 3 terrain variants, each with the command that builds it), a 3D section on
+- Site: `docs/models.html` gallery (53 kinds plus 3 terrain variants, each with the command that builds it), a 3D section on
   the home page, sitemap, structured data, `docs/llms.txt` for AI crawlers. `scripts/build-gallery.mjs` regenerates the page.
 - README: a 3D section with the overview image; description and keywords (npm, MCP Registry) mention 3D models.
 - Release prep: `CHANGELOG.md` (0.1.0), version bump to 0.1.0 in `package.json` and `server.json`, `release.yml`
@@ -195,14 +195,14 @@ post (several game dev communities restrict AI content or self-promotion; some w
 several places. Lead with a concrete before and after, say what it does not do, ask one question.
 
 > I built a small open source tool (MIT) that lets a coding agent build and check 3D models for Godot without Blender:
-> 49 ready-made parametric kinds (cars, aircraft, ships, buildings, trees, terrain with a lake and a river), a text viewer
+> 53 ready-made parametric kinds (cars, aircraft, ships, buildings, trees, terrain with a lake and a river), a text viewer
 > so an agent without eyes can check the shape, and a lint that scores the .glb. They are clean base models, not sculpted
 > art. Gallery: https://laaielichter.github.io/Godotwright/models.html. What would you want it to build next?
 
 **X / Bluesky / Mastodon** (attach `docs/gallery/overview.jpg`):
 
 > I built Godotwright: an MCP server + CLI that lets Claude Code, Codex or a cheap model build, view and check 3D models for
-> Godot 4 from code. 49 kinds, a text viewer for agents that can't see, MIT. Gallery + install: [link]
+> Godot 4 from code. 53 kinds, a text viewer for agents that can't see, MIT. Gallery + install: [link]
 > What should it build next?
 
 **LinkedIn (Dutch audience, write it in Dutch):** a story post about the test with six small models: what broke, what

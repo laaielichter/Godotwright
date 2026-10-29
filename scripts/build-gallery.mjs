@@ -22,6 +22,7 @@ const FAMILIES = [
   ["Roads, rails and bridges", /^infrastructure\./],
   ["Plants", /^plant\./],
   ["Terrain and water", /^world\./],
+  ["Creatures", /^creature\./],
   ["Spacecraft", /^spacecraft\./],
   ["Props", /^prop\./],
 ];
