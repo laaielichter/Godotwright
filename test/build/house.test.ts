@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildGlb } from "../../src/build/glb.js";
-import { buildKind, GENERATORS } from "../../src/build/generators/index.js";
+import { buildKind, GENERATORS, generatorFor } from "../../src/build/generators/index.js";
 import { resolveParams, random } from "../../src/build/params.js";
 import { contractFromModel } from "../../src/model/contract.js";
 import { inspectModel } from "../../src/model/inspect.js";
@@ -69,6 +69,13 @@ describe("parameters", () => {
     expect(() => buildKind("house", { width: "wide" })).toThrow(/must be a number/);
     expect(() => buildKind("house", { chimney: "maybe" })).toThrow(/true or false/);
     expect(() => buildKind("castle")).toThrow(/unknown model kind "castle"/);
+  });
+
+  it("does not take the names of Object.prototype for kinds", () => {
+    for (const kind of ["constructor", "toString", "__proto__"]) {
+      expect(() => buildKind(kind), kind).toThrow(/unknown model kind/);
+      expect(() => generatorFor(kind), kind).toThrow(/unknown model kind/);
+    }
   });
 
   it("converts strings from the command line", () => {
