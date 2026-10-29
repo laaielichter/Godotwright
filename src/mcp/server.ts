@@ -11,6 +11,7 @@ import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
 import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { formatDelta, reviewDelta } from "../review/delta.js";
 import { parseFindingLine, recordFeedback } from "../learn/learn.js";
 import { allKinds } from "../build/generators/index.js";
 import { buildModel } from "../build/run.js";
@@ -183,22 +184,29 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "AAA review",
       description:
-        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure, with a 0-100 score per category. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk.",
+        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure, with a 0-100 score per category. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk. Pass `only_new: true` while you are fixing: it shows only findings that are new since your last review in full, the ones you already saw as one short line each, and how many are fixed.",
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only show findings in these res:// files"),
         code: z.string().optional().describe("unsaved GDScript to review in place of the file on disk"),
         file: z.string().optional().describe("res:// path the code belongs to (required with code)"),
+        only_new: z.boolean().optional().describe("show only what changed since the last review of this project (saves tokens in a fix loop)"),
         detail: detailParam,
       },
       annotations: readOnly,
     },
-    async ({ path, files, code, file, detail }) =>
+    async ({ path, files, code, file, only_new, detail }) =>
       guard(() => {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
         const target = file && !file.startsWith("res://") ? `res://${file.replace(/^\/+/, "")}` : file;
         const report = reviewLearning(where(path), { base: options.base, baseFiles: options.baseFiles, overrides: code !== undefined && target ? { [target]: code } : undefined });
         const focus = [...(files ?? []), ...(target ? [target] : [])].map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`));
+        // Unsaved code is a what-if: it does not become the memory the next delta compares with.
+        const delta = reviewDelta(where(path), report, { remember: code === undefined });
+        if (only_new) {
+          const head = `AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100\n${report.categories.map((c) => `${c.category} ${c.score}`).join(", ")}; static typing ${report.typing.percent}%\n`;
+          return text(head + formatDelta(delta, { cap: profile.findings, focus, noInfos: !profile.infos && (detail ?? profile.detail) === "brief" }));
+        }
         return text(formatReviewFor(report, detail ?? profile.detail, profile, focus));
       }),
   );

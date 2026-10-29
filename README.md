@@ -77,6 +77,7 @@ godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
+godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
 godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
@@ -213,6 +214,17 @@ constants get their Godot 4 names (only when the old name no longer exists in Go
 it lists with the line: `setget`, `move_and_slide(velocity)`, `remote func`, export hints it does not know. Scenes and
 project settings are not touched; Godot's own `--convert-3to4` does those. Commit first; a second run makes no further
 changes.
+
+### Cheaper fix loops: only what changed
+
+```sh
+godotwright review --only-new
+```
+
+Every review remembers its findings in `.godot/godotwright/review-last.json` (Godot projects ignore `.godot/` in git). With
+`--only-new` (MCP: `only_new: true`) the next review prints the findings that are new since then in full, the ones you
+already saw as one short line each (`file:line [rule]`), and how many are fixed. A finding keeps its identity when its
+line moves. An agent fixing a long list reads the list once instead of after every edit.
 
 ## Review in GitHub Actions
 
