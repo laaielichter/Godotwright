@@ -19,7 +19,7 @@ export function checkCommand(): Command {
   return new Command("check")
     .description("run Godot headless and report script and scene errors with file and line")
     .argument("[path]", "project directory (or any path inside it)", ".")
-    .option("--godot <path>", "Godot binary (default: $GODOT, then PATH)")
+    .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--no-import", "skip the import step (faster when .godot/ is up to date)")
     .option("--no-instantiate", "only load scenes, do not instantiate them")
     .option("--run [frames]", "also run the main scene for a number of frames (default 120)")

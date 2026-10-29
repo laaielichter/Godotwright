@@ -1,4 +1,4 @@
-import { chmodSync, cpSync, existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -115,6 +115,42 @@ describe("findGodot", () => {
     expect(findGodot(undefined, { PATH: join(godot, "..") })).toBe(godot);
     expect(() => findGodot(undefined, { PATH: "" })).toThrow(GodotNotFoundError);
     expect(() => findGodot("/no/such/godot", {})).toThrow(/not found or not executable/);
+  });
+
+  /** Creates empty executables at the given paths under a fresh home folder. */
+  function home(files: string[]): string {
+    const root = mkdtempSync(join(tmpdir(), "godot-home-"));
+    for (const file of files) {
+      mkdirSync(join(root, file, ".."), { recursive: true });
+      writeFileSync(join(root, file), "");
+      chmodSync(join(root, file), 0o755);
+    }
+    return root;
+  }
+
+  it("finds the newest unzipped download on Windows, console build first", () => {
+    const root = home([
+      "Downloads/Godot_v4.6.1-stable_win64.exe",
+      "Downloads/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64.exe",
+      "Downloads/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe",
+      "Downloads/notes.txt",
+    ]);
+    expect(findGodot(undefined, { USERPROFILE: root }, "win32")).toBe(
+      join(root, "Downloads", "Godot_v4.7.2-stable_win64.exe", "Godot_v4.7.2-stable_win64_console.exe"),
+    );
+  });
+
+  it("finds Godot from Steam on Windows", () => {
+    const root = home(["Steam/steamapps/common/Godot Engine/godot.windows.opt.tools.64.exe"]);
+    expect(findGodot(undefined, { "ProgramFiles(x86)": root }, "win32")).toBe(
+      join(root, "Steam", "steamapps", "common", "Godot Engine", "godot.windows.opt.tools.64.exe"),
+    );
+  });
+
+  it("finds a download in the home folder on Linux", () => {
+    const root = home(["Downloads/Godot_v4.7.2-stable_linux.x86_64"]);
+    expect(findGodot(undefined, { HOME: root }, "linux")).toBe(join(root, "Downloads", "Godot_v4.7.2-stable_linux.x86_64"));
+    expect(() => findGodot(undefined, { HOME: home(["Downloads/godot.txt"]) }, "linux")).toThrow(GodotNotFoundError);
   });
 });
 
