@@ -27,6 +27,10 @@ export async function runCli(args: string[]): Promise<{ output: string; exitCode
       writeOut: (text) => (output += text),
       writeErr: (text) => (output += text),
     });
+  // Commands report failure by setting process.exitCode. Clear it first so a value left by an
+  // earlier call in the same test file cannot leak into this result. This call's code stays in
+  // process.exitCode afterwards, where callers can read it.
+  process.exitCode = undefined;
   try {
     await program.parseAsync(args, { from: "user" });
   } catch (error) {
