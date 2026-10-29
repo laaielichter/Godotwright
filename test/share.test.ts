@@ -116,7 +116,7 @@ describe("the report", () => {
     expect(report.rules["api/unknown-member"]).toMatchObject({ reported: 1, contradicted: 1 });
     expect(report.apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
     expect(report.missedByReview).toEqual({ 'Identifier "<s>" not declared. In <path>': 1, "Function <id> not found in base <id>": 1 });
-    expect(report.unparsed).toEqual({ "Cannot open <path> <path> for reading": 1 });
+    expect(report.unparsed).toEqual({ "Cannot open <path>": 1 });
   });
 
   it("never shares a verdict of right as a Godot confirmation", () => {

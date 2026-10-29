@@ -120,16 +120,18 @@ describe("learning store", () => {
 describe("message templates", () => {
   it("drops paths, names and numbers", () => {
     expect(messageTemplate('Identifier "secret_inventory" not declared in the current scope.')).toBe('Identifier "<s>" not declared in the current scope.');
-    expect(messageTemplate("Failed loading resource: res://levels/boss_7.tscn. Make sure resources have been imported")).toBe(
-      "Failed loading resource: <path> Make sure resources have been imported",
-    );
-    expect(messageTemplate("Cannot open file /home/roel/My Game/a.gd at line 12")).toBe("Cannot open file <path> <path> at line <n>");
+    expect(messageTemplate("Failed loading resource: res://levels/boss_7.tscn. Make sure resources have been imported")).toBe("Failed loading resource: <path>");
+    expect(messageTemplate("Cannot open file /home/roel/My Game/a.gd at line 12")).toBe("Cannot open file <path>");
+    // The last word of a path with a space must not survive as a plain word.
+    expect(messageTemplate("Cannot open project at C:\\Users\\John Smith")).toBe("Cannot open project at <path>");
     expect(messageTemplate("too   many\nspaces 0xFF -3.5")).toBe("too many spaces <n> <n>");
   });
 
   it("only calls a template shareable when nothing personal is left", () => {
     expect(shareableTemplate('Identifier "<s>" not declared in the current scope.')).toBe(true);
-    expect(shareableTemplate("Cannot open file <path> at line <n>")).toBe(true);
+    expect(shareableTemplate("Cannot open file <path>")).toBe(true);
+    // A path is the last thing in a template; words after one may belong to the path.
+    expect(shareableTemplate("Cannot open file <path> at line <n>")).toBe(false);
     expect(shareableTemplate("open C:\\Users")).toBe(false);
     expect(shareableTemplate("mail me at a.b@example.com now")).toBe(false);
     expect(shareableTemplate("short")).toBe(false);
