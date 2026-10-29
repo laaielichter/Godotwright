@@ -5,8 +5,9 @@ import { buildGlb } from "../../src/build/glb.js";
 import { allKinds, buildKind } from "../../src/build/generators/index.js";
 import { loadRecipes } from "../../src/build/recipes.js";
 import { buildSpec } from "../../src/build/spec.js";
-import { inspectModel } from "../../src/model/inspect.js";
+import { inspectModel, transformPoint } from "../../src/model/inspect.js";
 import { lintModelFile } from "../../src/model/lint.js";
+import type { V3 } from "../../src/build/mesh.js";
 import { runCli } from "../helpers.js";
 import { sha, writeScene } from "./helpers.js";
 
@@ -20,6 +21,25 @@ function problems(kind: string, input: Record<string, unknown> = {}): string[] {
   const arch = scene.archetype ? library.resolve(scene.archetype) : undefined;
   const report = lintModelFile(path, arch ? { archetype: arch } : {});
   return report.findings.filter((f) => f.severity !== "info").map((f) => `${f.rule} ${f.node ?? ""} ${f.message}`);
+}
+
+/** The world-space box of one node's geometry, by its path in the file (such as "Church/Roof"). */
+function partBox(kind: string, input: Record<string, unknown>, nodePath: string): { min: V3; max: V3 } {
+  const info = inspectModel(writeScene(buildKind(kind, input)));
+  const prims = info.primitives.filter((p) => p.nodeName === nodePath);
+  expect(prims.length, nodePath).toBeGreaterThan(0);
+  const min: V3 = [Infinity, Infinity, Infinity];
+  const max: V3 = [-Infinity, -Infinity, -Infinity];
+  for (const p of prims) {
+    for (let i = 0; i < p.vertices; i++) {
+      const q = transformPoint(p.world, p.positions[i * 3]!, p.positions[i * 3 + 1]!, p.positions[i * 3 + 2]!);
+      for (let a = 0; a < 3; a++) {
+        min[a] = Math.min(min[a]!, q[a]!);
+        max[a] = Math.max(max[a]!, q[a]!);
+      }
+    }
+  }
+  return { min, max };
 }
 
 describe("ring and offset in the spec language", () => {
@@ -127,5 +147,15 @@ describe("the recipes", () => {
     expect(kinds.output).toContain("tractor:");
     expect(kinds.output).toContain("rearWheelRadius = 0.85");
     expect((await runCli(["model", "build", "spaceship"])).exitCode).toBe(1);
+  });
+});
+
+describe("recipe geometry", () => {
+  it("church: the roof reaches the belfry's back face at every nave width", () => {
+    for (const naveWidth of [8, 10, 25]) {
+      const roof = partBox("church", { naveWidth }, "Church/Roof");
+      const belfry = partBox("church", { naveWidth }, "Church/Belfry");
+      expect(roof.max[2], `naveWidth ${naveWidth}`).toBeCloseTo(belfry.min[2], 1);
+    }
   });
 });
