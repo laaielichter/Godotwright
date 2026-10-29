@@ -66,8 +66,9 @@ describe("the example car", () => {
     const scene = buildSpec(EXAMPLE_SPEC);
     const wheels = scene.nodes[0]!.children!.find((c) => c.name === "Wheels")!.children!;
     expect(wheels.map((w) => w.name)).toEqual(["Wheel_FL", "Wheel_FR", "Wheel_RL", "Wheel_RR"]);
-    expect(wheels[0]!.translation).toEqual([-0.78, 0.33, -1.3]);
-    expect(wheels[1]!.translation).toEqual([0.78, 0.33, -1.3]);
+    // The front faces +z, so the car's left side is +x.
+    expect(wheels[0]!.translation).toEqual([0.78, 0.33, 1.3]);
+    expect(wheels[1]!.translation).toEqual([-0.78, 0.33, 1.3]);
   });
 
   it("has outward faces on every shell, and the parameters change the size", () => {

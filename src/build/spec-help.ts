@@ -16,11 +16,11 @@ export const EXAMPLE_SPEC = {
           shape: "loft",
           material: "paint",
           sections: [
-            { z: -2.2, superellipse: { width: "$width * 0.62", height: 0.45, n: 3, count: 32, cy: 0.55 } },
-            { z: -1.7, superellipse: { width: "$width * 0.96", height: 0.62, n: 3, count: 32, cy: 0.62 } },
-            { z: -0.3, superellipse: { width: "$width", height: 0.7, n: 3, count: 32, cy: 0.7 } },
-            { z: 1.5, superellipse: { width: "$width", height: 0.7, n: 3, count: 32, cy: 0.7 } },
-            { z: 2.2, superellipse: { width: "$width * 0.8", height: 0.55, n: 3, count: 32, cy: 0.62 } },
+            { z: -2.2, superellipse: { width: "$width * 0.8", height: 0.55, n: 3, count: 32, cy: 0.62 } },
+            { z: -1.5, superellipse: { width: "$width", height: 0.7, n: 3, count: 32, cy: 0.7 } },
+            { z: 0.3, superellipse: { width: "$width", height: 0.7, n: 3, count: 32, cy: 0.7 } },
+            { z: 1.7, superellipse: { width: "$width * 0.96", height: 0.62, n: 3, count: 32, cy: 0.62 } },
+            { z: 2.2, superellipse: { width: "$width * 0.62", height: 0.45, n: 3, count: 32, cy: 0.55 } },
           ],
         },
         {
@@ -28,18 +28,18 @@ export const EXAMPLE_SPEC = {
           shape: "loft",
           material: "glass",
           sections: [
-            { z: -1.0, superellipse: { width: "$width * 0.75", height: 0.35, n: 2.5, count: 32, cy: 1.0 } },
-            { z: -0.5, superellipse: { width: "$width * 0.83", height: 0.62, n: 2.5, count: 32, cy: 1.1 } },
-            { z: 0.9, superellipse: { width: "$width * 0.83", height: 0.6, n: 2.5, count: 32, cy: 1.1 } },
-            { z: 1.5, superellipse: { width: "$width * 0.72", height: 0.35, n: 2.5, count: 32, cy: 1.0 } },
+            { z: -1.5, superellipse: { width: "$width * 0.72", height: 0.35, n: 2.5, count: 32, cy: 1.0 } },
+            { z: -0.9, superellipse: { width: "$width * 0.83", height: 0.6, n: 2.5, count: 32, cy: 1.1 } },
+            { z: 0.5, superellipse: { width: "$width * 0.83", height: 0.62, n: 2.5, count: 32, cy: 1.1 } },
+            { z: 1.0, superellipse: { width: "$width * 0.75", height: 0.35, n: 2.5, count: 32, cy: 1.0 } },
           ],
         },
         {
           name: "Wheels",
           vars: { x: "$width / 2 - 0.12", z: "$wheelbase / 2" },
           children: [
-            { name: "Wheel_FL", shape: "cylinder", material: "rubber", axis: "x", radius: "$wheelRadius", height: 0.22, at: ["-$x", "$wheelRadius", "-$z"], mirror: "Wheel_FR" },
-            { name: "Wheel_RL", shape: "cylinder", material: "rubber", axis: "x", radius: "$wheelRadius", height: 0.22, at: ["-$x", "$wheelRadius", "$z"], mirror: "Wheel_RR" },
+            { name: "Wheel_FL", shape: "cylinder", material: "rubber", axis: "x", radius: "$wheelRadius", height: 0.22, at: ["$x", "$wheelRadius", "$z"], mirror: "Wheel_FR" },
+            { name: "Wheel_RL", shape: "cylinder", material: "rubber", axis: "x", radius: "$wheelRadius", height: 0.22, at: ["$x", "$wheelRadius", "-$z"], mirror: "Wheel_RR" },
           ],
         },
       ],
@@ -76,7 +76,7 @@ Shapes and their keys:
 
 Numbers can be expressions: "$width / 2 - 0.1", "max($a, 1) * 2", "pi", "rad(45)", "$i * 0.5" inside repeat.
 Functions: min max abs sqrt sin cos tan floor ceil round pow rad clamp lerp. Variables start with $.
-Conventions: +y is up, the front faces -z, the model stands on y = 0, a moving part gets its own node with its pivot at its origin
+Conventions: +y is up, the front of a model faces +z (Godot's Vector3.MODEL_FRONT, also the glTF convention; the model's left is then +x), the model stands on y = 0, a moving part gets its own node with its pivot at its origin
 (a wheel at its hub). Presets: plaster brick concrete asphalt roof_tile roof_slate wood frame_white glass metal rubber paint bark leaf.
 
 Example (a car); save it, then: godotwright model build --spec car.json --set width=1.9 -o car.glb
