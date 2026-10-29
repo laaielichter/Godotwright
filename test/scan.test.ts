@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { symlinkSync } from "node:fs";
+import { basename, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { reviewProject } from "../src/review/review.js";
 import { formatProjectMap } from "../src/scan/format.js";
@@ -203,6 +204,29 @@ describe("unreadable files and folders", () => {
     const map = withDenied([join(root, "flash.gdshader")], () => scanProject(root));
     expect(map.shaders).toEqual([]);
     expect(map.warnings).toEqual([{ file: "res://flash.gdshader", message: "could not read file (EACCES)" }]);
+  });
+});
+
+describe("references that leave the project", () => {
+  const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n';
+  const sceneWith = (path: string) => `[gd_scene format=3]\n[ext_resource type="Script" path="${path}" id="1"]\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n`;
+
+  it("does not look for files outside the project through ../", () => {
+    const outside = makeProject({ "secret.gd": "extends Node\n" });
+    const root = makeProject({ "project.godot": PROJECT, "main.tscn": sceneWith(`res://../${basename(outside)}/secret.gd`) });
+    expect(scanProject(root).warnings).toEqual([{ file: "res://main.tscn", line: 2, message: `missing Script: res://../${basename(outside)}/secret.gd` }]);
+  });
+
+  it("does not look through a folder link out of the project, even in an ignored folder", () => {
+    const outside = makeProject({ "secret.gd": "extends Node\n" });
+    const root = makeProject({ "project.godot": PROJECT, "docs/.gdignore": "", "main.tscn": sceneWith("res://docs/out/secret.gd") });
+    symlinkSync(outside, join(root, "docs", "out"), "dir");
+    expect(scanProject(root).warnings.map((w) => w.message)).toEqual(["missing Script: res://docs/out/secret.gd"]);
+  });
+
+  it("still resolves a file in an ignored folder of the project", () => {
+    const root = makeProject({ "project.godot": PROJECT, "docs/.gdignore": "", "docs/notes.gd": "extends Node\n", "main.tscn": sceneWith("res://docs/notes.gd") });
+    expect(scanProject(root).warnings).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { type Dirent, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 /** Folders Godot never treats as project content: hidden ones (.godot, .git, a Python venv) and node_modules. */
 function isSkippedDir(name: string): boolean {
@@ -71,6 +71,28 @@ export function toResPath(root: string, file: string): string {
 
 export function fromResPath(root: string, resPath: string): string {
   return join(root, ...resPath.replace(/^res:\/\//, "").split("/"));
+}
+
+/**
+ * The `res://` path of the file that `resPath` names under `dir` (a project or base root), with folder
+ * links resolved, or undefined when no such file is inside `dir`. The disk is only read inside `dir`:
+ * a path that leaves it through `..` is refused before any lookup, and a link out of it is not followed.
+ */
+export function realResPath(dir: string, resPath: string): string | undefined {
+  const path = fromResPath(dir, resPath);
+  if (!isInside(dir, path)) return undefined;
+  try {
+    const realDir = realpathSync(dir);
+    const real = realpathSync(path);
+    return isInside(realDir, real) ? toResPath(realDir, real) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isInside(dir: string, path: string): boolean {
+  const rel = relative(dir, path);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 /** Resolves a path relative to the directory of `from` (both `res://`). */

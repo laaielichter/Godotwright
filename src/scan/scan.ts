@@ -11,6 +11,7 @@ import {
   findProjectRoot,
   fromResPath,
   listProjectFiles,
+  realResPath,
   resolveResPath,
 } from "../project/files.js";
 import type { CSharpScriptInfo, ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
@@ -217,13 +218,23 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   }
 
   const listed = listedFiles(root, options.baseFiles);
-  const exists = (res: string) => fileSet.has(res) || listed.has(res) || [root, ...bases].some((dir) => existsSync(fromResPath(dir, res)));
+  /**
+   * Where a `res://` path points: a listed file, or a file on disk inside the project or a base (which
+   * covers folders the listing skips, such as .gdignore ones). Nothing outside those roots is looked up.
+   */
+  const locate = (res: string): string | undefined => {
+    if (fileSet.has(res) || listed.has(res)) return res;
+    for (const dir of [root, ...bases]) {
+      if (realResPath(dir, res) !== undefined) return res;
+    }
+    return undefined;
+  };
   /** Resolves a uid or path reference; returns undefined when neither points to a file. */
   const resolve = (ref: { uid?: string; path?: string }): string | undefined => {
     const byUid = ref.uid ? uids.get(ref.uid) : undefined;
     if (byUid) return byUid;
     if (ref.path?.startsWith("uid://")) return uids.get(ref.path);
-    if (ref.path && exists(ref.path)) return ref.path;
+    if (ref.path) return locate(ref.path);
     return undefined;
   };
 
