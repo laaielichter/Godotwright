@@ -309,6 +309,20 @@ describe("model accessors", () => {
     expect(() => inspectModel(path)).toThrow(/sparse/);
   });
 
+  it("refuses an index past the last vertex", () => {
+    const mesh = box();
+    mesh.indices.push(0, 1, 99);
+    expect(() => inspectModel(writeGlb({ meshes: [mesh] }))).toThrow(ModelError);
+    expect(() => inspectModel(writeGlb({ meshes: [mesh] }))).toThrow(/index 99 is not one of the 24 vertices/);
+  });
+
+  it("refuses an accessor that reads past its buffer view", () => {
+    const short = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {
+      j.bufferViews[0].byteLength = 12;
+    });
+    expect(() => inspectModel(short)).toThrow(/reads past the end of its buffer view/);
+  });
+
   it("gives a clear error for a count that is negative, fractional or too large", () => {
     for (const count of [-1, 1.5, 1e12]) {
       const path = editGlbJson(writeGlb({ meshes: [box()] }), (j) => {

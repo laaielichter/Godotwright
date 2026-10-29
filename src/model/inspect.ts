@@ -105,6 +105,8 @@ function triangleIndices(model: LoadedGltf, prim: GltfPrimitive, vertexCount: nu
   let raw: number[];
   if (prim.indices !== undefined) raw = Array.from(readAccessor(model, prim.indices).data);
   else raw = Array.from({ length: vertexCount }, (_, i) => i);
+  const bad = raw.find((i) => !Number.isInteger(i) || i < 0 || i >= vertexCount);
+  if (bad !== undefined) throw new ModelError(`${model.file}: index ${bad} is not one of the ${vertexCount} vertices`);
   const mode = prim.mode ?? 4;
   if (mode === 4) return Uint32Array.from(raw.slice(0, raw.length - (raw.length % 3)));
   const out: number[] = [];
