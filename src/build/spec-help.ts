@@ -85,6 +85,9 @@ Functions: min max abs sqrt sin cos tan asin acos atan atan2 hypot floor ceil ro
 Conventions: +y is up, the front of a model faces +z (Godot's Vector3.MODEL_FRONT, also the glTF convention; the model's left is then +x), the model stands on y = 0, a moving part gets its own node with its pivot at its origin
 (a wheel at its hub). A custom material may also have "emissive": [r, g, b] (a lamp that glows) and "alpha": "BLEND". Presets: plaster brick concrete asphalt roof_tile roof_slate wood frame_white glass metal rubber paint bark leaf.
 
+Collision: add --collision convex (a hull per mesh: props, vehicles) or --collision trimesh (exact: buildings, terrain) and Godot
+makes the collision shapes when it imports the file (node names get -convcol or -col; Godot strips that again).
+
 Example (a car); save it, then: godotwright model build --spec car.json --set width=1.9 -o car.glb
 `;
 

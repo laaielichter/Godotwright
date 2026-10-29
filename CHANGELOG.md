@@ -14,6 +14,8 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
   (annotations, renamed classes, functions, properties and constants, `yield` to `await`, `connect`/`emit_signal`/`funcref`
   to signals and callables, moved members) with a dry run first, and lists what still needs a hand.
 - **`review --sarif`**: the review as SARIF 2.1.0 for GitHub code scanning, so findings show inline on pull requests.
+- **`model build --collision convex|trimesh`** (MCP `collision`): names the meshes with Godot's import hints (`-convcol`,
+  `-col`), so Godot creates collision shapes when it imports the `.glb`; node names in the scene stay plain.
 
 - **Model tools** (CLI and MCP): `model inspect` and `model lint` for `.glb`/`.gltf` (flipped faces, open edges, normals, UVs,
   tangents, textures, node names, budgets, with a score), `model contract` (pin node names, size and triangle budget,

@@ -141,7 +141,8 @@ export function buildGlb(scene: BuildScene): Buffer {
     const entry: Record<string, unknown> = { name: node.name };
     if (node.translation) entry["translation"] = node.translation;
     if (node.rotation) entry["rotation"] = node.rotation;
-    if (node.mesh && !node.mesh.empty) entry["mesh"] = meshFor(node.mesh, node.name);
+    // An import hint (-col, -convcol) belongs to the node; the mesh keeps the plain name.
+    if (node.mesh && !node.mesh.empty) entry["mesh"] = meshFor(node.mesh, node.name.replace(/-(convcol|col|colonly|convcolonly)$/, ""));
     const index = nodes.length;
     nodes.push(entry);
     const children = (node.children ?? []).map(addNode);

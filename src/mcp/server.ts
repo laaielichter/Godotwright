@@ -348,7 +348,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Build a 3D model from code",
       description:
-        "Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` or a model `spec`, write it to `out`, and lint it. If the spec has an \"archetype\" (or the kind has one), the result is also checked against what that thing should be. Call godot_model_identify first and godot_model_spec for the format.",
+        "Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` or a model `spec`, write it to `out`, and lint it. Pass `collision` so Godot adds collision shapes when it imports the file (most models need one; nobody remembers to add it by hand). If the spec has an \"archetype\" (or the kind has one), the result is also checked against what that thing should be. Call godot_model_identify first and godot_model_spec for the format.",
       inputSchema: {
         out: z.string().describe("where to write the .glb, inside the project, e.g. models/car.glb"),
         kind: z.string().optional().describe(`a ready-made kind: ${allKinds().map((k) => k.kind).join(", ")}`),
@@ -356,11 +356,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
         spec_file: z.string().optional().describe("or a path to a spec JSON file inside the project"),
         params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("parameter values, e.g. { width: 9, roof: 'hip' }"),
         contract_out: z.string().optional().describe("also write a model.contract.json here (inside the project)"),
+        collision: z.enum(["convex", "trimesh"]).optional().describe("name the meshes so Godot makes collision shapes on import: convex (a hull per mesh, for props and vehicles) or trimesh (exact triangles, for buildings and terrain)"),
         detail: modelDetail,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ out, kind, spec, spec_file, params, contract_out, detail }) =>
+    async ({ out, kind, spec, spec_file, params, contract_out, collision, detail }) =>
       guard(() => {
         if (!out.toLowerCase().endsWith(".glb")) return failure("`out` must end in .glb");
         if (contract_out && !contract_out.toLowerCase().endsWith(".json")) return failure("`contract_out` must end in .json");
@@ -373,7 +374,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             return failure(`${spec_file}: cannot read the spec (${(error as Error).message})`);
           }
         }
-        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: inside(out), ...(contract_out ? { contractOut: inside(contract_out) } : {}) });
+        const outcome = buildModel({ ...(kind ? { kind } : {}), ...(source === undefined ? {} : { spec: source }), ...(params ? { params } : {}), out: inside(out), ...(contract_out ? { contractOut: inside(contract_out) } : {}), ...(collision ? { collision } : {}) });
         const errors = outcome.report.categories.reduce((n, c) => n + c.errors, 0);
         const body = `${outcome.summary}\n${formatModelReport(outcome.report, detail ?? profile.detail)}`;
         return errors > 0 ? failure(body) : text(body);

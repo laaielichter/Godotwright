@@ -202,7 +202,8 @@ export function modelCommand(): Command {
     .option("--spec <file>", "with a kind: parameters as JSON. Without a kind: a full model spec (see `model spec`)")
     .option("--set <name=value>", "set one parameter (repeatable)", collect, [])
     .option("--contract-out <file>", "also write a model.contract.json for the result")
-    .action((kind: string | undefined, options: { out?: string; spec?: string; set: string[]; contractOut?: string }, command: Command) => {
+    .addOption(new Option("--collision <kind>", "name the meshes so Godot makes collision shapes on import: convex (a hull per mesh) or trimesh (exact, for static things)").choices(["convex", "trimesh"]))
+    .action((kind: string | undefined, options: { out?: string; spec?: string; set: string[]; contractOut?: string; collision?: "convex" | "trimesh" }, command: Command) => {
       guard(() => {
         const input: Record<string, unknown> = {};
         let spec: unknown;
@@ -220,7 +221,7 @@ export function modelCommand(): Command {
           input[pair.slice(0, at)] = pair.slice(at + 1);
         }
         const name = kind ?? ((spec as { name?: unknown }).name as string | undefined) ?? "model";
-        const outcome = buildModel({ ...(kind ? { kind } : {}), spec: kind ? undefined : spec, params: kind ? { ...(spec as object | undefined), ...input } : input, out: options.out ?? `${name}.glb`, ...(options.contractOut ? { contractOut: options.contractOut } : {}) });
+        const outcome = buildModel({ ...(kind ? { kind } : {}), spec: kind ? undefined : spec, params: kind ? { ...(spec as object | undefined), ...input } : input, out: options.out ?? `${name}.glb`, ...(options.contractOut ? { contractOut: options.contractOut } : {}), ...(options.collision ? { collision: options.collision } : {}) });
         writeOut(command, `${outcome.summary}\n`);
         if (outcome.report.categories.some((c) => c.errors > 0)) process.exitCode = 1;
       });
