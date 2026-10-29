@@ -108,10 +108,11 @@ Godotwright gets better with every use, without collecting anything personal.
     Same method as models: archetypes first, then recipes.
 
 21. **Support for small, cheap models.** Step 1 (done): `model view` (three letter views, a parts table) and the
-    floating-part check, from a test with six small-model agents ([docs/cheap-models.md](docs/cheap-models.md)). Next: a
-    briefing tool (`model brief`) with the closest recipe to start from, recipes placeable inside a spec, an honest report of
-    what `lint --archetype` compared, archetypes for fantasy, creatures, fortifications and spacecraft, then the same six
-    tasks again to measure the difference.
+    floating-part check, from a test with six small-model agents ([docs/cheap-models.md](docs/cheap-models.md)). Step 2
+    (done): `model brief` (and `godot_model_brief`), one page with the closest ready-made kind, parts, size, rules, mistakes,
+    the order of tools and a short spec cheat sheet; `model recipes <kind>` prints a recipe to edit; `model spec --short`.
+    Next: recipes placeable inside a spec, an honest report of what `lint --archetype` compared, archetypes for fantasy,
+    creatures, fortifications and spacecraft, then the same six tasks again to measure the difference.
 
 ## After layer 1
 

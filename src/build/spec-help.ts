@@ -87,3 +87,12 @@ Conventions: +y is up, the front of a model faces +z (Godot's Vector3.MODEL_FRON
 
 Example (a car); save it, then: godotwright model build --spec car.json --set width=1.9 -o car.glb
 `;
+
+/** The spec format in a dozen lines, for small models that lose the thread in the full help. Kept in step with SPEC_HELP by a test. */
+export const SPEC_CHEAT = `  { "version": 1, "name": "x", "archetype": "<id>", "params": [{ "name": "w", "type": "number", "default": 2, "min": 1, "max": 4 }], "nodes": [ <node> ] }
+  node: { "name": "Wheel_FL", "shape": "cylinder", "material": "rubber", "at": [x, y, z], "rotate": [rx, ry, rz], "mirror": "Wheel_FR", "repeat": {...}, "vars": {...}, "children": [ <node> ] }
+  shapes: box {size:[w,h,d], anchor} | cylinder {radius,height,axis} | ellipsoid {radii} | lathe {profile:[[r,y],...]} | loft {sections} | extrude {plan,y0,y1} | roof {x0,x1,z0,z1,y,rise,kind}
+  numbers may be expressions: "$w / 2 - 0.1"; $i inside repeat. +y up, front +z, metres, stand on y = 0.
+  a moving part = its own node with "at" on its pivot (a wheel at its hub, a door on its hinge); use "offset" to move the shape away from the pivot.
+  every part must touch another part or the ground: overlap parts by a few cm instead of leaving gaps.
+  materials: plaster brick concrete asphalt roof_tile roof_slate wood frame_white glass metal rubber paint bark leaf`;

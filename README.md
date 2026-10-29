@@ -81,11 +81,13 @@ godotwright model contract car.glb    # write a model.contract.json: node names,
 godotwright model contract --archetype car   # the same, from what a car usually is (no model yet)
 godotwright model lint car.glb --archetype car   # also check it is what it should be
 godotwright model lint car.glb --contract model.contract.json
+godotwright model brief "a tractor"    # one page before you build: kind to start from, parts, size, rules, order of work (for small models)
 godotwright model identify "a tractor" # what it is: parts, size, variants, what to anticipate
 godotwright model archetypes          # the family tree of things Godotwright knows
 godotwright model kinds               # what `model build` can make, with parameters
 godotwright model view car.glb       # see a model as text: front, side and top views, the parts, what does not touch
 godotwright model recipes             # the ready-made recipes and the archetype each one is checked against
+godotwright model recipes tractor     # print one recipe as a spec to edit
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright learn                     # what Godotwright learned on this machine
 ```
@@ -252,6 +254,7 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 | `godot_check` | Run Godot headless and report errors as file:line |
 | `godot_checklist` | Every AAA rule with its fix |
 | `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
+| `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules, the order of tools and a short spec cheat sheet |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants, what to anticipate (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (written inside the project), and lint it |
