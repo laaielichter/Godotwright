@@ -351,6 +351,28 @@ describe("review robustness", () => {
     expect(unused).toEqual(["res://main.gd", "res://scripts/enemy.gd"]);
   });
 
+  it("reports TODO markers in comments only, not inside string literals", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        'var label := "# TODO: not a comment"',
+        'var doc := """',
+        "# TODO: inside a triple-quoted string",
+        '"""',
+        "",
+        "",
+        "func _ready() -> void:",
+        "\t# TODO: real comment",
+        "\tprint(label, doc, '#FIXME: single-quoted string')",
+        "",
+      ].join("\n"),
+    });
+    const todo = reviewProject(root).findings.filter((f) => f.rule === "quality/todo").map(formatFinding);
+    expect(todo).toEqual(["res://main.gd:10: info [quality/todo] TODO: real comment"]);
+  });
+
   it("checks signals declared in inner classes for emission", () => {
     const root = makeProject({
       "project.godot": PROJECT,

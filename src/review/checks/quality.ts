@@ -97,10 +97,10 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
     if (up) out.push(finding("quality/fragile-path", path, ll.line, `Node path "${up[1]}" climbs ${up[1]!.split("../").length - 1} levels up the tree.`));
   }
 
-  source.split("\n").forEach((line, i) => {
-    const todo = /#.*\b(TODO|FIXME|HACK|XXX)\b:?\s*(.*)$/.exec(line);
-    if (todo) out.push(finding("quality/todo", path, i + 1, `${todo[1]}: ${todo[2]!.trim().slice(0, 80) || "(no text)"}`));
-  });
+  for (const { line, text } of commentsOf(source)) {
+    const todo = /#.*\b(TODO|FIXME|HACK|XXX)\b:?\s*(.*)$/.exec(text);
+    if (todo) out.push(finding("quality/todo", path, line, `${todo[1]}: ${todo[2]!.trim().slice(0, 80) || "(no text)"}`));
+  }
 
   return { findings: out, typing };
 }
@@ -118,6 +118,39 @@ export function checkUnusedSignals(pm: ProjectModel): Finding[] {
         new RegExp(`emit_signal\\s*\\(\\s*&?"${name}"`).test(code) ||
         new RegExp(`\\b${name}\\s*\\.\\s*emit\\b`).test(code);
       if (!emitted) out.push(finding("quality/unused-signal", model.path, s.line, `Signal "${s.name}" is declared but never emitted.`));
+    }
+  }
+  return out;
+}
+
+/** Each comment with its 1-based line; a `#` inside a string literal does not start one. */
+function commentsOf(source: string): { line: number; text: string }[] {
+  const out: { line: number; text: string }[] = [];
+  let line = 1;
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i]!;
+    if (ch === "\n") {
+      line++;
+    } else if (ch === '"' || ch === "'") {
+      const quote = source.startsWith(ch.repeat(3), i) ? ch.repeat(3) : ch;
+      let j = i + quote.length;
+      for (; j < source.length && !source.startsWith(quote, j); j++) {
+        if (source[j] === "\\") {
+          if (source[j + 1] === "\n") line++;
+          j++;
+        } else if (source[j] === "\n") {
+          // A plain string ends at its line when it never closes; a triple-quoted one runs on.
+          if (quote.length === 1) break;
+          line++;
+        }
+      }
+      const closed = source.startsWith(quote, j);
+      i = closed ? j + quote.length - 1 : j - 1;
+    } else if (ch === "#") {
+      const end = source.indexOf("\n", i);
+      const stop = end < 0 ? source.length : end;
+      out.push({ line, text: source.slice(i, stop).replace(/\r$/, "") });
+      i = stop - 1;
     }
   }
   return out;
