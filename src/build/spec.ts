@@ -215,6 +215,11 @@ function spendNodes(counters: Ctx["counters"], amount: number, path: string): vo
   if (counters.nodes > LIMITS.nodes) throw new BuildError(`${path}: too many nodes (max ${LIMITS.nodes})`);
 }
 
+/** Refuses a model whose triangles would pass the limit. */
+function checkTriangles(total: number, path: string): void {
+  if (total > LIMITS.triangles) throw new BuildError(`${path}: the model grew past ${LIMITS.triangles.toLocaleString("en-US")} triangles`);
+}
+
 function expandName(template: string, index: number, repeated: boolean): string {
   if (template.includes("{i}")) return template.replaceAll("{i}", String(index + 1));
   return repeated ? `${template}_${index + 1}` : template;
@@ -256,6 +261,7 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
   }
 
   const out: BuildNode[] = [];
+  let firstTriangles = 0;
   for (let i = 0; i < count; i++) {
     const local: Ctx = { ...ctx, scope: { ...scope, ...(repeat ? { i, n: count } : {}) } };
     const at = raw["at"] === undefined ? [0, 0, 0] : vec(raw["at"], 3, local.scope, `${path}.at`);
@@ -278,12 +284,12 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
         const [ox = 0, oy = 0, oz = 0] = vec(raw["offset"], 3, local.scope, `${path}.offset`);
         mesh.translate(ox, oy, oz);
       }
+      if (i === 0) firstTriangles = mesh.triangles;
       parent.counters.triangles += mesh.triangles;
-      // Every copy of a repeated node is the same size, so refuse early instead of building them all.
-      if (i === 0 && count > 1) parent.counters.triangles += mesh.triangles * (count - 1);
-      if (parent.counters.triangles > LIMITS.triangles) throw new BuildError(`${path}: the model grew past ${LIMITS.triangles.toLocaleString("en-US")} triangles`);
+      checkTriangles(parent.counters.triangles, path);
+      // Copies of a repeat are usually the same size: once the first two agree, refuse now if all of them would not fit.
+      if (i === 1 && mesh.triangles === firstTriangles) checkTriangles(parent.counters.triangles + firstTriangles * (count - 2), path);
       node.mesh = mesh;
-      if (i > 0 && count > 1) parent.counters.triangles -= mesh.triangles;
     } else checkKeys(raw, COMMON_KEYS, path);
     if (raw["children"] !== undefined) {
       const children = list(raw["children"], `${path}.children`, LIMITS.nodes, 0).flatMap((c, k) => buildNodes(c, local, `${path}.children[${k}]`));

@@ -191,6 +191,18 @@ describe("mistakes get a path and a reason", () => {
     expect(() => buildSpec(spec([{ name: "E", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: 128, repeat: { count: 500, step: [1, 0, 0] } }]))).toThrow(/triangles/);
   });
 
+  it("counts each copy of a repeat against the triangle limit, when the copies differ in size", () => {
+    // Copy 0 is tiny and later copies grow to 128 segments. The limit is lowered here so that the test stays quick.
+    const saved = LIMITS.triangles;
+    LIMITS.triangles = 50_000;
+    try {
+      const grow = { name: "E{i}", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: "min($i + 6, 128)", repeat: { count: 500, step: [3, 0, 0] } };
+      expect(() => buildSpec(spec([grow]))).toThrow(/grew past 50,000 triangles/);
+    } finally {
+      LIMITS.triangles = saved;
+    }
+  });
+
   it("counts every copy of a repeated node against the node limit", () => {
     // 200 rows of 200 cells is 40,000 nodes; the inner repeat must count each of its copies, not just one.
     const cells = { name: "Cell{i}", shape: "box", size: [1, 1, 1], material: "paint", repeat: { count: 200, step: [0, 1, 0] } };
