@@ -8,6 +8,9 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`check --scene <res-path>`** and the run's output: `check --run` (MCP `godot_check` with `run_frames` or `scene`)
+  now returns what the game printed, engine noise removed, so an agent can read its own `print()` calls back.
+
 - **Model tools** (CLI and MCP): `model inspect` and `model lint` for `.glb`/`.gltf` (flipped faces, open edges, normals, UVs,
   tangents, textures, node names, budgets, with a score), `model contract` (pin node names, size and triangle budget,
   or start one from what a thing usually is with `--archetype`), `model identify` and `model archetypes` (what a thing

@@ -70,7 +70,8 @@ godotwright scan [path]               # compact project map, cheap to read
 godotwright scan [path] --detail full # node trees, signatures, line numbers
 godotwright scan [path] --json        # the full map as JSON
 godotwright check [path]              # run Godot headless, report errors as file:line
-godotwright check [path] --run        # also run the main scene for 120 frames
+godotwright check [path] --run        # also run the main scene for 120 frames and show what it printed
+godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put print() in the code and read it back here
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category

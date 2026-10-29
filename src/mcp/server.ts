@@ -205,23 +205,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene. Reports engine errors as res://file:line. Needs Godot on this machine; slower than godot_review.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here: it is the only way to see the game run without a screen. Needs Godot on this machine; slower than godot_review.",
       inputSchema: {
         path: pathParam,
-        run_frames: z.number().int().min(0).max(10_000).optional().describe("also run the main scene for this many frames (default 0)"),
+        run_frames: z.number().int().min(0).max(10_000).optional().describe("also run the main scene for this many frames and return its output (default 0; 120 when scene is given)"),
+        scene: z.string().optional().describe("run this scene (a res:// path) instead of the main scene"),
         timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout per Godot run (default 600)"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ path, run_frames, timeout_seconds }) => {
+    async ({ path, run_frames, scene, timeout_seconds }) => {
       try {
         const result = await checkLearning(where(path), {
           godot: options.godot,
-          runFrames: run_frames ?? 0,
+          runFrames: run_frames ?? (scene ? 120 : 0),
+          ...(scene ? { scene } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
         const lines = result.diagnostics.map(formatDiagnostic);
         lines.push(`${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`);
+        if (result.output !== undefined) lines.push(`output of the run (what the game printed):\n${result.output || "(nothing)"}`);
         return result.errors > 0 ? failure(lines.join("\n")) : text(lines.join("\n"));
       } catch (error) {
         if (error instanceof GodotNotFoundError) {

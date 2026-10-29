@@ -16,6 +16,8 @@ export interface CheckOptions {
   instantiate?: boolean;
   /** Also run the main scene for this many frames (default 0 = off). */
   runFrames?: number;
+  /** Run this scene (a res:// path) instead of the main scene; implies 120 frames when runFrames is not set. */
+  scene?: string;
   /** Directories to skip, e.g. ["addons"]. */
   exclude?: string[];
   /** Timeout per Godot run in milliseconds (default 10 minutes). */
@@ -42,6 +44,24 @@ export interface CheckResult {
   warnings: number;
   /** Raw output per step, when `keepLogs` is set. */
   logs?: Record<string, string>;
+  /** What the game printed while it ran (print(), push_warning() and friends go to stdout), engine noise removed. */
+  output?: string;
+}
+
+/** How much of a run's output is kept: the last lines, so a loop that prints every frame does not drown the rest. */
+const OUTPUT_LINES = 200;
+const OUTPUT_CHARS = 12_000;
+
+/** The game's own prints from a run: engine banners and empty lines removed, the tail kept. */
+export function runOutput(stdout: string): string {
+  const lines = stdout
+    .split(/\r?\n/)
+    .map((l) => l.trimEnd())
+    .filter((l) => l !== "" && !NOISE.some((re) => re.test(l)));
+  const tail = lines.slice(-OUTPUT_LINES);
+  const text = tail.join("\n");
+  const cut = text.length > OUTPUT_CHARS ? text.slice(-OUTPUT_CHARS) : text;
+  return (lines.length > tail.length ? `(first ${lines.length - tail.length} lines left out)\n` : "") + cut;
 }
 
 /** Engine messages that say nothing about the project. */
@@ -129,8 +149,12 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     rmSync(checkerDir, { recursive: true, force: true });
   }
 
-  if (options.runFrames && options.runFrames > 0) {
-    const result = await run("run", ["--quit-after", String(options.runFrames)]);
+  const frames = options.runFrames ?? (options.scene ? 120 : 0);
+  let output: string | undefined;
+  if (frames > 0) {
+    const scene = options.scene ? (options.scene.startsWith("res://") ? options.scene : `res://${options.scene.replace(/^\/+/, "")}`) : undefined;
+    const result = await run("run", ["--quit-after", String(frames), ...(scene ? [scene] : [])]);
+    output = runOutput(result.stdout);
     for (const d of parseGodotLog(result.stderr, "run")) {
       // Stopping after N frames can leave objects alive; report leaks, but not as errors.
       if (EXIT_LEAK.test(d.message)) {
@@ -152,6 +176,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     errors: clean.filter((d) => d.severity === "error").length,
     warnings: clean.filter((d) => d.severity === "warning").length,
     ...(options.keepLogs ? { logs } : {}),
+    ...(output !== undefined ? { output } : {}),
   };
 }
 
