@@ -1,0 +1,827 @@
+[
+ {
+  "id": "world",
+  "name": "world feature",
+  "description": "Land, water and other large things an open world is made of: terrain tiles, mountains, islands, coasts, seas, lakes, rivers, biomes and settlements.",
+  "aliases": [
+   "world",
+   "open world",
+   "wereld",
+   "landscape",
+   "landschap",
+   "map",
+   "level",
+   "environment",
+   "omgeving",
+   "scenery"
+  ],
+  "extends": "thing",
+  "hints": [
+   "terrain",
+   "landscape",
+   "island",
+   "sea",
+   "ocean",
+   "coast",
+   "mountain",
+   "river",
+   "lake",
+   "forest",
+   "desert",
+   "valley",
+   "continent",
+   "world",
+   "map"
+  ],
+  "conventions": [
+   "World pieces are built in tiles (chunks) so they can be streamed in and out: a tile is typically 64-1024 m wide.",
+   "y = 0 is sea level. Land is above it, a sea floor is below it. Heights are in metres, never a 0-1 range baked into the mesh.",
+   "A tile's origin is the centre of its footprint at y = 0, so neighbouring tiles line up at whole multiples of the tile size.",
+   "Neighbouring tiles share their border vertices with exactly the same heights, or cracks open between them.",
+   "A heightmap tile has a power of two plus one vertices per side (65, 129, 257, 513), so the last row of one tile is the first row of the next."
+  ],
+  "anticipate": [
+   "Collision from the same heights: a HeightMapShape3D takes map_width x map_depth floats in map_data (or update_map_data_from_image), instead of a trimesh of the whole surface.",
+   "Levels of detail by distance: GeometryInstance3D visibility_range_begin and visibility_range_end switch tiles or detail meshes, and a coarser edge row needs a skirt or stitching so it does not crack.",
+   "Scatter (trees, rocks, grass) as MultiMesh instances placed from the terrain heights, not one node per object.",
+   "A big world loses float precision far from the origin: recentre the world around the player (floating origin) or use a double-precision Godot build."
+  ],
+  "pitfalls": [
+   "Stretched textures on steep slopes: a top-down UV smears on cliffs, so blend a triplanar or a second texture by slope.",
+   "A coast that ends at y = 0 with a sharp edge: let the land slope below sea level so the shore line has depth to show.",
+   "One huge mesh for the whole world: it cannot be culled or streamed. Cut it into tiles."
+  ]
+ },
+ {
+  "id": "world.terrain",
+  "name": "terrain",
+  "description": "A landscape surface: a heightmap tile or a larger piece of ground.",
+  "aliases": [
+   "terrain",
+   "terrein",
+   "heightmap",
+   "height map",
+   "hoogtekaart",
+   "landmass",
+   "landmassa",
+   "grond",
+   "terrain tile",
+   "terrain chunk",
+   "plain",
+   "vlakte",
+   "plateau",
+   "hills",
+   "heuvels",
+   "heuvelland"
+  ],
+  "extends": "world",
+  "parts": [
+   {
+    "name": "Surface",
+    "role": "ground",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "surface",
+     "ground",
+     "terrain",
+     "land",
+     "grond",
+     "terrein",
+     "oppervlak"
+    ],
+    "note": "The ground mesh: a grid of height samples, with a normal and a UV per vertex."
+   },
+   {
+    "name": "Collision",
+    "role": "collision",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "collision",
+     "collider",
+     "botsing"
+    ],
+    "note": "A StaticBody3D with a HeightMapShape3D built from the same heights as the surface."
+   }
+  ],
+  "scale": {
+   "length": [
+    64,
+    1024
+   ],
+   "width": [
+    64,
+    1024
+   ],
+   "height": [
+    5,
+    1500
+   ],
+   "source": "general knowledge: usual tile sizes in open-world engines (64-1024 m); the height range depends on the landscape: plains a few metres, mountains hundreds to thousands",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "resolution",
+    "options": [
+     "65",
+     "129",
+     "257",
+     "513"
+    ]
+   },
+   {
+    "axis": "relief",
+    "options": [
+     "plains",
+     "rolling hills",
+     "mountains",
+     "dunes",
+     "badlands"
+    ]
+   }
+  ],
+  "anticipate": [
+   "A splat or slope-based material (grass, rock, sand, snow) instead of one texture over the whole tile."
+  ],
+  "pitfalls": [
+   "Noise-only terrain looks the same everywhere: combine large smooth shapes (domain) with a ridged or fractal detail layer, and flatten where roads and buildings go."
+  ]
+ },
+ {
+  "id": "world.terrain.mountain",
+  "name": "mountain",
+  "description": "A mountain, a mountain range or a volcano.",
+  "aliases": [
+   "mountain",
+   "mountains",
+   "berg",
+   "bergen",
+   "mountain range",
+   "bergketen",
+   "peak",
+   "piek",
+   "volcano",
+   "vulkaan",
+   "alp",
+   "alps",
+   "massif",
+   "ridge",
+   "bergrug",
+   "hill",
+   "heuvel"
+  ],
+  "extends": "world.terrain",
+  "scale": {
+   "length": [
+    500,
+    20000
+   ],
+   "width": [
+    500,
+    20000
+   ],
+   "height": [
+    50,
+    5000
+   ],
+   "source": "general knowledge: a hill is a few tens to hundreds of metres, a mountain from about 300 m up to 4-6 km in most ranges; the highest point on Earth is about 8,849 m above sea level",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "shape",
+    "options": [
+     "single peak",
+     "ridge",
+     "range",
+     "volcano cone",
+     "plateau mountain"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "A cone with uniform slopes looks like a pile of sand: add ridged noise, a few steep faces and scree at the foot."
+  ]
+ },
+ {
+  "id": "world.terrain.island",
+  "name": "island",
+  "description": "An island or a group of islands.",
+  "aliases": [
+   "island",
+   "islands",
+   "eiland",
+   "eilanden",
+   "atoll",
+   "archipelago",
+   "islet",
+   "eilandje",
+   "cay",
+   "waddeneiland"
+  ],
+  "extends": "world.terrain",
+  "parts": [
+   {
+    "name": "Land",
+    "role": "ground",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "land",
+     "island",
+     "eiland",
+     "ground",
+     "surface"
+    ],
+    "replaces": [
+     "Surface"
+    ]
+   },
+   {
+    "name": "Beach",
+    "role": "beach",
+    "required": false,
+    "aliases": [
+     "beach",
+     "strand",
+     "shore",
+     "kust"
+    ]
+   },
+   {
+    "name": "SeaFloor",
+    "role": "floor",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "seafloor",
+     "sea floor",
+     "zeebodem",
+     "floor",
+     "bodem"
+    ],
+    "note": "The land keeps sloping down below y = 0 for tens of metres so the water has depth around the shore."
+   }
+  ],
+  "scale": {
+   "length": [
+    100,
+    20000
+   ],
+   "width": [
+    100,
+    20000
+   ],
+   "height": [
+    2,
+    1500
+   ],
+   "source": "general knowledge: from a sandbank of a few metres high to volcanic islands over 1 km high; length and width are the extent of the land above the water",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "type",
+    "options": [
+     "sand island",
+     "volcanic island",
+     "coral atoll",
+     "barrier island",
+     "archipelago"
+    ]
+   }
+  ],
+  "conventions": [
+   "The coastline is the y = 0 contour of the heightmap: the sea plane sits at y = 0 and the land crosses it."
+  ]
+ },
+ {
+  "id": "world.coast",
+  "name": "coast",
+  "description": "A stretch of coast: beach, dunes, cliffs or a harbour edge where land meets water.",
+  "aliases": [
+   "coast",
+   "kust",
+   "kustlijn",
+   "coastline",
+   "beach",
+   "strand",
+   "shore",
+   "oever",
+   "cliff",
+   "cliffs",
+   "klif",
+   "klippen",
+   "dune",
+   "dunes",
+   "duin",
+   "duinen",
+   "bay",
+   "baai",
+   "cove",
+   "inlet",
+   "fjord",
+   "fjord"
+  ],
+  "extends": "world",
+  "parts": [
+   {
+    "name": "Land",
+    "role": "ground",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "land",
+     "ground",
+     "dune",
+     "cliff",
+     "surface"
+    ]
+   },
+   {
+    "name": "Shoreline",
+    "role": "edge",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "shoreline",
+     "shore",
+     "waterline",
+     "oever",
+     "kustlijn"
+    ],
+    "note": "Where the surface crosses y = 0; a foam or wet-sand band can follow it."
+   }
+  ],
+  "scale": {
+   "length": [
+    50,
+    5000
+   ],
+   "width": [
+    20,
+    500
+   ],
+   "height": [
+    0,
+    200
+   ],
+   "source": "general knowledge: a coast segment is as long as you choose; dunes are 5-30 m high, sea cliffs from a few metres to over 200 m",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "type",
+    "options": [
+     "sandy beach",
+     "dunes",
+     "chalk or rock cliffs",
+     "mudflats",
+     "rocky shore",
+     "fjord"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "A straight coast looks artificial: bend it with large and small bays, and make cliffs and beaches alternate."
+  ]
+ },
+ {
+  "id": "world.water",
+  "name": "body of water",
+  "description": "A sea, lake or river: a water surface with a floor and shores.",
+  "aliases": [
+   "water",
+   "water body",
+   "waterlichaam",
+   "waterway",
+   "waterweg",
+   "wateroppervlak",
+   "water surface"
+  ],
+  "extends": "world",
+  "parts": [
+   {
+    "name": "Surface",
+    "role": "water",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "surface",
+     "water",
+     "plane",
+     "oppervlak",
+     "wateroppervlak"
+    ],
+    "note": "A flat, subdivided plane at the water level; waves come from a vertex shader and a normal map, not from modelled geometry."
+   },
+   {
+    "name": "Floor",
+    "role": "floor",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "floor",
+     "bed",
+     "bottom",
+     "bodem",
+     "zeebodem",
+     "bedding"
+    ],
+    "note": "The ground under the water, which should slope smoothly down from the shore."
+   }
+  ],
+  "anticipate": [
+   "A subdivided PlaneMesh (subdivide_width and subdivide_depth) for a surface that has vertex waves, and a ShaderMaterial for depth colour, foam and refraction.",
+   "A function that returns the water height at a position, so boats and floating things can follow the waves.",
+   "A water volume (Area3D) for swimming and drag, separate from the visual surface."
+  ],
+  "pitfalls": [
+   "Modelling waves in geometry: it costs triangles and cannot move; use a shader.",
+   "A water plane that ends in the view: make it follow the camera or extend it far beyond the visible area."
+  ]
+ },
+ {
+  "id": "world.water.sea",
+  "name": "sea",
+  "description": "A sea or ocean.",
+  "aliases": [
+   "sea",
+   "zee",
+   "ocean",
+   "oceaan",
+   "open water",
+   "open zee",
+   "waddenzee",
+   "north sea",
+   "noordzee",
+   "lagoon",
+   "lagune"
+  ],
+  "extends": "world.water",
+  "scale": {
+   "length": [
+    500,
+    100000
+   ],
+   "width": [
+    500,
+    100000
+   ],
+   "height": [
+    5,
+    200
+   ],
+   "source": "general knowledge: shelf seas are 0-200 m deep (the North Sea averages about 95 m); the visible plane is as large as the view needs",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "state",
+    "options": [
+     "calm",
+     "choppy",
+     "storm"
+    ]
+   },
+   {
+    "axis": "depth",
+    "options": [
+     "shallow shelf",
+     "deep ocean"
+    ]
+   }
+  ],
+  "conventions": [
+   "The sea surface is at y = 0; the sea floor is below it."
+  ],
+  "pitfalls": [
+   "A single plane for the whole sea cannot be as large as the world and detailed near the camera: use a plane that follows the camera with finer rings close by."
+  ]
+ },
+ {
+  "id": "world.water.lake",
+  "name": "lake",
+  "description": "A lake, pond or other still inland water.",
+  "aliases": [
+   "lake",
+   "meer",
+   "plas",
+   "pond",
+   "vijver",
+   "reservoir",
+   "stuwmeer",
+   "waterplas",
+   "tarn",
+   "ven"
+  ],
+  "extends": "world.water",
+  "scale": {
+   "length": [
+    20,
+    50000
+   ],
+   "width": [
+    20,
+    50000
+   ],
+   "height": [
+    1,
+    300
+   ],
+   "source": "general knowledge: ponds are a few metres deep, large lakes tens to hundreds of metres",
+   "confidence": "C"
+  },
+  "conventions": [
+   "A lake's surface is flat at its own height, not at y = 0; place it in a basin that is lower than its whole shoreline."
+  ],
+  "pitfalls": [
+   "A lake whose shore is lower than the water on one side: the water would run out. Check the lowest point of the rim."
+  ]
+ },
+ {
+  "id": "world.water.river",
+  "name": "river",
+  "description": "A river, stream or canal.",
+  "aliases": [
+   "river",
+   "rivier",
+   "stream",
+   "beek",
+   "brook",
+   "creek",
+   "canal",
+   "kanaal",
+   "waterway channel",
+   "vaart",
+   "sloot",
+   "ditch",
+   "delta",
+   "estuary",
+   "estuarium"
+  ],
+  "extends": "world.water",
+  "parts": [
+   {
+    "name": "Surface",
+    "role": "water",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "surface",
+     "water",
+     "oppervlak"
+    ],
+    "note": "A strip that follows the river's path and flows downhill; its UV should scroll along the flow."
+   },
+   {
+    "name": "Bed",
+    "role": "floor",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "bed",
+     "riverbed",
+     "bedding",
+     "floor"
+    ],
+    "note": "A channel carved into the terrain along the same path.",
+    "replaces": [
+     "Floor"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    50,
+    5000
+   ],
+   "width": [
+    2,
+    500
+   ],
+   "height": [
+    0.3,
+    30
+   ],
+   "source": "general knowledge: a segment is as long as you choose; streams are 1-5 m wide, big rivers hundreds of metres, depth from a few decimetres to tens of metres",
+   "confidence": "C"
+  },
+  "conventions": [
+   "A river always flows downhill: its surface height falls along the path, in small steps if the water is a series of flat pieces."
+  ],
+  "pitfalls": [
+   "A river that runs uphill or over a ridge: carve the channel into the terrain along the path instead of drawing a strip over it."
+  ]
+ },
+ {
+  "id": "world.biome",
+  "name": "biome",
+  "description": "A region with its own ground, plants and mood: forest, grassland, desert, tundra, swamp or jungle.",
+  "aliases": [
+   "biome",
+   "biomes",
+   "ecosystem",
+   "forest",
+   "bos",
+   "woud",
+   "woods",
+   "jungle",
+   "rainforest",
+   "regenwoud",
+   "desert",
+   "woestijn",
+   "savanna",
+   "savanne",
+   "tundra",
+   "swamp",
+   "moeras",
+   "heath",
+   "heide",
+   "grassland",
+   "grasland",
+   "meadow field",
+   "steppe"
+  ],
+  "extends": "world",
+  "parts": [
+   {
+    "name": "Ground",
+    "role": "ground",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "ground",
+     "terrain",
+     "floor",
+     "grond",
+     "bodem",
+     "surface"
+    ],
+    "note": "The ground material for this region: grass, sand, rock, snow, mud."
+   },
+   {
+    "name": "Vegetation",
+    "role": "vegetation",
+    "required": false,
+    "aliases": [
+     "vegetation",
+     "trees",
+     "plants",
+     "bomen",
+     "planten",
+     "scatter",
+     "foliage"
+    ],
+    "note": "MultiMesh scatter of trees, bushes and grass placed from a density map."
+   },
+   {
+    "name": "Props",
+    "role": "props",
+    "required": false,
+    "aliases": [
+     "props",
+     "rocks",
+     "stenen",
+     "logs",
+     "rotsen",
+     "debris"
+    ],
+    "note": "Rocks, logs and other small things that make the region feel lived in."
+   }
+  ],
+  "scale": {
+   "length": [
+    100,
+    20000
+   ],
+   "width": [
+    100,
+    20000
+   ],
+   "source": "general knowledge: a biome region is as large as the design needs; tiles of 100 m to a few km are blended at the borders",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "type",
+    "options": [
+     "temperate forest",
+     "grassland",
+     "desert",
+     "tundra",
+     "swamp",
+     "rainforest",
+     "heathland"
+    ]
+   }
+  ],
+  "anticipate": [
+   "Smooth borders: blend ground materials and thin out the plants over tens of metres instead of a hard line."
+  ],
+  "pitfalls": [
+   "Every tree the same size and rotation: vary scale (80-120%), rotation and tint per instance."
+  ]
+ },
+ {
+  "id": "world.settlement",
+  "name": "settlement",
+  "description": "A village, town or city placed in the world.",
+  "aliases": [
+   "settlement",
+   "village",
+   "dorp",
+   "town",
+   "stad",
+   "city",
+   "hamlet",
+   "gehucht",
+   "harbour town",
+   "havenstad",
+   "haven",
+   "harbour",
+   "port",
+   "nederzetting",
+   "campsite",
+   "outpost",
+   "buitenpost"
+  ],
+  "extends": "world",
+  "parts": [
+   {
+    "name": "Roads",
+    "role": "road",
+    "required": true,
+    "aliases": [
+     "roads",
+     "road",
+     "streets",
+     "wegen",
+     "straten",
+     "weg"
+    ]
+   },
+   {
+    "name": "Buildings",
+    "role": "building",
+    "required": true,
+    "aliases": [
+     "buildings",
+     "houses",
+     "huizen",
+     "gebouwen",
+     "building"
+    ],
+    "note": "Instances of a few building types, placed along the roads and rotated to face them."
+   },
+   {
+    "name": "Landmark",
+    "role": "landmark",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "landmark",
+     "church",
+     "kerk",
+     "tower",
+     "toren",
+     "square",
+     "plein"
+    ],
+    "note": "A church, tower or square that gives the place a recognisable centre."
+   }
+  ],
+  "scale": {
+   "length": [
+    100,
+    10000
+   ],
+   "width": [
+    100,
+    10000
+   ],
+   "source": "general knowledge: a hamlet is about 100 m across, a village a few hundred metres, a town a few km",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "size",
+    "options": [
+     "hamlet",
+     "village",
+     "town",
+     "city"
+    ]
+   }
+  ],
+  "anticipate": [
+   "Flatten the terrain under roads and buildings so they sit on the ground instead of floating or sinking.",
+   "Collision on the roads and a navigation region over the walkable areas."
+  ],
+  "pitfalls": [
+   "Streets on a perfect grid look artificial: bend them, vary the plot sizes and let them follow the slope."
+  ]
+ }
+]
