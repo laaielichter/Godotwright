@@ -44,8 +44,10 @@ A report holds only:
 
 Each report holds only what is new since the last one. Nothing is sent when
 sharing is off, when `GODOTWRIGHT_LEARN=0` or `DO_NOT_TRACK` is set, or when no
-collector is configured. Reports go over https only. A failed send is retried a
-day later; it never slows a command down by more than a few seconds.
+collector is configured. Reports go over https only, or over http to a collector
+on this machine (localhost, 127.0.0.1 or [::1]; for tests and local collectors). A
+failed send is retried a day later; it never slows a command down by more than a
+few seconds.
 
 Turn it off at any time with `godotwright learn share off`; that also forgets
 the install id. The collector does not store IP addresses and keeps only
