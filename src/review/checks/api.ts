@@ -17,7 +17,6 @@ const GODOT3_SYNTAX: [RegExp, string][] = [
   [/^tool\s*$/, "`tool` is `@tool` in Godot 4"],
   [/\bsetget\b/, "`setget` is gone in Godot 4; use `var x: T: set = _set_x, get = _get_x` or set()/get blocks"],
   [/\byield\s*\(/, "`yield()` is `await` in Godot 4, e.g. `await get_tree().create_timer(1.0).timeout`"],
-  [/\.instance\(\s*\)/, "`PackedScene.instance()` is `instantiate()` in Godot 4"],
   [/^(remote|master|puppet|remotesync|mastersync|puppetsync|sync|slave)\s+(func|var)\b/, "network keywords are `@rpc(...)` annotations in Godot 4"],
   [/\bfuncref\s*\(/, "`funcref()` is a Callable in Godot 4: `object.method` or `Callable(object, \"method\")`"],
   [/\bconnect\(\s*"[^"]*"\s*,\s*[^,()"]+\s*,\s*"[^"]*"/, "`connect(\"signal\", target, \"method\")` is `signal_name.connect(target.method)` in Godot 4"],
@@ -29,7 +28,7 @@ const MOVED: Record<string, string> = {
   "OS.get_ticks_msec": "Time.get_ticks_msec()",
   "OS.get_ticks_usec": "Time.get_ticks_usec()",
   "OS.get_unix_time": "Time.get_unix_time_from_system()",
-  "OS.get_system_time_msecs": "Time.get_unix_time_from_system()",
+  "OS.get_system_time_msecs": "int(Time.get_unix_time_from_system() * 1000)",
   "OS.get_datetime": "Time.get_datetime_dict_from_system()",
   "OS.get_date": "Time.get_date_dict_from_system()",
   "OS.get_time": "Time.get_time_dict_from_system()",
@@ -45,10 +44,14 @@ const MOVED: Record<string, string> = {
   "Engine.editor_hint": "Engine.is_editor_hint()",
 };
 
+/** `.instance()` is Godot 3's PackedScene call. Scripts may define their own `instance()`, so see checkScriptApi. */
+const PACKED_INSTANCE = /\.instance\(\s*\)/;
+
 const INPUT_ONE = /\b(?:is_action_pressed|is_action_just_pressed|is_action_just_released|is_action_released|get_action_strength|get_action_raw_strength|is_action|action_press|action_release)\s*\(\s*&?"([^"]+)"/g;
 const INPUT_AXIS = /\bget_axis\s*\(\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"/g;
 const INPUT_VECTOR = /\bget_vector\s*\(\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"\s*,\s*&?"([^"]+)"/g;
 const SIGNAL_BY_NAME = /(^|[^.\w])(emit_signal|connect|disconnect|is_connected)\s*\(\s*&?"([^"]+)"/g;
+const ADD_USER_SIGNAL = /\badd_user_signal\s*\(\s*&?"([^"]+)"/g;
 
 export interface ApiCheckOptions {
   /** Project uses C# or GDExtension, so unknown class names may be real. */
@@ -109,6 +112,13 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
 
   const source = pm.data.sources.get(path) ?? "";
   const duckTyped = new Set([...source.matchAll(/\b(?:has_method|has_signal|has_meta)\s*\(\s*&?"(\w+)"/g)].map((m) => m[1]!));
+  /** Signals that a script adds at runtime with add_user_signal(), in it or in a script it extends. */
+  const runtimeSignals = (model: ClassModel): Set<string> =>
+    new Set(pm.chain(model).flatMap((c) => [...(pm.data.sources.get(c.path) ?? "").matchAll(ADD_USER_SIGNAL)].map((m) => m[1]!)));
+  // Without a receiver type, `x.instance()` is Godot 3 only when no script (or foreign class) in the project defines `instance`.
+  let definesInstance: boolean | undefined;
+  const hasInstanceMethod = (): boolean =>
+    (definesInstance ??= options.foreignClasses || [...pm.allModels()].some((m) => m.outline.functions.some((f) => f.name === "instance")));
 
   // --- per statement ----------------------------------------------------
   let currentFn: FunctionInfo | undefined;
@@ -128,8 +138,12 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       }
     }
 
+    // Matched on the blanked code, so words inside string literals are not syntax.
     for (const [re, message] of GODOT3_SYNTAX) {
-      if (re.test(ll.text)) report("api/godot3-syntax", ll.line, `Godot 3 syntax: ${message}.`);
+      if (re.test(ll.code)) report("api/godot3-syntax", ll.line, `Godot 3 syntax: ${message}.`);
+    }
+    if (PACKED_INSTANCE.test(ll.code) && !hasInstanceMethod()) {
+      report("api/godot3-syntax", ll.line, "Godot 3 syntax: `PackedScene.instance()` is `instantiate()` in Godot 4.");
     }
     for (const name of inputActions(ll.text)) {
       if (!options.inputActions.has(name) && !name.startsWith("ui_")) {
@@ -141,7 +155,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     for (const m of ll.text.matchAll(SIGNAL_BY_NAME)) {
       const name = m[3]!;
       const member = pm.memberOf(selfType, name);
-      if (!member && !model.dynamic) {
+      if (!member && !model.dynamic && !runtimeSignals(model).has(name)) {
         report("api/unknown-signal", ll.line, `Signal "${name}" is not declared on this class or its parents.${suggestSignals(pm, selfType, name)}`);
       } else if (member && member.kind !== "signal") {
         report("api/unknown-signal", ll.line, `"${name}" is a ${member.kind}, not a signal.`);
@@ -412,7 +426,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const cls = pm.resolveTypeName(name, model, true);
       if (cls) return { type: cls, exact: true };
       if (api.lookup(name).entries.some((e) => e.owner === "@GlobalScope" || e.owner === "@GDScript")) return undefined;
-      if (followedByDot && /^[A-Z]/.test(name) && !options.foreignClasses) {
+      // `Variant` is the namespace of the dotted global enums (`Variant.Type`, `Variant.Operator`), not a missing class.
+      const enumNamespace = [...pm.globalEnums].some((e) => e.startsWith(`${name}.`));
+      if (followedByDot && /^[A-Z]/.test(name) && !options.foreignClasses && !enumNamespace) {
         const hint = renameHint(name, "type");
         report(
           "api/unknown-type",
@@ -436,6 +452,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         if (found.kind === "class") return { type: found.type, exact: true };
         return { type: found.type, exact: false };
       }
+      if (type.kind === "script" && runtimeSignals(type.model).has(name)) return { type: native("Signal"), exact: false };
       if (name === "new" && type.meta) return { type: { ...type, meta: false }, exact: false };
       if (type.kind === "script" && pm.chain(type.model).some((c) => c.dynamic)) return undefined;
       const label = typeLabel(type);
