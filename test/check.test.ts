@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { checkProject } from "../src/check/check.js";
+import { checkerSource } from "../src/check/checker-script.js";
 import { findGodot, GodotNotFoundError } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
 
@@ -179,5 +180,13 @@ describe("godotwright check", () => {
     expect(output).toContain("1 error, 1 warning (Godot 4.7.2.stable.official.fake, 3 scripts, 1 scenes)");
     expect(process.exitCode).toBe(1);
     process.exitCode = previous;
+  });
+});
+
+describe("checkerSource", () => {
+  it("writes exclude paths literally, even when they contain $ sequences", () => {
+    const source = checkerSource({ instantiate: true, exclude: ["vendor/a$&b", "tools/$$"] });
+    expect(source).toContain('const INSTANTIATE: bool = true\nconst EXCLUDE: Array[String] = ["res://vendor/a$&b", "res://tools/$$"]\n');
+    expect(source.split("const MARKER").length).toBe(2);
   });
 });
