@@ -122,6 +122,14 @@ describe("MCP server (premium profile)", () => {
   });
 });
 
+describe("MCP server tier", () => {
+  it("names the valid tiers when the tier is neither cheap nor premium", () => {
+    for (const tier of ["Premium", "fast", "", "toString"]) {
+      expect(() => createServer({ tier: tier as Tier, root: DEMO }), tier).toThrow(`tier must be cheap or premium, got "${tier}"`);
+    }
+  });
+});
+
 describe("MCP Registry entry", () => {
   const read = (file: string) => JSON.parse(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
   const pkg = read("package.json") as { name: string; version: string; mcpName: string };

@@ -95,6 +95,7 @@ const failure = (value: string) => ({ content: [{ type: "text" as const, text: v
 
 export function createServer(options: ServerOptions = {}): McpServer {
   const tier: Tier = options.tier ?? "cheap";
+  if (!Object.hasOwn(PROFILES, tier)) throw new Error(`tier must be cheap or premium, got "${tier}"`);
   const profile = PROFILES[tier];
   const base = resolve(options.root ?? process.cwd());
 
