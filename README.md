@@ -75,6 +75,7 @@ godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put 
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
+godotwright usages take_damage       # every place a name or res:// path is used: code, scenes, connections, groups, settings
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each

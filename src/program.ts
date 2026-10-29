@@ -7,6 +7,7 @@ import { mcpCommand } from "./commands/mcp.js";
 import { modelCommand } from "./commands/model.js";
 import { reviewCommand } from "./commands/review.js";
 import { migrateCommand } from "./commands/migrate.js";
+import { usagesCommand } from "./commands/usages.js";
 import { scanCommand } from "./commands/scan.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
@@ -25,6 +26,7 @@ export function createProgram(): Command {
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
     .addCommand(migrateCommand())
+    .addCommand(usagesCommand())
     .addCommand(modelCommand())
     .addCommand(mcpCommand())
     .addCommand(learnCommand())

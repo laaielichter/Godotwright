@@ -11,6 +11,7 @@ import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
 import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { findUsages, formatUsages } from "../usages/usages.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import { parseFindingLine, recordFeedback } from "../learn/learn.js";
 import { allKinds } from "../build/generators/index.js";
@@ -68,6 +69,7 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
+      "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it.",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
@@ -85,6 +87,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
       "- godot_checklist lists every AAA rule with its fix.",
+      "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
@@ -215,6 +218,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
           : formatReviewFor(report, detail ?? profile.detail, profile, focus, missing);
         return missing.length ? failure(body) : text(body);
       }),
+  );
+
+  server.registerTool(
+    "godot_usages",
+    {
+      title: "Find usages",
+      description:
+        "Find every place a name is used in the project, offline and without the editor: a function, signal, variable, constant, class_name, autoload, input action, group or node name, or a res:// path / uid:// (which files refer to it, and whether it exists). Looks in GDScript code (not comments), in strings where Godot looks names up (connect, emit_signal, is_action_pressed, add_to_group, get_node, load), in scene connections, node names and groups, and in project settings. Call it before you rename, move or delete anything.",
+      inputSchema: {
+        name: z.string().describe("what to look for, e.g. take_damage, health_changed, Player, jump, res://scenes/enemy.tscn"),
+        path: pathParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ name, path }) => guard(() => text(formatUsages(findUsages(where(path), name, { base: options.base, baseFiles: options.baseFiles }), profile.findings * 4))),
   );
 
   server.registerTool(
