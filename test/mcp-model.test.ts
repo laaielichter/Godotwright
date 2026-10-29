@@ -38,6 +38,7 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     const { tools } = await client.listTools();
     for (const name of ["godot_model_identify", "godot_model_spec", "godot_model_lint", "godot_model_inspect"]) expect(tools.find((t) => t.name === name)?.annotations?.readOnlyHint, name).toBe(true);
     expect(tools.find((t) => t.name === "godot_model_build")?.annotations?.readOnlyHint).toBe(false);
+    expect(tools.find((t) => t.name === "godot_model_build")?.annotations?.destructiveHint, "build overwrites out").toBe(true);
     expect(tools.find((t) => t.name === "godot_model_build")?.inputSchema.required).toEqual(["out"]);
   });
 

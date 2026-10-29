@@ -120,6 +120,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     .describe(`Output detail (default for this ${tier} profile: ${profile.detail}).`);
   const pathParam = z.string().optional().describe("Project directory or a path inside it (default: the current project).");
   const readOnly = { readOnlyHint: true, openWorldHint: false };
+  // These tools answer from the project but record counters in the local learning file.
+  const writesLearning = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 
   server.registerTool(
     "godot_scan",
@@ -143,7 +145,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         query: z.string().describe("e.g. CharacterBody2D.move_and_slide, Node.ready, @export_range, lerp, Tween"),
         detail: detailParam,
       },
-      annotations: readOnly,
+      annotations: writesLearning,
     },
     async ({ query, detail }) =>
       guard(() => {
@@ -163,7 +165,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         query: z.string().describe("words, e.g. 'raycast 3d', 'change scene', 'is on floor'"),
         limit: z.number().int().min(1).max(50).optional().describe("max results (default 10)"),
       },
-      annotations: readOnly,
+      annotations: writesLearning,
     },
     async ({ query, limit }) =>
       guard(() => {
@@ -185,7 +187,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         file: z.string().optional().describe("res:// path the code belongs to (required with code)"),
         detail: detailParam,
       },
-      annotations: readOnly,
+      annotations: writesLearning,
     },
     async ({ path, files, code, file, detail }) =>
       guard(() => {
@@ -316,7 +318,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         contract_out: z.string().optional().describe("also write a model.contract.json here (inside the project)"),
         detail: modelDetail,
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async ({ out, kind, spec, spec_file, params, contract_out, detail }) =>
       guard(() => {

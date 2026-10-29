@@ -42,6 +42,15 @@ describe("MCP server (cheap profile)", () => {
     expect(tools.find((t) => t.name === "godot_api")?.inputSchema.required).toEqual(["query"]);
   });
 
+  it("does not call the tools that write learning read-only", async () => {
+    const { tools } = await client.listTools();
+    for (const name of ["godot_review", "godot_api", "godot_api_search"]) {
+      const annotations = tools.find((t) => t.name === name)?.annotations;
+      expect(annotations?.readOnlyHint, name).toBe(false);
+      expect(annotations?.destructiveHint, name).toBe(false);
+    }
+  });
+
   it("sends step-by-step instructions", () => {
     expect(client.getInstructions()).toContain("Never guess API names");
   });
