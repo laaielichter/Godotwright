@@ -81,6 +81,9 @@ godotwright rename res://a.tscn res://scenes/a.tscn --write   # move a file with
 godotwright project set display/window/size/viewport_width 1920 --write   # change a setting; name and type checked against Godot 4.7
 godotwright project input add jump --key Space --joy-button A --write   # input map without hand-editing Object(InputEventKey,...)
 godotwright project autoload add Game res://game.gd --write   # checks the file is a Node and the name is free
+godotwright scene add main.tscn . Music AudioStreamPlayer --write   # add a node (or an instance: res://enemy.tscn); only that line changes
+godotwright scene set main.tscn Timer wait_time 0.5 --write   # property name and type checked; enums by name, resources as res:// files
+godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns when the method is missing or takes other arguments
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each

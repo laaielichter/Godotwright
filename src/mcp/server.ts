@@ -32,6 +32,7 @@ import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
 import { formatProjectMap, type Detail } from "../scan/format.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
+import { SceneError, editScene, formatScenePlan, type SceneEdit } from "../scene/edit.js";
 import { SettingsError, editProjectSettings, formatSettingsPlan, type SettingsEdit } from "../settings/edit.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
 
@@ -92,6 +93,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
+      "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
@@ -309,6 +311,60 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return plan.review && plan.review.after > plan.review.before ? failure(body) : text(body);
       } catch (error) {
         if (error instanceof SettingsError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_scene_edit",
+    {
+      title: "Change a scene",
+      description:
+        "Change a .tscn safely, without the editor: add a node (a Godot class or an instanced scene), remove a node (with its children, connections and the resources only it used), set a property (name and type checked against Godot 4.7; enums by name, resources as res:// files), connect or disconnect a signal (checks the signal exists, and warns when the method is missing or takes the wrong number of arguments, with the func line to add), or attach a script (refuses one that extends another node type). Node paths are relative to the scene root, which is \".\". Only the lines of that change are touched. Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after. Use it instead of editing .tscn files by hand.",
+      inputSchema: {
+        scene: z.string().describe("the scene: res://main.tscn, or a path"),
+        op: z.enum(["add_node", "remove_node", "set", "connect", "disconnect", "attach_script"]).describe("what to change"),
+        node: z.string().optional().describe('remove_node/set/attach_script: path of the node ("." is the root)'),
+        parent: z.string().optional().describe('add_node: path of the parent ("." is the root)'),
+        name: z.string().optional().describe("add_node: name of the new node"),
+        type: z.string().optional().describe("add_node: a Godot node class, e.g. Sprite2D"),
+        instance: z.string().optional().describe("add_node: a res:// scene to instance instead of a type"),
+        property: z.string().optional().describe("set: property name, e.g. position"),
+        value: z.string().optional().describe("set: the value, e.g. Vector2(10, 20), 3, true, ALWAYS, res://icon.svg, null"),
+        from: z.string().optional().describe("connect/disconnect: path of the node that emits"),
+        signal: z.string().optional().describe("connect/disconnect: signal name"),
+        to: z.string().optional().describe("connect/disconnect: path of the node that receives"),
+        method: z.string().optional().describe("connect/disconnect: method name"),
+        script: z.string().optional().describe("attach_script: res:// path of the script"),
+        write: z.boolean().optional().describe("write the change (default false: show the diff only)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async (args) => {
+      const need = (field: keyof typeof args): string => {
+        const v = args[field];
+        if (typeof v !== "string" || v === "") throw new SceneError(`${args.op} needs ${field}`);
+        return v;
+      };
+      try {
+        const { op } = args;
+        const edit: SceneEdit =
+          op === "add_node"
+            ? { op, parent: need("parent"), name: need("name"), ...(args.instance ? { instance: args.instance } : { type: need("type") }) }
+            : op === "remove_node"
+              ? { op, node: need("node") }
+              : op === "set"
+                ? { op, node: need("node"), property: need("property"), value: need("value") }
+                : op === "attach_script"
+                  ? { op, node: need("node"), script: need("script") }
+                  : { op, from: need("from"), signal: need("signal"), to: need("to"), method: need("method") };
+        const scene = args.scene.startsWith("res://") ? args.scene : where(args.scene);
+        const plan = editScene(scene, edit, { write: args.write === true, project: base });
+        const body = formatScenePlan(plan);
+        return plan.review && plan.review.after > plan.review.before ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof SceneError || error instanceof ProjectNotFoundError) return failure(error.message);
         throw error;
       }
     },

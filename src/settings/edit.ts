@@ -2,7 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
 import { describeInputEvent, parseProjectSettings } from "../godot/project-settings.js";
-import { isCall, isObject, parseVariant } from "../godot/variant.js";
+import { typedValue, tryParse } from "../godot/typed-value.js";
+import { isObject, parseVariant } from "../godot/variant.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
@@ -238,54 +239,10 @@ export function eventLabel(text: string): string {
   return isObject(value) ? describeInputEvent(value.class, value.props) : text;
 }
 
-const CALL_TYPES = /^(Vector[234]i?|Rect2i?|Color|Transform[23]D|Basis|Quaternion|Plane|AABB|Projection|Packed\w+Array|NodePath|StringName)$/;
-
 /** The value as Godot writes it, checked against the type the 4.7 reference gives the setting. */
 function settingValue(key: string, input: string, type: string | undefined, root: string): string {
-  const value = input.trim();
-  const fail = (what: string) => new SettingsError(`${key} is ${type === "int" || type === "float" ? "an" : "a"} ${type}; "${input}" is not ${what}`);
-  let out: string;
-  if (type === "bool") {
-    if (!/^(true|false)$/i.test(value)) throw fail("true or false");
-    out = value.toLowerCase();
-  } else if (type === "int") {
-    if (!/^-?\d+$/.test(value)) throw fail("a whole number");
-    out = String(Number(value));
-  } else if (type === "float") {
-    const n = Number(value);
-    if (value === "" || !Number.isFinite(n)) throw fail("a number");
-    out = Number.isInteger(n) ? `${n}.0` : String(n);
-  } else if (type === "String" || type === "StringName") {
-    if (value.startsWith('"')) {
-      const parsed = (() => {
-        try {
-          return parseVariant(value);
-        } catch {
-          return undefined;
-        }
-      })();
-      if (typeof parsed !== "string") throw fail("a quoted string");
-      out = value;
-    } else out = JSON.stringify(input);
-  } else {
-    let parsed;
-    try {
-      parsed = parseVariant(value);
-    } catch {
-      // A setting we do not know with a bare word: most unknown settings are strings.
-      if (type) throw fail(`a Godot ${type} value (for example ${type}(...))`);
-      return JSON.stringify(input);
-    }
-    if (type && CALL_TYPES.test(type) && !(isCall(parsed) && parsed.$type === type)) throw fail(`a ${type}(...) value`);
-    out = value;
-  }
-  const str = (() => {
-    try {
-      return parseVariant(out);
-    } catch {
-      return undefined;
-    }
-  })();
+  const out = typedValue(key, input, type, (m) => new SettingsError(m));
+  const str = tryParse(out);
   if (typeof str === "string" && str.startsWith("res://") && !existsSync(fromResPath(root, str))) throw new SettingsError(`${str} does not exist in the project`);
   return out;
 }
