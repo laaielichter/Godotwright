@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, extname, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
 
 /** Subset of the glTF 2.0 JSON that Godotwright reads. */
 export interface Gltf {
@@ -124,19 +124,52 @@ function parseJson(file: string, text: string): Gltf {
 
 function resolveBuffer(file: string, uri: string | undefined, dir: string): Buffer {
   if (!uri) return Buffer.alloc(0);
-  const bytes = readUri(uri, dir);
+  if (typeof uri !== "string") throw new ModelError(`${file}: buffer uri must be text`);
+  const bytes = readUri(file, uri, dir);
   if (!bytes) throw new ModelError(`${file}: buffer file not found: ${uri}`);
   return bytes;
 }
 
-/** Reads a data: URI or a file next to the model. Returns undefined when the file is missing. */
-export function readUri(uri: string, dir: string): Buffer | undefined {
+/** Reads a data: URI, or a file inside the model's folder. Returns undefined when that file is missing. */
+export function readUri(file: string, uri: string, dir: string): Buffer | undefined {
   if (uri.startsWith("data:")) {
     const comma = uri.indexOf(",");
     return comma < 0 ? undefined : Buffer.from(uri.slice(comma + 1), uri.slice(0, comma).includes(";base64") ? "base64" : "utf8");
   }
-  const path = resolve(dir, decodeURIComponent(uri));
-  return existsSync(path) ? readFileSync(path) : undefined;
+  const path = externalPath(file, uri, dir);
+  if (!existsSync(path)) return undefined;
+  // Checked again after following links, so a link inside the folder cannot point out of it.
+  const real = realpathSync(path);
+  if (!within(realpathSync(dir), real)) throw outsideFolder(file, uri);
+  try {
+    return readFileSync(real);
+  } catch (error) {
+    throw new ModelError(`${file}: cannot read ${uri} (${(error as Error).message})`);
+  }
+}
+
+/** Where an external uri points. Refuses absolute paths, URLs and anything that climbs out of the folder. */
+function externalPath(file: string, uri: string, dir: string): string {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(uri);
+  } catch {
+    throw new ModelError(`${file}: uri "${uri}" is not valid percent-encoding`);
+  }
+  if (isAbsolute(decoded) || /^[a-z][a-z\d+.-]*:/i.test(decoded)) throw outsideFolder(file, uri);
+  const path = resolve(dir, decoded);
+  if (!within(dir, path)) throw outsideFolder(file, uri);
+  return path;
+}
+
+/** True when `path` is `dir` itself or lies below it. */
+function within(dir: string, path: string): boolean {
+  const rel = relative(dir, path);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+function outsideFolder(file: string, uri: string): ModelError {
+  return new ModelError(`${file}: "${uri}" must be a file inside the model's folder (absolute paths and ".." are refused)`);
 }
 
 const COMPONENTS: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT2: 4, MAT3: 9, MAT4: 16 };

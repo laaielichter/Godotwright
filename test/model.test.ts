@@ -1,3 +1,5 @@
+import { readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadLibrary } from "../src/archetype/library.js";
 import { contractFromArchetype, contractFromModel, loadContract } from "../src/model/contract.js";
@@ -9,6 +11,24 @@ import { box, writeGlb, type TestMesh } from "./model-helpers.js";
 import { makeProject, runCli } from "./helpers.js";
 
 const ids = (path: string, options = {}) => lintModelFile(path, options).findings.map((f) => f.rule);
+
+/** Rewrites the JSON chunk of a .glb written by writeGlb, so a test can break one field of it. */
+function editGlbJson(path: string, edit: (json: any) => void): string {
+  const data = readFileSync(path);
+  const jsonLength = data.readUInt32LE(12);
+  const json = JSON.parse(data.subarray(20, 20 + jsonLength).toString("utf8"));
+  edit(json);
+  const body = Buffer.from(JSON.stringify(json));
+  const padded = Buffer.concat([body, Buffer.alloc((4 - (body.length % 4)) % 4, 0x20)]);
+  const header = Buffer.from(data.subarray(0, 12));
+  const jsonHead = Buffer.alloc(8);
+  jsonHead.writeUInt32LE(padded.length, 0);
+  jsonHead.writeUInt32LE(0x4e4f534a, 4);
+  const rest = data.subarray(20 + jsonLength);
+  header.writeUInt32LE(12 + 8 + padded.length + rest.length, 8);
+  writeFileSync(path, Buffer.concat([header, jsonHead, padded, rest]));
+  return path;
+}
 
 describe("model inspect", () => {
   it("counts triangles, nodes and size", () => {
@@ -277,5 +297,38 @@ describe("model recipes", () => {
     const json = JSON.parse((await runCli(["model", "recipes", "--json"])).output) as { kind: string; archetype: string | null; params: { name: string }[] }[];
     expect(json.map((r) => r.kind)).toEqual(recipes.map((r) => r.kind));
     expect(json.every((r) => r.archetype && r.params.length > 0)).toBe(true);
+  });
+});
+
+describe("model files outside the model's folder", () => {
+  /** A one-triangle .gltf whose only buffer has the given uri. */
+  const gltfWith = (uri: string) =>
+    JSON.stringify({
+      asset: { version: "2.0" }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+      accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+      bufferViews: [{ buffer: 0, byteLength: 36 }],
+      buffers: [{ uri, byteLength: 36 }],
+    });
+
+  it("reads buffers next to the model, and refuses files outside its folder", () => {
+    const root = makeProject({
+      "outside.bin": "\0".repeat(36),
+      "models/inside.bin": "\0".repeat(36),
+      "models/inside.gltf": gltfWith("inside.bin"),
+      "models/escape.gltf": gltfWith("../outside.bin"),
+      "models/encoded.gltf": gltfWith("..%2Foutside.bin"),
+      "models/malformed.gltf": gltfWith("%E0%A4%A"),
+    });
+    writeFileSync(join(root, "models", "absolute.gltf"), gltfWith(join(root, "outside.bin")));
+    symlinkSync(join(root, "outside.bin"), join(root, "models", "link.bin"));
+    writeFileSync(join(root, "models", "link.gltf"), gltfWith("link.bin"));
+    const model = (name: string) => join(root, "models", name);
+    expect(() => inspectModel(model("inside.gltf"))).not.toThrow();
+    for (const name of ["escape.gltf", "encoded.gltf", "absolute.gltf", "malformed.gltf", "link.gltf"]) {
+      expect(() => inspectModel(model(name)), name).toThrow(ModelError);
+    }
+    expect(() => inspectModel(model("escape.gltf"))).toThrow(/inside the model's folder/);
+    expect(() => inspectModel(model("malformed.gltf"))).toThrow(/not valid percent-encoding/);
   });
 });

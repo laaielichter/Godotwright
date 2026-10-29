@@ -143,7 +143,7 @@ function readTextures(model: LoadedGltf): TextureInfo[] {
       const view = model.json.bufferViews?.[image.bufferView];
       const buffer = view && model.buffers[view.buffer];
       if (view && buffer) bytes = buffer.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength);
-    } else if (image?.uri) bytes = readUri(image.uri, model.dir);
+    } else if (image?.uri) bytes = readUri(model.file, image.uri, model.dir);
     const size = bytes && imageSize(bytes);
     return {
       index,
