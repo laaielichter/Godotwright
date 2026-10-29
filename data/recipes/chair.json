@@ -1,0 +1,119 @@
+{
+ "version": 1,
+ "name": "chair",
+ "archetype": "prop.chair",
+ "description": "A wooden dining chair facing +Z: a square seat on four legs and a backrest with two uprights and a rail at the back (-Z side).",
+ "params": [
+  {
+   "name": "seatHeight",
+   "type": "number",
+   "default": 0.45,
+   "min": 0.35,
+   "max": 0.6,
+   "description": "Height of the seat above the floor."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 0.45,
+   "min": 0.35,
+   "max": 0.6,
+   "description": "Width of the seat in metres."
+  },
+  {
+   "name": "backHeight",
+   "type": "number",
+   "default": 0.45,
+   "min": 0.3,
+   "max": 0.8,
+   "description": "Height of the backrest above the seat."
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Chair",
+   "material": "wood",
+   "vars": {
+    "SH": "$seatHeight",
+    "W": "$width",
+    "D": "$width",
+    "BH": "$backHeight"
+   },
+   "children": [
+    {
+     "name": "Seat",
+     "shape": "box",
+     "size": [
+      "$W",
+      0.04,
+      "$D"
+     ],
+     "at": [
+      0,
+      "$SH - 0.02",
+      0
+     ]
+    },
+    {
+     "name": "Leg_FL",
+     "shape": "box",
+     "size": [
+      0.04,
+      "$SH - 0.04",
+      0.04
+     ],
+     "at": [
+      "$W / 2 - 0.03",
+      "($SH - 0.04) / 2",
+      "$D / 2 - 0.03"
+     ],
+     "mirror": "Leg_FR"
+    },
+    {
+     "name": "Leg_BL",
+     "shape": "box",
+     "size": [
+      0.04,
+      "$SH - 0.04",
+      0.04
+     ],
+     "at": [
+      "$W / 2 - 0.03",
+      "($SH - 0.04) / 2",
+      "-$D / 2 + 0.03"
+     ],
+     "mirror": "Leg_BR"
+    },
+    {
+     "name": "Upright_L",
+     "shape": "box",
+     "size": [
+      0.04,
+      "$BH",
+      0.03
+     ],
+     "at": [
+      "$W / 2 - 0.03",
+      "$SH + $BH / 2",
+      "-$D / 2 + 0.03"
+     ],
+     "mirror": "Upright_R"
+    },
+    {
+     "name": "BackRail",
+     "shape": "box",
+     "size": [
+      "$W - 0.1",
+      "$BH * 0.35",
+      0.025
+     ],
+     "at": [
+      0,
+      "$SH + $BH * 0.62",
+      "-$D / 2 + 0.03"
+     ]
+    }
+   ]
+  }
+ ]
+}
