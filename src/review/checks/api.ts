@@ -129,7 +129,8 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     }
 
     for (const [re, message] of GODOT3_SYNTAX) {
-      if (re.test(ll.text)) report("api/godot3-syntax", ll.line, `Godot 3 syntax: ${message}.`);
+      // Matched on the blanked code, so words inside string literals are not syntax.
+      if (re.test(ll.code)) report("api/godot3-syntax", ll.line, `Godot 3 syntax: ${message}.`);
     }
     for (const name of inputActions(ll.text)) {
       if (!options.inputActions.has(name) && !name.startsWith("ui_")) {

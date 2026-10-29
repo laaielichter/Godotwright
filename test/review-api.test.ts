@@ -42,6 +42,41 @@ describe("unique-name nodes after keywords", () => {
   });
 });
 
+describe("Godot 3 syntax", () => {
+  it("ignores Godot 3 words inside string literals", () => {
+    expect(
+      findings(
+        [
+          "extends Node",
+          "",
+          "func _ready() -> void:",
+          '\tprint("setget is gone, yield( and funcref( and .instance() are Godot 3")',
+          '\tpush_warning("export var, onready var and tool are Godot 3 too")',
+          "\tprint('connect(\"hit\", self, \"_on_hit\")')",
+        ].join("\n"),
+      ).filter((l) => l.includes("[api/godot3-syntax]")),
+    ).toEqual([]);
+  });
+
+  it("still reports Godot 3 syntax in code", () => {
+    expect(
+      findings(
+        [
+          "extends Node",
+          "",
+          "var hp = 3 setget set_hp",
+          "",
+          "func _ready() -> void:",
+          "\tyield(get_tree(), \"idle_frame\")",
+        ].join("\n"),
+      ).filter((l) => l.includes("[api/godot3-syntax]")),
+    ).toEqual([
+      "res://main.gd:3: error [api/godot3-syntax] Godot 3 syntax: `setget` is gone in Godot 4; use `var x: T: set = _set_x, get = _get_x` or set()/get blocks.",
+      "res://main.gd:6: error [api/godot3-syntax] Godot 3 syntax: `yield()` is `await` in Godot 4, e.g. `await get_tree().create_timer(1.0).timeout`.",
+    ]);
+  });
+});
+
 describe("argument counts", () => {
   const twoParams = "extends Node\n\nfunc f(a, b) -> int:\n\treturn 0\n\n";
 
