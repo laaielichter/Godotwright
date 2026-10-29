@@ -267,6 +267,28 @@ describe("review robustness", () => {
     });
   });
 
+  it("does not give a value the type of a literal it only starts with", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "func _ready() -> void:",
+        '\tvar parts := "a,b".split(",")',
+        "\tprint(parts.size())",
+        '\tvar keys := {"a": 1}.keys()',
+        "\tprint(keys.append(2))",
+        '\tvar same := "a" == "b"',
+        "\tprint(same)",
+        '\tvar text := "abc"',
+        "\tprint(text.nope_method())",
+        "",
+      ].join("\n"),
+    });
+    const api = reviewProject(root).findings.filter((f) => f.category === "api").map(formatFinding);
+    expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
+  });
+
   it("does not call a script or group unused or unassigned when a scene does not parse", () => {
     const root = makeProject({
       "project.godot": PROJECT,
