@@ -157,6 +157,21 @@ describe("recipe geometry", () => {
     }
   });
 
+  it("power pylon: the back of each square frame is braced too, not a copy of the front", () => {
+    for (const height of [15, 30, 70]) {
+      const boxes = nodeBoxes("power-pylon", { height });
+      const z = (path: string): number => {
+        const b = boxes.get(path);
+        expect(b, path).toBeDefined();
+        return (b!.min[2] + b!.max[2]) / 2;
+      };
+      for (let i = 1; i <= 6; i++) {
+        expect(z(`Pylon/Brace_F${i}`), `height ${height}, frame ${i}`).toBeGreaterThan(0);
+        expect(z(`Pylon/Brace_B${i}`), `height ${height}, frame ${i}`).toBeCloseTo(-z(`Pylon/Brace_F${i}`), 3);
+      }
+    }
+  });
+
   it("light aircraft: the wing tips sit at the wingspan, tip to tip", () => {
     for (const wingSpan of [8, 11, 13]) {
       const info = inspectModel(writeScene(buildKind("light-aircraft", { wingSpan })));

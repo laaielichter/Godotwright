@@ -88,8 +88,29 @@
        "$bodyH / 7",
        0
       ]
-     },
-     "mirror": "Brace_B{i}"
+     }
+    },
+    {
+     "name": "Brace_B{i}",
+     "shape": "box",
+     "size": [
+      "2 * ($b - ($b - $t) * ($i + 1) / 7)",
+      0.1,
+      0.1
+     ],
+     "at": [
+      0,
+      "$bodyH / 7",
+      "-($b - ($b - $t) * ($i + 1) / 7)"
+     ],
+     "repeat": {
+      "count": 6,
+      "step": [
+       0,
+       "$bodyH / 7",
+       0
+      ]
+     }
     },
     {
      "name": "Brace_L{i}",
