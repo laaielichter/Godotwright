@@ -267,6 +267,33 @@ describe("review robustness", () => {
     });
   });
 
+  it("does not flag a lazily cached load or lookup in a per-frame function", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "var _tex: Texture2D",
+        "var _sprite: Sprite2D",
+        "",
+        "",
+        "func _process(_delta: float) -> void:",
+        "\tif not _tex:",
+        '\t\t_tex = load("res://icon.svg")',
+        "\tif _sprite == null:",
+        '\t\t_sprite = get_node("Sprite")',
+        '\tvar other := get_node("Other")',
+        "\tprint(other)",
+        "",
+      ].join("\n"),
+    });
+    const performance = reviewProject(root).findings.filter((f) => f.category === "performance").map(formatFinding);
+    expect(performance).toEqual([
+      "res://main.gd:12: warning [performance/node-lookup-per-frame] A node lookup in _process() runs every frame; store the node in an @onready var.",
+      "res://main.gd:13: info [performance/print-per-frame] print() in _process() prints every frame and slows the game.",
+    ]);
+  });
+
   it("checks per-frame functions whose body is on the func line", () => {
     const root = makeProject({
       "project.godot": PROJECT,
