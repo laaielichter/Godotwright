@@ -218,7 +218,7 @@ export function splitAnnotations(text: string): { annotations: string[]; rest: s
     if (!match) break;
     let end = match[0].length;
     let j = end;
-    while (rest[j] === " ") j++;
+    while (rest[j] === " " || rest[j] === "\t") j++;
     if (rest[j] === "(") {
       const close = matchingParen(rest, j);
       end = close + 1;
@@ -351,9 +351,10 @@ export function outlineScript(source: string): ScriptOutline {
 
     const { annotations, rest } = splitAnnotations(ll.text);
     for (const annotation of annotations) {
-      const name = annotation.slice(1).split("(")[0]!;
+      const name = /^@(\w+)/.exec(annotation)?.[1] ?? "";
+      const args = /\(([\s\S]*)\)$/.exec(annotation)?.[1] ?? "";
       if (!top && name === "tool") script.tool = true;
-      else if (!top && name === "icon") script.icon = unquote(annotation.slice(6, -1).trim());
+      else if (!top && name === "icon") script.icon = unquote(args.trim());
       else if (!STANDALONE_ANNOTATIONS.has(name)) pending.push(annotation);
     }
     if (rest === "") continue;

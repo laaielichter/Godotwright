@@ -143,4 +143,25 @@ describe("outlineScript", () => {
       { path: "data.json", kind: "load", line: 40 },
     ]);
   });
+
+  it("reads annotations that have a space before their argument list", () => {
+    const spaced = outlineScript(
+      [
+        "@tool",
+        '@icon ("res://x.svg")',
+        "class_name Spaced",
+        "",
+        '@export_group ("Movement")',
+        "@export var speed := 1.0",
+        '@export_subgroup ("Tuning")',
+        "@export_range (0, 10) var level := 1",
+      ].join("\n"),
+    );
+    expect(spaced.tool).toBe(true);
+    expect(spaced.icon).toBe("res://x.svg");
+    expect(spaced.variables.map((v) => [v.name, v.exportAnnotation])).toEqual([
+      ["speed", "@export"],
+      ["level", "@export_range (0, 10)"],
+    ]);
+  });
 });
