@@ -238,4 +238,32 @@ describe("review robustness", () => {
     expect(unknown.map((f) => f.line)).toContain(3);
     expect(unknown.map(formatFinding)[0]).toContain('Type "Foo" does not exist');
   });
+
+  describe("GDExtension node types in scene connections", () => {
+    const scene = [
+      '[gd_scene load_steps=2 format=3]',
+      '[ext_resource type="Script" path="res://main.gd" id="1"]',
+      '[node name="Main" type="Node2D"]',
+      'script = ExtResource("1")',
+      '[node name="Gizmo" type="MyGizmo" parent="."]',
+      '[connection signal="tapped" from="Gizmo" to="." method="_on_gizmo_tapped"]',
+      "",
+    ].join("\n");
+    const files = {
+      "project.godot": PROJECT,
+      "main.tscn": scene,
+      "main.gd": "extends Node2D\n\nfunc _on_gizmo_tapped() -> void:\n\tpass\n",
+    };
+
+    it("does not report signals of a node type that a GDExtension library provides", () => {
+      const root = makeProject({ ...files, "gizmo.gdextension": '[configuration]\nentry_symbol = "gizmo_init"\n' });
+      expect(reviewProject(root).findings.filter((f) => f.rule === "structure/bad-connection")).toEqual([]);
+    });
+
+    it("still reports the same connection when no library could provide the type", () => {
+      const root = makeProject(files);
+      const bad = reviewProject(root).findings.filter((f) => f.rule === "structure/bad-connection").map(formatFinding);
+      expect(bad).toEqual(['res://main.tscn:6: error [structure/bad-connection] Connection Gizmo.tapped: MyGizmo has no signal "tapped".']);
+    });
+  });
 });

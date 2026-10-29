@@ -23,8 +23,15 @@ const MAX_AUTOLOADS = 10;
 const MAX_DEPTH = 12;
 const SNAKE_FILE = /^[a-z0-9_]+(\.[a-z0-9_]+)*$/;
 
-export function checkStructure(pm: ProjectModel): Finding[] {
+export interface StructureOptions {
+  /** Project uses C# or GDExtension, so node types the bundled API does not know may be real. */
+  foreignClasses?: boolean;
+}
+
+export function checkStructure(pm: ProjectModel, options: StructureOptions = {}): Finding[] {
   const out: Finding[] = [];
+  /** A node type from a GDExtension or C# library: its signals and methods cannot be checked. */
+  const foreign = (type: GType | undefined): boolean => Boolean(options.foreignClasses) && type?.kind === "native" && !pm.api.getClass(type.name);
   const { map, root } = pm.data;
   // Only this project's own files: a base project's layout is not this project's (see LoadOptions.base).
   const files = pm.data.files.filter((f) => !pm.data.external.has(f));
@@ -51,13 +58,13 @@ export function checkStructure(pm: ProjectModel): Finding[] {
         out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): node "${from === null ? c.from : c.to}" does not exist.`));
         continue;
       }
-      if (from && from.kind !== "enum" && !dynamic(pm, from)) {
+      if (from && from.kind !== "enum" && !dynamic(pm, from) && !foreign(from)) {
         const signal = pm.memberOf(from, c.signal);
         if (!signal || signal.kind !== "signal") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal}: ${label(from)} has no signal "${c.signal}".`));
         }
       }
-      if (to && to.kind !== "enum" && !dynamic(pm, to)) {
+      if (to && to.kind !== "enum" && !dynamic(pm, to) && !foreign(to)) {
         const method = pm.memberOf(to, c.method);
         if (!method || method.kind !== "method") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): ${label(to)} has no method "${c.method}".`));
