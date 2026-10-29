@@ -309,8 +309,6 @@
    "hoogbouw",
    "lighthouse",
    "vuurtoren",
-   "watchtower",
-   "uitkijktoren",
    "water tower",
    "watertoren"
   ],
@@ -901,6 +899,149 @@
    "A castle made of one solid block has nothing to enter or animate: make the gate a node and the towers separate.",
    "Walls without thickness look like paper from above: give them a walkway and parapet.",
    "Towers the same height as the wall defeat their purpose: make them clearly taller."
+  ]
+ },
+ {
+  "id": "building.watchtower",
+  "name": "watchtower",
+  "description": "A free-standing look-out tower: a tall shaft of stone or timber, a gallery or hoarding near the top, a roof, and a door at the foot.",
+  "aliases": [
+   "watchtower",
+   "watch tower",
+   "wachttoren",
+   "uitkijktoren",
+   "lookout tower",
+   "look-out tower",
+   "guard tower",
+   "wachtpost",
+   "bell tower",
+   "klokkentoren",
+   "turret tower",
+   "tower keep"
+  ],
+  "extends": "building",
+  "parts": [
+   {
+    "name": "Shaft",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "shaft",
+     "tower",
+     "body",
+     "toren",
+     "walls",
+     "drum",
+     "stem"
+    ],
+    "note": "Round or square, 4-10 m across; stone at the foot, sometimes timber above."
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak",
+     "spire",
+     "cone",
+     "spits",
+     "cap"
+    ],
+    "note": "Often a pointed cone or pyramid on top of the gallery."
+   },
+   {
+    "name": "Gallery",
+    "role": "gallery",
+    "required": false,
+    "aliases": [
+     "gallery",
+     "hoarding",
+     "walkway",
+     "balcony",
+     "platform",
+     "omloop",
+     "weergang",
+     "brattice"
+    ],
+    "note": "A wooden or stone walkway near the top, overhanging the shaft on brackets."
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": false,
+    "aliases": [
+     "door",
+     "deur",
+     "entrance",
+     "gate"
+    ],
+    "note": "At the foot, facing +Z; often raised above the ground for defence."
+   },
+   {
+    "name": "Window",
+    "role": "glazing",
+    "required": false,
+    "aliases": [
+     "window",
+     "windows",
+     "slit",
+     "slits",
+     "arrow slit",
+     "schietgat",
+     "loophole"
+    ]
+   },
+   {
+    "name": "Battlements",
+    "role": "battlements",
+    "required": false,
+    "aliases": [
+     "battlements",
+     "merlons",
+     "kantelen",
+     "crenellation",
+     "parapet"
+    ]
+   },
+   {
+    "name": "Flag",
+    "role": "flag",
+    "required": false,
+    "aliases": [
+     "flag",
+     "vlag",
+     "banner",
+     "pole",
+     "vlaggenmast"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    3,
+    15
+   ],
+   "width": [
+    3,
+    15
+   ],
+   "height": [
+    8,
+    40
+   ],
+   "source": "general knowledge: medieval and modern look-out towers; much smaller than a high-rise",
+   "confidence": "C"
+  },
+  "conventions": [
+   "A watchtower stands on y = 0 with its door facing +Z; the gallery and roof are separate nodes from the shaft."
+  ],
+  "anticipate": [
+   "A collision cylinder or box for the shaft, and a floor for the gallery if players can stand on it."
+  ],
+  "pitfalls": [
+   "A watchtower is not a high-rise: it is 8-40 m tall and a few metres across.",
+   "A gallery modelled as a solid cylinder looks like a ring of wood: give it a floor, posts and an open or roofed walkway."
   ]
  }
 ]

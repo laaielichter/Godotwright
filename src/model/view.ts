@@ -163,17 +163,11 @@ function fillTriangle(
 }
 
 /** One orthographic view as text: each character is a cell, filled with the letter of the part in front. */
-function renderView(info: ModelInfo, spec: ViewSpec, letters: Map<string, string>, width: number): string[] {
+function renderView(info: ModelInfo, spec: ViewSpec, letters: Map<string, string>, cellW: number): string[] {
   const bounds = info.bounds;
   if (!bounds) return [];
   const spanR = Math.max(bounds.size[spec.right], 1e-6), spanU = Math.max(bounds.size[spec.up], 1e-6);
-  // A character is about twice as tall as it is wide.
-  let cellW = spanR / width;
-  let rows = Math.ceil(spanU / (cellW * 2));
-  if (rows > 32) {
-    rows = 32;
-    cellW = spanU / (rows * 2);
-  }
+  const rows = Math.max(1, Math.ceil(spanU / (cellW * 2)));
   const cols = Math.max(1, Math.ceil(spanR / cellW));
   const cellH = cellW * 2;
   const grid = { cell: Array.from({ length: rows }, () => new Array<string>(cols).fill(" ")), depth: Array.from({ length: rows }, () => new Array<number>(cols).fill(-Infinity)) };
@@ -201,7 +195,7 @@ function renderView(info: ModelInfo, spec: ViewSpec, letters: Map<string, string
       lines[row] = line.join("");
     }
   }
-  return [`${spec.title}  (1 character = ${cellW.toFixed(cellW < 0.1 ? 3 : 2)} m wide)`, ...lines];
+  return [spec.title, ...lines];
 }
 
 const f2 = (n: number): string => n.toFixed(2);
@@ -224,9 +218,14 @@ export function viewModel(info: ModelInfo, options: { width?: number; only?: "fr
     side: { title: "SIDE (from the right of the model; its front is on the right)", right: 2, up: 1, depth: 0, nearer: -1, ground: true },
     top: { title: "TOP (from above; the front is at the bottom)", right: 0, up: 2, depth: 1, nearer: 1, flipUp: true },
   } as const satisfies Record<string, ViewSpec>;
+  // One scale for every view, so sizes compare across them. A character is about twice as tall as it is wide.
+  const across = Math.max(sx, sz, 1e-6);
+  const tall = Math.max(sy, sz, 1e-6);
+  const cellW = Math.max(across / width, tall / (32 * 2));
+  out.push(`Scale: 1 character = ${cellW.toFixed(cellW < 0.1 ? 3 : 2)} m wide and ${(cellW * 2).toFixed(cellW < 0.05 ? 3 : 2)} m tall, the same in every view.`, "");
   for (const name of ["front", "side", "top"] as const) {
     if (options.only && options.only !== name) continue;
-    out.push(...renderView(info, views[name], letters, width), "");
+    out.push(...renderView(info, views[name], letters, cellW), "");
   }
 
   out.push("PARTS (letter, node, size x y z in metres, lowest y):");

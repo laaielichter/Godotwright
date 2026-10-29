@@ -204,6 +204,8 @@ describe("identify", () => {
       ["rocket", "spacecraft.rocket"], ["raket", "spacecraft.rocket"], ["spaceship", "spacecraft.spaceship"], ["ruimteschip", "spacecraft.spaceship"], ["satelliet", "spacecraft.satellite"],
       ["rowing boat", "vessel.boat.rowing-boat"], ["roeiboot", "vessel.boat.rowing-boat"], ["motorboat", "vessel.boat"],
       ["campfire", "prop.campfire"], ["kampvuur", "prop.campfire"],
+      ["watchtower", "building.watchtower"], ["wachttoren", "building.watchtower"], ["a medieval stone watchtower", "building.watchtower"],
+      ["spaceship fighter", "spacecraft.spaceship"], ["sci-fi fighter", "spacecraft.spaceship"], ["fighter jet", "aircraft.fixed-wing.fighter"], ["tower", "building.tower"],
     ] as const) {
       const r = id(text);
       expect(r.best.id, text).toBe(expected);

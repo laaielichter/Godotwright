@@ -58,6 +58,43 @@ This is six runs of one model on one tool version: an indication, not a benchmar
 
 More is planned: recipes that can be placed inside a spec, and a second run of the same six tasks to measure the difference. See the roadmap.
 
+## The second run
+
+After those changes, the same six tasks were run again: six Haiku agents, the same words, the same limit of 14 tool calls,
+the same command list plus the new commands (`model brief`, `model view`, `model recipes <kind>`). The tool did not change
+during the run. Both sets of models were then linted with the same, current tool and rendered with the same viewer.
+
+![First run (left of each pair) and second run (right), rendered the same way](gallery/haiku-before-after.jpg)
+
+What was measured:
+
+| | First run | Second run |
+|---|---|---|
+| Lint score (current tool) | 100, 100, 100, 100, 100, 99 | 100, 98, 100, 100, 100, 100 |
+| Parts that do not touch the rest | 2 (campfire) | 0 |
+| Tool calls used (of 14) | not recorded | 9, 11, 9, 5, 7, 6 |
+| A ready-made kind offered by `model brief` | none existed for these things | 5 of 6 (all but the watchtower); 3 started from it (rowing boat, dragon, spaceship) |
+
+What a person sees in the renders:
+
+- **Better:** the rowing boat is now an open hull with thwarts (the first was a closed red shell); the tree house and the
+  ladder now hang visibly on the tree; the campfire has no loose parts.
+- **The same:** the watchtower and the spaceship.
+- **Not better:** the dragon. The first agent built spikes and upright folded wings itself; the second started from the
+  ready-made dragon and only folded its wings flat. A recipe can also narrow what an agent tries.
+
+Problems the agents reported, and what happened to them:
+
+- `watchtower` was still matched to the high-rise `building.tower` (30 to 830 m tall). There is now a `building.watchtower`
+  archetype (`watchtower`, `wachttoren`, `uitkijktoren`, ...) with a shaft, roof, gallery, door and battlements.
+- `spaceship fighter` and `sci-fi fighter` went to the fighter jet. They now mean the spaceship.
+- `model view` drew each view at its own scale. All views now share one scale, said once at the top.
+- Still open: the connection check compares bounding boxes, so a part a few centimetres from a round trunk counts as
+  touching; the flipped-faces finding does not say where the triangles are; an oar that pivots in the middle of its length
+  trips the hinge rule; the dragon has no wing-fold parameter; `model identify` and `model kinds` print a lot of text.
+
+Again: six runs of one model, an indication and not a benchmark.
+
 ## What this does not claim
 
 A text view is a crutch, not eyesight: it shows silhouettes and attachment, not beauty. A tool cannot give a small model a
