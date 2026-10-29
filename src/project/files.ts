@@ -1,8 +1,10 @@
-import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { type Dirent, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-/** Directories Godot never treats as project content. */
-const SKIP_DIRS = new Set([".godot", ".import", ".git", ".svn", ".hg", "node_modules", ".vs", ".vscode", ".idea"]);
+/** Folders Godot never treats as project content: hidden ones (.godot, .git, a Python venv) and node_modules. */
+function isSkippedDir(name: string): boolean {
+  return name.startsWith(".") || name === "node_modules";
+}
 
 /**
  * Finds the directory holding project.godot, starting at `start` and walking up.
@@ -19,16 +21,27 @@ export function findProjectRoot(start: string): string | undefined {
   }
 }
 
-/** Lists project files as `res://` paths, sorted, skipping ignored directories. */
-export function listProjectFiles(root: string): string[] {
+/**
+ * Lists project files as `res://` paths, sorted, skipping ignored directories. Folder links are followed
+ * (Godot does too), each real folder once, so a link loop ends. Real folders are walked first and links
+ * after, so a folder inside the project keeps its own path whatever its links are called. A folder that
+ * cannot be read is left out and passed to `onError`, so one locked folder does not stop the rest.
+ */
+export function listProjectFiles(root: string, onError?: (folder: string, error: unknown) => void): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
+  const links: string[] = [];
   const walk = (dir: string) => {
-    // Symlinked folders are followed (Godot does too); each real folder once, so a link loop ends.
-    const real = realpathSync(dir);
-    if (seen.has(real)) return;
-    seen.add(real);
-    const entries = readdirSync(dir, { withFileTypes: true });
+    let entries: Dirent[];
+    try {
+      const real = realpathSync(dir);
+      if (seen.has(real)) return;
+      seen.add(real);
+      entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1));
+    } catch (error) {
+      onError?.(toResPath(root, dir), error);
+      return;
+    }
     if (dir !== root && entries.some((e) => e.name === ".gdignore" && e.isFile())) return;
     for (const entry of entries) {
       const full = join(dir, entry.name);
@@ -42,15 +55,20 @@ export function listProjectFiles(root: string): string[] {
         } catch {
           continue; // broken link
         }
+        if (isDir) {
+          if (!isSkippedDir(entry.name)) links.push(full);
+          continue;
+        }
       }
       if (isDir) {
-        if (!SKIP_DIRS.has(entry.name)) walk(full);
+        if (!isSkippedDir(entry.name)) walk(full);
       } else if (isFile) {
         out.push(toResPath(root, full));
       }
     }
   };
   walk(root);
+  for (let i = 0; i < links.length; i++) walk(links[i]!);
   return out.sort();
 }
 
@@ -60,6 +78,28 @@ export function toResPath(root: string, file: string): string {
 
 export function fromResPath(root: string, resPath: string): string {
   return join(root, ...resPath.replace(/^res:\/\//, "").split("/"));
+}
+
+/**
+ * The `res://` path of the file that `resPath` names under `dir` (a project or base root), with folder
+ * links resolved, or undefined when no such file is inside `dir`. A path that leaves `dir` through `..`
+ * is refused without touching the disk, and a folder link that leads out of `dir` does not count.
+ */
+export function realResPath(dir: string, resPath: string): string | undefined {
+  const path = fromResPath(dir, resPath);
+  if (!isInside(dir, path)) return undefined;
+  try {
+    const realDir = realpathSync(dir);
+    const real = realpathSync(path);
+    return isInside(realDir, real) ? toResPath(realDir, real) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isInside(dir: string, path: string): boolean {
+  const rel = relative(dir, path);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 /** Resolves a path relative to the directory of `from` (both `res://`). */

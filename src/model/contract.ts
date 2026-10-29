@@ -40,11 +40,33 @@ export function loadContract(file: string): ModelContract {
   }
   const c = raw as Partial<ModelContract>;
   if (typeof raw !== "object" || raw === null || c.version !== 1) throw new ModelError(`${file}: not a model contract (expected "version": 1)`);
-  if (c.nodes !== undefined && !(Array.isArray(c.nodes) && c.nodes.every((n) => typeof n === "string"))) throw new ModelError(`${file}: "nodes" must be a list of names`);
-  for (const [key, m] of [...Object.entries(c.size ?? {}), ["lowestY", c.lowestY] as const]) {
-    if (m !== undefined && typeof (m as Measure).value !== "number") throw new ModelError(`${file}: "${key}" needs a numeric "value"`);
+  const fail = (what: string) => new ModelError(`${file}: ${what}`);
+  if (c.nodes !== undefined && !(Array.isArray(c.nodes) && c.nodes.every((n) => typeof n === "string"))) throw fail(`"nodes" must be a list of names`);
+  for (const key of ["ordered", "exact"] as const) {
+    if (c[key] !== undefined && typeof c[key] !== "boolean") throw fail(`"${key}" must be true or false`);
   }
+  if (c.maxTriangles !== undefined && !Number.isFinite(c.maxTriangles)) throw fail(`"maxTriangles" must be a number`);
+  if (c.size !== undefined) {
+    if (typeof c.size !== "object" || c.size === null || Array.isArray(c.size)) throw fail(`"size" must be an object with x, y and/or z`);
+    // An axis the checker does not know would be ignored, so a size it asks for would never be checked.
+    for (const [axis, m] of Object.entries(c.size)) {
+      if (!["x", "y", "z"].includes(axis)) throw fail(`"size" has an unknown axis "${axis}" (use x, y or z)`);
+      checkMeasure(file, `size.${axis}`, m);
+    }
+  }
+  if (c.lowestY !== undefined) checkMeasure(file, "lowestY", c.lowestY);
   return c as ModelContract;
+}
+
+/** A Measure: a finite value, and optionally a tolerance of 0 or more and a text source. */
+function checkMeasure(file: string, key: string, m: unknown): void {
+  const fail = (what: string) => new ModelError(`${file}: "${key}" ${what}`);
+  if (typeof m !== "object" || m === null || Array.isArray(m)) throw fail(`must be an object with a numeric "value"`);
+  const measure = m as Partial<Measure>;
+  if (!Number.isFinite(measure.value)) throw fail(`needs a finite numeric "value"`);
+  const tolerance = measure.tolerance;
+  if (tolerance !== undefined && !(Number.isFinite(tolerance) && tolerance >= 0)) throw fail(`has a "tolerance" that is not a number of 0 or more`);
+  if (measure.source !== undefined && typeof measure.source !== "string") throw fail(`has a "source" that is not text`);
 }
 
 /** Builds a contract from a model as it is now: a starting point to review and tighten. */

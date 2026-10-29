@@ -84,6 +84,8 @@ export class ProjectModel {
   readonly globalEnums: Set<string>;
   private readonly belowNative = new Map<string, Set<string>>();
   private readonly belowScript = new Map<ClassModel, Set<string>>();
+  /** Constants whose type is being resolved, so `const A: A` stops instead of recursing. */
+  private readonly constsBusy = new Set<string>();
 
   constructor(
     readonly data: ProjectData,
@@ -278,10 +280,18 @@ export class ProjectModel {
     for (const m of this.chain(model)) {
       const c = m.outline.constants.find((k) => k.name === name);
       if (!c) continue;
-      if (c.type) return this.resolveTypeName(c.type, m);
-      const line = this.lineAt(m.script, c.line);
-      const value = line ? /=\s*(.*)$/.exec(line.text)?.[1] : undefined;
-      return value ? this.literalType(value, m) : undefined;
+      const key = `${m.id}\u0000${name}`;
+      // Invalid code such as `const A: A = 1` names itself: stop here, the type stays unknown.
+      if (this.constsBusy.has(key)) return undefined;
+      this.constsBusy.add(key);
+      try {
+        if (c.type) return this.resolveTypeName(c.type, m);
+        const line = this.lineAt(m.script, c.line);
+        const value = line ? /=\s*(.*)$/.exec(line.text)?.[1] : undefined;
+        return value ? this.literalType(value, m) : undefined;
+      } finally {
+        this.constsBusy.delete(key);
+      }
     }
     return undefined;
   }
@@ -306,9 +316,10 @@ export class ProjectModel {
     if (/^-?\d+$/.test(e)) return native("int");
     if (/^-?(\d+\.\d*|\.\d+|\d+e-?\d+)$/i.test(e)) return native("float");
     if (/^(true|false)$/.test(e)) return native("bool");
-    if (/^["']/.test(e)) return native("String");
-    if (/^\[/.test(e)) return native("Array");
-    if (/^\{/.test(e)) return native("Dictionary");
+    // A literal types the value only when it is the whole expression: `"a,b".split(",")` is not a String.
+    if (/^["']/.test(e) && stringEnd(e) === e.length - 1) return native("String");
+    if (/^\[/.test(e) && closingParen(e, 0) === e.length - 1) return native("Array");
+    if (/^\{/.test(e) && closingParen(e, 0) === e.length - 1) return native("Dictionary");
     return undefined;
   }
 
@@ -517,6 +528,16 @@ export class ProjectModel {
     }
     return node.type ? native(node.type) : undefined;
   }
+}
+
+/** Index of the last quote of the string literal at the start of `text` (triple quotes included); -1 when unclosed. */
+function stringEnd(text: string): number {
+  const quote = text.startsWith('"""') || text.startsWith("'''") ? text.slice(0, 3) : text[0]!;
+  for (let i = quote.length; i < text.length; i++) {
+    if (text[i] === "\\") i++;
+    else if (text.startsWith(quote, i)) return i + quote.length - 1;
+  }
+  return -1;
 }
 
 /** Index of the `)` that closes the `(` at `open`, skipping strings; -1 when unclosed. */

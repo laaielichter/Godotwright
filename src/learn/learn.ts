@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import type { GodotApi } from "../api/api.js";
+import { GodotApi } from "../api/api.js";
 import type { CheckResult } from "../check/check.js";
 import type { LearnedData } from "../collector/collector.js";
 import type { ReviewReport } from "../review/review.js";
 import type { Finding } from "../review/rules.js";
 import { learningAllowed, readLearning, ruleStats, updateLearning, type LearningData } from "./store.js";
-import { messageTemplate } from "./template.js";
+import { scrubTemplate, shareableQuery } from "./share.js";
+import { messageTemplate, shareableTemplate } from "./template.js";
 
 /**
  * Rules whose errors real Godot always reports when it loads a script, so a
@@ -77,6 +78,16 @@ function contradictions(rule: string, data: LearningData, shared?: LearnedData):
   return 0;
 }
 
+/** True for a file inside a folder whose name starts with a dot. */
+function inDotFolder(file: string): boolean {
+  return file
+    .replace(/::.*$/, "")
+    .replace(/^res:\/\//, "")
+    .split("/")
+    .slice(0, -1)
+    .some((part) => part.startsWith("."));
+}
+
 /** Counts which rules fired in a review (once per rule per review). */
 export function recordReview(report: Pick<ReviewReport, "findings">): void {
   updateIfAllowed((data) => {
@@ -99,33 +110,62 @@ export function recordCheck(check: CheckResult, review: Pick<ReviewReport, "find
   const godotErrors = check.diagnostics.filter((d) => d.severity === "error" && d.file?.endsWith(".gd"));
   const errorsByFile = new Map<string, number[]>();
   for (const d of godotErrors) errorsByFile.set(d.file!, [...(errorsByFile.get(d.file!) ?? []), d.line ?? 0]);
-  const reviewed = review.findings.filter((f) => f.severity === "error" && GODOT_CHECKED_RULES.has(f.rule) && f.file.endsWith(".gd") && !f.file.includes("::"));
+  // Godot's checker skips folders whose name starts with a dot: nothing there is judged.
+  const judged = review.findings.filter((f) => !inDotFolder(f.file));
+  const reviewed = judged.filter((f) => f.severity === "error" && GODOT_CHECKED_RULES.has(f.rule) && f.file.endsWith(".gd") && !f.file.includes("::"));
 
+  const api = GodotApi.load();
   updateIfAllowed((data) => {
     for (const f of reviewed) {
       const lines = errorsByFile.get(f.file);
       if (!lines) ruleStats(data, f.rule).contradicted++;
       else if (lines.some((l) => f.line !== undefined && Math.abs(l - f.line) <= 1)) ruleStats(data, f.rule).confirmed++;
     }
-    const reviewedFiles = new Set(review.findings.filter((f) => f.severity === "error").map((f) => f.file));
+    const reviewedFiles = new Set(judged.filter((f) => f.severity === "error").map((f) => f.file));
     for (const d of godotErrors) {
-      if (d.source !== "script" || reviewedFiles.has(d.file!)) continue;
-      const key = messageTemplate(d.message);
+      const key = localTemplate(d.message, api);
+      if (d.source !== "script" || reviewedFiles.has(d.file!) || !key) continue;
       data.missedByReview[key] = (data.missedByReview[key] ?? 0) + 1;
     }
     for (const d of check.diagnostics) {
-      if (d.file || d.source === "scan" || d.source === "engine") continue;
-      const key = messageTemplate(d.message);
+      const key = localTemplate(d.message, api);
+      if (d.file || d.source === "scan" || d.source === "engine" || !key) continue;
       data.unparsed[key] = (data.unparsed[key] ?? 0) + 1;
     }
+    pruneTemplates(data, api);
   });
 }
 
-/** Remembers failed API lookups and what the next successful lookup was. */
+/** A Godot message as it is kept here: its template with names scrubbed, or undefined when something personal is left. */
+function localTemplate(message: string, api: GodotApi): string | undefined {
+  const template = scrubTemplate(messageTemplate(message), api);
+  return shareableTemplate(template) ? template : undefined;
+}
+
+/** Drops remembered messages the current rules would not keep (a name or path kept by an older version). */
+function pruneTemplates(data: LearningData, api: GodotApi): void {
+  for (const map of [data.missedByReview, data.unparsed]) {
+    for (const template of Object.keys(map)) if (localTemplate(template, api) !== template) delete map[template];
+  }
+}
+
+/** Drops failed lookups the current rules would not keep (a project's own names kept by an older version). */
+function pruneApiMisses(data: LearningData, api: GodotApi): void {
+  for (const query of Object.keys(data.apiMisses)) if (!shareableQuery(query, api)) delete data.apiMisses[query];
+  if (data.lastMiss && !shareableQuery(data.lastMiss.query, api)) delete data.lastMiss;
+}
+
+/**
+ * Remembers failed API lookups and what the next successful lookup was. A failed lookup is kept only
+ * when it is a Godot class and member (see shareableQuery): a project's own names never are.
+ */
 export function recordApiLookup(query: string, found: boolean, now = Date.now()): void {
   const key = query.trim();
   if (!/^@?[A-Za-z_][\w.]{0,80}$/.test(key)) return;
+  const api = GodotApi.load();
+  if (!found && !shareableQuery(key, api)) return;
   updateIfAllowed((data) => {
+    pruneApiMisses(data, api);
     if (!found) {
       const miss = (data.apiMisses[key] ??= { count: 0, resolved: {} });
       miss.count++;
@@ -165,14 +205,15 @@ export function recordFeedback(finding: Pick<Finding, "rule" | "file" | "message
       stats.dismissed++;
       data.dismissed[fingerprint(finding)] = Date.now();
     } else {
-      stats.confirmed++;
+      // A verdict from a user or agent is not Godot's confirmation: it never unlocks a downgrade.
+      stats.verified = (stats.verified ?? 0) + 1;
     }
   });
 }
 
 /** Parses a finding line as printed by `formatFinding` back into its parts. */
 export function parseFindingLine(line: string): Pick<Finding, "rule" | "file" | "message" | "line"> | undefined {
-  const m = /^(?<file>\S+?)(?::(?<line>\d+))?: (?:error|warning|info) \[(?<rule>[\w/-]+)\] (?<message>.*)$/.exec(line.trim());
+  const m = /^(?<file>.+?)(?::(?<line>\d+))?: (?:error|warning|info) \[(?<rule>[\w/-]+)\] (?<message>.*)$/.exec(line.trim());
   if (!m?.groups) return undefined;
   return { file: m.groups["file"]!, line: m.groups["line"] ? Number(m.groups["line"]) : undefined, rule: m.groups["rule"]!, message: m.groups["message"]! };
 }

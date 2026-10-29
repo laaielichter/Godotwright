@@ -1,14 +1,18 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Archetype, ArchetypePart, ResolvedArchetype } from "./types.js";
+import { stem, tokens } from "./words.js";
 
 const DATA_DIR = fileURLToPath(new URL("../../data/archetypes/", import.meta.url));
 const MOVES = ["spin", "hinge", "slide", "steer", "yaw", "pitch"];
 const PIVOTS = ["center", "hub", "hinge", "base", "mount"];
 const CONFIDENCE = ["A", "B", "C", "D", "X"];
 const AXES = ["x", "y", "z"];
-/** Aliases that two archetypes may share on purpose; identify then reports the ambiguity. */
-export const SHARED_ALIASES = new Set(["windmolen", "bike", "motor", "turbine", "kist", "mast", "track", "tracks", "bank", "wall", "box"]);
+/** Aliases that two archetypes may share on purpose (two things really have that name); identify then reports the ambiguity. */
+export const SHARED_ALIASES = new Set(["windmolen", "bike", "motor"]);
+
+/** The word an alias stands for, as identify compares it: "Hills" and "hill" are one word. */
+export const aliasKey = (alias: string): string => tokens(alias).map(stem).join(" ");
 
 export class ArchetypeError extends Error {}
 
@@ -20,7 +24,8 @@ export function validateArchetypes(list: Archetype[]): string[] {
     if (byId.has(a.id)) problems.push(`${a.id}: id used twice`);
     byId.set(a.id, a);
   }
-  const aliasOwner = new Map<string, string>();
+  const sharedKeys = new Set([...SHARED_ALIASES].map(aliasKey));
+  const aliasOwners = new Map<string, Set<string>>();
   for (const a of list) {
     const at = (msg: string) => problems.push(`${a.id}: ${msg}`);
     if (!/^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$/.test(a.id)) at("id must be lowercase dotted words");
@@ -31,9 +36,13 @@ export function validateArchetypes(list: Archetype[]): string[] {
     if (a.extends !== undefined && !a.id.startsWith(`${a.extends.split(".").slice(0, -1).join(".")}`) ) at(`should be named under its parent's family (parent ${a.extends})`);
     for (const alias of a.aliases ?? []) {
       if (alias !== alias.toLowerCase() || alias.trim() !== alias || alias === "") at(`alias "${alias}" must be lowercase and trimmed`);
-      const owner = aliasOwner.get(alias);
-      if (owner && owner !== a.id && !SHARED_ALIASES.has(alias)) at(`alias "${alias}" is also used by ${owner}`);
-      aliasOwner.set(alias, a.id);
+      // Compared as identify reads them: a singular and a plural of one word are one alias.
+      const key = aliasKey(alias);
+      const owners = aliasOwners.get(key) ?? new Set<string>();
+      const other = [...owners].find((o) => o !== a.id);
+      if (other && !sharedKeys.has(key)) at(`alias "${alias}" is also used by ${other}`);
+      owners.add(a.id);
+      aliasOwners.set(key, owners);
     }
     const names = new Set<string>();
     for (const p of a.parts ?? []) {

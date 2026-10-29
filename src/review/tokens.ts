@@ -18,7 +18,8 @@ export function tokenize(code: string): Token[] {
     const i = m.index;
     if (t.startsWith("%") && t.length > 1) {
       const prev = out[out.length - 1];
-      if (prev && /^([A-Za-z_\d]|\)|\]|"|')/.test(prev.t.slice(-1)) && !/^(and|or|not|in|return|if|elif|while)$/.test(prev.t)) {
+      const endsValue = prev !== undefined && /^([A-Za-z_\d]|\)|\]|"|')/.test(prev.t.slice(-1)) && (!KEYWORDS.has(prev.t) || VALUE_KEYWORDS.has(prev.t));
+      if (endsValue) {
         out.push({ t: "%", i });
         const rest = code.slice(i + 1, i + t.length);
         for (const r of rest.matchAll(TOKEN)) out.push({ t: r[0], i: i + 1 + r.index });
@@ -32,11 +33,10 @@ export function tokenize(code: string): Token[] {
 
 /** Index of the token that closes the bracket at `open`, or the last index. */
 export function closeIndex(tokens: Token[], open: number): number {
-  const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
   let depth = 0;
   for (let j = open; j < tokens.length; j++) {
     const t = tokens[j]!.t;
-    if (t in pairs) depth++;
+    if (t === "(" || t === "[" || t === "{") depth++;
     else if (t === ")" || t === "]" || t === "}") {
       depth--;
       if (depth === 0) return j;
@@ -53,3 +53,6 @@ export const KEYWORDS = new Set([
   "const", "enum", "var", "breakpoint", "preload", "await", "yield", "and", "or", "not", "true",
   "false", "null", "void", "PI", "TAU", "INF", "NAN", "set", "get", "assert",
 ]);
+
+/** Keywords that are values, so a `%` right after them is still the modulo operator. */
+const VALUE_KEYWORDS = new Set(["self", "super", "true", "false", "null", "PI", "TAU", "INF", "NAN"]);

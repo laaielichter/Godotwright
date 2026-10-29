@@ -192,17 +192,42 @@ export function ringSurface(rings: V3[][], options: SurfaceOptions): MeshBuilder
       const ring = rings[i] as V3[];
       const centre = ringCentre(ring);
       if (ring.every((q) => length(sub(q, centre)) < 1e-9)) continue;
-      const capNormal = normalize(sub(centre, ringCentre(rings[next] as V3[])));
-      const c = b.vertex(p, centre, capNormal, [0, 0]);
+      const capNormal = ringNormal(ring, sub(centre, ringCentre(rings[next] as V3[])));
       const verts = ring.map((q) => b.vertex(p, q, capNormal, projectCapUv(q, capNormal)));
-      for (let j = 0; j < n; j++) {
-        const a = verts[j] as number, d = verts[(j + 1) % n] as number;
-        const winding = dot(cross(sub(ring[(j + 1) % n] as V3, ring[j] as V3), sub(centre, ring[j] as V3)), capNormal);
-        p.indices.push(c, ...(winding >= 0 ? [a, d] : [d, a]));
-      }
+      for (const [j, k, l] of capTriangles(ring, capNormal)) p.indices.push(verts[j] as number, verts[k] as number, verts[l] as number);
     }
   }
   return b;
+}
+
+/**
+ * Triangles that cover a flat ring, concave or not, all facing the way `normal` points. The ring is
+ * ear-clipped in the plane that drops the normal's largest component, so it keeps its own outline.
+ */
+function capTriangles(ring: V3[], normal: V3): [number, number, number][] {
+  const ax = Math.abs(normal[0]), ay = Math.abs(normal[1]), az = Math.abs(normal[2]);
+  const [u, v] = ax >= ay && ax >= az ? ([1, 2] as const) : ay >= az ? ([0, 2] as const) : ([0, 1] as const);
+  const flat: P2[] = ring.map((q): P2 => [q[u], q[v]]);
+  const order = signedArea(flat) >= 0 ? flat.map((_, i) => i) : flat.map((_, i) => flat.length - 1 - i);
+  const point = (k: number): V3 => ring[k] as V3;
+  return triangulate(order.map((i) => flat[i] as P2)).map(([a, b, c]): [number, number, number] => {
+    const i = order[a] as number, j = order[b] as number, k = order[c] as number;
+    return dot(cross(sub(point(j), point(i)), sub(point(k), point(i))), normal) >= 0 ? [i, j, k] : [i, k, j];
+  });
+}
+
+/**
+ * The normal of a flat ring, from its own points (Newell's method), turned to point the way `towards` does.
+ * A ring of a loft need not be parallel to the next one, so the direction between centres is not its normal.
+ */
+function ringNormal(ring: V3[], towards: V3): V3 {
+  let sum: V3 = [0, 0, 0];
+  ring.forEach((p, i) => {
+    const q = ring[(i + 1) % ring.length] as V3;
+    sum = add(sum, [(p[1] - q[1]) * (p[2] + q[2]), (p[2] - q[2]) * (p[0] + q[0]), (p[0] - q[0]) * (p[1] + q[1])]);
+  });
+  const unit = normalize(sum);
+  return dot(unit, towards) < 0 ? [-unit[0], -unit[1], -unit[2]] : unit;
 }
 
 function ringCentre(ring: V3[]): V3 {

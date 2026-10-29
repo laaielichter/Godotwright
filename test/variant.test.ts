@@ -38,6 +38,15 @@ describe("parseVariant", () => {
     expect(parseVariant('Dictionary[String, int]({"a": 1})')).toEqual({ a: 1 });
   });
 
+  it("keeps every Dictionary key, including __proto__ and non-string keys", () => {
+    const dict = parseVariant('{"__proto__": 5, 1: "int", "1": "str", Vector2(1, 2): "vec"}') as Record<string, unknown>;
+    expect(Object.keys(dict).sort()).toEqual(["(1)", "(Vector2(1, 2))", "1", "__proto__"]);
+    expect(Object.prototype.hasOwnProperty.call(dict, "__proto__")).toBe(true);
+    expect(dict["__proto__"]).toBe(5);
+    expect(dict["(1)"]).toBe("int");
+    expect(dict["1"]).toBe("str");
+  });
+
   it("reads inline objects", () => {
     expect(parseVariant('Object(InputEventKey,"keycode":65,"pressed":false,"script":null)')).toEqual({
       $type: "Object",

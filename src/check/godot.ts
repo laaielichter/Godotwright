@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { accessSync, constants, existsSync, readdirSync, statSync } from "node:fs";
-import { basename, delimiter, join } from "node:path";
+import { basename, delimiter, join, resolve as resolvePath } from "node:path";
 
 export class GodotNotFoundError extends Error {
   constructor() {
@@ -27,6 +27,23 @@ function isExecutable(path: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** The folders on PATH, in order. */
+function pathDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[] {
+  return (env["PATH"] ?? env["Path"] ?? "").split(platform === "win32" ? ";" : delimiter).filter(Boolean);
+}
+
+/** The first executable with a bare command name (no folder part) on PATH, as the shell would find it. */
+function onPath(name: string, env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string | undefined {
+  const exts = platform === "win32" ? [".exe", ".cmd", ""] : [""];
+  for (const dir of pathDirs(env, platform)) {
+    for (const ext of exts) {
+      const path = join(dir, name + ext);
+      if (isExecutable(path)) return path;
+    }
+  }
+  return undefined;
 }
 
 /** Sort key for a Godot download: minor, patch, console build first. */
@@ -101,27 +118,30 @@ function installDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[
   ];
 }
 
-/** Finds the Godot binary: explicit path, then $GODOT / $GODOT_BIN, then PATH, then common install spots. */
+/** Finds the Godot binary: explicit path, then $GODOT / $GODOT_BIN, then PATH, then common install spots. Always absolute. */
 export function findGodot(explicit?: string, env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string {
   for (const candidate of [explicit, env["GODOT"], env["GODOT_BIN"]]) {
     if (candidate) {
-      if (isExecutable(candidate)) return candidate;
+      // A bare name such as "godot" is looked up on PATH; a path is checked where it points.
+      const bare = !/[\\/]/.test(candidate);
+      const found = bare ? onPath(candidate, env, platform) : isExecutable(candidate) ? candidate : undefined;
+      if (found) return resolvePath(found);
       throw new Error(`Godot binary not found or not executable: ${candidate}`);
     }
   }
-  for (const dir of (env["PATH"] ?? env["Path"] ?? "").split(platform === "win32" ? ";" : delimiter).filter(Boolean)) {
+  for (const dir of pathDirs(env, platform)) {
     const found = godotIn(dir, platform, false);
-    if (found) return found;
+    if (found) return resolvePath(found);
   }
   if (platform === "darwin") {
     for (const app of ["/Applications", ...installDirs(env, platform)]) {
       const mac = join(app, "Godot.app", "Contents", "MacOS", "Godot");
-      if (existsSync(mac)) return mac;
+      if (existsSync(mac)) return resolvePath(mac);
     }
   }
   for (const dir of installDirs(env, platform)) {
     const found = godotIn(dir, platform, true);
-    if (found) return found;
+    if (found) return resolvePath(found);
   }
   throw new GodotNotFoundError();
 }
@@ -142,22 +162,43 @@ export function runGodot(bin: string, args: string[], options: { cwd?: string; t
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let exitCode: number | null | undefined;
+    let done = false;
+    let timer: NodeJS.Timeout | undefined;
+    // 'close' waits for every process that holds the pipes, and a process Godot started can keep them open.
+    // So after a timeout, or once Godot has exited on its own, the run is taken as finished at 'exit'.
+    const finish = (code: number | null) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
+    };
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
-    const timer = options.timeoutMs
-      ? setTimeout(() => {
+    if (options.timeoutMs) {
+      timer = setTimeout(() => {
+        if (exitCode === undefined) {
           timedOut = true;
           child.kill("SIGKILL");
-        }, options.timeoutMs)
-      : undefined;
+        } else {
+          // Godot had already exited; only a process it started was still holding the output.
+          finish(exitCode);
+        }
+      }, options.timeoutMs);
+    }
     child.on("error", (error) => {
+      if (done) return;
+      done = true;
       if (timer) clearTimeout(timer);
       reject(error);
     });
-    child.on("close", (code) => {
-      if (timer) clearTimeout(timer);
-      resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
+    child.on("exit", (code) => {
+      exitCode = code;
+      if (timedOut) finish(code);
     });
+    child.on("close", (code) => finish(code));
   });
 }
 

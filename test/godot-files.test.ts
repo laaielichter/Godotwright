@@ -126,4 +126,20 @@ describe("parseResourceText", () => {
     expect(res.resourceType).toBe("Resource");
     expect(res.scriptRef).toBe("1");
   });
+
+  it("keeps integer sub_resource ids from legacy scenes", () => {
+    const scene = parseResourceText(
+      [
+        "[gd_scene load_steps=2 format=2]",
+        "",
+        '[sub_resource type="GDScript" id=1]',
+        'script/source = "extends Node"',
+        "",
+        '[node name="Root" type="Node"]',
+        "script = SubResource( 1 )",
+      ].join("\n"),
+    );
+    expect(scene.subResources.map((s) => [s.id, s.type])).toEqual([["1", "GDScript"]]);
+    expect(scene.nodes[0]!.builtinScriptRef).toBe("1");
+  });
 });

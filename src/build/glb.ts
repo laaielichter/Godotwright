@@ -97,8 +97,9 @@ export function buildGlb(scene: BuildScene): Buffer {
         min[i % width] = Math.min(at(min, i % width), at(values, i));
         max[i % width] = Math.max(at(max, i % width), at(values, i));
       }
-      entry["min"] = min;
-      entry["max"] = max;
+      // The buffer stores float32, so the bounds are written as the float32 values a reader will see.
+      entry["min"] = min.map((v) => Math.fround(v));
+      entry["max"] = max.map((v) => Math.fround(v));
     }
     accessors.push(entry);
     return accessors.length - 1;

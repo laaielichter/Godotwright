@@ -103,6 +103,14 @@ export interface ScriptOutline extends ClassOutline {
   logicalLines: LogicalLine[];
 }
 
+/** A GDScript identifier: a Unicode XID start or `_`, then XID continue characters. */
+const IDENT = String.raw`[\p{XID_Start}_]\p{XID_Continue}*`;
+
+/** Builds a regex with the `u` flag (needed for `\p{...}`). Values are inserted as written. */
+function re(strings: TemplateStringsArray, ...values: string[]): RegExp {
+  return new RegExp(String.raw(strings, ...values), "u");
+}
+
 /** Splits source into logical statements, joining bracketed and `\`-continued lines. */
 export function logicalLines(source: string): LogicalLine[] {
   const out: LogicalLine[] = [];
@@ -214,11 +222,11 @@ export function splitAnnotations(text: string): { annotations: string[]; rest: s
   const annotations: string[] = [];
   let rest = text;
   for (;;) {
-    const match = /^@[A-Za-z_]\w*/.exec(rest);
+    const match = re`^@${IDENT}`.exec(rest);
     if (!match) break;
     let end = match[0].length;
     let j = end;
-    while (rest[j] === " ") j++;
+    while (rest[j] === " " || rest[j] === "\t") j++;
     if (rest[j] === "(") {
       const close = matchingParen(rest, j);
       end = close + 1;
@@ -283,7 +291,7 @@ export function splitTopLevel(text: string, sep = ","): string[] {
 
 export function parseParams(text: string): Param[] {
   return splitTopLevel(text).map((raw) => {
-    const match = /^([A-Za-z_]\w*)\s*(.*)$/.exec(raw);
+    const match = re`^(${IDENT})\s*(.*)$`.exec(raw);
     if (!match) return { name: raw, inferred: false, hasDefault: false };
     const param: Param = { name: match[1]!, inferred: false, hasDefault: false };
     let rest = match[2]!.trim();
@@ -307,9 +315,10 @@ export function parseParams(text: string): Param[] {
   });
 }
 
+/** Strips one pair of quotes (either style) and keeps any text after the closing quote. */
 function unquote(text: string): string {
-  const match = /^"(.*)"(.*)$/.exec(text);
-  return match ? match[1]! + match[2]! : text;
+  const match = /^(["'])(.*)\1(.*)$/.exec(text);
+  return match ? match[2]! + match[3]! : text;
 }
 
 function emptyClass(): ClassOutline {
@@ -320,6 +329,29 @@ type Block =
   | { kind: "class"; indent: number; outline: InnerClass }
   | { kind: "func"; indent: number; info: FunctionInfo }
   | { kind: "property"; indent: number };
+
+/** Start of a `preload(`, `load(` or `ResourceLoader.load(` call, up to its first argument. */
+const RESOURCE_CALL = new RegExp(
+  String.raw`(?<![\p{XID_Continue}.])(?:ResourceLoader\s*\.\s*)?(preload|load)\s*\(\s*(?=["'])`,
+  "gu",
+);
+
+/**
+ * Literal paths of the preload and load calls on a statement. The call is found in `code`,
+ * where string contents are blanked, so text inside strings is ignored. The path is read
+ * from `text` at the same offset. A path that is only part of an expression is skipped.
+ */
+function resourceRefs(ll: LogicalLine): ResourceRef[] {
+  const refs: ResourceRef[] = [];
+  for (const match of ll.code.matchAll(RESOURCE_CALL)) {
+    const open = match.index! + match[0].length;
+    const quote = ll.code[open]!;
+    const close = ll.code.indexOf(quote, open + 1);
+    if (close < 0 || !/^\s*[,)]/.test(ll.code.slice(close + 1))) continue;
+    refs.push({ path: ll.text.slice(open + 1, close), kind: match[1] as "preload" | "load", line: ll.line });
+  }
+  return refs;
+}
 
 export function outlineScript(source: string): ScriptOutline {
   const lines = logicalLines(source);
@@ -335,9 +367,7 @@ export function outlineScript(source: string): ScriptOutline {
   let pending: string[] = [];
 
   for (const ll of lines) {
-    for (const match of ll.text.matchAll(/(?<![\w.])(preload|load)\s*\(\s*"([^"]*)"\s*\)/g)) {
-      script.preloads.push({ path: match[2]!, kind: match[1] as "preload" | "load", line: ll.line });
-    }
+    script.preloads.push(...resourceRefs(ll));
 
     while (stack.length > 0 && stack[stack.length - 1]!.indent >= ll.indent) stack.pop();
     for (const block of stack) {
@@ -351,9 +381,10 @@ export function outlineScript(source: string): ScriptOutline {
 
     const { annotations, rest } = splitAnnotations(ll.text);
     for (const annotation of annotations) {
-      const name = annotation.slice(1).split("(")[0]!;
+      const name = re`^@(${IDENT})`.exec(annotation)?.[1] ?? "";
+      const args = /\(([\s\S]*)\)$/.exec(annotation)?.[1] ?? "";
       if (!top && name === "tool") script.tool = true;
-      else if (!top && name === "icon") script.icon = unquote(annotation.slice(6, -1).trim());
+      else if (!top && name === "icon") script.icon = unquote(args.trim());
       else if (!STANDALONE_ANNOTATIONS.has(name)) pending.push(annotation);
     }
     if (rest === "") continue;
@@ -420,29 +451,29 @@ type Member =
 function parseMember(text: string, ll: LogicalLine, annotations: string[]): Member | undefined {
   let match: RegExpExecArray | null;
 
-  if ((match = /^class_name\s+([A-Za-z_]\w*)(?:\s+extends\s+(.+?))?\s*$/.exec(text))) {
+  if ((match = re`^class_name\s+(${IDENT})(?:\s+extends\s+(.+?))?\s*$`.exec(text))) {
     return { kind: "class_name", name: match[1]!, extends: match[2] ? unquote(match[2]) : undefined };
   }
   if ((match = /^extends\s+(.+?)\s*$/.exec(text))) {
     return { kind: "extends", extends: unquote(match[1]!) };
   }
-  if ((match = /^signal\s+([A-Za-z_]\w*)\s*(?:\((.*)\))?\s*$/.exec(text))) {
+  if ((match = re`^signal\s+(${IDENT})\s*(?:\((.*)\))?\s*$`.exec(text))) {
     return {
       kind: "signal",
       info: { name: match[1]!, params: match[2] ? parseParams(match[2]) : [], line: ll.line },
     };
   }
-  if ((match = /^enum\s*([A-Za-z_]\w*)?\s*\{(.*)\}\s*$/.exec(text))) {
+  if ((match = re`^enum\s*(${IDENT})?\s*\{(.*)\}\s*$`.exec(text))) {
     const values = splitTopLevel(match[2]!)
       .map((value) => value.split("=")[0]!.trim())
       .filter(Boolean);
     return { kind: "enum", info: { name: match[1], values, line: ll.line } };
   }
-  if ((match = /^(?:static\s+)?const\s+([A-Za-z_]\w*)\s*(?::\s*([^=]*?))?\s*:?=/.exec(text))) {
+  if ((match = re`^(?:static\s+)?const\s+(${IDENT})\s*(?::\s*([^=]*?))?\s*:?=`.exec(text))) {
     const type = match[2]?.trim();
     return { kind: "const", info: { name: match[1]!, type: type || undefined, line: ll.line } };
   }
-  if ((match = /^(static\s+)?var\s+([A-Za-z_]\w*)\s*(.*)$/.exec(text))) {
+  if ((match = re`^(static\s+)?var\s+(${IDENT})\s*(.*)$`.exec(text))) {
     const tail = match[3]!;
     const typed = /^:\s*([^=:]+?)\s*(?=(?::?=|:\s*$|$))/.exec(tail);
     const inferred = /^:=/.test(tail);
@@ -464,7 +495,7 @@ function parseMember(text: string, ll: LogicalLine, annotations: string[]): Memb
       },
     };
   }
-  if ((match = /^(static\s+)?func\s+([A-Za-z_]\w*)\s*\(/.exec(text))) {
+  if ((match = re`^(static\s+)?func\s+(${IDENT})\s*\(`.exec(text))) {
     const open = match[0].length - 1;
     const close = matchingParen(text, open);
     const after = text.slice(close + 1);
@@ -483,7 +514,7 @@ function parseMember(text: string, ll: LogicalLine, annotations: string[]): Memb
       },
     };
   }
-  if ((match = /^class\s+([A-Za-z_]\w*)(?:\s+extends\s+("[^"]*"|'[^']*'|[^:]+?))?\s*:\s*$/.exec(text))) {
+  if ((match = re`^class\s+(${IDENT})(?:\s+extends\s+((?:"[^"]*"|'[^']*')(?:\.${IDENT})*|[^:]+?))?\s*:\s*$`.exec(text))) {
     return { kind: "class", name: match[1]!, extends: match[2] ? unquote(match[2]) : undefined };
   }
   return undefined;

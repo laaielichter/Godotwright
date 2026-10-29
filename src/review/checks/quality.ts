@@ -33,9 +33,11 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
     else untyped.push({ line, what });
   };
 
+  // `var x: set = _set_x` has no type: the parser reads the accessor keyword as the type.
+  const declaredType = (type: string | undefined) => Boolean(type) && type !== "set" && type !== "get";
   for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
     const o = model.outline;
-    for (const v of o.variables) count(Boolean(v.type) || v.inferred, v.line, `var ${v.name}`);
+    for (const v of o.variables) count(declaredType(v.type) || v.inferred, v.line, `var ${v.name}`);
     for (const fn of o.functions) {
       for (const p of fn.params) count(Boolean(p.type) || p.inferred, fn.line, `parameter ${p.name} of ${fn.name}()`);
       count(Boolean(fn.returnType) || fn.name === "_init", fn.line, `return type of ${fn.name}()`);
@@ -82,36 +84,73 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
 
   for (const ll of script.logicalLines) {
     for (const m of ll.text.matchAll(/(^|[^.\w])emit_signal\s*\(\s*&?"(\w+)"/g)) {
+      // `name.emit()` only works for a signal this class declares or inherits; for anything else the advice would not compile.
+      const model = pm.scopeAt(path, ll.line)?.model;
+      if (!model || pm.memberOf({ kind: "script", model, meta: false }, m[2]!)?.kind !== "signal") continue;
       out.push(finding("quality/string-signal", path, ll.line, `emit_signal("${m[2]}") can be ${m[2]}.emit().`));
     }
-    if (/\bconnect\s*\(\s*&?"\w+"\s*,/.test(ll.text) || /\bCallable\s*\(\s*self\s*,\s*&?"/.test(ll.text)) {
+    // A method given as Callable(self, "name") only needs the connect advice when it is passed to connect().
+    if (/\bconnect\s*\(\s*&?"\w+"\s*,/.test(ll.text) || /\bconnect\s*\(\s*Callable\s*\(\s*self\s*,\s*&?"/.test(ll.text)) {
       out.push(finding("quality/string-signal", path, ll.line, "Connect with the signal object and a method reference: my_signal.connect(_on_event)."));
     }
     const up = /(?:get_node(?:_or_null)?\s*\(\s*&?\^?"|\$")((?:\.\.\/){2,}[^"]*)"/.exec(ll.text);
     if (up) out.push(finding("quality/fragile-path", path, ll.line, `Node path "${up[1]}" climbs ${up[1]!.split("../").length - 1} levels up the tree.`));
   }
 
-  source.split("\n").forEach((line, i) => {
-    const todo = /#.*\b(TODO|FIXME|HACK|XXX)\b:?\s*(.*)$/.exec(line);
-    if (todo) out.push(finding("quality/todo", path, i + 1, `${todo[1]}: ${todo[2]!.trim().slice(0, 80) || "(no text)"}`));
-  });
+  for (const { line, text } of commentsOf(source)) {
+    const todo = /#.*\b(TODO|FIXME|HACK|XXX)\b:?\s*(.*)$/.exec(text);
+    if (todo) out.push(finding("quality/todo", path, line, `${todo[1]}: ${todo[2]!.trim().slice(0, 80) || "(no text)"}`));
+  }
 
   return { findings: out, typing };
 }
 
-/** Signals declared in the project but never emitted anywhere. */
+/** Signals declared in the project (also in inner classes) but never emitted anywhere. */
 export function checkUnusedSignals(pm: ProjectModel): Finding[] {
   const code = [...pm.data.sources.values()].join("\n");
   const out: Finding[] = [];
-  for (const [path, outline] of pm.data.scripts) {
-    if (path.startsWith("res://addons/")) continue;
-    for (const s of outline.signals) {
+  for (const model of pm.allModels()) {
+    if (model.path.startsWith("res://addons/")) continue;
+    for (const s of model.outline.signals) {
       const name = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const emitted =
         new RegExp(`\\b${name}\\s*\\.\\s*emit\\s*\\(`).test(code) ||
         new RegExp(`emit_signal\\s*\\(\\s*&?"${name}"`).test(code) ||
         new RegExp(`\\b${name}\\s*\\.\\s*emit\\b`).test(code);
-      if (!emitted) out.push(finding("quality/unused-signal", path, s.line, `Signal "${s.name}" is declared but never emitted.`));
+      if (!emitted) out.push(finding("quality/unused-signal", model.path, s.line, `Signal "${s.name}" is declared but never emitted.`));
+    }
+  }
+  return out;
+}
+
+/** Each comment with its 1-based line; a `#` inside a string literal does not start one. */
+function commentsOf(source: string): { line: number; text: string }[] {
+  const out: { line: number; text: string }[] = [];
+  let line = 1;
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i]!;
+    if (ch === "\n") {
+      line++;
+    } else if (ch === '"' || ch === "'") {
+      const quote = source.startsWith(ch.repeat(3), i) ? ch.repeat(3) : ch;
+      let j = i + quote.length;
+      for (; j < source.length && !source.startsWith(quote, j); j++) {
+        if (source[j] === "\\") {
+          if (source[j + 1] === "\n") line++;
+          j++;
+        } else if (source[j] === "\n") {
+          // A plain string ends at its line when it never closes; a triple-quoted one runs on.
+          if (quote.length === 1) break;
+          line++;
+        }
+      }
+      const closed = source.startsWith(quote, j);
+      i = closed ? j + quote.length - 1 : j - 1;
+    } else if (ch === "#") {
+      const end = source.indexOf("\n", i);
+      const stop = end < 0 ? source.length : end;
+      out.push({ line, text: source.slice(i, stop).replace(/\r$/, "") });
+      i = stop - 1;
     }
   }
   return out;

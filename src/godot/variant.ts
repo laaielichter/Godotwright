@@ -256,9 +256,18 @@ function parseArray(r: Reader): Variant[] {
   }
 }
 
+/**
+ * The record key of a Dictionary key. String keys are used as they are. Other keys are
+ * wrapped in parentheses, so the number 1 does not collide with the string "1".
+ */
+function dictKey(key: Variant): string {
+  return typeof key === "string" ? key : `(${formatVariant(key)})`;
+}
+
 function parseDict(r: Reader): { [key: string]: Variant } {
   r.expect("{");
-  const out: { [key: string]: Variant } = {};
+  // No prototype, so a key such as "__proto__" is an ordinary entry.
+  const out: { [key: string]: Variant } = Object.create(null);
   for (;;) {
     r.skipSpace();
     if (r.peek() === "}") {
@@ -268,7 +277,7 @@ function parseDict(r: Reader): { [key: string]: Variant } {
     const key = parseValue(r);
     r.skipSpace();
     r.expect(":");
-    out[typeof key === "string" ? key : JSON.stringify(key)] = parseValue(r);
+    out[dictKey(key)] = parseValue(r);
     r.skipSpace();
     if (r.peek() === ",") r.next();
     else if (r.peek() !== "}") r.fail("expected ',' or '}' in dictionary");

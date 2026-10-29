@@ -294,9 +294,7 @@
    "piper",
    "prop plane",
    "tweedekker",
-   "biplane",
-   "glider",
-   "zweefvliegtuig"
+   "biplane"
   ],
   "extends": "aircraft.fixed-wing.airplane",
   "parts": [
@@ -338,6 +336,16 @@
   }
  },
  {
+  "id": "aircraft.fixed-wing.glider",
+  "name": "glider",
+  "description": "An aeroplane without an engine: it flies on the lift of rising air.",
+  "aliases": [
+   "glider",
+   "zweefvliegtuig"
+  ],
+  "extends": "aircraft.fixed-wing.airplane"
+ },
+ {
   "id": "aircraft.fixed-wing.fighter",
   "name": "fighter jet",
   "description": "A military jet.",
@@ -348,11 +356,8 @@
    "straaljager",
    "jachtvliegtuig",
    "f16",
-   "f-16",
    "f35",
-   "f-35",
    "f15",
-   "f-15",
    "mig",
    "su-27",
    "warplane",

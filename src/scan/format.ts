@@ -29,7 +29,14 @@ function list(items: string[], max: number): string {
 export function formatProjectMap(all: ProjectMap, detail: Detail = "brief"): string {
   // Only this project's own files; base project files are counted, not listed.
   const own = <T extends { external?: boolean }>(items: T[]) => items.filter((i) => !i.external);
-  const map = { ...all, scenes: own(all.scenes), scripts: own(all.scripts), resources: own(all.resources), shaders: own(all.shaders) };
+  const map = {
+    ...all,
+    scenes: own(all.scenes),
+    scripts: own(all.scripts),
+    resources: own(all.resources),
+    shaders: own(all.shaders),
+    csharpScripts: own(all.csharpScripts),
+  };
   const full = detail === "full";
   const max = full ? Number.POSITIVE_INFINITY : BRIEF_LIMIT;
   const out: string[] = [];

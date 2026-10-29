@@ -143,4 +143,88 @@ describe("outlineScript", () => {
       { path: "data.json", kind: "load", line: 40 },
     ]);
   });
+
+  it("reads annotations that have a space before their argument list", () => {
+    const spaced = outlineScript(
+      [
+        "@tool",
+        '@icon ("res://x.svg")',
+        "class_name Spaced",
+        "",
+        '@export_group ("Movement")',
+        "@export var speed := 1.0",
+        '@export_subgroup ("Tuning")',
+        "@export_range (0, 10) var level := 1",
+        "@export_range\t(0, 10) var tabbed := 2",
+      ].join("\n"),
+    );
+    expect(spaced.tool).toBe(true);
+    expect(spaced.icon).toBe("res://x.svg");
+    expect(spaced.variables.map((v) => [v.name, v.exportAnnotation])).toEqual([
+      ["speed", "@export"],
+      ["level", "@export_range (0, 10)"],
+      ["tabbed", "@export_range\t(0, 10)"],
+    ]);
+  });
+
+  it("strips single quotes from extends and icon paths", () => {
+    const quoted = outlineScript("@icon('res://x.svg')\nclass_name Q extends 'res://base.gd'\n");
+    expect(quoted.icon).toBe("res://x.svg");
+    expect(quoted.extends).toBe("res://base.gd");
+    expect(outlineScript("extends 'res://base.gd'\n").extends).toBe("res://base.gd");
+  });
+
+  it("keeps inner classes that extend a quoted path with a dotted tail", () => {
+    const script = outlineScript(
+      [
+        'class Foo extends "res://base.gd".Bar:',
+        "\tvar x := 1",
+        "\tfunc f() -> void:",
+        "\t\tpass",
+        "",
+        "class Baz extends 'res://base.gd':",
+        "\tvar y := 2",
+      ].join("\n"),
+    );
+    expect(script.innerClasses.map((c) => [c.name, c.extends, c.variables.map((v) => v.name), c.functions.map((f) => f.name)])).toEqual([
+      ["Foo", "res://base.gd.Bar", ["x"], ["f"]],
+      ["Baz", "res://base.gd", ["y"], []],
+    ]);
+  });
+
+  it("finds preload and load calls outside strings, with either quote style", () => {
+    const script = outlineScript(
+      [
+        "var a := preload('res://a.tscn')",
+        `var b := 'load("res://fake.tscn")'`,
+        'var c := ResourceLoader.load("res://c.tres")',
+        'var d := load("res://d.tres") + load("res://e" + name)',
+        `var f := 'preload("res://g.tscn")'`,
+      ].join("\n"),
+    );
+    expect(script.preloads).toEqual([
+      { path: "res://a.tscn", kind: "preload", line: 1 },
+      { path: "res://c.tres", kind: "load", line: 3 },
+      { path: "res://d.tres", kind: "load", line: 4 },
+    ]);
+  });
+
+  it("reads Unicode identifiers for functions, variables, constants and signals", () => {
+    const script = outlineScript(
+      [
+        "func größe(höhe: int) -> void:",
+        "\tvar lokal := 1",
+        "\tprint(lokal, höhe)",
+        "",
+        "var café := 2",
+        "var 変数 := 3",
+        "const π := 3.14",
+        "signal ñ",
+      ].join("\n"),
+    );
+    expect(script.functions.map((f) => [f.name, f.params.map((p) => p.name)])).toEqual([["größe", ["höhe"]]]);
+    expect(script.variables.map((v) => v.name)).toEqual(["café", "変数"]);
+    expect(script.constants.map((c) => c.name)).toEqual(["π"]);
+    expect(script.signals.map((s) => s.name)).toEqual(["ñ"]);
+  });
 });

@@ -1,4 +1,4 @@
-import type { FunctionInfo, LogicalLine } from "../../godot/gdscript.js";
+import { matchingParen, type FunctionInfo, type LogicalLine } from "../../godot/gdscript.js";
 import { finding, type Finding } from "../rules.js";
 import type { ProjectModel } from "../model.js";
 
@@ -29,7 +29,7 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
         continue;
       }
       const where = `${fn.name}()`;
-      const lookups = body.filter((ll) => NODE_LOOKUP.test(ll.code)).map((ll) => ll.line);
+      const lookups = body.filter((ll) => NODE_LOOKUP.test(ll.code) && !isLazyInit(body, ll)).map((ll) => ll.line);
       if (lookups.length > 0) {
         const lines = lookups.length > 1 ? ` (lines ${lookups.slice(0, 6).join(", ")}${lookups.length > 6 ? ", ..." : ""})` : "";
         out.push(
@@ -45,7 +45,7 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
       }
       for (const ll of body) {
         const code = ll.code;
-        if (LOAD.test(code)) {
+        if (LOAD.test(code) && !isLazyInit(body, ll)) {
           out.push(finding("performance/load-per-frame", path, ll.line, `load() in ${where} runs every frame; use preload() or load once.`));
         }
         if (PRINT.test(code)) {
@@ -64,9 +64,34 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
   return out;
 }
 
-/** Statements in a function body (not the `func` line itself). */
+/** Statements in a function body, including one written on the `func` line: `func _process(d): print(d)`. */
 export function bodyOf(lines: LogicalLine[], fn: FunctionInfo): LogicalLine[] {
-  return lines.filter((l) => l.line > fn.line && l.line <= fn.endLine && l.indent > fn.indent);
+  const body = lines.filter((l) => l.line > fn.line && l.line <= fn.endLine && l.indent > fn.indent);
+  const inline = inlineBody(lines.find((l) => l.line === fn.line), fn);
+  return inline ? [inline, ...body] : body;
+}
+
+/**
+ * True for a lazy cache that runs once: `x = load(...)` or `x = get_node(...)` directly under
+ * `if not x:` or `if x == null:`.
+ */
+function isLazyInit(body: LogicalLine[], ll: LogicalLine): boolean {
+  const assign = /^([A-Za-z_]\w*)\s*=(?!=)/.exec(ll.code);
+  if (!assign) return false;
+  const parent = [...body].reverse().find((l) => l.line < ll.line && l.indent < ll.indent);
+  return parent !== undefined && new RegExp(`^if\\s+(not\\s+${assign[1]}|${assign[1]}\\s*==\\s*null)\\s*:$`).test(parent.text);
+}
+
+/** The statement after the colon that ends the `func` header, as its own line; undefined when the body is below. */
+function inlineBody(line: LogicalLine | undefined, fn: FunctionInfo): LogicalLine | undefined {
+  const head = line ? new RegExp(`\\bfunc\\s+${fn.name}\\s*\\(`).exec(line.code) : null;
+  if (!line || !head) return undefined;
+  const colon = line.code.indexOf(":", matchingParen(line.code, head.index + head[0].length - 1));
+  if (colon < 0) return undefined;
+  const code = line.code.slice(colon + 1).trim();
+  if (code === "") return undefined;
+  // `text` and `code` have the same length, so the same offset works for both.
+  return { text: line.text.slice(colon + 1).trim(), code, line: line.line, endLine: line.line, indent: fn.indent + 4 };
 }
 
 export function checkScenePerformance(pm: ProjectModel): Finding[] {

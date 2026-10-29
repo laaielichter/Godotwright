@@ -30,6 +30,16 @@ describe("a good model passes", () => {
     expect(check(writeScene(buildKind("house", { roof: "hip", floors: 3, chimney: false })), "huis").filter((f) => f.severity !== "info")).toEqual([]);
   });
 
+  it("does not ask a glider for a propeller", () => {
+    const glider = writeScene(buildSpec({ version: 1, nodes: [{ name: "Glider", material: "paint", children: [
+      { name: "Fuselage", shape: "box", size: [0.6, 0.8, 8], at: [0, 0.6, 0] },
+      { name: "WingLeft", shape: "box", size: [8, 0.1, 1.2], at: [4.3, 0.8, 0] },
+      { name: "WingRight", shape: "box", size: [8, 0.1, 1.2], at: [-4.3, 0.8, 0] },
+    ] }] }));
+    expect(chooseArchetype("glider", library).archetype.id).toBe("aircraft.fixed-wing.glider");
+    expect(rules(glider, "glider")).not.toContain("archetype/missing-part");
+  });
+
   it("lists the usual parts that are not there, once", () => {
     const f = check(writeScene(buildSpec(EXAMPLE_SPEC)), "car").filter((x) => x.rule === "archetype/optional-part");
     expect(f).toHaveLength(1);
@@ -55,6 +65,16 @@ describe("missing and miscounted parts", () => {
 
   it("does not count a group like 'Wheels' as another wheel", () => {
     expect(rules(writeScene(buildSpec(EXAMPLE_SPEC)), "car")).not.toContain("archetype/part-count");
+  });
+
+  it("recognises node names that end in a number, such as Wheel1 and Body2", () => {
+    const wheel = (name: string, x: number, z: number) => ({ name, shape: "cylinder", axis: "x", radius: 0.33, height: 0.2, at: [x, 0.33, z] });
+    const spec = { version: 1, nodes: [{ name: "Car", material: "paint", children: [
+      { name: "Body2", shape: "box", size: [1.8, 0.8, 4.4], at: [0, 0.7, 0] },
+      { name: "Glass1", shape: "box", size: [1.6, 0.6, 2.0], at: [0, 1.4, 0] },
+      wheel("Wheel1", 0.9, 1.4), wheel("Wheel2", -0.9, 1.4), wheel("Wheel3", 0.9, -1.4), wheel("Wheel4", -0.9, -1.4),
+    ] }] };
+    expect(check(writeScene(buildSpec(spec)), "car").filter((x) => x.severity !== "info")).toEqual([]);
   });
 
   it("recognises parts by their Dutch and English names, and by the most specific one", () => {
@@ -95,6 +115,20 @@ describe("pivots and wheel axes", () => {
     expect(f[0]!.message).toMatch(/from its centre/);
   });
 
+  it("checks the pivot of the node that spins, not of a mesh child that has a wheel name", () => {
+    const wheelWithMesh = (at: number[], mesh: number[]) => writeScene(buildSpec({ version: 1, nodes: [{ name: "Car", material: "paint", children: [
+      { name: "Body", shape: "box", size: [1.8, 0.8, 4.4], at: [0, 0.7, 0] },
+      { name: "Wheel_FL", at, children: [{ name: "WheelMesh", shape: "cylinder", axis: "x", radius: 0.33, height: 0.2, at: mesh }] },
+    ] }] }));
+    // The spinning node sits 0.57 m above the middle of its tyre: the wheel turns about the wrong point.
+    const off = check(wheelWithMesh([0.9, 0.9, 1.4], [0, -0.57, 0]), "car").filter((x) => x.rule === "archetype/pivot");
+    expect(off).toHaveLength(1);
+    expect(off[0]!.node).toBe("Car/Wheel_FL");
+    expect(off[0]!.message).toMatch(/from its centre/);
+    // The same tyre with its spinning node on the hub is right; the mesh child is only geometry.
+    expect(check(wheelWithMesh([0.9, 0.33, 1.4], [0, 0, 0]), "car").filter((x) => x.rule === "archetype/pivot")).toEqual([]);
+  });
+
   it("flags a wheel that lies the wrong way", () => {
     const path = car((n) => { for (const w of wheels(n)) w["axis"] = "z"; });
     const f = check(path, "car").filter((x) => x.rule === "archetype/wheel-axis");
@@ -116,8 +150,6 @@ describe("pivots and wheel axes", () => {
 });
 
 describe("size and direction", () => {
-  const scaled = (factor: number) => car((n) => { n[0]!["at"] = [0, 0, 0]; (n[0] as Node)["children"] = (n[0]!["children"] as Node[]); const root = n[0]!; root["name"] = "Scaled"; root["children"] = [{ name: "Car", children: root["children"] }]; });
-
   it("flags a car that is ten times too big or too small, with the likely factor", () => {
     const big = buildSpec({ version: 1, nodes: [{ name: "Car", material: "paint", children: [{ name: "Body", shape: "box", size: [18, 6, 44], at: [0, 3, 0] }, { name: "Wheel_A", shape: "cylinder", axis: "x", radius: 3, height: 2, at: [9, 3, 12] }] }] });
     const f = check(writeScene(big), "car").filter((x) => x.rule === "archetype/size");
@@ -125,7 +157,6 @@ describe("size and direction", () => {
     expect(f[0]!.message).toMatch(/about 10 times too big, likely a unit mistake/);
     const small = buildSpec({ version: 1, nodes: [{ name: "Car", material: "paint", children: [{ name: "Body", shape: "box", size: [0.18, 0.14, 0.44], at: [0, 0.07, 0] }] }] });
     expect(check(writeScene(small), "car").find((x) => x.rule === "archetype/size")!.message).toMatch(/times too small/);
-    expect(scaled(1)).toBeTruthy();
   });
 
   it("does not flag a size inside the range, or a helicopter whose rotor is wider than its body", () => {

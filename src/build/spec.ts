@@ -6,7 +6,7 @@ import { BuildError, resolveParams, type ParamDef } from "./params.js";
 import { box, cylinder, ellipsoid, extrude, lathe, ringSurface, roof } from "./shapes.js";
 
 /** Limits that keep a spec from running away (a mistake or a hostile file). */
-export const LIMITS = { nodes: 5000, repeat: 500, triangles: 3_000_000, points: 256, sections: 200, segments: 128 };
+export const LIMITS = { nodes: 5000, depth: 100, repeat: 500, triangles: 3_000_000, points: 256, sections: 200, segments: 128 };
 
 type Obj = Record<string, unknown>;
 
@@ -26,10 +26,17 @@ interface Ctx {
   material?: string;
   materials: Record<string, Material>;
   counters: { nodes: number; triangles: number };
+  /** Nesting level of the node being built: top-level nodes are 1. */
+  depth: number;
 }
 
 function isObj(v: unknown): v is Obj {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** A table keyed by names from the spec: no inherited keys, so "constructor" or "__proto__" are ordinary names. */
+function bare<T>(from: Record<string, T> = {}): Record<string, T> {
+  return Object.assign(Object.create(null) as Record<string, T>, from);
 }
 
 function checkKeys(node: Obj, allowed: string[], path: string): void {
@@ -74,7 +81,7 @@ function integer(v: unknown, scope: Scope, path: string, min: number, max: numbe
 function material(name: unknown, ctx: Ctx, path: string): string {
   const chosen = name ?? ctx.material;
   if (typeof chosen !== "string") throw new BuildError(`${path}: this shape needs a "material" (here or on a parent)`);
-  if (!ctx.materials[chosen]) throw new BuildError(`${path}: unknown material "${chosen}" (presets: ${Object.keys(MATERIALS).join(", ")}; or define it under "materials")`);
+  if (!Object.hasOwn(ctx.materials, chosen)) throw new BuildError(`${path}: unknown material "${chosen}" (presets: ${Object.keys(MATERIALS).join(", ")}; or define it under "materials")`);
   return chosen;
 }
 
@@ -98,7 +105,7 @@ function superellipse(spec: unknown, scope: Scope, path: string): [number, numbe
 
 function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
   const shape = node["shape"] as string;
-  const allowed = SHAPE_KEYS[shape];
+  const allowed = Object.hasOwn(SHAPE_KEYS, shape) ? SHAPE_KEYS[shape] : undefined;
   if (!allowed) throw new BuildError(`${path}.shape: unknown shape "${shape}" (known: ${Object.keys(SHAPE_KEYS).join(", ")})`);
   checkKeys(node, [...COMMON_KEYS, ...allowed], path);
   const m = material(node["material"], ctx, path);
@@ -209,6 +216,34 @@ export function mirrorNode(node: BuildNode, name: string): BuildNode {
   return out;
 }
 
+/** Nodes and triangles in a built node and everything under it. */
+function sizeOf(node: BuildNode): { nodes: number; triangles: number } {
+  let nodes = 1;
+  let triangles = node.mesh?.triangles ?? 0;
+  for (const child of node.children ?? []) {
+    const size = sizeOf(child);
+    nodes += size.nodes;
+    triangles += size.triangles;
+  }
+  return { nodes, triangles };
+}
+
+/** True when a list of spec nodes has a mirror anywhere in it. */
+function hasMirror(list: unknown): boolean {
+  return Array.isArray(list) && list.some((n) => isObj(n) && (n["mirror"] !== undefined || hasMirror(n["children"])));
+}
+
+/** Counts nodes that will be written, and refuses the spec once they pass the limit. */
+function spendNodes(counters: Ctx["counters"], amount: number, path: string): void {
+  counters.nodes += amount;
+  if (counters.nodes > LIMITS.nodes) throw new BuildError(`${path}: too many nodes (max ${LIMITS.nodes})`);
+}
+
+/** Refuses a model whose triangles would pass the limit. */
+function checkTriangles(total: number, path: string): void {
+  if (total > LIMITS.triangles) throw new BuildError(`${path}: the model grew past ${LIMITS.triangles.toLocaleString("en-US")} triangles`);
+}
+
 function expandName(template: string, index: number, repeated: boolean): string {
   if (template.includes("{i}")) return template.replaceAll("{i}", String(index + 1));
   return repeated ? `${template}_${index + 1}` : template;
@@ -218,14 +253,16 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
   if (!isObj(raw)) throw new BuildError(`${path}: expected an object`);
   const name = raw["name"];
   if (typeof name !== "string" || name === "") throw new BuildError(`${path}: every node needs a "name"`);
-  if (++parent.counters.nodes > LIMITS.nodes) throw new BuildError(`${path}: too many nodes (max ${LIMITS.nodes})`);
+  const depth = parent.depth + 1;
+  if (depth > LIMITS.depth) throw new BuildError(`${path}: nested too deeply (max ${LIMITS.depth} levels)`);
+  spendNodes(parent.counters, 1, path);
 
-  const scope: Scope = { ...parent.scope };
+  const scope: Scope = bare(parent.scope);
   if (raw["vars"] !== undefined) {
     if (!isObj(raw["vars"])) throw new BuildError(`${path}.vars: expected an object`);
     for (const [k, v] of Object.entries(raw["vars"])) scope[k] = num(v, scope, `${path}.vars.${k}`);
   }
-  const ctx: Ctx = { ...parent, scope, ...(typeof raw["material"] === "string" ? { material: raw["material"] } : {}) };
+  const ctx: Ctx = { ...parent, scope, depth, ...(typeof raw["material"] === "string" ? { material: raw["material"] } : {}) };
 
   const repeat = raw["repeat"];
   let count = 1;
@@ -245,9 +282,12 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
       if (repeat["phase"] !== undefined) throw new BuildError(`${path}.repeat.phase: only a ring ("around") has a phase`);
       step = vec(repeat["step"], 3, scope, `${path}.repeat.step`);
     }
+    // The first copy is counted above; every other copy is a node too.
+    spendNodes(parent.counters, count - 1, path);
   }
 
   const out: BuildNode[] = [];
+  let firstTriangles = 0;
   for (let i = 0; i < count; i++) {
     const local: Ctx = { ...ctx, scope: { ...scope, ...(repeat ? { i, n: count } : {}) } };
     const at = raw["at"] === undefined ? [0, 0, 0] : vec(raw["at"], 3, local.scope, `${path}.at`);
@@ -270,12 +310,12 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
         const [ox = 0, oy = 0, oz = 0] = vec(raw["offset"], 3, local.scope, `${path}.offset`);
         mesh.translate(ox, oy, oz);
       }
+      if (i === 0) firstTriangles = mesh.triangles;
       parent.counters.triangles += mesh.triangles;
-      // Every copy of a repeated node is the same size, so refuse early instead of building them all.
-      if (i === 0 && count > 1) parent.counters.triangles += mesh.triangles * (count - 1);
-      if (parent.counters.triangles > LIMITS.triangles) throw new BuildError(`${path}: the model grew past ${LIMITS.triangles.toLocaleString("en-US")} triangles`);
+      checkTriangles(parent.counters.triangles, path);
+      // Copies of a repeat are usually the same size: once the first two agree, refuse now if all of them would not fit.
+      if (i === 1 && mesh.triangles === firstTriangles) checkTriangles(parent.counters.triangles + firstTriangles * (count - 2), path);
       node.mesh = mesh;
-      if (i > 0 && count > 1) parent.counters.triangles -= mesh.triangles;
     } else checkKeys(raw, COMMON_KEYS, path);
     if (raw["children"] !== undefined) {
       const children = list(raw["children"], `${path}.children`, LIMITS.nodes, 0).flatMap((c, k) => buildNodes(c, local, `${path}.children[${k}]`));
@@ -285,6 +325,13 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
     out.push(node);
     if (raw["mirror"] !== undefined) {
       if (typeof raw["mirror"] !== "string" || raw["mirror"] === "") throw new BuildError(`${path}.mirror: give the name of the mirrored node, e.g. "Wheel_R"`);
+      // A copy of a subtree that already holds a mirror would double that mirror's parts, so refuse it.
+      if (hasMirror(raw["children"])) throw new BuildError(`${path}.mirror: its children already have a mirror, so mirroring it again would double them`);
+      // The copy is a whole subtree of its own: count it before building it.
+      const size = sizeOf(node);
+      spendNodes(parent.counters, size.nodes, path);
+      parent.counters.triangles += size.triangles;
+      checkTriangles(parent.counters.triangles, path);
       out.push(mirrorNode(node, expandName(raw["mirror"], i, repeat !== undefined)));
     }
   }
@@ -310,7 +357,7 @@ function readParams(raw: unknown, overrides: Record<string, unknown>): { scope: 
     defs.push({ ...(d as unknown as ParamDef), description: typeof d["description"] === "string" ? d["description"] : "" });
   }
   const values = resolveParams(defs, overrides, "spec");
-  const scope: Scope = {};
+  const scope: Scope = bare<number>();
   for (const [k, v] of Object.entries(values)) {
     if (typeof v === "number") scope[k] = v;
     else if (typeof v === "boolean") scope[k] = v ? 1 : 0;
@@ -319,7 +366,7 @@ function readParams(raw: unknown, overrides: Record<string, unknown>): { scope: 
 }
 
 function readMaterials(raw: unknown): Record<string, Material> {
-  const out: Record<string, Material> = { ...MATERIALS };
+  const out = bare(MATERIALS);
   if (raw === undefined) return out;
   if (!isObj(raw)) throw new BuildError("materials: expected an object");
   for (const [name, m] of Object.entries(raw)) {
@@ -335,13 +382,17 @@ function readMaterials(raw: unknown): Record<string, Material> {
     };
     const emissive = m["emissive"];
     if (emissive !== undefined && (!Array.isArray(emissive) || emissive.length !== 3 || emissive.some((c) => typeof c !== "number" || c < 0 || c > 1))) throw new BuildError(`${path}.emissive: expected [r, g, b] with values from 0 to 1`);
+    const alpha = m["alpha"];
+    if (alpha !== undefined && alpha !== "BLEND" && alpha !== "OPAQUE") throw new BuildError(`${path}.alpha: use "BLEND" or "OPAQUE"`);
+    const doubleSided = m["doubleSided"];
+    if (doubleSided !== undefined && typeof doubleSided !== "boolean") throw new BuildError(`${path}.doubleSided: expected true or false`);
     out[name] = {
       name,
       color: [color[0] as number, color[1] as number, color[2] as number, (color[3] as number | undefined) ?? 1],
       metallic: unit("metallic", 0),
       roughness: unit("roughness", 0.8),
-      ...(m["alpha"] === "BLEND" ? { alpha: "BLEND" as const } : {}),
-      ...(m["doubleSided"] === true ? { doubleSided: true } : {}),
+      ...(alpha === "BLEND" ? { alpha: "BLEND" as const } : {}),
+      ...(doubleSided === true ? { doubleSided: true } : {}),
       ...(emissive ? { emissive: emissive as [number, number, number] } : {}),
     };
   }
@@ -355,7 +406,7 @@ export function buildSpec(raw: unknown, overrides: Record<string, unknown> = {})
   if (raw["version"] !== 1) throw new BuildError('the spec needs "version": 1');
   const { scope } = readParams(raw["params"], overrides);
   const materials = readMaterials(raw["materials"]);
-  const ctx: Ctx = { scope, materials, counters: { nodes: 0, triangles: 0 } };
+  const ctx: Ctx = { scope, materials, counters: { nodes: 0, triangles: 0 }, depth: 0 };
   const roots = list(raw["nodes"], "nodes", LIMITS.nodes).flatMap((n, i) => buildNodes(n, ctx, `nodes[${i}]`));
   assertUnique(roots, "nodes");
   if (raw["archetype"] !== undefined && typeof raw["archetype"] !== "string") throw new BuildError('"archetype" must be an archetype id such as "vehicle.wheeled.car"');

@@ -2,28 +2,40 @@ import { BuildError } from "./params.js";
 
 export type Scope = Record<string, number>;
 
-const FUNCTIONS: Record<string, (...args: number[]) => number> = {
-  min: Math.min,
-  max: Math.max,
-  abs: Math.abs,
-  sqrt: Math.sqrt,
-  sin: Math.sin,
-  cos: Math.cos,
-  tan: Math.tan,
-  floor: Math.floor,
-  ceil: Math.ceil,
-  round: Math.round,
-  pow: Math.pow,
-  rad: (degrees = 0) => (degrees * Math.PI) / 180,
-  deg: (radians = 0) => (radians * 180) / Math.PI,
-  atan: Math.atan,
-  atan2: Math.atan2,
-  asin: Math.asin,
-  acos: Math.acos,
-  hypot: Math.hypot,
-  clamp: (v = 0, lo = 0, hi = 0) => Math.min(hi, Math.max(lo, v)),
-  lerp: (a = 0, b = 0, t = 0) => a + (b - a) * t,
+/** A function of numbers, with the fewest and the most numbers it takes. */
+interface Fn {
+  args: [number, number];
+  call: (...values: number[]) => number;
+}
+
+const FUNCTIONS: Record<string, Fn> = {
+  min: { args: [2, 8], call: Math.min },
+  max: { args: [2, 8], call: Math.max },
+  abs: { args: [1, 1], call: Math.abs },
+  sqrt: { args: [1, 1], call: Math.sqrt },
+  sin: { args: [1, 1], call: Math.sin },
+  cos: { args: [1, 1], call: Math.cos },
+  tan: { args: [1, 1], call: Math.tan },
+  floor: { args: [1, 1], call: Math.floor },
+  ceil: { args: [1, 1], call: Math.ceil },
+  round: { args: [1, 1], call: Math.round },
+  pow: { args: [2, 2], call: Math.pow },
+  rad: { args: [1, 1], call: (degrees) => (degrees * Math.PI) / 180 },
+  deg: { args: [1, 1], call: (radians) => (radians * 180) / Math.PI },
+  atan: { args: [1, 1], call: Math.atan },
+  atan2: { args: [2, 2], call: Math.atan2 },
+  asin: { args: [1, 1], call: Math.asin },
+  acos: { args: [1, 1], call: Math.acos },
+  hypot: { args: [2, 3], call: Math.hypot },
+  clamp: { args: [3, 3], call: (v, lo, hi) => Math.min(hi, Math.max(lo, v)) },
+  lerp: { args: [3, 3], call: (a, b, t) => a + (b - a) * t },
 };
+
+/** "3 numbers", "1 number", "2 to 8 numbers". */
+function countOf([lo, hi]: [number, number]): string {
+  const numbers = (n: number): string => `${n} number${n === 1 ? "" : "s"}`;
+  return lo === hi ? numbers(lo) : `${lo} to ${numbers(hi)}`;
+}
 const CONSTANTS: Record<string, number> = { pi: Math.PI };
 
 const MAX_LENGTH = 500;
@@ -63,6 +75,8 @@ export function evaluate(text: string, scope: Scope): number {
     if (!isOp(op)) fail(`expected "${op}"`);
     pos++;
   };
+  // Every value is checked as it is made, so that a later min() or ^ cannot hide a NaN or an infinity.
+  const finite = (v: number): number => (Number.isFinite(v) ? v : fail("the result is not a finite number"));
 
   const expression = (depth: number): number => {
     if (depth > 40) fail("too deeply nested");
@@ -70,7 +84,7 @@ export function evaluate(text: string, scope: Scope): number {
     while (isOp("+") || isOp("-")) {
       const op = (tokens[pos++] as { op: string }).op;
       const right = term(depth);
-      value = op === "+" ? value + right : value - right;
+      value = finite(op === "+" ? value + right : value - right);
     }
     return value;
   };
@@ -80,7 +94,7 @@ export function evaluate(text: string, scope: Scope): number {
       const op = (tokens[pos++] as { op: string }).op;
       const right = unary(depth);
       if ((op === "/" || op === "%") && right === 0) fail("division by zero");
-      value = op === "*" ? value * right : op === "/" ? value / right : value % right;
+      value = finite(op === "*" ? value * right : op === "/" ? value / right : value % right);
     }
     return value;
   };
@@ -88,22 +102,22 @@ export function evaluate(text: string, scope: Scope): number {
     if (isOp("-")) { pos++; return -unary(depth); }
     if (isOp("+")) { pos++; return unary(depth); }
     const base = atom(depth);
-    if (isOp("^")) { pos++; return Math.pow(base, unary(depth)); }
+    if (isOp("^")) { pos++; return finite(Math.pow(base, unary(depth))); }
     return base;
   };
   const atom = (depth: number): number => {
     const t = tokens[pos++];
     if (!t) return fail("the expression ends too early");
-    if (t.kind === "num") return t.value;
+    if (t.kind === "num") return finite(t.value);
     if (t.kind === "var") {
-      const v = scope[t.name];
+      const v = Object.hasOwn(scope, t.name) ? scope[t.name] : undefined;
       if (v === undefined) return fail(`unknown variable $${t.name} (known: ${Object.keys(scope).map((k) => `$${k}`).join(", ") || "none"})`);
-      return v;
+      return finite(v);
     }
     if (t.kind === "name") {
       if (isOp("(")) {
         pos++;
-        const fn = FUNCTIONS[t.name];
+        const fn = Object.hasOwn(FUNCTIONS, t.name) ? FUNCTIONS[t.name] : undefined;
         if (!fn) return fail(`unknown function ${t.name}() (known: ${Object.keys(FUNCTIONS).join(", ")})`);
         const args: number[] = [];
         if (!isOp(")")) {
@@ -111,10 +125,11 @@ export function evaluate(text: string, scope: Scope): number {
           while (isOp(",")) { pos++; args.push(expression(depth + 1)); }
         }
         eat(")");
-        return fn(...args);
+        if (args.length < fn.args[0] || args.length > fn.args[1]) fail(`${t.name}() takes ${countOf(fn.args)}, got ${args.length}`);
+        return finite(fn.call(...args));
       }
-      const c = CONSTANTS[t.name];
-      return c === undefined ? fail(`unknown name "${t.name}" (variables start with $)`) : c;
+      const c = Object.hasOwn(CONSTANTS, t.name) ? CONSTANTS[t.name] : undefined;
+      return c === undefined ? fail(`unknown name "${t.name}" (variables start with $)`) : finite(c);
     }
     if (t.op === "(") {
       const v = expression(depth + 1);

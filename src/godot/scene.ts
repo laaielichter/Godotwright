@@ -87,7 +87,7 @@ export function parseResourceText(text: string): ResourceFile {
         break;
       case "sub_resource":
         file.subResources.push({
-          id: attr("id") ?? "",
+          id: attr("id") ?? String(section.attrs["id"] ?? ""),
           type: attr("type") ?? "",
           line: section.line,
           props: section.props,

@@ -17,6 +17,8 @@ export interface RuleStats {
   contradicted: number;
   /** Times a user or agent marked a finding of this rule as wrong. */
   dismissed: number;
+  /** Times a user or agent marked a finding of this rule as right. Local only: not a Godot confirmation. */
+  verified?: number;
 }
 
 export interface ApiMiss {
@@ -53,7 +55,10 @@ export interface SharingState {
   /** Random id, replaced every 30 days, so the collector can count distinct installs. */
   installId?: string;
   installIdSince?: string;
+  /** When the collector last accepted a report. */
   lastSentAt?: string;
+  /** When a send was last tried, accepted or not: a failed try also waits a day. */
+  lastAttemptAt?: string;
   /** Counts already sent, so each report holds only what is new. */
   sent?: Snapshot;
   /** Where to send; overrides the built-in collector URL. */
@@ -101,32 +106,115 @@ export function learningAllowed(data: LearningData, env: NodeJS.ProcessEnv = pro
 export function readLearning(file = learningFile()): LearningData {
   try {
     if (!existsSync(file)) return emptyLearning();
-    const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<LearningData>;
-    const base = emptyLearning();
-    return { ...base, ...parsed, sharing: { ...base.sharing, ...(parsed.sharing ?? {}) } } as LearningData;
+    return normalizeLearning(JSON.parse(readFileSync(file, "utf8")));
   } catch {
     // A broken file must never break a tool; start fresh.
     return emptyLearning();
   }
 }
 
+/** Keeps each field only in the shape it has; anything else falls back to its default (a hand edit must not break a tool). */
+function normalizeLearning(parsed: unknown): LearningData {
+  const base = emptyLearning();
+  const top = isRecord(parsed) ? parsed : {};
+  return {
+    version: 1,
+    enabled: typeof top["enabled"] === "boolean" ? top["enabled"] : base.enabled,
+    rules: recordOf(top["rules"], ruleFrom),
+    dismissed: counts(top["dismissed"]),
+    apiMisses: recordOf(top["apiMisses"], missFrom),
+    lastMiss: lastMissFrom(top["lastMiss"]),
+    missedByReview: counts(top["missedByReview"]),
+    unparsed: counts(top["unparsed"]),
+    sharing: sharingFrom(top["sharing"]),
+  };
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function count(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 0;
+}
+
+function counts(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (isRecord(v)) for (const [k, n] of Object.entries(v)) if (typeof n === "number" && Number.isFinite(n) && n >= 0) out[k] = n;
+  return out;
+}
+
+function recordOf<T>(v: unknown, item: (x: unknown) => T | undefined): Record<string, T> {
+  const out: Record<string, T> = {};
+  if (isRecord(v)) for (const [k, x] of Object.entries(v)) {
+    const value = item(x);
+    if (value !== undefined) out[k] = value;
+  }
+  return out;
+}
+
+function ruleFrom(v: unknown): RuleStats | undefined {
+  if (!isRecord(v)) return undefined;
+  const stats: RuleStats = { reported: count(v["reported"]), confirmed: count(v["confirmed"]), contradicted: count(v["contradicted"]), dismissed: count(v["dismissed"]) };
+  if (v["verified"] !== undefined) stats.verified = count(v["verified"]);
+  return stats;
+}
+
+function missFrom(v: unknown): ApiMiss | undefined {
+  return isRecord(v) ? { count: count(v["count"]), resolved: counts(v["resolved"]) } : undefined;
+}
+
+function lastMissFrom(v: unknown): LearningData["lastMiss"] {
+  if (!isRecord(v) || typeof v["query"] !== "string" || typeof v["at"] !== "number") return undefined;
+  return { query: v["query"], at: v["at"] };
+}
+
+function snapshotFrom(v: unknown): Snapshot | undefined {
+  if (!isRecord(v)) return undefined;
+  return { rules: recordOf(v["rules"], ruleFrom), apiMisses: recordOf(v["apiMisses"], missFrom), missedByReview: counts(v["missedByReview"]), unparsed: counts(v["unparsed"]) };
+}
+
+function sharingFrom(v: unknown): SharingState {
+  const s = isRecord(v) ? v : {};
+  const out: SharingState = { enabled: s["enabled"] === true };
+  for (const key of ["decidedAt", "installId", "installIdSince", "lastSentAt", "lastAttemptAt", "endpoint"] as const) {
+    const text = s[key];
+    if (typeof text === "string") out[key] = text;
+  }
+  if (typeof s["noticeShown"] === "boolean") out.noticeShown = s["noticeShown"];
+  const sent = snapshotFrom(s["sent"]);
+  if (sent) out.sent = sent;
+  return out;
+}
+
 /**
  * Reads, changes and writes the learning file. Writes go to a temp file first,
  * so a crash or a second process never leaves a half-written file.
- * Errors are swallowed: learning is a side effect and must not break tools.
+ * Returns the data, and why the write failed when it did (read-only home, full disk, ...).
  */
-export function updateLearning(change: (data: LearningData) => void, file = learningFile()): LearningData {
+export function saveLearning(change: (data: LearningData) => void, file = learningFile()): { data: LearningData; error?: string } {
   const data = readLearning(file);
+  let tmp: string | undefined;
   try {
     change(data);
     mkdirSync(dirname(file), { recursive: true });
-    const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+    tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
     writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
     renameSync(tmp, file);
-  } catch {
-    // Read-only home, full disk, ...: carry on without learning.
+    return { data };
+  } catch (error) {
+    try {
+      if (tmp) rmSync(tmp, { force: true });
+    } catch {
+      // Nothing more to clean up.
+    }
+    return { data, error: error instanceof Error ? error.message : String(error) };
   }
-  return data;
+}
+
+/** saveLearning for tools: errors are swallowed, since learning is a side effect and must not break a tool. */
+export function updateLearning(change: (data: LearningData) => void, file = learningFile()): LearningData {
+  return saveLearning(change, file).data;
 }
 
 export function resetLearning(file = learningFile()): void {

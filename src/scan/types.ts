@@ -100,6 +100,12 @@ export interface ShaderInfo {
   shaderType?: string;
 }
 
+export interface CSharpScriptInfo {
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
+  path: string;
+}
+
 export interface Warning {
   file: string;
   line?: number;
@@ -118,7 +124,7 @@ export interface ProjectMap {
   shaders: ShaderInfo[];
   /** Counts of other files by kind (texture, audio, model, ...). */
   assets: Record<string, number>;
-  csharpScripts: string[];
+  csharpScripts: CSharpScriptInfo[];
   /** Set when the project is laid over base projects (a mod over a game). */
   base?: { roots: string[]; files: number; listed?: number };
   warnings: Warning[];

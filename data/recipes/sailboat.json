@@ -58,7 +58,8 @@
     "B": "$beam",
     "fb": "$length * 0.07",
     "dp": "$length * 0.04",
-    "M": "$mastHeight"
+    "M": "$mastHeight",
+    "mastUp": "$M - $fb"
    },
    "children": [
     {
@@ -152,11 +153,11 @@
      "shape": "cylinder",
      "material": "metal",
      "radius": 0.06,
-     "height": "$M",
+     "height": "$mastUp",
      "segments": 12,
      "at": [
       0,
-      "$fb + $M / 2",
+      "$fb + $mastUp / 2",
       "$length * 0.08"
      ]
     },
@@ -164,7 +165,7 @@
      "name": "Sail_Main",
      "at": [
       0,
-      "$fb + $M * 0.12",
+      "$fb + $mastUp * 0.12",
       "$length * 0.08"
      ],
      "children": [
@@ -196,7 +197,7 @@
          0
         ],
         [
-         "$M * 0.85",
+         "$mastUp * 0.85",
          0
         ],
         [
@@ -232,7 +233,7 @@
          0
         ],
         [
-         "$M * 0.8",
+         "$mastUp * 0.8",
          0
         ],
         [

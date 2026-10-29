@@ -136,6 +136,21 @@ describe("glb writer", () => {
     expect(inspectModel(path).nodes.map((n) => n.name)).toEqual(["Cube"]);
   });
 
+  it("writes accessor bounds as the float32 values the buffer actually holds", () => {
+    const glb = buildGlb(single(box([0.1, 0.2, 0.3], [0.7, 0.9, 1.1], "paint")));
+    const jsonLength = glb.readUInt32LE(12);
+    const json = JSON.parse(glb.subarray(20, 20 + jsonLength).toString("utf8")) as {
+      accessors: { min: number[]; max: number[]; bufferView: number; count: number }[];
+      bufferViews: { byteOffset: number }[];
+      meshes: { primitives: { attributes: { POSITION: number } }[] }[];
+    };
+    const position = json.accessors[json.meshes[0]!.primitives[0]!.attributes.POSITION]!;
+    const start = 20 + jsonLength + 8 + json.bufferViews[position.bufferView]!.byteOffset;
+    const stored = Array.from({ length: position.count }, (_, v) => [0, 1, 2].map((k) => glb.readFloatLE(start + (v * 3 + k) * 4)));
+    expect(position.min).toEqual([0, 1, 2].map((k) => Math.min(...stored.map((p) => p[k]!))));
+    expect(position.max).toEqual([0, 1, 2].map((k) => Math.max(...stored.map((p) => p[k]!))));
+  });
+
   it("rejects an unknown material", () => {
     const b = new MeshBuilder();
     b.tri([0, 0, 0], [1, 0, 0], [0, 1, 0], "no_such_material");

@@ -24,7 +24,7 @@ steady trickle from listings. No bought stars, no upvote requests, no alt accoun
 | First release | 0 | 0, manual step below |
 | On npm / MCP Registry | 0 | 0, manual step below |
 
-Score: 4 / 32 before, 21 / 32 after this change. The manual steps bring it to about 30.
+Score: 4 / 32 before, 17 / 32 after this change. The manual steps, including the v0.1.0 release, bring it to about 30.
 
 ## Done in this change
 

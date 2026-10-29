@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, extname, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
 
 /** Subset of the glTF 2.0 JSON that Godotwright reads. */
 export interface Gltf {
@@ -111,52 +111,123 @@ function loadText(file: string, data: Buffer, dir: string): LoadedGltf {
   return { file, bytes: data.length, json, buffers, dir };
 }
 
+const LISTS = ["nodes", "meshes", "accessors", "bufferViews", "buffers", "images", "textures", "materials", "scenes"] as const;
+
 function parseJson(file: string, text: string): Gltf {
+  let parsed: unknown;
   try {
-    const json = JSON.parse(text) as Gltf;
-    if (!json.asset?.version?.startsWith("2")) throw new ModelError(`${file}: not a glTF 2.0 file`);
-    return json;
+    parsed = JSON.parse(text);
   } catch (error) {
-    if (error instanceof ModelError) throw error;
     throw new ModelError(`${file}: invalid glTF JSON (${(error as Error).message})`);
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new ModelError(`${file}: not a glTF 2.0 file`);
+  const json = parsed as Gltf;
+  if (typeof json.asset?.version !== "string" || !json.asset.version.startsWith("2")) throw new ModelError(`${file}: not a glTF 2.0 file`);
+  // The lists are read by index all over the reader, so a list that is not one, or holds a non-object, fails here by name.
+  for (const key of LISTS) {
+    const list: unknown = (json as Record<string, unknown>)[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) throw new ModelError(`${file}: "${key}" must be a list`);
+    if (list.some((entry) => typeof entry !== "object" || entry === null)) throw new ModelError(`${file}: "${key}" must be a list of objects`);
+  }
+  return json;
 }
 
 function resolveBuffer(file: string, uri: string | undefined, dir: string): Buffer {
   if (!uri) return Buffer.alloc(0);
-  const bytes = readUri(uri, dir);
+  const bytes = readUri(file, uri, dir);
   if (!bytes) throw new ModelError(`${file}: buffer file not found: ${uri}`);
   return bytes;
 }
 
-/** Reads a data: URI or a file next to the model. Returns undefined when the file is missing. */
-export function readUri(uri: string, dir: string): Buffer | undefined {
+/** Reads a data: URI, or a file inside the model's folder. Returns undefined when that file is missing. */
+export function readUri(file: string, uri: string, dir: string): Buffer | undefined {
+  if (typeof uri !== "string") throw new ModelError(`${file}: a uri must be text`);
   if (uri.startsWith("data:")) {
     const comma = uri.indexOf(",");
     return comma < 0 ? undefined : Buffer.from(uri.slice(comma + 1), uri.slice(0, comma).includes(";base64") ? "base64" : "utf8");
   }
-  const path = resolve(dir, decodeURIComponent(uri));
-  return existsSync(path) ? readFileSync(path) : undefined;
+  const path = externalPath(file, uri, dir);
+  if (!existsSync(path)) return undefined;
+  // Checked again after following links, so a link inside the folder cannot point out of it.
+  const real = realpathSync(path);
+  if (!within(realpathSync(dir), real)) throw outsideFolder(file, uri);
+  try {
+    return readFileSync(real);
+  } catch (error) {
+    throw new ModelError(`${file}: cannot read ${uri} (${(error as Error).message})`);
+  }
+}
+
+/** Where an external uri points. Refuses absolute paths, URLs and anything that climbs out of the folder. */
+function externalPath(file: string, uri: string, dir: string): string {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(uri);
+  } catch {
+    throw new ModelError(`${file}: uri "${uri}" is not valid percent-encoding`);
+  }
+  if (isAbsolute(decoded) || /^[a-z][a-z\d+.-]*:/i.test(decoded)) throw outsideFolder(file, uri);
+  const path = resolve(dir, decoded);
+  if (!within(dir, path)) throw outsideFolder(file, uri);
+  return path;
+}
+
+/** True when `path` is `dir` itself or lies below it. */
+function within(dir: string, path: string): boolean {
+  const rel = relative(dir, path);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+function outsideFolder(file: string, uri: string): ModelError {
+  return new ModelError(`${file}: "${uri}" must be a file inside the model's folder (absolute paths and ".." are refused)`);
 }
 
 const COMPONENTS: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT2: 4, MAT3: 9, MAT4: 16 };
 const BYTES: Record<number, number> = { 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
 
+/** A count, index or offset in a glTF file: a whole number from 0 up, exact in a double. */
+export function isIndex(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+/** A zeroed Float64Array. A length the machine cannot allocate is an error about the file, not an allocator message. */
+function allocate(model: LoadedGltf, index: number, length: number): Float64Array {
+  try {
+    return new Float64Array(length);
+  } catch {
+    throw new ModelError(`${model.file}: accessor ${index} is too large to read`);
+  }
+}
+
 /** Reads an accessor into a flat Float64Array (normalized integers become 0..1 or -1..1). */
 export function readAccessor(model: LoadedGltf, index: number): { data: Float64Array; width: number; count: number } {
   const acc = model.json.accessors?.[index];
   if (!acc) throw new ModelError(`${model.file}: accessor ${index} does not exist`);
-  const width = COMPONENTS[acc.type];
-  const size = BYTES[acc.componentType];
+  const width = Object.hasOwn(COMPONENTS, acc.type) ? COMPONENTS[acc.type] : undefined;
+  const size = typeof acc.componentType === "number" ? BYTES[acc.componentType] : undefined;
   if (!width || !size) throw new ModelError(`${model.file}: accessor ${index} has an unsupported type`);
-  const out = new Float64Array(acc.count * width);
-  if (acc.bufferView === undefined) return { data: out, width, count: acc.count };
+  if (!isIndex(acc.count)) throw new ModelError(`${model.file}: accessor ${index} has no valid count`);
+  // Sparse values would be substituted over zeros; reading without them gives wrong geometry, so refuse.
+  if (acc.sparse !== undefined) throw new ModelError(`${model.file}: accessor ${index} is sparse, and sparse accessors are not supported`);
+  if (acc.bufferView === undefined) return { data: allocate(model, index, acc.count * width), width, count: acc.count };
+  if (!isIndex(acc.bufferView)) throw new ModelError(`${model.file}: accessor ${index} has an invalid bufferView`);
   const view = model.json.bufferViews?.[acc.bufferView];
   const buffer = view && model.buffers[view.buffer];
   if (!view || !buffer) throw new ModelError(`${model.file}: accessor ${index} points at a missing buffer`);
-  const stride = view.byteStride ?? width * size;
-  const base = (view.byteOffset ?? 0) + (acc.byteOffset ?? 0);
-  if (base + (acc.count - 1) * stride + width * size > buffer.length) throw new ModelError(`${model.file}: accessor ${index} reads past the end of its buffer`);
+  const viewStart = view.byteOffset ?? 0;
+  if (!isIndex(viewStart) || !isIndex(view.byteLength)) throw new ModelError(`${model.file}: buffer view ${acc.bufferView} has an invalid byteOffset or byteLength`);
+  const viewEnd = viewStart + view.byteLength;
+  if (viewEnd > buffer.length) throw new ModelError(`${model.file}: buffer view ${acc.bufferView} reads past the end of its buffer`);
+  const element = width * size;
+  const stride = view.byteStride ?? element;
+  const accOffset = acc.byteOffset ?? 0;
+  if (!isIndex(accOffset) || !isIndex(stride) || stride < element) throw new ModelError(`${model.file}: accessor ${index} has an invalid byteOffset or byteStride`);
+  const base = viewStart + accOffset;
+  // Every element must lie inside its buffer view, and the view inside its buffer, before anything is allocated.
+  const last = acc.count === 0 ? base : base + (acc.count - 1) * stride + element;
+  if (last > viewEnd) throw new ModelError(`${model.file}: accessor ${index} reads past the end of its buffer view`);
+  const out = allocate(model, index, acc.count * width);
   for (let i = 0; i < acc.count; i++) {
     for (let c = 0; c < width; c++) {
       const at = base + i * stride + c * size;

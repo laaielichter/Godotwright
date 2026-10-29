@@ -1,7 +1,7 @@
 import { tinted, type Material } from "../materials.js";
 import type { BuildNode, BuildScene } from "../glb.js";
 import { MeshBuilder } from "../mesh.js";
-import { random, type ParamDef, type Params } from "../params.js";
+import { BuildError, random, type ParamDef, type Params } from "../params.js";
 import { box, extrude, roof } from "../shapes.js";
 import type { Generator } from "./index.js";
 
@@ -18,6 +18,9 @@ export const HOUSE_PARAMS: ParamDef[] = [
   { name: "chimney", type: "boolean", default: true, description: "Add a chimney (gable and hip roofs only)." },
   { name: "seed", type: "integer", default: 1, min: 0, max: 1000000, description: "Picks the wall and door colours; the same seed gives the same house." },
 ];
+
+/** The wall a window needs: its glass and frame, with room between windows and at the corners. Windows in a row never overlap. */
+const WINDOW_CELL = 1.8;
 
 const WALLS: [number, number, number][] = [
   [0.78, 0.72, 0.62], [0.82, 0.8, 0.74], [0.6, 0.66, 0.7], [0.72, 0.62, 0.5], [0.55, 0.28, 0.2],
@@ -87,6 +90,8 @@ export const house: Generator = {
     const windows = new MeshBuilder();
     wallList.forEach((w, wi) => {
       const n = counts[wi] as number;
+      const most = Math.floor(w.length / WINDOW_CELL + 1e-9);
+      if (n > most) throw new BuildError(`house: ${wi < 2 ? "windowsPerFloor" : "windowsPerSide"} ${n} does not fit on a ${w.length} m wall (at most ${most})`);
       for (let f = 0; f < floors; f++) {
         for (let k = 0; k < n; k++) {
           const centre = ((k + 0.5) / n) * w.length;

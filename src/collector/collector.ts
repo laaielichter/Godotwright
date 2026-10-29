@@ -1,8 +1,11 @@
 import { appendFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { join } from "node:path";
-import type { ShareReport } from "../learn/share.js";
+import { GodotApi } from "../api/api.js";
+import { RULES } from "../review/rules.js";
+import { scrubTemplate, shareableQuery, typoOf, type ShareReport } from "../learn/share.js";
 import type { RuleStats } from "../learn/store.js";
+import { shareableTemplate } from "../learn/template.js";
 
 /**
  * Reference collector for opt-in reports. It checks each report again (the
@@ -29,28 +32,30 @@ export function validateReport(value: unknown): ShareReport | undefined {
   if (!["linux", "macos", "windows", "other"].includes(r["platform"] as string)) return undefined;
   if (typeof r["install"] !== "string" || !/^[0-9a-f-]{36}$/.test(r["install"])) return undefined;
 
+  const api = GodotApi.load();
   const rules = entries(r["rules"]);
-  if (!rules || !rules.every(([k, s]) => RULE.test(k) && isObject(s) && ["reported", "confirmed", "contradicted", "dismissed"].every((f) => COUNT((s as Record<string, unknown>)[f])) && Object.keys(s).length === 4)) return undefined;
+  if (!rules || !rules.every(([k, s]) => RULE.test(k) && Object.hasOwn(RULES, k) && isObject(s) && ["reported", "confirmed", "contradicted", "dismissed"].every((f) => COUNT((s as Record<string, unknown>)[f])) && Object.keys(s).length === 4)) return undefined;
   const misses = entries(r["apiMisses"]);
   if (
     !misses ||
     !misses.every(([q, m]) => {
-      if (!API_NAME.test(q) || !isObject(m) || !COUNT(m["count"]) || Object.keys(m).length !== 2) return false;
+      // The same test as the client applies (shareableQuery): a Godot class and member, never a bare name.
+      if (!shareableQuery(q, api) || !isObject(m) || !COUNT(m["count"]) || Object.keys(m).length !== 2) return false;
       const resolved = entries(m["resolved"]);
-      return !!resolved && resolved.every(([t, n]) => API_NAME.test(t) && COUNT(n));
+      return !!resolved && resolved.every(([t, n]) => API_NAME.test(t) && COUNT(n) && typoOf(q, t) && api.lookup(t).entries.length > 0);
     })
   )
     return undefined;
   for (const part of ["missedByReview", "unparsed"]) {
     const list = entries(r[part]);
-    if (!list || !list.every(([t, n]) => safeTemplate(t) && COUNT(n))) return undefined;
+    if (!list || !list.every(([t, n]) => safeTemplate(t, api) && COUNT(n))) return undefined;
   }
   return value as unknown as ShareReport;
 }
 
-/** Templates must be short and hold no paths, mail addresses or identifiers. */
-export function safeTemplate(t: string): boolean {
-  return t.length >= 8 && t.length <= 160 && !/[\\/]/.test(t.replace(/<path>/g, "")) && !/@\w/.test(t) && !/\b\w*_\w*\b/.test(t.replace(/<\w+>/g, ""));
+/** Templates must pass the client's check (shareableTemplate) and hold no name of a project: only Godot's wording survives scrubTemplate. */
+export function safeTemplate(t: string, api: GodotApi = GodotApi.load()): boolean {
+  return t.length <= 160 && shareableTemplate(t) && scrubTemplate(t, api) === t;
 }
 
 export interface CollectorOptions {

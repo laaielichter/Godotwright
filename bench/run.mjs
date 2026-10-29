@@ -168,6 +168,10 @@ function runAgent(task, mode, rep) {
   });
 }
 
+if (!existsSync(CLI)) {
+  console.error("Run `npm run build` first.");
+  process.exit(2);
+}
 const queue = [];
 for (let rep = 1; rep <= reps; rep++) for (const mode of modes) for (const task of taskList) queue.push([task, mode, rep]);
 const workers = Array.from({ length: Math.min(jobs, queue.length) }, async () => {
@@ -176,9 +180,5 @@ const workers = Array.from({ length: Math.min(jobs, queue.length) }, async () =>
     await runAgent(task, mode, rep);
   }
 });
-if (!existsSync(CLI)) {
-  console.error("Run `npm run build` first.");
-  process.exit(2);
-}
 console.log(`base project: ${BASE_PROJECT}`);
 await Promise.all(workers);

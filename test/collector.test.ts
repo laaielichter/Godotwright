@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GodotApi } from "../src/api/api.js";
 import { aggregate, createCollector, readReports, safeTemplate, validateReport } from "../src/collector/collector.js";
 import { learnFromProjects } from "../src/collector/public.js";
@@ -35,6 +35,7 @@ describe("checking reports again on the collector", () => {
   it("accepts what the client builds", () => {
     resetLearning();
     recordApiLookup("Node2D.lookat", false);
+    recordApiLookup("Node2D.look_at", true);
     const built = buildReport(readLearning(), api, id(1))!;
     expect(validateReport(JSON.parse(JSON.stringify(built.report)))).toBeDefined();
     expect(validateReport(report(1))).toBeDefined();
@@ -49,6 +50,15 @@ describe("checking reports again on the collector", () => {
       report(1, { apiMisses: { "res://player.gd": { count: 1, resolved: {} } } }),
       report(1, { apiMisses: { "Node2D.lookat": { count: 1, resolved: { "a b": 1 } } } }),
       report(1, { rules: { "My Rule": { reported: 1, confirmed: 0, contradicted: 0, dismissed: 0 } } }),
+      report(1, { rules: { "api/made-up": { reported: 1, confirmed: 0, contradicted: 0, dismissed: 0 } } }),
+      // Same checks as the client: no identifiers of a project in a template, no bare names or unrelated answers in misses.
+      report(1, { missedByReview: { "Function mySceneName not found in base Node": 1 } }),
+      report(1, { missedByReview: { 'Identifier "<s>" not declared near Player2': 1 } }),
+      report(1, { unparsed: { "Cannot open <path> Smith": 1 } }),
+      report(1, { apiMisses: { Level: { count: 1, resolved: {} } } }),
+      report(1, { apiMisses: { "Enemy.take_damage": { count: 1, resolved: { "Enemy.take_damage": 1 } } } }),
+      report(1, { apiMisses: { "Node2D.lookat": { count: 1, resolved: { "Node2D.visible": 1 } } } }),
+      report(1, { apiMisses: { "Node2D.lookat": { count: 1, resolved: { "Nope.nothing": 1 } } } }),
       report(1, { rules: { "api/unknown-member": { reported: -1, confirmed: 0, contradicted: 0, dismissed: 0 } } }),
       { ...report(1), schema: 2 },
       "text",
@@ -56,19 +66,24 @@ describe("checking reports again on the collector", () => {
     ];
     for (const b of bad) expect(validateReport(b), JSON.stringify(b)).toBeUndefined();
     expect(safeTemplate('Identifier "<s>" not declared at <path>')).toBe(true);
+    expect(safeTemplate("Function <id> not found in base <id>")).toBe(true);
+    expect(safeTemplate("Function mySceneName not found in base Node")).toBe(false);
   });
 });
 
 describe("collector server", () => {
-  const dir = mkdtempSync(join(tmpdir(), "godotwright-reports-"));
-  const server = createCollector({ dir, now: () => new Date("2026-11-01T10:00:00Z") });
+  // Each test gets its own report folder and server, so the order of tests does not matter.
+  let dir = "";
+  let server: ReturnType<typeof createCollector>;
   let url = "";
-  beforeAll(async () => {
+  beforeEach(async () => {
+    resetLearning();
+    dir = mkdtempSync(join(tmpdir(), "godotwright-reports-"));
+    server = createCollector({ dir, now: () => new Date("2026-11-01T10:00:00Z") });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
-  afterAll(() => new Promise((done) => server.close(done)));
-  beforeEach(() => resetLearning());
+  afterEach(() => new Promise((done) => server.close(done)));
 
   const post = (body: string, path = "/v1/report") => fetch(`${url}${path}`, { method: "POST", body, headers: { "x-forwarded-for": "203.0.113.9" } });
 
@@ -89,6 +104,7 @@ describe("collector server", () => {
   it("receives what a client with sharing on sends", async () => {
     setSharing(true);
     recordApiLookup("Node2D.lookat", false);
+    recordApiLookup("Node2D.look_at", true);
     expect(await maybeShare({ env: { GODOTWRIGHT_SHARE_URL: `${url}/v1/report` } })).toBe("sent");
     expect(readReports(dir).some((r) => r.install === readLearning().sharing.installId)).toBe(true);
   });

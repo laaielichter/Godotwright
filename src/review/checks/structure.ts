@@ -22,15 +22,24 @@ const MAX_ROOT_FILES = 12;
 const MAX_AUTOLOADS = 10;
 const MAX_DEPTH = 12;
 const SNAKE_FILE = /^[a-z0-9_]+(\.[a-z0-9_]+)*$/;
+/** Scan's message for a file it could not read or parse. */
+const PARSE_FAILED = /^could not parse file/;
 
-export function checkStructure(pm: ProjectModel): Finding[] {
+export interface StructureOptions {
+  /** Project uses C# or GDExtension, so node types the bundled API does not know may be real. */
+  foreignClasses?: boolean;
+}
+
+export function checkStructure(pm: ProjectModel, options: StructureOptions = {}): Finding[] {
   const out: Finding[] = [];
+  /** A node type from a GDExtension or C# library: its signals and methods cannot be checked. */
+  const foreign = (type: GType | undefined): boolean => Boolean(options.foreignClasses) && type?.kind === "native" && !pm.api.getClass(type.name);
   const { map, root } = pm.data;
   // Only this project's own files: a base project's layout is not this project's (see LoadOptions.base).
   const files = pm.data.files.filter((f) => !pm.data.external.has(f));
 
   // Broken references found while scanning.
-  for (const w of map.warnings) out.push(finding("structure/broken-reference", w.file, w.line, w.message));
+  for (const w of map.warnings) out.push(finding(PARSE_FAILED.test(w.message) ? "structure/parse-error" : "structure/broken-reference", w.file, w.line, w.message));
 
   // Signal connections saved in scenes.
   for (const scene of map.scenes) {
@@ -51,13 +60,13 @@ export function checkStructure(pm: ProjectModel): Finding[] {
         out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): node "${from === null ? c.from : c.to}" does not exist.`));
         continue;
       }
-      if (from && from.kind !== "enum" && !dynamic(pm, from)) {
+      if (from && from.kind !== "enum" && !dynamic(pm, from) && !foreign(from)) {
         const signal = pm.memberOf(from, c.signal);
         if (!signal || signal.kind !== "signal") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal}: ${label(from)} has no signal "${c.signal}".`));
         }
       }
-      if (to && to.kind !== "enum" && !dynamic(pm, to)) {
+      if (to && to.kind !== "enum" && !dynamic(pm, to) && !foreign(to)) {
         const method = pm.memberOf(to, c.method);
         if (!method || method.kind !== "method") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): ${label(to)} has no method "${c.method}".`));
@@ -68,11 +77,15 @@ export function checkStructure(pm: ProjectModel): Finding[] {
     if (deepest > MAX_DEPTH) out.push(finding("structure/deep-tree", scene.path, undefined, `Node tree is ${deepest} levels deep.`));
   }
 
-  // Groups used in code but never assigned.
+  // A scene or resource that does not parse may use any script or group, so neither can be called unused or unassigned.
+  const unreadable = map.warnings.some((w) => PARSE_FAILED.test(w.message) && /\.(tscn|tres)$/.test(w.file));
+
+  // Groups used in code but never assigned. Not checked when add_to_group() takes a constant or variable: it may add any group.
   const assigned = new Set(map.scenes.flatMap((s) => s.nodes.flatMap((n) => n.groups)));
   const code = [...pm.data.sources.values()].join("\n");
   for (const m of code.matchAll(/\badd_to_group\s*\(\s*&?"([^"]+)"/g)) assigned.add(m[1]!);
-  for (const [path, outline] of pm.data.scripts) {
+  const namedAtRuntime = /\badd_to_group\s*\(\s*(?!&?")\S/.test(code);
+  for (const [path, outline] of unreadable || namedAtRuntime ? [] : pm.data.scripts) {
     for (const ll of outline.logicalLines) {
       for (const m of ll.text.matchAll(/\b(get_nodes_in_group|get_first_node_in_group|is_in_group|call_group|call_group_flags|set_group|notify_group|get_node_count_in_group)\s*\(\s*(?:\d+\s*,\s*)?&?"([^"]+)"/g)) {
         if (!assigned.has(m[2]!)) {
@@ -119,9 +132,10 @@ export function checkStructure(pm: ProjectModel): Finding[] {
   for (const a of map.autoloads) referenced.add(a.path);
   const text = code + [...pm.data.resources.values()].map((r) => r.extResources.map((e) => e.path).join("\n")).join("\n");
   for (const [path, outline] of pm.data.scripts) {
-    if (path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
-    const base = path.slice(path.lastIndexOf("/") + 1);
-    if (text.includes(base)) continue;
+    if (unreadable || path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
+    // Whole file name only: `old_enemy.gd` does not use `enemy.gd`.
+    const base = path.slice(path.lastIndexOf("/") + 1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`(^|[^\\w])${base}(?![\\w.])`).test(text)) continue;
     const ext = outline.extends ?? "";
     if (/^(EditorScript|EditorPlugin|SceneTree|MainLoop)$/.test(ext)) continue;
     out.push(finding("structure/unused-script", path, undefined, "No scene, resource, autoload or script refers to this script."));

@@ -82,7 +82,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   }
   findings.push(...checkScenePerformance(pm).filter((f) => inScope(f.file)));
   findings.push(...checkUnusedSignals(pm).filter((f) => inScope(f.file)));
-  findings.push(...checkStructure(pm).filter((f) => inScope(f.file)));
+  findings.push(...checkStructure(pm, { foreignClasses }).filter((f) => inScope(f.file)));
 
   const adjusted = options.learning ? adjustFindings(findings, options.learning, options.shared) : undefined;
   const sorted = (adjusted?.findings ?? findings).sort(
