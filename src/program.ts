@@ -9,6 +9,7 @@ import { reviewCommand } from "./commands/review.js";
 import { migrateCommand } from "./commands/migrate.js";
 import { usagesCommand } from "./commands/usages.js";
 import { renameCommand } from "./commands/rename.js";
+import { projectCommand } from "./commands/project.js";
 import { scanCommand } from "./commands/scan.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
@@ -29,6 +30,7 @@ export function createProgram(): Command {
     .addCommand(migrateCommand())
     .addCommand(usagesCommand())
     .addCommand(renameCommand())
+    .addCommand(projectCommand())
     .addCommand(modelCommand())
     .addCommand(mcpCommand())
     .addCommand(learnCommand())

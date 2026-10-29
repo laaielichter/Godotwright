@@ -28,6 +28,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright rename <from> <to> [--write]` (godot_rename): renames a name or moves a res:// file everywhere at once, with a dry run first, and checks the review before and after.
 
+## Project settings, input map, autoloads
+
+`godotwright project set <key> <value>`, `project input add <action> --key Space --joy-button A`, `project autoload add <Name> <res://file>` (godot_project_edit with op set, unset, input_add, input_remove, autoload_add, autoload_remove): changes project.godot with checks, touching only that entry. Dry run first, `--write` (write: true) applies.
+
 ## Fix loop
 
 `godotwright review --only-new` (godot_review with only_new: true): after the first review, only the findings that are new since the last one in full, the rest as one short line each, and how many are fixed.

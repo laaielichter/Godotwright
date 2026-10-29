@@ -8,6 +8,12 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`project set|unset`, `project input add|remove`, `project autoload add|remove`** (MCP `godot_project_edit`): change
+  project.godot without the editor. Settings are checked against the Godot 4.7 reference (name, type, `res://` files),
+  input events are written in the Godot 4 format from short names (`Key:Ctrl+S`, `Mouse:Left`, `JoyButton:A`,
+  `JoyAxis:left_y-`), and autoloads must be a Node script or a scene whose name clashes with no class. Only the lines of
+  that entry change; dry run first, review errors before and after.
+
 - **`rename`** (MCP `godot_rename`): rename a function, signal, variable, class, autoload, input action, group or node
   everywhere, or move a `res://` file with its `.uid` and `.import` files and every reference. Dry run first, refuses a
   name that is taken, and reports the review errors before and after.
