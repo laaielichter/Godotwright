@@ -16,8 +16,8 @@ describe("model brief", () => {
   });
 
   it("says plainly when a kind only matches the family, and does not claim more", () => {
-    const b = briefFor("a mountain");
-    expect(b.result.best.id).toBe("world.terrain.mountain");
+    const b = briefFor("a coast");
+    expect(b.result.best.id).toBe("world.coast");
     expect(b.relation).toBe("family");
     expect(b.text).toContain("Nothing makes exactly this");
     expect(b.text).toContain("godotwright model build terrain");
@@ -32,6 +32,20 @@ describe("model brief", () => {
     expect(family.kinds.length).toBeLessThanOrEqual(3);
     const sibling = briefFor("a go-kart with wheels and an engine");
     expect(sibling.result.best.id.startsWith("vehicle")).toBe(true);
+  });
+
+  it("points to the option of a kind that makes the thing: a lake, a river, an island, a mountain", () => {
+    const lake = briefFor("a lake");
+    expect(lake.relation).toBe("feature");
+    expect(lake.kinds[0]?.kind).toBe("terrain");
+    expect(lake.text).toContain("godotwright model build terrain --set lakeRadius=60");
+    expect(lake.text).toContain("tune it with: lakeX, lakeZ, lakeDepth");
+    expect(briefFor("rivier").text).toContain("--set riverWidth=6");
+    expect(briefFor("an island").text).toContain("--set relief=island");
+    expect(briefFor("berg").text).toContain("--set relief=mountains");
+    // A thing with its own kind keeps it, and a thing no option names falls back to the family.
+    expect(briefFor("tractor").relation).toBe("exact");
+    expect(briefFor("a coast").relation).toBe("family");
   });
 
   it("does not suggest unrelated kinds for something unknown", () => {
