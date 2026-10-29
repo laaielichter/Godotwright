@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GodotApi } from "../src/api/api.js";
 import { aggregate, createCollector, readReports, safeTemplate, validateReport } from "../src/collector/collector.js";
 import { learnFromProjects } from "../src/collector/public.js";
@@ -60,15 +60,18 @@ describe("checking reports again on the collector", () => {
 });
 
 describe("collector server", () => {
-  const dir = mkdtempSync(join(tmpdir(), "godotwright-reports-"));
-  const server = createCollector({ dir, now: () => new Date("2026-11-01T10:00:00Z") });
+  // Each test gets its own report folder and server, so the order of tests does not matter.
+  let dir = "";
+  let server: ReturnType<typeof createCollector>;
   let url = "";
-  beforeAll(async () => {
+  beforeEach(async () => {
+    resetLearning();
+    dir = mkdtempSync(join(tmpdir(), "godotwright-reports-"));
+    server = createCollector({ dir, now: () => new Date("2026-11-01T10:00:00Z") });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
-  afterAll(() => new Promise((done) => server.close(done)));
-  beforeEach(() => resetLearning());
+  afterEach(() => new Promise((done) => server.close(done)));
 
   const post = (body: string, path = "/v1/report") => fetch(`${url}${path}`, { method: "POST", body, headers: { "x-forwarded-for": "203.0.113.9" } });
 
