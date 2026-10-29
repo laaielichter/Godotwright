@@ -90,8 +90,10 @@ Godotwright gets better with every use, without collecting anything personal.
 18. **Recipes.** Ready-made specs in `data/recipes/` (car, tractor, helicopter, airliner, ship, trees,
     wind turbine, container, truck, bus, motorcycle, bicycle, train, tank, light aircraft, fighter, drone, boat, sailboat, piston and jet engine, barn, tower, church, windmill, apartment, bridge, road, railway track, street lamp, fence, power pylon, palm, bush, grass, flower, crate, barrel, chair, table so far), each checked
     against its archetype and tested at the edges of its parameters.
-19. **Recipes are complete** (every archetype can be built), `model recipes` lists them and
-    `model contract --archetype` starts a contract from an archetype. Still to do: a contact-sheet render.
+19. **Recipes for most archetypes.** `model recipes` lists the 41 recipes, and `model contract --archetype` starts a
+    contract from an archetype. The `terrain` kind covers mountains, islands and lakes; `house` and `sea` are kinds too.
+    Not buildable yet: `aircraft.fixed-wing.airplane` (no recipe or kind), and the knowledge-only open-world archetypes
+    coast, river, biome and settlement. Still to do: a contact-sheet render.
 20. **Open worlds.** Step 1 (done): the knowledge, as archetypes in `data/archetypes/world.json`: terrain, mountain,
     island, coast, sea, lake, river, biome and settlement, with the rules of world building (tiles that share their
     border heights, y = 0 as sea level, collision from the same heights, levels of detail, instanced scatter, floating
