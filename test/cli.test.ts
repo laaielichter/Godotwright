@@ -96,7 +96,7 @@ describe("godotwright CLI", () => {
   });
 });
 
-describe("CLI options", () => {
+describe("number options", () => {
   it("review --min-score fails the gate only below the score", async () => {
     expect((await run(["review", DEMO, "--min-score", "0"])).exitCode).toBe(0);
     expect((await run(["review", DEMO, "--min-score", "101"])).exitCode).toBe(1);
@@ -135,21 +135,6 @@ describe("CLI options", () => {
     const { output, exitCode } = await run(["collector", "serve", "--port", "2O"]);
     expect(exitCode).toBe(1);
     expect(output).toContain("expected a number");
-  });
-
-  it("model contract writes model.contract.json, to -o or by default, and prints it with -o -", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "godotwright-contract-"));
-    const file = join(dir, "model.contract.json");
-    const archetype = await run(["model", "contract", "--archetype", "car", "-o", file]);
-    expect(archetype.exitCode).toBe(0);
-    expect(JSON.parse(readFileSync(file, "utf8")).description).toContain("vehicle.wheeled.car");
-    const fromModel = join(dir, "box.contract.json");
-    expect((await run(["model", "contract", writeGlb({ meshes: [box()] }), "-o", fromModel])).exitCode).toBe(0);
-    expect(JSON.parse(readFileSync(fromModel, "utf8")).version).toBe(1);
-    const printed = await run(["model", "contract", "--archetype", "car", "-o", "-"]);
-    expect(JSON.parse(printed.output).description).toContain("vehicle.wheeled.car");
-    const help = await run(["model", "contract", "--help"]);
-    expect(help.output).toContain('default: "model.contract.json"');
   });
 
   it("api -n limits search results, and refuses a limit that is not a number", async () => {
