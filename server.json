@@ -2,18 +2,18 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.laaielichter/godotwright",
   "title": "Godotwright",
-  "description": "Makes coding agents better at Godot 4: offline 4.7 API, project map, headless checks, AAA review.",
+  "description": "Godot 4.7 for coding agents: offline API, headless checks, GDScript review, 3D models from code.",
   "repository": {
     "url": "https://github.com/laaielichter/Godotwright",
     "source": "github"
   },
   "websiteUrl": "https://laaielichter.github.io/Godotwright/",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "godotwright",
-      "version": "0.0.2",
+      "version": "0.1.0",
       "transport": {
         "type": "stdio"
       },
