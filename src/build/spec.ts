@@ -209,6 +209,12 @@ export function mirrorNode(node: BuildNode, name: string): BuildNode {
   return out;
 }
 
+/** Counts nodes that will be written, and refuses the spec once they pass the limit. */
+function spendNodes(counters: Ctx["counters"], amount: number, path: string): void {
+  counters.nodes += amount;
+  if (counters.nodes > LIMITS.nodes) throw new BuildError(`${path}: too many nodes (max ${LIMITS.nodes})`);
+}
+
 function expandName(template: string, index: number, repeated: boolean): string {
   if (template.includes("{i}")) return template.replaceAll("{i}", String(index + 1));
   return repeated ? `${template}_${index + 1}` : template;
@@ -218,7 +224,7 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
   if (!isObj(raw)) throw new BuildError(`${path}: expected an object`);
   const name = raw["name"];
   if (typeof name !== "string" || name === "") throw new BuildError(`${path}: every node needs a "name"`);
-  if (++parent.counters.nodes > LIMITS.nodes) throw new BuildError(`${path}: too many nodes (max ${LIMITS.nodes})`);
+  spendNodes(parent.counters, 1, path);
 
   const scope: Scope = { ...parent.scope };
   if (raw["vars"] !== undefined) {
@@ -245,6 +251,8 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
       if (repeat["phase"] !== undefined) throw new BuildError(`${path}.repeat.phase: only a ring ("around") has a phase`);
       step = vec(repeat["step"], 3, scope, `${path}.repeat.step`);
     }
+    // The first copy is counted above; every other copy is a node too.
+    spendNodes(parent.counters, count - 1, path);
   }
 
   const out: BuildNode[] = [];

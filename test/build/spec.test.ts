@@ -190,6 +190,13 @@ describe("mistakes get a path and a reason", () => {
     expect(() => buildSpec(spec([grid]))).toThrow(new RegExp(`too many nodes \\(max ${LIMITS.nodes}\\)`));
     expect(() => buildSpec(spec([{ name: "E", shape: "ellipsoid", material: "paint", radii: [1, 1, 1], segments: 128, repeat: { count: 500, step: [1, 0, 0] } }]))).toThrow(/triangles/);
   });
+
+  it("counts every copy of a repeated node against the node limit", () => {
+    // 200 rows of 200 cells is 40,000 nodes; the inner repeat must count each of its copies, not just one.
+    const cells = { name: "Cell{i}", shape: "box", size: [1, 1, 1], material: "paint", repeat: { count: 200, step: [0, 1, 0] } };
+    expect(() => buildSpec(spec([{ name: "Row{i}", repeat: { count: 200, step: [2, 0, 0] }, children: [cells] }]))).toThrow(/too many nodes \(max 5000\)/);
+    expect(() => buildSpec(spec([{ name: "Row", repeat: { count: 20, step: [2, 0, 0] }, children: [{ ...cells, repeat: { count: 20, step: [0, 1, 0] } }] }]))).not.toThrow();
+  });
 });
 
 describe("model build --spec and model spec", () => {
