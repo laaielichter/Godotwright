@@ -133,6 +133,13 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     expect(textOf(await call("godot_model_brief", { text: "asdfgh" }))).toContain("No ready-made kind is near this");
   });
 
+  it("builds with collision hints for Godot's importer", async () => {
+    const res = await call("godot_model_build", { kind: "crate", out: "models/crate.glb", collision: "convex" });
+    expect(failed(res)).toBe(false);
+    expect(textOf(res)).toContain("collision on import");
+    expect(readFileSync(`${root}/models/crate.glb`).includes("Lid-convcol")).toBe(true);
+  });
+
   it("shows a model as text, with views, parts and what does not touch", async () => {
     const out = textOf(await call("godot_model_view", { file: "models/ok.glb", width: 40 }));
     expect(out).toContain("FRONT");

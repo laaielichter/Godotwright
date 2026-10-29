@@ -25,7 +25,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 0. `godotwright model brief "<thing>"` (godot_model_brief): one page with the kind to start from, parts, size, rules and the order of work. Start here if you are a small model.
 1. `godotwright model identify "<thing>"` (or the MCP tool godot_model_identify): what it is, its parts, typical size, pivots, what to anticipate.
-2. `godotwright model build <kind> -o out.glb --set name=value` from a ready-made kind (`godotwright model kinds`), or `--spec file.json` for your own tree of named parts (`godotwright model spec` explains the format).
+2. `godotwright model build <kind> -o out.glb --set name=value --collision convex|trimesh` (collision shapes on import) from a ready-made kind (`godotwright model kinds`), or `--spec file.json` for your own tree of named parts (`godotwright model spec` explains the format).
 3. `godotwright model view out.glb` (godot_model_view): front, side and top views as text, a table of the parts, and parts that do not touch the rest.
 4. `godotwright model lint out.glb --archetype <thing>` (godot_model_lint): score and what-it-should-be checks. Fix every error.
 

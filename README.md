@@ -92,6 +92,7 @@ godotwright model view car.glb       # see a model as text: front, side and top 
 godotwright model recipes             # the ready-made recipes and the archetype each one is checked against
 godotwright model recipes tractor     # print one recipe as a spec to edit
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
+godotwright model build house -o house.glb --collision trimesh   # Godot adds collision shapes on import (-col / -convcol names)
 godotwright learn                     # what Godotwright learned on this machine
 ```
 
