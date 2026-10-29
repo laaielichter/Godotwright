@@ -222,6 +222,27 @@ describe("the CLI", () => {
   });
 });
 
+describe("every thing that can be built has parts to compare", () => {
+  it("each archetype with a ready-made kind defines at least one required part, and the kind has them all", async () => {
+    const { allKinds } = await import("../../src/build/generators/index.js");
+    for (const k of allKinds()) {
+      if (!k.archetype) continue;
+      const a = library.resolve(k.archetype);
+      expect(a.parts.some((p) => p.required), k.kind).toBe(true);
+      const report = lintModelFile(writeScene(buildKind(k.kind)), { archetype: a });
+      const missing = report.compared?.required.filter((r) => r.found === 0).map((r) => r.part) ?? [];
+      expect(missing, `${k.kind} is missing required parts`).toEqual([]);
+    }
+  }, 60000);
+
+  it("says so when an archetype defines no required parts, instead of reporting 0 of 0", async () => {
+    const good = writeScene(buildSpec(EXAMPLE_SPEC));
+    const out = (await runCli(["model", "lint", good, "--archetype", "building"])).output;
+    expect(out).toContain("none are defined for this thing, so parts were not compared");
+    expect(out).not.toContain("0 of 0");
+  });
+});
+
 describe("the data", () => {
   it("rejects a replaces that no ancestor can satisfy", () => {
     const list = library.archetypes.map((a) => (a.id === "vehicle.wheeled.car" ? { ...a, parts: [...(a.parts ?? []), { name: "Extra", role: "x", required: false, replaces: ["Nope"] }] } : a));
