@@ -51,16 +51,16 @@ const smoothstep = (edge0: number, edge1: number, x: number): number => {
 };
 
 export const TERRAIN_PARAMS: ParamDef[] = [
-  { name: "tileSize", type: "number", default: 256, min: 64, max: 1024, description: "Width and depth of the tile in metres." },
-  { name: "resolution", type: "enum", default: "129", options: ["33", "65", "129", "257"], description: "Vertices per side. A power of two plus one, so the last row of a tile is the first row of the next." },
+  { name: "tileSize", type: "number", default: 256, min: 64, max: 1024, description: "Width and depth of the tile in metres. All tiles of one world use the same tileSize and resolution: the grid sets the detail of the ground, so another grid gives other heights." },
+  { name: "resolution", type: "enum", default: "129", options: ["33", "65", "129", "257"], description: "Vertices per side. A power of two plus one, so the last row of a tile is the first row of the next. All tiles of one world use the same tileSize and resolution, since the grid sets the detail of the ground." },
   { name: "relief", type: "enum", default: "hills", options: ["plains", "hills", "mountains", "island"], description: "The kind of landscape. An island is one landmass around the world origin with sea floor around it." },
   { name: "maxHeight", type: "number", default: 60, min: 5, max: 1500, description: "Height scale in metres: about the height difference of hills, the peak height of mountains." },
   { name: "baseLevel", type: "number", default: 8, min: -50, max: 200, description: "Average ground height above sea level (y = 0) in metres." },
   { name: "featureSize", type: "number", default: 120, min: 20, max: 1000, description: "Size in metres of the largest bumps (the wavelength of the base noise)." },
   { name: "tileX", type: "integer", default: 0, min: -1000, max: 1000, description: "Place of the tile in the world grid, along x. The tile centre is at tileX * tileSize." },
   { name: "tileZ", type: "integer", default: 0, min: -1000, max: 1000, description: "Place of the tile in the world grid, along z. The tile centre is at tileZ * tileSize." },
-  { name: "seed", type: "integer", default: 1, min: 0, max: 1000000, description: "The same seed gives the same landscape in every tile, so neighbouring tiles continue each other." },
-  { name: "lakeRadius", type: "number", default: 0, min: 0, max: 2000, description: "Radius of a lake in metres; 0 means no lake. The lake is part of the world, so it can span several tiles." },
+  { name: "seed", type: "integer", default: 1, min: 0, max: 1000000, description: "The same seed gives the same landscape in every tile, so neighbouring tiles continue each other when they share their tileSize and resolution." },
+  { name: "lakeRadius", type: "number", default: 0, min: 0, max: 2000, description: "Radius of a lake in metres; 0 means no lake. The lake is part of the world, so it can span several tiles. Its level is the lowest point of the rim, which matches across tiles only when they share their tileSize and resolution." },
   { name: "lakeX", type: "number", default: 0, min: -100000, max: 100000, description: "World x of the lake centre in metres." },
   { name: "lakeZ", type: "number", default: 0, min: -100000, max: 100000, description: "World z of the lake centre in metres." },
   { name: "lakeDepth", type: "number", default: 4, min: 0.5, max: 100, description: "How deep the lake is below its water level at the centre, in metres." },
@@ -177,7 +177,7 @@ const UV_METERS = 8;
 export const terrain: Generator = {
   kind: "terrain",
   archetype: "world.terrain",
-  description: "A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals and an optional lake. Tiles with the same seed continue each other exactly, so a world can be cut into tiles.",
+  description: "A heightmap terrain tile: a grid of ground heights from seeded noise (plains, hills, mountains or an island), with smooth normals and an optional lake. Tiles with the same seed, tileSize and resolution continue each other exactly, so a world can be cut into tiles.",
   params: TERRAIN_PARAMS,
   build(p: Params): BuildScene {
     const size = p["tileSize"] as number, n = Number(p["resolution"]);

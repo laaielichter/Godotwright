@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadLibrary } from "../../src/archetype/library.js";
 import { buildGlb } from "../../src/build/glb.js";
 import { buildKind } from "../../src/build/generators/index.js";
-import { lakeOf, noise2, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
+import { lakeOf, noise2, terrain, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
 import { resolveParams } from "../../src/build/params.js";
 import { lintModelFile } from "../../src/model/lint.js";
 import { runCli } from "../helpers.js";
@@ -93,6 +93,13 @@ describe("terrain", () => {
     // The land is in the middle and the sea floor at the corners of the tile.
     expect(island.y[Math.floor(island.y.length / 2)]!).toBeGreaterThan(0);
     expect(island.y[0]!).toBeLessThan(0);
+  });
+
+  it("says that the tiles of one world share their grid, because the ground and the lakes depend on it", () => {
+    for (const name of ["tileSize", "resolution", "lakeRadius"]) {
+      expect(TERRAIN_PARAMS.find((d) => d.name === name)!.description, name).toMatch(/tileSize and resolution/);
+    }
+    expect(terrain.description).toMatch(/same seed, tileSize and resolution/);
   });
 
   it("rejects a resolution that is not a power of two plus one, and a tile outside the range", () => {
