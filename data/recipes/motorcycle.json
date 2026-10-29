@@ -1,0 +1,370 @@
+{
+ "version": 1,
+ "name": "motorcycle",
+ "archetype": "vehicle.wheeled.motorcycle",
+ "description": "A motorcycle: a frame with tank, seat and engine, a rear wheel on a swingarm, and a fork that steers about a raked axis and carries the front wheel and handlebar.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 2.1,
+   "min": 1.7,
+   "max": 2.5,
+   "description": "Overall length in metres."
+  },
+  {
+   "name": "wheelRadius",
+   "type": "number",
+   "default": 0.32,
+   "min": 0.25,
+   "max": 0.4,
+   "description": "Tyre radius."
+  }
+ ],
+ "materials": {
+  "mc_paint": {
+   "color": [
+    0.7,
+    0.05,
+    0.05
+   ],
+   "metallic": 0.3,
+   "roughness": 0.35
+  },
+  "mc_black": {
+   "color": [
+    0.05,
+    0.05,
+    0.06
+   ],
+   "metallic": 0.5,
+   "roughness": 0.4
+  }
+ },
+ "nodes": [
+  {
+   "name": "Motorcycle",
+   "material": "mc_paint",
+   "vars": {
+    "R": "$wheelRadius",
+    "wb": "$length * 0.7",
+    "hy": "$wheelRadius + 0.72",
+    "hz": "$length * 0.35 - 0.36"
+   },
+   "children": [
+    {
+     "name": "Frame",
+     "children": [
+      {
+       "name": "Tank",
+       "shape": "ellipsoid",
+       "radii": [
+        0.18,
+        0.17,
+        0.32
+       ],
+       "at": [
+        0,
+        "$R + 0.78",
+        "$wb * 0.12"
+       ],
+       "segments": 20
+      },
+      {
+       "name": "Seat",
+       "shape": "box",
+       "material": "mc_black",
+       "size": [
+        0.26,
+        0.1,
+        "$wb * 0.42"
+       ],
+       "at": [
+        0,
+        "$R + 0.7",
+        "-$wb * 0.2"
+       ]
+      },
+      {
+       "name": "Engine",
+       "shape": "box",
+       "material": "mc_black",
+       "size": [
+        0.3,
+        0.32,
+        0.4
+       ],
+       "at": [
+        0,
+        "$R + 0.2",
+        0
+       ]
+      },
+      {
+       "name": "Tail",
+       "shape": "box",
+       "size": [
+        0.2,
+        0.12,
+        0.35
+       ],
+       "at": [
+        0,
+        "$R + 0.78",
+        "-$wb * 0.43"
+       ]
+      },
+      {
+       "name": "Exhaust",
+       "shape": "cylinder",
+       "material": "metal",
+       "axis": "z",
+       "radius": 0.05,
+       "height": "$wb * 0.55",
+       "at": [
+        0.2,
+        "$R + 0.12",
+        "-$wb * 0.22"
+       ]
+      },
+      {
+       "name": "Swingarm",
+       "shape": "box",
+       "material": "mc_black",
+       "size": [
+        0.22,
+        0.07,
+        "$wb * 0.42"
+       ],
+       "at": [
+        0,
+        "$R + 0.05",
+        "-$wb * 0.3"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "WheelRear",
+     "at": [
+      0,
+      "$R",
+      "-$wb / 2"
+     ],
+     "children": [
+      {
+       "name": "Tread",
+       "shape": "lathe",
+       "material": "rubber",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "segments": 28,
+       "profile": [
+        [
+         "$R*0.52",
+         "-0.18/2"
+        ],
+        [
+         "$R*0.9",
+         "-0.18/2"
+        ],
+        [
+         "$R",
+         "-0.18*0.34"
+        ],
+        [
+         "$R",
+         "0.18*0.34"
+        ],
+        [
+         "$R*0.9",
+         "0.18/2"
+        ],
+        [
+         "$R*0.52",
+         "0.18/2"
+        ]
+       ]
+      },
+      {
+       "name": "Rim",
+       "shape": "lathe",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "segments": 28,
+       "profile": [
+        [
+         0,
+         "-0.18*0.53"
+        ],
+        [
+         "$R*0.53",
+         "-0.18*0.53"
+        ],
+        [
+         "$R*0.47",
+         0
+        ],
+        [
+         "$R*0.53",
+         "0.18*0.53"
+        ],
+        [
+         0,
+         "0.18*0.53"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Fork",
+     "at": [
+      0,
+      "$hy",
+      "$hz"
+     ],
+     "rotate": [
+      -27,
+      0,
+      0
+     ],
+     "children": [
+      {
+       "name": "Tubes",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        0.2,
+        0.8,
+        0.05
+       ],
+       "offset": [
+        0,
+        -0.4,
+        0
+       ]
+      },
+      {
+       "name": "Handlebar",
+       "shape": "box",
+       "material": "mc_black",
+       "size": [
+        0.72,
+        0.04,
+        0.05
+       ],
+       "at": [
+        0,
+        0.07,
+        0
+       ]
+      },
+      {
+       "name": "Headlight",
+       "shape": "ellipsoid",
+       "material": "frame_white",
+       "radii": [
+        0.1,
+        0.1,
+        0.07
+       ],
+       "at": [
+        0,
+        -0.05,
+        0.12
+       ]
+      },
+      {
+       "name": "WheelFront",
+       "at": [
+        0,
+        -0.8,
+        0
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.15/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.15/2"
+          ],
+          [
+           "$R",
+           "-0.15*0.34"
+          ],
+          [
+           "$R",
+           "0.15*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.15/2"
+          ],
+          [
+           "$R*0.52",
+           "0.15/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.15*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.15*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.15*0.53"
+          ],
+          [
+           0,
+           "0.15*0.53"
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

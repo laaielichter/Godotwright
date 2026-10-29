@@ -1,0 +1,281 @@
+{
+ "version": 1,
+ "name": "tank",
+ "archetype": "vehicle.tracked.tank",
+ "description": "A main battle tank: a sloped hull, two track units with a row of road wheels each, and a turret on the vertical turret-ring axis that carries a gun hinged at its trunnion.",
+ "params": [
+  {
+   "name": "hullLength",
+   "type": "number",
+   "default": 7.0,
+   "min": 5.5,
+   "max": 8.5,
+   "description": "Hull length in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 3.4,
+   "min": 3.0,
+   "max": 3.8,
+   "description": "Width of the hull and tracks in metres (the road wheels stick out about 0.15 m)."
+  },
+  {
+   "name": "gunLength",
+   "type": "number",
+   "default": 3.3,
+   "min": 2.5,
+   "max": 4.5,
+   "description": "Gun barrel length beyond the turret."
+  },
+  {
+   "name": "roadWheels",
+   "type": "integer",
+   "default": 6,
+   "min": 4,
+   "max": 8,
+   "description": "Road wheels per side."
+  }
+ ],
+ "materials": {
+  "tank_paint": {
+   "color": [
+    0.3,
+    0.34,
+    0.2
+   ],
+   "metallic": 0.1,
+   "roughness": 0.7
+  },
+  "tank_dark": {
+   "color": [
+    0.12,
+    0.13,
+    0.1
+   ],
+   "metallic": 0.2,
+   "roughness": 0.8
+  }
+ },
+ "nodes": [
+  {
+   "name": "Tank",
+   "material": "tank_paint",
+   "vars": {
+    "HL": "$hullLength / 2",
+    "tx": "$width / 2 - 0.4",
+    "hullBot": 0.55,
+    "hullTop": 1.9,
+    "ty": 2.0
+   },
+   "children": [
+    {
+     "name": "Hull",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "-$HL",
+       "superellipse": {
+        "width": "$width - 1.0",
+        "height": "$hullTop - $hullBot - 0.4",
+        "n": 5,
+        "count": 24,
+        "cy": "($hullTop + $hullBot) / 2 - 0.1"
+       }
+      },
+      {
+       "z": "-$HL + 0.5",
+       "superellipse": {
+        "width": "$width - 0.7",
+        "height": "$hullTop - $hullBot",
+        "n": 5,
+        "count": 24,
+        "cy": "($hullTop + $hullBot) / 2"
+       }
+      },
+      {
+       "z": "$HL - 1.4",
+       "superellipse": {
+        "width": "$width - 0.7",
+        "height": "$hullTop - $hullBot",
+        "n": 5,
+        "count": 24,
+        "cy": "($hullTop + $hullBot) / 2"
+       }
+      },
+      {
+       "z": "$HL",
+       "superellipse": {
+        "width": "$width - 1.4",
+        "height": "$hullTop - $hullBot - 0.7",
+        "n": 5,
+        "count": 24,
+        "cy": "($hullTop + $hullBot) / 2 - 0.35"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Track_L",
+     "shape": "box",
+     "material": "tank_dark",
+     "size": [
+      0.7,
+      0.9,
+      "$hullLength + 0.5"
+     ],
+     "at": [
+      "$tx",
+      0.45,
+      0
+     ],
+     "mirror": "Track_R"
+    },
+    {
+     "name": "RoadWheel_L{i}",
+     "shape": "cylinder",
+     "material": "metal",
+     "rotate": [
+      0,
+      0,
+      90
+     ],
+     "radius": 0.36,
+     "height": 0.2,
+     "segments": 16,
+     "at": [
+      "$width / 2 + 0.03",
+      0.45,
+      "$HL - 0.7"
+     ],
+     "repeat": {
+      "count": "$roadWheels",
+      "step": [
+       0,
+       0,
+       "-($hullLength - 1.4) / ($roadWheels - 1)"
+      ]
+     },
+     "mirror": "RoadWheel_R{i}"
+    },
+    {
+     "name": "Yaw",
+     "at": [
+      0,
+      "$hullTop",
+      "-0.4"
+     ],
+     "children": [
+      {
+       "name": "Turret",
+       "shape": "loft",
+       "material": "tank_paint",
+       "sections": [
+        {
+         "z": -1.7,
+         "superellipse": {
+          "width": 2.2,
+          "height": 0.55,
+          "n": 4,
+          "count": 24,
+          "cy": 0.27
+         }
+        },
+        {
+         "z": -0.4,
+         "superellipse": {
+          "width": 2.5,
+          "height": 0.85,
+          "n": 4,
+          "count": 24,
+          "cy": 0.42
+         }
+        },
+        {
+         "z": 1.0,
+         "superellipse": {
+          "width": 2.0,
+          "height": 0.7,
+          "n": 4,
+          "count": 24,
+          "cy": 0.35
+         }
+        },
+        {
+         "z": 1.6,
+         "superellipse": {
+          "width": 1.2,
+          "height": 0.5,
+          "n": 4,
+          "count": 24,
+          "cy": 0.25
+         }
+        }
+       ]
+      },
+      {
+       "name": "Hatch",
+       "shape": "cylinder",
+       "material": "tank_dark",
+       "radius": 0.25,
+       "height": 0.15,
+       "segments": 14,
+       "at": [
+        0.6,
+        0.85,
+        -0.5
+       ]
+      },
+      {
+       "name": "Gun",
+       "at": [
+        0,
+        0.2,
+        1.3
+       ],
+       "children": [
+        {
+         "name": "Pipe",
+         "shape": "cylinder",
+         "material": "tank_dark",
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "radius": 0.07,
+         "height": "$gunLength",
+         "segments": 14,
+         "at": [
+          0,
+          0.25,
+          0
+         ],
+         "offset": [
+          0,
+          "$gunLength / 2",
+          0
+         ]
+        },
+        {
+         "name": "Mantlet",
+         "shape": "box",
+         "size": [
+          0.9,
+          0.5,
+          0.25
+         ],
+         "at": [
+          0,
+          0.25,
+          0.125
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

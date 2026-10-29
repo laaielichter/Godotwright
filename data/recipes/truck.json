@@ -1,0 +1,430 @@
+{
+ "version": 1,
+ "name": "truck",
+ "archetype": "vehicle.wheeled.truck",
+ "description": "A rigid lorry: a cab with windscreen, a cargo box on a ladder frame, three axles (six wheels, the front ones steer) and mirrors.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 8.5,
+   "min": 6,
+   "max": 12,
+   "description": "Overall length in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 2.5,
+   "min": 2.3,
+   "max": 2.6,
+   "description": "Width (EU maximum 2.55 m)."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 3.6,
+   "min": 3.0,
+   "max": 4.0,
+   "description": "Height of the cargo box."
+  },
+  {
+   "name": "wheelRadius",
+   "type": "number",
+   "default": 0.5,
+   "min": 0.4,
+   "max": 0.6,
+   "description": "Tyre radius."
+  }
+ ],
+ "materials": {
+  "truck_cab": {
+   "color": [
+    0.85,
+    0.85,
+    0.87
+   ],
+   "metallic": 0.3,
+   "roughness": 0.4
+  },
+  "truck_box": {
+   "color": [
+    0.2,
+    0.35,
+    0.6
+   ],
+   "metallic": 0.2,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "Truck",
+   "material": "truck_cab",
+   "vars": {
+    "R": "$wheelRadius",
+    "L2": "$length / 2",
+    "frame": "$wheelRadius + 0.45",
+    "cabL": 2.3,
+    "x": "$width / 2 - 0.15",
+    "boxBottom": "$wheelRadius + 0.75"
+   },
+   "children": [
+    {
+     "name": "Cab",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "$L2 - $cabL",
+       "superellipse": {
+        "width": "$width * 0.98",
+        "height": 2.1,
+        "n": 5,
+        "count": 24,
+        "cy": "$boxBottom + 1.0"
+       }
+      },
+      {
+       "z": "$L2 - 0.3",
+       "superellipse": {
+        "width": "$width * 0.98",
+        "height": 2.1,
+        "n": 5,
+        "count": 24,
+        "cy": "$boxBottom + 1.0"
+       }
+      },
+      {
+       "z": "$L2 - 0.05",
+       "superellipse": {
+        "width": "$width * 0.9",
+        "height": 1.8,
+        "n": 5,
+        "count": 24,
+        "cy": "$boxBottom + 0.9"
+       }
+      },
+      {
+       "z": "$L2",
+       "superellipse": {
+        "width": "$width * 0.82",
+        "height": 1.5,
+        "n": 5,
+        "count": 24,
+        "cy": "$boxBottom + 0.6"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Windscreen",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$width * 0.8",
+      0.7,
+      0.08
+     ],
+     "at": [
+      0,
+      "$boxBottom + 1.35",
+      "$L2 - 0.2"
+     ]
+    },
+    {
+     "name": "Chassis",
+     "shape": "box",
+     "material": "truck_box",
+     "size": [
+      "$width",
+      "$height - $boxBottom",
+      "$length - $cabL - 0.3"
+     ],
+     "at": [
+      0,
+      "($height + $boxBottom) / 2",
+      "-$cabL / 2 - 0.15"
+     ]
+    },
+    {
+     "name": "Frame",
+     "shape": "box",
+     "material": "metal",
+     "size": [
+      "$width * 0.55",
+      0.35,
+      "$length - 0.4"
+     ],
+     "at": [
+      0,
+      "$frame",
+      0
+     ]
+    },
+    {
+     "name": "Wheels",
+     "children": [
+      {
+       "name": "Wheel_FL",
+       "at": [
+        "$x",
+        "$R",
+        "$L2 - 0.95"
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.3/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.3/2"
+          ],
+          [
+           "$R",
+           "-0.3*0.34"
+          ],
+          [
+           "$R",
+           "0.3*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.3/2"
+          ],
+          [
+           "$R*0.52",
+           "0.3/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.3*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.3*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.3*0.53"
+          ],
+          [
+           0,
+           "0.3*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheel_FR"
+      },
+      {
+       "name": "Wheel_ML",
+       "at": [
+        "$x",
+        "$R",
+        "-$L2 + 2.6"
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.3/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.3/2"
+          ],
+          [
+           "$R",
+           "-0.3*0.34"
+          ],
+          [
+           "$R",
+           "0.3*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.3/2"
+          ],
+          [
+           "$R*0.52",
+           "0.3/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.3*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.3*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.3*0.53"
+          ],
+          [
+           0,
+           "0.3*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheel_MR"
+      },
+      {
+       "name": "Wheel_RL",
+       "at": [
+        "$x",
+        "$R",
+        "-$L2 + 1.2"
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.3/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.3/2"
+          ],
+          [
+           "$R",
+           "-0.3*0.34"
+          ],
+          [
+           "$R",
+           "0.3*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.3/2"
+          ],
+          [
+           "$R*0.52",
+           "0.3/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.3*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.3*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.3*0.53"
+          ],
+          [
+           0,
+           "0.3*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheel_RR"
+      }
+     ]
+    },
+    {
+     "name": "Mirror_L",
+     "shape": "box",
+     "size": [
+      0.12,
+      0.35,
+      0.08
+     ],
+     "at": [
+      "$width / 2 + 0.12",
+      "$boxBottom + 1.5",
+      "$L2 - 0.5"
+     ],
+     "mirror": "Mirror_R"
+    }
+   ]
+  }
+ ]
+}

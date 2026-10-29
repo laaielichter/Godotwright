@@ -1,0 +1,635 @@
+{
+ "version": 1,
+ "name": "train",
+ "archetype": "vehicle.rail.train",
+ "description": "A single railcar or locomotive-style coach: a streamlined body with window band and windscreen, two bogies that can pivot under the body, and wheels on standard gauge (1.435 m).",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 20,
+   "min": 15,
+   "max": 27,
+   "description": "Body length in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 2.9,
+   "min": 2.8,
+   "max": 3.15,
+   "description": "Body width in metres."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 4.0,
+   "min": 3.6,
+   "max": 4.4,
+   "description": "Roof height above the rail."
+  },
+  {
+   "name": "wheelRadius",
+   "type": "number",
+   "default": 0.46,
+   "min": 0.4,
+   "max": 0.55,
+   "description": "Wheel radius."
+  }
+ ],
+ "materials": {
+  "train_paint": {
+   "color": [
+    0.75,
+    0.75,
+    0.78
+   ],
+   "metallic": 0.3,
+   "roughness": 0.4
+  },
+  "train_stripe": {
+   "color": [
+    0.7,
+    0.1,
+    0.1
+   ],
+   "metallic": 0.2,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "Train",
+   "material": "train_paint",
+   "vars": {
+    "R": "$wheelRadius",
+    "L2": "$length / 2",
+    "bot": "2 * $wheelRadius + 0.2"
+   },
+   "children": [
+    {
+     "name": "Body",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "-$L2",
+       "superellipse": {
+        "width": "$width * 0.95",
+        "height": "$height - $bot",
+        "n": 6,
+        "count": 28,
+        "cy": "($height + $bot) / 2"
+       }
+      },
+      {
+       "z": "-$L2 + 0.4",
+       "superellipse": {
+        "width": "$width",
+        "height": "$height - $bot",
+        "n": 6,
+        "count": 28,
+        "cy": "($height + $bot) / 2"
+       }
+      },
+      {
+       "z": "$L2 - 2.0",
+       "superellipse": {
+        "width": "$width",
+        "height": "$height - $bot",
+        "n": 6,
+        "count": 28,
+        "cy": "($height + $bot) / 2"
+       }
+      },
+      {
+       "z": "$L2 - 0.5",
+       "superellipse": {
+        "width": "$width * 0.94",
+        "height": "$height - $bot - 0.2",
+        "n": 6,
+        "count": 28,
+        "cy": "($height + $bot) / 2 - 0.1"
+       }
+      },
+      {
+       "z": "$L2",
+       "superellipse": {
+        "width": "$width * 0.8",
+        "height": "$height - $bot - 0.7",
+        "n": 6,
+        "count": 28,
+        "cy": "($height + $bot) / 2 - 0.35"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Stripe",
+     "shape": "box",
+     "material": "train_stripe",
+     "size": [
+      "$width + 0.03",
+      0.35,
+      "$length - 3"
+     ],
+     "at": [
+      0,
+      "$bot + 0.7",
+      -0.3
+     ]
+    },
+    {
+     "name": "Glass",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$width + 0.02",
+      0.8,
+      "$length - 4"
+     ],
+     "at": [
+      0,
+      "$bot + 1.7",
+      -0.6
+     ]
+    },
+    {
+     "name": "Windscreen",
+     "shape": "box",
+     "material": "glass",
+     "size": [
+      "$width * 0.7",
+      1.0,
+      0.1
+     ],
+     "at": [
+      0,
+      "$bot + 1.75",
+      "$L2 - 0.25"
+     ]
+    },
+    {
+     "name": "Roof",
+     "shape": "box",
+     "material": "metal",
+     "size": [
+      1.2,
+      0.3,
+      "$length * 0.5"
+     ],
+     "at": [
+      0,
+      "$height + 0.12",
+      -2
+     ]
+    },
+    {
+     "name": "Bogie_F",
+     "at": [
+      0,
+      "$R",
+      "$L2 - 3.8"
+     ],
+     "children": [
+      {
+       "name": "Frame",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        1.9,
+        0.3,
+        2.6
+       ],
+       "at": [
+        0,
+        0.1,
+        0
+       ]
+      },
+      {
+       "name": "Axle_F",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.06,
+       "height": 1.5,
+       "segments": 10,
+       "at": [
+        0,
+        0,
+        0.9
+       ]
+      },
+      {
+       "name": "Axle_R",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.06,
+       "height": 1.5,
+       "segments": 10,
+       "at": [
+        0,
+        0,
+        -0.9
+       ]
+      },
+      {
+       "name": "Wheelset_FL",
+       "at": [
+        0.75,
+        0,
+        0.9
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.13/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.13/2"
+          ],
+          [
+           "$R",
+           "-0.13*0.34"
+          ],
+          [
+           "$R",
+           "0.13*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.13/2"
+          ],
+          [
+           "$R*0.52",
+           "0.13/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.13*0.53"
+          ],
+          [
+           0,
+           "0.13*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheelset_FR"
+      },
+      {
+       "name": "Wheelset_RL",
+       "at": [
+        0.75,
+        0,
+        -0.9
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.13/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.13/2"
+          ],
+          [
+           "$R",
+           "-0.13*0.34"
+          ],
+          [
+           "$R",
+           "0.13*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.13/2"
+          ],
+          [
+           "$R*0.52",
+           "0.13/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.13*0.53"
+          ],
+          [
+           0,
+           "0.13*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheelset_RR"
+      }
+     ]
+    },
+    {
+     "name": "Bogie_R",
+     "at": [
+      0,
+      "$R",
+      "-$L2 + 3.8"
+     ],
+     "children": [
+      {
+       "name": "Frame",
+       "shape": "box",
+       "material": "metal",
+       "size": [
+        1.9,
+        0.3,
+        2.6
+       ],
+       "at": [
+        0,
+        0.1,
+        0
+       ]
+      },
+      {
+       "name": "Axle_F",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.06,
+       "height": 1.5,
+       "segments": 10,
+       "at": [
+        0,
+        0,
+        0.9
+       ]
+      },
+      {
+       "name": "Axle_R",
+       "shape": "cylinder",
+       "material": "metal",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "radius": 0.06,
+       "height": 1.5,
+       "segments": 10,
+       "at": [
+        0,
+        0,
+        -0.9
+       ]
+      },
+      {
+       "name": "Wheelset_FL",
+       "at": [
+        0.75,
+        0,
+        0.9
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.13/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.13/2"
+          ],
+          [
+           "$R",
+           "-0.13*0.34"
+          ],
+          [
+           "$R",
+           "0.13*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.13/2"
+          ],
+          [
+           "$R*0.52",
+           "0.13/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.13*0.53"
+          ],
+          [
+           0,
+           "0.13*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheelset_FR"
+      },
+      {
+       "name": "Wheelset_RL",
+       "at": [
+        0.75,
+        0,
+        -0.9
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           "$R*0.52",
+           "-0.13/2"
+          ],
+          [
+           "$R*0.9",
+           "-0.13/2"
+          ],
+          [
+           "$R",
+           "-0.13*0.34"
+          ],
+          [
+           "$R",
+           "0.13*0.34"
+          ],
+          [
+           "$R*0.9",
+           "0.13/2"
+          ],
+          [
+           "$R*0.52",
+           "0.13/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 28,
+         "profile": [
+          [
+           0,
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.53",
+           "-0.13*0.53"
+          ],
+          [
+           "$R*0.47",
+           0
+          ],
+          [
+           "$R*0.53",
+           "0.13*0.53"
+          ],
+          [
+           0,
+           "0.13*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheelset_RR"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
