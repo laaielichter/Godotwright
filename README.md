@@ -224,6 +224,11 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 | `godot_check` | Run Godot headless and report errors as file:line |
 | `godot_checklist` | Every AAA rule with its fix |
 | `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
+| `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants, what to anticipate (English or Dutch) |
+| `godot_model_spec` | The model spec format, an example and the ready-made kinds |
+| `godot_model_build` | Build a clean `.glb` from a kind or a spec (written inside the project), and lint it |
+| `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
+| `godot_model_inspect` | What is in a `.glb`: nodes, triangles, textures, size |
 
 Pick a profile with `--tier`:
 
