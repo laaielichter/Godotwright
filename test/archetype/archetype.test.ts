@@ -289,6 +289,14 @@ describe("identify reads the subject, not the place or a word it borrows", () =>
   });
 });
 
+describe("identify gives each family its own words", () => {
+  it("knows a glider as an unpowered aeroplane, not as a light aircraft that needs a propeller", () => {
+    expect(best("glider")).toBe("aircraft.fixed-wing.glider");
+    expect(best("zweefvliegtuig")).toBe("aircraft.fixed-wing.glider");
+    expect(library.resolve("aircraft.fixed-wing.glider").parts.map((p) => p.name)).not.toContain("Propeller");
+  });
+});
+
 describe("the alias rules compare words the way identify does", () => {
   const twin = (id: string, alias: string): Archetype => ({ id: `thing.${id}`, extends: "thing", name: id, description: "d", aliases: [alias] });
 

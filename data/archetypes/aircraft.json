@@ -294,9 +294,7 @@
    "piper",
    "prop plane",
    "tweedekker",
-   "biplane",
-   "glider",
-   "zweefvliegtuig"
+   "biplane"
   ],
   "extends": "aircraft.fixed-wing.airplane",
   "parts": [
@@ -336,6 +334,16 @@
    "source": "general knowledge: typical production range, not a standard; a Cessna 172 is about 8.3 x 11.0 x 2.7 m",
    "confidence": "C"
   }
+ },
+ {
+  "id": "aircraft.fixed-wing.glider",
+  "name": "glider",
+  "description": "An aeroplane without an engine: it flies on the lift of rising air.",
+  "aliases": [
+   "glider",
+   "zweefvliegtuig"
+  ],
+  "extends": "aircraft.fixed-wing.airplane"
  },
  {
   "id": "aircraft.fixed-wing.fighter",

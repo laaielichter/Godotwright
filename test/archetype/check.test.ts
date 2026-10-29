@@ -30,6 +30,16 @@ describe("a good model passes", () => {
     expect(check(writeScene(buildKind("house", { roof: "hip", floors: 3, chimney: false })), "huis").filter((f) => f.severity !== "info")).toEqual([]);
   });
 
+  it("does not ask a glider for a propeller", () => {
+    const glider = writeScene(buildSpec({ version: 1, nodes: [{ name: "Glider", material: "paint", children: [
+      { name: "Fuselage", shape: "box", size: [0.6, 0.8, 8], at: [0, 0.6, 0] },
+      { name: "WingLeft", shape: "box", size: [8, 0.1, 1.2], at: [4.3, 0.8, 0] },
+      { name: "WingRight", shape: "box", size: [8, 0.1, 1.2], at: [-4.3, 0.8, 0] },
+    ] }] }));
+    expect(chooseArchetype("glider", library).archetype.id).toBe("aircraft.fixed-wing.glider");
+    expect(rules(glider, "glider")).not.toContain("archetype/missing-part");
+  });
+
   it("lists the usual parts that are not there, once", () => {
     const f = check(writeScene(buildSpec(EXAMPLE_SPEC)), "car").filter((x) => x.rule === "archetype/optional-part");
     expect(f).toHaveLength(1);
