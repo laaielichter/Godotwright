@@ -1,4 +1,4 @@
-import type { FunctionInfo, LogicalLine } from "../../godot/gdscript.js";
+import { matchingParen, type FunctionInfo, type LogicalLine } from "../../godot/gdscript.js";
 import { finding, type Finding } from "../rules.js";
 import type { ProjectModel } from "../model.js";
 
@@ -64,9 +64,23 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
   return out;
 }
 
-/** Statements in a function body (not the `func` line itself). */
+/** Statements in a function body, including one written on the `func` line: `func _process(d): print(d)`. */
 export function bodyOf(lines: LogicalLine[], fn: FunctionInfo): LogicalLine[] {
-  return lines.filter((l) => l.line > fn.line && l.line <= fn.endLine && l.indent > fn.indent);
+  const body = lines.filter((l) => l.line > fn.line && l.line <= fn.endLine && l.indent > fn.indent);
+  const inline = inlineBody(lines.find((l) => l.line === fn.line), fn);
+  return inline ? [inline, ...body] : body;
+}
+
+/** The statement after the colon that ends the `func` header, as its own line; undefined when the body is below. */
+function inlineBody(line: LogicalLine | undefined, fn: FunctionInfo): LogicalLine | undefined {
+  const head = line ? new RegExp(`\\bfunc\\s+${fn.name}\\s*\\(`).exec(line.code) : null;
+  if (!line || !head) return undefined;
+  const colon = line.code.indexOf(":", matchingParen(line.code, head.index + head[0].length - 1));
+  if (colon < 0) return undefined;
+  const code = line.code.slice(colon + 1).trim();
+  if (code === "") return undefined;
+  // `text` and `code` have the same length, so the same offset works for both.
+  return { text: line.text.slice(colon + 1).trim(), code, line: line.line, endLine: line.line, indent: fn.indent + 4 };
 }
 
 export function checkScenePerformance(pm: ProjectModel): Finding[] {

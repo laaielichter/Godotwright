@@ -267,6 +267,18 @@ describe("review robustness", () => {
     });
   });
 
+  it("checks per-frame functions whose body is on the func line", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": 'extends Node\n\nfunc _process(delta: float) -> void: print("tick")\n\n\nfunc _physics_process(delta: float) -> void: pass\n',
+    });
+    const performance = reviewProject(root).findings.filter((f) => f.category === "performance").map(formatFinding);
+    expect(performance).toEqual([
+      "res://main.gd:3: info [performance/print-per-frame] print() in _process() prints every frame and slows the game.",
+      "res://main.gd:6: info [performance/empty-callback] _physics_process() is empty; Godot still calls it every frame.",
+    ]);
+  });
+
   it("does not report a group that add_to_group() names with a constant", () => {
     const count = ["func count() -> int:", '\treturn get_tree().get_nodes_in_group("players").size()', ""].join("\n");
     const named = makeProject({
