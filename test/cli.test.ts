@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -34,6 +34,46 @@ async function run(args: string[]): Promise<{ output: string; exitCode: number }
   } finally {
     process.exitCode = previous;
   }
+}
+
+/**
+ * A stand-in for the Godot binary. It logs each call (not --version), copies the checker script it
+ * is given next to the log, and either finishes at once or hangs, to test the timeout.
+ */
+function fakeGodot(hang = false): { bin: string; dir: string; calls: () => string[][] } {
+  const dir = mkdtempSync(join(tmpdir(), "fake-godot-cli-"));
+  const bin = join(dir, "godot");
+  writeFileSync(
+    bin,
+    `#!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
+const args = process.argv.slice(2);
+if (args.includes("--version")) { console.log("4.7.2.stable.official.fake"); process.exit(0); }
+fs.appendFileSync(path.join(${JSON.stringify(dir)}, "calls.log"), JSON.stringify(args) + "\\n");
+if (${hang}) {
+  setInterval(() => {}, 1000);
+} else {
+  const script = args.indexOf("--script");
+  if (script >= 0) {
+    const root = args[args.indexOf("--path") + 1];
+    fs.copyFileSync(path.join(root, args[script + 1].replace("res://", "")), path.join(${JSON.stringify(dir)}, "check.gd"));
+    process.stderr.write("GODOTWRIGHT_DONE 2 1\\n");
+  }
+  process.exit(0);
+}
+`,
+  );
+  chmodSync(bin, 0o755);
+  const log = join(dir, "calls.log");
+  return { bin, dir, calls: () => (existsSync(log) ? readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line) as string[]) : []) };
+}
+
+/** A throwaway copy of the demo project, so the checker does not write into the fixture. */
+function copyDemo(): string {
+  const dir = mkdtempSync(join(tmpdir(), "godotwright-cli-demo-"));
+  cpSync(DEMO, dir, { recursive: true });
+  return dir;
 }
 
 describe("godotwright CLI", () => {
@@ -104,4 +144,50 @@ describe("number options", () => {
     expect(bad.exitCode).toBe(1);
     expect(bad.output).toContain("expected a number");
   });
+});
+
+describe("godotwright check options", () => {
+  it("runs the main scene for the frames given to --run, and keeps the project path", async () => {
+    const root = copyDemo();
+    const godot = fakeGodot();
+    const { exitCode } = await run(["check", root, "--godot", godot.bin, "--no-import", "--run", "300"]);
+    expect(exitCode).toBe(0);
+    expect(godot.calls().at(-1)?.slice(-2)).toEqual(["--quit-after", "300"]);
+  });
+
+  it("refuses --run with a project path after it, instead of checking the current folder", async () => {
+    const root = copyDemo();
+    const godot = fakeGodot();
+    const { output, exitCode } = await run(["check", "--run", root, "--godot", godot.bin]);
+    expect(exitCode).toBe(1);
+    expect(output).toContain("whole number of frames");
+    expect(godot.calls()).toEqual([]);
+  });
+
+  it("takes --exclude repeatable, so a project path after it is still the project", async () => {
+    const root = copyDemo();
+    const godot = fakeGodot();
+    const { exitCode } = await run(["check", "--exclude", "addons", "--exclude", "tools", root, "--godot", godot.bin, "--no-import"]);
+    expect(exitCode).toBe(0);
+    expect(readFileSync(join(godot.dir, "check.gd"), "utf8")).toContain('const EXCLUDE: Array[String] = ["res://addons", "res://tools"]');
+  });
+
+  it("refuses a --timeout that is not a positive number, instead of waiting without a limit", async () => {
+    const root = copyDemo();
+    const godot = fakeGodot();
+    for (const value of ["6O", "0", "-5"]) {
+      const { output, exitCode } = await run(["check", root, "--godot", godot.bin, "--timeout", value]);
+      expect(exitCode, value).toBe(1);
+      expect(output, value).toContain("expected a number");
+    }
+    expect(godot.calls()).toEqual([]);
+  });
+
+  it("stops a Godot run that hangs at --timeout and reports it", async () => {
+    const root = copyDemo();
+    const godot = fakeGodot(true);
+    const { output, exitCode } = await run(["check", root, "--godot", godot.bin, "--no-import", "--timeout", "0.5"]);
+    expect(exitCode).toBe(1);
+    expect(output).toContain("check timed out");
+  }, 20_000);
 });
