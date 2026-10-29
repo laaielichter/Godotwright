@@ -1,14 +1,27 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { checkProject } from "../src/check/check.js";
 import { findGodot, GodotNotFoundError } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
 
+/** Temp folders this file creates; removed once the tests are done. */
+const tempDirs: string[] = [];
+
+function tempDir(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+}
+
+afterAll(() => {
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 /** A stand-in for the Godot binary that replays canned output. */
 function fakeGodot(behavior: { version?: string; checkLog?: string; finish?: boolean; runLog?: string }): string {
-  const dir = mkdtempSync(join(tmpdir(), "fake-godot-"));
+  const dir = tempDir("fake-godot-");
   const bin = join(dir, "godot");
   const script = `#!/usr/bin/env node
 const fs = require("node:fs");
@@ -36,7 +49,7 @@ process.exit(0);
 }
 
 function copyFixture(name: string): string {
-  const dir = mkdtempSync(join(tmpdir(), `godotwright-${name}-`));
+  const dir = tempDir(`godotwright-${name}-`);
   cpSync(join(FIXTURES, name), dir, { recursive: true });
   return dir;
 }
@@ -119,7 +132,7 @@ describe("findGodot", () => {
 
   /** Creates empty executables at the given paths under a fresh home folder. */
   function home(files: string[]): string {
-    const root = mkdtempSync(join(tmpdir(), "godot-home-"));
+    const root = tempDir("godot-home-");
     for (const file of files) {
       mkdirSync(join(root, file, ".."), { recursive: true });
       writeFileSync(join(root, file), "");
