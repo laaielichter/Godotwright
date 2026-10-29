@@ -189,4 +189,21 @@ describe("outlineScript", () => {
       ["Baz", "res://base.gd", ["y"], []],
     ]);
   });
+
+  it("finds preload and load calls outside strings, with either quote style", () => {
+    const script = outlineScript(
+      [
+        "var a := preload('res://a.tscn')",
+        `var b := 'load("res://fake.tscn")'`,
+        'var c := ResourceLoader.load("res://c.tres")',
+        'var d := load("res://d.tres") + load("res://e" + name)',
+        `var f := 'preload("res://g.tscn")'`,
+      ].join("\n"),
+    );
+    expect(script.preloads).toEqual([
+      { path: "res://a.tscn", kind: "preload", line: 1 },
+      { path: "res://c.tres", kind: "load", line: 3 },
+      { path: "res://d.tres", kind: "load", line: 4 },
+    ]);
+  });
 });

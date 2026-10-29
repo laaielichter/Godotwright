@@ -322,6 +322,26 @@ type Block =
   | { kind: "func"; indent: number; info: FunctionInfo }
   | { kind: "property"; indent: number };
 
+/** Start of a `preload(`, `load(` or `ResourceLoader.load(` call, up to its first argument. */
+const RESOURCE_CALL = /(?<![\w.])(?:ResourceLoader\s*\.\s*)?(preload|load)\s*\(\s*(?=["'])/g;
+
+/**
+ * Literal paths of the preload and load calls on a statement. The call is found in `code`,
+ * where string contents are blanked, so text inside strings is ignored. The path is read
+ * from `text` at the same offset. A path that is only part of an expression is skipped.
+ */
+function resourceRefs(ll: LogicalLine): ResourceRef[] {
+  const refs: ResourceRef[] = [];
+  for (const match of ll.code.matchAll(RESOURCE_CALL)) {
+    const open = match.index! + match[0].length;
+    const quote = ll.code[open]!;
+    const close = ll.code.indexOf(quote, open + 1);
+    if (close < 0 || !/^\s*[,)]/.test(ll.code.slice(close + 1))) continue;
+    refs.push({ path: ll.text.slice(open + 1, close), kind: match[1] as "preload" | "load", line: ll.line });
+  }
+  return refs;
+}
+
 export function outlineScript(source: string): ScriptOutline {
   const lines = logicalLines(source);
   const script: ScriptOutline = {
@@ -336,9 +356,7 @@ export function outlineScript(source: string): ScriptOutline {
   let pending: string[] = [];
 
   for (const ll of lines) {
-    for (const match of ll.text.matchAll(/(?<![\w.])(preload|load)\s*\(\s*"([^"]*)"\s*\)/g)) {
-      script.preloads.push({ path: match[2]!, kind: match[1] as "preload" | "load", line: ll.line });
-    }
+    script.preloads.push(...resourceRefs(ll));
 
     while (stack.length > 0 && stack[stack.length - 1]!.indent >= ll.indent) stack.pop();
     for (const block of stack) {
