@@ -44,6 +44,12 @@ const finding = (over: Partial<Finding> = {}): Finding => ({
   ...over,
 });
 
+// The shipped data/learned.json changes every week: these tests must not depend on it.
+// (collector.test.ts keeps the one test that reads it.)
+vi.mock("../src/learn/bundled.js", () => ({
+  bundledLearning: () => ({ version: 1, installs: 0, apiHints: {}, rules: {}, missedByReview: {} }),
+}));
+
 beforeEach(() => resetLearning());
 
 describe("learning store", () => {
@@ -229,15 +235,17 @@ describe("turning learning off", () => {
   });
 
   it("records nothing and changes nothing after learn off", async () => {
+    recordFeedback(finding(), "wrong");
+    const before = readLearning();
     expect((await runCli(["learn", "off"])).output).toContain("off");
+    // Off: the local file no longer applies, so the finding is shown again.
+    const report = reviewLearning(project());
+    expect(report.findings.some((f) => f.rule === "api/unknown-member")).toBe(true);
+    expect(report.learning).toBeUndefined();
     recordFeedback(finding(), "wrong");
     recordCheck(godot([]), { findings: [finding()] });
-    const report = reviewLearning(project());
-    expect(report.learning).toBeUndefined();
-    const data = readLearning();
-    expect(data.enabled).toBe(false);
-    expect(data.rules).toEqual({});
-    expect(data.dismissed).toEqual({});
+    lookupLearning(GodotApi.load(), "Node2D.lookat");
+    expect(readLearning()).toEqual({ ...before, enabled: false });
     expect((await runCli(["learn"])).output).toContain("local learning: off");
   });
 });

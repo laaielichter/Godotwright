@@ -19,6 +19,11 @@ import {
 import { readLearning, resetLearning, updateLearning } from "../src/learn/store.js";
 import { makeProject, runCli } from "./helpers.js";
 
+// Same as learn.test.ts: the shipped data/learned.json must not change these results.
+vi.mock("../src/learn/bundled.js", () => ({
+  bundledLearning: () => ({ version: 1, installs: 0, apiHints: {}, rules: {}, missedByReview: {} }),
+}));
+
 const api = GodotApi.load();
 const URL = "https://collector.example/v1/report";
 const env = { GODOTWRIGHT_SHARE_URL: URL };
