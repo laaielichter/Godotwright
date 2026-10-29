@@ -183,6 +183,18 @@ describe("learning from real Godot checks", () => {
     expect(readLearning().rules).toEqual({});
   });
 
+  it("does not judge review errors in dot-folders, which Godot never loads", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "player.gd": "extends Node\n\n\nfunc _ready() -> void:\n\tprint(1)\n",
+      ".backup/old_player.gd": SCRIPT,
+    });
+    const review = reviewProject(root);
+    expect(review.findings.some((f) => f.file.startsWith("res://.backup/") && f.rule === "api/unknown-member")).toBe(true);
+    for (let i = 0; i < DOWNGRADE_AFTER; i++) recordCheck(godot([]), review);
+    expect(readLearning().rules["api/unknown-member"]?.contradicted ?? 0).toBe(0);
+  });
+
   it("remembers Godot errors the review missed, without names", () => {
     recordCheck(godot([{ severity: "error", file: "res://enemy.gd", line: 3, message: 'Identifier "secret_boss" not declared in the current scope.', source: "script" }]), review);
     expect(readLearning().missedByReview).toEqual({ 'Identifier "<s>" not declared in the current scope.': 1 });

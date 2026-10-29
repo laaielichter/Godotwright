@@ -77,6 +77,16 @@ function contradictions(rule: string, data: LearningData, shared?: LearnedData):
   return 0;
 }
 
+/** True for a file inside a folder whose name starts with a dot. */
+function inDotFolder(file: string): boolean {
+  return file
+    .replace(/::.*$/, "")
+    .replace(/^res:\/\//, "")
+    .split("/")
+    .slice(0, -1)
+    .some((part) => part.startsWith("."));
+}
+
 /** Counts which rules fired in a review (once per rule per review). */
 export function recordReview(report: Pick<ReviewReport, "findings">): void {
   updateIfAllowed((data) => {
@@ -99,7 +109,9 @@ export function recordCheck(check: CheckResult, review: Pick<ReviewReport, "find
   const godotErrors = check.diagnostics.filter((d) => d.severity === "error" && d.file?.endsWith(".gd"));
   const errorsByFile = new Map<string, number[]>();
   for (const d of godotErrors) errorsByFile.set(d.file!, [...(errorsByFile.get(d.file!) ?? []), d.line ?? 0]);
-  const reviewed = review.findings.filter((f) => f.severity === "error" && GODOT_CHECKED_RULES.has(f.rule) && f.file.endsWith(".gd") && !f.file.includes("::"));
+  // Godot's checker skips folders whose name starts with a dot: nothing there is judged.
+  const judged = review.findings.filter((f) => !inDotFolder(f.file));
+  const reviewed = judged.filter((f) => f.severity === "error" && GODOT_CHECKED_RULES.has(f.rule) && f.file.endsWith(".gd") && !f.file.includes("::"));
 
   updateIfAllowed((data) => {
     for (const f of reviewed) {
@@ -107,7 +119,7 @@ export function recordCheck(check: CheckResult, review: Pick<ReviewReport, "find
       if (!lines) ruleStats(data, f.rule).contradicted++;
       else if (lines.some((l) => f.line !== undefined && Math.abs(l - f.line) <= 1)) ruleStats(data, f.rule).confirmed++;
     }
-    const reviewedFiles = new Set(review.findings.filter((f) => f.severity === "error").map((f) => f.file));
+    const reviewedFiles = new Set(judged.filter((f) => f.severity === "error").map((f) => f.file));
     for (const d of godotErrors) {
       if (d.source !== "script" || reviewedFiles.has(d.file!)) continue;
       const key = messageTemplate(d.message);
