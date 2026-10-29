@@ -189,6 +189,7 @@ export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
   const located = new Set<string>();
   for (const d of kept) {
     if (d.severity === "error" && d.line && d.source !== "scan") {
+      if (d.file) located.add(d.file);
       for (const path of d.message.match(MENTIONED_PATH) ?? []) located.add(path);
     }
   }
