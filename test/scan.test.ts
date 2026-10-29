@@ -6,7 +6,7 @@ import { formatProjectMap } from "../src/scan/format.js";
 import { scanProject } from "../src/scan/scan.js";
 import { DEMO, makeProject, runCli } from "./helpers.js";
 
-/** Paths (substrings) that fail with EACCES. Tests run as root, which can read anything, so the fs calls are guarded. */
+/** Paths (substrings) whose reads fail with EACCES: a test run as root can read anything, so the failure is simulated. */
 const denied = vi.hoisted(() => [] as string[]);
 
 vi.mock("node:fs", async (importOriginal) => {
