@@ -237,8 +237,8 @@ export const terrain: Generator = {
       };
       for (let j = 0; j < n - 1; j++) {
         for (let i = 0; i < n - 1; i++) {
-          // Only near the lake: low ground elsewhere is not part of it.
-          if (Math.hypot(cx - size / 2 + (i + 0.5) * step - lake.x, cz - size / 2 + (j + 0.5) * step - lake.z) > lake.radius * 1.1 + step) continue;
+          // Only inside the rim: the rim is above the water, so low ground beyond it is dry or a pool of its own, and not the lake.
+          if (Math.hypot(cx - size / 2 + (i + 0.5) * step - lake.x, cz - size / 2 + (j + 0.5) * step - lake.z) > lake.radius + step) continue;
           if (Math.min(H(i, j), H(i + 1, j), H(i, j + 1), H(i + 1, j + 1)) >= lake.level) continue;
           wp.indices.push(corner(i, j), corner(i, j + 1), corner(i + 1, j));
           wp.indices.push(corner(i + 1, j), corner(i, j + 1), corner(i + 1, j + 1));

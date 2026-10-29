@@ -156,6 +156,17 @@ describe("a lake in the terrain", () => {
     expect(terrainHeight(p, lake.x + 25, lake.z)).toBeLessThan(lake.level);
   });
 
+  it("draws no water outside the rim: the ground beyond it is dry, or would be a pool of its own", () => {
+    // The tile east of the lake: its ground dips under the water just outside the rim, at about 317 m from the centre.
+    const input = { relief: "hills", lakeRadius: 300, seed: 1, tileSize: 256, resolution: "129", tileX: 1, tileZ: 0 };
+    const lake = lakeOf(resolveParams(TERRAIN_PARAMS, input, "terrain"))!;
+    const prim = water(input)!.mesh!.prims.get("lake_water")!;
+    for (let v = 0; v < prim.positions.length; v += 3) {
+      const x = prim.positions[v]! + 256, z = prim.positions[v + 2]!;
+      expect(Math.hypot(x - lake.x, z - lake.z)).toBeLessThanOrEqual(lake.radius + 2 * (256 / 128));
+    }
+  });
+
   it("is made of whole grid cells near the lake, and only there", () => {
     const g = grid(lakeInput);
     const prim = water(lakeInput)!.mesh!.prims.get("lake_water")!;
