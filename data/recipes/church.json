@@ -1,0 +1,195 @@
+{
+ "version": 1,
+ "name": "church",
+ "archetype": "building.church",
+ "description": "A parish church: a long nave with a gable roof and tall side windows, a square belfry at the +Z end with a pyramid spire, and a doorway in the tower.",
+ "params": [
+  {
+   "name": "naveLength",
+   "type": "number",
+   "default": 24,
+   "min": 15,
+   "max": 60,
+   "description": "Length of the nave along z in metres."
+  },
+  {
+   "name": "naveWidth",
+   "type": "number",
+   "default": 10,
+   "min": 8,
+   "max": 25,
+   "description": "Width of the nave."
+  },
+  {
+   "name": "wallHeight",
+   "type": "number",
+   "default": 8,
+   "min": 5,
+   "max": 15,
+   "description": "Height of the nave walls."
+  },
+  {
+   "name": "towerHeight",
+   "type": "number",
+   "default": 30,
+   "min": 15,
+   "max": 70,
+   "description": "Height of the spire tip above the ground."
+  }
+ ],
+ "materials": {
+  "church_stone": {
+   "color": [
+    0.7,
+    0.65,
+    0.55
+   ],
+   "metallic": 0,
+   "roughness": 0.85
+  },
+  "church_dark": {
+   "color": [
+    0.1,
+    0.1,
+    0.12
+   ],
+   "metallic": 0,
+   "roughness": 0.9
+  }
+ },
+ "nodes": [
+  {
+   "name": "Church",
+   "material": "church_stone",
+   "vars": {
+    "L2": "$naveLength / 2",
+    "W2": "$naveWidth / 2",
+    "tw": "$naveWidth * 0.5",
+    "belfryTop": "$towerHeight * 0.6",
+    "rise": "$naveWidth * 0.35"
+   },
+   "children": [
+    {
+     "name": "Nave",
+     "shape": "box",
+     "size": [
+      "$naveWidth",
+      "$wallHeight",
+      "$naveLength"
+     ],
+     "at": [
+      0,
+      "$wallHeight / 2",
+      0
+     ]
+    },
+    {
+     "name": "Roof",
+     "shape": "roof",
+     "material": "roof_slate",
+     "x0": "-$W2 - 0.3",
+     "x1": "$W2 + 0.3",
+     "z0": "-$L2 - 0.3",
+     "z1": "$L2 - $tw",
+     "y": "$wallHeight",
+     "rise": "$rise",
+     "kind": "gable"
+    },
+    {
+     "name": "Belfry",
+     "shape": "box",
+     "size": [
+      "$tw",
+      "$belfryTop",
+      "$tw"
+     ],
+     "at": [
+      0,
+      "$belfryTop / 2",
+      "$L2 + $tw / 2 - 0.5"
+     ]
+    },
+    {
+     "name": "Spire",
+     "shape": "lathe",
+     "material": "roof_slate",
+     "segments": 4,
+     "rotate": [
+      0,
+      45,
+      0
+     ],
+     "at": [
+      0,
+      "$belfryTop",
+      "$L2 + $tw / 2 - 0.5"
+     ],
+     "profile": [
+      [
+       "$tw * 0.7071",
+       0
+      ],
+      [
+       0.12,
+       "$towerHeight - $belfryTop"
+      ]
+     ]
+    },
+    {
+     "name": "Door",
+     "shape": "box",
+     "material": "church_dark",
+     "size": [
+      "$tw * 0.45",
+      "min(4, $belfryTop * 0.3)",
+      0.15
+     ],
+     "at": [
+      0,
+      "min(4, $belfryTop * 0.3) / 2",
+      "$L2 + $tw - 0.5 + 0.03"
+     ]
+    },
+    {
+     "name": "LouvreWindow",
+     "shape": "box",
+     "material": "church_dark",
+     "size": [
+      "$tw * 0.3",
+      "$belfryTop * 0.18",
+      "$tw + 0.1"
+     ],
+     "at": [
+      0,
+      "$belfryTop * 0.85",
+      "$L2 + $tw / 2 - 0.5"
+     ]
+    },
+    {
+     "name": "Window_L{i}",
+     "shape": "box",
+     "material": "church_dark",
+     "size": [
+      0.12,
+      "$wallHeight * 0.55",
+      0.9
+     ],
+     "at": [
+      "$W2 + 0.02",
+      "$wallHeight * 0.55",
+      "-$L2 + 3"
+     ],
+     "repeat": {
+      "count": "floor(($naveLength - $tw - 4) / 4.5)",
+      "step": [
+       0,
+       0,
+       4.5
+      ]
+     },
+     "mirror": "Window_R{i}"
+    }
+   ]
+  }
+ ]
+}
