@@ -89,6 +89,11 @@ describe("what may be shared", () => {
     expect(scrubTemplate("call is_on_floor or vault_7 or HTTPRequest", api)).toBe("call <id> or <id> or HTTPRequest");
   });
 
+  it("replaces every word that is not Godot or engine wording, not only identifier-looking ones", () => {
+    expect(scrubTemplate("Player John Smith not declared", api)).toBe("<id> <id> <id> not declared");
+    expect(scrubTemplate("Cannot open project Heist for reading", api)).toBe("Cannot open <id> <id> for reading");
+  });
+
   it("only accepts https collectors, or http on this machine", () => {
     expect(validEndpoint(URL)).toBe(true);
     expect(validEndpoint("http://localhost:8080/report")).toBe(true);

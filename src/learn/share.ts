@@ -71,13 +71,29 @@ export function shareableQuery(query: string, api: GodotApi): boolean {
 }
 
 /**
- * Replaces words that look like identifiers (snake_case, digits, camelCase)
- * with <id>, unless they are Godot class names.
+ * Wording of Godot's messages and of GDScript, in lowercase. A word of a template
+ * that is neither here nor a Godot class name is a name of the project's, so it is scrubbed.
+ */
+const ENGINE_WORDS = new Set(
+  `a about above add after all also an and any are as at base attempt warning warnings be been before being below between both but by call called can cannot
+  class classes const could current declared declaration did do does during each else end enum enums error errors
+  exist exists expect expected expecting export extends failed failure file files find following for found from func
+  function functions global godot gdscript has have how identifier identifiers if imported in index info instance instead
+  into invalid is it its just key line load loaded loading make many may mean meant message messages method methods missing
+  more must no not now null object of off on only open or other out over parse property read reading resource resources
+  return returns scene scenes scope script scripts signal signals sure statement static string than that the then there
+  this to too type types under unable unexpected unknown until up use used using value values var variable variables
+  was were what when where which while will with within without write writing yet you your`.split(/\s+/),
+);
+
+/**
+ * Replaces every word that is not a Godot class name or engine wording with <id>,
+ * so no name of the project survives in a template.
  */
 export function scrubTemplate(template: string, api: GodotApi): string {
   return template.replace(/<\w+>|[A-Za-z_@][\w@]*/g, (word) => {
-    if (/^<\w+>$/.test(word) || api.classes.has(word)) return word;
-    return /[_\d@]|[a-z][A-Z]|[A-Z]{2,}[a-z]/.test(word) ? "<id>" : word;
+    if (/^<\w+>$/.test(word) || api.classes.has(word) || ENGINE_WORDS.has(word.toLowerCase())) return word;
+    return "<id>";
   });
 }
 
