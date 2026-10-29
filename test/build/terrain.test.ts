@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadLibrary } from "../../src/archetype/library.js";
 import { buildGlb } from "../../src/build/glb.js";
 import { buildKind } from "../../src/build/generators/index.js";
-import { lakeOf, noise2, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
+import { lakeOf, noise2, terrain, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
 import { resolveParams } from "../../src/build/params.js";
 import { lintModelFile } from "../../src/model/lint.js";
 import { runCli } from "../helpers.js";
@@ -95,6 +95,13 @@ describe("terrain", () => {
     expect(island.y[0]!).toBeLessThan(0);
   });
 
+  it("says that the tiles of one world share their grid, because the ground and the lakes depend on it", () => {
+    for (const name of ["tileSize", "resolution", "lakeRadius"]) {
+      expect(TERRAIN_PARAMS.find((d) => d.name === name)!.description, name).toMatch(/tileSize and resolution/);
+    }
+    expect(terrain.description).toMatch(/same seed, tileSize and resolution/);
+  });
+
   it("rejects a resolution that is not a power of two plus one, and a tile outside the range", () => {
     expect(() => buildKind("terrain", { resolution: "100" })).toThrow(/resolution/);
     expect(() => buildKind("terrain", { tileSize: 5000 })).toThrow(/at most/);
@@ -129,11 +136,42 @@ describe("a lake in the terrain", () => {
     }
   });
 
+  it("sits half a metre under the lowest point of the rim, found on a dense reference ring", () => {
+    const cases = [
+      { relief: "hills", lakeRadius: 300, seed: 1, tileSize: 256, resolution: "129" },
+      { relief: "mountains", lakeRadius: 300, seed: 1, tileSize: 256, resolution: "129" },
+      { relief: "hills", lakeRadius: 400, seed: 5, tileSize: 1024, resolution: "33", featureSize: 20, maxHeight: 300 },
+    ];
+    for (const input of cases) {
+      const p = resolveParams(TERRAIN_PARAMS, input, "terrain");
+      const ground = resolveParams(TERRAIN_PARAMS, { ...input, lakeRadius: 0 }, "terrain");
+      const lake = lakeOf(p)!;
+      let lowest = Infinity;
+      for (let k = 0; k < 20000; k++) {
+        const a = (k / 20000) * Math.PI * 2;
+        lowest = Math.min(lowest, terrainHeight(ground, lake.x + lake.radius * Math.cos(a), lake.z + lake.radius * Math.sin(a)));
+      }
+      expect(lake.level, JSON.stringify(input)).toBeGreaterThan(lowest - 0.6);
+      expect(lake.level, JSON.stringify(input)).toBeLessThan(lowest - 0.4);
+    }
+  });
+
   it("digs a basin: the ground at the centre is below the water, by about the depth", () => {
     const p = resolveParams(TERRAIN_PARAMS, lakeInput, "terrain");
     const lake = lakeOf(p)!;
     expect(terrainHeight(p, lake.x, lake.z)).toBeCloseTo(lake.level - 8, 6);
     expect(terrainHeight(p, lake.x + 25, lake.z)).toBeLessThan(lake.level);
+  });
+
+  it("draws no water outside the rim: the ground beyond it is dry, or would be a pool of its own", () => {
+    // The tile east of the lake: its ground dips under the water just outside the rim, at about 317 m from the centre.
+    const input = { relief: "hills", lakeRadius: 300, seed: 1, tileSize: 256, resolution: "129", tileX: 1, tileZ: 0 };
+    const lake = lakeOf(resolveParams(TERRAIN_PARAMS, input, "terrain"))!;
+    const prim = water(input)!.mesh!.prims.get("lake_water")!;
+    for (let v = 0; v < prim.positions.length; v += 3) {
+      const x = prim.positions[v]! + 256, z = prim.positions[v + 2]!;
+      expect(Math.hypot(x - lake.x, z - lake.z)).toBeLessThanOrEqual(lake.radius + 2 * (256 / 128));
+    }
   });
 
   it("is made of whole grid cells near the lake, and only there", () => {

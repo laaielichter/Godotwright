@@ -24,8 +24,11 @@ export function allKinds(): { kind: string; description: string; params: ParamDe
   ];
 }
 
+/** Only the table's own kinds count: a plain object would also answer to 'constructor' and 'toString'. */
+const isBuiltin = (kind: string): boolean => Object.hasOwn(GENERATORS, kind);
+
 export function generatorFor(kind: string): Generator {
-  const g = GENERATORS[kind];
+  const g = isBuiltin(kind) ? GENERATORS[kind] : undefined;
   if (!g) throw new BuildError(`unknown model kind "${kind}" (known: ${allKinds().map((k) => k.kind).join(", ")})`);
   return g;
 }
@@ -33,7 +36,7 @@ export function generatorFor(kind: string): Generator {
 /** Resolves and checks the parameters, then builds the scene. */
 export function buildKind(kind: string, input: Record<string, unknown> = {}): BuildScene {
   const recipe = loadRecipes().get(kind);
-  if (recipe && !GENERATORS[kind]) return buildSpec(recipe.spec, input);
+  if (recipe && !isBuiltin(kind)) return buildSpec(recipe.spec, input);
   const g = generatorFor(kind);
   const scene = g.build(resolveParams(g.params, input, kind));
   return g.archetype ? { ...scene, archetype: g.archetype } : scene;
