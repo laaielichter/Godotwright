@@ -46,6 +46,12 @@ describe("expressions", () => {
     expect(() => evaluate("1".repeat(600), {})).toThrow(/too long/);
     expect(() => evaluate("pow(10, 999)", {})).toThrow(/not a finite number/);
   });
+
+  it("looks names up as the names of this spec, never ones inherited from Object", () => {
+    expect(() => evaluate("constructor", {})).toThrow(/unknown name "constructor"/);
+    expect(() => evaluate("$constructor", {})).toThrow(/unknown variable \$constructor/);
+    expect(() => evaluate("toString(1)", {})).toThrow(/unknown function toString\(\)/);
+  });
 });
 
 describe("the example car", () => {
@@ -183,6 +189,15 @@ describe("mistakes get a path and a reason", () => {
     fail(spec([{ name: "L", shape: "loft", material: "paint", sections: [{ z: 0, superellipse: { width: 1, height: 1, count: 9 } }, { z: 1, superellipse: { width: 1, height: 1 } }] }]), /must be even/);
     fail(spec([{ name: "R", shape: "roof", material: "paint", x0: 0, x1: 1, z0: 0, z1: 1, y: 0, rise: 1, kind: "dome" }]), /use "gable" or "hip"/);
     fail(spec([solid({ at: [1, 2] })]), /expected a list of 3 numbers/);
+  });
+
+  it("refuses shapes, materials and variables named like Object.prototype members", () => {
+    fail(spec([solid({ shape: "constructor" })]), /unknown shape "constructor"/);
+    fail(spec([solid({ material: "toString" })]), /unknown material "toString"/);
+    fail(spec([solid({ size: ["$constructor", 1, 1] })]), /unknown variable \$constructor/);
+    // A name that is really declared works, including one that a JSON file may use for a key.
+    const declared = JSON.parse('{"version":1,"materials":{"__proto__":{"color":[1,0,0]}},"nodes":[{"name":"A","shape":"box","size":["$__proto__",1,1],"material":"__proto__","vars":{"__proto__":2}}]}');
+    expect(inspectModel(writeScene(buildSpec(declared))).bounds?.size[0]).toBeCloseTo(2);
   });
 
   it("stops specs that grow without bound", () => {

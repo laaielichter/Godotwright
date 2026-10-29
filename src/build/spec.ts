@@ -34,6 +34,11 @@ function isObj(v: unknown): v is Obj {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+/** A table keyed by names from the spec: no inherited keys, so "constructor" or "__proto__" are ordinary names. */
+function bare<T>(from: Record<string, T> = {}): Record<string, T> {
+  return Object.assign(Object.create(null) as Record<string, T>, from);
+}
+
 function checkKeys(node: Obj, allowed: string[], path: string): void {
   for (const key of Object.keys(node)) {
     if (!allowed.includes(key)) throw new BuildError(`${path}: unknown key "${key}" (allowed here: ${allowed.join(", ")})`);
@@ -76,7 +81,7 @@ function integer(v: unknown, scope: Scope, path: string, min: number, max: numbe
 function material(name: unknown, ctx: Ctx, path: string): string {
   const chosen = name ?? ctx.material;
   if (typeof chosen !== "string") throw new BuildError(`${path}: this shape needs a "material" (here or on a parent)`);
-  if (!ctx.materials[chosen]) throw new BuildError(`${path}: unknown material "${chosen}" (presets: ${Object.keys(MATERIALS).join(", ")}; or define it under "materials")`);
+  if (!Object.hasOwn(ctx.materials, chosen)) throw new BuildError(`${path}: unknown material "${chosen}" (presets: ${Object.keys(MATERIALS).join(", ")}; or define it under "materials")`);
   return chosen;
 }
 
@@ -100,7 +105,7 @@ function superellipse(spec: unknown, scope: Scope, path: string): [number, numbe
 
 function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
   const shape = node["shape"] as string;
-  const allowed = SHAPE_KEYS[shape];
+  const allowed = Object.hasOwn(SHAPE_KEYS, shape) ? SHAPE_KEYS[shape] : undefined;
   if (!allowed) throw new BuildError(`${path}.shape: unknown shape "${shape}" (known: ${Object.keys(SHAPE_KEYS).join(", ")})`);
   checkKeys(node, [...COMMON_KEYS, ...allowed], path);
   const m = material(node["material"], ctx, path);
@@ -252,7 +257,7 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
   if (depth > LIMITS.depth) throw new BuildError(`${path}: nested too deeply (max ${LIMITS.depth} levels)`);
   spendNodes(parent.counters, 1, path);
 
-  const scope: Scope = { ...parent.scope };
+  const scope: Scope = bare(parent.scope);
   if (raw["vars"] !== undefined) {
     if (!isObj(raw["vars"])) throw new BuildError(`${path}.vars: expected an object`);
     for (const [k, v] of Object.entries(raw["vars"])) scope[k] = num(v, scope, `${path}.vars.${k}`);
@@ -352,7 +357,7 @@ function readParams(raw: unknown, overrides: Record<string, unknown>): { scope: 
     defs.push({ ...(d as unknown as ParamDef), description: typeof d["description"] === "string" ? d["description"] : "" });
   }
   const values = resolveParams(defs, overrides, "spec");
-  const scope: Scope = {};
+  const scope: Scope = bare<number>();
   for (const [k, v] of Object.entries(values)) {
     if (typeof v === "number") scope[k] = v;
     else if (typeof v === "boolean") scope[k] = v ? 1 : 0;
@@ -361,7 +366,7 @@ function readParams(raw: unknown, overrides: Record<string, unknown>): { scope: 
 }
 
 function readMaterials(raw: unknown): Record<string, Material> {
-  const out: Record<string, Material> = { ...MATERIALS };
+  const out = bare(MATERIALS);
   if (raw === undefined) return out;
   if (!isObj(raw)) throw new BuildError("materials: expected an object");
   for (const [name, m] of Object.entries(raw)) {

@@ -96,14 +96,14 @@ export function evaluate(text: string, scope: Scope): number {
     if (!t) return fail("the expression ends too early");
     if (t.kind === "num") return t.value;
     if (t.kind === "var") {
-      const v = scope[t.name];
+      const v = Object.hasOwn(scope, t.name) ? scope[t.name] : undefined;
       if (v === undefined) return fail(`unknown variable $${t.name} (known: ${Object.keys(scope).map((k) => `$${k}`).join(", ") || "none"})`);
       return v;
     }
     if (t.kind === "name") {
       if (isOp("(")) {
         pos++;
-        const fn = FUNCTIONS[t.name];
+        const fn = Object.hasOwn(FUNCTIONS, t.name) ? FUNCTIONS[t.name] : undefined;
         if (!fn) return fail(`unknown function ${t.name}() (known: ${Object.keys(FUNCTIONS).join(", ")})`);
         const args: number[] = [];
         if (!isOp(")")) {
@@ -113,7 +113,7 @@ export function evaluate(text: string, scope: Scope): number {
         eat(")");
         return fn(...args);
       }
-      const c = CONSTANTS[t.name];
+      const c = Object.hasOwn(CONSTANTS, t.name) ? CONSTANTS[t.name] : undefined;
       return c === undefined ? fail(`unknown name "${t.name}" (variables start with $)`) : c;
     }
     if (t.op === "(") {
