@@ -1,0 +1,91 @@
+{
+ "version": 1,
+ "name": "bush",
+ "archetype": "plant.bush",
+ "description": "A shrub: a cluster of overlapping rounded leaf masses around a central one, on short woody stems, standing on y = 0. The number of masses sets how wide and full it is.",
+ "params": [
+  {
+   "name": "width",
+   "type": "number",
+   "default": 1.6,
+   "min": 0.5,
+   "max": 3,
+   "description": "Diameter of the bush in metres."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 1.1,
+   "min": 0.5,
+   "max": 3,
+   "description": "Height of the bush in metres."
+  },
+  {
+   "name": "masses",
+   "type": "integer",
+   "default": 6,
+   "min": 3,
+   "max": 10,
+   "description": "Number of leaf masses around the centre."
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Bush",
+   "material": "leaf",
+   "vars": {
+    "w": "$width",
+    "h": "$height"
+   },
+   "children": [
+    {
+     "name": "Stem",
+     "shape": "cylinder",
+     "material": "bark",
+     "radius": "$w * 0.04",
+     "height": "$h * 0.35",
+     "segments": 8,
+     "at": [
+      0,
+      "$h * 0.175",
+      0
+     ]
+    },
+    {
+     "name": "Core",
+     "shape": "ellipsoid",
+     "radii": [
+      "$w * 0.32",
+      "$h * 0.5",
+      "$w * 0.32"
+     ],
+     "at": [
+      0,
+      "$h * 0.5",
+      0
+     ],
+     "segments": 16
+    },
+    {
+     "name": "Mass_{i}",
+     "shape": "ellipsoid",
+     "radii": [
+      "$w * 0.24",
+      "$h * 0.36",
+      "$w * 0.24"
+     ],
+     "at": [
+      "$w * 0.26",
+      "$h * 0.38",
+      0
+     ],
+     "segments": 12,
+     "repeat": {
+      "count": "$masses",
+      "around": "y"
+     }
+    }
+   ]
+  }
+ ]
+}

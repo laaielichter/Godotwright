@@ -62,7 +62,7 @@ describe("ring and offset in the spec language", () => {
 describe("the recipes", () => {
   it("are listed with the built-in kinds, with parameters and an archetype", () => {
     const kinds = allKinds();
-    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon"]));
+    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower"]));
     for (const r of recipes) {
       expect(r.archetype, r.kind).toBeDefined();
       expect(library.get(r.archetype!), r.kind).toBeDefined();

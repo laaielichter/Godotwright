@@ -1,0 +1,158 @@
+{
+ "version": 1,
+ "name": "palm",
+ "archetype": "plant.tree.palm",
+ "description": "A palm tree: a slim ringed trunk that swells at the base, a crown knob at the top and a ring of long, arching fronds, each its own node with its pivot at the crown so it can sway.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 10,
+   "min": 3,
+   "max": 30,
+   "description": "Height of the trunk top in metres."
+  },
+  {
+   "name": "fronds",
+   "type": "integer",
+   "default": 12,
+   "min": 6,
+   "max": 30,
+   "description": "Number of fronds."
+  },
+  {
+   "name": "trunkRadius",
+   "type": "number",
+   "default": 0.2,
+   "min": 0.1,
+   "max": 0.5,
+   "description": "Trunk radius at head height."
+  }
+ ],
+ "materials": {
+  "palm_frond": {
+   "color": [
+    0.15,
+    0.4,
+    0.1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.7,
+   "doubleSided": true
+  }
+ },
+ "nodes": [
+  {
+   "name": "Palm",
+   "material": "bark",
+   "vars": {
+    "H": "$height",
+    "tr": "$trunkRadius",
+    "FL": "max(1.5, $height * 0.28)"
+   },
+   "children": [
+    {
+     "name": "Trunk",
+     "shape": "lathe",
+     "segments": 14,
+     "profile": [
+      [
+       "$tr * 1.7",
+       0
+      ],
+      [
+       "$tr * 1.15",
+       "$H * 0.06"
+      ],
+      [
+       "$tr * 0.9",
+       "$H * 0.5"
+      ],
+      [
+       "$tr * 1.0",
+       "$H * 0.97"
+      ]
+     ]
+    },
+    {
+     "name": "Crown",
+     "shape": "ellipsoid",
+     "material": "leaf",
+     "radii": [
+      "$tr * 1.5",
+      "$tr * 1.2",
+      "$tr * 1.5"
+     ],
+     "at": [
+      0,
+      "$H",
+      0
+     ],
+     "segments": 12
+    },
+    {
+     "name": "Frond_{i}",
+     "material": "palm_frond",
+     "shape": "loft",
+     "at": [
+      0,
+      "$H",
+      0
+     ],
+     "rotate": [
+      -25,
+      0,
+      0
+     ],
+     "repeat": {
+      "count": "$fronds",
+      "around": "y"
+     },
+     "sections": [
+      {
+       "z": 0.05,
+       "superellipse": {
+        "width": "$FL * 0.04",
+        "height": 0.01,
+        "n": 2.5,
+        "count": 12,
+        "cy": 0
+       }
+      },
+      {
+       "z": "$FL * 0.3",
+       "superellipse": {
+        "width": "$FL * 0.22",
+        "height": 0.01,
+        "n": 2.5,
+        "count": 12,
+        "cy": "-$FL * 0.02"
+       }
+      },
+      {
+       "z": "$FL * 0.65",
+       "superellipse": {
+        "width": "$FL * 0.2",
+        "height": 0.01,
+        "n": 2.5,
+        "count": 12,
+        "cy": "-$FL * 0.12"
+       }
+      },
+      {
+       "z": "$FL",
+       "superellipse": {
+        "width": "$FL * 0.05",
+        "height": 0.01,
+        "n": 2.5,
+        "count": 12,
+        "cy": "-$FL * 0.36"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
