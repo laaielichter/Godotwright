@@ -65,7 +65,52 @@
    ],
    "source": "general knowledge: typical production range, not a standard",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "box",
+     "crate",
+     "kist",
+     "base",
+     "bottom",
+     "walls",
+     "case"
+    ]
+   },
+   {
+    "name": "Lid",
+    "role": "lid",
+    "required": false,
+    "aliases": [
+     "lid",
+     "deksel",
+     "cover",
+     "top"
+    ]
+   },
+   {
+    "name": "Post",
+    "role": "post",
+    "required": false,
+    "aliases": [
+     "post",
+     "posts",
+     "corner",
+     "corners",
+     "hoek",
+     "hoeken",
+     "frame",
+     "slat",
+     "slats",
+     "plank"
+    ]
+   }
+  ]
  },
  {
   "id": "prop.barrel",
@@ -229,7 +274,52 @@
    ],
    "source": "general knowledge: typical production range, not a standard; seat height about 0.42-0.48 m",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": true,
+    "aliases": [
+     "seat",
+     "zitting",
+     "sit",
+     "cushion"
+    ]
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "count": [
+     1,
+     5
+    ],
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "pootjes"
+    ]
+   },
+   {
+    "name": "Back",
+    "role": "back",
+    "required": true,
+    "aliases": [
+     "back",
+     "backrest",
+     "rug",
+     "rugleuning",
+     "upright",
+     "uprights",
+     "backrail",
+     "rail",
+     "leuning"
+    ]
+   }
+  ]
  },
  {
   "id": "prop.table",
@@ -267,7 +357,53 @@
    ],
    "source": "table and desk height is typically 0.72-0.76 m (general knowledge)",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Top",
+    "role": "top",
+    "required": true,
+    "aliases": [
+     "top",
+     "tabletop",
+     "blad",
+     "tafelblad",
+     "surface",
+     "plate"
+    ]
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "count": [
+     1,
+     6
+    ],
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "pedestal",
+     "column"
+    ]
+   },
+   {
+    "name": "Apron",
+    "role": "apron",
+    "required": false,
+    "aliases": [
+     "apron",
+     "skirt",
+     "rail",
+     "rails",
+     "schort",
+     "stretcher",
+     "frame"
+    ]
+   }
+  ]
  },
  {
   "id": "prop.campfire",

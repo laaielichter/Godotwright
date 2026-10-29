@@ -208,7 +208,91 @@
    ],
    "source": "general knowledge: typical production range, not a standard",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Walls",
+    "role": "walls",
+    "required": true,
+    "aliases": [
+     "walls",
+     "wall",
+     "muren",
+     "muur",
+     "facade",
+     "gevel",
+     "body",
+     "block"
+    ],
+    "note": "The main block; a flat roof and a long, regular facade."
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak",
+     "parapet",
+     "roof deck"
+    ]
+   },
+   {
+    "name": "Windows",
+    "role": "glazing",
+    "required": true,
+    "aliases": [
+     "windows",
+     "window",
+     "ramen",
+     "raam",
+     "glazing",
+     "glass band"
+    ],
+    "note": "A band or grid of windows on every floor, as its own part so it can be lit."
+   },
+   {
+    "name": "Entrance",
+    "role": "door",
+    "required": true,
+    "aliases": [
+     "entrance",
+     "entree",
+     "door",
+     "deur",
+     "lobby",
+     "foyer",
+     "canopy",
+     "luifel"
+    ],
+    "note": "The main entrance faces +Z."
+   },
+   {
+    "name": "Core",
+    "role": "core",
+    "required": false,
+    "aliases": [
+     "core",
+     "stair core",
+     "stairwell",
+     "trappenhuis",
+     "lift",
+     "elevator",
+     "stair"
+    ]
+   },
+   {
+    "name": "Balcony",
+    "role": "balcony",
+    "required": false,
+    "aliases": [
+     "balcony",
+     "balkon",
+     "balconies",
+     "balkons"
+    ]
+   }
+  ]
  },
  {
   "id": "building.tower",
@@ -249,6 +333,75 @@
   },
   "pitfalls": [
    "Tall towers need a repeating facade (a few tiling textures), not unique modelling per floor."
+  ],
+  "parts": [
+   {
+    "name": "Shaft",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "shaft",
+     "tower",
+     "body",
+     "toren",
+     "schacht",
+     "main block",
+     "block",
+     "floors"
+    ]
+   },
+   {
+    "name": "Entrance",
+    "role": "door",
+    "required": true,
+    "aliases": [
+     "entrance",
+     "entree",
+     "door",
+     "deur",
+     "lobby",
+     "podium"
+    ]
+   },
+   {
+    "name": "Windows",
+    "role": "glazing",
+    "required": false,
+    "aliases": [
+     "windows",
+     "window",
+     "ramen",
+     "glazing",
+     "band",
+     "bands",
+     "curtain wall",
+     "glass"
+    ]
+   },
+   {
+    "name": "Crown",
+    "role": "crown",
+    "required": false,
+    "aliases": [
+     "crown",
+     "top",
+     "spire",
+     "bekroning",
+     "roof",
+     "upper"
+    ]
+   },
+   {
+    "name": "Antenna",
+    "role": "antenna",
+    "required": false,
+    "aliases": [
+     "antenna",
+     "mast",
+     "antenne",
+     "spire"
+    ]
+   }
   ]
  },
  {
@@ -284,7 +437,67 @@
    ],
    "source": "general knowledge: typical production range, not a standard",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Walls",
+    "role": "walls",
+    "required": true,
+    "aliases": [
+     "walls",
+     "wall",
+     "muren",
+     "muur",
+     "body"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": true,
+    "aliases": [
+     "door",
+     "doors",
+     "gate",
+     "deur",
+     "deuren",
+     "poort"
+    ],
+    "note": "A big double door in the +Z gable end; it may slide or swing, so keep it a node of its own."
+   },
+   {
+    "name": "Hatch",
+    "role": "hatch",
+    "required": false,
+    "aliases": [
+     "hatch",
+     "luik",
+     "hayloft",
+     "hooizolder",
+     "loft door"
+    ]
+   },
+   {
+    "name": "Window",
+    "role": "glazing",
+    "required": false,
+    "aliases": [
+     "window",
+     "windows",
+     "raam",
+     "ramen"
+    ]
+   }
+  ]
  },
  {
   "id": "building.church",

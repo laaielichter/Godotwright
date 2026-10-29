@@ -375,6 +375,53 @@
   },
   "anticipate": [
    "A repeatable bay with a post at each end."
+  ],
+  "parts": [
+   {
+    "name": "Post",
+    "role": "post",
+    "required": true,
+    "aliases": [
+     "post",
+     "posts",
+     "paal",
+     "palen",
+     "pole",
+     "stake"
+    ],
+    "note": "Posts at the ends and between sections; set into the ground."
+   },
+   {
+    "name": "Rail",
+    "role": "rail",
+    "required": false,
+    "aliases": [
+     "rail",
+     "rails",
+     "beam",
+     "balk",
+     "rails",
+     "bar",
+     "wire",
+     "draad"
+    ]
+   },
+   {
+    "name": "Picket",
+    "role": "picket",
+    "required": false,
+    "aliases": [
+     "picket",
+     "pickets",
+     "slat",
+     "slats",
+     "plank",
+     "planks",
+     "paling",
+     "latten",
+     "board"
+    ]
+   }
   ]
  },
  {
@@ -412,6 +459,63 @@
    ],
    "source": "general knowledge: typical production range, not a standard: wooden poles 8-15 m, lattice pylons 25-70 m",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "post",
+     "column",
+     "corner"
+    ],
+    "note": "The lattice legs lean in towards the top."
+   },
+   {
+    "name": "Beam",
+    "role": "arm",
+    "required": true,
+    "aliases": [
+     "beam",
+     "beams",
+     "crossarm",
+     "cross arm",
+     "arm",
+     "arms",
+     "traverse",
+     "bar"
+    ]
+   },
+   {
+    "name": "Insulator",
+    "role": "insulator",
+    "required": false,
+    "aliases": [
+     "insulator",
+     "insulators",
+     "isolator",
+     "isolatoren"
+    ]
+   },
+   {
+    "name": "Brace",
+    "role": "brace",
+    "required": false,
+    "aliases": [
+     "brace",
+     "braces",
+     "diagonal",
+     "diagonals",
+     "schoor",
+     "lattice",
+     "strut"
+    ]
+   }
+  ]
  }
 ]

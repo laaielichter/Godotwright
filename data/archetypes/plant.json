@@ -312,7 +312,40 @@
    ],
    "source": "general knowledge: typical production range, not a standard",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Foliage",
+    "role": "foliage",
+    "required": true,
+    "aliases": [
+     "foliage",
+     "mass",
+     "core",
+     "leaves",
+     "crown",
+     "blad",
+     "bladeren",
+     "struik",
+     "bush",
+     "canopy"
+    ]
+   },
+   {
+    "name": "Stem",
+    "role": "trunk",
+    "required": false,
+    "aliases": [
+     "stem",
+     "stems",
+     "trunk",
+     "stam",
+     "twig",
+     "twigs",
+     "branch"
+    ]
+   }
+  ]
  },
  {
   "id": "plant.grass",
@@ -353,6 +386,23 @@
   },
   "anticipate": [
    "A tuft of crossed cards that is instanced thousands of times; never one mesh per blade."
+  ],
+  "parts": [
+   {
+    "name": "Blade",
+    "role": "blade",
+    "required": true,
+    "aliases": [
+     "blade",
+     "blades",
+     "halm",
+     "halmen",
+     "spriet",
+     "leaf",
+     "grass",
+     "gras"
+    ]
+   }
   ]
  },
  {
@@ -391,6 +441,59 @@
    ],
    "source": "general knowledge: typical production range, not a standard; sunflowers reach 2-3 m",
    "confidence": "C"
-  }
+  },
+  "parts": [
+   {
+    "name": "Stem",
+    "role": "trunk",
+    "required": true,
+    "aliases": [
+     "stem",
+     "steel",
+     "stalk",
+     "trunk"
+    ]
+   },
+   {
+    "name": "Petal",
+    "role": "petal",
+    "required": true,
+    "aliases": [
+     "petal",
+     "petals",
+     "bloemblad",
+     "bloemblaadjes",
+     "bloom",
+     "head",
+     "flower",
+     "bloem",
+     "blossom"
+    ]
+   },
+   {
+    "name": "Centre",
+    "role": "centre",
+    "required": false,
+    "aliases": [
+     "centre",
+     "center",
+     "heart",
+     "hart",
+     "pistil",
+     "disc"
+    ]
+   },
+   {
+    "name": "Leaf",
+    "role": "leaf",
+    "required": false,
+    "aliases": [
+     "leaf",
+     "leaves",
+     "blad",
+     "bladeren"
+    ]
+   }
+  ]
  }
 ]

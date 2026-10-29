@@ -64,7 +64,8 @@ export function formatChecked(choice: { archetype: ResolvedArchetype; generic: b
   }
   const found = compared.required.filter((r) => r.found > 0);
   const missing = compared.required.filter((r) => r.found === 0);
-  out.push(`  required parts found: ${found.length} of ${compared.required.length}${found.length ? ` (${found.map((r) => `${r.part} x${r.found}`).join(", ")})` : ""}${missing.length ? `; not found: ${missing.map((r) => r.part).join(", ")}` : ""}`);
+  if (compared.required.length === 0) out.push("  required parts: none are defined for this thing, so parts were not compared (only pivots, size and direction, where known)");
+  else out.push(`  required parts found: ${found.length} of ${compared.required.length}${found.length ? ` (${found.map((r) => `${r.part} x${r.found}`).join(", ")})` : ""}${missing.length ? `; not found: ${missing.map((r) => r.part).join(", ")}` : ""}`);
   if (compared.optionalFound.length) out.push(`  optional parts found: ${compared.optionalFound.join(", ")}`);
   if (compared.unmatchedNodes.length) out.push(`  nodes that match no part: ${compared.unmatchedNodes.slice(0, 8).join(", ")}${compared.unmatchedNodes.length > 8 ? ` (+${compared.unmatchedNodes.length - 8} more)` : ""}  (fine for extra detail; rename one if it is a part)`);
   out.push(`  size: ${compared.sizeChecked ? "compared with the typical range" : "not compared (no typical size known)"}`);
