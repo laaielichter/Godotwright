@@ -1,0 +1,234 @@
+{
+ "version": 1,
+ "name": "jet-engine",
+ "archetype": "machine.jet-engine",
+ "description": "A turbofan engine: a nacelle with an intake lip, a fan with blades that spins about the engine axis, a core cowl and an exhaust nozzle. It stands on y = 0 with the intake facing +Z.",
+ "params": [
+  {
+   "name": "fanDiameter",
+   "type": "number",
+   "default": 2.4,
+   "min": 0.8,
+   "max": 3.4,
+   "description": "Fan diameter in metres (a GE90 is about 3.1)."
+  },
+  {
+   "name": "length",
+   "type": "number",
+   "default": 4.0,
+   "min": 2.0,
+   "max": 7.0,
+   "description": "Engine length in metres."
+  },
+  {
+   "name": "blades",
+   "type": "integer",
+   "default": 18,
+   "min": 8,
+   "max": 36,
+   "description": "Number of fan blades."
+  }
+ ],
+ "materials": {
+  "jet_cowl": {
+   "color": [
+    0.85,
+    0.86,
+    0.88
+   ],
+   "metallic": 0.5,
+   "roughness": 0.3
+  },
+  "jet_dark": {
+   "color": [
+    0.12,
+    0.12,
+    0.14
+   ],
+   "metallic": 0.6,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "JetEngine",
+   "material": "jet_cowl",
+   "vars": {
+    "R": "$fanDiameter / 2",
+    "L2": "$length / 2"
+   },
+   "children": [
+    {
+     "name": "Nacelle",
+     "shape": "lathe",
+     "segments": 36,
+     "caps": false,
+     "rotate": [
+      90,
+      0,
+      0
+     ],
+     "at": [
+      0,
+      "$R * 1.12",
+      0
+     ],
+     "profile": [
+      [
+       "$R * 0.62",
+       "-$L2 + $length * 0.12"
+      ],
+      [
+       "$R * 0.8",
+       "-$L2 + $length * 0.25"
+      ],
+      [
+       "$R * 1.12",
+       "-$length * 0.1"
+      ],
+      [
+       "$R * 1.12",
+       "$L2 - $length * 0.15"
+      ],
+      [
+       "$R * 1.06",
+       "$L2 - $length * 0.04"
+      ],
+      [
+       "$R * 0.98",
+       "$L2"
+      ],
+      [
+       "$R * 0.93",
+       "$L2 - 0.02"
+      ],
+      [
+       "$R * 0.9",
+       "$L2 - $length * 0.1"
+      ],
+      [
+       "$R * 0.9",
+       "-$L2 + $length * 0.3"
+      ],
+      [
+       "$R * 0.62",
+       "-$L2 + $length * 0.12"
+      ]
+     ]
+    },
+    {
+     "name": "Core",
+     "shape": "lathe",
+     "segments": 28,
+     "material": "metal",
+     "rotate": [
+      90,
+      0,
+      0
+     ],
+     "at": [
+      0,
+      "$R * 1.12",
+      0
+     ],
+     "profile": [
+      [
+       "$R * 0.2",
+       "$L2 - $length * 0.2"
+      ],
+      [
+       "$R * 0.55",
+       "$L2 - $length * 0.3"
+      ],
+      [
+       "$R * 0.5",
+       "-$L2 + $length * 0.25"
+      ],
+      [
+       "$R * 0.4",
+       "-$L2 + $length * 0.05"
+      ]
+     ]
+    },
+    {
+     "name": "Fan",
+     "material": "jet_dark",
+     "at": [
+      0,
+      "$R * 1.12",
+      "$L2 - $length * 0.22"
+     ],
+     "children": [
+      {
+       "name": "Hub",
+       "shape": "ellipsoid",
+       "radii": [
+        "$R * 0.2",
+        "$R * 0.2",
+        "$R * 0.22"
+       ],
+       "segments": 16
+      },
+      {
+       "name": "Blade_{i}",
+       "shape": "box",
+       "size": [
+        "$R * 0.17",
+        "$R * 0.78",
+        "$R * 0.025"
+       ],
+       "offset": [
+        0,
+        "$R * 0.55",
+        0
+       ],
+       "rotate": [
+        0,
+        0,
+        0
+       ],
+       "repeat": {
+        "count": "$blades",
+        "around": "z"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Nozzle",
+     "shape": "lathe",
+     "segments": 28,
+     "material": "jet_dark",
+     "rotate": [
+      90,
+      0,
+      0
+     ],
+     "at": [
+      0,
+      "$R * 1.12",
+      "-$L2 + 0.05"
+     ],
+     "profile": [
+      [
+       "$R * 0.45",
+       0.1
+      ],
+      [
+       "$R * 0.5",
+       -0.05
+      ],
+      [
+       "$R * 0.4",
+       -0.3
+      ],
+      [
+       "$R * 0.2",
+       -0.3
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}
