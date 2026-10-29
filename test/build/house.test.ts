@@ -52,6 +52,18 @@ describe("house", () => {
     expect(windows[0]!.triangles).toBeGreaterThan(0);
   });
 
+  it("refuses more windows than a wall holds, and names the limit", () => {
+    expect(() => buildKind("house", { width: 3, windowsPerFloor: 12 })).toThrow(/windowsPerFloor 12 does not fit on a 3 m wall \(at most 1\)/);
+    expect(() => buildKind("house", { depth: 4, windowsPerSide: 3 })).toThrow(/windowsPerSide 3 does not fit on a 4 m wall \(at most 2\)/);
+  });
+
+  it("builds the most windows a wall holds without findings", () => {
+    for (const input of [{ width: 9, windowsPerFloor: 5 }, { depth: 10.8, windowsPerSide: 6 }, { width: 3, windowsPerFloor: 1 }]) {
+      const report = lintModelFile(house(input));
+      expect(report.findings.filter((f) => f.severity !== "info"), JSON.stringify(input)).toEqual([]);
+    }
+  });
+
   it("writes a contract that the model passes", () => {
     const path = house();
     const contract = contractFromModel(inspectModel(path));
