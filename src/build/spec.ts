@@ -10,7 +10,7 @@ export const LIMITS = { nodes: 5000, repeat: 500, triangles: 3_000_000, points: 
 
 type Obj = Record<string, unknown>;
 
-const COMMON_KEYS = ["name", "shape", "material", "at", "rotate", "mirror", "repeat", "vars", "children"];
+const COMMON_KEYS = ["name", "shape", "material", "at", "offset", "rotate", "mirror", "repeat", "vars", "children"];
 const SHAPE_KEYS: Record<string, string[]> = {
   box: ["size", "anchor"],
   cylinder: ["radius", "height", "axis", "segments", "anchor"],
@@ -166,19 +166,37 @@ function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
   }
 }
 
-function quaternion(degrees: number[]): [number, number, number, number] | undefined {
-  if (degrees.every((d) => d === 0)) return undefined;
-  const [rx = 0, ry = 0, rz = 0] = degrees.map((d) => (d * Math.PI) / 360);
-  const qx: [number, number, number, number] = [Math.sin(rx), 0, 0, Math.cos(rx)];
-  const qy: [number, number, number, number] = [0, Math.sin(ry), 0, Math.cos(ry)];
-  const qz: [number, number, number, number] = [0, 0, Math.sin(rz), Math.cos(rz)];
-  const mul = (a: [number, number, number, number], b: [number, number, number, number]): [number, number, number, number] => [
+type Quat = [number, number, number, number];
+
+function qmul(a: Quat, b: Quat): Quat {
+  return [
     a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
     a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
     a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
     a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
   ];
-  return mul(qz, mul(qy, qx));
+}
+
+/** Rotation about one axis, in degrees. */
+function axisQuat(axis: "x" | "y" | "z", degrees: number): Quat {
+  const h = (degrees * Math.PI) / 360;
+  return [axis === "x" ? Math.sin(h) : 0, axis === "y" ? Math.sin(h) : 0, axis === "z" ? Math.sin(h) : 0, Math.cos(h)];
+}
+
+/** Rotations in degrees, applied x, then y, then z. */
+function quaternion(degrees: number[]): Quat | undefined {
+  if (degrees.every((d) => d === 0)) return undefined;
+  const [rx = 0, ry = 0, rz = 0] = degrees;
+  return qmul(axisQuat("z", rz), qmul(axisQuat("y", ry), axisQuat("x", rx)));
+}
+
+/** Turns a point about an axis through the origin (the same rotation as axisQuat). */
+function turn(axis: "x" | "y" | "z", degrees: number, p: V3): V3 {
+  const r = (degrees * Math.PI) / 180;
+  const c = Math.cos(r), s = Math.sin(r);
+  if (axis === "x") return [p[0], c * p[1] - s * p[2], s * p[1] + c * p[2]];
+  if (axis === "y") return [c * p[0] + s * p[2], p[1], -s * p[0] + c * p[2]];
+  return [c * p[0] - s * p[1], s * p[0] + c * p[1], p[2]];
 }
 
 /** The mirror image of a node tree in the x = 0 plane of its parent. */
@@ -212,19 +230,35 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
   const repeat = raw["repeat"];
   let count = 1;
   let step: number[] = [0, 0, 0];
+  let around: "x" | "y" | "z" | undefined;
+  let phase = 0;
   if (repeat !== undefined) {
-    if (!isObj(repeat)) throw new BuildError(`${path}.repeat: expected { "count": n, "step": [dx, dy, dz] }`);
-    checkKeys(repeat, ["count", "step"], `${path}.repeat`);
+    if (!isObj(repeat)) throw new BuildError(`${path}.repeat: expected { "count": n, "step": [dx, dy, dz] } or { "count": n, "around": "y" }`);
+    checkKeys(repeat, ["count", "step", "around", "phase"], `${path}.repeat`);
     count = integer(repeat["count"], scope, `${path}.repeat.count`, 1, LIMITS.repeat);
-    step = vec(repeat["step"], 3, scope, `${path}.repeat.step`);
+    if (repeat["around"] !== undefined) {
+      if (repeat["around"] !== "x" && repeat["around"] !== "y" && repeat["around"] !== "z") throw new BuildError(`${path}.repeat.around: use "x", "y" or "z"`);
+      if (repeat["step"] !== undefined) throw new BuildError(`${path}.repeat: use either "step" (a row) or "around" (a ring), not both`);
+      around = repeat["around"];
+      phase = repeat["phase"] === undefined ? 0 : num(repeat["phase"], scope, `${path}.repeat.phase`);
+    } else {
+      if (repeat["phase"] !== undefined) throw new BuildError(`${path}.repeat.phase: only a ring ("around") has a phase`);
+      step = vec(repeat["step"], 3, scope, `${path}.repeat.step`);
+    }
   }
 
   const out: BuildNode[] = [];
   for (let i = 0; i < count; i++) {
     const local: Ctx = { ...ctx, scope: { ...scope, ...(repeat ? { i, n: count } : {}) } };
     const at = raw["at"] === undefined ? [0, 0, 0] : vec(raw["at"], 3, local.scope, `${path}.at`);
-    const position: V3 = [(at[0] ?? 0) + i * (step[0] ?? 0), (at[1] ?? 0) + i * (step[1] ?? 0), (at[2] ?? 0) + i * (step[2] ?? 0)];
-    const rotation = raw["rotate"] === undefined ? undefined : quaternion(vec(raw["rotate"], 3, local.scope, `${path}.rotate`));
+    let position: V3 = [(at[0] ?? 0) + i * (step[0] ?? 0), (at[1] ?? 0) + i * (step[1] ?? 0), (at[2] ?? 0) + i * (step[2] ?? 0)];
+    let rotation = raw["rotate"] === undefined ? undefined : quaternion(vec(raw["rotate"], 3, local.scope, `${path}.rotate`));
+    if (around) {
+      // A ring: copy i is turned about the axis through the parent's origin, position and direction together.
+      const angle = phase + (i * 360) / count;
+      position = turn(around, angle, position);
+      rotation = qmul(axisQuat(around, angle), rotation ?? [0, 0, 0, 1]);
+    }
 
     const node: BuildNode = { name: expandName(name, i, repeat !== undefined) };
     if (position.some((v) => v !== 0)) node.translation = position;
@@ -232,6 +266,10 @@ function buildNodes(raw: unknown, parent: Ctx, path: string): BuildNode[] {
     if (raw["shape"] !== undefined) {
       if (typeof raw["shape"] !== "string") throw new BuildError(`${path}.shape: expected a shape name`);
       const mesh = makeShape(raw, local, path);
+      if (raw["offset"] !== undefined) {
+        const [ox = 0, oy = 0, oz = 0] = vec(raw["offset"], 3, local.scope, `${path}.offset`);
+        mesh.translate(ox, oy, oz);
+      }
       parent.counters.triangles += mesh.triangles;
       // Every copy of a repeated node is the same size, so refuse early instead of building them all.
       if (i === 0 && count > 1) parent.counters.triangles += mesh.triangles * (count - 1);

@@ -28,6 +28,14 @@ object to the file of its family (or a new file) and run `npm test`; the tests c
   sure, use `C` and say so. Never guess a number and call it `A`.
 - Do not put anything from a private project in here, only general knowledge.
 
+## Adding a recipe
+
+A recipe is a model spec (see `godotwright model spec`) saved as `data/recipes/<kind>.json`. Give it a `name`,
+a `description`, an `archetype` id, `params` with ranges, and `nodes`. Put the pivot of every moving part at its
+hub or hinge (use `offset` to move a shape without moving its pivot). `npm test` builds every recipe, checks it
+against its archetype and tries each parameter at its lowest and highest value, so a recipe that only works with
+its defaults is caught. Look at it too: `model build <kind>` writes a `.glb` you can open in any viewer.
+
 ## Set up
 
 ```sh

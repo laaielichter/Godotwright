@@ -130,7 +130,9 @@ tangents, named parts with sensible pivots, standing on y = 0, and the same byte
 same parameters. The result goes straight through `model lint`, and `--contract-out` writes a
 `model.contract.json` for it. `model kinds` lists the kinds with their parameters, ranges and defaults;
 set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
-to be refined, not hand-sculpted art. Kinds today: `house`.
+to be refined, not hand-sculpted art. Kinds today: `house`, plus recipes, which are ready-made specs in
+`data/recipes/`: `car`, `tractor` and `helicopter`. Every recipe names its archetype, so `model build` checks
+it as it builds, and every recipe is tested to stay clean at the lowest and highest value of each parameter.
 
 `model identify` says **what a thing is** before you build it, from its name in English or Dutch (typos,
 plurals and Dutch compounds like "vrachtauto" included) or from a description ("something with wheels and

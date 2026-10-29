@@ -1,0 +1,417 @@
+{
+ "version": 1,
+ "name": "car",
+ "archetype": "vehicle.wheeled.car",
+ "description": "A passenger car: a lofted body, a glass cabin, four wheels with their pivot at the hub, doors on their hinges, lights and mirrors.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 4.4,
+   "min": 3.4,
+   "max": 5.3,
+   "description": "Body length in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 1.8,
+   "min": 1.5,
+   "max": 2.0,
+   "description": "Body width in metres."
+  },
+  {
+   "name": "wheelRadius",
+   "type": "number",
+   "default": 0.33,
+   "min": 0.25,
+   "max": 0.42,
+   "description": "Tyre radius; a city car is about 0.28, an SUV about 0.38."
+  },
+  {
+   "name": "tyreWidth",
+   "type": "number",
+   "default": 0.22,
+   "min": 0.16,
+   "max": 0.3,
+   "description": "Tyre width."
+  }
+ ],
+ "materials": {
+  "lamp": {
+   "color": [
+    0.95,
+    0.92,
+    0.75
+   ],
+   "metallic": 0,
+   "roughness": 0.15
+  },
+  "taillamp": {
+   "color": [
+    0.65,
+    0.02,
+    0.02
+   ],
+   "metallic": 0,
+   "roughness": 0.2
+  }
+ },
+ "nodes": [
+  {
+   "name": "Car",
+   "vars": {
+    "L2": "$length / 2",
+    "x": "$width / 2 - $tyreWidth / 2 - 0.02",
+    "z": "$length * 0.295"
+   },
+   "children": [
+    {
+     "name": "Body",
+     "shape": "loft",
+     "material": "paint",
+     "sections": [
+      {
+       "z": "-$L2",
+       "superellipse": {
+        "width": "$width * 0.8",
+        "height": 0.55,
+        "n": 4,
+        "count": 32,
+        "cy": 0.62
+       }
+      },
+      {
+       "z": "-$L2 * 0.68",
+       "superellipse": {
+        "width": "$width",
+        "height": 0.7,
+        "n": 4,
+        "count": 32,
+        "cy": 0.7
+       }
+      },
+      {
+       "z": "$L2 * 0.14",
+       "superellipse": {
+        "width": "$width",
+        "height": 0.7,
+        "n": 4,
+        "count": 32,
+        "cy": 0.7
+       }
+      },
+      {
+       "z": "$L2 * 0.77",
+       "superellipse": {
+        "width": "$width * 0.96",
+        "height": 0.62,
+        "n": 4,
+        "count": 32,
+        "cy": 0.62
+       }
+      },
+      {
+       "z": "$L2",
+       "superellipse": {
+        "width": "$width * 0.62",
+        "height": 0.45,
+        "n": 4,
+        "count": 32,
+        "cy": 0.55
+       }
+      }
+     ]
+    },
+    {
+     "name": "Cabin",
+     "shape": "loft",
+     "material": "glass",
+     "sections": [
+      {
+       "z": "-$L2 * 0.68",
+       "superellipse": {
+        "width": "$width * 0.72",
+        "height": 0.35,
+        "n": 2.5,
+        "count": 32,
+        "cy": 1.0
+       }
+      },
+      {
+       "z": "-$L2 * 0.41",
+       "superellipse": {
+        "width": "$width * 0.83",
+        "height": 0.6,
+        "n": 2.5,
+        "count": 32,
+        "cy": 1.1
+       }
+      },
+      {
+       "z": "$L2 * 0.23",
+       "superellipse": {
+        "width": "$width * 0.83",
+        "height": 0.62,
+        "n": 2.5,
+        "count": 32,
+        "cy": 1.1
+       }
+      },
+      {
+       "z": "$L2 * 0.45",
+       "superellipse": {
+        "width": "$width * 0.75",
+        "height": 0.35,
+        "n": 2.5,
+        "count": 32,
+        "cy": 1.0
+       }
+      }
+     ]
+    },
+    {
+     "name": "Door_L",
+     "at": [
+      "$width / 2 - 0.012",
+      0.72,
+      "$L2 * 0.32"
+     ],
+     "mirror": "Door_R",
+     "children": [
+      {
+       "name": "Panel",
+       "shape": "box",
+       "material": "paint",
+       "size": [
+        0.04,
+        0.4,
+        "$length * 0.23"
+       ],
+       "at": [
+        0,
+        0,
+        "-$length * 0.115"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Wheels",
+     "children": [
+      {
+       "name": "Wheel_FL",
+       "at": [
+        "$x",
+        "$wheelRadius",
+        "$z"
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 32,
+         "profile": [
+          [
+           "$wheelRadius*0.52",
+           "-$tyreWidth/2"
+          ],
+          [
+           "$wheelRadius*0.9",
+           "-$tyreWidth/2"
+          ],
+          [
+           "$wheelRadius",
+           "-$tyreWidth*0.34"
+          ],
+          [
+           "$wheelRadius",
+           "$tyreWidth*0.34"
+          ],
+          [
+           "$wheelRadius*0.9",
+           "$tyreWidth/2"
+          ],
+          [
+           "$wheelRadius*0.52",
+           "$tyreWidth/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 32,
+         "profile": [
+          [
+           0,
+           "-$tyreWidth*0.53"
+          ],
+          [
+           "$wheelRadius*0.53",
+           "-$tyreWidth*0.53"
+          ],
+          [
+           "$wheelRadius*0.47",
+           0
+          ],
+          [
+           "$wheelRadius*0.53",
+           "$tyreWidth*0.53"
+          ],
+          [
+           0,
+           "$tyreWidth*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheel_FR"
+      },
+      {
+       "name": "Wheel_RL",
+       "at": [
+        "$x",
+        "$wheelRadius",
+        "-$z"
+       ],
+       "children": [
+        {
+         "name": "Tread",
+         "shape": "lathe",
+         "material": "rubber",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 32,
+         "profile": [
+          [
+           "$wheelRadius*0.52",
+           "-$tyreWidth/2"
+          ],
+          [
+           "$wheelRadius*0.9",
+           "-$tyreWidth/2"
+          ],
+          [
+           "$wheelRadius",
+           "-$tyreWidth*0.34"
+          ],
+          [
+           "$wheelRadius",
+           "$tyreWidth*0.34"
+          ],
+          [
+           "$wheelRadius*0.9",
+           "$tyreWidth/2"
+          ],
+          [
+           "$wheelRadius*0.52",
+           "$tyreWidth/2"
+          ]
+         ]
+        },
+        {
+         "name": "Rim",
+         "shape": "lathe",
+         "material": "metal",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "segments": 32,
+         "profile": [
+          [
+           0,
+           "-$tyreWidth*0.53"
+          ],
+          [
+           "$wheelRadius*0.53",
+           "-$tyreWidth*0.53"
+          ],
+          [
+           "$wheelRadius*0.47",
+           0
+          ],
+          [
+           "$wheelRadius*0.53",
+           "$tyreWidth*0.53"
+          ],
+          [
+           0,
+           "$tyreWidth*0.53"
+          ]
+         ]
+        }
+       ],
+       "mirror": "Wheel_RR"
+      }
+     ]
+    },
+    {
+     "name": "Headlight_L",
+     "shape": "box",
+     "material": "lamp",
+     "size": [
+      0.3,
+      0.12,
+      0.06
+     ],
+     "at": [
+      "$width * 0.3",
+      0.62,
+      "$L2 * 0.97"
+     ],
+     "mirror": "Headlight_R"
+    },
+    {
+     "name": "Taillight_L",
+     "shape": "box",
+     "material": "taillamp",
+     "size": [
+      0.3,
+      0.1,
+      0.05
+     ],
+     "at": [
+      "$width * 0.34",
+      0.75,
+      "-$L2 * 0.995"
+     ],
+     "mirror": "Taillight_R"
+    },
+    {
+     "name": "Mirror_L",
+     "shape": "box",
+     "material": "paint",
+     "size": [
+      0.16,
+      0.1,
+      0.08
+     ],
+     "at": [
+      "$width / 2 + 0.06",
+      0.95,
+      "$L2 * 0.2"
+     ],
+     "mirror": "Mirror_R"
+    }
+   ]
+  }
+ ]
+}

@@ -5,7 +5,7 @@ import { formatArchetype, formatIdentify, formatTree } from "../archetype/format
 import { identify } from "../archetype/identify.js";
 import { ArchetypeError, loadLibrary } from "../archetype/library.js";
 import { BuildError } from "../build/params.js";
-import { buildKind, GENERATORS } from "../build/generators/index.js";
+import { allKinds, buildKind } from "../build/generators/index.js";
 import { buildModel } from "../build/run.js";
 import { buildSpec } from "../build/spec.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
@@ -89,7 +89,7 @@ export function modelCommand(): Command {
     .description("list the model kinds that `model build` can make, with their parameters")
     .action((_options: object, command: Command) => {
       const out: string[] = [];
-      for (const g of Object.values(GENERATORS)) {
+      for (const g of allKinds()) {
         out.push(`${g.kind}: ${g.description}`);
         for (const d of g.params) {
           const range = d.options ? d.options.join("|") : [d.min !== undefined && `min ${d.min}`, d.max !== undefined && `max ${d.max}`].filter(Boolean).join(", ");
@@ -137,7 +137,7 @@ export function modelCommand(): Command {
   model
     .command("build")
     .description("make a model from code: a clean .glb with UVs, tangents, named parts, ready for lint")
-    .argument("[kind]", `a ready-made kind (${Object.keys(GENERATORS).join(", ")}); leave out when you give a full spec with --spec`)
+    .argument("[kind]", `a ready-made kind (${allKinds().map((k) => k.kind).join(", ")}); leave out when you give a full spec with --spec`)
     .option("-o, --out <file>", "output file (default <kind>.glb, or the name in the spec)")
     .option("--spec <file>", "with a kind: parameters as JSON. Without a kind: a full model spec (see `model spec`)")
     .option("--set <name=value>", "set one parameter (repeatable)", collect, [])

@@ -1,0 +1,358 @@
+{
+ "version": 1,
+ "name": "helicopter",
+ "archetype": "aircraft.rotorcraft.helicopter",
+ "description": "A light helicopter: cabin and tail boom, glass canopy, main rotor with blades that pitch about their root, a tail rotor, fin and skids.",
+ "params": [
+  {
+   "name": "rotorRadius",
+   "type": "number",
+   "default": 7.0,
+   "min": 3.0,
+   "max": 9.0,
+   "description": "Main rotor radius in metres."
+  },
+  {
+   "name": "blades",
+   "type": "integer",
+   "default": 4,
+   "min": 2,
+   "max": 6,
+   "description": "Number of main rotor blades."
+  },
+  {
+   "name": "tailRotorRadius",
+   "type": "number",
+   "default": 1.1,
+   "min": 0.5,
+   "max": 1.6,
+   "description": "Tail rotor radius."
+  }
+ ],
+ "materials": {
+  "heli_paint": {
+   "color": [
+    0.85,
+    0.85,
+    0.88
+   ],
+   "metallic": 0.3,
+   "roughness": 0.35
+  },
+  "heli_dark": {
+   "color": [
+    0.06,
+    0.06,
+    0.07
+   ],
+   "metallic": 0.2,
+   "roughness": 0.5
+  }
+ },
+ "nodes": [
+  {
+   "name": "Helicopter",
+   "material": "heli_paint",
+   "children": [
+    {
+     "name": "Fuselage",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": -2.2,
+       "superellipse": {
+        "width": 1.2,
+        "height": 1.6,
+        "n": 3,
+        "count": 32,
+        "cy": 2.2
+       }
+      },
+      {
+       "z": -1.0,
+       "superellipse": {
+        "width": 2.2,
+        "height": 2.2,
+        "n": 3,
+        "count": 32,
+        "cy": 1.95
+       }
+      },
+      {
+       "z": 0.6,
+       "superellipse": {
+        "width": 2.3,
+        "height": 2.2,
+        "n": 3,
+        "count": 32,
+        "cy": 1.95
+       }
+      },
+      {
+       "z": 1.6,
+       "superellipse": {
+        "width": 2.0,
+        "height": 1.6,
+        "n": 3,
+        "count": 32,
+        "cy": 1.6
+       }
+      },
+      {
+       "z": 3.1,
+       "superellipse": {
+        "width": 0.9,
+        "height": 0.8,
+        "n": 3,
+        "count": 32,
+        "cy": 1.35
+       }
+      }
+     ]
+    },
+    {
+     "name": "Glass",
+     "shape": "loft",
+     "material": "glass",
+     "sections": [
+      {
+       "z": 0.3,
+       "superellipse": {
+        "width": 2.0,
+        "height": 0.9,
+        "n": 2.5,
+        "count": 32,
+        "cy": 2.45
+       }
+      },
+      {
+       "z": 1.6,
+       "superellipse": {
+        "width": 1.95,
+        "height": 1.3,
+        "n": 2.5,
+        "count": 32,
+        "cy": 2.15
+       }
+      },
+      {
+       "z": 2.7,
+       "superellipse": {
+        "width": 1.2,
+        "height": 0.9,
+        "n": 2.5,
+        "count": 32,
+        "cy": 1.8
+       }
+      }
+     ]
+    },
+    {
+     "name": "TailBoom",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": -1.9,
+       "superellipse": {
+        "width": 0.9,
+        "height": 1.0,
+        "n": 3,
+        "count": 32,
+        "cy": 2.3
+       }
+      },
+      {
+       "z": -5.0,
+       "superellipse": {
+        "width": 0.55,
+        "height": 0.6,
+        "n": 3,
+        "count": 32,
+        "cy": 2.55
+       }
+      },
+      {
+       "z": -8.0,
+       "superellipse": {
+        "width": 0.25,
+        "height": 0.3,
+        "n": 3,
+        "count": 32,
+        "cy": 2.8
+       }
+      }
+     ]
+    },
+    {
+     "name": "Fin",
+     "shape": "box",
+     "size": [
+      0.1,
+      1.5,
+      1.1
+     ],
+     "at": [
+      0,
+      3.45,
+      -7.7
+     ]
+    },
+    {
+     "name": "Stabilizer",
+     "shape": "box",
+     "size": [
+      1.9,
+      0.06,
+      0.45
+     ],
+     "at": [
+      0,
+      2.7,
+      -7.0
+     ]
+    },
+    {
+     "name": "Mast",
+     "shape": "cylinder",
+     "material": "heli_dark",
+     "radius": 0.13,
+     "height": 1.0,
+     "anchor": "base",
+     "at": [
+      0,
+      3.0,
+      0
+     ]
+    },
+    {
+     "name": "MainRotor",
+     "material": "heli_dark",
+     "at": [
+      0,
+      4.0,
+      0
+     ],
+     "children": [
+      {
+       "name": "Hub",
+       "shape": "cylinder",
+       "radius": 0.28,
+       "height": 0.2,
+       "anchor": "base",
+       "at": [
+        0,
+        -0.1,
+        0
+       ]
+      },
+      {
+       "name": "MainBlade",
+       "shape": "box",
+       "size": [
+        "$rotorRadius",
+        0.04,
+        0.4
+       ],
+       "offset": [
+        "$rotorRadius / 2",
+        0,
+        0
+       ],
+       "repeat": {
+        "count": "$blades",
+        "around": "y"
+       }
+      }
+     ]
+    },
+    {
+     "name": "TailRotor",
+     "material": "heli_dark",
+     "at": [
+      0.2,
+      2.8,
+      -8.2
+     ],
+     "children": [
+      {
+       "name": "TailHub",
+       "shape": "cylinder",
+       "radius": 0.08,
+       "height": 0.16,
+       "axis": "x"
+      },
+      {
+       "name": "TailBlade",
+       "shape": "box",
+       "size": [
+        0.03,
+        "$tailRotorRadius",
+        0.16
+       ],
+       "offset": [
+        0,
+        "$tailRotorRadius / 2",
+        0
+       ],
+       "repeat": {
+        "count": 2,
+        "around": "x"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Skids",
+     "material": "heli_dark",
+     "children": [
+      {
+       "name": "Skid_L",
+       "shape": "box",
+       "size": [
+        0.08,
+        0.08,
+        3.6
+       ],
+       "at": [
+        1.05,
+        0.04,
+        0.4
+       ],
+       "mirror": "Skid_R"
+      },
+      {
+       "name": "Strut_FL",
+       "shape": "box",
+       "size": [
+        0.06,
+        0.8,
+        0.06
+       ],
+       "at": [
+        0.98,
+        0.45,
+        1.3
+       ],
+       "mirror": "Strut_FR"
+      },
+      {
+       "name": "Strut_RL",
+       "shape": "box",
+       "size": [
+        0.06,
+        0.8,
+        0.06
+       ],
+       "at": [
+        0.98,
+        0.45,
+        -0.7
+       ],
+       "mirror": "Strut_RR"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -10,7 +10,7 @@ import { GodotApi } from "../api/api.js";
 import { formatLookup, formatSearch } from "../api/format.js";
 import { checkLearning, lookupLearning, reviewLearning } from "../learn/hooks.js";
 import { parseFindingLine, recordFeedback } from "../learn/learn.js";
-import { GENERATORS } from "../build/generators/index.js";
+import { allKinds } from "../build/generators/index.js";
 import { buildModel } from "../build/run.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
 import { loadContract } from "../model/contract.js";
@@ -295,7 +295,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       annotations: readOnly,
     },
     async () => {
-      const kinds = Object.values(GENERATORS).map((g) => `${g.kind}: ${g.description} Parameters: ${g.params.map((p) => `${p.name}=${String(p.default)}`).join(", ")}`);
+      const kinds = allKinds().map((g) => `${g.kind}: ${g.description} Parameters: ${g.params.map((p) => `${p.name}=${String(p.default)}`).join(", ")}`);
       return text(`${SPEC_HELP}\n${JSON.stringify(EXAMPLE_SPEC, null, 2)}\n\nReady-made kinds (godot_model_build with \`kind\`):\n${kinds.join("\n")}\n`);
     },
   );
@@ -308,7 +308,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         "Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` or a model `spec`, write it to `out`, and lint it. If the spec has an \"archetype\" (or the kind has one), the result is also checked against what that thing should be. Call godot_model_identify first and godot_model_spec for the format.",
       inputSchema: {
         out: z.string().describe("where to write the .glb, inside the project, e.g. models/car.glb"),
-        kind: z.string().optional().describe(`a ready-made kind: ${Object.keys(GENERATORS).join(", ")}`),
+        kind: z.string().optional().describe(`a ready-made kind: ${allKinds().map((k) => k.kind).join(", ")}`),
         spec: z.record(z.string(), z.unknown()).optional().describe("a full model spec as a JSON object"),
         spec_file: z.string().optional().describe("or a path to a spec JSON file inside the project"),
         params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("parameter values, e.g. { width: 9, roof: 'hip' }"),

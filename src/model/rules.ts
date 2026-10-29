@@ -31,7 +31,7 @@ const list: ModelRule[] = [
   { id: "model/non-manifold", category: "geometry", severity: "info", title: "Edge shared by more than two triangles", fix: "Split the surfaces or remove the stray triangle." },
   { id: "model/degenerate-triangles", category: "geometry", severity: "warning", title: "Triangles without area", fix: "Merge or delete the vertices of the flat triangles." },
   { id: "model/mirrored-node", category: "geometry", severity: "warning", title: "Node with a negative scale", fix: "Apply the mirror to the mesh (bake the scale) so the winding stays right." },
-  { id: "model/asymmetry", category: "geometry", severity: "warning", title: "Almost symmetric, but not quite", fix: "Mirror one half onto the other so left and right match." },
+  { id: "model/asymmetry", category: "geometry", severity: "info", title: "Almost symmetric, but not quite", fix: "Mirror one half onto the other so left and right match, unless the difference is meant (an exhaust on one side)." },
   { id: "model/missing-normals", category: "materials", severity: "warning", title: "Mesh without normals", fix: "Export the normals, or the surface shades flat and wrong." },
   { id: "model/missing-uv", category: "materials", severity: "error", title: "Textured material on a mesh without UVs", fix: "Add UV coordinates (TEXCOORD_0) to the mesh." },
   { id: "model/missing-tangents", category: "materials", severity: "warning", title: "Normal map without tangents", fix: "Export tangents so the normal map lights the same in every engine." },
