@@ -203,8 +203,16 @@ describe("learning from real Godot checks", () => {
   });
 
   it("remembers messages the log parser could not place", () => {
-    recordCheck(godot([{ severity: "error", message: "Unexpected thing 42", source: "import" }]), { findings: [] });
-    expect(readLearning().unparsed).toEqual({ "Unexpected thing <n>": 1 });
+    recordCheck(godot([{ severity: "error", message: "Unexpected end of file 42", source: "import" }]), { findings: [] });
+    expect(readLearning().unparsed).toEqual({ "Unexpected end of file <n>": 1 });
+  });
+
+  it("keeps no project name from a Godot message, and drops such names kept by an older version", () => {
+    recordCheck(godot([{ severity: "error", file: "res://enemy.gd", line: 3, message: "Function take_damage not found in base Enemy", source: "script" }]), { findings: [] });
+    expect(readLearning().missedByReview).toEqual({ "Function <id> not found in base <id>": 1 });
+    updateLearning((d) => (d.missedByReview["Function take_damage not found in base Enemy"] = 2));
+    recordCheck(godot([]), { findings: [] });
+    expect(readLearning().missedByReview).toEqual({ "Function <id> not found in base <id>": 1 });
   });
 });
 
@@ -256,10 +264,18 @@ describe("getting smarter over time", () => {
 
   it("only links lookups close in time, and only to names that exist", () => {
     const api = GodotApi.load();
-    recordApiLookup("Foo.bar", false, 0);
+    recordApiLookup("Node2D.lookat", false, 0);
     recordApiLookup("Node.get_node", true, 10 * 60_000);
-    expect(readLearning().apiMisses["Foo.bar"]?.resolved).toEqual({});
-    expect(learnedHints("Foo.bar", api, readLearning(), { "Foo.bar": { "Node.get_node": 2, "Nope.nothing": 9 } })).toEqual(["Node.get_node"]);
+    expect(readLearning().apiMisses["Node2D.lookat"]?.resolved).toEqual({});
+    expect(learnedHints("Node2D.lookat", api, readLearning(), { "Node2D.lookat": { "Node.get_node": 2, "Nope.nothing": 9 } })).toEqual(["Node.get_node"]);
+  });
+
+  it("keeps no failed lookup of the project's own names, nor a bare name", () => {
+    const api = GodotApi.load();
+    for (const query of ["Enemy.take_damage", "Level", "Node2D.my_position"]) lookupLearning(api, query);
+    expect(readLearning().apiMisses).toEqual({});
+    expect(readLearning().lastMiss).toBeUndefined();
+    expect(existsSync(learningFile()) ? readFileSync(learningFile(), "utf8") : "").not.toMatch(/take_damage|my_position|Level/);
   });
 
   it("reads a finding line whose file path has a space", () => {
