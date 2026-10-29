@@ -100,6 +100,13 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     expect(failed(await call("godot_model_lint", { file: "/etc/hostname" }))).toBe(true);
   });
 
+  it("accepts folders inside the project whose names start with two dots", async () => {
+    const res = await call("godot_model_build", { out: "..cache/car.glb", kind: "house" });
+    expect(failed(res)).toBe(false);
+    expect(existsSync(`${root}/..cache/car.glb`)).toBe(true);
+    expect(failed(await call("godot_model_inspect", { file: "..cache/car.glb" }))).toBe(false);
+  });
+
   it("lints a model, and with an archetype catches a car without wheels", async () => {
     await call("godot_model_build", { out: "models/ok.glb", spec: EXAMPLE_SPEC });
     const plain = textOf(await call("godot_model_lint", { file: "models/ok.glb" }));

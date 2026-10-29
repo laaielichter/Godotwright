@@ -1,5 +1,5 @@
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
@@ -272,7 +272,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     const root = findProjectRoot(base) ?? base;
     const real = realLocation(full);
     const rel = real === undefined ? ".." : relative(realLocation(root) ?? root, real);
-    if (rel.startsWith("..") || isAbsolute(rel)) throw new ModelError(`${path} is outside the project (${root}); use a path inside it`);
+    if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new ModelError(`${path} is outside the project (${root}); use a path inside it`);
     return full;
   };
   /** A path the tools write: inside the project, and not a link, since writing through one changes the file it points to. */
