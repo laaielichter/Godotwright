@@ -1,4 +1,14 @@
-import type { Command } from "commander";
+import { InvalidArgumentError, type Command } from "commander";
+
+/**
+ * Parses a number option. Text such as "8O" is a usage error: as NaN it would silently
+ * switch off a gate, budget or limit, and a CI job would stay green.
+ */
+export function parseNumber(value: string): number {
+  const n = Number(value);
+  if (value.trim() === "" || !Number.isFinite(n)) throw new InvalidArgumentError("expected a number");
+  return n;
+}
 
 /** Writes command output through commander, so tests can capture it. */
 export function writeOut(command: Command, text: string): void {
