@@ -100,7 +100,10 @@ Godotwright gets better with every use, without collecting anything personal.
     marked `sheet` in the archetypes, so the open border of a tile is not reported as open edges but a hole is.
     Step 3 (done): a lake: a bowl carved into the terrain from world coordinates (so it can span tiles) and a water
     surface at a level half a metre under the lowest point of its rim.
-    Next: rivers that run downhill, collision data (`HeightMapShape3D` heights) written
+    Step 4 (done): a river that winds towards +z, with a bed that follows the lowest ground across it and never rises, so
+    the water always runs downhill and lies below the ground beside it (tested over many seeds), and a water surface that
+    falls smoothly row by row.
+    Next: collision data (`HeightMapShape3D` heights) written
     next to the tile, scatter points for plants and settlements, and checks for streaming budgets.
     Same method as models: archetypes first, then recipes.
 
