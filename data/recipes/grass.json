@@ -1,0 +1,77 @@
+{
+ "version": 1,
+ "name": "grass",
+ "archetype": "plant.grass",
+ "description": "A tuft of grass: thin tapering blades in a ring, each leaning outwards by a different amount and with a different height so the tuft looks natural. Scatter many tufts for a lawn.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 0.35,
+   "min": 0.05,
+   "max": 1.2,
+   "description": "Height of the tallest blades in metres."
+  },
+  {
+   "name": "blades",
+   "type": "integer",
+   "default": 24,
+   "min": 8,
+   "max": 48,
+   "description": "Number of blades."
+  },
+  {
+   "name": "radius",
+   "type": "number",
+   "default": 0.12,
+   "min": 0.05,
+   "max": 0.4,
+   "description": "Radius of the tuft at the base."
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Grass",
+   "material": "leaf",
+   "vars": {
+    "h": "$height",
+    "r": "$radius"
+   },
+   "children": [
+    {
+     "name": "Blade_{i}",
+     "shape": "lathe",
+     "segments": 4,
+     "at": [
+      "$r * (0.3 + 0.7 * ((($i * 7) % 5) / 4))",
+      0,
+      0
+     ],
+     "rotate": [
+      0,
+      0,
+      "-8 - 14 * (($i * 3) % 4) / 3"
+     ],
+     "repeat": {
+      "count": "$blades",
+      "around": "y"
+     },
+     "profile": [
+      [
+       "$h * 0.025",
+       0
+      ],
+      [
+       "$h * 0.012",
+       "$h * (0.7 + 0.3 * ((($i * 5) % 7) / 6))"
+      ],
+      [
+       "$h * 0.003",
+       "$h * (0.8 + 0.2 * ((($i * 5) % 7) / 6))"
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

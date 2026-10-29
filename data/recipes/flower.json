@@ -1,0 +1,148 @@
+{
+ "version": 1,
+ "name": "flower",
+ "archetype": "plant.flower",
+ "description": "A flower: a slender stem, two leaves near the base and a head of petals around a centre disc, facing up. The petal count and the height are parameters.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 0.5,
+   "min": 0.1,
+   "max": 2.5,
+   "description": "Height of the flower head above the ground in metres."
+  },
+  {
+   "name": "petals",
+   "type": "integer",
+   "default": 8,
+   "min": 5,
+   "max": 16,
+   "description": "Number of petals."
+  },
+  {
+   "name": "headRadius",
+   "type": "number",
+   "default": 0.06,
+   "min": 0.02,
+   "max": 0.2,
+   "description": "Radius of the head including petals."
+  }
+ ],
+ "materials": {
+  "flower_stem": {
+   "color": [
+    0.12,
+    0.35,
+    0.08,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.7,
+   "doubleSided": true
+  },
+  "flower_petal": {
+   "color": [
+    0.95,
+    0.75,
+    0.1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.6
+  },
+  "flower_centre": {
+   "color": [
+    0.3,
+    0.15,
+    0.05,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.8
+  }
+ },
+ "nodes": [
+  {
+   "name": "Flower",
+   "material": "flower_stem",
+   "vars": {
+    "H": "$height",
+    "hr": "$headRadius"
+   },
+   "children": [
+    {
+     "name": "Stem",
+     "shape": "cylinder",
+     "radius": "max(0.004, $H * 0.012)",
+     "height": "$H",
+     "segments": 8,
+     "at": [
+      0,
+      "$H / 2",
+      0
+     ]
+    },
+    {
+     "name": "Leaf_L",
+     "shape": "ellipsoid",
+     "radii": [
+      "$H * 0.1",
+      "$H * 0.012",
+      "$H * 0.035"
+     ],
+     "at": [
+      "$H * 0.09",
+      "$H * 0.2",
+      0
+     ],
+     "rotate": [
+      0,
+      0,
+      25
+     ],
+     "segments": 10,
+     "mirror": "Leaf_R"
+    },
+    {
+     "name": "Head",
+     "at": [
+      0,
+      "$H",
+      0
+     ],
+     "children": [
+      {
+       "name": "Centre",
+       "shape": "cylinder",
+       "material": "flower_centre",
+       "radius": "$hr * 0.35",
+       "height": "$hr * 0.2",
+       "segments": 14
+      },
+      {
+       "name": "Petal_{i}",
+       "shape": "ellipsoid",
+       "material": "flower_petal",
+       "radii": [
+        "$hr * 0.32",
+        "$hr * 0.06",
+        "$hr * 0.14"
+       ],
+       "at": [
+        "$hr * 0.62",
+        0,
+        0
+       ],
+       "segments": 10,
+       "repeat": {
+        "count": "$petals",
+        "around": "y"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
