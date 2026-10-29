@@ -65,11 +65,13 @@ godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
 godotwright model contract car.glb    # write a model.contract.json: node names, size, budget
+godotwright model contract --archetype car   # the same, from what a car usually is (no model yet)
 godotwright model lint car.glb --archetype car   # also check it is what it should be
 godotwright model lint car.glb --contract model.contract.json
 godotwright model identify "a tractor" # what it is: parts, size, variants, what to anticipate
 godotwright model archetypes          # the family tree of things Godotwright knows
 godotwright model kinds               # what `model build` can make, with parameters
+godotwright model recipes             # the ready-made recipes and the archetype each one is checked against
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright learn                     # what Godotwright learned on this machine
 ```
@@ -120,7 +122,9 @@ Findings are grouped per node, and their severity follows how much of the surfac
 affected, so one stray triangle is an info and a flipped panel is an error.
 A **model contract** (`model.contract.json`) pins what a model must keep, so a renamed node or a
 hull that grows 3 cm wider is caught. `model contract` writes one from the model as it is now;
-review it, add a `source` to each size, and keep it next to the model. With `--contract`, `model lint`
+review it, add a `source` to each size, and keep it next to the model. `model contract --archetype car`
+starts instead from what a thing usually is (its single parts by name, the middle of the typical size, a triangle
+budget), for a model that does not exist yet. With `--contract`, `model lint`
 reports `contract-missing-node`, `contract-order`, `contract-extra-node`, `contract-size`,
 `contract-ground` and `contract-triangles`. Sizes default to a 1% tolerance, or set `tolerance` in metres.
 The exit code is 1 when there are errors, or when the score is below `--min-score`.

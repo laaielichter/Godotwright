@@ -6,10 +6,11 @@ import { identify } from "../archetype/identify.js";
 import { ArchetypeError, loadLibrary } from "../archetype/library.js";
 import { BuildError } from "../build/params.js";
 import { allKinds, buildKind } from "../build/generators/index.js";
+import { loadRecipes } from "../build/recipes.js";
 import { buildModel } from "../build/run.js";
 import { buildSpec } from "../build/spec.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
-import { contractFromModel, loadContract } from "../model/contract.js";
+import { contractFromArchetype, contractFromModel, loadContract } from "../model/contract.js";
 import { formatModelInfo, formatModelReport } from "../model/format.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
@@ -78,10 +79,35 @@ export function modelCommand(): Command {
 
   model
     .command("contract")
-    .description("write a model.contract.json from a model as it is now (node names, size, triangle budget), to review and keep")
-    .argument("<file>", "a .glb or .gltf file")
-    .action((file: string, _options: object, command: Command) => {
-      guard(() => writeOut(command, `${JSON.stringify(contractFromModel(inspectModel(file)), null, 2)}\n`));
+    .description("write a model.contract.json: from a model as it is now (node names, size, triangle budget), or from what a thing usually is (--archetype), to review and keep")
+    .argument("[file]", "a .glb or .gltf file")
+    .option("--archetype <what>", 'start from an archetype id or a name instead of a file, e.g. "helicopter"')
+    .action((file: string | undefined, options: { archetype?: string }, command: Command) => {
+      guard(() => {
+        if (options.archetype !== undefined) {
+          if (file) throw new ModelError("give a model file or --archetype, not both");
+          const choice = chooseArchetype(options.archetype);
+          for (const note of choice.notes) process.stderr.write(`note: ${note}\n`);
+          if (choice.generic) process.stderr.write(`note: no exact match for "${options.archetype}"; this contract is for the closest family, ${choice.archetype.id}\n`);
+          return writeOut(command, `${JSON.stringify(contractFromArchetype(choice.archetype), null, 2)}\n`);
+        }
+        if (!file) throw new ModelError("give a model file, or --archetype <what> to start from what a thing usually is");
+        writeOut(command, `${JSON.stringify(contractFromModel(inspectModel(file)), null, 2)}\n`);
+      });
+    });
+
+  model
+    .command("recipes")
+    .description("list the ready-made recipes (data/recipes) with the archetype each one is checked against")
+    .option("--json", "print as JSON")
+    .action((options: { json?: boolean }, command: Command) => {
+      const recipes = [...loadRecipes().values()];
+      if (options.json) {
+        const rows = recipes.map((r) => ({ kind: r.kind, archetype: r.archetype ?? null, description: r.description, params: r.params.map((p) => ({ name: p.name, default: p.default, min: p.min ?? null, max: p.max ?? null })) }));
+        return writeOut(command, `${JSON.stringify(rows, null, 2)}\n`);
+      }
+      const out = recipes.map((r) => `${r.kind}  (${r.archetype ?? "no archetype"}, ${r.params.length} parameter${r.params.length === 1 ? "" : "s"})\n  ${r.description}`);
+      writeOut(command, `${out.join("\n")}\n\nBuild one with: godotwright model build <kind> -o <file>.glb   (parameters: godotwright model kinds)\n`);
     });
 
   model

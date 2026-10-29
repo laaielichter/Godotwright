@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import type { ResolvedArchetype } from "../archetype/types.js";
 import { ModelError } from "./gltf.js";
 import type { ModelInfo } from "./inspect.js";
 import { MODEL_RULES, type ModelFinding } from "./rules.js";
@@ -14,6 +15,8 @@ export interface Measure {
 /** What a model must keep: node names, overall size, budget. Stored as model.contract.json. */
 export interface ModelContract {
   version: 1;
+  /** Free text: where the contract came from. Not checked. */
+  description?: string;
   /** Node names (or paths) that must exist. */
   nodes?: string[];
   /** When true, the nodes must also appear in this order. */
@@ -54,6 +57,30 @@ export function contractFromModel(info: ModelInfo): ModelContract {
     contract.lowestY = { value: round(info.bounds.min[1]), tolerance: 0.02 };
   }
   contract.maxTriangles = Math.ceil((info.triangles * 1.05) / 1000) * 1000;
+  return contract;
+}
+
+/**
+ * Builds a starting contract from what a thing usually is, for a model that does not exist yet.
+ * Only parts that occur once are listed by name (a wheel has many names); the size is the middle of the
+ * typical range, give or take the width of that range, and the description says where that range comes from.
+ */
+export function contractFromArchetype(arch: ResolvedArchetype): ModelContract {
+  const contract: ModelContract = { version: 1, description: `Starting contract for ${arch.name} (${arch.id}) from the archetype library. Review it, give the nodes the names you use, and tighten the sizes.` };
+  const single = arch.parts.filter((p) => p.required && (p.count === undefined || p.count === 1)).map((p) => p.name);
+  if (single.length) contract.nodes = single;
+  if (arch.scale) {
+    contract.description += ` Sizes: ${arch.scale.source} (class ${arch.scale.confidence}).`;
+    const measure = (range: [number, number] | undefined): Measure | undefined => {
+      if (!range) return undefined;
+      const mid = (range[0] + range[1]) / 2;
+      return { value: Math.round(mid * 1000) / 1000, tolerance: Math.round((range[1] - range[0]) * 1000) / 1000 };
+    };
+    const x = measure(arch.scale.width), y = measure(arch.scale.height), z = measure(arch.scale.length);
+    if (x || y || z) contract.size = { ...(x ? { x } : {}), ...(y ? { y } : {}), ...(z ? { z } : {}) };
+  }
+  if (!arch.chain.includes("vessel")) contract.lowestY = { value: 0, tolerance: 0.05 };
+  contract.maxTriangles = 20000;
   return contract;
 }
 

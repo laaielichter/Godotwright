@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { contractFromModel, loadContract } from "../src/model/contract.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { loadLibrary } from "../src/archetype/library.js";
+import { contractFromArchetype, contractFromModel, loadContract } from "../src/model/contract.js";
 import { formatModelReport } from "../src/model/format.js";
 import { inspectModel } from "../src/model/inspect.js";
 import { ModelError, loadGltf } from "../src/model/gltf.js";
@@ -204,5 +205,77 @@ describe("model contract", () => {
     const run = await runCli(["model", "lint", path, "--contract", file]);
     expect(run.exitCode).toBe(1);
     expect(run.output).toContain("contract-missing-node");
+  });
+});
+
+describe("model contract --archetype", () => {
+  const library = loadLibrary();
+
+  it("lists the parts that occur once, the typical size and the budget", () => {
+    const c = contractFromArchetype(library.resolve("vehicle.wheeled.car"));
+    expect(c.nodes).toEqual(expect.arrayContaining(["Body"]));
+    expect(c.nodes).not.toContain("Wheel");
+    const width = library.resolve("vehicle.wheeled.car").scale!.width!;
+    expect(c.size!.x!.value).toBeCloseTo((width[0] + width[1]) / 2);
+    expect(c.size!.x!.tolerance).toBeCloseTo(width[1] - width[0]);
+    expect(c.lowestY).toEqual({ value: 0, tolerance: 0.05 });
+    expect(c.maxTriangles).toBe(20000);
+    expect(c.description).toMatch(/class C/);
+  });
+
+  it("leaves out the ground rule for a vessel, and a size the archetype does not give", () => {
+    const ship = contractFromArchetype(library.resolve("vessel.ship"));
+    expect(ship.lowestY).toBeUndefined();
+    const barrel = contractFromArchetype(library.resolve("prop.barrel"));
+    expect(barrel.size!.z).toBeUndefined();
+    expect(barrel.size!.x).toBeDefined();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.exitCode = undefined;
+  });
+  /** Runs the CLI and also returns what it wrote to stderr (problems and notes). */
+  const withErrors = async (args: string[]) => {
+    let errors = "";
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => ((errors += String(chunk)), true));
+    const run = await runCli(args);
+    return { ...run, errors };
+  };
+
+  it("writes a contract the checker accepts, from an id or a name in either language", async () => {
+    for (const what of ["vehicle.wheeled.car", "helikopter"]) {
+      const run = await runCli(["model", "contract", "--archetype", what]);
+      expect(run.exitCode, what).toBe(0);
+      const file = makeProject({ "model.contract.json": run.output }) + "/model.contract.json";
+      expect(loadContract(file).version).toBe(1);
+    }
+  });
+
+  it("says so for a generic match, and refuses a file together with --archetype or nothing at all", async () => {
+    const generic = await withErrors(["model", "contract", "--archetype", "asdfgh"]);
+    expect(generic.exitCode).toBe(0);
+    expect(generic.errors).toMatch(/closest family/);
+    process.exitCode = undefined;
+    const both = await withErrors(["model", "contract", writeGlb({ meshes: [box(1, 1, 1)] }), "--archetype", "car"]);
+    expect(both.exitCode).toBe(1);
+    expect(both.errors).toMatch(/not both/);
+    process.exitCode = undefined;
+    const none = await withErrors(["model", "contract"]);
+    expect(none.exitCode).toBe(1);
+    expect(none.errors).toMatch(/--archetype/);
+  });
+});
+
+describe("model recipes", () => {
+  it("lists every recipe with its archetype, and as JSON", async () => {
+    const { loadRecipes } = await import("../src/build/recipes.js");
+    const recipes = [...loadRecipes().values()];
+    const text = await runCli(["model", "recipes"]);
+    expect(text.exitCode).toBe(0);
+    for (const r of recipes) expect(text.output).toContain(`${r.kind}  (${r.archetype},`);
+    const json = JSON.parse((await runCli(["model", "recipes", "--json"])).output) as { kind: string; archetype: string | null; params: { name: string }[] }[];
+    expect(json.map((r) => r.kind)).toEqual(recipes.map((r) => r.kind));
+    expect(json.every((r) => r.archetype && r.params.length > 0)).toBe(true);
   });
 });
