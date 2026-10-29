@@ -75,6 +75,7 @@ godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put 
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
+godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
@@ -192,6 +193,24 @@ expressions (`"$width / 2 - 0.1"`, never executed as code). `model spec` explain
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
+
+## Port Godot 3 scripts to Godot 4
+
+```sh
+godotwright migrate                 # shows every change it would make, and what still needs a hand
+godotwright migrate --write         # applies them
+godotwright review                  # what is still wrong, with line numbers
+```
+
+`migrate` rewrites the mechanical part of a port: `export`, `onready` and `tool` become annotations (with `@export_range`,
+`@export_enum`, `@export_file` and typed arrays where the hint is clear), renamed classes, functions, properties and
+constants get their Godot 4 names (only when the old name no longer exists in Godot 4 and is not defined in the script),
+`yield(x, "sig")` becomes `await x.sig`, `connect("sig", target, "method", [binds])` becomes
+`sig.connect(target.method.bind(...))`, `emit_signal` and `funcref` become signals and callables, and members that moved
+(`OS.get_ticks_msec()`) move to their new class. Strings, comments and node paths are left alone. What it cannot do safely
+it lists with the line: `setget`, `move_and_slide(velocity)`, `remote func`, export hints it does not know. Scenes and
+project settings are not touched; Godot's own `--convert-3to4` does those. Commit first; a second run makes no further
+changes.
 
 ## Review in GitHub Actions
 

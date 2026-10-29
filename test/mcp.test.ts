@@ -30,6 +30,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_check",
       "godot_checklist",
       "godot_feedback",
+      "godot_migrate",
       "godot_model_brief",
       "godot_model_build",
       "godot_model_identify",
