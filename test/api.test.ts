@@ -117,6 +117,13 @@ describe("closest", () => {
     expect(distance("kitten", "sitting")).toBe(3);
     expect(closest("Sprit2D", ["Sprite2D", "Sprite3D", "Node"])).toEqual(["Sprite2D", "Sprite3D"]);
   });
+
+  it("does not suggest short names just because the query contains them", () => {
+    expect(closest("bright", ["r", "g", "b"])).toEqual([]);
+    expect(closest("Color.bright", ["r", "g", "b", "a"])).toEqual([]);
+    expect(closest("", ["r", "g", "b", "a"])).toEqual([]);
+    expect(api.lookup("Color.bright").suggestions.filter((s) => s.length < 3)).toEqual([]);
+  });
 });
 
 describe("godotwright api", () => {

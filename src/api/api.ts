@@ -325,12 +325,21 @@ export function formatMethodSignature(method: ApiMethod, owner?: string): string
   return `${prefix}${name}(${formatApiParams(method.params, q.includes("vararg"))}) -> ${method.returnEnum ?? method.returns}${suffix}`;
 }
 
-/** Up to five names closest to `name` by edit distance (case-insensitive). */
+/**
+ * Up to five names closest to `name` by edit distance (case-insensitive).
+ * A name that contains the query, or sits inside it, ranks first, but only for names of at least
+ * three letters: `r` is inside `bright` and says nothing about it.
+ */
 export function closest(name: string, candidates: string[], max = 5): string[] {
   const target = name.toLowerCase();
+  if (!target) return [];
   const limit = Math.max(2, Math.floor(target.length / 3));
   return candidates
-    .map((c) => ({ c, d: c.toLowerCase().includes(target) || target.includes(c.toLowerCase()) ? 1 : distance(target, c.toLowerCase(), limit) }))
+    .map((c) => {
+      const lower = c.toLowerCase();
+      const related = lower.length >= 3 && (lower.includes(target) || target.includes(lower));
+      return { c, d: related ? 1 : distance(target, lower, limit) };
+    })
     .filter((x) => x.d <= limit)
     .sort((a, b) => a.d - b.d || a.c.length - b.c.length || a.c.localeCompare(b.c))
     .slice(0, max)
