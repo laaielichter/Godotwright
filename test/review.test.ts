@@ -226,3 +226,345 @@ describe("moved Godot 3 window properties", () => {
     })).toEqual([]);
   });
 });
+
+/** Findings of one rule, formatted, for a throwaway project. */
+function ruleLines(files: Record<string, string>, rule: string): string[] {
+  return reviewProject(makeProject(files)).findings.filter((f) => f.rule === rule).map(formatFinding);
+}
+
+describe("rules that had no test", () => {
+  it("performance/empty-callback: a per-frame function with only pass", () => {
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": "extends Node\n\nfunc _process(_delta: float) -> void:\n\tpass\n" }, "performance/empty-callback")).toEqual([
+      "res://main.gd:3: info [performance/empty-callback] _process() is empty; Godot still calls it every frame.",
+    ]);
+  });
+
+  it("performance/instantiate-per-frame: a scene instantiated every frame", () => {
+    const script = "extends Node\n\nvar _scene: PackedScene\n\n\nfunc _process(_delta: float) -> void:\n\t_scene.instantiate()\n";
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "performance/instantiate-per-frame")).toEqual([
+      "res://main.gd:7: info [performance/instantiate-per-frame] instantiate() in _process() can run every frame; spawn on events or use a pool.",
+    ]);
+  });
+
+  it("performance/huge-scene: more than 1500 nodes in one scene", () => {
+    const scene = ['[gd_scene format=3]', '[node name="Root" type="Node"]'];
+    for (let i = 0; i < 1500; i++) scene.push(`[node name="N${i}" type="Node" parent="."]`);
+    expect(ruleLines({ "project.godot": PROJECT, "main.tscn": scene.join("\n") + "\n" }, "performance/huge-scene")).toEqual([
+      "res://main.tscn: info [performance/huge-scene] 1501 nodes in one scene.",
+    ]);
+  });
+
+  it("performance/many-shadow-lights: a seventh light that casts shadows", () => {
+    const scene = ['[gd_scene format=3]', '[node name="Root" type="Node3D"]'];
+    for (let i = 1; i <= 7; i++) scene.push(`[node name="Light${i}" type="OmniLight3D" parent="."]`, "shadow_enabled = true");
+    const seventh = scene.findIndex((line) => line.includes('name="Light7"')) + 1;
+    expect(ruleLines({ "project.godot": PROJECT, "main.tscn": scene.join("\n") + "\n" }, "performance/many-shadow-lights")).toEqual([
+      `res://main.tscn:${seventh}: warning [performance/many-shadow-lights] 7 lights cast shadows in this scene; each one costs a shadow pass.`,
+    ]);
+  });
+
+  it("quality/deep-nesting: a statement seven levels deep", () => {
+    const script = [
+      "extends Node",
+      "",
+      "func f(x: int) -> void:",
+      "\tif x > 0:",
+      "\t\tif x > 1:",
+      "\t\t\tif x > 2:",
+      "\t\t\t\tif x > 3:",
+      "\t\t\t\t\tif x > 4:",
+      "\t\t\t\t\t\tif x > 5:",
+      "\t\t\t\t\t\t\tpass",
+      "",
+    ].join("\n");
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "quality/deep-nesting")).toEqual([
+      "res://main.gd:10: info [quality/deep-nesting] f() nests 7 levels deep.",
+    ]);
+  });
+
+  it("quality/fragile-path: a node path that climbs two levels", () => {
+    const script = 'extends Node\n\nfunc _ready() -> void:\n\tvar player := get_node("../../Player")\n\tprint(player)\n';
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "quality/fragile-path")).toEqual([
+      'res://main.gd:4: info [quality/fragile-path] Node path "../../Player" climbs 2 levels up the tree.',
+    ]);
+  });
+
+  it("quality/long-file: a script of more than 600 lines", () => {
+    const source = ["extends Node", ...Array.from({ length: 600 }, (_, i) => `# line ${i}`), ""].join("\n");
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": source }, "quality/long-file")).toEqual([
+      `res://main.gd: info [quality/long-file] ${source.split("\n").length} lines; consider splitting this script.`,
+    ]);
+  });
+
+  it("quality/long-function: a function with 61 statements", () => {
+    const script = ["extends Node", "", "func build() -> void:", ...Array.from({ length: 61 }, (_, i) => `\tprint(${i})`), ""].join("\n");
+    expect(ruleLines({ "project.godot": PROJECT, "main.gd": script }, "quality/long-function")).toEqual([
+      "res://main.gd:3: info [quality/long-function] build() has 61 statements; aim for under 60.",
+    ]);
+  });
+
+  it("structure/deep-tree: a node 13 levels below the root", () => {
+    const scene = ['[gd_scene format=3]', '[node name="Root" type="Node"]'];
+    let parent = ".";
+    for (let i = 1; i <= 13; i++) {
+      const name = `N${i}`;
+      scene.push(`[node name="${name}" type="Node" parent="${parent}"]`);
+      parent = parent === "." ? name : `${parent}/${name}`;
+    }
+    expect(ruleLines({ "project.godot": PROJECT, "main.tscn": scene.join("\n") + "\n" }, "structure/deep-tree")).toEqual([
+      "res://main.tscn: info [structure/deep-tree] Node tree is 13 levels deep.",
+    ]);
+  });
+
+  it("structure/engine-version: a project last saved with Godot 4.6", () => {
+    expect(ruleLines({ "project.godot": PROJECT.replace('"4.7"', '"4.6"') }, "structure/engine-version")).toEqual([
+      "res://project.godot: info [structure/engine-version] The project was last saved with Godot 4.6; Godotwright targets 4.7.",
+    ]);
+  });
+
+  it("structure/many-autoloads: eleven autoloads", () => {
+    const autoloads = Array.from({ length: 11 }, (_, i) => `Auto${i}="*res://auto${i}.gd"`);
+    const files: Record<string, string> = { "project.godot": `${PROJECT}\n[autoload]\n\n${autoloads.join("\n")}\n` };
+    for (let i = 0; i < 11; i++) files[`auto${i}.gd`] = "extends Node\n";
+    expect(ruleLines(files, "structure/many-autoloads")).toEqual(["res://project.godot: info [structure/many-autoloads] 11 autoloads."]);
+  });
+
+  it("structure/no-gitignore: a project without a .gitignore for .godot/", () => {
+    expect(ruleLines({ "project.godot": PROJECT }, "structure/no-gitignore")).toEqual([
+      "res://.gitignore: info [structure/no-gitignore] No .gitignore here or above ignores .godot/.",
+    ]);
+  });
+});
+
+describe("review robustness", () => {
+  it("reports a self-referencing constant on its line instead of aborting the review", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": "extends Node\n\nconst Foo: Foo = 1\nconst A: B = 1\nconst B: A = 2\n\nfunc _ready() -> void:\n\tprint(A, B, Foo)\n",
+    });
+    const report = reviewProject(root);
+    const unknown = report.findings.filter((f) => f.rule === "api/unknown-type" && f.file === "res://main.gd");
+    expect(unknown.map((f) => f.line)).toContain(3);
+    expect(unknown.map(formatFinding)[0]).toContain('Type "Foo" does not exist');
+  });
+
+  describe("GDExtension node types in scene connections", () => {
+    const scene = [
+      '[gd_scene load_steps=2 format=3]',
+      '[ext_resource type="Script" path="res://main.gd" id="1"]',
+      '[node name="Main" type="Node2D"]',
+      'script = ExtResource("1")',
+      '[node name="Gizmo" type="MyGizmo" parent="."]',
+      '[connection signal="tapped" from="Gizmo" to="." method="_on_gizmo_tapped"]',
+      "",
+    ].join("\n");
+    const files = {
+      "project.godot": PROJECT,
+      "main.tscn": scene,
+      "main.gd": "extends Node2D\n\nfunc _on_gizmo_tapped() -> void:\n\tpass\n",
+    };
+
+    it("does not report signals of a node type that a GDExtension library provides", () => {
+      const root = makeProject({ ...files, "gizmo.gdextension": '[configuration]\nentry_symbol = "gizmo_init"\n' });
+      expect(reviewProject(root).findings.filter((f) => f.rule === "structure/bad-connection")).toEqual([]);
+    });
+
+    it("still reports the same connection when no library could provide the type", () => {
+      const root = makeProject(files);
+      const bad = reviewProject(root).findings.filter((f) => f.rule === "structure/bad-connection").map(formatFinding);
+      expect(bad).toEqual(['res://main.tscn:6: error [structure/bad-connection] Connection Gizmo.tapped: MyGizmo has no signal "tapped".']);
+    });
+  });
+
+  it("does not flag a lazily cached load or lookup in a per-frame function", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "var _tex: Texture2D",
+        "var _sprite: Sprite2D",
+        "",
+        "",
+        "func _process(_delta: float) -> void:",
+        "\tif not _tex:",
+        '\t\t_tex = load("res://icon.svg")',
+        "\tif _sprite == null:",
+        '\t\t_sprite = get_node("Sprite")',
+        '\tvar other := get_node("Other")',
+        "\tprint(other)",
+        "",
+      ].join("\n"),
+    });
+    const performance = reviewProject(root).findings.filter((f) => f.category === "performance").map(formatFinding);
+    expect(performance).toEqual([
+      "res://main.gd:12: warning [performance/node-lookup-per-frame] A node lookup in _process() runs every frame; store the node in an @onready var.",
+      "res://main.gd:13: info [performance/print-per-frame] print() in _process() prints every frame and slows the game.",
+    ]);
+  });
+
+  it("checks per-frame functions whose body is on the func line", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": 'extends Node\n\nfunc _process(delta: float) -> void: print("tick")\n\n\nfunc _physics_process(delta: float) -> void: pass\n',
+    });
+    const performance = reviewProject(root).findings.filter((f) => f.category === "performance").map(formatFinding);
+    expect(performance).toEqual([
+      "res://main.gd:3: info [performance/print-per-frame] print() in _process() prints every frame and slows the game.",
+      "res://main.gd:6: info [performance/empty-callback] _physics_process() is empty; Godot still calls it every frame.",
+    ]);
+  });
+
+  it("does not report a group that add_to_group() names with a constant", () => {
+    const count = ["func count() -> int:", '\treturn get_tree().get_nodes_in_group("players").size()', ""].join("\n");
+    const named = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": ["extends Node", "", 'const PLAYERS := "players"', "", "func _ready() -> void:", "\tadd_to_group(PLAYERS)", "", "", count].join("\n"),
+    });
+    const unassigned = makeProject({ "project.godot": PROJECT, "main.gd": ["extends Node", "", "", count].join("\n") });
+    const groups = (root: string) => reviewProject(root).findings.filter((f) => f.rule === "structure/unknown-group").map(formatFinding);
+    expect(groups(named)).toEqual([]);
+    expect(groups(unassigned)).toEqual(['res://main.gd:5: warning [structure/unknown-group] Group "players" is never assigned to a node in a scene or with add_to_group().']);
+  });
+
+  it("does not give a value the type of a literal it only starts with", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "func _ready() -> void:",
+        '\tvar parts := "a,b".split(",")',
+        "\tprint(parts.size())",
+        '\tvar keys := {"a": 1}.keys()',
+        "\tprint(keys.append(2))",
+        '\tvar same := "a" == "b"',
+        "\tprint(same)",
+        '\tvar text := "abc"',
+        "\tprint(text.nope_method())",
+        "",
+      ].join("\n"),
+    });
+    const api = reviewProject(root).findings.filter((f) => f.category === "api").map(formatFinding);
+    expect(api).toEqual(['res://main.gd:11: error [api/unknown-member] Method "nope_method()" does not exist on String in Godot 4.7.']);
+  });
+
+  it("does not take a longer file name that ends the same way as a use of a script", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "scripts/enemy.gd": "extends Node\n\nfunc _ready() -> void:\n\tpass\n",
+      "scripts/old_enemy.gd": "extends Node\n\nfunc _ready() -> void:\n\tpass\n",
+      "main.gd": 'extends Node\n\nconst OLD = preload("res://scripts/old_enemy.gd")\n\nfunc _ready() -> void:\n\tpass\n',
+    });
+    const unused = reviewProject(root).findings.filter((f) => f.rule === "structure/unused-script").map((f) => f.file);
+    expect(unused).toEqual(["res://main.gd", "res://scripts/enemy.gd"]);
+  });
+
+  it("reports TODO markers in comments only, not inside string literals", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        'var label := "# TODO: not a comment"',
+        'var doc := """',
+        "# TODO: inside a triple-quoted string",
+        '"""',
+        "",
+        "",
+        "func _ready() -> void:",
+        "\t# TODO: real comment",
+        "\tprint(label, doc, '#FIXME: single-quoted string')",
+        "",
+      ].join("\n"),
+    });
+    const todo = reviewProject(root).findings.filter((f) => f.rule === "quality/todo").map(formatFinding);
+    expect(todo).toEqual(["res://main.gd:10: info [quality/todo] TODO: real comment"]);
+  });
+
+  it("checks signals declared in inner classes for emission", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "class Inner:",
+        "\tsignal never_emitted",
+        "\tsignal done",
+        "",
+        "\tfunc run() -> void:",
+        "\t\tdone.emit()",
+        "",
+        "",
+        "func _ready() -> void:",
+        "\tpass",
+        "",
+      ].join("\n"),
+    });
+    const unused = reviewProject(root).findings.filter((f) => f.rule === "quality/unused-signal").map(formatFinding);
+    expect(unused).toEqual(['res://main.gd:4: warning [quality/unused-signal] Signal "never_emitted" is declared but never emitted.']);
+  });
+
+  it("gives string-signal advice only where the suggested code compiles", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "signal declared",
+        "",
+        "func _ready() -> void:",
+        '\tcall_deferred(Callable(self, "_tick"))',
+        '\temit_signal("ghost")',
+        '\temit_signal("declared")',
+        '\tdeclared.connect(Callable(self, "_tick"))',
+        "",
+        "",
+        "func _tick() -> void:",
+        "\tpass",
+        "",
+      ].join("\n"),
+    });
+    const advice = reviewProject(root).findings.filter((f) => f.rule === "quality/string-signal").map(formatFinding);
+    expect(advice).toEqual([
+      'res://main.gd:8: info [quality/string-signal] emit_signal("declared") can be declared.emit().',
+      "res://main.gd:9: info [quality/string-signal] Connect with the signal object and a method reference: my_signal.connect(_on_event).",
+    ]);
+  });
+
+  it("reports a file that does not parse with the syntax fix, not the missing-file one", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene load_steps=2 format=3]\n[node name="Main" type="Node2D"\n',
+    });
+    const report = reviewProject(root);
+    const parse = report.findings.filter((f) => f.rule === "structure/parse-error");
+    expect(parse.map((f) => f.file)).toEqual(["res://main.tscn"]);
+    expect(report.findings.some((f) => f.message.includes("could not parse file"))).toBe(true);
+    expect(report.findings.filter((f) => f.rule === "structure/broken-reference").some((f) => f.file === "res://main.tscn")).toBe(false);
+    expect(formatReview(report, "full")).toContain("fix: Fix the syntax error at the line shown");
+  });
+
+  it("does not count a property with only a setter as statically typed", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "speed.gd": "extends Node\n\nvar speed: set = _set_speed\nvar count := 0\n\n\nfunc _set_speed(value) -> void:\n\tspeed = value\n",
+    });
+    // Declarations: speed (untyped), count (inferred), value (untyped), the return type of _set_speed (typed).
+    expect(reviewProject(root).typing).toEqual({ typed: 2, total: 4, percent: 50 });
+  });
+
+  it("does not call a script or group unused or unassigned when a scene does not parse", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      ".gitignore": ".godot/\n",
+      "broken.tscn": '[gd_scene load_steps=2 format=3]\n[ext_resource type="Script" path="res://enemy.gd" id="1"]\n[node name="Root" type="Node2D" groups=["players"]]\nscript = ExtResource("1")\n[node name="Broken" type="Node2D" parent="."\n',
+      "enemy.gd": "extends Node2D\n\nfunc _ready() -> void:\n\tpass\n",
+      "main.gd": 'extends Node\n\nfunc _ready() -> void:\n\tget_tree().get_nodes_in_group("players")\n',
+    });
+    const structure = reviewProject(root).findings.filter((f) => f.category === "structure").map(formatFinding);
+    expect(structure.filter((l) => l.includes("could not parse file"))).toHaveLength(1);
+    expect(structure.some((l) => l.includes("enemy.gd") && l.includes("structure/unused-script"))).toBe(false);
+    expect(structure.some((l) => l.includes("structure/unknown-group"))).toBe(false);
+  });
+});
