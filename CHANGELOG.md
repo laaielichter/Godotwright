@@ -8,6 +8,13 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **`scene add|remove|set|connect|disconnect|script`** (MCP `godot_scene_edit`): change a `.tscn` without the editor.
+  Node classes, properties (with enums by name and resources as `res://` files) and signals are checked against
+  Godot 4.7 and the node's script; a connection warns when the method is missing or takes other arguments and gives the
+  `func` line to add; removing a node takes its children, connections and the resources only it used; a script that
+  extends another node type is refused. Only the lines of that change are touched, plus a new `ext_resource` (with its
+  uid) and `load_steps`.
+
 - **`project set|unset`, `project input add|remove`, `project autoload add|remove`** (MCP `godot_project_edit`): change
   project.godot without the editor. Settings are checked against the Godot 4.7 reference (name, type, `res://` files),
   input events are written in the Godot 4 format from short names (`Key:Ctrl+S`, `Mouse:Left`, `JoyButton:A`,

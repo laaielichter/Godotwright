@@ -42,6 +42,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_rename",
       "godot_review",
       "godot_scan",
+      "godot_scene_edit",
       "godot_usages",
     ]);
     expect(tools.find((t) => t.name === "godot_scan")?.annotations?.readOnlyHint).toBe(true);
