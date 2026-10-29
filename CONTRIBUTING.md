@@ -9,6 +9,24 @@ Thanks for helping. Small fixes and big ideas are both welcome.
 - Suggest a rule for a mistake coding agents keep making in Godot.
 - Pick an issue labeled `good first issue`.
 - Improve the docs or the site in `docs/`.
+- Add or correct a **model archetype** (see below). It is data, not code, and a good first contribution.
+
+## Adding an archetype
+
+`godotwright model identify` knows what things are from `data/archetypes/*.json`. To add one, add an
+object to the file of its family (or a new file) and run `npm test`; the tests check the whole library.
+
+- `id` is a dotted path under its parent (`vehicle.wheeled.car`), and `extends` names the parent.
+  Parts, sizes, variants and notes are inherited; list only what is new or different.
+- `aliases` are lowercase names in English **and Dutch** (and other languages you know). An alias may belong
+  to one archetype only, unless two things really share a word (such as the Dutch "windmolen"); then add it to
+  `SHARED_ALIASES` in `src/archetype/library.ts`.
+- `parts` name the nodes a model should have (`PascalCase`). Give a moving part `moves` and a `pivot`
+  (`hub`, `hinge`, `base`, `center` or `mount`).
+- `scale` is a typical size range in metres with a **`source`** and a **`confidence`**: `A` official figure or
+  standard, `B` manufacturer or public data, `C` general knowledge, `D` derived, `X` unknown. If you are not
+  sure, use `C` and say so. Never guess a number and call it `A`.
+- Do not put anything from a private project in here, only general knowledge.
 
 ## Set up
 

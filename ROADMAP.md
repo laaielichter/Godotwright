@@ -79,7 +79,10 @@ Godotwright gets better with every use, without collecting anything personal.
     repeat, so an agent can build things Godotwright has no ready-made kind for.
     *Done when:* a 30-line car spec builds a clean model.
 16. **Object knowledge.** An archetype library (what a thing is, its parts, sizes, variants, pivots) with
-    `model identify`, and checks of a model against its archetype.
+    `model identify` and `model archetypes`.
+    *Done when:* "tractor", "helikopter", "windmill", "boot" and nonsense each get a sensible, tested answer.
+16b. **Checks against an archetype**: a model without wheels, with a wheel pivot off the hub, or ten
+    times too big is reported.
 17. **More kinds** (trees and plants, cars, helicopters, aircraft, ships, engines, infrastructure),
     **MCP tools for models**, and a contact-sheet render.
 

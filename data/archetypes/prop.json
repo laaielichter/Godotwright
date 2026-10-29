@@ -1,0 +1,270 @@
+[
+ {
+  "id": "prop",
+  "name": "prop",
+  "description": "A small object that fills a scene.",
+  "aliases": [
+   "prop",
+   "props",
+   "decor",
+   "set dressing",
+   "furniture",
+   "meubel",
+   "meubels"
+  ],
+  "extends": "thing",
+  "hints": [
+   "table",
+   "chair",
+   "box",
+   "crate",
+   "barrel",
+   "stool",
+   "shelf"
+  ],
+  "conventions": [
+   "A prop's origin is at the centre of its base on the ground; objects that sit on others (a cup on a table) are modelled sitting at y = 0 too."
+  ],
+  "anticipate": [
+   "A single simple collision box; props are placed in numbers."
+  ]
+ },
+ {
+  "id": "prop.crate",
+  "name": "crate",
+  "description": "A crate or box.",
+  "aliases": [
+   "crate",
+   "crates",
+   "kist",
+   "kisten",
+   "box",
+   "doos",
+   "wooden crate",
+   "krat",
+   "cardboard box",
+   "kartonnen doos",
+   "chest",
+   "container box",
+   "pallet box",
+   "palletbox"
+  ],
+  "extends": "prop",
+  "scale": {
+   "length": [
+    0.3,
+    1.5
+   ],
+   "width": [
+    0.3,
+    1.2
+   ],
+   "height": [
+    0.3,
+    1.2
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.barrel",
+  "name": "barrel",
+  "description": "A barrel, drum or tank.",
+  "aliases": [
+   "barrel",
+   "barrels",
+   "vat",
+   "vaten",
+   "drum",
+   "oil drum",
+   "olievat",
+   "keg",
+   "ton",
+   "tank barrel",
+   "cask",
+   "fust"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "barrel"
+    ]
+   },
+   {
+    "name": "Lid",
+    "role": "lid",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "lid",
+     "deksel",
+     "cap"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.5,
+    0.65
+   ],
+   "height": [
+    0.8,
+    0.95
+   ],
+   "source": "a standard 55 gallon (208 L) steel drum is about 0.57 m across and 0.88 m high",
+   "confidence": "B"
+  },
+  "pitfalls": [
+   "Make the profile with a lathe: a plain cylinder misses the rolling hoops and the chime at the rim."
+  ]
+ },
+ {
+  "id": "prop.shipping-container",
+  "name": "shipping container",
+  "description": "An ISO intermodal container.",
+  "aliases": [
+   "shipping container",
+   "container",
+   "zeecontainer",
+   "iso container",
+   "20ft container",
+   "40ft container",
+   "cargo container",
+   "20 foot container",
+   "40 foot container",
+   "box container",
+   "reefer"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "box",
+     "shell"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "door",
+     "deur"
+    ],
+    "note": "Double doors at the rear (-Z), hinged at the outer edges, with locking rods."
+   }
+  ],
+  "scale": {
+   "length": [
+    6.0,
+    12.2
+   ],
+   "width": [
+    2.43,
+    2.44
+   ],
+   "height": [
+    2.59,
+    2.9
+   ],
+   "source": "ISO 668: width 8 ft = 2.438 m, standard height 8 ft 6 in = 2.591 m (high cube 9 ft 6 in = 2.896 m), length 20 ft = 6.058 m or 40 ft = 12.192 m",
+   "confidence": "A"
+  },
+  "pitfalls": [
+   "The wall is corrugated: a flat box loses the look; use a normal map or real corrugations."
+  ]
+ },
+ {
+  "id": "prop.chair",
+  "name": "chair",
+  "description": "A chair, stool or seat.",
+  "aliases": [
+   "chair",
+   "chairs",
+   "stoel",
+   "stoelen",
+   "stool",
+   "kruk",
+   "armchair",
+   "fauteuil",
+   "sofa",
+   "bank",
+   "bench",
+   "zitbank",
+   "couch"
+  ],
+  "extends": "prop",
+  "scale": {
+   "length": [
+    0.4,
+    2.2
+   ],
+   "width": [
+    0.4,
+    0.9
+   ],
+   "height": [
+    0.4,
+    1.1
+   ],
+   "source": "general knowledge: typical production range, not a standard; seat height about 0.42-0.48 m",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.table",
+  "name": "table",
+  "description": "A table or desk.",
+  "aliases": [
+   "table",
+   "tables",
+   "tafel",
+   "tafels",
+   "desk",
+   "bureau",
+   "counter",
+   "toonbank",
+   "workbench",
+   "werkbank",
+   "shelf",
+   "plank",
+   "kast",
+   "cupboard"
+  ],
+  "extends": "prop",
+  "scale": {
+   "length": [
+    0.6,
+    3.0
+   ],
+   "width": [
+    0.5,
+    1.2
+   ],
+   "height": [
+    0.7,
+    0.8
+   ],
+   "source": "table and desk height is typically 0.72-0.76 m (general knowledge)",
+   "confidence": "C"
+  }
+ }
+]

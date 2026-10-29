@@ -1,0 +1,363 @@
+[
+ {
+  "id": "vessel",
+  "name": "vessel",
+  "description": "Something that floats and travels on water.",
+  "aliases": [
+   "vessel",
+   "watercraft",
+   "vaartuig",
+   "water vehicle"
+  ],
+  "extends": "thing",
+  "hints": [
+   "water",
+   "float",
+   "floats",
+   "sea",
+   "zee",
+   "sail",
+   "varen",
+   "harbour",
+   "haven"
+  ],
+  "conventions": [
+   "The waterline is the reference: the hull is modelled with the waterline at y = 0 (or note where it is), and the bow faces +Z."
+  ],
+  "anticipate": [
+   "A waterline height: the draught is the part below y = 0.",
+   "Wake and spray positions at the bow and stern."
+  ],
+  "pitfalls": [
+   "A hull modelled sitting on y = 0 with no draught floats too high in the water."
+  ]
+ },
+ {
+  "id": "vessel.ship",
+  "name": "ship",
+  "description": "A seagoing ship.",
+  "aliases": [
+   "ship",
+   "ships",
+   "schip",
+   "schepen",
+   "cargo ship",
+   "vrachtschip",
+   "container ship",
+   "containerschip",
+   "tanker",
+   "frigate",
+   "fregat",
+   "destroyer",
+   "cruiser",
+   "battleship",
+   "slagschip",
+   "ferry",
+   "veerboot",
+   "warship",
+   "oorlogsschip",
+   "liner",
+   "cruise ship",
+   "cruiseschip"
+  ],
+  "extends": "vessel",
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "romp",
+     "body"
+    ]
+   },
+   {
+    "name": "Superstructure",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "superstructure",
+     "bridge",
+     "opbouw",
+     "brug",
+     "deckhouse"
+    ]
+   },
+   {
+    "name": "Funnel",
+    "role": "funnel",
+    "required": false,
+    "aliases": [
+     "funnel",
+     "stack",
+     "schoorsteen"
+    ]
+   },
+   {
+    "name": "Mast",
+    "role": "mast",
+    "required": false,
+    "aliases": [
+     "mast"
+    ]
+   },
+   {
+    "name": "Rudder",
+    "role": "control surface",
+    "required": false,
+    "count": [
+     1,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "rudder",
+     "roer"
+    ],
+    "note": "Pivots about a vertical axis at the stern."
+   },
+   {
+    "name": "Propeller",
+    "role": "propeller",
+    "required": false,
+    "count": [
+     1,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "propeller",
+     "screw",
+     "schroef"
+    ],
+    "note": "Spins about the shaft axis (z)."
+   }
+  ],
+  "scale": {
+   "length": [
+    50,
+    400
+   ],
+   "width": [
+    9,
+    61
+   ],
+   "height": [
+    8,
+    70
+   ],
+   "source": "general knowledge: typical production range, not a standard; Panamax locks limit the beam to 32.31 m, Neopanamax to 51.25 m (Panama Canal Authority)",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "kind",
+    "options": [
+     "cargo",
+     "container",
+     "tanker",
+     "ferry",
+     "cruise",
+     "warship"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "A hull with a flat bottom looks wrong: loft the hull through sections, narrowing to the bow and with a rising keel."
+  ]
+ },
+ {
+  "id": "vessel.boat",
+  "name": "boat",
+  "description": "A small boat.",
+  "aliases": [
+   "boat",
+   "boats",
+   "boot",
+   "boten",
+   "motorboat",
+   "speedboat",
+   "rowing boat",
+   "roeiboot",
+   "sloep",
+   "dinghy",
+   "jacht",
+   "yacht",
+   "canoe",
+   "kano",
+   "vissersboot",
+   "fishing boat"
+  ],
+  "extends": "vessel",
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "romp",
+     "body"
+    ]
+   },
+   {
+    "name": "Engine",
+    "role": "engine",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "engine",
+     "outboard",
+     "buitenboordmotor",
+     "motor"
+    ]
+   },
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": false,
+    "count": [
+     1,
+     8
+    ],
+    "aliases": [
+     "seat",
+     "bench",
+     "bank",
+     "zitplaats"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    3,
+    15
+   ],
+   "width": [
+    1.3,
+    4.5
+   ],
+   "height": [
+    1,
+    4
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "vessel.sailboat",
+  "name": "sailboat",
+  "description": "A sailing boat.",
+  "aliases": [
+   "sailboat",
+   "sailing boat",
+   "zeilboot",
+   "zeiljacht",
+   "sailing yacht",
+   "sloop",
+   "schooner",
+   "catamaran",
+   "zeilschip",
+   "tall ship",
+   "windjammer"
+  ],
+  "extends": "vessel",
+  "hints": [
+   "sail",
+   "sails",
+   "zeil",
+   "mast",
+   "wind"
+  ],
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "romp",
+     "body"
+    ]
+   },
+   {
+    "name": "Mast",
+    "role": "mast",
+    "required": true,
+    "count": [
+     1,
+     3
+    ],
+    "aliases": [
+     "mast"
+    ]
+   },
+   {
+    "name": "Sail",
+    "role": "sail",
+    "required": true,
+    "count": [
+     1,
+     6
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "mount",
+    "aliases": [
+     "sail",
+     "zeil",
+     "mainsail",
+     "jib",
+     "genoa"
+    ],
+    "note": "Hangs from the mast; the boom swings about a vertical axis at the mast."
+   },
+   {
+    "name": "Keel",
+    "role": "keel",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "keel",
+     "kiel",
+     "centreboard",
+     "zwaard"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    4,
+    25
+   ],
+   "width": [
+    1.5,
+    6
+   ],
+   "height": [
+    6,
+    35
+   ],
+   "source": "general knowledge: typical production range, not a standard: hull length; height is the mast above the waterline",
+   "confidence": "C"
+  }
+ }
+]

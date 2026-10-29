@@ -1,5 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Option } from "commander";
+import { formatArchetype, formatIdentify, formatTree } from "../archetype/format.js";
+import { identify } from "../archetype/identify.js";
+import { ArchetypeError, loadLibrary } from "../archetype/library.js";
 import { BuildError } from "../build/params.js";
 import { buildKind, GENERATORS } from "../build/generators/index.js";
 import { buildGlb } from "../build/glb.js";
@@ -20,7 +23,7 @@ function guard(run: () => void): void {
   try {
     run();
   } catch (error) {
-    if (!(error instanceof ModelError)) throw error;
+    if (!(error instanceof ModelError) && !(error instanceof ArchetypeError)) throw error;
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 1;
   }
@@ -89,6 +92,34 @@ export function modelCommand(): Command {
         }
       }
       writeOut(command, `${out.join("\n")}\n`);
+    });
+
+  model
+    .command("identify")
+    .description("say what a thing is: its parts, typical size, variants, conventions and what to anticipate (English or Dutch)")
+    .argument("<text...>", 'what you want to make, e.g. "a tractor" or "helikopter"')
+    .option("--json", "print the result as JSON")
+    .action((text: string[], options: { json?: boolean }, command: Command) => {
+      guard(() => {
+        const library = loadLibrary();
+        const result = identify(text.join(" "), library);
+        writeOut(command, options.json ? `${JSON.stringify(result, null, 2)}\n` : formatIdentify(result, library));
+      });
+    });
+
+  model
+    .command("archetypes")
+    .description("show the family tree of known things, or one archetype by id (e.g. aircraft.rotorcraft.helicopter)")
+    .argument("[id]", "an archetype id")
+    .option("--json", "print as JSON")
+    .action((id: string | undefined, options: { json?: boolean }, command: Command) => {
+      guard(() => {
+        const library = loadLibrary();
+        if (!id) return writeOut(command, options.json ? `${JSON.stringify(library.archetypes.map((a) => a.id), null, 2)}\n` : formatTree(library));
+        if (!library.get(id)) throw new ArchetypeError(`unknown archetype "${id}" (see \`model archetypes\`)`);
+        const resolved = library.resolve(id);
+        writeOut(command, options.json ? `${JSON.stringify(resolved, null, 2)}\n` : formatArchetype(resolved));
+      });
     });
 
   model

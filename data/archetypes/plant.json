@@ -1,0 +1,396 @@
+[
+ {
+  "id": "plant",
+  "name": "plant",
+  "description": "A tree, bush, flower or grass.",
+  "aliases": [
+   "plant",
+   "planten",
+   "vegetation",
+   "vegetatie",
+   "flora",
+   "greenery",
+   "groen",
+   "foliage"
+  ],
+  "extends": "thing",
+  "hints": [
+   "grow",
+   "leaf",
+   "leaves",
+   "blad",
+   "bladeren",
+   "green",
+   "groen",
+   "nature",
+   "natuur",
+   "forest",
+   "bos",
+   "garden",
+   "tuin"
+  ],
+  "conventions": [
+   "The origin is at the base of the stem or trunk, on the ground (y = 0)."
+  ],
+  "anticipate": [
+   "Variants from a seed, so a forest does not repeat one tree.",
+   "Leaves as alpha-tested cards (two-sided), not individual leaf meshes.",
+   "LODs and a billboard for distance: plants are drawn in the thousands.",
+   "A wind sway shader or a few bones for the crown."
+  ],
+  "pitfalls": [
+   "Modelling every leaf in geometry blows the triangle budget: use cards with a leaf-cluster texture."
+  ]
+ },
+ {
+  "id": "plant.tree",
+  "name": "tree",
+  "description": "A tree.",
+  "aliases": [
+   "tree",
+   "trees",
+   "boom",
+   "bomen",
+   "treetop"
+  ],
+  "extends": "plant",
+  "parts": [
+   {
+    "name": "Trunk",
+    "role": "trunk",
+    "required": true,
+    "aliases": [
+     "trunk",
+     "stam",
+     "stem"
+    ]
+   },
+   {
+    "name": "Branches",
+    "role": "branch",
+    "required": false,
+    "aliases": [
+     "branches",
+     "branch",
+     "takken",
+     "tak"
+    ]
+   },
+   {
+    "name": "Crown",
+    "role": "foliage",
+    "required": true,
+    "aliases": [
+     "crown",
+     "leaves",
+     "foliage",
+     "kroon",
+     "bladeren",
+     "canopy"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2,
+    25
+   ],
+   "width": [
+    2,
+    25
+   ],
+   "height": [
+    4,
+    60
+   ],
+   "source": "general knowledge: typical production range, not a standard; 3-30 m for most trees, up to 60 m for the tallest",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "species",
+    "options": [
+     "oak",
+     "birch",
+     "willow",
+     "pine",
+     "spruce",
+     "palm"
+    ]
+   },
+   {
+    "axis": "season",
+    "options": [
+     "summer",
+     "autumn",
+     "winter",
+     "spring"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "plant.tree.broadleaf",
+  "name": "broadleaf tree",
+  "description": "A deciduous tree.",
+  "aliases": [
+   "broadleaf tree",
+   "deciduous tree",
+   "loofboom",
+   "oak",
+   "eik",
+   "beech",
+   "beuk",
+   "birch",
+   "berk",
+   "willow",
+   "wilg",
+   "maple",
+   "esdoorn",
+   "elm",
+   "iep",
+   "linden",
+   "lindeboom",
+   "poplar",
+   "populier",
+   "chestnut",
+   "kastanje",
+   "apple tree",
+   "appelboom"
+  ],
+  "extends": "plant.tree",
+  "scale": {
+   "length": [
+    4,
+    25
+   ],
+   "width": [
+    4,
+    25
+   ],
+   "height": [
+    5,
+    35
+   ],
+   "source": "general knowledge: typical production range, not a standard: crown width 4-25 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A lollipop (ball on a stick) crown looks artificial: make the crown irregular and let branches show."
+  ]
+ },
+ {
+  "id": "plant.tree.conifer",
+  "name": "conifer",
+  "description": "A pine, spruce or other needle tree.",
+  "aliases": [
+   "conifer",
+   "naaldboom",
+   "pine",
+   "den",
+   "spruce",
+   "spar",
+   "fir",
+   "kerstboom",
+   "christmas tree",
+   "cedar",
+   "ceder",
+   "larch",
+   "lariks",
+   "pine tree",
+   "dennenboom",
+   "evergreen"
+  ],
+  "extends": "plant.tree",
+  "scale": {
+   "length": [
+    3,
+    12
+   ],
+   "width": [
+    3,
+    12
+   ],
+   "height": [
+    8,
+    60
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Conifers are conical with whorls of branches: a smooth cone looks fake."
+  ]
+ },
+ {
+  "id": "plant.tree.palm",
+  "name": "palm tree",
+  "description": "A palm.",
+  "aliases": [
+   "palm",
+   "palm tree",
+   "palmboom",
+   "coconut palm",
+   "kokospalm",
+   "date palm",
+   "dadelpalm"
+  ],
+  "extends": "plant.tree",
+  "parts": [
+   {
+    "name": "Trunk",
+    "role": "trunk",
+    "required": true,
+    "aliases": [
+     "trunk",
+     "stam"
+    ]
+   },
+   {
+    "name": "Frond",
+    "role": "foliage",
+    "required": true,
+    "count": [
+     6,
+     30
+    ],
+    "aliases": [
+     "frond",
+     "leaf",
+     "blad",
+     "palmblad"
+    ],
+    "note": "Long drooping fronds from one crown point; each can sway."
+   }
+  ],
+  "scale": {
+   "length": [
+    3,
+    8
+   ],
+   "width": [
+    3,
+    8
+   ],
+   "height": [
+    3,
+    30
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "plant.bush",
+  "name": "bush",
+  "description": "A shrub or hedge.",
+  "aliases": [
+   "bush",
+   "bushes",
+   "struik",
+   "struiken",
+   "shrub",
+   "hedge",
+   "haag",
+   "heg",
+   "bosje",
+   "heester"
+  ],
+  "extends": "plant",
+  "scale": {
+   "length": [
+    0.5,
+    6
+   ],
+   "width": [
+    0.5,
+    3
+   ],
+   "height": [
+    0.5,
+    3
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "plant.grass",
+  "name": "grass",
+  "description": "Grass or ground cover.",
+  "aliases": [
+   "grass",
+   "gras",
+   "lawn",
+   "gazon",
+   "grass tuft",
+   "grasspluk",
+   "meadow",
+   "weide",
+   "weiland",
+   "reed",
+   "riet",
+   "fern",
+   "varen",
+   "ground cover"
+  ],
+  "extends": "plant",
+  "scale": {
+   "length": [
+    0.1,
+    1
+   ],
+   "width": [
+    0.1,
+    1
+   ],
+   "height": [
+    0.05,
+    1.2
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "A tuft of crossed cards that is instanced thousands of times; never one mesh per blade."
+  ]
+ },
+ {
+  "id": "plant.flower",
+  "name": "flower",
+  "description": "A flower.",
+  "aliases": [
+   "flower",
+   "flowers",
+   "bloem",
+   "bloemen",
+   "rose",
+   "roos",
+   "tulip",
+   "tulp",
+   "sunflower",
+   "zonnebloem",
+   "daisy",
+   "madelief",
+   "orchid",
+   "orchidee"
+  ],
+  "extends": "plant",
+  "scale": {
+   "length": [
+    0.05,
+    0.6
+   ],
+   "width": [
+    0.05,
+    0.6
+   ],
+   "height": [
+    0.1,
+    2.5
+   ],
+   "source": "general knowledge: typical production range, not a standard; sunflowers reach 2-3 m",
+   "confidence": "C"
+  }
+ }
+]

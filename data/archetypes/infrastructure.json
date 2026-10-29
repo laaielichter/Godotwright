@@ -1,0 +1,417 @@
+[
+ {
+  "id": "infrastructure",
+  "name": "infrastructure",
+  "description": "Roads, rails, bridges, poles and other public works.",
+  "aliases": [
+   "infrastructure",
+   "infrastructuur",
+   "public works",
+   "street furniture",
+   "straatmeubilair"
+  ],
+  "extends": "thing",
+  "hints": [
+   "road",
+   "weg",
+   "street",
+   "straat",
+   "bridge",
+   "brug",
+   "rail",
+   "pole",
+   "paal",
+   "fence",
+   "hek"
+  ],
+  "conventions": [
+   "Linear objects (roads, rails, fences) are built as a repeatable segment with matching ends, so segments tile along z."
+  ],
+  "anticipate": [
+   "A segment that tiles end to end, plus curved or junction variants.",
+   "Collision and navigation surfaces separate from the visual mesh."
+  ]
+ },
+ {
+  "id": "infrastructure.road",
+  "name": "road",
+  "description": "A road or street segment.",
+  "aliases": [
+   "road",
+   "weg",
+   "street",
+   "straat",
+   "highway",
+   "snelweg",
+   "motorway",
+   "lane",
+   "rijbaan",
+   "asphalt road",
+   "crossing",
+   "kruispunt",
+   "roundabout",
+   "rotonde",
+   "junction",
+   "intersection"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Surface",
+    "role": "surface",
+    "required": true,
+    "aliases": [
+     "surface",
+     "asphalt",
+     "road",
+     "wegdek"
+    ]
+   },
+   {
+    "name": "Marking",
+    "role": "marking",
+    "required": false,
+    "aliases": [
+     "marking",
+     "markings",
+     "line",
+     "markering",
+     "belijning"
+    ]
+   },
+   {
+    "name": "Curb",
+    "role": "curb",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "aliases": [
+     "curb",
+     "kerb",
+     "trottoirband"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    5,
+    50
+   ],
+   "width": [
+    3.0,
+    40
+   ],
+   "height": [
+    0.0,
+    0.3
+   ],
+   "source": "lane width about 2.75-3.75 m (general knowledge: design guides differ per country); a segment is as long as you choose",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Segments must have identical cross-sections at both ends, or seams show.",
+   "Lane markings are a decal or texture, not geometry, or they z-fight with the surface."
+  ]
+ },
+ {
+  "id": "infrastructure.bridge",
+  "name": "bridge",
+  "description": "A bridge.",
+  "aliases": [
+   "bridge",
+   "brug",
+   "viaduct",
+   "overpass",
+   "flyover",
+   "suspension bridge",
+   "hangbrug",
+   "draaibrug",
+   "ophaalbrug",
+   "arch bridge",
+   "boogbrug",
+   "footbridge",
+   "voetgangersbrug"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Deck",
+    "role": "surface",
+    "required": true,
+    "aliases": [
+     "deck",
+     "brugdek",
+     "road"
+    ]
+   },
+   {
+    "name": "Pier",
+    "role": "support",
+    "required": false,
+    "count": [
+     0,
+     20
+    ],
+    "aliases": [
+     "pier",
+     "pillar",
+     "pijler"
+    ]
+   },
+   {
+    "name": "Cable",
+    "role": "cable",
+    "required": false,
+    "aliases": [
+     "cable",
+     "kabel"
+    ]
+   },
+   {
+    "name": "Leaf",
+    "role": "movable",
+    "required": false,
+    "count": [
+     1,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "leaf",
+     "span",
+     "klep"
+    ],
+    "note": "A bascule bridge leaf hinges about a horizontal axis at its end."
+   }
+  ],
+  "scale": {
+   "length": [
+    10,
+    3000
+   ],
+   "width": [
+    5,
+    40
+   ],
+   "height": [
+    3,
+    300
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "infrastructure.railway-track",
+  "name": "railway track",
+  "description": "A length of railway track.",
+  "aliases": [
+   "railway",
+   "railway track",
+   "railroad",
+   "spoor",
+   "spoorlijn",
+   "rails",
+   "track",
+   "spoorbaan",
+   "tracks"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Rail",
+    "role": "rail",
+    "required": true,
+    "count": 2,
+    "aliases": [
+     "rail"
+    ]
+   },
+   {
+    "name": "Sleeper",
+    "role": "support",
+    "required": true,
+    "count": [
+     2,
+     200
+    ],
+    "aliases": [
+     "sleeper",
+     "tie",
+     "dwarsligger"
+    ]
+   },
+   {
+    "name": "Ballast",
+    "role": "bed",
+    "required": false,
+    "aliases": [
+     "ballast",
+     "gravel",
+     "grind"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    5,
+    50
+   ],
+   "width": [
+    3.0,
+    4.5
+   ],
+   "height": [
+    0.2,
+    0.4
+   ],
+   "source": "ballast bed width, general knowledge; gauge is 1.435 m (UIC standard)",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "Standard gauge is 1.435 m between the inner rail edges (UIC/IEC standard); sleepers about 0.6 m apart (general knowledge); the ballast bed is about 3.4-4.5 m wide."
+  ]
+ },
+ {
+  "id": "infrastructure.street-lamp",
+  "name": "street lamp",
+  "description": "A lamp post or street light.",
+  "aliases": [
+   "street lamp",
+   "lamp post",
+   "lantaarnpaal",
+   "streetlight",
+   "street light",
+   "lamppost",
+   "straatlamp",
+   "light pole",
+   "lantern",
+   "lantaarn"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Pole",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "pole",
+     "post",
+     "paal"
+    ]
+   },
+   {
+    "name": "Lamp",
+    "role": "light",
+    "required": true,
+    "aliases": [
+     "lamp",
+     "light",
+     "armatuur",
+     "head"
+    ],
+    "note": "Emissive material plus a light node at the bulb."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    2.5
+   ],
+   "width": [
+    0.2,
+    2.5
+   ],
+   "height": [
+    3,
+    12
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "infrastructure.fence",
+  "name": "fence",
+  "description": "A fence, wall or railing.",
+  "aliases": [
+   "fence",
+   "hek",
+   "hekwerk",
+   "railing",
+   "wall",
+   "muur",
+   "gate",
+   "poort",
+   "barrier",
+   "slagboom",
+   "garden fence",
+   "tuinhek"
+  ],
+  "extends": "infrastructure",
+  "scale": {
+   "length": [
+    1,
+    5
+   ],
+   "width": [
+    0.03,
+    0.3
+   ],
+   "height": [
+    0.6,
+    2.5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "A repeatable bay with a post at each end."
+  ]
+ },
+ {
+  "id": "infrastructure.power-pylon",
+  "name": "power pylon",
+  "description": "A high-voltage pylon or utility pole.",
+  "aliases": [
+   "pylon",
+   "power pylon",
+   "hoogspanningsmast",
+   "electricity pylon",
+   "transmission tower",
+   "utility pole",
+   "telegraph pole",
+   "telefoonpaal",
+   "elektriciteitsmast",
+   "mast",
+   "radio mast",
+   "zendmast",
+   "cell tower"
+  ],
+  "extends": "infrastructure",
+  "scale": {
+   "length": [
+    5,
+    20
+   ],
+   "width": [
+    5,
+    20
+   ],
+   "height": [
+    8,
+    70
+   ],
+   "source": "general knowledge: typical production range, not a standard: wooden poles 8-15 m, lattice pylons 25-70 m",
+   "confidence": "C"
+  }
+ }
+]
