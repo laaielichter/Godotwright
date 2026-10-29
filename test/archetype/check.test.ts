@@ -57,6 +57,16 @@ describe("missing and miscounted parts", () => {
     expect(rules(writeScene(buildSpec(EXAMPLE_SPEC)), "car")).not.toContain("archetype/part-count");
   });
 
+  it("recognises node names that end in a number, such as Wheel1 and Body2", () => {
+    const wheel = (name: string, x: number, z: number) => ({ name, shape: "cylinder", axis: "x", radius: 0.33, height: 0.2, at: [x, 0.33, z] });
+    const spec = { version: 1, nodes: [{ name: "Car", material: "paint", children: [
+      { name: "Body2", shape: "box", size: [1.8, 0.8, 4.4], at: [0, 0.7, 0] },
+      { name: "Glass1", shape: "box", size: [1.6, 0.6, 2.0], at: [0, 1.4, 0] },
+      wheel("Wheel1", 0.9, 1.4), wheel("Wheel2", -0.9, 1.4), wheel("Wheel3", 0.9, -1.4), wheel("Wheel4", -0.9, -1.4),
+    ] }] };
+    expect(check(writeScene(buildSpec(spec)), "car").filter((x) => x.severity !== "info")).toEqual([]);
+  });
+
   it("recognises parts by their Dutch and English names, and by the most specific one", () => {
     const spec = { version: 1, nodes: [{ name: "Tractor", material: "paint", children: [
       { name: "Motorkap", shape: "box", size: [1, 1, 2], at: [0, 1.5, 0] },
@@ -93,6 +103,20 @@ describe("pivots and wheel axes", () => {
     expect(f).toHaveLength(1);
     expect(f[0]!.node).toBe("Car/Wheels/Wheel_FL");
     expect(f[0]!.message).toMatch(/from its centre/);
+  });
+
+  it("checks the pivot of the node that spins, not of a mesh child that has a wheel name", () => {
+    const wheelWithMesh = (at: number[], mesh: number[]) => writeScene(buildSpec({ version: 1, nodes: [{ name: "Car", material: "paint", children: [
+      { name: "Body", shape: "box", size: [1.8, 0.8, 4.4], at: [0, 0.7, 0] },
+      { name: "Wheel_FL", at, children: [{ name: "WheelMesh", shape: "cylinder", axis: "x", radius: 0.33, height: 0.2, at: mesh }] },
+    ] }] }));
+    // The spinning node sits 0.57 m above the middle of its tyre: the wheel turns about the wrong point.
+    const off = check(wheelWithMesh([0.9, 0.9, 1.4], [0, -0.57, 0]), "car").filter((x) => x.rule === "archetype/pivot");
+    expect(off).toHaveLength(1);
+    expect(off[0]!.node).toBe("Car/Wheel_FL");
+    expect(off[0]!.message).toMatch(/from its centre/);
+    // The same tyre with its spinning node on the hub is right; the mesh child is only geometry.
+    expect(check(wheelWithMesh([0.9, 0.33, 1.4], [0, 0, 0]), "car").filter((x) => x.rule === "archetype/pivot")).toEqual([]);
   });
 
   it("flags a wheel that lies the wrong way", () => {
