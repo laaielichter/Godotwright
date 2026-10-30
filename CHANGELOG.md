@@ -12,7 +12,13 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   calls `set_shader_parameter(value, "amount")`, because `bind()` adds its arguments after the caller's. Also for `set`,
   `set_deferred`, `set_indexed`, `set_meta` and `set_instance_shader_parameter`.
 
-Both were found by the benchmark's harder tasks: a small model made each mistake once, and the review did not see it.
+Both rules were found by the benchmark's harder tasks: a small model made each mistake once, and the review did not see it.
+
+- **Review knows what older Godot 4 releases had.** For a member Godot 4.7 removed, the finding now says when ("It was
+  removed after Godot 4.0"), so an agent upgrading a project sees it is an upgrade, not a typo. Eight old names Godot 4.7
+  still accepts for old projects (such as `NavigationAgent2D.time_horizon` and `TileMap.cell_quadrant_size`) are now an
+  info that names the current one, instead of a warning that they do not exist. The list (`data/api-removed.json`) was
+  built from Godot 4.0 to 4.5 and checked entry by entry in Godot 4.7.2.
 
 ## 0.1.0 (work on your project without the editor, and 3D models)
 
