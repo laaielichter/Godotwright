@@ -1,0 +1,8 @@
+{
+"1": "Add an enemy to the game. Make a new scene res://enemy.tscn for it and put an instance named `Enemy` in main.tscn, starting at position (400, 490). The enemy walks left and right along the floor at 80 pixels per second between x = 300 and x = 500, turning around at each end. When the hero touches the enemy, the hero takes 1 damage.",
+"2": "Three GUT tests in res://test/ fail. Find the bugs in the game (code and scenes) and fix them so that all four tests pass. Do not change the tests.",
+"3": "Rename the function `heal` to `restore_health`, and rename the node `HUD` to `Interface`, everywhere in the project (code and scene files), so that the game still works and the tests still pass.",
+"4": "Add a pause menu. Pressing Escape pauses the game and shows a node named `PauseMenu` (you may build it as its own scene); pressing Escape again hides it and resumes the game. While paused, the hero must not move. Add a `pause` input action for Escape.",
+"5": "Change the project settings: make the game window 1280 by 720 pixels, set the window stretch mode to `canvas_items`, turn vsync off, and cap the frame rate at 120 frames per second.",
+"6": "Add a ProgressBar named `HealthBar` as a child of the `HUD` node. Its maximum is 3 and it always shows the hero's current health: it starts full and goes down by one each time the hero takes damage. (In the game, pressing H makes the hero take 1 damage.)"
+}
