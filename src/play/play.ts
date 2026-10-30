@@ -163,6 +163,9 @@ func _sample() -> void:
 	var values := {}
 	for w: Array in WATCH:
 		var node: Node = _scene.get_node_or_null(NodePath(w[0])) if w[0] != "." else _scene
+		# Autoloads hang under /root, next to the scene: Score.points finds /root/Score.
+		if node == null:
+			node = root.get_node_or_null(NodePath(w[0]))
 		if node == null:
 			values[w[2]] = "<no node>"
 		else:
@@ -234,10 +237,10 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
     if (!actions.has(input) && !input.startsWith("ui_")) warnings.push(`"${input}" is not an input action in project.godot, so pressing it does nothing (add it with godotwright project input add)`);
   }
   if (scene.endsWith(".tscn")) {
-    const paths = new Set(parseResourceText(readFileSync(fromResPath(root, scene), "utf8")).nodes.map((n) => n.path));
+    const paths = new Set([...parseResourceText(readFileSync(fromResPath(root, scene), "utf8")).nodes.map((n) => n.path), ...settings.autoloads.map((a) => a.name)]);
     for (const w of watch) {
       const node = w.includes(".") ? w.slice(0, w.indexOf(".")) : ".";
-      if (!paths.has(node)) warnings.push(`${node} is not a node in ${scene} (it may be made at run time)`);
+      if (!paths.has(node) && !node.startsWith("/root/")) warnings.push(`${node} is not a node in ${scene} (it may be made at run time)`);
     }
   }
   const fps = Number(settings.values["physics/common/physics_ticks_per_second"] ?? 60) || 60;

@@ -8,6 +8,17 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **Fixes from watching small models work.** Twelve Haiku agents did six everyday Godot tasks with Godotwright; their
+  logs showed five things that got in their way, now fixed:
+  - `check` skips `res://addons/` by default (third-party code; the GUT addon's own scene raised an error that was not
+    the project's). `--include-addons` loads it anyway.
+  - `check --run` and `--scene` run at a fixed frame rate (the project's physics rate), so N frames are N/60 s of game
+    time and a 2 s timer fires within 120+ frames. The output says how much game time the frames were.
+  - `review` no longer calls unit test scripts (GUT, GdUnit4) unused: the test runner loads them.
+  - `review` counts only the project's own scenes, and `review a.gd b.gd` shows only the findings of those files (the
+    scores stay for the whole project).
+  - `play --watch Score.points` finds an autoload by name.
+
 - **Review rule `api/impossible-type-test`**: `x is T` or `x as T` where the static type of `x` can never be a `T` (two
   classes where neither inherits from the other, a class against a built-in type, or `is` between two different
   built-in types). Godot stops with a parse error on these; every case in the tests was checked against Godot 4.7.2,

@@ -138,6 +138,8 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
     if (new RegExp(`(^|[^\\w])${base}(?![\\w.])`).test(text)) continue;
     const ext = outline.extends ?? "";
     if (/^(EditorScript|EditorPlugin|SceneTree|MainLoop)$/.test(ext)) continue;
+    // Unit tests: the test runner (GUT, GdUnit4) loads them, not a scene.
+    if (/^(GutTest|GdUnitTestSuite)$/.test(ext) || /addons\/(gut|gdUnit4)\//.test(ext) || /\/tests?\/(.*\/)?(test_[^/]*|[^/]*_test)\.gd$/.test(path)) continue;
     out.push(finding("structure/unused-script", path, undefined, "No scene, resource, autoload or script refers to this script."));
   }
   return out;
