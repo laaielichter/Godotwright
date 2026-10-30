@@ -2,6 +2,18 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
+## Unreleased
+
+- **Review rule `api/physics-change-in-callback`** (warning): in a `body_entered`/`area_entered` (or exited) handler,
+  adding a physics object with `add_child()`, or setting `monitoring`, `monitorable` or `disabled` directly, makes Godot
+  print "Can't change this state while flushing queries" and the change is wrong; use `add_child.call_deferred()` and
+  `set_deferred()`. Nodes without physics are left alone. Checked against Godot 4.7.2.
+- **Review rule `api/bind-swaps-arguments`** (error): `tween_method(material.set_shader_parameter.bind("amount"), ...)`
+  calls `set_shader_parameter(value, "amount")`, because `bind()` adds its arguments after the caller's. Also for `set`,
+  `set_deferred`, `set_indexed`, `set_meta` and `set_instance_shader_parameter`.
+
+Both were found by the benchmark's harder tasks: a small model made each mistake once, and the review did not see it.
+
 ## 0.1.0 (work on your project without the editor, and 3D models)
 
 Until now Godotwright read a project and told the agent what was wrong. Now an agent can also **change** a project

@@ -42,6 +42,8 @@ const list: Rule[] = [
   { id: "performance/many-shadow-lights", category: "performance", severity: "warning", title: "Many shadow-casting lights", fix: "Turn off shadows on lights that do not need them." },
   { id: "performance/huge-scene", category: "performance", severity: "info", title: "Very large scene", fix: "Split the scene into sub-scenes, or use MultiMesh/GridMap for repeated objects." },
   // Code quality.
+  { id: "api/physics-change-in-callback", category: "api", severity: "warning", title: "Physics change while Godot reports overlaps", fix: "In a body/area entered or exited handler, add physics nodes with add_child.call_deferred() and change monitoring or disabled with set_deferred()." },
+  { id: "api/bind-swaps-arguments", category: "api", severity: "error", title: "bind() puts the tweened value first", fix: "bind() adds its arguments after the caller's; use tween_property(object, \"shader_parameter/name\", ...) or a lambda." },
   { id: "quality/untyped", category: "quality", severity: "info", title: "Missing static types", fix: "Add types to variables, parameters and return values (or use :=)." },
   { id: "quality/long-function", category: "quality", severity: "info", title: "Long function", fix: "Split the function into smaller named steps." },
   { id: "quality/long-file", category: "quality", severity: "info", title: "Long script", fix: "Split the script by responsibility (components or child nodes)." },
