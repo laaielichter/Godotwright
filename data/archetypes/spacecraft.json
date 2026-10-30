@@ -414,9 +414,6 @@
    "probe",
    "ruimtesonde",
    "space probe",
-   "space station",
-   "ruimtestation",
-   "iss",
    "telescope in space",
    "sputnik",
    "communication satellite"
@@ -498,25 +495,173 @@
   ],
   "scale": {
    "length": [
-    1,
-    120
+    0.1,
+    15
    ],
    "width": [
-    1,
-    110
+    0.1,
+    35
    ],
    "height": [
-    1,
-    30
+    0.1,
+    10
    ],
-   "source": "general knowledge: small satellites a metre across to large stations (the ISS is about 109 m wide)",
-   "confidence": "C"
+   "source": "public data: small cubesats (0.1-0.3 m) to large communications satellites (~5-10 m bus with 20-30 m solar wings)",
+   "confidence": "B"
   },
   "anticipate": [
    "Solar panels as separate nodes that can turn to the sun."
   ],
   "pitfalls": [
    "Panels as one fused wing: each panel is its own node so it can fold."
+  ]
+ },
+ {
+  "id": "spacecraft.station",
+  "name": "space station",
+  "description": "An orbital facility or space habitat: pressurized modules, a structural truss, large solar arrays, and docking ports.",
+  "aliases": [
+   "space station",
+   "ruimtestation",
+   "orbital station",
+   "orbital habitat",
+   "space habitat",
+   "iss",
+   "international space station",
+   "mir",
+   "tiangong",
+   "skylab",
+   "station in space"
+  ],
+  "extends": "spacecraft",
+  "hints": [
+   "modules",
+   "module",
+   "truss",
+   "solar array",
+   "solar arrays",
+   "docking port",
+   "docking",
+   "habitat",
+   "pressurized",
+   "airlock",
+   "cupola",
+   "in orbit",
+   "orbiting"
+  ],
+  "parts": [
+   {
+    "name": "Module",
+    "role": "body",
+    "required": true,
+    "count": [
+     1,
+     20
+    ],
+    "aliases": [
+     "module",
+     "modules",
+     "hab",
+     "habitat",
+     "lab",
+     "laboratory",
+     "node",
+     "cylinder",
+     "body"
+    ],
+    "replaces": [
+     "Hull"
+    ]
+   },
+   {
+    "name": "Truss",
+    "role": "structure",
+    "required": true,
+    "count": [
+     1,
+     6
+    ],
+    "aliases": [
+     "truss",
+     "integrated truss",
+     "girder",
+     "beam",
+     "backbone",
+     "framework"
+    ],
+    "note": "The structural backbone that holds solar arrays and radiators."
+   },
+   {
+    "name": "SolarArray",
+    "role": "panel",
+    "required": true,
+    "count": [
+     2,
+     16
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "solar array",
+     "solar arrays",
+     "solar wing",
+     "solar panel",
+     "solar panels",
+     "zonnepanelen",
+     "array",
+     "arrays"
+    ],
+    "note": "Large photovoltaic wings mounted on the truss."
+   },
+   {
+    "name": "DockingPort",
+    "role": "port",
+    "required": true,
+    "count": [
+     1,
+     8
+    ],
+    "aliases": [
+     "docking port",
+     "docking adapter",
+     "docking mechanism",
+     "port",
+     "airlock",
+     "berthing mechanism"
+    ],
+    "note": "Interface ports for visiting spacecraft."
+   }
+  ],
+  "scale": {
+   "length": [
+    10,
+    150
+   ],
+   "width": [
+    10,
+    150
+   ],
+   "height": [
+    5,
+    50
+   ],
+   "source": "official NASA / Roscosmos data: International Space Station is about 109 m x 73 m",
+   "confidence": "B"
+  },
+  "conventions": [
+   "A space station keeps its primary truss oriented along X, pressurized modules clustered along Z, and +Y as nominal zenith."
+  ],
+  "anticipate": [
+   "Docking ports marked as connection nodes for docking spacecraft.",
+   "Solar arrays as separate nodes that can track the sun."
+  ],
+  "pitfalls": [
+   "Modules and solar arrays fused into one static mesh prevents solar tracking or adding modules."
   ]
  }
 ]
