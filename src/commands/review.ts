@@ -1,4 +1,7 @@
+import { existsSync, statSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { Command, Option } from "commander";
+import { findProjectRoot, toResPath } from "../project/files.js";
 import { toSarif } from "../review/sarif.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import { formatReview, formatReviewSummary } from "../review/format.js";
@@ -9,7 +12,7 @@ import { BASE_FILES_HELP, BASE_HELP, collect, parseNumber, writeOut } from "./ou
 export function reviewCommand(): Command {
   return new Command("review")
     .description("AAA review without Godot: API correctness, performance, code quality and structure, with scores")
-    .argument("[path]", "project directory (or any path inside it)", ".")
+    .argument("[paths...]", "project directory (or any path inside it); name .gd/.tscn files to see only their findings (the scores stay for the whole project)")
     .addOption(new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief"))
     .option("--include-addons", "also review scripts in res://addons/")
     .option("--base <dir>", BASE_HELP, collect, [])
@@ -18,8 +21,15 @@ export function reviewCommand(): Command {
     .option("--min-score <score>", "exit with code 1 when the overall score is lower", parseNumber)
     .option("--json", "print the report as JSON")
     .option("--sarif", "print the report as SARIF 2.1.0, for GitHub code scanning (findings inline on pull requests)")
-    .action((path: string, options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; minScore?: number; json?: boolean; sarif?: boolean }, command: Command) => {
-      const report = reviewLearning(path, { includeAddons: options.includeAddons, base: options.base, baseFiles: options.baseFiles });
+    .action((paths: string[], options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; minScore?: number; json?: boolean; sarif?: boolean }, command: Command) => {
+      const files = paths.filter((p) => existsSync(p) && statSync(p).isFile());
+      const path = paths.find((p) => !files.includes(p)) ?? (files[0] ? dirname(resolve(files[0])) : ".");
+      const full = reviewLearning(path, { includeAddons: options.includeAddons, base: options.base, baseFiles: options.baseFiles });
+      // Named files narrow the findings shown, not the review: scores and counts stay for the whole project.
+      const root = findProjectRoot(path) ?? path;
+      const focus = files.map((f) => toResPath(root, resolve(f)));
+      const report = focus.length ? { ...full, findings: full.findings.filter((f) => focus.includes(f.file)) } : full;
+      if (focus.length && !options.json && !options.sarif) writeOut(command, `findings shown only for: ${focus.join(", ")} (scores are for the whole project)\n`);
       const delta = reviewDelta(path, report);
       if (options.sarif) writeOut(command, `${JSON.stringify(toSarif(report), null, 2)}\n`);
       else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);

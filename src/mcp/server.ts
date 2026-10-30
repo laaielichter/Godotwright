@@ -421,7 +421,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
         const lines = result.diagnostics.map(formatDiagnostic);
         lines.push(`${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`);
-        if (result.output !== undefined) lines.push(`output of the run (what the game printed):\n${result.output || "(nothing)"}`);
+        if (result.output !== undefined) lines.push(`output of the run (${result.ran ? `${result.ran.frames} frames = ${result.ran.seconds} s of game time, ` : ""}what the game printed):\n${result.output || "(nothing)"}`);
         return result.errors > 0 ? failure(lines.join("\n")) : text(lines.join("\n"));
       } catch (error) {
         if (error instanceof GodotNotFoundError) {

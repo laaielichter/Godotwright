@@ -104,7 +104,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     findings: sorted,
     typing: { ...typing, percent: typingPercent },
     scripts: [...data.scripts.keys()].filter(inScope).length,
-    scenes: data.map.scenes.filter((sc) => !sc.external).length,
+    scenes: data.map.scenes.filter((sc) => !sc.external && inScope(sc.path)).length,
     ...(adjusted && (adjusted.downgraded.length || adjusted.hidden) ? { learning: { downgraded: adjusted.downgraded, hidden: adjusted.hidden } } : {}),
   };
 }

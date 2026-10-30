@@ -11,6 +11,7 @@ interface Options {
   run?: number | true;
   scene?: string;
   exclude: string[];
+  includeAddons?: boolean;
   timeout: number;
   json?: boolean;
   verbose?: boolean;
@@ -40,7 +41,8 @@ export function checkCommand(): Command {
     .option("--no-instantiate", "only load scenes, do not instantiate them")
     .option("--run [frames]", "also run the main scene for a number of frames (default 120), and show what it printed", parseFrames)
     .option("--scene <res-path>", "run this scene instead of the main scene (implies --run)")
-    .option("--exclude <dir>", "directory to skip, e.g. addons (repeatable)", collect, [])
+    .option("--exclude <dir>", "directory to skip, e.g. levels/old (repeatable); res://addons/ is skipped already", collect, [])
+    .option("--include-addons", "also load res://addons/ (third-party code; its errors are not your project's)")
     .option("--timeout <seconds>", "timeout per Godot run", parseSeconds, 600)
     .option("--json", "print the result as JSON")
     .option("--verbose", "also print the raw Godot output")
@@ -53,6 +55,7 @@ export function checkCommand(): Command {
           runFrames: options.run === undefined ? (options.scene ? 120 : 0) : options.run === true ? 120 : options.run,
           ...(options.scene ? { scene: options.scene } : {}),
           exclude: options.exclude,
+          includeAddons: options.includeAddons,
           timeoutMs: options.timeout * 1000,
           keepLogs: options.verbose,
         });
@@ -60,7 +63,10 @@ export function checkCommand(): Command {
           writeOut(command, `${JSON.stringify(result, null, 2)}\n`);
         } else {
           const lines = Object.entries(result.logs ?? {}).map(([step, log]) => `--- godot ${step} ---\n${log.trim()}`);
-          if (result.output !== undefined) lines.push(`--- output of the run ---\n${result.output || "(the game printed nothing)"}\n---`);
+          if (result.output !== undefined) {
+            const ran = result.ran ? ` (${result.ran.frames} frames = ${result.ran.seconds} s of game time)` : "";
+            lines.push(`--- output of the run${ran} ---\n${result.output || "(the game printed nothing)"}\n---`);
+          }
           lines.push(...result.diagnostics.map(formatDiagnostic));
           lines.push(
             `${result.errors} error${result.errors === 1 ? "" : "s"}, ${result.warnings} warning${result.warnings === 1 ? "" : "s"}` +
