@@ -74,6 +74,10 @@ at what it made, all checked against Godot 4.7 and without the editor. It also b
   built-in types). Godot stops with a parse error on these; every case in the tests was checked against Godot 4.7.2,
   and `as` between built-in types (a conversion, like `float as int`) is left alone. Found while writing `screenshot`.
 
+- **Review rule `quality/time-scale-not-restored`** (warning): a script that changes `Engine.time_scale` and never sets it
+  back to 1.0 leaves the whole game slow. From `LESSONS.md` in the repository, lessons from one large build, each marked with
+  whether Godotwright checks it.
+
 - **`review --sarif`**: the review as SARIF 2.1.0 for GitHub code scanning, so findings show inline on pull requests.
 
 - **`review --only-new`** (MCP `only_new`): after the first review, only the findings that are new since the last one in

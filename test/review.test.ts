@@ -608,3 +608,24 @@ describe("fixes from watching small models work", () => {
     process.exitCode = undefined;
   });
 });
+
+describe("quality/time-scale-not-restored", () => {
+  const scene = '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n';
+  const run = (body: string) =>
+    findings({ "main.tscn": scene, "main.gd": `extends Node\n\n\n${body}` }).filter((f) => f.includes("time-scale"));
+
+  it("warns when slow motion is started and never undone", () => {
+    expect(run("func hit() -> void:\n\tEngine.time_scale = 0.3\n")).toEqual([
+      "res://main.gd:5: warning [quality/time-scale-not-restored] Engine.time_scale is changed here but never set back to 1.0 in this script, so the whole game stays slow (or fast); restore it when the effect ends and in _exit_tree().",
+    ]);
+    expect(run("func hit() -> void:\n\tEngine.time_scale *= 0.5\n")).toHaveLength(1);
+  });
+
+  it("is quiet when the script sets it back, only reads it, or mentions it in a comment or string", () => {
+    expect(run("func hit() -> void:\n\tEngine.time_scale = 0.3\n\n\nfunc _exit_tree() -> void:\n\tEngine.time_scale = 1.0\n")).toEqual([]);
+    expect(run("func hit() -> void:\n\tEngine.time_scale = 0.3\n\tawait get_tree().create_timer(0.2, true, false, true).timeout\n\tEngine.time_scale = 1\n")).toEqual([]);
+    expect(run("func step(delta: float) -> float:\n\treturn delta / Engine.time_scale if Engine.time_scale > 0.001 else delta\n")).toEqual([]);
+    expect(run('func hit() -> void:\n\t# Engine.time_scale = 0.3\n\tprint("Engine.time_scale = 0.3")\n')).toEqual([]);
+    expect(run("func paused() -> bool:\n\treturn Engine.time_scale == 0.0\n")).toEqual([]);
+  });
+});
