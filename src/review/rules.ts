@@ -27,6 +27,7 @@ const list: Rule[] = [
   { id: "api/unknown-function", category: "api", severity: "error", title: "Unknown function", fix: "Call a function that exists on this class, its parents or the global scope." },
   { id: "api/unknown-member", category: "api", severity: "error", title: "Unknown member", fix: "Use a member that exists on this type in Godot 4.7 (check with godotwright api)." },
   { id: "api/wrong-arguments", category: "api", severity: "error", title: "Wrong number of arguments", fix: "Pass the arguments the Godot 4.7 signature expects (check with godotwright api)." },
+  { id: "api/impossible-type-test", category: "api", severity: "error", title: "Type test that can never be true", fix: "Test or cast against a type the value can be: a parent or child class of its static type." },
   { id: "api/infer-variant", category: "api", severity: "error", title: "Type inferred from a Variant", fix: "Give the variable a type (`var x: float = abs(v)`), or use the typed function (`absf`, `maxi`, `clampf`, ...)." },
   { id: "api/unsafe-member", category: "api", severity: "warning", title: "Member not on the static type", fix: "Give the variable the right type (or cast with `as`) so the member can be checked." },
   { id: "api/unknown-input-action", category: "api", severity: "error", title: "Unknown input action", fix: "Add the action to Project Settings > Input Map, or fix the name." },
