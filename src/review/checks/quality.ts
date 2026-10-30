@@ -97,6 +97,26 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
     if (up) out.push(finding("quality/fragile-path", path, ll.line, `Node path "${up[1]}" climbs ${up[1]!.split("../").length - 1} levels up the tree.`));
   }
 
+  // Slow motion that is never undone leaves the whole game slow, also after the node that started it is gone.
+  const slowed: number[] = [];
+  let restored = false;
+  for (const ll of script.logicalLines) {
+    for (const m of ll.code.matchAll(/\bEngine\s*\.\s*time_scale\s*(=|\+=|-=|\*=|\/=)(?!=)\s*([^;]*)/g)) {
+      if (m[1] === "=" && /^1(\.0*)?\s*$/.test(m[2]!)) restored = true;
+      else slowed.push(ll.line);
+    }
+  }
+  if (slowed.length && !restored) {
+    out.push(
+      finding(
+        "quality/time-scale-not-restored",
+        path,
+        slowed[0],
+        "Engine.time_scale is changed here but never set back to 1.0 in this script, so the whole game stays slow (or fast); restore it when the effect ends and in _exit_tree().",
+      ),
+    );
+  }
+
   for (const { line, text } of commentsOf(source)) {
     const todo = /#.*\b(TODO|FIXME|HACK|XXX)\b:?\s*(.*)$/.exec(text);
     if (todo) out.push(finding("quality/todo", path, line, `${todo[1]}: ${todo[2]!.trim().slice(0, 80) || "(no text)"}`));

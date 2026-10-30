@@ -436,6 +436,10 @@ contradicted. That, plus what opted-in installs share, ships in `data/learned.js
 API hints for common typos, and rules Godot keeps contradicting.
 What your own machine saw wins: one confirmation by Godot keeps a rule an error.
 
+Lessons from real builds also become rules. [LESSONS.md](LESSONS.md) is an anonymised reflection on one large
+build (no code, no project names); each lesson says whether Godotwright checks it, and the ones that can be checked,
+like slow motion that is never undone, are review rules.
+
 For maintainers, `godotwright collector serve` accepts reports (checked again,
 stored without IP addresses), and `godotwright collector aggregate <dir> --out
 data/learned.json` sums them, keeping only what at least 3 installs reported.
