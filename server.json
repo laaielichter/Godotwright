@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.laaielichter/godotwright",
   "title": "Godotwright",
-  "description": "Godot 4.7 for coding agents: offline API, headless checks, GDScript review, 3D models from code.",
+  "description": "Godot 4.7 for coding agents: offline API, checks, review, safe edits, tests, play, 3D models.",
   "repository": {
     "url": "https://github.com/laaielichter/Godotwright",
     "source": "github"
