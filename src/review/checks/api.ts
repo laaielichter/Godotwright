@@ -1,4 +1,5 @@
 import { closest } from "../../api/api.js";
+import { removedClass, removedMember, removedNote } from "../../api/removed.js";
 import { matchingParen, splitAnnotations, type FunctionInfo, type LogicalLine } from "../../godot/gdscript.js";
 import { finding, type Finding } from "../rules.js";
 import { native, VALUE_TYPES, type ClassModel, type GType, type ProjectModel } from "../model.js";
@@ -89,7 +90,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       if (options.foreignClasses) continue;
       const hint = renameHint(name, "type");
       const near = hint ? "" : suggest(name, [...api.classes.keys(), ...pm.classNames.keys()]);
-      report("api/unknown-type", line, `Type "${name}" does not exist in Godot 4.7 or this project.${hint}${near}`);
+      report("api/unknown-type", line, `Type "${name}" does not exist in Godot 4.7 or this project.${removedNote(removedClass(name))}${hint}${near}`);
     }
   };
 
@@ -99,7 +100,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const line = model.owner ? model.firstLine : (script.logicalLines.find((l) => /^(@\w+\s+)*(class_name\b.*\b)?extends\b/.test(l.text))?.line ?? 1);
       const name = model.extendsRaw.replace(/^"|"$/g, "");
       const hint = renameHint(name, "type");
-      report("api/unknown-type", line, `Cannot extend "${name}": it does not exist in Godot 4.7 or this project.${hint}`);
+      report("api/unknown-type", line, `Cannot extend "${name}": it does not exist in Godot 4.7 or this project.${removedNote(removedClass(name))}${hint}`);
     }
     for (const fn of model.outline.functions) {
       for (const p of fn.params) checkTypeName(p.type, fn.line, model);
@@ -506,14 +507,25 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
           ? api.ancestors(type.name).flatMap((c) => [...(c.methods ?? []), ...(c.members ?? []), ...(c.signals ?? []), ...(c.constants ?? [])].map((x) => x.name))
           : pm.chain(type.model).flatMap((c) => [...c.outline.functions, ...c.outline.variables, ...c.outline.signals, ...c.outline.constants].map((x) => x.name));
       const what = isCall ? `Method "${name}()"` : `"${name}"`;
+      const old = type.kind === "native" ? removedMember(api, type.name, name) : undefined;
+      if (old?.compat) {
+        report(
+          "api/unsafe-member",
+          ll.line,
+          `${what} on ${label} is an old name: Godot ${old.last} documented it, and Godot 4.7 still accepts it only so old projects load. Move to the current name.${hint}${hint ? "" : suggest(name, names)}`,
+          "info",
+        );
+        return undefined;
+      }
+      const gone = removedNote(old);
       // A known Godot 3 name that no class below defines is certainly wrong.
       if (certain || hint) {
-        report("api/unknown-member", ll.line, `${what} does not exist on ${label} in Godot 4.7.${hint}${hint ? "" : suggest(name, names)}`);
+        report("api/unknown-member", ll.line, `${what} does not exist on ${label} in Godot 4.7.${gone}${hint}${hint ? "" : suggest(name, names)}`);
       } else {
         report(
           "api/unsafe-member",
           ll.line,
-          `${what} is not a member of ${label} or of any class below it in Godot 4.7 or this project.${hint}${hint ? "" : suggest(name, names)}`,
+          `${what} is not a member of ${label} or of any class below it in Godot 4.7 or this project.${gone}${hint}${hint ? "" : suggest(name, names)}`,
         );
       }
       return undefined;
