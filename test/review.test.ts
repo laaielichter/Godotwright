@@ -664,3 +664,25 @@ describe("api/physics-change-in-callback and api/bind-swaps-arguments", () => {
     expect(run('func _drop(_body: Node2D) -> void:\n\tpass\n\n\nfunc flash(m: ShaderMaterial) -> void:\n\tcreate_tween().tween_property(m, "shader_parameter/amount", 0.0, 0.2)\n\tcreate_tween().tween_method(_set_amount.bind(m), 1.0, 0.0, 0.2)\n\n\nfunc _set_amount(v: float, m: ShaderMaterial) -> void:\n\tm.set_shader_parameter("amount", v)\n')).toEqual([]);
   });
 });
+
+describe("members older Godot 4 releases had", () => {
+  const scene = '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node2D"]\nscript = ExtResource("1")\n';
+  const all = (body: string) => {
+    const root = makeProject({ "project.godot": PROJECT, ".gitignore": ".godot/\n", "main.tscn": scene, "main.gd": `extends Node2D\n\n\n${body}` });
+    return reviewProject(root).findings.filter((f) => f.rule === "api/unsafe-member").map(formatFinding);
+  };
+
+  it("says when Godot removed a member, and calls an old name that still works an info, not a warning", () => {
+    const found = all("func setup(follow: PathFollow2D, agent: NavigationAgent2D) -> void:\n\tfollow.lookahead = 4.0\n\tagent.time_horizon = 2.0\n");
+    expect(found[0]).toContain('warning [api/unsafe-member] "lookahead" is not a member of PathFollow2D');
+    expect(found[0]).toContain("It was removed after Godot 4.0.");
+    expect(found[1]).toContain('info [api/unsafe-member] "time_horizon" on NavigationAgent2D is an old name: Godot 4.0 documented it, and Godot 4.7 still accepts it only so old projects load.');
+    expect(found[1]).toContain("time_horizon_agents");
+  });
+
+  it("adds nothing to a plain typo", () => {
+    const found = all("func setup(follow: PathFollow2D) -> void:\n\tfollow.progres = 4.0\n");
+    expect(found[0]).not.toContain("removed after");
+    expect(found[0]).not.toContain("old name");
+  });
+});
