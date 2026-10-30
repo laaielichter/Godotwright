@@ -230,9 +230,38 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       );
     }
 
+    /**
+     * `x is T` and `x as T` where the static type of x can never be a T: two Godot classes where neither inherits from
+     * the other, a class and a built-in type, or (for `is` only) two different built-in types. Godot stops with a parse
+     * error on these; each case was checked against Godot 4.7.2. Script types are left out:
+     * a node may carry a script that extends a base class of the node's own class.
+     */
+    function checkTypeTest(op: string, expr: string, from: GType, targetName: string): void {
+      const to = pm.typeFromAnnotation(targetName, model);
+      if (from.kind !== "native" || to?.kind !== "native" || from.meta || to.meta) return;
+      const a = from.name;
+      const b = to.name;
+      if (a === b) return;
+      const valueA = VALUE_TYPES.has(a);
+      const valueB = VALUE_TYPES.has(b);
+      const classA = !valueA && pm.api.getClass(a) !== undefined;
+      const classB = !valueB && pm.api.getClass(b) !== undefined;
+      if (!(valueA || classA) || !(valueB || classB)) return;
+      if (classA && classB && (pm.api.inheritsFrom(a, b) || pm.api.inheritsFrom(b, a))) return;
+      // `as` between two built-in types converts (float as int, String as StringName); only `is` cannot match.
+      if (op === "as" && valueA && valueB) return;
+      const message =
+        op === "as"
+          ? `Invalid cast: "${expr}" has type ${a}, which can never be converted to ${b}. Godot stops with a parse error.`
+          : `"${expr}" has type ${a}, so "${expr} is ${b}" can never be true${classA && classB ? " (neither class inherits from the other)" : ""}. Godot stops with a parse error.`;
+      report("api/impossible-type-test", ll.line, message);
+    }
+
     function analyzeExpr(code: string, base: number): GType | undefined {
       const tokens = tokenize(code);
       let whole: GType | undefined;
+      // The last name chain, so `x is T` / `x as T` can compare the type of x with T.
+      let lastChain: { start: number; end: number; type?: GType } | undefined;
       for (let k = 0; k < tokens.length; k++) {
         const tok = tokens[k]!;
         const prev = tokens[k - 1]?.t;
@@ -253,6 +282,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
           }
           if (tok.t === "is" && name === "not") continue;
           checkTypeName(name, ll.line, model);
+          if (lastChain && lastChain.end === k - 1 && lastChain.type) checkTypeTest(tok.t, tokens.slice(lastChain.start, k).map((t) => t.t).join(""), lastChain.type, name);
           k = j;
           continue;
         }
@@ -264,6 +294,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         // `{key = value}` dictionary keys are not names.
         if (tokens[k + 1]?.t === "=" && (prev === "{" || prev === ",")) continue;
         const type = walkChain(tokens, k, base);
+        lastChain = { start: k, end: type.end, type: type.value?.type };
         if (k === 0) whole = type.end === tokens.length - 1 ? type.value?.type : undefined;
       }
       return whole;
