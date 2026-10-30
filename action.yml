@@ -1,0 +1,93 @@
+name: Godotwright receipt
+description: Review, Godot check, tests and scenarios of a Godot 4.7 project in one markdown receipt, on a pull request. No editor needed.
+author: laaielichter
+branding:
+  icon: check-circle
+  color: blue
+inputs:
+  path:
+    description: Project directory (or any path inside it).
+    default: "."
+  godot-version:
+    description: Godot version to download (Linux runner), e.g. 4.7.2. The checks that need Godot use it.
+    default: "4.7.2"
+  review-only:
+    description: Run only the review, which needs no Godot (skips the check, the tests and the scenarios).
+    default: "false"
+  comment:
+    description: "Post the receipt as a comment on the pull request (needs the permission pull-requests: write)."
+    default: "false"
+  token:
+    description: Token used to post the comment.
+    default: ${{ github.token }}
+  command:
+    description: How to run Godotwright. Change it only to run a build of your own.
+    default: npx -y godotwright@latest
+outputs:
+  ok:
+    description: "true when every step passed."
+    value: ${{ steps.run.outputs.ok }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+    - name: Cache Godot
+      if: inputs.review-only != 'true'
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot
+        key: godot-${{ inputs.godot-version }}-linux-x86_64
+    - name: Download Godot
+      if: inputs.review-only != 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.godot-version }}
+      run: |
+        mkdir -p ~/godot && cd ~/godot
+        base="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+        file="Godot_v${VERSION}-stable_linux.x86_64"
+        curl -fsSLO "$base/$file.zip"
+        curl -fsSLO "$base/SHA512-SUMS.txt"
+        grep " $file.zip$" SHA512-SUMS.txt | sha512sum -c -
+        unzip -q "$file.zip"
+        mv "$file" godot
+        rm "$file.zip"
+    - name: Run Godotwright
+      id: run
+      shell: bash
+      env:
+        GODOTWRIGHT: ${{ inputs.command }}
+        PROJECT: ${{ inputs.path }}
+        REVIEW_ONLY: ${{ inputs.review-only }}
+      run: |
+        flags=()
+        if [ "$REVIEW_ONLY" = "true" ]; then flags+=(--no-godot-checks); else export GODOT="$HOME/godot/godot"; fi
+        receipt="$RUNNER_TEMP/godotwright-receipt.md"
+        set +e
+        $GODOTWRIGHT ci "$PROJECT" "${flags[@]}" > "$receipt"
+        code=$?
+        set -e
+        cat "$receipt"
+        cat "$receipt" >> "$GITHUB_STEP_SUMMARY"
+        echo "receipt=$receipt" >> "$GITHUB_OUTPUT"
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        if [ "$code" = "0" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PR: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+        RECEIPT: ${{ steps.run.outputs.receipt }}
+      run: |
+        gh pr comment "$PR" --repo "$REPO" --body-file "$RECEIPT" --edit-last || gh pr comment "$PR" --repo "$REPO" --body-file "$RECEIPT"
+    - name: Fail when a step failed
+      if: steps.run.outputs.code != '0'
+      shell: bash
+      env:
+        CODE: ${{ steps.run.outputs.code }}
+      run: exit "$CODE"

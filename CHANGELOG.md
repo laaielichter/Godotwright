@@ -2,11 +2,6 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
-## Unreleased
-
-- `godotwright ci`: one receipt for a pull request. It runs the review, the Godot check, the project's GUT or GdUnit4 tests and its scenarios, prints a markdown table (the failing lines with file:line below it) and exits 1 when a step fails. `--no-godot-checks` runs only the review.
-- Scenarios (`.godotwright/scenarios/*.json`, `godotwright scenario`): play an input timeline into a scene and check what the game did, for example `"Hero.position.x >= 100 @ 25"`. The proof that a change works, written once and run on every pull request.
-
 ## 0.1.0 (work on your project without the editor, and 3D models)
 
 Until now Godotwright read a project and told the agent what was wrong. Now an agent can also **change** a project
@@ -65,6 +60,12 @@ at what it made, all checked against Godot 4.7 and without the editor. It also b
 
 - **`check --scene <res-path>`** and the run's output: `check --run` (MCP `godot_check` with `run_frames` or `scene`)
   now returns what the game printed, engine noise removed, so an agent can read its own `print()` calls back.
+
+- **`ci`**: one receipt for a pull request. It runs the review, the Godot check, the project's GUT or GdUnit4 tests and its scenarios, prints a markdown table (the failing lines with file:line below it) and exits 1 when a step fails. `--no-godot-checks` runs only the review.
+
+- **Scenarios** (`.godotwright/scenarios/*.json`, `godotwright scenario`): play an input timeline into a scene and check what the game did, for example `"Hero.position.x >= 100 @ 25"`. The proof that a change works, written once and run on every pull request.
+
+- **GitHub Action** (`uses: laaielichter/godotwright@v0.1.0`) that runs `godotwright ci` on a pull request: it puts the table in the job summary and, if asked, in a pull request comment, and fails the job when a step fails.
 
 ### Review
 
