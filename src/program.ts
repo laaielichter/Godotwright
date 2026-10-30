@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { apiCommand } from "./commands/api.js";
 import { checkCommand } from "./commands/check.js";
+import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { learnCommand } from "./commands/learn.js";
 import { mcpCommand } from "./commands/mcp.js";
@@ -31,6 +32,8 @@ export function createProgram(): Command {
     .addCommand(checkCommand())
     .addCommand(testCommand())
     .addCommand(playCommand())
+    .addCommand(scenarioCommand())
+    .addCommand(ciCommand())
     .addCommand(screenshotCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
