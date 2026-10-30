@@ -1,0 +1,28 @@
+[gd_scene load_steps=7 format=3 uid="uid://benemy0scene"]
+
+[ext_resource type="Script" uid="uid://cenemy0script" path="res://scripts/enemy.gd" id="1_enemy"]
+[ext_resource type="Resource" uid="uid://bgoblin0stats" path="res://resources/goblin.tres" id="2_stats"]
+[ext_resource type="Texture2D" uid="uid://cicon00svg001" path="res://icon.svg" id="3_icon"]
+[ext_resource type="Shader" uid="uid://bflash0shader" path="res://shaders/flash.gdshader" id="4_flash"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hit"]
+radius = 24.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_flash"]
+shader = ExtResource("4_flash")
+shader_parameter/amount = 0.0
+
+[node name="Enemy" type="Area2D" groups=["enemies"]]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_enemy")
+stats = ExtResource("2_stats")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_flash")
+modulate = Color(1, 0.3, 0.3, 1)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("3_icon")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_hit")

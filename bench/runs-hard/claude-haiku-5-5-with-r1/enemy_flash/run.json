@@ -1,0 +1,22 @@
+{
+  "task": "enemy_flash",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 21,
+  "turns": 11,
+  "costUsd": 0.006560079999999999,
+  "isError": false,
+  "result": "Changed `scripts/enemy.gd` so `hit()` sets the flash shader's `amount` to 1 on that enemy's Sprite2D and tweens it to 0 over 0.2 seconds, with each enemy getting its own material so only the hit one flashes. I couldn't run the game here; the godot_review check passed with no findings.\n\nEnemies that die from the hit are freed immediately, so the flash won't be visible on a killing blow.",
+  "toolCalls": {
+    "Glob": 1,
+    "Read": 3,
+    "Edit": 4,
+    "mcp__godotwright__godot_review": 2
+  },
+  "changed": [
+    "scripts/enemy.gd"
+  ],
+  "deleted": []
+}

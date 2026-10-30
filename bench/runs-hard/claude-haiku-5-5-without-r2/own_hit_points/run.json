@@ -1,0 +1,22 @@
+{
+  "task": "own_hit_points",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 8,
+  "turns": 5,
+  "costUsd": 0.0025920599999999998,
+  "isError": false,
+  "result": "Added `hit(amount)` to `scripts/enemy.gd`: enemies now start with `hit_points` from their `stats` (1 if there are none) and call `queue_free()` once they reach zero or below.",
+  "toolCalls": {
+    "Read": 1,
+    "Grep": 1,
+    "Glob": 1,
+    "Edit": 1
+  },
+  "changed": [
+    "scripts/enemy.gd"
+  ],
+  "deleted": []
+}

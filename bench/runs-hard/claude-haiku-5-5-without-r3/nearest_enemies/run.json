@@ -1,0 +1,20 @@
+{
+  "task": "nearest_enemies",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 6,
+  "turns": 3,
+  "costUsd": 0.0018863,
+  "isError": false,
+  "result": "Added `enemies_near(point, radius) -> Array[Area2D]` to `autoload/game_state.gd`, returning enemies in the \"enemies\" group within `radius` of `point`, sorted nearest first.",
+  "toolCalls": {
+    "Read": 1,
+    "Edit": 1
+  },
+  "changed": [
+    "autoload/game_state.gd"
+  ],
+  "deleted": []
+}

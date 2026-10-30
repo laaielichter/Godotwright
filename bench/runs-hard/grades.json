@@ -1,0 +1,2226 @@
+[
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r1",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "coin_drop",
+    "pass": false,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [
+      "Can't change this state while flushing queries. Use call_deferred() or set_deferred() to change monitoring state instead."
+    ],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 99,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r2",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r3",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r4",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r4",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r4",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r4",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r4",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r5",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r5",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r5",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r5",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-with-r5",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "enemy_flash",
+    "pass": false,
+    "passed": 4,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": false,
+        "name": "the flash fades back to 0: 1.0"
+      }
+    ],
+    "runErrors": [
+      "Error calling method from MethodTweener: 'ShaderMaterial::set_shader_parameter': Cannot convert argument 1 from float to StringName."
+    ],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 96,
+      "apiErrors": 1,
+      "errors": 1
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r1",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r2",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r3",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r4",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r4",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r4",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r4",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r4",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r5",
+    "task": "bullet_layers",
+    "pass": true,
+    "passed": 8,
+    "total": 8,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "bullet scene exists"
+      },
+      {
+        "pass": true,
+        "name": "bullet root is an Area2D"
+      },
+      {
+        "pass": true,
+        "name": "the bullet passes through the player"
+      },
+      {
+        "pass": true,
+        "name": "it does not collide with the player layer"
+      },
+      {
+        "pass": true,
+        "name": "it collides with the enemies layer"
+      },
+      {
+        "pass": true,
+        "name": "it flies up at about 600 px/s"
+      },
+      {
+        "pass": true,
+        "name": "it hits the enemy"
+      },
+      {
+        "pass": true,
+        "name": "it removes itself after the hit"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r5",
+    "task": "coin_drop",
+    "pass": true,
+    "passed": 6,
+    "total": 6,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "the enemy touched the player"
+      },
+      {
+        "pass": true,
+        "name": "one coin was dropped"
+      },
+      {
+        "pass": true,
+        "name": "the coin is a child of the enemy's parent"
+      },
+      {
+        "pass": true,
+        "name": "the coin is where the enemy was"
+      },
+      {
+        "pass": true,
+        "name": "the coin is in the physics world"
+      },
+      {
+        "pass": true,
+        "name": "the coin notices the player"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r5",
+    "task": "enemy_flash",
+    "pass": true,
+    "passed": 5,
+    "total": 5,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "the enemy sprite uses the flash shader"
+      },
+      {
+        "pass": true,
+        "name": "the hit enemy flashes"
+      },
+      {
+        "pass": true,
+        "name": "the other enemy does not flash"
+      },
+      {
+        "pass": true,
+        "name": "the flash fades back to 0"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r5",
+    "task": "nearest_enemies",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "GameState has enemies_near()"
+      },
+      {
+        "pass": true,
+        "name": "it returns an array"
+      },
+      {
+        "pass": true,
+        "name": "the array is typed Array[Area2D]"
+      },
+      {
+        "pass": true,
+        "name": "it finds the enemies in range"
+      },
+      {
+        "pass": true,
+        "name": "nearest first"
+      },
+      {
+        "pass": true,
+        "name": "an enemy out of range is left out"
+      },
+      {
+        "pass": true,
+        "name": "nothing in range gives an empty array"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "claude-haiku-5-5-without-r5",
+    "task": "own_hit_points",
+    "pass": true,
+    "passed": 7,
+    "total": 7,
+    "finished": true,
+    "checks": [
+      {
+        "pass": true,
+        "name": "enemy scene loads"
+      },
+      {
+        "pass": true,
+        "name": "enemy has hit()"
+      },
+      {
+        "pass": true,
+        "name": "one hit does not kill a 2 hit point enemy"
+      },
+      {
+        "pass": true,
+        "name": "two hits kill it"
+      },
+      {
+        "pass": true,
+        "name": "another enemy still has its own hit points"
+      },
+      {
+        "pass": true,
+        "name": "a new enemy starts with full hit points"
+      },
+      {
+        "pass": true,
+        "name": "the shared stats resource is unchanged"
+      }
+    ],
+    "runErrors": [],
+    "godotErrors": 0,
+    "godotErrorLines": [],
+    "review": {
+      "overall": 100,
+      "apiErrors": 0,
+      "errors": 0
+    }
+  }
+]

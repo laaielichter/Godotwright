@@ -6,7 +6,7 @@ lets real Godot 4.7 judge the result.
 
 ## Tasks
 
-Twelve small, realistic tasks on the demo game in `test/fixtures/demo`
+Seventeen small, realistic tasks on the demo game in `test/fixtures/demo`
 (a 2D platformer with a player, enemies, a HUD and a GameState autoload):
 
 | Task | What the agent must do | What usually goes wrong |
@@ -23,6 +23,11 @@ Twelve small, realistic tasks on the demo game in `test/fixtures/demo`
 | `line_of_sight` | a ray query on layer 1 that ignores the enemy | Godot 3 `intersect_ray` signature |
 | `tool_button` | an Inspector button that resets health | `@export_tool_button` (Godot 4.4+), `@tool` |
 | `big_port` | port a Godot 3 hero with export ranges, setget, yield and a tool script | `velocity` clash, setget, yield, export hints |
+| `own_hit_points` | enemies lose hit points on `hit()` and die at 0 | changing the shared stats `.tres` changes every enemy |
+| `enemy_flash` | flash only the hit enemy with a shader | a material shared by every instance of the scene |
+| `bullet_layers` | a bullet that hits enemies and passes through the player | layer numbers vs mask bits |
+| `coin_drop` | drop a coin (an Area2D) when an enemy touches the player | adding a physics object while Godot reports overlaps |
+| `nearest_enemies` | `enemies_near()` returning `Array[Area2D]`, nearest first | untyped arrays from `filter()` and groups |
 
 Each task has:
 
@@ -52,7 +57,8 @@ with `run.json` (time, turns, cost, tool calls).
 `bench/grade.mjs --runs bench/runs` (run by the Bench workflow, with Godot 4.7.2) rebuilds
 each result and records:
 
-- **Tasks passed**: the Godot behavior test passes completely.
+- **Tasks passed**: the Godot behavior test passes completely, and Godot printed no error while it ran
+  (Godot often carries on after an error such as "Can't change this state while flushing queries", but the game is wrong).
 - **Checks passed**: share of individual behavior checks that pass.
 - **No Godot errors**: `godotwright check` (import, load and instantiate everything,
   run the main scene for 60 frames) reports no errors.

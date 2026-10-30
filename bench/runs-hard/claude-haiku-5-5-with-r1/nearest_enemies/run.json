@@ -1,0 +1,23 @@
+{
+  "task": "nearest_enemies",
+  "mode": "with",
+  "model": "claude-haiku-5-5",
+  "tier": "cheap",
+  "exitCode": 0,
+  "seconds": 11,
+  "turns": 6,
+  "costUsd": 0.0032857200000000002,
+  "isError": false,
+  "result": "Added `enemies_near(point: Vector2, radius: float) -> Array[Area2D]` to `autoload/game_state.gd`; it returns enemies in the \"enemies\" group within `radius` of `point`, sorted nearest first. godot_review reports no findings for the file.",
+  "toolCalls": {
+    "Read": 1,
+    "Grep": 1,
+    "ToolSearch": 1,
+    "Edit": 1,
+    "mcp__godotwright__godot_review": 1
+  },
+  "changed": [
+    "autoload/game_state.gd"
+  ],
+  "deleted": []
+}

@@ -88,6 +88,32 @@ up when a code path runs, for example:
 - `xr/openxr_origin_centric_movement`: `get_gravity()` is called on an `XROrigin3D`,
   which has no such method.
 
+## Round 2: five harder tasks
+
+Five tasks built around Godot mistakes that only show when the game runs: a shared stats resource, a material shared
+by every instance of a scene, physics layers versus mask bits, adding a physics object while Godot reports overlaps,
+and typed arrays. Before any agent ran, a deliberately naive solution of each task was graded: all five failed, and
+every reference solution passed with zero Godot errors. From this round on, an engine error printed while the test
+runs also fails a task.
+
+50 runs of Claude Haiku 5.5 (`cheap` profile), 5 per task with and 5 without Godotwright, graded with Godot 4.7.2
+(raw data in `runs-hard/`):
+
+| Godotwright | Runs | Tasks passed | Godotwright calls / run | Time / run | Cost / run |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| yes | 25 | 24 (96%) | 0.8 | 15 s | $0.005 |
+| no | 25 | 24 (96%) | 0.0 | 12 s | $0.005 |
+
+- **Still no difference in correctness.** Each group failed one run, on a different task.
+- **Both failures were mistakes the review could have named, and did not.** With Godotwright, one run added the coin
+  in the `body_entered` handler, and Godot printed "Can't change this state while flushing queries". Without it, one
+  run tweened `set_shader_parameter.bind("amount")`, which calls the setter with its arguments the wrong way round.
+  The agent with Godotwright had run the review and got no warning. Two review rules now catch both
+  (`api/physics-change-in-callback`, `api/bind-swaps-arguments`), with no findings on the demo projects or on the runs
+  that passed.
+- **Haiku solves 96% of even these tasks.** A benchmark that separates the groups needs tasks that take many steps, or
+  models weaker than Haiku.
+
 ## Next round
 
 1. Harder tasks: multi-scene features, larger projects, and engine areas with less

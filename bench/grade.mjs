@@ -37,6 +37,9 @@ export async function grade(task, source) {
   const checks = [...run.out.matchAll(/^BENCH_(PASS|FAIL) (.*)$/gm)].map((m) => ({ pass: m[1] === "PASS", name: m[2] }));
   const done = /^BENCH_DONE (\d+) (\d+)$/m.exec(run.out);
   const passed = checks.filter((c) => c.pass).length;
+  // An engine error while the test ran fails the task even when every check passed: Godot often
+  // carries on after one ("Can't change this state while flushing queries"), but the game is wrong.
+  const runErrors = [...run.out.matchAll(/^(?:SCRIPT )?ERROR: (.*)$/gm)].map((m) => m[1].trim());
 
   let godotErrors = null;
   let godotErrorLines = [];
@@ -57,11 +60,12 @@ export async function grade(task, source) {
   rmSync(dir, { recursive: true, force: true });
   return {
     task,
-    pass: Boolean(done) && checks.length > 0 && passed === checks.length,
+    pass: Boolean(done) && checks.length > 0 && passed === checks.length && runErrors.length === 0,
     passed,
     total: checks.length,
     finished: Boolean(done),
     checks,
+    runErrors: runErrors.slice(0, 10),
     godotErrors,
     godotErrorLines: godotErrorLines.slice(0, 10),
     review,
@@ -79,6 +83,7 @@ async function validate() {
     console.log(`${good ? "OK  " : "BAD "} ${task}: base ${base.passed}/${base.total}, solution ${solved.passed}/${solved.total}, solution godot errors ${solved.godotErrors}`);
     for (const c of solved.checks.filter((x) => !x.pass)) console.log(`       solution FAIL ${c.name}`);
     for (const line of solved.godotErrorLines) console.log(`       solution error ${line}`);
+    for (const line of solved.runErrors) console.log(`       solution error during the test ${line}`);
     if (!solved.finished) console.log(`       solution log:\n${solved.log}`);
     if (!base.finished) console.log(`       base did not finish:\n${base.log}`);
   }
@@ -99,6 +104,7 @@ async function gradeRuns(root) {
       console.log(`${result.pass ? "PASS" : "FAIL"} ${label} ${task} ${result.passed}/${result.total} godot errors ${result.godotErrors}`);
       for (const c of result.checks.filter((x) => !x.pass)) console.log(`     FAIL ${c.name}`);
       for (const line of result.godotErrorLines) console.log(`     error ${line}`);
+      for (const line of result.runErrors) console.log(`     error during the test ${line}`);
     }
   }
   const out = join(root, "grades.json");
