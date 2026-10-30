@@ -93,6 +93,7 @@ godotwright check [path] --run        # also run the main scene for 120 frames a
 godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put print() in the code and read it back here
 godotwright test [path]               # run the GUT or GdUnit4 tests headless; prints only what failed, with file:line
 godotwright play --input "10 tap jump; 20 hold right 30" --watch Player.position   # play input into a scene, see the values per frame
+godotwright ci                                     # one receipt: review, check, tests and scenarios (markdown, exit 1 on a failure)
 godotwright screenshot --model car.glb --view front,side,top,iso   # a PNG of a model from four sides (or of a scene); says how much is drawn
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
