@@ -67,6 +67,17 @@ describe("play", () => {
     expect(text).toContain("printed:\nhello from the game");
   });
 
+  it("finds autoloads by name, both in the warning and in the script", async () => {
+    const root = makeProject({
+      "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n[autoload]\nScore="*res://score.gd"\n',
+      "score.gd": "extends Node\n\nvar points := 0\n",
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node2D"]\n',
+    });
+    const report = await playScene(root, { godot: fakeGodot(root), watch: ["Score.points", "/root/Score.points"] });
+    expect(report.warnings).toEqual([]);
+    expect(playScript("res://main.tscn", [], ["Score.points"], 10, 1)).toContain("node = root.get_node_or_null(NodePath(w[0]))");
+  });
+
   it("says when the run did not reach the last frame, with the error", async () => {
     const root = project();
     const report = await playScene(root, { godot: fakeGodot(root, false), watch: ["Hero.position"] });

@@ -1,5 +1,6 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseProjectSettings } from "../godot/project-settings.js";
 import { findProjectRoot } from "../project/files.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
@@ -18,8 +19,10 @@ export interface CheckOptions {
   runFrames?: number;
   /** Run this scene (a res:// path) instead of the main scene; implies 120 frames when runFrames is not set. */
   scene?: string;
-  /** Directories to skip, e.g. ["addons"]. */
+  /** Directories to skip, e.g. ["levels/old"]. */
   exclude?: string[];
+  /** Also load res://addons/ (third-party code, skipped by default: its errors are not the project's). */
+  includeAddons?: boolean;
   /** Timeout per Godot run in milliseconds (default 10 minutes). */
   timeoutMs?: number;
   /** Keep the raw Godot output of each step in the result. */
@@ -46,6 +49,8 @@ export interface CheckResult {
   logs?: Record<string, string>;
   /** What the game printed while it ran (print(), push_warning() and friends go to stdout), engine noise removed. */
   output?: string;
+  /** How long the run was in game time: frames at the project's physics rate. */
+  ran?: { frames: number; fps: number; seconds: number };
 }
 
 /** How much of a run's output is kept: the last lines, so a loop that prints every frame does not drown the rest. */
@@ -99,8 +104,10 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     });
   }
 
+  // Addons are third-party code: skipped unless asked for, like review does.
+  const exclude = [...new Set([...(options.exclude ?? []), ...(options.includeAddons ? [] : ["addons"])])];
   // Folders the user excluded are skipped by the checker, so their scan warnings are not wanted either.
-  const excluded = (options.exclude ?? []).map(excludePath);
+  const excluded = exclude.map(excludePath);
   for (const w of scanProject(root).warnings) {
     const file = w.file.replace(/::.*$/, "");
     if (excluded.some((folder) => file.startsWith(`${folder}/`))) continue;
@@ -129,7 +136,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   mkdirSync(checkerDir, { recursive: true });
   writeFileSync(
     join(checkerDir, "check.gd"),
-    checkerSource({ instantiate: options.instantiate !== false, exclude: options.exclude ?? [] }),
+    checkerSource({ instantiate: options.instantiate !== false, exclude }),
   );
   let scripts = 0;
   let scenes = 0;
@@ -158,9 +165,13 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
 
   const frames = options.runFrames ?? (options.scene ? 120 : 0);
   let output: string | undefined;
+  let fps = 60;
   if (frames > 0) {
     const scene = options.scene ? (options.scene.startsWith("res://") ? options.scene : `res://${options.scene.replace(/^\/+/, "")}`) : undefined;
-    const result = await run("run", ["--quit-after", String(frames), ...(scene ? [scene] : [])]);
+    // A fixed frame rate makes N frames N/fps seconds of game time, so a 2 s timer fires within 120+ frames
+    // however fast the machine runs headless.
+    fps = physicsRate(root);
+    const result = await run("run", ["--fixed-fps", String(fps), "--quit-after", String(frames), ...(scene ? [scene] : [])]);
     output = runOutput(result.stdout);
     const found = parseGodotLog(result.stderr, "run");
     for (const d of found) {
@@ -186,8 +197,18 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     errors: clean.filter((d) => d.severity === "error").length,
     warnings: clean.filter((d) => d.severity === "warning").length,
     ...(options.keepLogs ? { logs } : {}),
-    ...(output !== undefined ? { output } : {}),
+    ...(output !== undefined ? { output, ran: { frames, fps, seconds: Math.round((frames / fps) * 100) / 100 } } : {}),
   };
+}
+
+/** The project's physics ticks per second (default 60). */
+function physicsRate(root: string): number {
+  try {
+    const value = parseProjectSettings(readFileSync(join(root, "project.godot"), "utf8")).values["physics/common/physics_ticks_per_second"];
+    return typeof value === "number" && value > 0 ? value : 60;
+  } catch {
+    return 60;
+  }
 }
 
 /** A step that exits badly must not pass as clean just because Godot printed no error for it. */

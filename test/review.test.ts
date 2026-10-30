@@ -568,3 +568,43 @@ describe("review robustness", () => {
     expect(structure.some((l) => l.includes("structure/unknown-group"))).toBe(false);
   });
 });
+
+describe("fixes from watching small models work", () => {
+  it("does not call unit test scripts unused: the test runner loads them", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "test/test_hero.gd": "extends GutTest\n\nfunc test_a() -> void:\n\tpass\n",
+      "tests/unit/player_test.gd": "extends GdUnitTestSuite\n\nfunc test_b() -> void:\n\tpass\n",
+      "test/helpers/test_tools.gd": 'extends "res://addons/gut/test.gd"\n',
+      "scripts/spare.gd": "extends Node\n",
+    });
+    const unused = reviewProject(root).findings.filter((f) => f.rule === "structure/unused-script").map((f) => f.file);
+    expect(unused).toEqual(["res://scripts/spare.gd"]);
+  });
+
+  it("counts only the project's own scenes, like the scripts", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node"]\n',
+      "addons/tool/panel.tscn": '[gd_scene format=3]\n\n[node name="Panel" type="Control"]\n',
+    });
+    expect(reviewProject(root).scenes).toBe(1);
+    expect(reviewProject(root, { includeAddons: true }).scenes).toBe(2);
+  });
+
+  it("shows only the findings of the files you name, with the project's scores", async () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      ".gitignore": ".godot/\n",
+      "a.gd": "extends Node\n\nfunc f() -> void:\n\tvar x = Vector2.ZERO.lenght()\n",
+      "b.gd": "extends Node\n\nfunc g() -> void:\n\tvar y = Vector2.ZERO.lenght()\n",
+    });
+    const one = await runCli(["review", `${root}/a.gd`]);
+    expect(one.output).toContain("findings shown only for: res://a.gd (scores are for the whole project)");
+    expect(one.output).toContain("res://a.gd:4");
+    expect(one.output).not.toContain("res://b.gd:4");
+    const both = await runCli(["review", `${root}/a.gd`, `${root}/b.gd`]);
+    expect(both.output).toContain("res://b.gd:4");
+    process.exitCode = undefined;
+  });
+});

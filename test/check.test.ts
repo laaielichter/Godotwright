@@ -150,13 +150,15 @@ describe("checkProject", () => {
       '[gd_scene format=3]\n\n[ext_resource type="Texture2D" path="res://gone.png" id="1"]\n\n[node name="Root" type="Node2D"]\n',
     );
     const godot = fakeGodot({});
-    const scanFiles = async (exclude?: string[]) => {
-      const result = await checkProject(root, { godot, import: false, exclude });
+    const scanFiles = async (exclude?: string[], includeAddons?: boolean) => {
+      const result = await checkProject(root, { godot, import: false, exclude, includeAddons });
       return result.diagnostics.filter((d) => d.source === "scan").map((d) => d.file);
     };
-    expect(await scanFiles()).toEqual(["res://addons/plugin/bad.tscn", "res://main.tscn"]);
-    expect(await scanFiles(["addons"])).toEqual(["res://main.tscn"]);
-    expect(await scanFiles(["res://addons/"])).toEqual(["res://main.tscn"]);
+    // res://addons/ is third-party code and skipped by default; --include-addons brings it back.
+    expect(await scanFiles()).toEqual(["res://main.tscn"]);
+    expect(await scanFiles([], true)).toEqual(["res://addons/plugin/bad.tscn", "res://main.tscn"]);
+    expect(await scanFiles(["addons"], true)).toEqual(["res://main.tscn"]);
+    expect(await scanFiles(["res://addons/"], true)).toEqual(["res://main.tscn"]);
   });
 
   it("reports an import or run step that exits badly without an error line", async () => {
@@ -296,7 +298,7 @@ describe("running a scene and reading its output", () => {
     const root = copyFixture("demo");
     const godot = fakeGodot({ runOut: "hello from _ready\n" });
     const run = await runCli(["check", root, "--godot", godot, "--scene", "res://scenes/Main.tscn"]);
-    expect(run.output).toContain("--- output of the run ---\nhello from _ready\n---");
+    expect(run.output).toContain("--- output of the run (120 frames = 2 s of game time) ---\nhello from _ready\n---");
     const plain = await runCli(["check", root, "--godot", godot]);
     expect(plain.output).not.toContain("output of the run");
     const json = JSON.parse((await runCli(["check", root, "--godot", godot, "--run", "10", "--json"])).output) as { output?: string };
