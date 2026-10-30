@@ -1,0 +1,1 @@
+{"input": "10 tap jump", "frames": 70, "expect": ["Hero.velocity.y == -400 @ 10", "Hero.is_on_floor() == false @ 12", "Hero.is_on_floor() == true"]}

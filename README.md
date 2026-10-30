@@ -30,6 +30,25 @@ map of your project, real Godot checks and a fixed AAA review, as MCP tools and 
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
 
+### A receipt on every pull request
+
+```yaml
+# .github/workflows/godotwright.yml
+on: pull_request
+permissions: { contents: read, pull-requests: write }
+jobs:
+  receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: laaielichter/godotwright@v0.1.0
+        with: { comment: "true" }
+```
+
+It downloads a checksum-verified Godot, runs `godotwright ci` (review, check, GUT or GdUnit4 tests, and your
+[scenarios](docs/llms.txt)), puts the table in the job summary and in a pull request comment, and fails the job when a
+step fails. No editor, no GPU. `review-only: "true"` skips Godot.
+
 ### It changes, runs and shows your project too
 
 Reading is not enough for an agent that has to get work done, so Godotwright also does the work that usually needs the
