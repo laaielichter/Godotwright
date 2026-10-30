@@ -629,3 +629,38 @@ describe("quality/time-scale-not-restored", () => {
     expect(run("func paused() -> bool:\n\treturn Engine.time_scale == 0.0\n")).toEqual([]);
   });
 });
+
+describe("api/physics-change-in-callback and api/bind-swaps-arguments", () => {
+  const coin = '[gd_scene format=3]\n\n[sub_resource type="CircleShape2D" id="1"]\n\n[node name="Coin" type="Area2D"]\n\n[node name="Shape" type="CollisionShape2D" parent="."]\nshape = SubResource("1")\n';
+  const label = '[gd_scene format=3]\n\n[node name="Label" type="Label"]\n';
+  const main = '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Area2D"]\nscript = ExtResource("1")\n';
+  const run = (body: string) =>
+    findings({ "main.tscn": main, "coin.tscn": coin, "label.tscn": label, "main.gd": `extends Area2D\n\nconst COIN: PackedScene = preload("res://coin.tscn")\nconst LABEL: PackedScene = preload("res://label.tscn")\n\n\nfunc _ready() -> void:\n\tbody_entered.connect(_drop)\n\n\n${body}` }).filter(
+      (f) => f.includes("physics-change") || f.includes("bind-swaps"),
+    );
+
+  it("warns when a handler adds a physics object or changes monitoring or disabled directly", () => {
+    expect(run("func _drop(_body: Node2D) -> void:\n\tvar coin: Node2D = COIN.instantiate()\n\tget_parent().add_child(coin)\n")).toEqual([
+      "res://main.gd:13: warning [api/physics-change-in-callback] _drop() runs while Godot reports overlaps, and adding a physics object then fails (\"Can't change this state while flushing queries\"). Use add_child.call_deferred(...).",
+    ]);
+    expect(run("func _drop(_body: Node2D) -> void:\n\tadd_child(Area2D.new())\n")).toHaveLength(1);
+    expect(run("func _drop(_body: Node2D) -> void:\n\tmonitoring = false\n")[0]).toContain('set_deferred("monitoring", ...)');
+    expect(run("func _drop(_body: Node2D) -> void:\n\t$Shape.disabled = true\n")).toHaveLength(1);
+    expect(run("func _on_hitbox_area_entered(_area: Area2D) -> void:\n\tadd_child(COIN.instantiate())\n")).toHaveLength(1);
+  });
+
+  it("is quiet for deferred calls, nodes without physics, comparisons and other functions", () => {
+    expect(run("func _drop(_body: Node2D) -> void:\n\tget_parent().add_child.call_deferred(COIN.instantiate())\n\tset_deferred(\"monitoring\", false)\n")).toEqual([]);
+    expect(run("func _drop(_body: Node2D) -> void:\n\tadd_child(LABEL.instantiate())\n\tadd_child(Node2D.new())\n")).toEqual([]);
+    expect(run("func _drop(_body: Node2D) -> void:\n\tif monitoring == false:\n\t\treturn\n")).toEqual([]);
+    expect(run("func _drop(_body: Node2D) -> void:\n\tpass\n\n\nfunc spawn() -> void:\n\tadd_child(COIN.instantiate())\n\tmonitoring = false\n")).toEqual([]);
+  });
+
+  it("flags bind() of a name-first setter in tween_method, and not other tweens", () => {
+    const flagged = run('func _drop(_body: Node2D) -> void:\n\tpass\n\n\nfunc flash(m: ShaderMaterial) -> void:\n\tcreate_tween().tween_method(m.set_shader_parameter.bind("amount"), 1.0, 0.0, 0.2)\n');
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]).toContain('error [api/bind-swaps-arguments]');
+    expect(flagged[0]).toContain('"shader_parameter/amount"');
+    expect(run('func _drop(_body: Node2D) -> void:\n\tpass\n\n\nfunc flash(m: ShaderMaterial) -> void:\n\tcreate_tween().tween_property(m, "shader_parameter/amount", 0.0, 0.2)\n\tcreate_tween().tween_method(_set_amount.bind(m), 1.0, 0.0, 0.2)\n\n\nfunc _set_amount(v: float, m: ShaderMaterial) -> void:\n\tm.set_shader_parameter("amount", v)\n')).toEqual([]);
+  });
+});

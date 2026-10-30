@@ -4,6 +4,7 @@ import type { LearnedData } from "../collector/collector.js";
 import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
+import { checkScriptPhysics } from "./checks/physics.js";
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
 import { checkScriptQuality, checkUnusedSignals, type TypingStats } from "./checks/quality.js";
 import { checkStructure } from "./checks/structure.js";
@@ -75,6 +76,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     if (!inScope(script)) continue;
     findings.push(...checkScriptApi(pm, script, { foreignClasses, inputActions }));
     findings.push(...checkScriptPerformance(pm, script));
+    findings.push(...checkScriptPhysics(pm, script));
     const quality = checkScriptQuality(pm, script);
     findings.push(...quality.findings);
     typing.typed += quality.typing.typed;
