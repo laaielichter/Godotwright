@@ -106,13 +106,11 @@ untouched project fails every task.
 
 ### Small things the agents ran into
 
-- `review` and `api` did not accept `--godot` while the instructions said commands that run Godot take it; `project set`
-  has the same issue. (An unknown option is a fair error, but the agents lost a call each.)
-- `api` for a property name such as `max_fps` cut the description in the brief view and did not point to the matching
-  project setting.
-- GUT output contains colour codes when it is run by hand.
-
-These are listed, not yet changed.
+- `api` cut a long description mid-sentence, so `Engine.max_fps` lost the pointer to the matching project setting.
+  Fixed: brief descriptions now end at a sentence and name the project setting.
+- `review`, `api` and `project set` rejected `--godot`. They do not run Godot, so this is left as it is; the agents' instructions
+  said all commands take it, which was the mistake.
+- The colour codes came from running GUT by hand. `godotwright test` already turns them off.
 
 ## Run it again
 

@@ -19,7 +19,14 @@ export function docsUrl(className: string): string {
 function short(text: string | undefined, max = 280): string {
   if (!text) return "";
   const para = text.split(/\n\s*\n|\n```/)[0]!.replace(/\s*\n\s*/g, " ").trim();
-  return para.length > max ? `${para.slice(0, max - 3).trimEnd()}...` : para;
+  if (para.length <= max) return para;
+  // Cut at the end of a sentence when there is one, so the text never stops mid-sentence.
+  const cut = para.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  const shown = stop >= max / 2 ? para.slice(0, stop + 1) : `${cut.slice(0, max - 3).trimEnd()}...`;
+  // A cut-off project setting is the answer to "how do I set this in the project", so name the ones that were dropped.
+  const dropped = [...new Set(para.slice(shown.length).match(/ProjectSettings\.[a-z0-9_/]+/g) ?? [])].filter((r) => !shown.includes(r));
+  return dropped.length ? `${shown} (see ${dropped.join(", ")})` : shown;
 }
 
 function status(item: { deprecated?: string; experimental?: string }): string {
