@@ -1,0 +1,22 @@
+{
+  "task": "enemy_flash",
+  "mode": "without",
+  "model": "claude-haiku-5-5",
+  "tier": null,
+  "exitCode": 0,
+  "seconds": 17,
+  "turns": 11,
+  "costUsd": 0.005077470000000001,
+  "isError": false,
+  "result": "Enemies now flash white on `hit()` via `flash.gdshader` (`amount` set to 1, tweened to 0 over 0.2s), with each enemy getting its own material copy so only the hit one flashes. Note that an enemy killed by the hit is freed the same frame, so its flash won't be visible.",
+  "toolCalls": {
+    "Glob": 2,
+    "Read": 4,
+    "Edit": 4
+  },
+  "changed": [
+    "scenes/enemy.tscn",
+    "scripts/enemy.gd"
+  ],
+  "deleted": []
+}

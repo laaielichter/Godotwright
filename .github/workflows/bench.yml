@@ -30,9 +30,14 @@ jobs:
       - name: Grade agent runs
         if: hashFiles('bench/runs/**/run.json') != ''
         run: node bench/grade.mjs --runs bench/runs
+      - name: Grade the harder tasks
+        if: hashFiles('bench/runs-hard/**/run.json') != ''
+        run: node bench/grade.mjs --runs bench/runs-hard
       - name: Upload grades
         if: hashFiles('bench/runs/grades.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: grades
-          path: bench/runs/grades.json
+          path: |
+            bench/runs/grades.json
+            bench/runs-hard/grades.json
