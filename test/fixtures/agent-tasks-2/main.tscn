@@ -1,0 +1,34 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
+[ext_resource type="Script" path="res://hero.gd" id="2_hero"]
+[ext_resource type="Script" path="res://hud.gd" id="3_hud"]
+
+[sub_resource type="RectangleShape2D" id="box"]
+size = Vector2(20, 20)
+
+[sub_resource type="WorldBoundaryShape2D" id="floor"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Hero" type="CharacterBody2D" parent="."]
+position = Vector2(100, 490)
+script = ExtResource("2_hero")
+
+[node name="Shape" type="CollisionShape2D" parent="Hero"]
+shape = SubResource("box")
+
+[node name="Floor" type="StaticBody2D" parent="."]
+position = Vector2(0, 500)
+
+[node name="Shape" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("floor")
+
+[node name="HUD" type="Label" parent="."]
+offset_right = 80.0
+offset_bottom = 23.0
+text = "HP 3"
+script = ExtResource("3_hud")
+
+[connection signal="health_changed" from="Hero" to="HUD" method="_on_hero_health_changed"]
