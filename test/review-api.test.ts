@@ -193,3 +193,48 @@ describe("argument counts", () => {
     ]);
   });
 });
+
+describe("type tests that can never be true", () => {
+  // Every case below was checked against Godot 4.7.2: the reported ones stop with a parse error, the others load.
+  const fn = (params: string, body: string) => findings(`extends Node\n\n\nfunc f(${params}) -> void:\n\t${body}\n`).filter((f) => f.includes("impossible-type-test"));
+
+  it("reports is/as between classes where neither inherits from the other", () => {
+    expect(fn("visual: VisualInstance3D", "print(visual is Camera3D)")).toEqual([
+      'res://main.gd:5: error [api/impossible-type-test] "visual" has type VisualInstance3D, so "visual is Camera3D" can never be true (neither class inherits from the other). Godot stops with a parse error.',
+    ]);
+    expect(fn("a: Area2D", "print(a as CharacterBody2D)")[0]).toContain('Invalid cast: "a" has type Area2D, which can never be converted to CharacterBody2D');
+    expect(fn("r: Resource", "print(r is Node)")).toHaveLength(1);
+    expect(fn("n: Node", "print(n as Resource)")).toHaveLength(1);
+  });
+
+  it("reports a class against a built-in type, and is between two different built-in types", () => {
+    expect(fn("i: int", "print(i is Node)")).toHaveLength(1);
+    expect(fn("i: int", "print(i as Node)")).toHaveLength(1);
+    expect(fn("x: float", "print(x is int)")).toHaveLength(1);
+    expect(fn("s: String", "print(s is StringName)")).toHaveLength(1);
+  });
+
+  it("stays quiet where Godot accepts the test", () => {
+    for (const [params, body] of [
+      ["n: Node", "print(n is Node2D)"],
+      ["n: Node2D", "print(n is Node)"],
+      ["v: Variant", "print(v is Camera3D)"],
+      ["o: Object", "print(o is Node)"],
+      ["r: RefCounted", "print(r is Resource)"],
+      ["t: Texture2D", "print(t is ImageTexture)"],
+      ["a: Array[int]", "print(a is Array)"],
+      ["x: float", "print(x as int)"],
+      ["s: String", "print(s as StringName)"],
+      ["v: Vector2", "print(v as Vector2i)"],
+      ["n: Node", "print(not n is Node2D)"],
+    ]) {
+      expect(fn(params!, body!), `${params}: ${body}`).toEqual([]);
+    }
+  });
+
+  it("leaves script classes alone: a node can carry a script that extends one of its base classes", () => {
+    const files = { "enemy.gd": "class_name Enemy\nextends Node2D\n" };
+    const out = findings("extends Node\n\n\nfunc f(b: CharacterBody2D) -> void:\n\tprint(b is Enemy)\n", files).filter((f) => f.includes("impossible"));
+    expect(out).toEqual([]);
+  });
+});

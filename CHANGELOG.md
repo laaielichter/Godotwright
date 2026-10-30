@@ -8,6 +8,11 @@ Godotwright now builds, views and checks 3D models, not only GDScript.
 
 ### Added
 
+- **Review rule `api/impossible-type-test`**: `x is T` or `x as T` where the static type of `x` can never be a `T` (two
+  classes where neither inherits from the other, a class against a built-in type, or `is` between two different
+  built-in types). Godot stops with a parse error on these; every case in the tests was checked against Godot 4.7.2,
+  and `as` between built-in types (a conversion, like `float as int`) is left alone. Found while writing `screenshot`.
+
 - **`screenshot`** (MCP `godot_screenshot`, which returns the image): render a scene, or a `.glb`/`.gltf` model, to a
   PNG with Godot's Compatibility renderer, which also runs on software OpenGL; on Linux without a display it uses
   `xvfb-run`. A model (or a 3D scene without a camera) gets a camera that fits it exactly, a light and ambient light, in
