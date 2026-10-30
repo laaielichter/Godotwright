@@ -654,5 +654,357 @@
    "A neck that does not join the body and head: overlap the segments at the joints.",
    "Wing membranes modelled with no thickness vanish from the side unless the material is double-sided."
   ]
+ },
+ {
+  "id": "creature.bird",
+  "name": "bird",
+  "description": "A bird: a body, a head with a beak, two wings, a tail and two legs.",
+  "aliases": [
+   "bird",
+   "vogel",
+   "eagle",
+   "arend",
+   "adelaar",
+   "owl",
+   "uil",
+   "duck",
+   "eend",
+   "chicken",
+   "kip",
+   "crow",
+   "kraai",
+   "parrot",
+   "papegaai",
+   "seagull",
+   "meeuw",
+   "pigeon",
+   "duif",
+   "hawk",
+   "havik",
+   "sparrow",
+   "mus"
+  ],
+  "extends": "creature",
+  "hints": [
+   "wings",
+   "vleugels",
+   "beak",
+   "snavel",
+   "feathers",
+   "veren",
+   "flies",
+   "vliegt"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "torso",
+     "romp",
+     "lichaam"
+    ]
+   },
+   {
+    "name": "Head",
+    "role": "head",
+    "required": true,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     },
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "head",
+     "hoofd",
+     "kop"
+    ],
+    "note": "Pivot at the base of the neck."
+   },
+   {
+    "name": "Beak",
+    "role": "beak",
+    "required": true,
+    "aliases": [
+     "beak",
+     "bill",
+     "snavel"
+    ]
+   },
+   {
+    "name": "Wing",
+    "role": "wing",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "wing",
+     "wings",
+     "vleugel",
+     "vleugels"
+    ],
+    "note": "Pivot at the shoulder; mirror left and right (WingLeft, WingRight)."
+   },
+   {
+    "name": "Tail",
+    "role": "tail",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "tail",
+     "staart"
+    ],
+    "note": "Pivot at the base of the tail."
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "been",
+     "benen",
+     "foot",
+     "voet"
+    ],
+    "note": "Pivot at the hip."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.1,
+    1.2
+   ],
+   "width": [
+    0.05,
+    3.0
+   ],
+   "height": [
+    0.08,
+    1.0
+   ],
+   "source": "general knowledge: typical range, not a standard; width is the wingspan, from a sparrow to a large eagle",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "pose",
+    "options": [
+     "perched",
+     "wings folded",
+     "flying"
+    ]
+   },
+   {
+    "axis": "kind",
+    "options": [
+     "songbird",
+     "bird of prey",
+     "waterfowl"
+    ]
+   }
+  ],
+  "conventions": [
+   "A bird is longest along z (the head and beak at +Z); the wings spread along x."
+  ],
+  "anticipate": [
+   "Wings as separate nodes with the pivot at the shoulder, so a flap animation is a rotation about z.",
+   "A small collision capsule: a bird is much smaller than its wingspan."
+  ],
+  "pitfalls": [
+   "Wings fused to the body cannot flap.",
+   "A wing pivot in the middle of the wing makes it swing around its centre instead of the shoulder."
+  ]
+ },
+ {
+  "id": "creature.fish",
+  "name": "fish",
+  "description": "A fish: a streamlined body, a tail fin, a dorsal fin and two pectoral fins.",
+  "aliases": [
+   "fish",
+   "vis",
+   "shark",
+   "haai",
+   "trout",
+   "forel",
+   "salmon",
+   "zalm",
+   "goldfish",
+   "goudvis",
+   "dolphin",
+   "dolfijn",
+   "whale",
+   "walvis",
+   "eel",
+   "paling"
+  ],
+  "extends": "creature",
+  "hints": [
+   "fins",
+   "vinnen",
+   "gills",
+   "kieuwen",
+   "scales",
+   "schubben",
+   "swims",
+   "zwemt",
+   "aquarium"
+  ],
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "torso",
+     "romp",
+     "lichaam"
+    ]
+   },
+   {
+    "name": "Head",
+    "role": "head",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "head",
+     "hoofd",
+     "kop"
+    ]
+   },
+   {
+    "name": "TailFin",
+    "role": "tail",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "tail fin",
+     "tailfin",
+     "tail",
+     "staart",
+     "staartvin"
+    ],
+    "note": "Pivot at the tail stalk, so the tail sweeps side to side."
+   },
+   {
+    "name": "DorsalFin",
+    "role": "fin",
+    "required": true,
+    "count": [
+     1,
+     2
+    ],
+    "aliases": [
+     "dorsal fin",
+     "dorsalfin",
+     "rugvin"
+    ]
+   },
+   {
+    "name": "PectoralFin",
+    "role": "fin",
+    "required": true,
+    "count": 2,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "pectoral fin",
+     "pectoralfin",
+     "borstvin",
+     "fin",
+     "fins",
+     "vin",
+     "vinnen"
+    ],
+    "note": "Pivot where the fin joins the body."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.03,
+    6.0
+   ],
+   "width": [
+    0.01,
+    1.5
+   ],
+   "height": [
+    0.02,
+    2.0
+   ],
+   "source": "general knowledge: typical range, not a standard; from a goldfish to a large shark",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "kind",
+    "options": [
+     "bony fish",
+     "shark",
+     "eel"
+    ]
+   }
+  ],
+  "conventions": [
+   "A fish is longest along z (the head at +Z), flat sides along x, the dorsal fin on top (+Y)."
+  ],
+  "anticipate": [
+   "A swim animation bends the body and sweeps the tail fin about y.",
+   "Fish live in water: the origin is the centre of the body, since it does not stand on y = 0."
+  ],
+  "pitfalls": [
+   "A fin built as a flat single-sided plane vanishes from behind: give it thickness or a double-sided material."
+  ]
  }
 ]

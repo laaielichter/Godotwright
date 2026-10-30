@@ -136,6 +136,7 @@ at what it made, all checked against Godot 4.7 and without the editor. It also b
 
 ### Changed
 
+- Three more archetypes: `building.gatehouse` (hinged gate, sliding portcullis), `creature.bird` and `creature.fish`.
 - `api` brief descriptions end at a sentence, and name a project setting the cut-off text pointed to (`Engine.max_fps` now says `ProjectSettings.display/window/vsync/vsync_mode`).
 - The description and keywords mention 3D models.
 
