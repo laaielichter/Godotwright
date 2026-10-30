@@ -10,6 +10,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 - [AGENTS.md](https://github.com/laaielichter/Godotwright/blob/main/AGENTS.md): how an agent should work in a Godot project with Godotwright
 - [3D model gallery](https://laaielichter.github.io/Godotwright/models.html): 53 ready-made parametric models and the commands that build them
 - [Small, cheap models and 3D](https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md): a test with six small-model agents, what went wrong and what the tools do about it
+- [Small, cheap models and everyday tasks](https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models-code.md): twelve small-model agents on six Godot tasks, graded with real Godot, and the five tool fixes that came out of it
 - [Benchmark](https://github.com/laaielichter/Godotwright/blob/main/bench/RESULTS.md): 168 agent runs with and without the tools, with the limits stated
 - [Roadmap](https://github.com/laaielichter/Godotwright/blob/main/ROADMAP.md)
 - [Privacy](https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md): nothing leaves the machine unless you opt in; no code, file names or paths are ever sent
