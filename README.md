@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">Godotwright</h1>
 <p align="center"><b>MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4.</b><br>
-Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript, and 3D models built, viewed and checked from code.</p>
+Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript, safe edits, unit tests, play-testing with input, screenshots, and 3D models built, viewed and checked from code.</p>
 <p align="center">
   <a href="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml"><img src="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
@@ -29,6 +29,21 @@ are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a comp
 map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
+
+### It changes, runs and shows your project too
+
+Reading is not enough for an agent that has to get work done, so Godotwright also does the work that usually needs the
+editor, checked against Godot 4.7 and with a dry run first:
+
+- **Change it:** `rename` a function, signal, node or file everywhere (code, scenes, connections, `.uid` files);
+  `project` edits settings, input actions and autoloads; `scene` adds and removes nodes, sets properties, connects
+  signals and attaches scripts. Only the lines of the change are touched. `usages` says where something is used.
+- **Run it:** `test` runs your GUT or GdUnit4 tests and prints only what failed, with `file:line`; `play` runs a scene,
+  presses the keys you give on the frames you give, and prints the values you watch; `check` runs Godot headless.
+- **See it:** `screenshot` renders a scene or a model to a PNG, and says how much of the picture is drawn.
+- **Port it:** `migrate` rewrites Godot 3 scripts to Godot 4 where that is mechanical.
+
+Twelve small-model agents did six everyday tasks like this: [what we measured](docs/cheap-models-code.md).
 
 ### And it builds 3D models
 
@@ -59,6 +74,10 @@ Then [connect it to your agent](#use-with-claude-code-codex-and-other-coding-age
   official Godot 4.7 class reference, bundled offline (1078 classes).
 - **Mistakes found before you press F5.** Missing `$Node` paths, scene connections to
   methods that do not exist, unknown input actions and broken `preload()` paths.
+- **Safe edits.** Renames, settings, input actions and scene changes are checked against the Godot 4.7 reference, show a
+  dry run first, change only their own lines, and report the review errors before and after.
+- **It can see the game run.** Press keys on exact frames and read values back, run the tests, take a screenshot: all
+  headless, nothing to click.
 - **Cheap for the model.** Compact, stable output, and a `cheap` profile that walks
   small models through small checked steps.
 - **Local and private.** `scan`, `api` and `review` need no Godot install and no network.
