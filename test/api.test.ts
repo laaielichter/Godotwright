@@ -161,3 +161,11 @@ describe("godotwright api", () => {
     expect(output).toContain("CharacterBody2D.is_on_floor() -> bool const");
   });
 });
+
+describe("brief descriptions", () => {
+  it("stop at the end of a sentence and still name a cut-off project setting", () => {
+    const text = formatLookup(api, api.lookup("Engine.max_fps"));
+    expect(text).not.toContain("...");
+    expect(text).toContain("battery life. (see ProjectSettings.display/window/vsync/vsync_mode)");
+  });
+});
