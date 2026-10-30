@@ -2,7 +2,8 @@ name: Release
 
 # When a version tag like v0.1.0 is pushed, create the GitHub release with the notes
 # for that version from CHANGELOG.md. The Publish workflow (npm and the MCP Registry)
-# runs on the same tag.
+# runs on the same tag. A release made on the website (which also makes the tag) gets
+# its notes filled in the same way.
 on:
   push:
     tags:
@@ -25,7 +26,12 @@ jobs:
             echo "CHANGELOG.md has no section for version $version"
             exit 1
           fi
-      - name: Create the release
+      - name: Create the release, or fill in the notes of one made on the website
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+          fi
