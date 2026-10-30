@@ -220,6 +220,7 @@ describe("identify", () => {
       ["rocket", "spacecraft.rocket"], ["raket", "spacecraft.rocket"], ["spaceship", "spacecraft.spaceship"], ["ruimteschip", "spacecraft.spaceship"], ["satelliet", "spacecraft.satellite"],
       ["rowing boat", "vessel.boat.rowing-boat"], ["roeiboot", "vessel.boat.rowing-boat"], ["motorboat", "vessel.boat"],
       ["campfire", "prop.campfire"], ["kampvuur", "prop.campfire"],
+      ["gatehouse", "building.gatehouse"], ["stadspoort", "building.gatehouse"], ["bird", "creature.bird"], ["vogel", "creature.bird"], ["fish", "creature.fish"], ["vis", "creature.fish"],
       ["watchtower", "building.watchtower"], ["wachttoren", "building.watchtower"], ["a medieval stone watchtower", "building.watchtower"],
       ["spaceship fighter", "spacecraft.spaceship"], ["sci-fi fighter", "spacecraft.spaceship"], ["fighter jet", "aircraft.fixed-wing.fighter"], ["tower", "building.tower"],
     ] as const) {
@@ -231,7 +232,7 @@ describe("identify", () => {
   });
 
   it("gives the new families the general conventions and a size with its source", () => {
-    for (const idText of ["building.fortification", "creature.dragon", "creature.humanoid", "spacecraft.rocket", "spacecraft.spaceship", "vessel.boat.rowing-boat", "prop.campfire"]) {
+    for (const idText of ["building.fortification", "building.gatehouse", "creature.bird", "creature.fish", "creature.dragon", "creature.humanoid", "spacecraft.rocket", "spacecraft.spaceship", "vessel.boat.rowing-boat", "prop.campfire"]) {
       const a = library.resolve(idText);
       expect(a.conventions.join(" "), idText).toContain("+Y is up");
       expect(a.scale?.source, idText).toBeTruthy();

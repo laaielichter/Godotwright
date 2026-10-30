@@ -1043,5 +1043,140 @@
    "A watchtower is not a high-rise: it is 8-40 m tall and a few metres across.",
    "A gallery modelled as a solid cylinder looks like a ring of wood: give it a floor, posts and an open or roofed walkway."
   ]
+ },
+ {
+  "id": "building.gatehouse",
+  "name": "gatehouse",
+  "description": "A fortified gate: an archway through a wall, flanked by towers, closed by a hinged gate or a sliding portcullis.",
+  "aliases": [
+   "gatehouse",
+   "poortgebouw",
+   "city gate",
+   "stadspoort",
+   "castle gate",
+   "gate tower",
+   "poorttoren"
+  ],
+  "extends": "building.fortification",
+  "hints": [
+   "portcullis",
+   "valhek",
+   "archway",
+   "poortbogen",
+   "arrow slit",
+   "schietspleet"
+  ],
+  "parts": [
+   {
+    "name": "Archway",
+    "role": "archway",
+    "required": true,
+    "aliases": [
+     "archway",
+     "arch",
+     "passage",
+     "poortbogen",
+     "doorgang"
+    ]
+   },
+   {
+    "name": "Tower",
+    "role": "tower",
+    "required": true,
+    "count": [
+     1,
+     2
+    ],
+    "aliases": [
+     "tower",
+     "towers",
+     "toren",
+     "torens"
+    ]
+   },
+   {
+    "name": "Gate",
+    "role": "gate",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "gate",
+     "door",
+     "poort",
+     "deur",
+     "gates"
+    ],
+    "note": "Pivot at the hinge side, so it swings open about y."
+   },
+   {
+    "name": "Portcullis",
+    "role": "portcullis",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "y"
+     }
+    ],
+    "pivot": "mount",
+    "aliases": [
+     "portcullis",
+     "valhek",
+     "grate"
+    ],
+    "note": "Slides up and down along y inside the archway."
+   },
+   {
+    "name": "Battlements",
+    "role": "battlements",
+    "required": false,
+    "aliases": [
+     "battlements",
+     "kantelen",
+     "tinnen",
+     "crenellation"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    6,
+    25
+   ],
+   "width": [
+    8,
+    30
+   ],
+   "height": [
+    8,
+    30
+   ],
+   "source": "general knowledge: typical range, not a standard; a single gatehouse, smaller than a whole castle",
+   "confidence": "C"
+  },
+  "conventions": [
+   "The passage runs along z; the outer face of the gatehouse faces +Z."
+  ],
+  "anticipate": [
+   "The opening must be tall and wide enough for the largest thing that passes: a human is about 2 m, a cart about 3 m.",
+   "Gate and portcullis are separate nodes so they can open."
+  ],
+  "pitfalls": [
+   "A gatehouse with the opening modelled as a flat texture cannot be walked through: cut the archway."
+  ]
  }
 ]
