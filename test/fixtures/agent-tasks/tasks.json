@@ -1,0 +1,8 @@
+{
+"1": "Add an input action named `dash` that fires on the Shift key and on joypad button B (button index 1).",
+"2": "In main.tscn, add a Timer node named `SpawnTimer` with a wait time of 2 seconds that starts automatically, and connect its `timeout` signal to a new method in main.gd that prints `spawn`.",
+"3": "Make the hero (hero.gd) jump at least 30% higher than it does now, measured as the height of the jump, without breaking anything else: it must still land on the floor.",
+"4": "One GUT test in res://test/ fails. Find the bug in the game code and fix it so that all tests pass. Do not change the test.",
+"5": "Rename the signal `health_changed` to `hp_changed` everywhere in the project (code and scenes), so that the game still works.",
+"6": "Add an autoload (global singleton) named `Score`: a script with `var points := 0` and `func add(n: int) -> void` that adds n to points. Then make the hero add 1 point each time it jumps."
+}

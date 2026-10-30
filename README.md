@@ -40,7 +40,7 @@ A coding agent can also **make, look at and check 3D models** for Godot with no 
 thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
 [53 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
 terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
-It is set up to work with small, cheap models too: [what we tested and learned](docs/cheap-models.md).
+It is set up to work with small, cheap models too: what we tested and learned [with 3D models](docs/cheap-models.md) and [with everyday Godot tasks](docs/cheap-models-code.md).
 
 ## Quickstart
 
