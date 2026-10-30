@@ -29,6 +29,26 @@ jobs:
       - name: Smoke test CLI
         run: node dist/cli.js --help
 
+  action:
+    name: Receipt action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run the action on a fixture project
+        id: receipt
+        uses: ./
+        with:
+          path: test/fixtures/play
+          command: node ${{ github.workspace }}/dist/cli.js
+      - name: The action reports ok
+        run: test "${{ steps.receipt.outputs.ok }}" = "true"
+
   godot:
     name: Godot ${{ matrix.godot }} integration
     runs-on: ubuntu-latest
