@@ -34,11 +34,23 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 - `godot_play` runs a scene with an input timeline and returns the values you watch per frame.
 - `godot_screenshot` renders a scene or a model to a PNG.
 
+## Know what real projects learned
+
+Godotwright holds lessons from large Godot 4 projects (vehicles and moving decks, open worlds tens of kilometres wide,
+cockpits, VFX, streaming, shaders, installers for shipped games, headless tests). Before you build any of that, call
+`godot_lessons` with a few words about it; with a Godot error you do not understand, call it with the message as
+`error`. The skills `debug`, `perf`, `vehicles`, `world`, `model` and `patch` hold the workflow for each of these.
+
 ## 3D models
 
-`godot_model_brief` or `godot_model_identify` first, then `godot_model_spec`, `godot_model_build`,
-`godot_model_view` (look at it as text) and `godot_model_lint` with the archetype. Models face +Z,
-+Y is up, units are metres.
+`godot_model_brief` first, then `godot_model_spec`, `godot_model_build`, `godot_model_view` (look at it as text) and
+`godot_model_lint` with the archetype. Models face +Z, +Y is up, units are metres. The `model` skill has the details.
+
+## When the plugin hooks are on
+
+Every `.gd`, `.tscn`, `.tres`, `.gdshader` and `project.godot` you edit is reviewed right after the edit: errors come
+back to you at once, warnings as a note. Godot errors in a command's output come with the lessons that explain them.
+Before you stop, review errors still open in files you changed are named once. Fix them, or say why they stay.
 
 ## Learn from real projects, and teach back
 
@@ -49,6 +61,8 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
   `error`, no names or code). The next check shows it when the same error comes back.
 - Say whether a lesson helped with `godot_feedback` (`lesson`, verdict `right` or `wrong`).
 - These tools come with Godotwright releases after 0.2.0; skip this part on an older server.
+- For deeper work, hand off to the `godot-reviewer` agent (verified review of a change) or the `godot-debugger` agent
+  (root cause of an error or wrong behaviour) so their logs stay out of the main conversation.
 
 If you verified that a review finding is a false alarm, report it with `godot_feedback` (verdict `wrong`).
 Keep changes small and use static types (`var speed: float = 200.0`, `func jump() -> void`).

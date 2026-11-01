@@ -16,13 +16,29 @@ In Claude Code:
 
 - **The MCP server** with all its tools (`godot_scan`, `godot_api`, `godot_review`, `godot_check`, `godot_scene_edit`,
   `godot_model_build`, `godot_lessons` and more). See the [full list](https://github.com/laaielichter/Godotwright#the-24-tools).
-- **Four skills:**
-  - `/godotwright:review` reviews the project and fixes what it finds, errors first.
-  - `/godotwright:port` ports Godot 3 code to Godot 4.
-  - `/godotwright:learn` teaches Godotwright what this session learned: it checks the gaps (Godot errors no rule or
-    lesson explains yet), keeps the lessons in general words, and rates the lessons that helped. Nothing is sent.
-  - `godot` is a Godot workflow Claude follows on its own: map the project, look up the API, review before and after
-    each edit, check with Godot before finishing.
+- **Hooks that put Godotwright in Claude's loop,** so it does not have to remember a tool:
+  - after every edit of a `.gd`, `.tscn`, `.tres`, `.gdshader` or `project.godot` file, that file is reviewed and its
+    errors go straight back to Claude (warnings as a note);
+  - when a command prints Godot errors (`SCRIPT ERROR`, `Parse Error`, ...), the lessons from real projects that
+    explain them are added;
+  - before Claude stops, review errors still open in files it changed are named once;
+  - a session in a Godot project starts with a few lines about it: name, Godot version, scripts and scenes, main scene,
+    and whether Godot is installed for the tools that run it.
+
+  Turn them off with `GODOTWRIGHT_HOOKS=0`. They use the same godotwright version as the MCP server, say nothing when
+  they have nothing to add, and never block on their own failure.
+- **Skills Claude uses on its own** when the work calls for them:
+  - `godot`: the workflow for any Godot work (map, look up, review before and after each edit, check with Godot);
+  - `debug`: from a Godot error or wrong behaviour to the cause, the fix and the proof;
+  - `perf`: stutter, load times, fps and memory, measured before and after;
+  - `vehicles`: helicopters, aircraft, cars, trains, ships, moving platforms and decks;
+  - `world`: terrain, streaming, levels of detail, road, rail and water networks;
+  - `model`: 3D models built, viewed and linted against what the thing really is;
+  - `patch`: changes to a shipped game (mods, overlays, installers) with preflight, receipts and rollback.
+- **Skills you start yourself:** `/godotwright:review` (review and fix, errors first), `/godotwright:port` (Godot 3 to 4)
+  and `/godotwright:learn` (teach Godotwright what this session learned, anonymously; nothing is sent).
+- **Two subagents** for work that would flood the conversation: `godot-reviewer` (a verified review of a change, with
+  Godot when installed) and `godot-debugger` (the root cause of an error or wrong behaviour, proven with a headless run).
 
 Start Claude Code in your Godot project folder. The tools that run Godot (`check`, `test`, `play`, `screenshot`) need
 Godot 4.7; set `GODOT` to its path if it is not found in the usual install folders.
@@ -33,6 +49,9 @@ Godot 4.7; set `GODOT` to its path if it is not found in the usual install folde
   [godotwright npm package](https://www.npmjs.com/package/godotwright) (published from this repository by GitHub
   Actions, with provenance). It needs Node.js 22.12 or newer. The `check`, `test`, `play` and `screenshot` tools run
   your Godot binary headless on your project, which runs the project's own scripts.
+- **Hooks:** run `node` with the plugin's `hooks/run.mjs`, which starts the same pinned godotwright version as the MCP
+  server. They read the file you edited (and the project it is in) and the output of commands, keep a small state file
+  per session (the files with open review errors) in the plugin's data folder, and print hook JSON for Claude.
 - **Writes:** only inside your project. Tools that change files (`godot_rename`, `godot_scene_edit`,
   `godot_project_edit`, `godot_migrate`) show the change first and write only with `write: true`; `godot_model_build`
   writes the `.glb` you name. A local learning file in your user folder counts how review rules work out; it is

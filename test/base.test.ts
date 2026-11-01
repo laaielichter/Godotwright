@@ -143,6 +143,41 @@ describe("file lists of a shipped game", () => {
   });
 });
 
+describe("one cause, one finding", () => {
+  const PROJ = PROJECT("Overlay").replace('run/main_scene="res://main.tscn"\n', "");
+
+  it("does not call a script that only the shipped game holds missing", () => {
+    const root = makeProject({
+      "project.godot": PROJ,
+      "heli.gd": 'extends "res://shared/pinned_core.gd"\n\n\nfunc _ready() -> void:\n\tspin_up(2.0)\n',
+      "files.json": JSON.stringify({ archives: [{ resources: [{ resource: "shared/pinned_core.gd.remap" }] }] }),
+    });
+    const errors = (o = {}) => reviewProject(root, o).findings.filter((f) => f.severity === "error" && f.file === "res://heli.gd").map((f) => f.rule);
+    expect(errors()).toEqual(["api/unknown-type"]);
+    expect(errors({ baseFiles: [join(root, "files.json")] })).toEqual([]);
+  });
+
+  it("reports a broken preload once, not again at every use of its constant", () => {
+    const root = makeProject({
+      "project.godot": PROJ,
+      "t.gd": 'extends Node\nconst Flight = preload("res://jet/flight.gd")\nvar craft: Flight = null\n\n\nfunc spawn() -> Flight:\n\tvar f: Flight = Flight.new()\n\treturn f\n',
+    });
+    const errors = reviewProject(root).findings.filter((f) => f.severity === "error" && f.file === "res://t.gd").map((f) => f.message);
+    expect(errors).toEqual(["preload() path not found: res://jet/flight.gd"]);
+  });
+
+  it("leaves names alone that may come from a base that does not resolve, but still catches Godot 3 names", () => {
+    const root = makeProject({
+      "project.godot": PROJ,
+      "world.gd": 'extends "res://game/world.gd"\n\n\nfunc build() -> void:\n\tDistrict.build(self)\n\tvar b: Spatial = null\n\tprint(b)\n',
+    });
+    const messages = reviewProject(root).findings.filter((f) => f.severity === "error" && f.file === "res://world.gd").map((f) => f.message);
+    expect(messages.some((m) => m.startsWith('Cannot extend "res://game/world.gd"'))).toBe(true);
+    expect(messages.some((m) => m.includes("District"))).toBe(false);
+    expect(messages.some((m) => m.includes("Spatial") && m.includes("Node3D"))).toBe(true);
+  });
+});
+
 describe("GDScript that real projects use", () => {
   const review = (code: string, files: Record<string, string> = {}) => {
     const root = makeProject({ "project.godot": PROJECT("T").replace('run/main_scene="res://main.tscn"\n', ""), "a.gd": code, ...files });
@@ -237,5 +272,16 @@ describe("project files", () => {
     const rules = reviewProject(mod, { base: [game] }).findings.map((f) => f.rule);
     expect(rules).not.toContain("structure/root-clutter");
     expect(rules).not.toContain("structure/file-naming");
+  });
+});
+
+describe("statements joined with a semicolon", () => {
+  it("know a local declared after the semicolon", () => {
+    const root = makeProject({
+      "project.godot": PROJECT("Semi").replace('run/main_scene="res://main.tscn"\n', ""),
+      "a.gd": 'extends Node\n\n\nfunc f(frames: Array) -> float:\n\tvar a: Dictionary = frames[0]; var b: Dictionary = frames[1]\n\tvar s := ";"; var n := 2\n\treturn float(a.size() + b.size() + s.length() + n)\n',
+    });
+    const errors = reviewProject(root).findings.filter((f) => f.severity === "error" && f.file === "res://a.gd");
+    expect(errors).toEqual([]);
   });
 });

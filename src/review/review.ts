@@ -5,6 +5,7 @@ import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
 import { checkScriptPhysics } from "./checks/physics.js";
+import { checkScriptRuntime } from "./checks/runtime.js";
 import { checkScenePitfalls, checkScriptPitfalls, checkShaderPitfalls } from "./checks/pitfalls.js";
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
 import { checkScriptQuality, checkUnusedSignals, type TypingStats } from "./checks/quality.js";
@@ -79,6 +80,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     findings.push(...checkScriptPerformance(pm, script));
     findings.push(...checkScriptPhysics(pm, script));
     findings.push(...checkScriptPitfalls(pm, script));
+    findings.push(...checkScriptRuntime(pm, script));
     const quality = checkScriptQuality(pm, script);
     findings.push(...quality.findings);
     typing.typed += quality.typing.typed;

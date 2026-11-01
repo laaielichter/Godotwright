@@ -25,7 +25,11 @@ The learning file (`godotwright learn` shows where it is) holds:
   a lesson that is mostly placeholders is refused. The tool shows what was stored. Remove one with
   `godotwright lessons remove <id>`.
 
-It is built not to hold code, paths or project names. A method of your own on
+The hooks of the Claude Code plugin (`godotwright hook`) keep a small state file per agent session: the paths of the
+Godot files changed in that session that still had review errors, so the agent is reminded of them once before it
+stops. It lives in the plugin's data folder (or the system temp folder), is never sent, and is deleted after two days.
+
+The learning file is built not to hold code, paths or project names. A method of your own on
 a Godot class can still look like a Godot name, so keep the file local.
 Turn learning off with `godotwright learn off` or `GODOTWRIGHT_LEARN=0`. Delete
 the file with `godotwright learn reset`; a reset keeps learning off if it was off.

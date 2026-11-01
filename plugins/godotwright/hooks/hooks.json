@@ -1,0 +1,49 @@
+{
+  "description": "Godotwright reviews every Godot file Claude edits and sends the errors back, adds lessons from real projects under Godot errors in command output, names review errors left open before Claude stops, and starts a session in a Godot project with what the project is. GODOTWRIGHT_HOOKS=0 turns them off.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run.mjs\" post-edit",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run.mjs\" post-bash",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run.mjs\" stop",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run.mjs\" session-start",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

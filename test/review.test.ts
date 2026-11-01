@@ -746,3 +746,87 @@ describe("api/open-compressed-gzip and quality/visibility-margin-hysteresis", ()
     expect(run("func lod(mi: MeshInstance3D) -> void:\n\tmi.visibility_range_end = 700.0\n\tmi.visibility_range_end_margin = 0.0\n", "visibility-margin")).toEqual([]);
   });
 });
+
+describe("runtime pitfalls from real projects", () => {
+  const run = (code: string, rule: string) => {
+    const root = makeProject({ "project.godot": PROJECT, "a.gd": code });
+    return reviewProject(root).findings.filter((f) => f.rule === rule && f.file === "res://a.gd").map((f) => f.line);
+  };
+
+  it("api/coroutine-without-await: a coroutine's result used without await", () => {
+    const code =
+      "extends Node\n\n\nfunc build() -> int:\n\tawait get_tree().process_frame\n\treturn 1\n\n\nfunc a() -> void:\n\tvar n: int = build()\n\tprint(n)\n\n\nfunc b() -> void:\n\tbuild()\n\tvar m: int = await build()\n\tif m > 0: build()\n\tget_tree().process_frame.connect(func() -> void: print(m); build())\n\tprint(m)\n";
+    expect(run(code, "api/coroutine-without-await")).toEqual([10]);
+    // An await inside a lambda does not make the function around it a coroutine.
+    expect(run("extends Node\n\n\nfunc f() -> int:\n\tvar cb := func() -> void:\n\t\tawait get_tree().process_frame\n\tcb.call()\n\treturn 1\n\n\nfunc g() -> void:\n\tprint(f())\n", "api/coroutine-without-await")).toEqual([]);
+  });
+
+  it("api/timer-start-outside-tree: start() before add_child()", () => {
+    expect(run("extends Node\n\n\nfunc _ready() -> void:\n\tvar t := Timer.new()\n\tt.start(1.0)\n\tadd_child(t)\n", "api/timer-start-outside-tree")).toEqual([6]);
+    expect(run("extends Node\n\n\nfunc _ready() -> void:\n\tvar t := Timer.new()\n\tadd_child(t)\n\tt.start(1.0)\n", "api/timer-start-outside-tree")).toEqual([]);
+  });
+
+  it("api/multimesh-format-after-count: format set after instance_count", () => {
+    const bad = "extends Node\n\n\nfunc _ready() -> void:\n\tvar mm := MultiMesh.new()\n\tmm.instance_count = 100\n\tmm.use_custom_data = true\n";
+    expect(run(bad, "api/multimesh-format-after-count")).toEqual([7]);
+    expect(run(bad.replace("mm.instance_count = 100\n\tmm.use_custom_data = true", "mm.use_custom_data = true\n\tmm.instance_count = 100"), "api/multimesh-format-after-count")).toEqual([]);
+    expect(run(bad.replace("= 100", "= 0"), "api/multimesh-format-after-count")).toEqual([]);
+  });
+
+  it("api/viewport-world-borrowed: world_3d copied from another viewport", () => {
+    expect(run("extends SubViewport\n\n@export var target: Node3D\n\n\nfunc _ready() -> void:\n\tworld_3d = target.get_viewport().world_3d\n", "api/viewport-world-borrowed")).toEqual([7]);
+    expect(run("extends SubViewport\n\n@export var target: Node3D\n\n\nfunc _ready() -> void:\n\tworld_3d = target.get_viewport().find_world_3d()\n", "api/viewport-world-borrowed")).toEqual([]);
+    // Every viewport has a World2D of its own: sharing it is the split-screen idiom.
+    expect(run("extends Node\n\n\nfunc _ready() -> void:\n\tvar a := SubViewport.new()\n\tvar b := SubViewport.new()\n\tb.world_2d = a.world_2d\n", "api/viewport-world-borrowed")).toEqual([]);
+  });
+
+  it("api/debug-only-monitor: orphan nodes read without a debug check", () => {
+    const code = "extends Node\n\n\nfunc report() -> void:\n\tprint(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))\n";
+    expect(run(code, "api/debug-only-monitor")).toEqual([5]);
+    expect(run(code.replace("\tprint(", "\tif OS.is_debug_build(): print("), "api/debug-only-monitor")).toEqual([]);
+    expect(run(code.replace("OBJECT_ORPHAN_NODE_COUNT", "TIME_FPS"), "api/debug-only-monitor")).toEqual([]);
+  });
+
+  it("quality/time-modulo-window: a time modulo as a periodic trigger", () => {
+    const code = "extends Node\n\nvar t: float = 0.0\n\n\nfunc _process(delta: float) -> void:\n\tt += delta\n\tif int(t * 2.0) % 10 == 0:\n\t\tprint(t)\n\tif Engine.get_process_frames() % 10 == 0:\n\t\tprint(t)\n";
+    expect(run(code, "quality/time-modulo-window")).toEqual([8]);
+  });
+
+  it("quality/standalone-ternary: a ternary used as a statement", () => {
+    const code = "extends Node\n\n\nfunc a() -> void:\n\tpass\n\n\nfunc b() -> void:\n\tpass\n\n\nfunc c(x: bool) -> void:\n\ta() if x else b()\n\tvar y: int = 1 if x else 2\n\tprint(y if x else 0)\n";
+    expect(run(code, "quality/standalone-ternary")).toEqual([13]);
+    expect(run("extends Node\n\nvar n: int = 0\n\n\nfunc c(x: bool) -> void:\n\tn += 1 if x else 0\n", "quality/standalone-ternary")).toEqual([]);
+  });
+
+  it("quality/find-children-unowned: find_children() in a script that adds nodes", () => {
+    const code = 'extends Node\n\n\nfunc _ready() -> void:\n\tadd_child(Node3D.new())\n\tprint(find_children("*", "Node3D"))\n';
+    expect(run(code, "quality/find-children-unowned")).toEqual([6]);
+    expect(run(code.replace('"Node3D")', '"Camera3D")'), "quality/find-children-unowned")).toEqual([]);
+    expect(run(code.replace('"Node3D")', '"Node3D", true, false)'), "quality/find-children-unowned")).toEqual([]);
+    expect(run('extends Node\n\n\nfunc _ready() -> void:\n\tprint(find_children("*"))\n', "quality/find-children-unowned")).toEqual([]);
+  });
+
+  it("quality/worker-task-not-waited: a task nobody waits for", () => {
+    const code = "extends Node\n\n\nfunc _ready() -> void:\n\tWorkerThreadPool.add_task(func() -> void: pass)\n";
+    expect(run(code, "quality/worker-task-not-waited")).toEqual([5]);
+    expect(run(code.replace("\tWorkerThreadPool.add_task(func() -> void: pass)", "\tvar id := WorkerThreadPool.add_task(func() -> void: pass)\n\tWorkerThreadPool.wait_for_task_completion(id)"), "quality/worker-task-not-waited")).toEqual([]);
+  });
+
+  it("performance/subviewport-always: UPDATE_ALWAYS that is never switched off", () => {
+    const code = "extends SubViewport\n\n\nfunc _ready() -> void:\n\trender_target_update_mode = SubViewport.UPDATE_ALWAYS\n";
+    expect(run(code, "performance/subviewport-always")).toEqual([5]);
+    expect(run(`${code}\n\nfunc hide_screen() -> void:\n\trender_target_update_mode = SubViewport.UPDATE_DISABLED\n`, "performance/subviewport-always")).toEqual([]);
+    // A capture tool renders on purpose.
+    expect(run("extends SceneTree\n\n\nfunc _initialize() -> void:\n\tvar v := SubViewport.new()\n\tv.render_target_update_mode = SubViewport.UPDATE_ALWAYS\n\troot.add_child(v)\n", "performance/subviewport-always")).toEqual([]);
+  });
+});
+
+describe("coroutines in lambdas over several lines", () => {
+  it("leave a coroutine call alone that may be a statement of the lambda", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "a.gd": 'extends SceneTree\n\n\nfunc finish() -> void:\n\tawait process_frame\n\tquit()\n\n\nfunc _initialize() -> void:\n\tcreate_timer(5.0).timeout.connect(func() -> void:\n\t\tprint("late")\n\t\tfinish()\n\t)\n',
+    });
+    expect(reviewProject(root).findings.filter((f) => f.rule === "api/coroutine-without-await")).toEqual([]);
+  });
+});
