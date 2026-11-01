@@ -3,6 +3,7 @@ import { apiCommand } from "./commands/api.js";
 import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
+import { hookCommand } from "./commands/hook.js";
 import { learnCommand } from "./commands/learn.js";
 import { lessonsCommand } from "./commands/lessons.js";
 import { mcpCommand } from "./commands/mcp.js";
@@ -48,9 +49,10 @@ export function createProgram(): Command {
     .addCommand(learnCommand())
     .addCommand(lessonsCommand())
     .addCommand(collectorCommand())
+    .addCommand(hookCommand())
     .hook("postAction", async (_program, action) => {
       // The MCP server keeps running and shares on its own; learn commands manage sharing.
-      if (action.name() === "mcp" || ["learn", "collector"].includes(action.parent?.name() ?? "")) return;
+      if (action.name() === "mcp" || action.name() === "hook" || ["learn", "collector"].includes(action.parent?.name() ?? "")) return;
       const notice = takeShareNotice();
       if (notice) process.stderr.write(`\n${notice}\n`);
       await maybeShare();

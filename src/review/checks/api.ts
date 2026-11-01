@@ -1,4 +1,5 @@
 import { closest } from "../../api/api.js";
+import { resolveResPath } from "../../project/files.js";
 import { removedClass, removedMember, removedNote } from "../../api/removed.js";
 import { matchingParen, splitAnnotations, type FunctionInfo, type LogicalLine } from "../../godot/gdscript.js";
 import { finding, type Finding } from "../rules.js";
@@ -60,6 +61,38 @@ export interface ApiCheckOptions {
   inputActions: Set<string>;
 }
 
+/**
+ * Statements joined with `;` on one line (`var a := f(); var b := g()`) as statements of their own, so a local declared
+ * after a `;` is known. `code` has string contents blanked, so a `;` inside a string does not split.
+ */
+export function splitStatements(lines: LogicalLine[]): LogicalLine[] {
+  const out: LogicalLine[] = [];
+  for (const ll of lines) {
+    if (!ll.code.includes(";")) {
+      out.push(ll);
+      continue;
+    }
+    let depth = 0;
+    let start = 0;
+    const cut = (end: number) => {
+      const lead = ll.code.slice(start, end).length - ll.code.slice(start, end).trimStart().length;
+      const text = ll.text.slice(start + lead, end).trimEnd();
+      if (text) out.push({ ...ll, text, code: ll.code.slice(start + lead, start + lead + text.length) });
+    };
+    for (let i = 0; i < ll.code.length; i++) {
+      const c = ll.code[i]!;
+      if (c === "(" || c === "[" || c === "{") depth++;
+      else if (c === ")" || c === "]" || c === "}") depth = Math.max(0, depth - 1);
+      else if (c === ";" && depth === 0) {
+        cut(i);
+        start = i + 1;
+      }
+    }
+    cut(ll.code.length);
+  }
+  return out;
+}
+
 export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheckOptions): Finding[] {
   const script = pm.data.scripts.get(path);
   const top = pm.scripts.get(path);
@@ -82,6 +115,28 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     return r ? ` In Godot 4 it is \`${r.to}\` (Godot 3 name).` : "";
   };
 
+  /**
+   * True when a script in the chain (or around an inner class) extends something that does not resolve: a missing
+   * file, or one only the shipped game holds. Its constants, enums and inner classes are unknown, so names that could
+   * come from it are not reported; the base itself is reported once (or not at all when the game ships it).
+   */
+  const unresolvedBase = (model: ClassModel): boolean => {
+    for (let scope: ClassModel | undefined = model; scope; scope = scope.owner) {
+      if (pm.chain(scope).some((c) => c.extendsRaw && !c.parent && !c.renamedBase && !pm.resolveClassRef(c.extendsRaw, c))) return true;
+    }
+    return false;
+  };
+  /** A constant alias of a script, `const Flight = preload("res://missing.gd")`: a broken path is reported on its own. */
+  const isConstAlias = (name: string, from: ClassModel): boolean => {
+    const head = name.split(".")[0]!;
+    for (let scope: ClassModel | undefined = from; scope; scope = scope.owner) {
+      const aliases = (c: ClassModel) =>
+        c.outline.constants.some((k) => k.name === head && !k.type && /=\s*(?:pre)?load\(/.test(pm.lineAt(c.script, k.line)?.text ?? ""));
+      if (pm.chain(scope).some(aliases)) return true;
+    }
+    return false;
+  };
+
   // --- type names -------------------------------------------------------
   const checkTypeName = (raw: string | undefined, line: number, from: ClassModel) => {
     if (!raw) return;
@@ -89,14 +144,22 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       if (pm.resolveTypeName(name, from) || name === "void" || name === "Variant") continue;
       if (options.foreignClasses) continue;
       const hint = renameHint(name, "type");
+      if (!hint && (isConstAlias(name, from) || unresolvedBase(from))) continue;
       const near = hint ? "" : suggest(name, [...api.classes.keys(), ...pm.classNames.keys()]);
       report("api/unknown-type", line, `Type "${name}" does not exist in Godot 4.7 or this project.${removedNote(removedClass(name))}${hint}${near}`);
     }
   };
 
+  /** `extends "res://x.gd"` where only the shipped game holds x.gd (a .pck file list): it exists, its code is unknown. */
+  const shippedScript = (model: ClassModel): boolean => {
+    const raw = model.extendsRaw!.trim().replace(/^"|"$/g, "");
+    if (!/^(res:\/\/|\.\.?\/)|\.gd$/.test(raw)) return false;
+    return pm.data.shipped.has(resolveResPath(model.path, raw.split(/(?<=\.gd)\./)[0]!));
+  };
+
   for (const model of pm.allModels()) {
     if (model.path !== path) continue;
-    if (model.extendsRaw && !pm.resolveClassRef(model.extendsRaw, model) && !options.foreignClasses) {
+    if (model.extendsRaw && !pm.resolveClassRef(model.extendsRaw, model) && !options.foreignClasses && !shippedScript(model)) {
       const line = model.owner ? model.firstLine : (script.logicalLines.find((l) => /^(@\w+\s+)*(class_name\b.*\b)?extends\b/.test(l.text))?.line ?? 1);
       const name = model.extendsRaw.replace(/^"|"$/g, "");
       const hint = renameHint(name, "type");
@@ -131,7 +194,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
   let currentTokens: Token[] = [];
   let currentOpen = 0;
 
-  for (const ll of script.logicalLines) {
+  for (const ll of splitStatements(script.logicalLines)) {
     const scope = pm.scopeAt(path, ll.line);
     if (!scope) continue;
     const { model, fn } = scope;
@@ -530,6 +593,8 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const enumNamespace = [...pm.globalEnums].some((e) => e.startsWith(`${name}.`));
       if (followedByDot && /^[A-Z]/.test(name) && !options.foreignClasses && !enumNamespace) {
         const hint = renameHint(name, "type");
+        // A constant or inner class of a base that does not resolve, or a const alias of a broken preload.
+        if (!hint && (unresolvedBase(model) || isConstAlias(name, model))) return undefined;
         report(
           "api/unknown-type",
           ll.line,

@@ -50,6 +50,15 @@ describe("bundled lessons", () => {
   it("explain every rule that came from a lesson", () => {
     const explained = new Set(lessons.flatMap((l) => l.rules ?? []));
     for (const rule of [
+      "api/coroutine-without-await",
+      "api/timer-start-outside-tree",
+      "api/multimesh-format-after-count",
+      "api/debug-only-monitor",
+      "performance/subviewport-always",
+      "quality/time-modulo-window",
+      "quality/standalone-ternary",
+      "quality/find-children-unowned",
+      "quality/worker-task-not-waited",
       "api/infer-variant",
       "api/freed-check-order",
       "api/get-meta-null-default",
@@ -101,7 +110,8 @@ describe("finding lessons", () => {
 
   it("by rule and by archetype", () => {
     expect(lessonsForRule("quality/time-scale-not-restored")[0]?.lesson.id).toBe("gameplay/time-scale");
-    const ship = lessonsForArchetype(["thing", "vessel", "vessel.ship"], { limit: 10 }).map((h) => h.lesson.id);
+    const ship = lessonsForArchetype(["thing", "vessel", "vessel.ship"], { limit: 20 }).map((h) => h.lesson.id);
+    expect(ship).toContain("physics/platform-moves-every-tick");
     expect(ship).toContain("physics/moving-platform-velocity");
     expect(ship).toContain("physics/collider-through-deck");
   });

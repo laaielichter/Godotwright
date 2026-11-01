@@ -182,7 +182,9 @@ describe("identify", () => {
     expect(fire.best.id).toBe("vehicle.wheeled.truck");
     expect(fire.matches[0]!.via).toBe("suffix");
     expect(fire.notes.join(" ")).toMatch(/Check that this is what you meant/);
-    expect(best("brandweerauto")).toBe("vehicle.wheeled.car");
+    expect(best("postauto")).toBe("vehicle.wheeled.car");
+    // A compound that is a kind of its own is that kind.
+    expect(best("brandweerauto")).toBe("vehicle.wheeled.fire-engine");
   });
 
   it("forgives small typing mistakes, but not real other words", () => {

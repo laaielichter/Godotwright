@@ -1,8 +1,9 @@
 # Lessons from building a large vehicle asset with Godotwright
 
-> These lessons, and about sixty more from a second, much larger project (an open world with helicopters, ships,
-> trains and moving decks), are now data: `data/lessons.json`, searchable with `godotwright lessons` and the
-> `godot_lessons` MCP tool, and shown under the Godot errors they explain. Lessons you learn yourself can be kept
+> These lessons, and about 250 more from a second, much larger project (an open world with helicopters, jets, ships,
+> trains and moving decks, cockpits, streaming terrain, and installers that patch the shipped game), are now data:
+> `data/lessons.json`, searchable with `godotwright lessons` and the `godot_lessons` MCP tool, and shown under the
+> Godot errors they explain. The last section below says what that second project changed in Godotwright. Lessons you learn yourself can be kept
 > with `godot_lesson_add`; see [Learning](README.md#learning). The text below is the story behind the first ones.
 
 An anonymised reflection on one long build: a high-detail military truck with a
@@ -206,3 +207,48 @@ code, names or paths; each lesson says whether Godotwright now checks it.
     exercised every step and found three bugs that would otherwise have shown
     up only on the real data. *Supported:* `scenario` and `play` do the same
     for game logic.
+
+# What a large open world taught Godotwright
+
+The second project is an open world tens of kilometres wide, built over many weeks by several coding agents: flyable
+helicopters and jets with cockpits, ships with decks to land on, trains on a rail network, streamed terrain, weather,
+VFX, NPCs, and installers that patch the shipped game. Its work notes, debug reports and changelogs were read in full,
+and every problem that had a Godot cause and a verified fix became a lesson: 195 new ones, anonymous like the rest.
+The review was also run over all of its scripts, the game itself and every overlay laid over it.
+
+## New review rules
+
+36. **A coroutine's result used without `await`.** A builder that was changed to spread its work over frames
+    started to `await`; every caller that read its result now stops the script. *Checked:* `api/coroutine-without-await`.
+37. **A Timer started before it is in the tree never fires.** *Checked:* `api/timer-start-outside-tree`.
+38. **A MultiMesh takes a new format only while `instance_count` is 0.** Custom data set afterwards is ignored.
+    *Checked:* `api/multimesh-format-after-count`.
+39. **`world_3d` of the viewport a node is in is null when it uses its parent's world**, so a camera view that copies
+    it renders nothing. *Checked:* `api/viewport-world-borrowed`.
+40. **`int(t * k) % n == 0` is true for a whole window of frames.** An expensive tree search ran on every frame of
+    that window. *Checked:* `quality/time-modulo-window`.
+41. **A ternary on its own line throws its value away**, and with void calls the script does not load.
+    *Checked:* `quality/standalone-ternary`.
+42. **`find_children()` skips nodes without an owner**, such as the ones a script adds itself.
+    *Checked:* `quality/find-children-unowned`.
+43. **Every WorkerThreadPool task must be waited for**, at the latest when its node leaves the tree.
+    *Checked:* `quality/worker-task-not-waited`.
+44. **A SubViewport on UPDATE_ALWAYS renders a whole extra view every frame**, also when its screen is out of sight.
+    *Checked:* `performance/subviewport-always`.
+45. **Orphan-node and static-memory monitors read 0 in a release export.** *Checked:* `api/debug-only-monitor`.
+
+## Fewer false alarms on real code
+
+46. **One cause, one finding.** A broken `preload()` constant used as a type was reported again at every use, and a
+    script extending a missing base got errors for every name that could come from that base. Both now stay with the
+    one finding that names the cause.
+47. **A script only the shipped game holds is not missing.** With a `.pck` file list as `baseFiles`, `extends` of a
+    script the game ships (as `.gd.remap`) is no longer an error.
+48. **`var a := f(); var b := g()` declares two locals.** Statements joined with `;` are read one by one.
+
+## For agents
+
+49. **Do not rely on the agent remembering a tool.** The Claude Code plugin now runs the review after every edit of a
+    Godot file and sends the errors back, adds lessons under Godot errors in command output, and names review errors
+    left open before the agent stops. `godotwright hook` does the same for any agent with hooks.
+

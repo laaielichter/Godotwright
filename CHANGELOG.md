@@ -4,6 +4,65 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+## 0.3.0 (agents in the loop, lessons from a large open world, prettier models)
+
+- **Godotwright in the agent's loop: hooks.** New command `godotwright hook <event>` reads a Claude Code hook's JSON on
+  stdin and prints hook JSON; it prints nothing when it has nothing to add, never fails the agent, and
+  `GODOTWRIGHT_HOOKS=0` turns it off.
+  - `post-edit`: after an edit of a `.gd`, `.tscn`, `.tres`, `.gdshader` or `project.godot` file, that file is reviewed;
+    its errors go back to the agent at once (with the lessons behind them), warnings as a note, and "the errors are
+    fixed" once they are.
+  - `post-bash`: when a command's output holds Godot errors (`SCRIPT ERROR`, `Parse Error`, ...), the lessons that
+    explain them are added.
+  - `stop`: before the agent stops, review errors still open in Godot files changed in this session are named once.
+  - `session-start`: a session in a Godot project starts with its name, Godot version, renderer, scripts, scenes,
+    main scene, autoloads, and whether Godot is installed for the tools that run it.
+- **Claude Code plugin, much better for agents.**
+  - The four hooks above, wired through `hooks/run.mjs`, which starts the same godotwright version as the plugin's MCP
+    server and stays silent when that version is too old to know them.
+  - Six new skills Claude uses on its own: `debug` (from a Godot error or wrong behaviour to cause, fix and proof),
+    `perf` (stutter, load times, fps, memory, measured before and after), `vehicles` (aircraft, ships, trains, moving
+    platforms and decks), `world` (terrain, streaming, levels of detail, networks), `model` (3D models) and `patch`
+    (changes to a shipped game with preflight, receipts and rollback).
+  - Two subagents: `godot-reviewer` (a verified review of a change, with Godot when installed) and `godot-debugger`
+    (the root cause of an error or wrong behaviour, proven with a headless run).
+  - A test checks that every skill and agent names only MCP tools the server has.
+- **195 new lessons from a large open-world project** (272 in all): physics on moving decks and platforms, physics
+  interpolation of assemblies, cockpits and head-up displays, SubViewport screens, streaming and visibility ranges,
+  terrain, water and tunnels, frame-time measurement (Performance monitors, probe nodes, percentiles and noise), worker
+  threads and loading, runtime resource packs and their UIDs, procedural models and their checks, audio, UI and input,
+  headless tests and test budgets, and patches to a shipped game. Every one passes the scrubber; lessons are linked to
+  the rules and archetypes they are about.
+- **New review rules from those lessons.** None reports an error on the official demo projects.
+  - `api/coroutine-without-await` (error): the result of a function that awaits used without `await`; Godot stops
+    with "is a coroutine, so it must be called with "await"".
+  - `api/timer-start-outside-tree` (warning): `Timer.new()` started before `add_child()`; it never fires.
+  - `api/multimesh-format-after-count` (warning): `use_custom_data`, `use_colors` or `transform_format` set after
+    `instance_count`; the change is ignored.
+  - `api/viewport-world-borrowed` (warning): `world_3d = node.get_viewport().world_3d`, which is null when that
+    viewport shows its parent's world; use `find_world_3d()`.
+  - `api/debug-only-monitor` (info): orphan-node and static-memory monitors read without `OS.is_debug_build()`; they
+    are 0 in a release export.
+  - `performance/subviewport-always` (info): a SubViewport set to `UPDATE_ALWAYS` and never switched back.
+  - `quality/time-modulo-window` (warning): `int(t * k) % n == 0` as a periodic trigger in `_process`; it stays true
+    for a whole window of frames.
+  - `quality/standalone-ternary` (warning): a ternary on its own line.
+  - `quality/find-children-unowned` (warning): `find_children()` for a type the script itself creates and adds;
+    those nodes have no owner and are skipped unless `owned` is false.
+  - `quality/worker-task-not-waited` (warning): `WorkerThreadPool` tasks that the script never waits for.
+- **Fewer false alarms on real code.** The review ran over every script of that project and every overlay laid over
+  it.
+  - A broken `preload()` constant used as a type is reported once (the broken path), not again at every use.
+  - A script that extends a base that does not resolve no longer gets errors for names that may come from that base.
+  - `extends` of a script that only the shipped game holds (listed as `.gd.remap` in `baseFiles`) is not an error.
+  - Statements joined with `;` are read one by one, so `var a := f(); var b := g()` declares both locals.
+  - A constant that aliases an inner class of another script (`const B = Kit.Box`) works as a type.
+- **21 new archetypes** for `model identify`, with English and Dutch names, parts, sizes with their source, and
+  pitfalls: tiltrotor, tandem-rotor helicopter, fixed-wing drone, bomber, cruise ship, warship, superyacht, ro-ro ferry,
+  aircraft carrier, submarine, helideck, offshore platform, underground station, bascule bridge, overhead power line,
+  tunnel, runway, navigation buoy, high-speed train, rack railway car and fire engine. Names such as "fregat",
+  "veerboot" and "chinook" now find the specific kind.
+
 - **Every ready-made model rebuilt, better and prettier.** All 53 recipes got truer proportions, far more detail where
   the eye looks, real materials and textures (wood grain along each board, brick, slate, stone, gravel), bevelled edges
   and see-through glass with interiors behind it. Every recipe keeps its parameters, the parts its archetype needs and

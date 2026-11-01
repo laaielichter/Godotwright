@@ -136,6 +136,15 @@ Godotwright gets better with every use, without collecting anything personal.
 24. **From gaps to rules.** Turn the gaps many installs share into review rules, and proposed lessons
     (`godotwright lessons export`) into bundled ones, each release. First round done: override signatures, GPU
     read-backs in loops, SceneTree tests that read too early and shaders that read their own depth became rules.
+    Second round: coroutines used without `await`, timers started outside the tree, MultiMesh formats set too late,
+    borrowed viewport worlds, time-modulo triggers, lone ternaries, `find_children()` that skips unowned nodes, worker
+    tasks never waited for, always-rendering SubViewports and debug-only monitors.
+25. **Agents in the loop.** Hooks for coding agents (`godotwright hook`, wired in the Claude Code plugin): the review
+    after every edit of a Godot file, lessons under Godot errors in command output, a last look at open errors before
+    the agent stops, and a short project brief at the start. Task skills (debug, perf, vehicles, world, model, patch)
+    and subagents (reviewer, debugger) in the plugin.
+    *Done when:* an agent that edits a broken script gets the errors back without calling a tool, every hook stays
+    silent when it has nothing to add, and no hook can block the agent by failing.
 
 ## After layer 1
 
@@ -170,7 +179,8 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 18: Recipes (41 so far, in `data/recipes/`)
 - [x] Step 22: Lessons from real projects (`data/lessons.json`, `godot_lessons`)
 - [x] Step 23: Self-learning (local lessons, lesson feedback, rules that learn from false alarms, `learn gaps`)
-- [ ] Step 24: From gaps to rules, every release
+- [ ] Step 24: From gaps to rules, every release (two rounds done)
+- [x] Step 25: Agents in the loop (hooks, task skills and subagents in the Claude Code plugin)
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement
