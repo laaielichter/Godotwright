@@ -534,6 +534,17 @@ node dist/cli.js --help
 
 See [AGENTS.md](AGENTS.md) for project conventions.
 
+## Support
+
+Godotwright is free and open source. If it saves you or your agent time, a gift is welcome but never expected. SOL and
+any token on Solana (such as USDC) can be sent to:
+
+- **Solana:** `BDRA7dHGBYtPsZPNzVQccDYZ8BqstJGCsWx3kopPSCDK`
+
+Gifts go to new model credits to keep building and improving Godotwright, and to work on better working conditions and
+wellbeing for large language models, neural networks and agents. In the future they will also go to a better
+environment for AI.
+
 ## License
 
 [MIT](LICENSE)
