@@ -1,0 +1,1369 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "gdscript/variant-loop-inference",
+      "topic": "gdscript",
+      "title": "A loop over an untyped array gives Variant elements, and an inferred type cannot come from them",
+      "symptom": "Godot stops with a parse error: cannot infer the type of a variable because the value does not have a set type. It happened three times in one project, each time in code that looked fine.",
+      "cause": "The loop variable of a literal array or an untyped Array has no static type, and neither has a value read from an untyped Dictionary or an untyped parameter. A variable whose type is inferred needs a typed value, so anything computed from them fails.",
+      "fix": "Give the loop variable a type (for p: Vector3 in points), type the collection (Array[Vector3]), or write the type of the new variable instead of letting Godot infer it.",
+      "rules": [
+        "api/infer-variant"
+      ],
+      "tags": [
+        "inference",
+        "variant",
+        "loop",
+        "dictionary",
+        "parse error",
+        "untyped"
+      ],
+      "errors": [
+        "Cannot infer the type of"
+      ]
+    },
+    {
+      "id": "gdscript/freed-check-order",
+      "topic": "gdscript",
+      "title": "Check is_instance_valid() before anything else touches the object",
+      "symptom": "Thousands of errors per run and a frame rate of about 6 fps: a queue of work items held one freed object, the call on it failed, and the queue never moved on.",
+      "cause": "A type test, a typed local variable and a typed parameter all check the object as soon as they get it. On a freed object that check is itself the error, so an is_instance_valid() guard placed after it, or inside the called function, never runs.",
+      "fix": "Read the item into a Variant, test is_instance_valid() first and the type after it, and advance a queue before calling into the item, so one bad item cannot block the rest.",
+      "rules": [
+        "api/freed-check-order"
+      ],
+      "tags": [
+        "freed",
+        "queue_free",
+        "instance",
+        "error storm",
+        "queue",
+        "typed parameter"
+      ],
+      "errors": [
+        "previously freed"
+      ]
+    },
+    {
+      "id": "gdscript/get-meta-null-default",
+      "topic": "gdscript",
+      "title": "A null default for get_meta() means no default",
+      "symptom": "An engine error every time a mission started, although the code passed a default value.",
+      "cause": "In Godot 4 a null default is treated as no default: when the entry is missing, get_meta() prints an error and returns null.",
+      "fix": "Check has_meta() first, or pass a default that is not null.",
+      "rules": [
+        "api/get-meta-null-default"
+      ],
+      "tags": [
+        "metadata",
+        "meta",
+        "default",
+        "null"
+      ],
+      "errors": [
+        "does not have any 'meta' values"
+      ]
+    },
+    {
+      "id": "gdscript/parse-into-typed",
+      "topic": "gdscript",
+      "title": "Parsed data is null when the input is missing or broken",
+      "symptom": "A black screen at start with no message on screen: a script error stopped the function that builds the world.",
+      "cause": "JSON.parse_string() and str_to_var() return null for a missing or broken input. Assigning that straight to a typed Array or Dictionary is a runtime error, so the rest of the function never runs.",
+      "fix": "Parse into a Variant, check it with is Array or is Dictionary, report what is wrong with push_error() and carry on without it.",
+      "rules": [
+        "api/parse-into-typed"
+      ],
+      "tags": [
+        "json",
+        "parse",
+        "save file",
+        "config",
+        "black screen",
+        "startup"
+      ],
+      "errors": [
+        "of type 'Nil' to a variable of type"
+      ]
+    },
+    {
+      "id": "gdscript/duplicate-after-merge",
+      "topic": "gdscript",
+      "title": "Two patches or a merge can add the same function twice",
+      "symptom": "A script that compiled before stops compiling after two candidate changes are combined.",
+      "cause": "Both changes added the same helper functions, or a patch tool inserted a function that was already there. A class may declare each name once.",
+      "fix": "Check the combined script before you ship it, and make patch tools check whether a function already exists before they add it.",
+      "rules": [
+        "api/duplicate-declaration"
+      ],
+      "tags": [
+        "merge",
+        "patch",
+        "duplicate",
+        "function",
+        "parse error"
+      ],
+      "errors": [
+        "has the same name as a previously declared"
+      ]
+    },
+    {
+      "id": "gdscript/override-signature",
+      "topic": "gdscript",
+      "title": "An override must keep up when its parent gains a parameter",
+      "symptom": "Parse error: the function signature does not match the parent, and every script that loads the child fails too.",
+      "cause": "The base class got an extra optional parameter; the override still had the old list. An override may add trailing parameters that have defaults, never fewer than the parent.",
+      "fix": "Give the override the same parameters as the parent, with the same defaults, and pass them on in the call to super.",
+      "tags": [
+        "override",
+        "signature",
+        "inheritance",
+        "super",
+        "parse error"
+      ],
+      "errors": [
+        "signature doesn't match the parent"
+      ]
+    },
+    {
+      "id": "gdscript/lambda-captures-freed",
+      "topic": "gdscript",
+      "title": "A lambda that captures a node outlives the node",
+      "symptom": "Errors that a lambda capture was freed, from timers that fired after their node was gone.",
+      "cause": "A lambda keeps its captured values; when the node it captured is freed before the signal fires, the call fails.",
+      "fix": "Connect a method of the node itself (for example its queue_free method as a Callable): Godot drops that connection when the node is freed.",
+      "tags": [
+        "lambda",
+        "callable",
+        "timer",
+        "signal",
+        "freed"
+      ],
+      "errors": [
+        "Lambda capture at index"
+      ]
+    },
+    {
+      "id": "gdscript/assert-is-not-a-guard",
+      "topic": "gdscript",
+      "title": "Asserts are not checks in a release build",
+      "symptom": "A check passed in testing and silently did nothing in the exported game; in another case a debug build stopped in a constructor and left a system half set up.",
+      "cause": "Godot removes assert() from release builds, and in debug builds a failing assert stops the script.",
+      "fix": "Use assert() only for programming mistakes in tests. For files, downloads and data, test with if and report with push_error().",
+      "tags": [
+        "assert",
+        "release",
+        "export",
+        "guard",
+        "check"
+      ]
+    },
+    {
+      "id": "gdscript/mojibake",
+      "topic": "gdscript",
+      "title": "Text encoded twice shows as garbage characters",
+      "symptom": "Players saw two odd characters instead of one accented letter in the interface.",
+      "cause": "The file was read as Latin-1 and written back as UTF-8, so every accented letter became two characters.",
+      "fix": "Type the characters again and save the file as UTF-8; let tools that rewrite scripts read and write UTF-8.",
+      "rules": [
+        "quality/mojibake"
+      ],
+      "tags": [
+        "encoding",
+        "utf-8",
+        "accent",
+        "text",
+        "localization"
+      ]
+    },
+    {
+      "id": "gdscript/draw-outside-draw",
+      "topic": "gdscript",
+      "title": "Drawing calls only work inside _draw()",
+      "symptom": "Errors that drawing is only allowed inside the draw callback, from a test that otherwise passed.",
+      "cause": "A helper called draw_line() and friends on a canvas item from outside its _draw() callback.",
+      "fix": "Call queue_redraw() and do the drawing in _draw() or in a function connected to the draw signal.",
+      "tags": [
+        "draw",
+        "canvas",
+        "queue_redraw",
+        "2d",
+        "ui"
+      ],
+      "errors": [
+        "Drawing is only allowed inside"
+      ]
+    },
+    {
+      "id": "gdscript/infinite-sentinel",
+      "topic": "gdscript",
+      "title": "An infinite sentinel value must never reach a transform",
+      "symptom": "About two thousand engine errors per run that a vector is not finite.",
+      "cause": "A height meaning no ground below was kept as minus infinity and then used in a position.",
+      "fix": "Guard every use of a sentinel with is_finite(), or keep a separate flag for no value.",
+      "tags": [
+        "inf",
+        "sentinel",
+        "position",
+        "transform",
+        "error storm"
+      ],
+      "errors": [
+        "is_finite()"
+      ]
+    },
+    {
+      "id": "gdscript/erase-dictionaries-in-loop",
+      "topic": "performance",
+      "title": "Array.erase() on dictionaries inside a loop is quadratic",
+      "symptom": "A hitch of 100 ms or more every time a part of the world was unloaded.",
+      "cause": "Array.erase() compares dictionaries by content, so erasing many records one by one compares every record with every other.",
+      "fix": "Mark the records to remove and filter the array once; in one case this took the work from 36 ms to 4 ms.",
+      "tags": [
+        "array",
+        "erase",
+        "dictionary",
+        "hitch",
+        "unload",
+        "quadratic"
+      ]
+    },
+    {
+      "id": "gdscript/float-property-readback",
+      "topic": "performance",
+      "title": "A float property never equals the 64-bit value you wrote",
+      "symptom": "Settings were pushed to the rendering server every frame although nothing changed.",
+      "cause": "Many engine properties are stored as 32-bit floats, while GDScript floats are 64-bit, so comparing the property with your value is almost never equal.",
+      "fix": "Compare with is_equal_approx(), or remember the last value you wrote and compare with that.",
+      "tags": [
+        "float",
+        "precision",
+        "compare",
+        "environment",
+        "every frame"
+      ]
+    },
+    {
+      "id": "gdscript/id-from-capped-buffer",
+      "topic": "gdscript",
+      "title": "An id taken from the size of a capped buffer stops counting",
+      "symptom": "Event numbers stopped going up once the history was full, so new events looked like old ones.",
+      "cause": "The id was the buffer size plus one, and the buffer drops its oldest entry when full.",
+      "fix": "Keep a separate counter for ids.",
+      "tags": [
+        "id",
+        "counter",
+        "buffer",
+        "history",
+        "events"
+      ]
+    },
+    {
+      "id": "gdscript/wrap-provider-once",
+      "topic": "gdscript",
+      "title": "Wrap a provider stored in metadata only once",
+      "symptom": "A hard crash with a stack overflow when a player boarded a vehicle.",
+      "cause": "Two systems each read a provider from metadata every second, kept it as their inner provider and put their own in its place, so each wrapped the other, again and again.",
+      "fix": "Wrap once per target, never keep yourself as the inner provider, and add a busy guard.",
+      "tags": [
+        "metadata",
+        "provider",
+        "recursion",
+        "stack overflow",
+        "crash"
+      ]
+    },
+    {
+      "id": "physics/moving-platform-velocity",
+      "topic": "physics",
+      "title": "A body placed on a moving platform must start at the platform's speed",
+      "symptom": "A helicopter boarded on a ship sailing at 8 m/s slid 24 m off the stern in three seconds; on take-off and landing the deck slid away underneath it.",
+      "cause": "The placing code set its velocity to zero, which is rest in the world, not on the deck. The brakes, the friction and the parked test also worked on world velocity.",
+      "fix": "Start the body at the deck's velocity at that point (the deck velocity plus the angular velocity crossed with the offset), and run brakes, friction, parked tests and locks on the velocity relative to the deck.",
+      "test": "Play the landing at rest, at cruise and at top speed, in calm and rough water and in turns: the body must slide less than 5 cm in 3 s after touchdown.",
+      "tags": [
+        "moving platform",
+        "deck",
+        "ship",
+        "landing",
+        "carrier",
+        "velocity",
+        "slide"
+      ],
+      "archetypes": [
+        "vessel",
+        "aircraft.rotorcraft"
+      ]
+    },
+    {
+      "id": "physics/collider-through-deck",
+      "topic": "physics",
+      "title": "No collider of a ship may reach above its own landing deck",
+      "symptom": "A parked helicopter bounced 1.1 m and seemed to land above the deck.",
+      "cause": "The hull's collision box reached the height of the side walls across the whole beam, so it stood a metre above the helicopter deck and pushed the skids out every tick.",
+      "fix": "End the hull box at deck level and give the walls their own thin boxes. Nothing may stand above a landing surface except declared obstacles, and the landing area must equal the collider's top.",
+      "test": "For each declared landing surface, check that no other shape of the same body rises above its top within its footprint.",
+      "tags": [
+        "collision",
+        "deck",
+        "helipad",
+        "bounce",
+        "ship",
+        "box shape"
+      ],
+      "archetypes": [
+        "vessel"
+      ]
+    },
+    {
+      "id": "physics/landing-pad-needs-collider",
+      "topic": "physics",
+      "title": "A landing pad that exists only as data cannot be landed on",
+      "symptom": "An aircraft sank 0.29 m into a pad and was never on the floor.",
+      "cause": "The pad was a height in a table, with no collision shape at that height.",
+      "fix": "Every surface the player can stand or land on needs a collider at exactly its visible height.",
+      "tags": [
+        "helipad",
+        "landing",
+        "collision",
+        "is_on_floor"
+      ],
+      "archetypes": [
+        "aircraft",
+        "building"
+      ]
+    },
+    {
+      "id": "physics/interpolation-reset-every-tick",
+      "topic": "physics",
+      "title": "Reset physics interpolation only after a teleport",
+      "symptom": "A parked passenger shivered by up to 7 cm on a moving vehicle.",
+      "cause": "With physics interpolation on, the passenger got reset_physics_interpolation() every tick, so it was drawn at its raw physics pose while the vehicle under it was drawn interpolated. The error is up to the speed divided by the tick rate.",
+      "fix": "Call reset_physics_interpolation() only when a node jumps to a new place.",
+      "rules": [
+        "quality/interpolation-reset-every-tick"
+      ],
+      "tags": [
+        "physics interpolation",
+        "jitter",
+        "shiver",
+        "platform"
+      ]
+    },
+    {
+      "id": "physics/camera-interpolated-pose",
+      "topic": "physics",
+      "title": "A camera that follows a body must read its interpolated pose",
+      "symptom": "The cockpit slid up to half a metre against the eye at speed, and the heads-up display danced.",
+      "cause": "With physics interpolation on, a body is drawn between two physics poses, but global_transform returns the last raw pose. A camera set from it in _process lags or leads the body.",
+      "fix": "In _process, read get_global_transform_interpolated() from the body and turn physics interpolation off on the camera. Moving the camera into _physics_process does not fix it.",
+      "tags": [
+        "camera",
+        "physics interpolation",
+        "jitter",
+        "cockpit",
+        "follow"
+      ]
+    },
+    {
+      "id": "physics/double-carry",
+      "topic": "physics",
+      "title": "Carry a passenger on a platform in one way only",
+      "symptom": "A person walking on a moving deck was carried twice as fast; after a fix, they no longer rode any platform at all.",
+      "cause": "A script moved the passenger with the deck while CharacterBody3D also followed the platform it stood on. The fix set platform_floor_layers to 0 and never set it back.",
+      "fix": "Keep one way of carrying. When your own code carries the body, save platform_floor_layers, set it to 0, and restore it when the carrying ends.",
+      "rules": [
+        "quality/platform-layers-not-restored"
+      ],
+      "tags": [
+        "platform",
+        "carry",
+        "deck",
+        "walk on board",
+        "CharacterBody3D"
+      ],
+      "archetypes": [
+        "vessel"
+      ]
+    },
+    {
+      "id": "physics/stale-on-floor",
+      "topic": "physics",
+      "title": "is_on_floor() is stale after code moves a body",
+      "symptom": "The parked state flickered every tick, so the engine refused to start; there was a 4 cm hop at lift-off.",
+      "cause": "is_on_floor() keeps the answer of the last move_and_slide(). After code sets the transform, it describes the old place. Flat contact shapes on a body that only turns about its vertical axis also dig into a tilted deck.",
+      "fix": "Call apply_floor_snap() after moving the body by code, then restore its transform and velocity. Tilt the contact shapes to the deck, sink them about 3 mm, and use hysteresis for engage and release.",
+      "tags": [
+        "is_on_floor",
+        "floor snap",
+        "parked",
+        "deck",
+        "CharacterBody3D"
+      ]
+    },
+    {
+      "id": "physics/catch-up-spiral",
+      "topic": "physics",
+      "title": "Many physics ticks per second can spiral down after one slow frame",
+      "symptom": "The game ran at 3 to 5 fps for minutes, with up to 8 physics steps per frame.",
+      "cause": "At 120 physics ticks per second with the default of up to 8 steps per frame, one slow frame makes Godot run many ticks to catch up, which makes the next frame slow as well.",
+      "fix": "Lower max_physics_steps_per_frame to about 4, or run 60 ticks per second with physics interpolation on.",
+      "test": "Measure physics steps per frame under load; more than two on average means the physics cost is too high for the tick rate.",
+      "tags": [
+        "physics ticks",
+        "fps",
+        "spiral",
+        "project settings",
+        "max_physics_steps_per_frame"
+      ]
+    },
+    {
+      "id": "physics/kinematic-lag",
+      "topic": "physics",
+      "title": "A body riding a platform must update after the platform",
+      "symptom": "Contacts with a moving deck were a tick behind, so bodies on it jittered or sank a little.",
+      "cause": "The colliders of a body that a script moves sit at last tick's pose during the current tick, and riders that update first read the old deck.",
+      "fix": "Update the platform before its riders (process_physics_priority) and stamp shared deck data with Engine.get_physics_frames(), so a rider knows the data is from this tick.",
+      "tags": [
+        "kinematic",
+        "AnimatableBody3D",
+        "platform",
+        "order",
+        "priority"
+      ]
+    },
+    {
+      "id": "physics/test-the-real-body",
+      "topic": "physics",
+      "title": "Reproduce a contact bug with the real body, under both physics engines",
+      "symptom": "A mocked aircraft passed the landing test that the real one failed.",
+      "cause": "The mock had other shapes, mass and damping than the real body, so the contact bug never showed.",
+      "fix": "Reproduce the reported bug with the old code first, then fix it. Test with the real body under GodotPhysics3D and Jolt, at 60 and 120 ticks, and compare paths the fix should not touch with traces from before.",
+      "test": "Run the same scenario with both physics engines and two tick rates, and compare the traces.",
+      "tags": [
+        "test",
+        "mock",
+        "Jolt",
+        "physics engine",
+        "reproduce",
+        "regression"
+      ]
+    },
+    {
+      "id": "physics/body-entered-deferred",
+      "topic": "physics",
+      "title": "Change physics state inside overlap callbacks only deferred",
+      "symptom": "An area that should switch off after a hit kept reporting, and Godot printed that it cannot change state while flushing queries.",
+      "cause": "Godot reports overlaps while it walks its physics queries; adding physics nodes or switching monitoring at that moment is refused.",
+      "fix": "Use add_child.call_deferred() and set_deferred() inside body and area entered or exited handlers.",
+      "rules": [
+        "api/physics-change-in-callback"
+      ],
+      "tags": [
+        "area",
+        "body_entered",
+        "deferred",
+        "monitoring",
+        "physics"
+      ],
+      "errors": [
+        "Can't change this state while flushing queries"
+      ]
+    },
+    {
+      "id": "gameplay/ballistic-aim",
+      "topic": "gameplay",
+      "title": "Aim ballistic weapons with the projectile's own flight model",
+      "symptom": "Aiming along the straight line to the target missed every ground target.",
+      "cause": "A projectile with gravity and drag does not fly in a straight line; a straight aim is only right at very short range.",
+      "fix": "Solve the elevation with the same physics the projectile uses; that hit within a metre.",
+      "test": "A scenario that fires at targets at several ranges and checks the miss distance.",
+      "tags": [
+        "aim",
+        "ballistic",
+        "projectile",
+        "gravity",
+        "weapon"
+      ]
+    },
+    {
+      "id": "gameplay/time-scale",
+      "topic": "gameplay",
+      "title": "Slow motion must always be undone",
+      "symptom": "After an impact camera, the whole game stayed slow.",
+      "cause": "The effect lowered Engine.time_scale and only restored it when it finished normally, not when its node left the tree early.",
+      "fix": "Set Engine.time_scale back to 1.0 when the effect ends and in _exit_tree().",
+      "rules": [
+        "quality/time-scale-not-restored"
+      ],
+      "tags": [
+        "slow motion",
+        "time_scale",
+        "camera",
+        "effect"
+      ]
+    },
+    {
+      "id": "gameplay/markers-not-constants",
+      "topic": "gameplay",
+      "title": "Read positions from marker nodes, not from constants",
+      "symptom": "Camera and muzzle positions broke every time the model changed.",
+      "cause": "The positions were numbers in a script, so they no longer matched the new model.",
+      "fix": "Put named marker nodes in the model and read their transforms at runtime.",
+      "tags": [
+        "marker",
+        "camera",
+        "muzzle",
+        "position",
+        "model"
+      ]
+    },
+    {
+      "id": "world/float32-far-from-origin",
+      "topic": "world",
+      "title": "Positions far from the origin lose precision; do not take velocities from them",
+      "symptom": "At 28 km from the origin a speed jumped in steps of 0.23 m/s, and a turn rate read exactly zero, so a parked vehicle slid sideways in turns.",
+      "cause": "Vector3 and Transform3D hold 32-bit floats: the step between two values is 0.12 mm at 1 to 2 km, 0.5 mm at 4 to 8 km and 2 mm at 16 to 32 km. A velocity taken from two positions is that step times the tick rate. The angle of a small rotation per tick rounds to zero below about 0.0005 radians.",
+      "fix": "Keep the real state of fast or far objects in GDScript floats, which are 64-bit (speed, heading, height), and compute velocities from it. Get small rotations from the antisymmetric part of the rotation matrix, carry riders relative to the platform, and move the world origin when the player goes far.",
+      "test": "Set test limits to at least ten times the float step at the largest distance in the world.",
+      "tags": [
+        "precision",
+        "float32",
+        "large world",
+        "origin",
+        "velocity",
+        "jitter"
+      ]
+    },
+    {
+      "id": "world/visibility-range-cells",
+      "topic": "world",
+      "title": "A chunk's visibility range is measured from its centre, so keep chunks small",
+      "symptom": "Up to 136 million triangles drawn: whole tree chunks switched to their most detailed level at once.",
+      "cause": "Trees were grouped in 256 m chunks with the detailed level up to 65 m, measured from the chunk's centre, so a camera inside a chunk drew all its trees in full detail.",
+      "fix": "Make chunks no larger than the distance of their most detailed level, use visibility_parent for levels of detail, and skip nodes with a custom bounding box when you set ranges automatically.",
+      "tags": [
+        "visibility range",
+        "lod",
+        "chunk",
+        "trees",
+        "triangles",
+        "multimesh"
+      ],
+      "archetypes": [
+        "plant",
+        "world"
+      ]
+    },
+    {
+      "id": "world/graphs-stay-connected",
+      "topic": "world",
+      "title": "Road, rail and waterway graphs must stay one connected network",
+      "symptom": "Traffic got stuck at dead ends, and boats could not reach parts of the map after a new bridge.",
+      "cause": "The traffic graph had parts not reachable from others, and a low bridge split the waterway network.",
+      "fix": "Let traffic use only the strongly connected part of the graph, add turning loops at dead ends, check that the network is one piece after every edit, and rebuild derived graphs when the ground under them changes.",
+      "tags": [
+        "roads",
+        "traffic",
+        "graph",
+        "navigation",
+        "waterways",
+        "rail"
+      ],
+      "archetypes": [
+        "infrastructure",
+        "world"
+      ]
+    },
+    {
+      "id": "world/simulate-far-things-less",
+      "topic": "performance",
+      "title": "Simulate far-away things less often",
+      "symptom": "A decorative ship far from the player cost 18 ms per frame; a fleet cost 3 ms per physics tick.",
+      "cause": "Every object ran its full simulation every tick, and one asked for the full water surface five times per tick when it only needed the height.",
+      "fix": "Use distance tiers (for example 30, 10 and 5 updates per second), freeze decorative objects beyond about 1.5 km, use the cheapest query that answers the question, and write transforms only when they change.",
+      "test": "With the player 2 km away, the script time of far objects should be close to zero.",
+      "tags": [
+        "lod",
+        "distance",
+        "simulation",
+        "tick",
+        "traffic",
+        "fleet",
+        "budget"
+      ]
+    },
+    {
+      "id": "import/runtime-textures-no-mipmaps",
+      "topic": "import",
+      "title": "Textures loaded by a script get no mipmaps and no VRAM compression",
+      "symptom": "Textures shimmered at a distance and video memory filled up: about a thousand textures took 10 GB.",
+      "cause": "Godot only compresses textures and makes mipmaps when it imports them and sees them used in 3D. A glTF loaded at runtime, an ImageTexture made from an image, and a texture assigned from code all skip that.",
+      "fix": "Generate mipmaps for runtime images (Image.generate_mipmaps(), with the normal map flag for normal maps), or bake models once into scenes with imported, compressed textures. Set textures used in 3D to VRAM compressed with mipmaps in their import settings.",
+      "rules": [
+        "performance/runtime-gltf-mipmaps"
+      ],
+      "tags": [
+        "texture",
+        "mipmaps",
+        "vram",
+        "compression",
+        "gltf",
+        "shimmer",
+        "runtime"
+      ],
+      "archetypes": [
+        "thing"
+      ]
+    },
+    {
+      "id": "import/image-load-res",
+      "topic": "import",
+      "title": "An image read from its source file in the project is missing from the exported game",
+      "symptom": "Textures that worked in the editor were missing after export.",
+      "cause": "The export holds the imported texture, not the source image, so reading the image file fails; it also skips mipmaps and compression.",
+      "fix": "Load the texture as a resource with load() and use it as a Texture2D.",
+      "rules": [
+        "api/image-load-res"
+      ],
+      "tags": [
+        "image",
+        "load",
+        "export",
+        "texture",
+        "res"
+      ]
+    },
+    {
+      "id": "import/compress-needs-editor",
+      "topic": "import",
+      "title": "Image.compress() for desktop formats only works in editor builds",
+      "symptom": "Every attempt to compress textures at runtime failed in the exported game, while it worked in tests.",
+      "cause": "The block compressors are part of the editor, not of export templates; the tests ran with the editor binary.",
+      "fix": "Compress textures at import or build time, check is_compressed() at runtime, and run performance tests with the export template.",
+      "tags": [
+        "compress",
+        "texture",
+        "export",
+        "vram",
+        "runtime"
+      ]
+    },
+    {
+      "id": "import/texture-size-multiple-of-four",
+      "topic": "import",
+      "title": "Block-compressed textures need sizes that are a multiple of 4",
+      "symptom": "Some textures stayed uncompressed: 6 MB per map instead of 1.5 MB.",
+      "cause": "A texture whose width or height is not a multiple of 4 cannot use the block formats, so it falls back to uncompressed.",
+      "fix": "Use powers of two (1024, 2048, 4096), or at least multiples of 4.",
+      "rules": [
+        "model/texture-not-power-of-two"
+      ],
+      "tags": [
+        "texture",
+        "size",
+        "compression",
+        "power of two",
+        "vram"
+      ]
+    },
+    {
+      "id": "import/backup-inside-project",
+      "topic": "import",
+      "title": "A backup folder inside the project is imported again",
+      "symptom": "Duplicate uids and a second import of the same model after an installer made a backup.",
+      "cause": "Godot imports every folder under the project, backups included.",
+      "fix": "Keep backups outside the project, or put an empty .gdignore file in the backup folder.",
+      "tags": [
+        "backup",
+        "import",
+        "uid",
+        "gdignore",
+        "installer"
+      ]
+    },
+    {
+      "id": "import/copied-project-needs-import",
+      "topic": "import",
+      "title": "A copied project needs its import cache before scripts load",
+      "symptom": "Headless scripts in a fresh copy failed on every class_name.",
+      "cause": "The class list and the imported files live in the .godot folder, which a copy without it does not have.",
+      "fix": "Import the project once (godot --headless --import) before running scripts in it.",
+      "tags": [
+        "import",
+        "headless",
+        "class_name",
+        "copy",
+        "ci"
+      ]
+    },
+    {
+      "id": "import/runtime-gltf-import-hints",
+      "topic": "import",
+      "title": "Collision suffixes in node names only work in the editor importer",
+      "symptom": "Collision proxies showed up as visible meshes in the game.",
+      "cause": "Name suffixes that ask for collision shapes are read by the editor's scene importer; a glTF loaded at runtime keeps them as plain meshes.",
+      "fix": "Build collision shapes yourself when you load a model at runtime, or import the model in the editor.",
+      "tags": [
+        "gltf",
+        "collision",
+        "import",
+        "runtime",
+        "suffix"
+      ]
+    },
+    {
+      "id": "rendering/small-light-cube-shadow",
+      "topic": "rendering",
+      "title": "Small fill lights with cube shadows cost six passes each",
+      "symptom": "A frame rate of 15 fps in a cockpit: five weak fill lights with a range of one or two metres cast shadows.",
+      "cause": "An omni light's default shadow is a cube map, rendered six times; five lights made thirty shadow passes.",
+      "fix": "Turn shadows off on small fill lights, or use the dual paraboloid shadow mode (two passes).",
+      "rules": [
+        "performance/small-light-cube-shadow",
+        "performance/many-shadow-lights"
+      ],
+      "tags": [
+        "light",
+        "shadow",
+        "omni",
+        "cockpit",
+        "fps"
+      ]
+    },
+    {
+      "id": "rendering/vertex-colors-srgb",
+      "topic": "rendering",
+      "title": "Vertex colours from colour codes need vertex_color_is_srgb",
+      "symptom": "Generated terrain looked washed out and grey-blue.",
+      "cause": "A colour written as a colour code is sRGB, but the material treats vertex colours as linear unless vertex_color_is_srgb is on.",
+      "fix": "Turn on vertex_color_is_srgb when you use vertex colours as albedo.",
+      "tags": [
+        "vertex color",
+        "srgb",
+        "color",
+        "terrain",
+        "material"
+      ]
+    },
+    {
+      "id": "rendering/shared-material-change",
+      "topic": "rendering",
+      "title": "Duplicate a material before you change it for one mesh",
+      "symptom": "A whole group of meshes showed the detail texture that was meant for the last one.",
+      "cause": "The meshes shared one material resource, so each change applied to all of them.",
+      "fix": "Call duplicate() on the material and set the copy as the mesh's material_override.",
+      "tags": [
+        "material",
+        "duplicate",
+        "shared",
+        "resource"
+      ]
+    },
+    {
+      "id": "rendering/shader-warmup-matches-viewport",
+      "topic": "rendering",
+      "title": "Shader warm-up must use the same settings as the real view",
+      "symptom": "Frames of half a second to five seconds after loading while new pipelines compiled.",
+      "cause": "The warm-up view had no anti-aliasing or upscaling, while the game used them; pipelines depend on those settings.",
+      "fix": "Warm up with the same anti-aliasing, scaling and effects as the main viewport.",
+      "test": "After loading, the pipeline compilations per frame should stay at zero.",
+      "tags": [
+        "shader",
+        "pipeline",
+        "stutter",
+        "warm-up",
+        "msaa"
+      ]
+    },
+    {
+      "id": "rendering/sky-shader-time",
+      "topic": "rendering",
+      "title": "An animated sky shader must be cheap in its cubemap pass",
+      "symptom": "About 8 fps with long stalls when clouds were in the sky.",
+      "cause": "A sky shader that uses TIME is redrawn every frame, also for the radiance cubemap, and the cloud march ran at full resolution.",
+      "fix": "Draw something cheap in the cubemap pass, march clouds at quarter resolution, and let the sky update the radiance map incrementally.",
+      "tags": [
+        "sky",
+        "clouds",
+        "shader",
+        "fps",
+        "radiance"
+      ]
+    },
+    {
+      "id": "rendering/water-depth-self-sample",
+      "topic": "rendering",
+      "title": "A water shader must not read the depth it writes itself",
+      "symptom": "The water showed foam everywhere, and the floor behind it could not be reconstructed.",
+      "cause": "With the alpha depth prepass, the water writes into the depth texture it then reads.",
+      "fix": "Use depth_draw_always instead of the alpha prepass when a water shader reads the depth texture.",
+      "tags": [
+        "water",
+        "shader",
+        "depth",
+        "foam",
+        "sea"
+      ],
+      "archetypes": [
+        "world.water"
+      ]
+    },
+    {
+      "id": "rendering/displaced-mesh-culling",
+      "topic": "rendering",
+      "title": "A mesh moved in its shader needs a bigger cull box",
+      "symptom": "A waving flag popped out at the edge of the screen, and clouds disappeared far from the origin.",
+      "cause": "Godot culls with the mesh's own box; vertices moved in the shader can leave it. A tool that set visibility ranges from that box gave a full-screen quad a range of a few kilometres.",
+      "fix": "Set extra_cull_margin to at least the displacement, or a custom bounding box, and leave such meshes out of automatic visibility ranges.",
+      "tags": [
+        "cull",
+        "shader",
+        "vertex",
+        "flag",
+        "clouds",
+        "aabb"
+      ]
+    },
+    {
+      "id": "rendering/glass-is-opaque",
+      "topic": "rendering",
+      "title": "Glass is opaque until you make it otherwise",
+      "symptom": "A cockpit stayed hidden behind its windows, and thin see-through gaps showed around the panes.",
+      "cause": "The glass material was opaque, or so nearly transparent and unlit that it vanished; panes were cut a few millimetres short of their opening.",
+      "fix": "Give glass alpha blending with an alpha of about 0.15 to 0.3 and a low roughness, keep it a separate mesh, let the pane share the opening's edge, and give the interior behind it its own light.",
+      "rules": [
+        "model/opaque-glass"
+      ],
+      "tags": [
+        "glass",
+        "window",
+        "canopy",
+        "cockpit",
+        "transparency"
+      ],
+      "archetypes": [
+        "aircraft",
+        "vehicle",
+        "vessel",
+        "building"
+      ]
+    },
+    {
+      "id": "rendering/fill-light",
+      "topic": "rendering",
+      "title": "The Compatibility renderer needs a fill light",
+      "symptom": "The shaded side of a vehicle was almost black.",
+      "cause": "Ambient light alone is weak in the Compatibility renderer.",
+      "fix": "Add a soft directional or omni fill light, without shadows.",
+      "tags": [
+        "light",
+        "compatibility",
+        "dark",
+        "renderer"
+      ]
+    },
+    {
+      "id": "rendering/settings-from-gameplay",
+      "topic": "rendering",
+      "title": "Gameplay scripts must not change global render settings",
+      "symptom": "Three to five milliseconds of GPU time lost after one aircraft was used, and the level-of-detail setting changed on its own.",
+      "cause": "A vehicle script set the main viewport's anti-aliasing and never set it back, and a sky script overwrote a setting the settings menu owned.",
+      "fix": "Leave global render settings to the settings code; if an effect needs one, save the old value and restore it in _exit_tree().",
+      "tags": [
+        "msaa",
+        "viewport",
+        "settings",
+        "render",
+        "gpu"
+      ]
+    },
+    {
+      "id": "models/mirrored-shell-winding",
+      "topic": "models",
+      "title": "A mirrored half needs its triangles reversed",
+      "symptom": "The hull could be seen through from outside since the first version; a back-face render showed the inside-out parts.",
+      "cause": "The generator mirrored one half by negating a coordinate. That turns every triangle the other way, but nobody reversed the vertex order, so Godot culled the outside.",
+      "fix": "Reverse the triangle order and mirror the normals whenever a mesh is mirrored, or let the builder orient every triangle by its normal.",
+      "rules": [
+        "model/flipped-faces"
+      ],
+      "test": "Render from 16 directions with back faces drawn in a loud colour; aim for almost none of that colour.",
+      "tags": [
+        "mirror",
+        "winding",
+        "normals",
+        "inside out",
+        "see-through",
+        "backface"
+      ],
+      "archetypes": [
+        "vessel",
+        "aircraft",
+        "vehicle"
+      ]
+    },
+    {
+      "id": "models/lods-that-are-lods",
+      "topic": "models",
+      "title": "A level of detail must be much smaller than the one before it",
+      "symptom": "The second level had 981 thousand triangles against 1 million for the first, and colours jumped when the level switched.",
+      "cause": "The interior was kept in the lower levels, each part had its own reduction limit, and every level had its own copy of the materials.",
+      "fix": "Keep lower levels to the outside only, reduce with one ratio (about a fifth per step), let all levels share the first level's materials by name and keep the same moving nodes in each. Count triangles from the final file.",
+      "rules": [
+        "model/triangle-budget"
+      ],
+      "test": "Each level should have at most half the triangles of the one before it.",
+      "tags": [
+        "lod",
+        "triangles",
+        "budget",
+        "materials",
+        "visibility range"
+      ],
+      "archetypes": [
+        "aircraft",
+        "vehicle",
+        "vessel"
+      ]
+    },
+    {
+      "id": "models/rig-names-are-a-contract",
+      "topic": "models",
+      "title": "Node names that scripts use are a contract",
+      "symptom": "Setting up a vehicle failed because a node did not exist, and new doors were missing from the list of moving parts.",
+      "cause": "Scripts found nodes by exact name; the list of names came from an older build; Godot changes names with dots, colons and similar characters, and modelling tools add numbered suffixes to duplicates.",
+      "fix": "Keep one spec as the single source of names, make the contract from the exported file, and check every level of detail and variant against it.",
+      "rules": [
+        "model/renamed-on-import",
+        "model/contract-missing-node",
+        "model/duplicate-node-names"
+      ],
+      "tags": [
+        "node names",
+        "contract",
+        "rig",
+        "suffix",
+        "import",
+        "lookup"
+      ],
+      "archetypes": [
+        "thing"
+      ]
+    },
+    {
+      "id": "models/pivot-direction",
+      "topic": "models",
+      "title": "Check that a moving part turns the right way, not only about the right point",
+      "symptom": "A control lever moved down when it was raised; the bug survived three versions. A mirrored rotor tilted inward instead of outward.",
+      "cause": "Runtime code turned parts about a fixed local axis, but the node frame was built the other way round or mirrored.",
+      "fix": "Write the axis and its positive direction into the contract, and in the builder turn each part by a test angle and check where its far end goes.",
+      "rules": [
+        "archetype/pivot"
+      ],
+      "tags": [
+        "pivot",
+        "rotation",
+        "axis",
+        "rig",
+        "mirror",
+        "animation"
+      ],
+      "archetypes": [
+        "thing"
+      ]
+    },
+    {
+      "id": "models/origin-on-ground",
+      "topic": "models",
+      "title": "Put the origin where the model touches the ground",
+      "symptom": "A model stood 1.4 m inside the ground.",
+      "cause": "Its origin was at its centre, but the code placed it as if the origin were at the wheels.",
+      "fix": "Put y = 0 at the wheels, skids or keel line, with +Y up, and check the lowest point is within a few millimetres of zero.",
+      "rules": [
+        "model/ground-offset"
+      ],
+      "tags": [
+        "origin",
+        "ground",
+        "pivot",
+        "placement",
+        "height"
+      ],
+      "archetypes": [
+        "vehicle",
+        "aircraft",
+        "vessel",
+        "prop"
+      ]
+    },
+    {
+      "id": "models/measure-the-real-thing",
+      "topic": "models",
+      "title": "Measure the real thing before modelling",
+      "symptom": "A published overall length was about 12 % off for the version being built, and the first model followed it.",
+      "cause": "Sources describe different versions and measure different things; one number was taken as the truth.",
+      "fix": "Scale photos on a part of known size and check against a second known size. Rate every source (official manual first, estimates last) and write down why when sources disagree. Generated drawings are good for shape only, never for size.",
+      "rules": [
+        "archetype/size"
+      ],
+      "tags": [
+        "dimensions",
+        "reference",
+        "measure",
+        "scale",
+        "sources"
+      ],
+      "archetypes": [
+        "thing"
+      ]
+    },
+    {
+      "id": "models/one-layout-source",
+      "topic": "models",
+      "title": "Keep one source of truth for the layout",
+      "symptom": "Wheels ended up 0.35 m away from their axles after several builders worked in parallel.",
+      "cause": "Each builder copied positions instead of reading them from one place.",
+      "fix": "Keep one shared layout file that every part reads.",
+      "rules": [
+        "model/floating-part",
+        "archetype/pivot"
+      ],
+      "tags": [
+        "layout",
+        "wheels",
+        "parts",
+        "builders"
+      ],
+      "archetypes": [
+        "vehicle"
+      ]
+    },
+    {
+      "id": "models/compare-silhouettes",
+      "topic": "models",
+      "title": "Compare silhouettes with photos, in the same pose",
+      "symptom": "A shape check scored badly although the model was right.",
+      "cause": "A raised launcher in the photo dominated the comparison, because the model was in its rest pose.",
+      "fix": "Overlay the model's silhouette on a photo mask only when the pose matches.",
+      "tags": [
+        "silhouette",
+        "photo",
+        "proportions",
+        "compare"
+      ]
+    },
+    {
+      "id": "models/real-finish",
+      "topic": "models",
+      "title": "Check the real finish before inventing one",
+      "symptom": "A camouflage pattern looked right but was wrong; every reference showed one solid colour with wear.",
+      "cause": "The finish was guessed from what such things usually look like.",
+      "fix": "Look at references for colour and wear before texturing.",
+      "tags": [
+        "texture",
+        "camouflage",
+        "paint",
+        "reference"
+      ]
+    },
+    {
+      "id": "models/module-width",
+      "topic": "models",
+      "title": "The width of a module is not the width of what it carries",
+      "symptom": "A mounted module came out half as wide as the real one.",
+      "cause": "The size from the manual described only the inner container, not the housings around it.",
+      "fix": "Measure the visible outside of a module, not its payload.",
+      "tags": [
+        "dimensions",
+        "module",
+        "container",
+        "reference"
+      ]
+    },
+    {
+      "id": "models/details-on-the-skin",
+      "topic": "models",
+      "title": "Project details onto the mesh you actually render",
+      "symptom": "Side consoles stood 4 cm outside the hull, an inner lining cut through the skin in hundreds of places, and trim floated 3 cm off it.",
+      "cause": "Details were placed on a mathematical surface that differed from the lofted mesh that is drawn.",
+      "fix": "Use one shape function for both, or project details onto the final mesh, and check that trim stays within a few millimetres of the skin.",
+      "tags": [
+        "details",
+        "skin",
+        "hull",
+        "interior",
+        "trim",
+        "intersections"
+      ],
+      "archetypes": [
+        "aircraft",
+        "vessel",
+        "vehicle"
+      ]
+    },
+    {
+      "id": "models/heavy-models-need-lods",
+      "topic": "models",
+      "title": "Heavy models need levels of detail",
+      "symptom": "A model of well over a million triangles was fine in a close-up and far too heavy as traffic.",
+      "cause": "One level of detail served every distance.",
+      "fix": "Set a budget per use: a hero helicopter about 350 to 600 thousand triangles outside plus its cockpit, a traffic car 22 to 70 thousand, with each lower level a fifth of the one above.",
+      "rules": [
+        "model/triangle-budget"
+      ],
+      "tags": [
+        "lod",
+        "triangles",
+        "budget",
+        "traffic"
+      ],
+      "archetypes": [
+        "vehicle",
+        "aircraft",
+        "vessel"
+      ]
+    },
+    {
+      "id": "models/reproducible-builds",
+      "topic": "models",
+      "title": "A model build should give the same file every time",
+      "symptom": "Two builds of the same model had different checksums, so nobody could tell whether a change was intended.",
+      "cause": "Noise was seeded with a hash that changes per process, and the export tool did not write the same bytes twice.",
+      "fix": "Seed with a stable checksum of the name, write the file with a deterministic writer, and compare checksums of two builds.",
+      "tags": [
+        "build",
+        "reproducible",
+        "seed",
+        "checksum",
+        "deterministic"
+      ]
+    },
+    {
+      "id": "performance/one-frame-burst",
+      "topic": "performance",
+      "title": "Spread spawning, building and unloading over frames",
+      "symptom": "Frames of 0.6 s to over a minute: seventeen vehicles and a hundred and thirty people spawned in one frame, a district of forty thousand nodes built at once, fifty physics bodies added in one step.",
+      "cause": "Loading, instancing and adding nodes all happened on the main thread in one frame; freeing a big part also runs in one go.",
+      "fix": "Request scenes early with ResourceLoader.load_threaded_request(), parse models on the WorkerThreadPool, add parts a few per frame (check is_inside_tree() after each await), and free large parts in small slices.",
+      "test": "No frame over 100 ms in which the node count grows by more than a few hundred.",
+      "tags": [
+        "spawn",
+        "hitch",
+        "stutter",
+        "loading",
+        "threads",
+        "add_child"
+      ]
+    },
+    {
+      "id": "performance/glb-on-main-thread",
+      "topic": "performance",
+      "title": "Parsing a glTF on the main thread costs about 13 to 15 ms per MB",
+      "symptom": "A freeze of 2 to 5 seconds each time a vehicle appeared.",
+      "cause": "The model was parsed, built and its textures read back from the GPU and uploaded again, all in one frame.",
+      "fix": "Parse on a worker thread while the world loads, decode images from the file data instead of reading them back, and upload one texture per frame.",
+      "rules": [
+        "performance/runtime-gltf-mipmaps"
+      ],
+      "tags": [
+        "gltf",
+        "glb",
+        "loading",
+        "freeze",
+        "threads",
+        "spawn"
+      ]
+    },
+    {
+      "id": "performance/throttle-that-never-runs",
+      "topic": "performance",
+      "title": "A retry timer must also run when the lookup found nothing",
+      "symptom": "A search over the whole scene tree ran 120 times per second.",
+      "cause": "The cached lookup retried whenever the node was missing, and the timer that should slow the retries only ran when it was found.",
+      "fix": "Throttle the search itself: wait for the timer before every new search, whatever the last result was. Distance triggers need a minimum time between runs too, or they run every frame at high speed.",
+      "rules": [
+        "performance/node-lookup-per-frame"
+      ],
+      "tags": [
+        "throttle",
+        "find_child",
+        "cache",
+        "lookup",
+        "every frame"
+      ]
+    },
+    {
+      "id": "performance/pool-effects",
+      "topic": "performance",
+      "title": "Pool effects instead of creating nodes per impact",
+      "symptom": "Hundreds of particle, decal and light nodes per second in a firefight.",
+      "cause": "Every hit created and freed its own nodes.",
+      "fix": "Keep a few particle systems per effect and use emit_particle(), and reuse decals and lights from a pool; one burst then adds a handful of nodes instead of hundreds.",
+      "rules": [
+        "performance/instantiate-per-frame"
+      ],
+      "tags": [
+        "particles",
+        "effects",
+        "pool",
+        "impact",
+        "nodes"
+      ]
+    },
+    {
+      "id": "performance/redraw-only-on-change",
+      "topic": "performance",
+      "title": "Redraw a heavy custom drawing only when it changes",
+      "symptom": "A map screen took 45 ms per redraw and ran at 12 fps, because it redrew on every mouse move.",
+      "cause": "queue_redraw() was called for every input event, and static layers were drawn again each time.",
+      "fix": "Redraw only when something on it changed, and bake static layers into a mesh that is drawn with one call.",
+      "tags": [
+        "draw",
+        "map",
+        "ui",
+        "queue_redraw",
+        "fps"
+      ]
+    },
+    {
+      "id": "performance/gpu-readback",
+      "topic": "performance",
+      "title": "Reading a texture back from the GPU stalls the frame",
+      "symptom": "Frames of 50 to 60 ms in the first minute, from hundreds of texture reads.",
+      "cause": "get_image() on a texture waits for the GPU to copy it back.",
+      "fix": "Keep the image you uploaded, or read it back asynchronously; never call get_image() in a loop over materials.",
+      "tags": [
+        "texture",
+        "get_image",
+        "gpu",
+        "stall",
+        "readback"
+      ]
+    },
+    {
+      "id": "process/tests-that-cannot-fail",
+      "topic": "process",
+      "title": "A headless test must be able to fail",
+      "symptom": "Tests reported success while the log was full of script errors; one test hung forever.",
+      "cause": "Godot exits with code 0 after a script error, the output went through a filter without pipefail, and a script error stopped the function before it could quit.",
+      "fix": "Require an explicit pass line, scan the log for script and parse errors, compare errors with a known baseline, and add a watchdog or a frame limit.",
+      "test": "Break the code on purpose once and see the test fail.",
+      "tags": [
+        "test",
+        "headless",
+        "ci",
+        "exit code",
+        "pipefail"
+      ]
+    },
+    {
+      "id": "process/scenetree-test-initialize",
+      "topic": "process",
+      "title": "In a SceneTree test script, wait a frame before reading global positions",
+      "symptom": "Over a hundred thousand errors that a node is not inside the tree, distances of minus 201 m and speeds of a million m/s.",
+      "cause": "In _initialize() the nodes added to the root are not in the tree yet, so their global transforms are identity.",
+      "fix": "Await process_frame after adding the scene and before the first check.",
+      "tags": [
+        "test",
+        "headless",
+        "SceneTree",
+        "is_inside_tree",
+        "global_position"
+      ],
+      "errors": [
+        "!is_inside_tree()"
+      ]
+    },
+    {
+      "id": "process/verify-with-images",
+      "topic": "process",
+      "title": "Verify with images, not with claims",
+      "symptom": "Helpers reported that a model looked right when the render showed otherwise.",
+      "cause": "No one looked at a picture before saying it was done.",
+      "fix": "End every visual step with a render that is actually looked at, from fixed views.",
+      "tags": [
+        "render",
+        "screenshot",
+        "verify",
+        "review"
+      ]
+    },
+    {
+      "id": "process/background-work-lost",
+      "topic": "process",
+      "title": "Long background work can be lost",
+      "symptom": "A restart of the machine stopped all running work.",
+      "cause": "Results were only in memory or in the session.",
+      "fix": "Write results to files as you go and resume from them.",
+      "tags": [
+        "background",
+        "resume",
+        "restart",
+        "checkpoint"
+      ]
+    },
+    {
+      "id": "process/patch-tools",
+      "topic": "tooling",
+      "title": "Patch tools must match exactly once and undo everything on any error",
+      "symptom": "Patches failed on files with Windows line endings, matched another feature's code, rewrote accented characters, or left a half-installed game after an interrupt.",
+      "cause": "Anchors were plain text searches, encoding was not kept, and the backup was only restored for some errors.",
+      "fix": "Make line endings the same before matching, require each anchor to match exactly once, keep the file's encoding, restore the backup on any error or interrupt, check for drift right before applying, and accept the result only when it has no new compile errors.",
+      "tags": [
+        "patch",
+        "installer",
+        "rollback",
+        "encoding",
+        "line endings",
+        "drift"
+      ]
+    },
+    {
+      "id": "process/measure-the-export",
+      "topic": "process",
+      "title": "Measure performance with the export template, in alternating blocks",
+      "symptom": "A fix that helped in tests did nothing in the game, and gates with a 5 % margin failed under normal load.",
+      "cause": "Tests ran with the editor binary or headless, where some features differ and no frames are drawn; the measuring probes cost time themselves.",
+      "fix": "Measure the exported game, switch a change on and off in alternating blocks and use the median, give gates enough margin, and note what the probes cost.",
+      "tags": [
+        "performance",
+        "measure",
+        "export",
+        "benchmark",
+        "fps",
+        "median"
+      ]
+    },
+    {
+      "id": "process/kill-switch",
+      "topic": "process",
+      "title": "Give every change a switch to turn it off",
+      "symptom": "Comparing with and without a change meant reinstalling the game.",
+      "cause": "Changes were built in without a way to disable them.",
+      "fix": "Let each change check a flag (a file or a setting) that turns it off, for comparisons and for a quick way back.",
+      "tags": [
+        "switch",
+        "flag",
+        "rollback",
+        "a/b test"
+      ]
+    },
+    {
+      "id": "process/cache-keys",
+      "topic": "process",
+      "title": "A cache key should hold only what the cached result depends on",
+      "symptom": "A baked cache was thrown away on every install, adding 20 s to every cold start.",
+      "cause": "The key hashed every script and the start location, so any change made a new cache.",
+      "fix": "Hash only the code and the inputs the result depends on, and check stored values against fresh ones now and then.",
+      "tags": [
+        "cache",
+        "bake",
+        "startup",
+        "hash",
+        "loading"
+      ]
+    }
+  ]
+}

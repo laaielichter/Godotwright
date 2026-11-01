@@ -97,7 +97,7 @@ describe("learning store", () => {
     expect(data.lastMiss).toBeUndefined();
     expect(data.missedByReview).toEqual({});
     expect(data.unparsed).toEqual({});
-    expect(data.sharing).toEqual({ enabled: true, sent: { rules: {}, apiMisses: {}, missedByReview: {}, unparsed: {} } });
+    expect(data.sharing).toEqual({ enabled: true, sent: { rules: {}, apiMisses: {}, missedByReview: {}, unparsed: {}, lessons: {} } });
   });
 
   it("keeps review, api and learn working on such a file", async () => {

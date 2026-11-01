@@ -4,6 +4,7 @@ import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { learnCommand } from "./commands/learn.js";
+import { lessonsCommand } from "./commands/lessons.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { modelCommand } from "./commands/model.js";
 import { reviewCommand } from "./commands/review.js";
@@ -45,6 +46,7 @@ export function createProgram(): Command {
     .addCommand(modelCommand())
     .addCommand(mcpCommand())
     .addCommand(learnCommand())
+    .addCommand(lessonsCommand())
     .addCommand(collectorCommand())
     .hook("postAction", async (_program, action) => {
       // The MCP server keeps running and shares on its own; learn commands manage sharing.

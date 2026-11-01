@@ -3,6 +3,8 @@ import { GodotApi } from "../api/api.js";
 import { parseFindingLine, recordFeedback, type Verdict } from "../learn/learn.js";
 import { buildReport, setSharing, shareBlocked, shareEndpoint } from "../learn/share.js";
 import { learningFile, readLearning, resetLearning, saveLearning, type LearningData } from "../learn/store.js";
+import { bundledLearning } from "../learn/bundled.js";
+import { findGaps, formatGaps, lessonSummary } from "../lessons/format.js";
 import { writeOut } from "./output.js";
 
 /** Saves the local learning switch, or fails with the reason: a choice that did not stick must not be reported as made. */
@@ -39,6 +41,8 @@ export function learnCommand(): Command {
         `Godot errors the review missed: ${Object.values(data.missedByReview).reduce((a, b) => a + b, 0)}`,
         `Godot messages not tied to a file: ${Object.values(data.unparsed).reduce((a, b) => a + b, 0)}`,
         `findings marked as wrong: ${Object.keys(data.dismissed).length}`,
+        ...lessonSummary(data),
+        "what to teach next: godotwright learn gaps",
       ];
       writeOut(command, `${lines.join("\n")}\n`);
     });
@@ -111,6 +115,16 @@ export function learnCommand(): Command {
       }
       setEnabled(false);
       writeOut(command, `deleted ${learningFile()}\nlocal learning stays off (learn on turns it back on)\n`);
+    });
+
+  learn
+    .command("gaps")
+    .description("the Godot errors the review did not predict and no lesson explains yet: what to teach Godotwright next")
+    .option("--limit <n>", "at most this many (default 20)", "20")
+    .action((options: { limit: string }, command: Command) => {
+      const limit = Number(options.limit);
+      if (!Number.isInteger(limit) || limit < 1) throw new Error("limit must be a whole number above 0");
+      writeOut(command, formatGaps(findGaps(readLearning(), bundledLearning(), limit)));
     });
 
   learn
