@@ -20,7 +20,8 @@ Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript
   <a href="ROADMAP.md">Roadmap</a>
 </p>
 <p align="center">
-  <img src="docs/demo.svg" alt="godotwright review scores a Godot project 50/100 and lists errors such as Cannot extend KinematicBody2D, export var is @export var in Godot 4, and a connection to a signal that does not exist" width="860">
+  <img src="docs/demo.gif" alt="Demo: godotwright review gives a Godot 3 player script 74/100, godotwright migrate rewrites KinematicBody2D, export var, onready var and yield, and after the last fix by hand the review gives 100/100" width="860"><br>
+  <sub>Real output of godotwright 0.1.0. <a href="https://laaielichter.github.io/Godotwright/demo.mp4">Watch as video</a></sub>
 </p>
 
 Coding agents learned Godot from years of Godot 3 tutorials. They write `yield`,
