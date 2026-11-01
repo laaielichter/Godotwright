@@ -1,0 +1,13 @@
+# Store text files with LF line endings, whatever the editor or OS uses,
+# so a Windows checkout cannot turn a one-line change into a whole-file diff.
+* text=auto eol=lf
+
+# Binary files: never touch them.
+*.png binary
+*.jpg binary
+*.gif binary
+*.mp4 binary
+*.glb binary
+*.gz binary
+*.mcpb binary
+*.zip binary

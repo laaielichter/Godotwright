@@ -6,7 +6,7 @@ import { formatFinding } from "../src/review/format.js";
 import { reviewProject } from "../src/review/review.js";
 import { formatProjectMap } from "../src/scan/format.js";
 import { listedFiles, loadProject, scanProject } from "../src/scan/scan.js";
-import { makeProject, runCli } from "./helpers.js";
+import { CAN_SYMLINK, makeProject, runCli } from "./helpers.js";
 
 const PROJECT = (name: string, extra = "") => `[application]\nconfig/name="${name}"\nrun/main_scene="res://main.tscn"\nconfig/features=PackedStringArray("4.7")\n${extra}`;
 
@@ -218,7 +218,7 @@ describe("super(...)", () => {
 });
 
 describe("project files", () => {
-  it("follows symlinked folders, once per real folder", async () => {
+  it.skipIf(!CAN_SYMLINK)("follows symlinked folders, once per real folder", async () => {
     const { symlinkSync, mkdirSync } = await import("node:fs");
     const shared = makeProject({ "lib/tool.gd": "extends Node\n" });
     const root = makeProject({ "project.godot": '[application]\nconfig/name="T"\n' });
