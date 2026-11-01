@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: laaielichter/godotwright@v0.1.0
+      - uses: laaielichter/godotwright@v0.2.0
         with: { comment: "true" }
 ```
 
