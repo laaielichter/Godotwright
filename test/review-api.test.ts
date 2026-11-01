@@ -92,6 +92,14 @@ describe("Godot 3 syntax", () => {
     ]);
   });
 
+  it("suggests the Packed type when a Godot 3 Pool array is called as a constructor", () => {
+    const [finding] = findings(
+      ["extends Node", "", "func _ready() -> void:", "\tvar names = PoolStringArray()"].join("\n"),
+    ).filter((l) => l.includes("[api/unknown-function]"));
+    expect(finding).toContain("`PackedStringArray`");
+    expect(finding).not.toContain("Did you mean");
+  });
+
   it("does not report funcref() as an unknown function as well", () => {
     expect(
       findings(
