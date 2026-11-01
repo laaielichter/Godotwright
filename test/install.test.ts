@@ -35,14 +35,19 @@ describe("Claude Code plugin and marketplace", () => {
     expect(existsSync(path(`${entry.source.slice(2)}/.claude-plugin/plugin.json`))).toBe(true);
   });
 
-  it("has the package version and starts the MCP server of that version for the open project", () => {
+  it("has the package version and starts the MCP server of that version", () => {
     expect(plugin.version).toBe(pkg.version);
     expect(Object.keys(mcp.mcpServers)).toEqual(["godotwright"]);
-    expect(pinnedArgs(mcp.mcpServers["godotwright"]!)).toEqual(["mcp", "--tier", "premium", "--project", "${CLAUDE_PROJECT_DIR}"]);
+    // No variable other than CLAUDE_PLUGIN_ROOT in the command, as the plugin directory asks. The server finds the
+    // project from the folder Claude Code runs in.
+    expect(pinnedArgs(mcp.mcpServers["godotwright"]!)).toEqual(["mcp", "--tier", "premium"]);
   });
 
-  it("ships an icon and a skill file for each skill folder", () => {
+  it("ships an icon, a README of at least 40 words, a license and a skill file for each skill folder", () => {
     expect(existsSync(path("plugins/godotwright/.claude-plugin/icon.png"))).toBe(true);
+    expect(existsSync(path("plugins/godotwright/LICENSE"))).toBe(true);
+    const readme = readFileSync(path("plugins/godotwright/README.md"), "utf8").replace(/```[\s\S]*?```/g, "");
+    expect(readme.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(40);
     for (const skill of ["godot", "review", "port"]) {
       const text = readFileSync(path(`plugins/godotwright/skills/${skill}/SKILL.md`), "utf8");
       expect(text).toMatch(new RegExp(`^---\\nname: ${skill}\\ndescription: .+`, "m"));

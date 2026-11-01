@@ -7,9 +7,7 @@
         "godotwright@0.2.0",
         "mcp",
         "--tier",
-        "premium",
-        "--project",
-        "${CLAUDE_PROJECT_DIR}"
+        "premium"
       ]
     }
   }
