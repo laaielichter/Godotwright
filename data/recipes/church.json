@@ -50,13 +50,12 @@
   },
   "church_dress": {
    "color": [
-    0.5,
-    0.46,
-    0.39
+    0.42,
+    0.39,
+    0.33
    ],
    "metallic": 0,
-   "roughness": 0.8,
-   "texture": "stone"
+   "roughness": 0.8
   },
   "church_glass": {
    "color": [
@@ -75,16 +74,6 @@
    ],
    "metallic": 0,
    "roughness": 0.95
-  },
-  "church_door": {
-   "color": [
-    0.2,
-    0.075,
-    0.03
-   ],
-   "metallic": 0,
-   "roughness": 0.7,
-   "texture": "wood"
   },
   "church_louvre": {
    "color": [
@@ -1796,7 +1785,7 @@
         0.3,
         "$tw / 2"
        ],
-       "material": "church_door",
+       "material": "wood",
        "children": [
         {
          "name": "Seam",

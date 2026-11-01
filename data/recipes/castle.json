@@ -69,6 +69,15 @@
    "metallic": 0.7,
    "roughness": 0.55
   },
+  "castle_earth": {
+   "color": [
+    0.13,
+    0.1,
+    0.065
+   ],
+   "metallic": 0,
+   "roughness": 1
+  },
   "castle_banner": {
    "color": [
     0.42,
@@ -117,7 +126,7 @@
       0.025,
       0
      ],
-     "material": "grass"
+     "material": "castle_earth"
     },
     {
      "name": "Wall_B",
