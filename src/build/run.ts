@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, constants, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
 import { loadLibrary } from "../archetype/library.js";
 import { contractFromModel } from "../model/contract.js";
@@ -67,11 +67,44 @@ export function buildModel(request: BuildRequest): BuildOutcome {
   mkdirSync(dirname(request.out), { recursive: true });
   writeFileSync(request.out, buildGlb(scene));
   const extra: string[] = [];
-  /** Writes a file next to the model, but never through a link: that would change the file it points to. */
+  const NOFOLLOW = constants.O_NOFOLLOW ?? 0;
+  /** Opens a file next to the model, never through a link: O_NOFOLLOW makes the open itself refuse one (not on Windows). */
+  const open = (file: string, flags: number): number => {
+    try {
+      return openSync(file, flags | NOFOLLOW, 0o644);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ELOOP") throw new BuildError(`${file} is a link; not writing through it`);
+      throw error;
+    }
+  };
+  const write = (fd: number, text: string): void => {
+    try {
+      writeSync(fd, text);
+    } finally {
+      closeSync(fd);
+    }
+  };
+  /** Writes (or replaces) a file next to the model. */
   const writeBeside = (file: string, text: string): void => {
-    if (existsSync(file) && lstatSync(file).isSymbolicLink()) throw new BuildError(`${file} is a link; not writing through it`);
-    writeFileSync(file, text);
+    write(open(file, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC), text);
     extra.push(file);
+  };
+  /** Writes a new file next to the model; an existing one is left as it is. Says whether it now holds `text`. */
+  const writeNew = (file: string, text: string): "written" | "same" | "kept" => {
+    try {
+      write(open(file, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL), text);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const fd = open(file, constants.O_RDONLY);
+      let current: string;
+      try {
+        current = readFileSync(fd, "utf8");
+      } finally {
+        closeSync(fd);
+      }
+      return current === text ? "same" : "kept";
+    }
+    return "written";
   };
   let collisionNote = "";
   if (request.collision === "heightmap" && scene.heightmap) {
@@ -84,8 +117,8 @@ export function buildModel(request: BuildRequest): BuildOutcome {
     if (root) {
       const sceneFile = `${stem}.tscn`;
       const text = heightmapSceneText(res(request.out), res(shapeFile), map.step);
-      if (!existsSync(sceneFile) || readFileSync(sceneFile, "utf8") === text) {
-        writeBeside(sceneFile, text);
+      if (writeNew(sceneFile, text) !== "kept") {
+        extra.push(sceneFile);
         collisionNote = `; ${sceneFile}: the tile with a StaticBody3D and its HeightMapShape3D (${map.size} x ${map.size} points, ${map.step} m apart), ready to place`;
       } else {
         collisionNote = `; ${sceneFile} exists and was kept: give its CollisionShape3D the shape ${res(shapeFile)} and a uniform scale of ${map.step}`;

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -67,6 +67,21 @@ describe("model build --collision heightmap", () => {
     expect(outcome.extra).toEqual([join(root, "t.heightmap.tres")]);
     expect(outcome.summary).toContain("exists and was kept");
     expect(outcome.summary).toContain("uniform scale of 8");
+  });
+
+  it("never writes through a link, and leaves an identical scene as it is", () => {
+    const root = makeProject({ "project.godot": PROJECT });
+    const outside = mkdtempSync(join(tmpdir(), "gw-hm-outside-"));
+    writeFileSync(join(outside, "target.txt"), "keep me");
+    symlinkSync(join(outside, "target.txt"), join(root, "t.heightmap.tres"));
+    expect(() => buildModel({ kind: "terrain", params: { resolution: "33" }, out: join(root, "t.glb"), collision: "heightmap" })).toThrow(/is a link/);
+    expect(readFileSync(join(outside, "target.txt"), "utf8")).toBe("keep me");
+
+    const again = makeProject({ "project.godot": PROJECT });
+    const first = buildModel({ kind: "terrain", params: { resolution: "33" }, out: join(again, "t.glb"), collision: "heightmap" });
+    const second = buildModel({ kind: "terrain", params: { resolution: "33" }, out: join(again, "t.glb"), collision: "heightmap" });
+    expect(second.extra).toEqual(first.extra);
+    expect(second.summary).toContain("ready to place");
   });
 
   it("writes only the shape outside a Godot project", () => {
