@@ -2,7 +2,7 @@
  "version": 1,
  "name": "barn",
  "archetype": "building.barn",
- "description": "A farm barn: a long box with a gable roof, a big double door in the +Z gable end, a hayloft hatch above it and a row of small windows along both long sides.",
+ "description": "A farm barn: board-and-batten timber walls in barn red on a stone plinth, a slate gable roof with white barge boards, fascias and a ridge cupola with a weathervane, big hinged double doors with white X-braced frames in the +Z gable end, a hayloft hatch with a hay beam above them, a lamp over the doors and a row of four-pane windows along both long sides.",
  "params": [
   {
    "name": "length",
@@ -40,21 +40,69 @@
  "materials": {
   "barn_wood": {
    "color": [
-    0.45,
-    0.2,
-    0.15
+    0.3,
+    0.05,
+    0.032
    ],
    "metallic": 0,
-   "roughness": 0.85
+   "roughness": 0.85,
+   "texture": "wood"
   },
   "barn_dark": {
    "color": [
-    0.12,
-    0.09,
-    0.07
+    0.03,
+    0.022,
+    0.016
    ],
    "metallic": 0,
-   "roughness": 0.9
+   "roughness": 0.95
+  },
+  "barn_stone": {
+   "color": [
+    0.36,
+    0.34,
+    0.31
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "texture": "stone"
+  },
+  "barn_roof": {
+   "color": [
+    0.075,
+    0.08,
+    0.085
+   ],
+   "metallic": 0,
+   "roughness": 0.65,
+   "texture": "roof_slate"
+  },
+  "barn_window": {
+   "color": [
+    0.025,
+    0.035,
+    0.045
+   ],
+   "metallic": 0.1,
+   "roughness": 0.08
+  },
+  "barn_iron": {
+   "color": [
+    0.06,
+    0.06,
+    0.065
+   ],
+   "metallic": 0.8,
+   "roughness": 0.45
+  },
+  "barn_lamp": {
+   "color": [
+    0.02,
+    0.09,
+    0.05
+   ],
+   "metallic": 0.6,
+   "roughness": 0.35
   }
  },
  "nodes": [
@@ -63,88 +111,1535 @@
    "material": "barn_wood",
    "vars": {
     "L2": "$length / 2",
-    "W2": "$width / 2"
+    "W2": "$width / 2",
+    "h": "$wallHeight",
+    "r": "$roofRise",
+    "pl": 0.45,
+    "oh": 0.5,
+    "ohg": 0.45,
+    "t": 0.22,
+    "th": "atan($r / $W2)",
+    "S2": "($W2 + $oh) / cos($th) + $t * tan($th)",
+    "ridge": "$h + $r + $t / cos($th)",
+    "dw": "min($width * 0.5, 4.5)",
+    "dh": "min($wallHeight * 0.8, 3.6)",
+    "hs": "min(1.5, $r * 0.42)",
+    "hy": "$h + $r * 0.36",
+    "nw": "max(1, floor(($length - 2) / 3.6))",
+    "cw": "clamp($width * 0.14, 1.1, 2.2)"
    },
    "children": [
+    {
+     "name": "Plinth",
+     "shape": "box",
+     "size": [
+      "$width + 0.12",
+      "$pl",
+      "$length + 0.12"
+     ],
+     "at": [
+      0,
+      "$pl / 2",
+      0
+     ],
+     "material": "barn_stone",
+     "bevel": 0.03
+    },
     {
      "name": "Walls",
      "shape": "box",
      "size": [
+      "$h - $pl + 0.05",
       "$width",
-      "$wallHeight",
       "$length"
      ],
      "at": [
       0,
-      "$wallHeight / 2",
+      "($h + $pl - 0.05) / 2",
       0
+     ],
+     "rotate": [
+      0,
+      0,
+      90
+     ],
+     "children": [
+      {
+       "name": "Gables",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": "-$L2",
+         "points": [
+          [
+           "(-0.01) + 0.015 * ((-0.01) - (-0.01)) / hypot(((-0.01) - (-0.01)), ((-$W2) - ($W2)))",
+           "($W2) + 0.015 * ((-$W2) - ($W2)) / hypot(((-0.01) - (-0.01)), ((-$W2) - ($W2)))"
+          ],
+          [
+           "(-0.01) + 0.015 * (($r - 0.03) - (-0.01)) / hypot((($r - 0.03) - (-0.01)), ((0) - ($W2)))",
+           "($W2) + 0.015 * ((0) - ($W2)) / hypot((($r - 0.03) - (-0.01)), ((0) - ($W2)))"
+          ],
+          [
+           "($r - 0.03) + 0.015 * ((-0.01) - ($r - 0.03)) / hypot(((-0.01) - ($r - 0.03)), (($W2) - (0)))",
+           "(0) + 0.015 * (($W2) - (0)) / hypot(((-0.01) - ($r - 0.03)), (($W2) - (0)))"
+          ],
+          [
+           "($r - 0.03) + 0.015 * ((-0.01) - ($r - 0.03)) / hypot(((-0.01) - ($r - 0.03)), ((-$W2) - (0)))",
+           "(0) + 0.015 * ((-$W2) - (0)) / hypot(((-0.01) - ($r - 0.03)), ((-$W2) - (0)))"
+          ],
+          [
+           "(-0.01) + 0.015 * (($r - 0.03) - (-0.01)) / hypot((($r - 0.03) - (-0.01)), ((0) - (-$W2)))",
+           "(-$W2) + 0.015 * ((0) - (-$W2)) / hypot((($r - 0.03) - (-0.01)), ((0) - (-$W2)))"
+          ],
+          [
+           "(-0.01) + 0.015 * ((-0.01) - (-0.01)) / hypot(((-0.01) - (-0.01)), (($W2) - (-$W2)))",
+           "(-$W2) + 0.015 * (($W2) - (-$W2)) / hypot(((-0.01) - (-0.01)), (($W2) - (-$W2)))"
+          ]
+         ]
+        },
+        {
+         "z": "$L2",
+         "points": [
+          [
+           "(-0.01) + 0.015 * ((-0.01) - (-0.01)) / hypot(((-0.01) - (-0.01)), ((-$W2) - ($W2)))",
+           "($W2) + 0.015 * ((-$W2) - ($W2)) / hypot(((-0.01) - (-0.01)), ((-$W2) - ($W2)))"
+          ],
+          [
+           "(-0.01) + 0.015 * (($r - 0.03) - (-0.01)) / hypot((($r - 0.03) - (-0.01)), ((0) - ($W2)))",
+           "($W2) + 0.015 * ((0) - ($W2)) / hypot((($r - 0.03) - (-0.01)), ((0) - ($W2)))"
+          ],
+          [
+           "($r - 0.03) + 0.015 * ((-0.01) - ($r - 0.03)) / hypot(((-0.01) - ($r - 0.03)), (($W2) - (0)))",
+           "(0) + 0.015 * (($W2) - (0)) / hypot(((-0.01) - ($r - 0.03)), (($W2) - (0)))"
+          ],
+          [
+           "($r - 0.03) + 0.015 * ((-0.01) - ($r - 0.03)) / hypot(((-0.01) - ($r - 0.03)), ((-$W2) - (0)))",
+           "(0) + 0.015 * ((-$W2) - (0)) / hypot(((-0.01) - ($r - 0.03)), ((-$W2) - (0)))"
+          ],
+          [
+           "(-0.01) + 0.015 * (($r - 0.03) - (-0.01)) / hypot((($r - 0.03) - (-0.01)), ((0) - (-$W2)))",
+           "(-$W2) + 0.015 * ((0) - (-$W2)) / hypot((($r - 0.03) - (-0.01)), ((0) - (-$W2)))"
+          ],
+          [
+           "(-0.01) + 0.015 * ((-0.01) - (-0.01)) / hypot(((-0.01) - (-0.01)), (($W2) - (-$W2)))",
+           "(-$W2) + 0.015 * (($W2) - (-$W2)) / hypot(((-0.01) - (-0.01)), (($W2) - (-$W2)))"
+          ]
+         ]
+        }
+       ],
+       "at": [
+        "($h - $pl + 0.05) / 2",
+        0,
+        0
+       ]
+      }
      ]
     },
     {
      "name": "Roof",
-     "shape": "roof",
-     "material": "roof_slate",
-     "x0": "-$W2 - 0.4",
-     "x1": "$W2 + 0.4",
-     "z0": "-$L2 - 0.4",
-     "z1": "$L2 + 0.4",
-     "y": "$wallHeight",
-     "rise": "$roofRise",
-     "kind": "gable"
+     "children": [
+      {
+       "name": "SlopeL",
+       "shape": "box",
+       "size": [
+        "$length + 2 * $ohg",
+        "$t",
+        "$S2"
+       ],
+       "at": [
+        "-($W2 + $oh) / 2",
+        "$h + ($W2 - $oh) / 2 * tan($th) + $t / 2 * cos($th) + $t * tan($th) / 2 * sin($th)",
+        0
+       ],
+       "material": "barn_roof",
+       "rotate": [
+        0,
+        90,
+        "deg($th)"
+       ],
+       "mirror": "SlopeR"
+      },
+      {
+       "name": "Ridge",
+       "shape": "cylinder",
+       "radius": 0.15,
+       "height": "$length + 2 * $ohg + 0.1",
+       "at": [
+        0,
+        "$ridge - 0.04",
+        0
+       ],
+       "material": "barn_roof",
+       "axis": "z",
+       "segments": 12
+      },
+      {
+       "name": "FasciaL",
+       "shape": "box",
+       "size": [
+        0.06,
+        0.3,
+        "$length + 2 * $ohg + 0.04"
+       ],
+       "at": [
+        "-$W2 - $oh - 0.03",
+        "$h - $oh * tan($th) + 0.06",
+        0
+       ],
+       "material": "frame_white",
+       "mirror": "FasciaR"
+      },
+      {
+       "name": "BargeFL",
+       "shape": "box",
+       "size": [
+        0.08,
+        0.36,
+        "$S2"
+       ],
+       "at": [
+        "-($W2 + $oh) / 2 + 0.05 * sin($th)",
+        "($h + ($W2 - $oh) / 2 * tan($th) + $t / 2 * cos($th) + $t * tan($th) / 2 * sin($th)) - 0.06 * cos($th)",
+        "$L2 + $ohg + 0.04"
+       ],
+       "material": "frame_white",
+       "rotate": [
+        0,
+        90,
+        "deg($th)"
+       ],
+       "mirror": "BargeFR"
+      },
+      {
+       "name": "BargeBL",
+       "shape": "box",
+       "size": [
+        0.08,
+        0.36,
+        "$S2"
+       ],
+       "at": [
+        "-($W2 + $oh) / 2 + 0.05 * sin($th)",
+        "($h + ($W2 - $oh) / 2 * tan($th) + $t / 2 * cos($th) + $t * tan($th) / 2 * sin($th)) - 0.06 * cos($th)",
+        "-$L2 - $ohg - 0.04"
+       ],
+       "material": "frame_white",
+       "rotate": [
+        0,
+        90,
+        "deg($th)"
+       ],
+       "mirror": "BargeBR"
+      },
+      {
+       "name": "GutterL",
+       "shape": "tube",
+       "path": [
+        [
+         "-$W2 - $oh + 0.04",
+         "$h - $oh * tan($th) - 0.06",
+         "-$L2 - $ohg"
+        ],
+        [
+         "-$W2 - $oh + 0.04",
+         "$h - $oh * tan($th) - 0.06",
+         "$L2 + $ohg"
+        ]
+       ],
+       "material": "metal",
+       "segments": 8,
+       "mirror": "GutterR",
+       "radius": 0.08
+      },
+      {
+       "name": "Downpipe_L{i}",
+       "shape": "tube",
+       "path": [
+        [
+         "-$W2 - $oh + 0.04",
+         "$h - $oh * tan($th) - 0.1",
+         0
+        ],
+        [
+         "-$W2 - 0.1",
+         "$h - $oh * tan($th) - 0.45",
+         0
+        ],
+        [
+         "-$W2 - 0.1",
+         0.55,
+         0
+        ],
+        [
+         "-$W2 - 0.3",
+         0.25,
+         0
+        ]
+       ],
+       "at": [
+        0,
+        0,
+        "-$L2 + 0.35"
+       ],
+       "material": "metal",
+       "segments": 8,
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0,
+         "$length - 0.7"
+        ]
+       },
+       "mirror": "Downpipe_R{i}",
+       "radius": 0.05
+      }
+     ]
+    },
+    {
+     "name": "Trim",
+     "material": "frame_white",
+     "children": [
+      {
+       "name": "Corner_L{i}",
+       "shape": "box",
+       "size": [
+        0.2,
+        "$h - $pl",
+        0.2
+       ],
+       "at": [
+        "$W2 - 0.06",
+        "($h + $pl) / 2",
+        "-$L2 + 0.06"
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0,
+         "$length - 0.12"
+        ]
+       },
+       "mirror": "Corner_R{i}"
+      },
+      {
+       "name": "GableBand_{i}",
+       "shape": "box",
+       "size": [
+        "$width + 0.16",
+        0.2,
+        0.08
+       ],
+       "at": [
+        0,
+        "$h - 0.02",
+        "-$L2 - 0.02"
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0,
+         "$length + 0.04"
+        ]
+       }
+      }
+     ]
     },
     {
      "name": "Door",
-     "shape": "box",
-     "material": "barn_dark",
-     "size": [
-      "min($width * 0.5, 4.5)",
-      "min($wallHeight * 0.8, 3.6)",
-      0.12
-     ],
-     "at": [
-      0,
-      "min($wallHeight * 0.8, 3.6) / 2",
-      "$L2 + 0.04"
+     "children": [
+      {
+       "name": "Opening",
+       "shape": "box",
+       "size": [
+        "$dw",
+        "$dh",
+        0.08
+       ],
+       "at": [
+        0,
+        "$dh / 2 + 0.05",
+        "$L2 + 0.03"
+       ],
+       "material": "barn_dark"
+      },
+      {
+       "name": "Leaf_L",
+       "at": [
+        "-$dw / 2",
+        0.1,
+        "$L2 + 0.1"
+       ],
+       "mirror": "Leaf_R",
+       "children": [
+        {
+         "name": "Boards",
+         "shape": "box",
+         "size": [
+          "($dh - 0.05)",
+          "($dw / 2)",
+          0.08
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) / 2",
+          0
+         ],
+         "material": "barn_wood",
+         "rotate": [
+          0,
+          0,
+          90
+         ]
+        },
+        {
+         "name": "StileOut",
+         "shape": "box",
+         "size": [
+          0.15,
+          "($dh - 0.05)",
+          0.05
+         ],
+         "at": [
+          0.075,
+          "($dh - 0.05) / 2",
+          0.06
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "StileIn",
+         "shape": "box",
+         "size": [
+          0.15,
+          "($dh - 0.05)",
+          0.05
+         ],
+         "at": [
+          "($dw / 2) - 0.075",
+          "($dh - 0.05) / 2",
+          0.06
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "RailTop",
+         "shape": "box",
+         "size": [
+          "($dw / 2)",
+          0.15,
+          0.05
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) - 0.075",
+          0.06
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "RailMid",
+         "shape": "box",
+         "size": [
+          "($dw / 2)",
+          0.15,
+          0.05
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) / 2",
+          0.06
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "RailLow",
+         "shape": "box",
+         "size": [
+          "($dw / 2)",
+          0.15,
+          0.05
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          0.075,
+          0.06
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "Brace1",
+         "shape": "box",
+         "size": [
+          "hypot((($dw / 2) - 0.3), ((($dh - 0.05)) / 2 - 0.2))",
+          0.12,
+          0.04
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) * 0.25",
+          0.055
+         ],
+         "material": "frame_white",
+         "rotate": [
+          0,
+          0,
+          "1 * deg(atan2(((($dh - 0.05)) / 2 - 0.2), (($dw / 2) - 0.3)))"
+         ]
+        },
+        {
+         "name": "Brace2",
+         "shape": "box",
+         "size": [
+          "hypot((($dw / 2) - 0.3), ((($dh - 0.05)) / 2 - 0.2))",
+          0.12,
+          0.04
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) * 0.25",
+          0.055
+         ],
+         "material": "frame_white",
+         "rotate": [
+          0,
+          0,
+          "-1 * deg(atan2(((($dh - 0.05)) / 2 - 0.2), (($dw / 2) - 0.3)))"
+         ]
+        },
+        {
+         "name": "Brace3",
+         "shape": "box",
+         "size": [
+          "hypot((($dw / 2) - 0.3), ((($dh - 0.05)) / 2 - 0.2))",
+          0.12,
+          0.04
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) * 0.75",
+          0.055
+         ],
+         "material": "frame_white",
+         "rotate": [
+          0,
+          0,
+          "1 * deg(atan2(((($dh - 0.05)) / 2 - 0.2), (($dw / 2) - 0.3)))"
+         ]
+        },
+        {
+         "name": "Brace4",
+         "shape": "box",
+         "size": [
+          "hypot((($dw / 2) - 0.3), ((($dh - 0.05)) / 2 - 0.2))",
+          0.12,
+          0.04
+         ],
+         "at": [
+          "($dw / 2) / 2",
+          "($dh - 0.05) * 0.75",
+          0.055
+         ],
+         "material": "frame_white",
+         "rotate": [
+          0,
+          0,
+          "-1 * deg(atan2(((($dh - 0.05)) / 2 - 0.2), (($dw / 2) - 0.3)))"
+         ]
+        },
+        {
+         "name": "HingeTop",
+         "shape": "box",
+         "size": [
+          "($dw / 2) * 0.55",
+          0.08,
+          0.03
+         ],
+         "at": [
+          "($dw / 2) * 0.275",
+          "($dh - 0.05) - 0.35",
+          0.1
+         ],
+         "material": "barn_iron"
+        },
+        {
+         "name": "HingeLow",
+         "shape": "box",
+         "size": [
+          "($dw / 2) * 0.55",
+          0.08,
+          0.03
+         ],
+         "at": [
+          "($dw / 2) * 0.275",
+          0.35,
+          0.1
+         ],
+         "material": "barn_iron"
+        },
+        {
+         "name": "Handle",
+         "shape": "box",
+         "size": [
+          0.05,
+          0.4,
+          0.06
+         ],
+         "at": [
+          "($dw / 2) - 0.25",
+          "($dh - 0.05) * 0.5",
+          0.12
+         ],
+         "material": "barn_iron"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Doorway",
+     "material": "frame_white",
+     "children": [
+      {
+       "name": "Jamb_L",
+       "shape": "box",
+       "size": [
+        0.18,
+        "$dh + 0.1",
+        0.14
+       ],
+       "at": [
+        "-$dw / 2 - 0.09",
+        "($dh + 0.1) / 2 + 0.05",
+        "$L2 + 0.07"
+       ],
+       "mirror": "Jamb_R"
+      },
+      {
+       "name": "Header",
+       "shape": "box",
+       "size": [
+        "$dw + 0.36",
+        0.2,
+        0.16
+       ],
+       "at": [
+        0,
+        "$dh + 0.25",
+        "$L2 + 0.08"
+       ]
+      }
      ]
     },
     {
      "name": "Hatch",
-     "shape": "box",
-     "material": "barn_dark",
-     "size": [
-      1.2,
-      1.2,
-      0.1
+     "at": [
+      "-$hs / 2",
+      "$hy - $hs * 0.55",
+      "$L2 + 0.02"
      ],
+     "children": [
+      {
+       "name": "Dark",
+       "shape": "box",
+       "size": [
+        "$hs",
+        "$hs * 1.1",
+        0.04
+       ],
+       "at": [
+        "$hs / 2",
+        "$hs * 0.55",
+        0
+       ],
+       "material": "barn_dark"
+      },
+      {
+       "name": "Boards",
+       "shape": "box",
+       "size": [
+        "$hs * 1.1 - 0.1",
+        "$hs - 0.1",
+        0.08
+       ],
+       "at": [
+        "$hs / 2",
+        "$hs * 0.55",
+        0.04
+       ],
+       "material": "barn_wood",
+       "rotate": [
+        0,
+        0,
+        90
+       ]
+      },
+      {
+       "name": "Frame_T",
+       "shape": "box",
+       "size": [
+        "$hs + 0.1",
+        0.12,
+        0.08
+       ],
+       "at": [
+        "$hs / 2",
+        "$hs * 1.1",
+        0.06
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Frame_B",
+       "shape": "box",
+       "size": [
+        "$hs + 0.1",
+        0.12,
+        0.08
+       ],
+       "at": [
+        "$hs / 2",
+        0,
+        0.06
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Frame_L",
+       "shape": "box",
+       "size": [
+        0.12,
+        "$hs * 1.1",
+        0.08
+       ],
+       "at": [
+        0,
+        "$hs * 0.55",
+        0.06
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Frame_R",
+       "shape": "box",
+       "size": [
+        0.12,
+        "$hs * 1.1",
+        0.08
+       ],
+       "at": [
+        "$hs",
+        "$hs * 0.55",
+        0.06
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Brace_A",
+       "shape": "box",
+       "size": [
+        "hypot($hs - 0.1, $hs * 1.1 - 0.1)",
+        0.1,
+        0.04
+       ],
+       "at": [
+        "$hs / 2",
+        "$hs * 0.55",
+        0.08
+       ],
+       "material": "frame_white",
+       "rotate": [
+        0,
+        0,
+        "deg(atan2($hs * 1.1 - 0.1, $hs - 0.1))"
+       ]
+      },
+      {
+       "name": "Brace_B",
+       "shape": "box",
+       "size": [
+        "hypot($hs - 0.1, $hs * 1.1 - 0.1)",
+        0.1,
+        0.04
+       ],
+       "at": [
+        "$hs / 2",
+        "$hs * 0.55",
+        0.08
+       ],
+       "material": "frame_white",
+       "rotate": [
+        0,
+        0,
+        "-deg(atan2($hs * 1.1 - 0.1, $hs - 0.1))"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "HayBeam",
+     "children": [
+      {
+       "name": "Beam",
+       "shape": "box",
+       "size": [
+        0.2,
+        0.22,
+        1.3
+       ],
+       "at": [
+        0,
+        "$hy + $hs * 0.55 + 0.3",
+        "$L2 + 0.55"
+       ],
+       "material": "barn_wood"
+      },
+      {
+       "name": "Pulley",
+       "shape": "cylinder",
+       "radius": 0.12,
+       "height": 0.08,
+       "at": [
+        0,
+        "$hy + $hs * 0.55 + 0.08",
+        "$L2 + 1.05"
+       ],
+       "material": "barn_iron",
+       "axis": "x",
+       "segments": 12
+      },
+      {
+       "name": "Rope",
+       "shape": "cylinder",
+       "radius": 0.015,
+       "height": "$hs * 0.6",
+       "at": [
+        0,
+        "$hy + $hs * 0.25",
+        "$L2 + 1.15"
+       ],
+       "material": "canvas",
+       "segments": 6
+      }
+     ]
+    },
+    {
+     "name": "Lamp",
      "at": [
       0,
-      "$wallHeight + $roofRise * 0.35",
-      "$L2 + 0.1"
+      "min($dh + 0.6, $h - 0.25)",
+      "$L2"
+     ],
+     "children": [
+      {
+       "name": "Plate",
+       "shape": "box",
+       "size": [
+        0.16,
+        0.24,
+        0.04
+       ],
+       "at": [
+        0,
+        0,
+        0.02
+       ],
+       "material": "barn_lamp"
+      },
+      {
+       "name": "Arm",
+       "shape": "tube",
+       "path": [
+        [
+         0,
+         0,
+         0.02
+        ],
+        [
+         0,
+         0.18,
+         0.2
+        ],
+        [
+         0,
+         0.22,
+         0.42
+        ],
+        [
+         0,
+         0.12,
+         0.6
+        ]
+       ],
+       "material": "barn_lamp",
+       "segments": 8,
+       "radius": 0.025
+      },
+      {
+       "name": "Shade",
+       "shape": "lathe",
+       "profile": [
+        [
+         0.04,
+         0.06
+        ],
+        [
+         0.06,
+         0.02
+        ],
+        [
+         0.24,
+         -0.08
+        ],
+        [
+         0.25,
+         -0.11
+        ],
+        [
+         0,
+         -0.11
+        ]
+       ],
+       "at": [
+        0,
+        0.1,
+        0.62
+       ],
+       "material": "barn_lamp",
+       "segments": 16
+      },
+      {
+       "name": "Bulb",
+       "shape": "ellipsoid",
+       "radii": [
+        0.07,
+        0.07,
+        0.07
+       ],
+       "segments": 10,
+       "at": [
+        0,
+        -0.05,
+        0.62
+       ],
+       "material": "light"
+      }
      ]
     },
     {
      "name": "Window_L{i}",
-     "shape": "box",
-     "material": "barn_dark",
-     "size": [
-      0.1,
-      0.6,
-      0.8
-     ],
      "at": [
-      "$W2 + 0.02",
-      "$wallHeight * 0.65",
-      "-$L2 + 2.0"
+      "$W2",
+      "$h * 0.62",
+      "-$L2 + $length / $nw / 2"
      ],
      "repeat": {
-      "count": "floor(($length - 3) / 3.5)",
+      "count": "$nw",
       "step": [
        0,
        0,
-       3.5
+       "$length / $nw"
       ]
      },
-     "mirror": "Window_R{i}"
+     "mirror": "Window_R{i}",
+     "children": [
+      {
+       "name": "Frame",
+       "shape": "box",
+       "size": [
+        0.1,
+        0.91,
+        1.16
+       ],
+       "at": [
+        0.03,
+        0,
+        0
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Pane",
+       "shape": "box",
+       "size": [
+        0.1,
+        0.75,
+        1
+       ],
+       "at": [
+        0.05,
+        0,
+        0
+       ],
+       "material": "barn_window"
+      },
+      {
+       "name": "Mullion",
+       "shape": "box",
+       "size": [
+        0.05,
+        0.75,
+        0.05
+       ],
+       "at": [
+        0.1,
+        0,
+        0
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Transom",
+       "shape": "box",
+       "size": [
+        0.05,
+        0.05,
+        1
+       ],
+       "at": [
+        0.1,
+        0,
+        0
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Sill",
+       "shape": "box",
+       "size": [
+        0.16,
+        0.07,
+        1.3
+       ],
+       "at": [
+        0.08,
+        -0.475,
+        0
+       ],
+       "material": "frame_white"
+      }
+     ]
+    },
+    {
+     "name": "Cupola",
+     "at": [
+      0,
+      "$ridge - 0.04",
+      0
+     ],
+     "vars": {
+      "drop": "$cw / 2 * tan($th) + 0.15",
+      "ch": "$cw * 0.8"
+     },
+     "children": [
+      {
+       "name": "Body",
+       "shape": "box",
+       "size": [
+        "$cw",
+        "$ch + $drop",
+        "$cw"
+       ],
+       "at": [
+        0,
+        "($ch - $drop) / 2",
+        0
+       ],
+       "material": "barn_wood"
+      },
+      {
+       "name": "VentZ",
+       "shape": "box",
+       "size": [
+        "$cw * 0.62",
+        "$ch * 0.62",
+        "$cw + 0.04"
+       ],
+       "at": [
+        0,
+        "$ch * 0.5",
+        0
+       ],
+       "material": "barn_dark"
+      },
+      {
+       "name": "VentX",
+       "shape": "box",
+       "size": [
+        "$cw + 0.04",
+        "$ch * 0.62",
+        "$cw * 0.62"
+       ],
+       "at": [
+        0,
+        "$ch * 0.5",
+        0
+       ],
+       "material": "barn_dark"
+      },
+      {
+       "name": "SlatZ_{i}",
+       "shape": "box",
+       "size": [
+        "$cw * 0.62",
+        0.05,
+        "$cw + 0.1"
+       ],
+       "at": [
+        0,
+        "$ch * 0.24",
+        0
+       ],
+       "material": "frame_white",
+       "repeat": {
+        "count": 4,
+        "step": [
+         0,
+         "$ch * 0.62 / 3.6",
+         0
+        ]
+       },
+       "rotate": [
+        0,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "SlatX_{i}",
+       "shape": "box",
+       "size": [
+        "$cw + 0.1",
+        0.05,
+        "$cw * 0.62"
+       ],
+       "at": [
+        0,
+        "$ch * 0.24",
+        0
+       ],
+       "material": "frame_white",
+       "repeat": {
+        "count": 4,
+        "step": [
+         0,
+         "$ch * 0.62 / 3.6",
+         0
+        ]
+       }
+      },
+      {
+       "name": "CornerPost_{i}",
+       "shape": "box",
+       "size": [
+        0.1,
+        "$ch",
+        0.1
+       ],
+       "at": [
+        "$cw / 2",
+        "$ch / 2",
+        "$cw / 2"
+       ],
+       "material": "frame_white",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      },
+      {
+       "name": "Cornice",
+       "shape": "box",
+       "size": [
+        "$cw + 0.3",
+        0.12,
+        "$cw + 0.3"
+       ],
+       "at": [
+        0,
+        "$ch + 0.06",
+        0
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Cap",
+       "shape": "lathe",
+       "profile": [
+        [
+         "($cw / 2 + 0.25) * 1.4142",
+         0
+        ],
+        [
+         0,
+         "$cw * 0.55"
+        ]
+       ],
+       "at": [
+        0,
+        "$ch + 0.12",
+        0
+       ],
+       "material": "barn_roof",
+       "segments": 4,
+       "rotate": [
+        0,
+        45,
+        0
+       ]
+      },
+      {
+       "name": "Vane",
+       "at": [
+        0,
+        "$ch + 0.12 + $cw * 0.55",
+        0
+       ],
+       "material": "barn_iron",
+       "children": [
+        {
+         "name": "Rod",
+         "shape": "cylinder",
+         "radius": 0.025,
+         "height": 1.3,
+         "at": [
+          0,
+          0.6,
+          0
+         ],
+         "segments": 6
+        },
+        {
+         "name": "Ball",
+         "shape": "ellipsoid",
+         "radii": [
+          0.07,
+          0.07,
+          0.07
+         ],
+         "segments": 10,
+         "at": [
+          0,
+          0.05,
+          0
+         ]
+        },
+        {
+         "name": "ArmX",
+         "shape": "box",
+         "size": [
+          0.7,
+          0.025,
+          0.025
+         ],
+         "at": [
+          0,
+          0.75,
+          0
+         ]
+        },
+        {
+         "name": "ArmZ",
+         "shape": "box",
+         "size": [
+          0.025,
+          0.025,
+          0.7
+         ],
+         "at": [
+          0,
+          0.75,
+          0
+         ]
+        },
+        {
+         "name": "Arrow",
+         "shape": "box",
+         "size": [
+          0.025,
+          0.04,
+          0.9
+         ],
+         "at": [
+          0,
+          1.12,
+          0
+         ]
+        },
+        {
+         "name": "Tail",
+         "shape": "box",
+         "size": [
+          0.02,
+          0.22,
+          0.24
+         ],
+         "at": [
+          0,
+          1.12,
+          -0.38
+         ]
+        },
+        {
+         "name": "Tip",
+         "shape": "lathe",
+         "profile": [
+          [
+           0.07,
+           0
+          ],
+          [
+           0,
+           0.18
+          ]
+         ],
+         "at": [
+          0,
+          1.12,
+          0.45
+         ],
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "segments": 4
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Apron",
+     "shape": "box",
+     "size": [
+      "$dw + 1.2",
+      0.08,
+      2.2
+     ],
+     "at": [
+      0,
+      0.04,
+      "$L2 + 1.1"
+     ],
+     "material": "concrete"
+    },
+    {
+     "name": "Rear",
+     "at": [
+      0,
+      0,
+      "-$L2"
+     ],
+     "children": [
+      {
+       "name": "DoorDark",
+       "shape": "box",
+       "size": [
+        1.1,
+        2.2,
+        0.06
+       ],
+       "at": [
+        0,
+        1.15,
+        -0.03
+       ],
+       "material": "barn_dark"
+      },
+      {
+       "name": "RearDoor",
+       "shape": "box",
+       "size": [
+        2.1,
+        1,
+        0.06
+       ],
+       "at": [
+        0,
+        1.15,
+        -0.06
+       ],
+       "material": "barn_wood",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "children": [
+        {
+         "name": "Rail_{i}",
+         "shape": "box",
+         "size": [
+          0.12,
+          0.92,
+          0.05
+         ],
+         "at": [
+          -0.8,
+          0,
+          -0.04
+         ],
+         "material": "frame_white",
+         "repeat": {
+          "count": 3,
+          "step": [
+           0.8,
+           0,
+           0
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "DoorJamb_L",
+       "shape": "box",
+       "size": [
+        0.14,
+        2.3,
+        0.1
+       ],
+       "at": [
+        -0.62,
+        1.15,
+        -0.05
+       ],
+       "material": "frame_white",
+       "mirror": "DoorJamb_R"
+      },
+      {
+       "name": "DoorHead",
+       "shape": "box",
+       "size": [
+        1.4,
+        0.16,
+        0.12
+       ],
+       "at": [
+        0,
+        2.33,
+        -0.06
+       ],
+       "material": "frame_white"
+      },
+      {
+       "name": "Step",
+       "shape": "box",
+       "size": [
+        1.6,
+        0.18,
+        0.7
+       ],
+       "at": [
+        0,
+        0.09,
+        -0.35
+       ],
+       "material": "concrete"
+      },
+      {
+       "name": "Vent",
+       "at": [
+        0,
+        "$h + $r * 0.42",
+        0
+       ],
+       "children": [
+        {
+         "name": "Back",
+         "shape": "box",
+         "size": [
+          "min(1.2, $r * 0.4)",
+          "min(0.9, $r * 0.3)",
+          0.06
+         ],
+         "at": [
+          0,
+          0,
+          -0.03
+         ],
+         "material": "barn_dark"
+        },
+        {
+         "name": "Slat_{i}",
+         "shape": "box",
+         "size": [
+          "min(1.2, $r * 0.4)",
+          0.05,
+          0.06
+         ],
+         "at": [
+          0,
+          "-min(0.9, $r * 0.3) * 0.36",
+          -0.07
+         ],
+         "material": "frame_white",
+         "rotate": [
+          -30,
+          0,
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "step": [
+           0,
+           "min(0.9, $r * 0.3) * 0.18",
+           0
+          ]
+         }
+        },
+        {
+         "name": "FrameT",
+         "shape": "box",
+         "size": [
+          "min(1.2, $r * 0.4) + 0.2",
+          0.1,
+          0.08
+         ],
+         "at": [
+          0,
+          "min(0.9, $r * 0.3) / 2 + 0.05",
+          -0.04
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "FrameB",
+         "shape": "box",
+         "size": [
+          "min(1.2, $r * 0.4) + 0.2",
+          0.1,
+          0.08
+         ],
+         "at": [
+          0,
+          "-min(0.9, $r * 0.3) / 2 - 0.05",
+          -0.04
+         ],
+         "material": "frame_white"
+        },
+        {
+         "name": "FrameL",
+         "shape": "box",
+         "size": [
+          0.1,
+          "min(0.9, $r * 0.3) + 0.2",
+          0.08
+         ],
+         "at": [
+          "min(1.2, $r * 0.4) / 2 + 0.05",
+          0,
+          -0.04
+         ],
+         "material": "frame_white",
+         "mirror": "FrameR"
+        }
+       ]
+      }
+     ]
     }
    ]
   }

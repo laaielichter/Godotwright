@@ -2,7 +2,7 @@
  "version": 1,
  "name": "car",
  "archetype": "vehicle.wheeled.car",
- "description": "A passenger car: a lofted body, a glass cabin, four wheels with their pivot at the hub, doors on their hinges, lights and mirrors.",
+ "description": "A four-door saloon: a body lofted from its side silhouette with real wheel arches and rounded shoulders, a glass greenhouse with roof and pillars over a visible interior, four doors, hood and trunk lid on their hinges, alloy wheels with the pivot at the hub, light clusters, grille and mirrors.",
  "params": [
   {
    "name": "length",
@@ -38,23 +38,41 @@
   }
  ],
  "materials": {
-  "lamp": {
+  "body_paint": {
    "color": [
-    0.95,
-    0.92,
-    0.75
+    0.46,
+    0.018,
+    0.024
    ],
-   "metallic": 0,
-   "roughness": 0.15
+   "metallic": 0.55,
+   "roughness": 0.22
   },
-  "taillamp": {
+  "trim_black": {
    "color": [
-    0.65,
-    0.02,
+    0.018,
+    0.018,
     0.02
    ],
+   "metallic": 0.1,
+   "roughness": 0.45
+  },
+  "lamp_bezel": {
+   "color": [
+    0.06,
+    0.06,
+    0.065
+   ],
+   "metallic": 1,
+   "roughness": 0.12
+  },
+  "upholstery": {
+   "color": [
+    0.035,
+    0.034,
+    0.036
+   ],
    "metallic": 0,
-   "roughness": 0.2
+   "roughness": 0.9
   }
  },
  "nodes": [
@@ -62,139 +80,4999 @@
    "name": "Car",
    "vars": {
     "L2": "$length / 2",
-    "x": "$width / 2 - $tyreWidth / 2 - 0.02",
-    "z": "$length * 0.295"
+    "W2": "$width / 2",
+    "dy": "($wheelRadius - 0.33) * 2",
+    "dyb": "$dy * 0.6",
+    "ys": "0.19 + $dyb",
+    "Ra": "$wheelRadius + 0.038",
+    "z": "min($length * 0.295, $length / 2 - $Ra - 0.26)",
+    "x": "$width / 2 - $tyreWidth / 2 - 0.025"
    },
    "children": [
     {
      "name": "Body",
      "shape": "loft",
-     "material": "paint",
+     "material": "body_paint",
+     "rotate": [
+      0,
+      -90,
+      0
+     ],
+     "vars": {
+      "Ra0": "$Ra",
+      "th0": "asin(clamp(($ys + 0 - $wheelRadius) / $Ra0, -0.95, 0.6))",
+      "Ra1": "$Ra",
+      "th1": "asin(clamp(($ys + 0 - $wheelRadius) / $Ra1, -0.95, 0.6))",
+      "Ra2": "$Ra",
+      "th2": "asin(clamp(($ys + 0.006 - $wheelRadius) / $Ra2, -0.95, 0.6))",
+      "Ra3": "$Ra + 0.003",
+      "th3": "asin(clamp(($ys + 0.03 - $wheelRadius) / $Ra3, -0.95, 0.6))",
+      "Ra4": "$Ra + 0.008",
+      "th4": "asin(clamp(($ys + 0.08 - $wheelRadius) / $Ra4, -0.95, 0.6))",
+      "Ra5": "$Ra + 0.014",
+      "th5": "asin(clamp(($ys + 0.15 - $wheelRadius) / $Ra5, -0.95, 0.6))"
+     },
      "sections": [
       {
-       "z": "-$L2",
-       "superellipse": {
-        "width": "$width * 0.8",
-        "height": 0.55,
-        "n": 4,
-        "count": 32,
-        "cy": 0.62
-       }
+       "z": "-1 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.03",
+         "0.22 + $dyb + 0.15"
+        ],
+        [
+         "$L2 - 0.05 - 0.12",
+         "0.27 + $dyb + 0.09"
+        ],
+        [
+         "$L2 - 0.008 - 0.15",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.15",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.15",
+         "0.63 + $dy - 0.0142"
+        ],
+        [
+         "$L2 - 0.075 - 0.15",
+         "0.70 + $dy - 0.038"
+        ],
+        [
+         "$L2 - 0.20 - 0.1275",
+         "0.755 + $dy - 0.057"
+        ],
+        [
+         "$L2 * 0.70 - 0.075",
+         "0.80 + $dy - 0.057"
+        ],
+        [
+         "$L2 * 0.55 - 0.03",
+         "0.835 + $dy - 0.0665"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.0855"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0525",
+         "1.0 + $dy - 0.095"
+        ],
+        [
+         "-$L2 + 0.06 + 0.135",
+         "1.012 + $dy - 0.095"
+        ],
+        [
+         "-$L2 + 0.01 + 0.15",
+         "0.97 + $dy - 0.057"
+        ],
+        [
+         "-$L2 + 0.005 + 0.15",
+         "0.86 + $dy - 0.0285"
+        ],
+        [
+         "-$L2 + 0.03 + 0.15",
+         "0.745 + $dy - 0.0095"
+        ],
+        [
+         "-$L2 + 0.002 + 0.15",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.15",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.135",
+         "0.36 + $dyb + 0.045"
+        ],
+        [
+         "-$L2 + 0.17 + 0.03",
+         "0.25 + $dyb + 0.15"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 0 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 0 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 1 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 1 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 2 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 2 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 3 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 3 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 4 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 4 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 5 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 5 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 6 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 6 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 7 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 7 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 8 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 8 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 9 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 9 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 10 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 10 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 0 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 0 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 1 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 1 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 2 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 2 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 3 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 3 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 4 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 4 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 5 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 5 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 6 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 6 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 7 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 7 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 8 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 8 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 9 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 9 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 10 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 10 * (pi - 2 * $th5) / 10)"
+        ]
+       ]
       },
       {
-       "z": "-$L2 * 0.68",
-       "superellipse": {
-        "width": "$width",
-        "height": 0.7,
-        "n": 4,
-        "count": 32,
-        "cy": 0.7
-       }
+       "z": "-0.975 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.022",
+         "0.22 + $dyb + 0.08"
+        ],
+        [
+         "$L2 - 0.05 - 0.088",
+         "0.27 + $dyb + 0.048"
+        ],
+        [
+         "$L2 - 0.008 - 0.11",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.11",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.11",
+         "0.63 + $dy - 0.009"
+        ],
+        [
+         "$L2 - 0.075 - 0.11",
+         "0.70 + $dy - 0.024"
+        ],
+        [
+         "$L2 - 0.20 - 0.0935",
+         "0.755 + $dy - 0.036"
+        ],
+        [
+         "$L2 * 0.70 - 0.055",
+         "0.80 + $dy - 0.036"
+        ],
+        [
+         "$L2 * 0.55 - 0.022",
+         "0.835 + $dy - 0.042"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.054"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0385",
+         "1.0 + $dy - 0.06"
+        ],
+        [
+         "-$L2 + 0.06 + 0.099",
+         "1.012 + $dy - 0.06"
+        ],
+        [
+         "-$L2 + 0.01 + 0.11",
+         "0.97 + $dy - 0.036"
+        ],
+        [
+         "-$L2 + 0.005 + 0.11",
+         "0.86 + $dy - 0.018"
+        ],
+        [
+         "-$L2 + 0.03 + 0.11",
+         "0.745 + $dy - 0.006"
+        ],
+        [
+         "-$L2 + 0.002 + 0.11",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.11",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.099",
+         "0.36 + $dyb + 0.024"
+        ],
+        [
+         "-$L2 + 0.17 + 0.022",
+         "0.25 + $dyb + 0.08"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 0 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 0 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 1 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 1 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 2 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 2 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 3 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 3 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 4 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 4 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 5 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 5 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 6 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 6 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 7 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 7 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 8 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 8 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 9 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 9 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 10 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 10 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 0 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 0 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 1 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 1 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 2 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 2 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 3 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 3 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 4 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 4 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 5 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 5 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 6 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 6 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 7 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 7 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 8 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 8 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 9 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 9 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 10 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 10 * (pi - 2 * $th4) / 10)"
+        ]
+       ]
       },
       {
-       "z": "$L2 * 0.14",
-       "superellipse": {
-        "width": "$width",
-        "height": 0.7,
-        "n": 4,
-        "count": 32,
-        "cy": 0.7
-       }
+       "z": "-0.92 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.014",
+         "0.22 + $dyb + 0.03"
+        ],
+        [
+         "$L2 - 0.05 - 0.056",
+         "0.27 + $dyb + 0.018"
+        ],
+        [
+         "$L2 - 0.008 - 0.07",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.07",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.07",
+         "0.63 + $dy - 0.0048"
+        ],
+        [
+         "$L2 - 0.075 - 0.07",
+         "0.70 + $dy - 0.0128"
+        ],
+        [
+         "$L2 - 0.20 - 0.0595",
+         "0.755 + $dy - 0.0192"
+        ],
+        [
+         "$L2 * 0.70 - 0.035",
+         "0.80 + $dy - 0.0192"
+        ],
+        [
+         "$L2 * 0.55 - 0.014",
+         "0.835 + $dy - 0.0224"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.0288"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0245",
+         "1.0 + $dy - 0.032"
+        ],
+        [
+         "-$L2 + 0.06 + 0.063",
+         "1.012 + $dy - 0.032"
+        ],
+        [
+         "-$L2 + 0.01 + 0.07",
+         "0.97 + $dy - 0.0192"
+        ],
+        [
+         "-$L2 + 0.005 + 0.07",
+         "0.86 + $dy - 0.0096"
+        ],
+        [
+         "-$L2 + 0.03 + 0.07",
+         "0.745 + $dy - 0.0032"
+        ],
+        [
+         "-$L2 + 0.002 + 0.07",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.07",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.063",
+         "0.36 + $dyb + 0.009"
+        ],
+        [
+         "-$L2 + 0.17 + 0.014",
+         "0.25 + $dyb + 0.03"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 0 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 0 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 1 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 1 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 2 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 2 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 3 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 3 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 4 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 4 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 5 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 5 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 6 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 6 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 7 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 7 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 8 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 8 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 9 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 9 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 10 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 10 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 0 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 0 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 1 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 1 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 2 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 2 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 3 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 3 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 4 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 4 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 5 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 5 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 6 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 6 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 7 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 7 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 8 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 8 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 9 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 9 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 10 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 10 * (pi - 2 * $th3) / 10)"
+        ]
+       ]
       },
       {
-       "z": "$L2 * 0.77",
-       "superellipse": {
-        "width": "$width * 0.96",
-        "height": 0.62,
-        "n": 4,
-        "count": 32,
-        "cy": 0.62
-       }
+       "z": "-0.8 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.007",
+         "0.22 + $dyb + 0.006"
+        ],
+        [
+         "$L2 - 0.05 - 0.028",
+         "0.27 + $dyb + 0.0036"
+        ],
+        [
+         "$L2 - 0.008 - 0.035",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.035",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.035",
+         "0.63 + $dy - 0.0018"
+        ],
+        [
+         "$L2 - 0.075 - 0.035",
+         "0.70 + $dy - 0.0048"
+        ],
+        [
+         "$L2 - 0.20 - 0.0298",
+         "0.755 + $dy - 0.0072"
+        ],
+        [
+         "$L2 * 0.70 - 0.0175",
+         "0.80 + $dy - 0.0072"
+        ],
+        [
+         "$L2 * 0.55 - 0.007",
+         "0.835 + $dy - 0.0084"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.0108"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0123",
+         "1.0 + $dy - 0.012"
+        ],
+        [
+         "-$L2 + 0.06 + 0.0315",
+         "1.012 + $dy - 0.012"
+        ],
+        [
+         "-$L2 + 0.01 + 0.035",
+         "0.97 + $dy - 0.0072"
+        ],
+        [
+         "-$L2 + 0.005 + 0.035",
+         "0.86 + $dy - 0.0036"
+        ],
+        [
+         "-$L2 + 0.03 + 0.035",
+         "0.745 + $dy - 0.0012"
+        ],
+        [
+         "-$L2 + 0.002 + 0.035",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.035",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.0315",
+         "0.36 + $dyb + 0.0018"
+        ],
+        [
+         "-$L2 + 0.17 + 0.007",
+         "0.25 + $dyb + 0.006"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 0 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 0 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 1 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 1 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 2 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 2 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 3 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 3 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 4 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 4 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 5 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 5 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 6 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 6 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 7 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 7 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 8 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 8 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 9 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 9 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 10 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 10 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 0 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 0 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 1 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 1 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 2 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 2 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 3 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 3 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 4 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 4 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 5 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 5 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 6 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 6 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 7 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 7 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 8 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 8 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 9 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 9 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 10 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 10 * (pi - 2 * $th2) / 10)"
+        ]
+       ]
       },
       {
-       "z": "$L2",
-       "superellipse": {
-        "width": "$width * 0.62",
-        "height": 0.45,
-        "n": 4,
-        "count": 32,
-        "cy": 0.55
-       }
+       "z": "-0.55 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.0024",
+         "0.22 + $dyb"
+        ],
+        [
+         "$L2 - 0.05 - 0.0096",
+         "0.27 + $dyb"
+        ],
+        [
+         "$L2 - 0.008 - 0.012",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.012",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.012",
+         "0.63 + $dy + 0.0009"
+        ],
+        [
+         "$L2 - 0.075 - 0.012",
+         "0.70 + $dy + 0.0024"
+        ],
+        [
+         "$L2 - 0.20 - 0.0102",
+         "0.755 + $dy + 0.0036"
+        ],
+        [
+         "$L2 * 0.70 - 0.006",
+         "0.80 + $dy + 0.0036"
+        ],
+        [
+         "$L2 * 0.55 - 0.0024",
+         "0.835 + $dy + 0.0042"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy + 0.0054"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0042",
+         "1.0 + $dy + 0.006"
+        ],
+        [
+         "-$L2 + 0.06 + 0.0108",
+         "1.012 + $dy + 0.006"
+        ],
+        [
+         "-$L2 + 0.01 + 0.012",
+         "0.97 + $dy + 0.0036"
+        ],
+        [
+         "-$L2 + 0.005 + 0.012",
+         "0.86 + $dy + 0.0018"
+        ],
+        [
+         "-$L2 + 0.03 + 0.012",
+         "0.745 + $dy + 0.0006"
+        ],
+        [
+         "-$L2 + 0.002 + 0.012",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.012",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.0108",
+         "0.36 + $dyb"
+        ],
+        [
+         "-$L2 + 0.17 + 0.0024",
+         "0.25 + $dyb"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 0 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 0 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 1 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 1 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 2 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 2 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 3 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 3 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 4 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 4 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 5 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 5 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 6 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 6 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 7 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 7 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 8 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 8 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 9 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 9 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 10 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 10 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 0 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 0 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 1 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 1 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 2 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 2 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 3 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 3 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 4 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 4 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 5 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 5 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 6 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 6 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 7 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 7 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 8 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 8 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 9 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 9 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 10 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 10 * (pi - 2 * $th1) / 10)"
+        ]
+       ]
+      },
+      {
+       "z": 0,
+       "points": [
+        [
+         "$L2 - 0.16",
+         "0.22 + $dyb"
+        ],
+        [
+         "$L2 - 0.05",
+         "0.27 + $dyb"
+        ],
+        [
+         "$L2 - 0.008",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022",
+         "0.63 + $dy + 0.0018"
+        ],
+        [
+         "$L2 - 0.075",
+         "0.70 + $dy + 0.0048"
+        ],
+        [
+         "$L2 - 0.20",
+         "0.755 + $dy + 0.0072"
+        ],
+        [
+         "$L2 * 0.70",
+         "0.80 + $dy + 0.0072"
+        ],
+        [
+         "$L2 * 0.55",
+         "0.835 + $dy + 0.0084"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy + 0.0108"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy + 0.012"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy + 0.012"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy + 0.012"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy + 0.012"
+        ],
+        [
+         "-$L2 * 0.84",
+         "1.0 + $dy + 0.012"
+        ],
+        [
+         "-$L2 + 0.06",
+         "1.012 + $dy + 0.012"
+        ],
+        [
+         "-$L2 + 0.01",
+         "0.97 + $dy + 0.0072"
+        ],
+        [
+         "-$L2 + 0.005",
+         "0.86 + $dy + 0.0036"
+        ],
+        [
+         "-$L2 + 0.03",
+         "0.745 + $dy + 0.0012"
+        ],
+        [
+         "-$L2 + 0.002",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04",
+         "0.36 + $dyb"
+        ],
+        [
+         "-$L2 + 0.17",
+         "0.25 + $dyb"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 0 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 0 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 1 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 1 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 2 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 2 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 3 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 3 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 4 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 4 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 5 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 5 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 6 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 6 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 7 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 7 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 8 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 8 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 9 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 9 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "-$z + $Ra0 * cos((pi - $th0) - 10 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 10 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 0 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 0 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 1 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 1 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 2 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 2 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 3 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 3 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 4 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 4 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 5 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 5 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 6 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 6 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 7 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 7 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 8 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 8 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 9 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 9 * (pi - 2 * $th0) / 10)"
+        ],
+        [
+         "$z + $Ra0 * cos((pi - $th0) - 10 * (pi - 2 * $th0) / 10)",
+         "$wheelRadius + $Ra0 * sin((pi - $th0) - 10 * (pi - 2 * $th0) / 10)"
+        ]
+       ]
+      },
+      {
+       "z": "0.55 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.0024",
+         "0.22 + $dyb"
+        ],
+        [
+         "$L2 - 0.05 - 0.0096",
+         "0.27 + $dyb"
+        ],
+        [
+         "$L2 - 0.008 - 0.012",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.012",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.012",
+         "0.63 + $dy + 0.0009"
+        ],
+        [
+         "$L2 - 0.075 - 0.012",
+         "0.70 + $dy + 0.0024"
+        ],
+        [
+         "$L2 - 0.20 - 0.0102",
+         "0.755 + $dy + 0.0036"
+        ],
+        [
+         "$L2 * 0.70 - 0.006",
+         "0.80 + $dy + 0.0036"
+        ],
+        [
+         "$L2 * 0.55 - 0.0024",
+         "0.835 + $dy + 0.0042"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy + 0.0054"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy + 0.006"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0042",
+         "1.0 + $dy + 0.006"
+        ],
+        [
+         "-$L2 + 0.06 + 0.0108",
+         "1.012 + $dy + 0.006"
+        ],
+        [
+         "-$L2 + 0.01 + 0.012",
+         "0.97 + $dy + 0.0036"
+        ],
+        [
+         "-$L2 + 0.005 + 0.012",
+         "0.86 + $dy + 0.0018"
+        ],
+        [
+         "-$L2 + 0.03 + 0.012",
+         "0.745 + $dy + 0.0006"
+        ],
+        [
+         "-$L2 + 0.002 + 0.012",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.012",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.0108",
+         "0.36 + $dyb"
+        ],
+        [
+         "-$L2 + 0.17 + 0.0024",
+         "0.25 + $dyb"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 0 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 0 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 1 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 1 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 2 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 2 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 3 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 3 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 4 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 4 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 5 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 5 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 6 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 6 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 7 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 7 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 8 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 8 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 9 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 9 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "-$z + $Ra1 * cos((pi - $th1) - 10 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 10 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 0 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 0 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 1 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 1 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 2 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 2 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 3 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 3 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 4 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 4 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 5 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 5 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 6 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 6 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 7 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 7 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 8 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 8 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 9 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 9 * (pi - 2 * $th1) / 10)"
+        ],
+        [
+         "$z + $Ra1 * cos((pi - $th1) - 10 * (pi - 2 * $th1) / 10)",
+         "$wheelRadius + $Ra1 * sin((pi - $th1) - 10 * (pi - 2 * $th1) / 10)"
+        ]
+       ]
+      },
+      {
+       "z": "0.8 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.007",
+         "0.22 + $dyb + 0.006"
+        ],
+        [
+         "$L2 - 0.05 - 0.028",
+         "0.27 + $dyb + 0.0036"
+        ],
+        [
+         "$L2 - 0.008 - 0.035",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.035",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.035",
+         "0.63 + $dy - 0.0018"
+        ],
+        [
+         "$L2 - 0.075 - 0.035",
+         "0.70 + $dy - 0.0048"
+        ],
+        [
+         "$L2 - 0.20 - 0.0298",
+         "0.755 + $dy - 0.0072"
+        ],
+        [
+         "$L2 * 0.70 - 0.0175",
+         "0.80 + $dy - 0.0072"
+        ],
+        [
+         "$L2 * 0.55 - 0.007",
+         "0.835 + $dy - 0.0084"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.0108"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.012"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0123",
+         "1.0 + $dy - 0.012"
+        ],
+        [
+         "-$L2 + 0.06 + 0.0315",
+         "1.012 + $dy - 0.012"
+        ],
+        [
+         "-$L2 + 0.01 + 0.035",
+         "0.97 + $dy - 0.0072"
+        ],
+        [
+         "-$L2 + 0.005 + 0.035",
+         "0.86 + $dy - 0.0036"
+        ],
+        [
+         "-$L2 + 0.03 + 0.035",
+         "0.745 + $dy - 0.0012"
+        ],
+        [
+         "-$L2 + 0.002 + 0.035",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.035",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.0315",
+         "0.36 + $dyb + 0.0018"
+        ],
+        [
+         "-$L2 + 0.17 + 0.007",
+         "0.25 + $dyb + 0.006"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 0 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 0 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 1 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 1 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 2 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 2 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 3 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 3 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 4 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 4 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 5 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 5 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 6 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 6 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 7 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 7 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 8 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 8 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 9 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 9 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "-$z + $Ra2 * cos((pi - $th2) - 10 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 10 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 0 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 0 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 1 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 1 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 2 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 2 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 3 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 3 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 4 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 4 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 5 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 5 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 6 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 6 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 7 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 7 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 8 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 8 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 9 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 9 * (pi - 2 * $th2) / 10)"
+        ],
+        [
+         "$z + $Ra2 * cos((pi - $th2) - 10 * (pi - 2 * $th2) / 10)",
+         "$wheelRadius + $Ra2 * sin((pi - $th2) - 10 * (pi - 2 * $th2) / 10)"
+        ]
+       ]
+      },
+      {
+       "z": "0.92 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.014",
+         "0.22 + $dyb + 0.03"
+        ],
+        [
+         "$L2 - 0.05 - 0.056",
+         "0.27 + $dyb + 0.018"
+        ],
+        [
+         "$L2 - 0.008 - 0.07",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.07",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.07",
+         "0.63 + $dy - 0.0048"
+        ],
+        [
+         "$L2 - 0.075 - 0.07",
+         "0.70 + $dy - 0.0128"
+        ],
+        [
+         "$L2 - 0.20 - 0.0595",
+         "0.755 + $dy - 0.0192"
+        ],
+        [
+         "$L2 * 0.70 - 0.035",
+         "0.80 + $dy - 0.0192"
+        ],
+        [
+         "$L2 * 0.55 - 0.014",
+         "0.835 + $dy - 0.0224"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.0288"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.032"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0245",
+         "1.0 + $dy - 0.032"
+        ],
+        [
+         "-$L2 + 0.06 + 0.063",
+         "1.012 + $dy - 0.032"
+        ],
+        [
+         "-$L2 + 0.01 + 0.07",
+         "0.97 + $dy - 0.0192"
+        ],
+        [
+         "-$L2 + 0.005 + 0.07",
+         "0.86 + $dy - 0.0096"
+        ],
+        [
+         "-$L2 + 0.03 + 0.07",
+         "0.745 + $dy - 0.0032"
+        ],
+        [
+         "-$L2 + 0.002 + 0.07",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.07",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.063",
+         "0.36 + $dyb + 0.009"
+        ],
+        [
+         "-$L2 + 0.17 + 0.014",
+         "0.25 + $dyb + 0.03"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 0 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 0 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 1 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 1 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 2 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 2 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 3 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 3 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 4 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 4 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 5 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 5 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 6 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 6 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 7 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 7 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 8 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 8 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 9 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 9 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "-$z + $Ra3 * cos((pi - $th3) - 10 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 10 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 0 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 0 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 1 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 1 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 2 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 2 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 3 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 3 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 4 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 4 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 5 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 5 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 6 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 6 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 7 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 7 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 8 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 8 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 9 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 9 * (pi - 2 * $th3) / 10)"
+        ],
+        [
+         "$z + $Ra3 * cos((pi - $th3) - 10 * (pi - 2 * $th3) / 10)",
+         "$wheelRadius + $Ra3 * sin((pi - $th3) - 10 * (pi - 2 * $th3) / 10)"
+        ]
+       ]
+      },
+      {
+       "z": "0.975 * $W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.022",
+         "0.22 + $dyb + 0.08"
+        ],
+        [
+         "$L2 - 0.05 - 0.088",
+         "0.27 + $dyb + 0.048"
+        ],
+        [
+         "$L2 - 0.008 - 0.11",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.11",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.11",
+         "0.63 + $dy - 0.009"
+        ],
+        [
+         "$L2 - 0.075 - 0.11",
+         "0.70 + $dy - 0.024"
+        ],
+        [
+         "$L2 - 0.20 - 0.0935",
+         "0.755 + $dy - 0.036"
+        ],
+        [
+         "$L2 * 0.70 - 0.055",
+         "0.80 + $dy - 0.036"
+        ],
+        [
+         "$L2 * 0.55 - 0.022",
+         "0.835 + $dy - 0.042"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.054"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.06"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0385",
+         "1.0 + $dy - 0.06"
+        ],
+        [
+         "-$L2 + 0.06 + 0.099",
+         "1.012 + $dy - 0.06"
+        ],
+        [
+         "-$L2 + 0.01 + 0.11",
+         "0.97 + $dy - 0.036"
+        ],
+        [
+         "-$L2 + 0.005 + 0.11",
+         "0.86 + $dy - 0.018"
+        ],
+        [
+         "-$L2 + 0.03 + 0.11",
+         "0.745 + $dy - 0.006"
+        ],
+        [
+         "-$L2 + 0.002 + 0.11",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.11",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.099",
+         "0.36 + $dyb + 0.024"
+        ],
+        [
+         "-$L2 + 0.17 + 0.022",
+         "0.25 + $dyb + 0.08"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 0 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 0 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 1 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 1 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 2 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 2 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 3 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 3 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 4 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 4 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 5 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 5 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 6 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 6 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 7 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 7 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 8 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 8 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 9 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 9 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "-$z + $Ra4 * cos((pi - $th4) - 10 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 10 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 0 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 0 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 1 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 1 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 2 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 2 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 3 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 3 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 4 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 4 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 5 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 5 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 6 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 6 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 7 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 7 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 8 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 8 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 9 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 9 * (pi - 2 * $th4) / 10)"
+        ],
+        [
+         "$z + $Ra4 * cos((pi - $th4) - 10 * (pi - 2 * $th4) / 10)",
+         "$wheelRadius + $Ra4 * sin((pi - $th4) - 10 * (pi - 2 * $th4) / 10)"
+        ]
+       ]
+      },
+      {
+       "z": "$W2",
+       "points": [
+        [
+         "$L2 - 0.16 - 0.03",
+         "0.22 + $dyb + 0.15"
+        ],
+        [
+         "$L2 - 0.05 - 0.12",
+         "0.27 + $dyb + 0.09"
+        ],
+        [
+         "$L2 - 0.008 - 0.15",
+         "0.40 + $dy"
+        ],
+        [
+         "$L2 - 0.15",
+         "0.52 + $dy"
+        ],
+        [
+         "$L2 - 0.022 - 0.15",
+         "0.63 + $dy - 0.0142"
+        ],
+        [
+         "$L2 - 0.075 - 0.15",
+         "0.70 + $dy - 0.038"
+        ],
+        [
+         "$L2 - 0.20 - 0.1275",
+         "0.755 + $dy - 0.057"
+        ],
+        [
+         "$L2 * 0.70 - 0.075",
+         "0.80 + $dy - 0.057"
+        ],
+        [
+         "$L2 * 0.55 - 0.03",
+         "0.835 + $dy - 0.0665"
+        ],
+        [
+         "$L2 * 0.38",
+         "0.875 + $dy - 0.0855"
+        ],
+        [
+         "$L2 * 0.15",
+         "0.915 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.20",
+         "0.945 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.50",
+         "0.965 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.70",
+         "0.985 + $dy - 0.095"
+        ],
+        [
+         "-$L2 * 0.84 + 0.0525",
+         "1.0 + $dy - 0.095"
+        ],
+        [
+         "-$L2 + 0.06 + 0.135",
+         "1.012 + $dy - 0.095"
+        ],
+        [
+         "-$L2 + 0.01 + 0.15",
+         "0.97 + $dy - 0.057"
+        ],
+        [
+         "-$L2 + 0.005 + 0.15",
+         "0.86 + $dy - 0.0285"
+        ],
+        [
+         "-$L2 + 0.03 + 0.15",
+         "0.745 + $dy - 0.0095"
+        ],
+        [
+         "-$L2 + 0.002 + 0.15",
+         "0.65 + $dy"
+        ],
+        [
+         "-$L2 + 0.15",
+         "0.52 + $dy"
+        ],
+        [
+         "-$L2 + 0.04 + 0.135",
+         "0.36 + $dyb + 0.045"
+        ],
+        [
+         "-$L2 + 0.17 + 0.03",
+         "0.25 + $dyb + 0.15"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 0 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 0 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 1 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 1 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 2 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 2 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 3 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 3 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 4 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 4 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 5 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 5 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 6 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 6 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 7 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 7 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 8 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 8 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 9 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 9 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "-$z + $Ra5 * cos((pi - $th5) - 10 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 10 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 0 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 0 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 1 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 1 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 2 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 2 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 3 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 3 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 4 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 4 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 5 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 5 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 6 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 6 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 7 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 7 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 8 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 8 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 9 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 9 * (pi - 2 * $th5) / 10)"
+        ],
+        [
+         "$z + $Ra5 * cos((pi - $th5) - 10 * (pi - 2 * $th5) / 10)",
+         "$wheelRadius + $Ra5 * sin((pi - $th5) - 10 * (pi - 2 * $th5) / 10)"
+        ]
+       ]
       }
      ]
     },
     {
-     "name": "Cabin",
+     "name": "Hood",
+     "at": [
+      0,
+      "0.8656 + $dy + 0.0136",
+      "$L2 * 0.42"
+     ],
+     "children": [
+      {
+       "name": "Panel",
+       "shape": "loft",
+       "material": "body_paint",
+       "rotate": [
+        0,
+        -90,
+        0
+       ],
+       "sections": [
+        {
+         "z": "-0.86 * $W2",
+         "points": [
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0136 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0105 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0114 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0262 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0092 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0446 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0092 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0208 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0446 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0252 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0262 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0252 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0105 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0274 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        },
+        {
+         "z": "-0.8 * $W2",
+         "points": [
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0056 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.007 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0044 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0175 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0032 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0298 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0032 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0168 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0298 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0192 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0175 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0192 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.007 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0204 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        },
+        {
+         "z": "-0.55 * $W2",
+         "points": [
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42)",
+           "0.8656 + $dy + 0.0088 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0024 - ($L2 * 0.42)",
+           "0.835 + $dy + 0.0082 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.006 - ($L2 * 0.42)",
+           "0.80 + $dy + 0.0076 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0102 - ($L2 * 0.42)",
+           "0.755 + $dy + 0.0076 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42)",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0096 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0102 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0084 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.006 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0084 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0024 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0078 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        },
+        {
+         "z": 0,
+         "points": [
+          [
+           "$L2 * 0.42 - ($L2 * 0.42)",
+           "0.8656 + $dy + 0.0136 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - ($L2 * 0.42)",
+           "0.835 + $dy + 0.0124 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - ($L2 * 0.42)",
+           "0.80 + $dy + 0.0112 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - ($L2 * 0.42)",
+           "0.755 + $dy + 0.0112 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - ($L2 * 0.42)",
+           "0.70 + $dy + 0.0088 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy + 0.0088 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy + 0.0088 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy + 0.0088 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0072 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0048 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0048 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0036 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0024 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0024 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0024 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0024 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        },
+        {
+         "z": "0.55 * $W2",
+         "points": [
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42)",
+           "0.8656 + $dy + 0.0088 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0024 - ($L2 * 0.42)",
+           "0.835 + $dy + 0.0082 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.006 - ($L2 * 0.42)",
+           "0.80 + $dy + 0.0076 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0102 - ($L2 * 0.42)",
+           "0.755 + $dy + 0.0076 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42)",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy + 0.0064 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - 0.012 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0096 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0102 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0084 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.006 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0084 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0024 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0078 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - 0.0012 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0072 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        },
+        {
+         "z": "0.8 * $W2",
+         "points": [
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0056 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.007 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0044 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0175 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0032 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0298 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0032 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0008 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - 0.035 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0168 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0298 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0192 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0175 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0192 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.007 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0204 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - 0.0035 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0216 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        },
+        {
+         "z": "0.86 * $W2",
+         "points": [
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0136 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0105 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0114 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0262 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0092 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0446 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0092 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136) - 0.0048"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42) + 0.0072",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136) - 0.0114"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42) + 0.0051",
+           "0.70 + $dy - 0.0048 - (0.8656 + $dy + 0.0136) - 0.0161"
+          ],
+          [
+           "$L2 - 0.075 - 0.0525 - ($L2 * 0.42)",
+           "0.70 + $dy - 0.0208 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 - 0.20 - 0.0446 - ($L2 * 0.42)",
+           "0.755 + $dy - 0.0252 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.70 - 0.0262 - ($L2 * 0.42)",
+           "0.80 + $dy - 0.0252 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.55 - 0.0105 - ($L2 * 0.42)",
+           "0.835 + $dy - 0.0274 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42)",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136)"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136) + 0.004"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42) - 0.0076",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136) + 0.0104"
+          ],
+          [
+           "$L2 * 0.42 - 0.0052 - ($L2 * 0.42) - 0.0054",
+           "0.8656 + $dy - 0.0296 - (0.8656 + $dy + 0.0136) + 0.0154"
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Trunk",
+     "at": [
+      0,
+      "0.9886 + $dy + 0.016",
+      "-$L2 * 0.735"
+     ],
+     "children": [
+      {
+       "name": "Panel",
+       "shape": "loft",
+       "material": "body_paint",
+       "rotate": [
+        0,
+        -90,
+        0
+       ],
+       "sections": [
+        {
+         "z": "-0.86 * $W2",
+         "points": [
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.018 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0184 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.018 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0472 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.018 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0252 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0472 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.034 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0184 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.034 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        },
+        {
+         "z": "-0.8 * $W2",
+         "points": [
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.008 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0123 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.008 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0315 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.008 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0192 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0315 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.024 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0123 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.024 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        },
+        {
+         "z": "-0.55 * $W2",
+         "points": [
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735)",
+           "0.9886 + $dy + 0.01 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0042 - (-$L2 * 0.735)",
+           "1.0 + $dy + 0.01 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0108 - (-$L2 * 0.735)",
+           "1.012 + $dy + 0.01 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735)",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0084 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0108 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.006 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0042 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.006 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        },
+        {
+         "z": 0,
+         "points": [
+          [
+           "-$L2 * 0.735 - (-$L2 * 0.735)",
+           "0.9886 + $dy + 0.016 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 - (-$L2 * 0.735)",
+           "1.0 + $dy + 0.016 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 - (-$L2 * 0.735)",
+           "1.012 + $dy + 0.016 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 - (-$L2 * 0.735)",
+           "0.97 + $dy + 0.0112 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy + 0.0112 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy + 0.0112 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy + 0.0112 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0048 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 - (-$L2 * 0.735)",
+           "1.012 + $dy - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 - (-$L2 * 0.735)",
+           "1.0 + $dy - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 - (-$L2 * 0.735)",
+           "0.9886 + $dy - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        },
+        {
+         "z": "0.55 * $W2",
+         "points": [
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735)",
+           "0.9886 + $dy + 0.01 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0042 - (-$L2 * 0.735)",
+           "1.0 + $dy + 0.01 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0108 - (-$L2 * 0.735)",
+           "1.012 + $dy + 0.01 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735)",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy + 0.0076 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 + 0.012 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0084 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0108 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.006 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0042 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.006 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0012 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.006 - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        },
+        {
+         "z": "0.8 * $W2",
+         "points": [
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.008 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0123 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.008 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0315 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.008 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0032 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 + 0.035 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0192 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0315 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.024 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0123 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.024 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0035 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.024 - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        },
+        {
+         "z": "0.86 * $W2",
+         "points": [
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.018 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0184 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.018 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0472 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.018 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016) - 0.0069"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735) - 0.0048",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016) - 0.0144"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735) - 0.0034",
+           "0.97 + $dy - 0.0092 - (0.9886 + $dy + 0.016) - 0.0182"
+          ],
+          [
+           "-$L2 + 0.01 + 0.0525 - (-$L2 * 0.735)",
+           "0.97 + $dy - 0.0252 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 + 0.06 + 0.0472 - (-$L2 * 0.735)",
+           "1.012 + $dy - 0.034 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.84 + 0.0184 - (-$L2 * 0.735)",
+           "1.0 + $dy - 0.034 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735)",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016)"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016) + 0.0035"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735) + 0.0078",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016) + 0.0096"
+          ],
+          [
+           "-$L2 * 0.735 + 0.0052 - (-$L2 * 0.735) + 0.0055",
+           "0.9886 + $dy - 0.034 - (0.9886 + $dy + 0.016) + 0.0148"
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Glass",
      "shape": "loft",
      "material": "glass",
      "sections": [
       {
-       "z": "-$L2 * 0.68",
-       "superellipse": {
-        "width": "$width * 0.72",
-        "height": 0.35,
-        "n": 2.5,
-        "count": 32,
-        "cy": 1.0
-       }
+       "z": "0.405 * $L2",
+       "points": [
+        [
+         0,
+         "0.8091 + $dy"
+        ],
+        [
+         "$W2 - 0.095",
+         "0.8091 + $dy"
+        ],
+        [
+         "$W2 - 0.1142",
+         "0.8571 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1142)",
+         "0.874 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1142)",
+         "0.8852 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1142)",
+         "0.8938 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1142)",
+         "0.9 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1142)",
+         "0.9037 + $dy"
+        ],
+        [
+         0,
+         "0.905 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1142)",
+         "0.9037 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1142)",
+         "0.9 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1142)",
+         "0.8938 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1142)",
+         "0.8852 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1142)",
+         "0.874 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1142)",
+         "0.8571 + $dy"
+        ],
+        [
+         "-($W2 - 0.095)",
+         "0.8091 + $dy"
+        ]
+       ]
       },
       {
-       "z": "-$L2 * 0.41",
-       "superellipse": {
-        "width": "$width * 0.83",
-        "height": 0.6,
-        "n": 2.5,
-        "count": 32,
-        "cy": 1.1
-       }
+       "z": "0.33 * $L2",
+       "points": [
+        [
+         0,
+         "0.8237 + $dy"
+        ],
+        [
+         "$W2 - 0.085",
+         "0.8237 + $dy"
+        ],
+        [
+         "$W2 - 0.1243",
+         "0.9218 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1243)",
+         "0.9566 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1243)",
+         "0.9794 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1243)",
+         "0.997 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1243)",
+         "1.0097 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1243)",
+         "1.0174 + $dy"
+        ],
+        [
+         0,
+         "1.02 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1243)",
+         "1.0174 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1243)",
+         "1.0097 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1243)",
+         "0.997 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1243)",
+         "0.9794 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1243)",
+         "0.9566 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1243)",
+         "0.9218 + $dy"
+        ],
+        [
+         "-($W2 - 0.085)",
+         "0.8237 + $dy"
+        ]
+       ]
       },
       {
-       "z": "$L2 * 0.23",
-       "superellipse": {
-        "width": "$width * 0.83",
-        "height": 0.62,
-        "n": 2.5,
-        "count": 32,
-        "cy": 1.1
-       }
+       "z": "0.22 * $L2",
+       "points": [
+        [
+         0,
+         "0.8428 + $dy"
+        ],
+        [
+         "$W2 - 0.08",
+         "0.8428 + $dy"
+        ],
+        [
+         "$W2 - 0.1444",
+         "1.035 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1444)",
+         "1.081 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1444)",
+         "1.1113 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1444)",
+         "1.1346 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1444)",
+         "1.1514 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1444)",
+         "1.1616 + $dy"
+        ],
+        [
+         0,
+         "1.165 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1444)",
+         "1.1616 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1444)",
+         "1.1514 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1444)",
+         "1.1346 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1444)",
+         "1.1113 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1444)",
+         "1.081 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1444)",
+         "1.035 + $dy"
+        ],
+        [
+         "-($W2 - 0.08)",
+         "0.8428 + $dy"
+        ]
+       ]
       },
       {
-       "z": "$L2 * 0.45",
-       "superellipse": {
-        "width": "$width * 0.75",
-        "height": 0.35,
-        "n": 2.5,
-        "count": 32,
-        "cy": 1.0
-       }
+       "z": "0.1 * $L2",
+       "points": [
+        [
+         0,
+         "0.8593 + $dy"
+        ],
+        [
+         "$W2 - 0.075",
+         "0.8593 + $dy"
+        ],
+        [
+         "$W2 - 0.1621",
+         "1.165 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1621)",
+         "1.211 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1621)",
+         "1.2413 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1621)",
+         "1.2646 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1621)",
+         "1.2814 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1621)",
+         "1.2916 + $dy"
+        ],
+        [
+         0,
+         "1.295 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1621)",
+         "1.2916 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1621)",
+         "1.2814 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1621)",
+         "1.2646 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1621)",
+         "1.2413 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1621)",
+         "1.211 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1621)",
+         "1.165 + $dy"
+        ],
+        [
+         "-($W2 - 0.075)",
+         "0.8593 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": 0,
+       "points": [
+        [
+         0,
+         "0.8679 + $dy"
+        ],
+        [
+         "$W2 - 0.075",
+         "0.8679 + $dy"
+        ],
+        [
+         "$W2 - 0.1764",
+         "1.245 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1764)",
+         "1.291 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1764)",
+         "1.3213 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1764)",
+         "1.3446 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1764)",
+         "1.3614 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1764)",
+         "1.3716 + $dy"
+        ],
+        [
+         0,
+         "1.375 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1764)",
+         "1.3716 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1764)",
+         "1.3614 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1764)",
+         "1.3446 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1764)",
+         "1.3213 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1764)",
+         "1.291 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1764)",
+         "1.245 + $dy"
+        ],
+        [
+         "-($W2 - 0.075)",
+         "0.8679 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.09 * $L2",
+       "points": [
+        [
+         0,
+         "0.8756 + $dy"
+        ],
+        [
+         "$W2 - 0.075",
+         "0.8756 + $dy"
+        ],
+        [
+         "$W2 - 0.1829",
+         "1.285 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1829)",
+         "1.331 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1829)",
+         "1.3613 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1829)",
+         "1.3846 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1829)",
+         "1.4014 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1829)",
+         "1.4116 + $dy"
+        ],
+        [
+         0,
+         "1.415 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1829)",
+         "1.4116 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1829)",
+         "1.4014 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1829)",
+         "1.3846 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1829)",
+         "1.3613 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1829)",
+         "1.331 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1829)",
+         "1.285 + $dy"
+        ],
+        [
+         "-($W2 - 0.075)",
+         "0.8756 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.4 * $L2",
+       "points": [
+        [
+         0,
+         "0.8983 + $dy"
+        ],
+        [
+         "$W2 - 0.085",
+         "0.8983 + $dy"
+        ],
+        [
+         "$W2 - 0.1883",
+         "1.285 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1883)",
+         "1.331 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1883)",
+         "1.3613 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1883)",
+         "1.3846 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1883)",
+         "1.4014 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1883)",
+         "1.4116 + $dy"
+        ],
+        [
+         0,
+         "1.415 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1883)",
+         "1.4116 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1883)",
+         "1.4014 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1883)",
+         "1.3846 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1883)",
+         "1.3613 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1883)",
+         "1.331 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1883)",
+         "1.285 + $dy"
+        ],
+        [
+         "-($W2 - 0.085)",
+         "0.8983 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.5 * $L2",
+       "points": [
+        [
+         0,
+         "0.905 + $dy"
+        ],
+        [
+         "$W2 - 0.095",
+         "0.905 + $dy"
+        ],
+        [
+         "$W2 - 0.185",
+         "1.225 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.185)",
+         "1.271 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.185)",
+         "1.3013 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.185)",
+         "1.3246 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.185)",
+         "1.3414 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.185)",
+         "1.3516 + $dy"
+        ],
+        [
+         0,
+         "1.355 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.185)",
+         "1.3516 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.185)",
+         "1.3414 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.185)",
+         "1.3246 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.185)",
+         "1.3013 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.185)",
+         "1.271 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.185)",
+         "1.225 + $dy"
+        ],
+        [
+         "-($W2 - 0.095)",
+         "0.905 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.58 * $L2",
+       "points": [
+        [
+         0,
+         "0.913 + $dy"
+        ],
+        [
+         "$W2 - 0.105",
+         "0.913 + $dy"
+        ],
+        [
+         "$W2 - 0.1704",
+         "1.11 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1704)",
+         "1.156 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1704)",
+         "1.1863 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1704)",
+         "1.2096 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1704)",
+         "1.2264 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1704)",
+         "1.2366 + $dy"
+        ],
+        [
+         0,
+         "1.24 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1704)",
+         "1.2366 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1704)",
+         "1.2264 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1704)",
+         "1.2096 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1704)",
+         "1.1863 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1704)",
+         "1.156 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1704)",
+         "1.11 + $dy"
+        ],
+        [
+         "-($W2 - 0.105)",
+         "0.913 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.66 * $L2",
+       "points": [
+        [
+         0,
+         "0.921 + $dy"
+        ],
+        [
+         "$W2 - 0.115",
+         "0.921 + $dy"
+        ],
+        [
+         "$W2 - 0.1508",
+         "1.0105 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1508)",
+         "1.0421 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1508)",
+         "1.063 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1508)",
+         "1.0791 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1508)",
+         "1.0906 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1508)",
+         "1.0976 + $dy"
+        ],
+        [
+         0,
+         "1.1 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1508)",
+         "1.0976 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1508)",
+         "1.0906 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1508)",
+         "1.0791 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1508)",
+         "1.063 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1508)",
+         "1.0421 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1508)",
+         "1.0105 + $dy"
+        ],
+        [
+         "-($W2 - 0.115)",
+         "0.921 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.725 * $L2",
+       "points": [
+        [
+         0,
+         "0.9277 + $dy"
+        ],
+        [
+         "$W2 - 0.125",
+         "0.9277 + $dy"
+        ],
+        [
+         "$W2 - 0.1415",
+         "0.9688 + $dy"
+        ],
+        [
+         "0.9737 * ($W2 - 0.1415)",
+         "0.9834 + $dy"
+        ],
+        [
+         "0.8953 * ($W2 - 0.1415)",
+         "0.993 + $dy"
+        ],
+        [
+         "0.766 * ($W2 - 0.1415)",
+         "1.0004 + $dy"
+        ],
+        [
+         "0.5867 * ($W2 - 0.1415)",
+         "1.0057 + $dy"
+        ],
+        [
+         "0.3536 * ($W2 - 0.1415)",
+         "1.0089 + $dy"
+        ],
+        [
+         0,
+         "1.01 + $dy"
+        ],
+        [
+         "-0.3536 * ($W2 - 0.1415)",
+         "1.0089 + $dy"
+        ],
+        [
+         "-0.5867 * ($W2 - 0.1415)",
+         "1.0057 + $dy"
+        ],
+        [
+         "-0.766 * ($W2 - 0.1415)",
+         "1.0004 + $dy"
+        ],
+        [
+         "-0.8953 * ($W2 - 0.1415)",
+         "0.993 + $dy"
+        ],
+        [
+         "-0.9737 * ($W2 - 0.1415)",
+         "0.9834 + $dy"
+        ],
+        [
+         "-1 * ($W2 - 0.1415)",
+         "0.9688 + $dy"
+        ],
+        [
+         "-($W2 - 0.125)",
+         "0.9277 + $dy"
+        ]
+       ]
       }
      ]
     },
     {
+     "name": "Roof",
+     "shape": "loft",
+     "material": "body_paint",
+     "sections": [
+      {
+       "z": 0,
+       "points": [
+        [
+         "0.9533 * ($W2 - 0.1764 + 0.008)",
+         "1.3055 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1764 + 0.008)",
+         "1.3367 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.1764 + 0.008)",
+         "1.3599 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.1764 + 0.008)",
+         "1.3752 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.1764 + 0.008)",
+         "1.3824 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.1764 + 0.008)",
+         "1.3824 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.1764 + 0.008)",
+         "1.3752 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.1764 + 0.008)",
+         "1.3599 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.1764 + 0.008)",
+         "1.3367 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.1764 + 0.008)",
+         "1.3055 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.1764 - 0.025)",
+         "1.291 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.1764 - 0.025)",
+         "1.3148 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.1764 - 0.025)",
+         "1.3324 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.1764 - 0.025)",
+         "1.3441 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.1764 - 0.025)",
+         "1.3496 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.1764 - 0.025)",
+         "1.3496 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.1764 - 0.025)",
+         "1.3441 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.1764 - 0.025)",
+         "1.3324 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1764 - 0.025)",
+         "1.3148 + $dy"
+        ],
+        [
+         "0.9533 * ($W2 - 0.1764 - 0.025)",
+         "1.291 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.09 * $L2",
+       "points": [
+        [
+         "0.9533 * ($W2 - 0.1829 + 0.008)",
+         "1.3455 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1829 + 0.008)",
+         "1.3767 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.1829 + 0.008)",
+         "1.3999 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.1829 + 0.008)",
+         "1.4152 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.1829 + 0.008)",
+         "1.4224 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.1829 + 0.008)",
+         "1.4224 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.1829 + 0.008)",
+         "1.4152 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.1829 + 0.008)",
+         "1.3999 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.1829 + 0.008)",
+         "1.3767 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.1829 + 0.008)",
+         "1.3455 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.1829 - 0.025)",
+         "1.331 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.1829 - 0.025)",
+         "1.3548 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.1829 - 0.025)",
+         "1.3724 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.1829 - 0.025)",
+         "1.3841 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.1829 - 0.025)",
+         "1.3896 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.1829 - 0.025)",
+         "1.3896 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.1829 - 0.025)",
+         "1.3841 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.1829 - 0.025)",
+         "1.3724 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1829 - 0.025)",
+         "1.3548 + $dy"
+        ],
+        [
+         "0.9533 * ($W2 - 0.1829 - 0.025)",
+         "1.331 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.4 * $L2",
+       "points": [
+        [
+         "0.9533 * ($W2 - 0.1883 + 0.008)",
+         "1.3455 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 + 0.008)",
+         "1.3767 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.1883 + 0.008)",
+         "1.3999 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.1883 + 0.008)",
+         "1.4152 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.1883 + 0.008)",
+         "1.4224 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.1883 + 0.008)",
+         "1.4224 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.1883 + 0.008)",
+         "1.4152 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.1883 + 0.008)",
+         "1.3999 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.1883 + 0.008)",
+         "1.3767 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.1883 + 0.008)",
+         "1.3455 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.1883 - 0.025)",
+         "1.331 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.1883 - 0.025)",
+         "1.3548 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.1883 - 0.025)",
+         "1.3724 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.1883 - 0.025)",
+         "1.3841 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.1883 - 0.025)",
+         "1.3896 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.1883 - 0.025)",
+         "1.3896 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.1883 - 0.025)",
+         "1.3841 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.1883 - 0.025)",
+         "1.3724 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 - 0.025)",
+         "1.3548 + $dy"
+        ],
+        [
+         "0.9533 * ($W2 - 0.1883 - 0.025)",
+         "1.331 + $dy"
+        ]
+       ]
+      },
+      {
+       "z": "-0.5 * $L2",
+       "points": [
+        [
+         "0.9533 * ($W2 - 0.185 + 0.008)",
+         "1.2855 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 + 0.008)",
+         "1.3167 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.185 + 0.008)",
+         "1.3399 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.185 + 0.008)",
+         "1.3552 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.185 + 0.008)",
+         "1.3624 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.185 + 0.008)",
+         "1.3624 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.185 + 0.008)",
+         "1.3552 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.185 + 0.008)",
+         "1.3399 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.185 + 0.008)",
+         "1.3167 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.185 + 0.008)",
+         "1.2855 + $dy"
+        ],
+        [
+         "-0.9533 * ($W2 - 0.185 - 0.025)",
+         "1.271 + $dy"
+        ],
+        [
+         "-0.8496 * ($W2 - 0.185 - 0.025)",
+         "1.2948 + $dy"
+        ],
+        [
+         "-0.6886 * ($W2 - 0.185 - 0.025)",
+         "1.3124 + $dy"
+        ],
+        [
+         "-0.4699 * ($W2 - 0.185 - 0.025)",
+         "1.3241 + $dy"
+        ],
+        [
+         "-0.176 * ($W2 - 0.185 - 0.025)",
+         "1.3296 + $dy"
+        ],
+        [
+         "0.176 * ($W2 - 0.185 - 0.025)",
+         "1.3296 + $dy"
+        ],
+        [
+         "0.4699 * ($W2 - 0.185 - 0.025)",
+         "1.3241 + $dy"
+        ],
+        [
+         "0.6886 * ($W2 - 0.185 - 0.025)",
+         "1.3124 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 - 0.025)",
+         "1.2948 + $dy"
+        ],
+        [
+         "0.9533 * ($W2 - 0.185 - 0.025)",
+         "1.271 + $dy"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "PillarA_L",
+     "shape": "tube",
+     "material": "body_paint",
+     "radius": 0.028,
+     "segments": 10,
+     "path": [
+      [
+       "0.9533 * ($W2 - 0.1142 + 0.004)",
+       "0.8798 + $dy",
+       "0.405 * $L2"
+      ],
+      [
+       "0.9533 * ($W2 - 0.1243 + 0.004)",
+       "0.9666 + $dy",
+       "0.33 * $L2"
+      ],
+      [
+       "0.9533 * ($W2 - 0.1444 + 0.004)",
+       "1.0937 + $dy",
+       "0.22 * $L2"
+      ],
+      [
+       "0.9533 * ($W2 - 0.1621 + 0.004)",
+       "1.2237 + $dy",
+       "0.1 * $L2"
+      ],
+      [
+       "0.9533 * ($W2 - 0.1764 + 0.004)",
+       "1.3037 + $dy",
+       0
+      ],
+      [
+       "0.9533 * ($W2 - 0.1829 + 0.004)",
+       "1.3437 + $dy",
+       "-0.09 * $L2"
+      ]
+     ],
+     "mirror": "PillarA_R"
+    },
+    {
+     "name": "PillarB_L",
+     "shape": "box",
+     "material": "trim_black",
+     "size": [
+      0.025,
+      0.402,
+      0.075
+     ],
+     "at": [
+      "$W2 - 0.1252",
+      "1.094 + $dy",
+      "-0.06 * $L2"
+     ],
+     "rotate": [
+      0,
+      0,
+      14.7408
+     ],
+     "mirror": "PillarB_R"
+    },
+    {
+     "name": "PillarC_L",
+     "shape": "loft",
+     "material": "body_paint",
+     "sections": [
+      {
+       "z": "-0.4 * $L2",
+       "points": [
+        [
+         "$W2 - 0.085 + 0.006",
+         "0.8983 + $dy"
+        ],
+        [
+         "$W2 - 0.1883 + 0.006",
+         "1.285 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1883 + 0.006)",
+         "1.3256 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1883 + 0.006)",
+         "1.3531 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 + 0.006)",
+         "1.3754 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 + 0.006) - 0.0088",
+         "1.3754 + $dy + 0.0057"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 + 0.006) - 0.0189",
+         "1.3754 + $dy + 0.003"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 + 0.006) - 0.0244",
+         "1.3754 + $dy - 0.0065"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1883 - 0.02)",
+         "1.3581 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1883 - 0.02)",
+         "1.3401 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1883 - 0.02)",
+         "1.3179 + $dy"
+        ],
+        [
+         "$W2 - 0.1883 - 0.02",
+         "1.285 + $dy"
+        ],
+        [
+         "$W2 - 0.085 - 0.02",
+         "0.8983 + $dy"
+        ],
+        [
+         "$W2 - 0.085 - 0.02 + 0.0038",
+         "0.8983 + $dy - 0.0092"
+        ],
+        [
+         "$W2 - 0.085 - 0.02 + 0.013",
+         "0.8983 + $dy - 0.013"
+        ],
+        [
+         "$W2 - 0.085 - 0.02 + 0.0222",
+         "0.8983 + $dy - 0.0092"
+        ]
+       ]
+      },
+      {
+       "z": "-0.5 * $L2",
+       "points": [
+        [
+         "$W2 - 0.095 + 0.006",
+         "0.905 + $dy"
+        ],
+        [
+         "$W2 - 0.185 + 0.006",
+         "1.225 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.185 + 0.006)",
+         "1.2656 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.185 + 0.006)",
+         "1.2931 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 + 0.006)",
+         "1.3154 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 + 0.006) - 0.0088",
+         "1.3154 + $dy + 0.0057"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 + 0.006) - 0.0189",
+         "1.3154 + $dy + 0.003"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 + 0.006) - 0.0244",
+         "1.3154 + $dy - 0.0065"
+        ],
+        [
+         "0.8496 * ($W2 - 0.185 - 0.02)",
+         "1.2981 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.185 - 0.02)",
+         "1.2801 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.185 - 0.02)",
+         "1.2579 + $dy"
+        ],
+        [
+         "$W2 - 0.185 - 0.02",
+         "1.225 + $dy"
+        ],
+        [
+         "$W2 - 0.095 - 0.02",
+         "0.905 + $dy"
+        ],
+        [
+         "$W2 - 0.095 - 0.02 + 0.0038",
+         "0.905 + $dy - 0.0092"
+        ],
+        [
+         "$W2 - 0.095 - 0.02 + 0.013",
+         "0.905 + $dy - 0.013"
+        ],
+        [
+         "$W2 - 0.095 - 0.02 + 0.0222",
+         "0.905 + $dy - 0.0092"
+        ]
+       ]
+      },
+      {
+       "z": "-0.58 * $L2",
+       "points": [
+        [
+         "$W2 - 0.105 + 0.006",
+         "0.913 + $dy"
+        ],
+        [
+         "$W2 - 0.1704 + 0.006",
+         "1.11 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1704 + 0.006)",
+         "1.1506 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1704 + 0.006)",
+         "1.1781 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1704 + 0.006)",
+         "1.2004 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1704 + 0.006) - 0.0088",
+         "1.2004 + $dy + 0.0057"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1704 + 0.006) - 0.0189",
+         "1.2004 + $dy + 0.003"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1704 + 0.006) - 0.0244",
+         "1.2004 + $dy - 0.0065"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1704 - 0.02)",
+         "1.1831 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1704 - 0.02)",
+         "1.1651 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1704 - 0.02)",
+         "1.1429 + $dy"
+        ],
+        [
+         "$W2 - 0.1704 - 0.02",
+         "1.11 + $dy"
+        ],
+        [
+         "$W2 - 0.105 - 0.02",
+         "0.913 + $dy"
+        ],
+        [
+         "$W2 - 0.105 - 0.02 + 0.0038",
+         "0.913 + $dy - 0.0092"
+        ],
+        [
+         "$W2 - 0.105 - 0.02 + 0.013",
+         "0.913 + $dy - 0.013"
+        ],
+        [
+         "$W2 - 0.105 - 0.02 + 0.0222",
+         "0.913 + $dy - 0.0092"
+        ]
+       ]
+      },
+      {
+       "z": "-0.66 * $L2",
+       "points": [
+        [
+         "$W2 - 0.115 + 0.006",
+         "0.921 + $dy"
+        ],
+        [
+         "$W2 - 0.1508 + 0.006",
+         "1.0105 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1508 + 0.006)",
+         "1.039 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1508 + 0.006)",
+         "1.0583 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1508 + 0.006)",
+         "1.074 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1508 + 0.006) - 0.0088",
+         "1.074 + $dy + 0.0057"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1508 + 0.006) - 0.0189",
+         "1.074 + $dy + 0.003"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1508 + 0.006) - 0.0244",
+         "1.074 + $dy - 0.0065"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1508 - 0.02)",
+         "1.0567 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1508 - 0.02)",
+         "1.0453 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1508 - 0.02)",
+         "1.0313 + $dy"
+        ],
+        [
+         "$W2 - 0.1508 - 0.02",
+         "1.0105 + $dy"
+        ],
+        [
+         "$W2 - 0.115 - 0.02",
+         "0.921 + $dy"
+        ],
+        [
+         "$W2 - 0.115 - 0.02 + 0.0038",
+         "0.921 + $dy - 0.0092"
+        ],
+        [
+         "$W2 - 0.115 - 0.02 + 0.013",
+         "0.921 + $dy - 0.013"
+        ],
+        [
+         "$W2 - 0.115 - 0.02 + 0.0222",
+         "0.921 + $dy - 0.0092"
+        ]
+       ]
+      },
+      {
+       "z": "-0.725 * $L2",
+       "points": [
+        [
+         "$W2 - 0.125 + 0.006",
+         "0.9277 + $dy"
+        ],
+        [
+         "$W2 - 0.1415 + 0.006",
+         "0.9688 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1415 + 0.006)",
+         "0.9829 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1415 + 0.006)",
+         "0.9924 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1415 + 0.006)",
+         "1.0002 + $dy"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1415 + 0.006) - 0.0088",
+         "1.0002 + $dy + 0.0057"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1415 + 0.006) - 0.0189",
+         "1.0002 + $dy + 0.003"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1415 + 0.006) - 0.0244",
+         "1.0002 + $dy - 0.0065"
+        ],
+        [
+         "0.8496 * ($W2 - 0.1415 - 0.02)",
+         "0.9829 + $dy"
+        ],
+        [
+         "0.9328 * ($W2 - 0.1415 - 0.02)",
+         "0.9794 + $dy"
+        ],
+        [
+         "0.9831 * ($W2 - 0.1415 - 0.02)",
+         "0.9752 + $dy"
+        ],
+        [
+         "$W2 - 0.1415 - 0.02",
+         "0.9688 + $dy"
+        ],
+        [
+         "$W2 - 0.125 - 0.02",
+         "0.9277 + $dy"
+        ],
+        [
+         "$W2 - 0.125 - 0.02 + 0.0038",
+         "0.9277 + $dy - 0.0092"
+        ],
+        [
+         "$W2 - 0.125 - 0.02 + 0.013",
+         "0.9277 + $dy - 0.013"
+        ],
+        [
+         "$W2 - 0.125 - 0.02 + 0.0222",
+         "0.9277 + $dy - 0.0092"
+        ]
+       ]
+      }
+     ],
+     "mirror": "PillarC_R"
+    },
+    {
+     "name": "BeltTrim_L",
+     "shape": "tube",
+     "material": "chrome",
+     "radius": 0.008,
+     "segments": 6,
+     "path": [
+      [
+       "$W2 - 0.095 + 0.004",
+       "0.8451 + $dy",
+       "0.405 * $L2"
+      ],
+      [
+       "$W2 - 0.085 + 0.004",
+       "0.8597 + $dy",
+       "0.33 * $L2"
+      ],
+      [
+       "$W2 - 0.08 + 0.004",
+       "0.8788 + $dy",
+       "0.22 * $L2"
+      ],
+      [
+       "$W2 - 0.075 + 0.004",
+       "0.8953 + $dy",
+       "0.1 * $L2"
+      ],
+      [
+       "$W2 - 0.075 + 0.004",
+       "0.9039 + $dy",
+       0
+      ],
+      [
+       "$W2 - 0.075 + 0.004",
+       "0.9116 + $dy",
+       "-0.09 * $L2"
+      ],
+      [
+       "$W2 - 0.085 + 0.004",
+       "0.9343 + $dy",
+       "-0.4 * $L2"
+      ]
+     ],
+     "mirror": "BeltTrim_R"
+    },
+    {
      "name": "Door_L",
      "at": [
-      "$width / 2 - 0.012",
-      0.72,
-      "$L2 * 0.32"
+      "$W2",
+      0,
+      "min($L2 * 0.40, $z - $Ra - 0.04)"
      ],
      "mirror": "Door_R",
      "children": [
       {
-       "name": "Panel",
-       "shape": "box",
-       "material": "paint",
-       "size": [
-        0.04,
-        0.4,
-        "$length * 0.23"
-       ],
-       "at": [
-        0,
-        0,
-        "-$length * 0.115"
+       "name": "Skin",
+       "shape": "loft",
+       "material": "body_paint",
+       "sections": [
+        {
+         "z": 0,
+         "points": [
+          [
+           "0.92 * $W2 - $W2 + 0.004",
+           "$ys + 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$ys + 0.09"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$ys + 0.16"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$bl - 0.10"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$bl - 0.068"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004",
+           "$bl - 0.05"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0026",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.009",
+           "$bl - 0.05 + 0.009"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0154",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 - 0.014",
+           "$bl - 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$bl - 0.068"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$bl - 0.10"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$ys + 0.16"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$ys + 0.09"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014",
+           "$ys + 0.05"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0026",
+           "$ys + 0.05 - 0.0064"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.009",
+           "$ys + 0.05 - 0.009"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0154",
+           "$ys + 0.05 - 0.0064"
+          ]
+         ]
+        },
+        {
+         "z": "-((min($L2 * 0.40, $z - $Ra - 0.04)) - (-$L2 * 0.06 + 0.006))",
+         "points": [
+          [
+           "0.92 * $W2 - $W2 + 0.004",
+           "$ys + 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$ys + 0.09"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$ys + 0.16"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$bl - 0.10"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$bl - 0.068"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004",
+           "$bl - 0.05"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0026",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.009",
+           "$bl - 0.05 + 0.009"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0154",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 - 0.014",
+           "$bl - 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$bl - 0.068"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$bl - 0.10"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$ys + 0.16"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$ys + 0.09"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014",
+           "$ys + 0.05"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0026",
+           "$ys + 0.05 - 0.0064"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.009",
+           "$ys + 0.05 - 0.009"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0154",
+           "$ys + 0.05 - 0.0064"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Handle",
+       "shape": "tube",
+       "material": "chrome",
+       "radius": 0.011,
+       "segments": 8,
+       "path": [
+        [
+         0.006,
+         "$bl - 0.135",
+         "-((min($L2 * 0.40, $z - $Ra - 0.04)) - (-$L2 * 0.06)) + 0.14 + 0.06"
+        ],
+        [
+         0.012,
+         "$bl - 0.135",
+         "-((min($L2 * 0.40, $z - $Ra - 0.04)) - (-$L2 * 0.06)) + 0.14"
+        ],
+        [
+         0.006,
+         "$bl - 0.135",
+         "-((min($L2 * 0.40, $z - $Ra - 0.04)) - (-$L2 * 0.06)) + 0.14 - 0.06"
+        ]
        ]
       }
-     ]
+     ],
+     "vars": {
+      "bl": "0.93 + $dy"
+     }
+    },
+    {
+     "name": "DoorRear_L",
+     "at": [
+      "$W2",
+      0,
+      "-$L2 * 0.06 - 0.006"
+     ],
+     "mirror": "DoorRear_R",
+     "children": [
+      {
+       "name": "Skin",
+       "shape": "loft",
+       "material": "body_paint",
+       "sections": [
+        {
+         "z": 0,
+         "points": [
+          [
+           "0.92 * $W2 - $W2 + 0.004",
+           "$ys + 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$ys + 0.09"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$ys + 0.16"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$bl - 0.10"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$bl - 0.068"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004",
+           "$bl - 0.05"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0026",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.009",
+           "$bl - 0.05 + 0.009"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0154",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 - 0.014",
+           "$bl - 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$bl - 0.068"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$bl - 0.10"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$ys + 0.16"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$ys + 0.09"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014",
+           "$ys + 0.05"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0026",
+           "$ys + 0.05 - 0.0064"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.009",
+           "$ys + 0.05 - 0.009"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0154",
+           "$ys + 0.05 - 0.0064"
+          ]
+         ]
+        },
+        {
+         "z": "-((-$L2 * 0.06 - 0.006) - (max(-$L2 * 0.40, -$z + $Ra + 0.04)))",
+         "points": [
+          [
+           "0.92 * $W2 - $W2 + 0.004",
+           "$ys + 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$ys + 0.09"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$ys + 0.16"
+          ],
+          [
+           "$W2 - $W2 + 0.004",
+           "$bl - 0.10"
+          ],
+          [
+           "0.975 * $W2 - $W2 + 0.004",
+           "$bl - 0.068"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004",
+           "$bl - 0.05"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0026",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.009",
+           "$bl - 0.05 + 0.009"
+          ],
+          [
+           "0.94 * $W2 - $W2 + 0.004 - 0.0154",
+           "$bl - 0.05 + 0.0064"
+          ],
+          [
+           "0.94 * $W2 - $W2 - 0.014",
+           "$bl - 0.05"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$bl - 0.068"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$bl - 0.10"
+          ],
+          [
+           "$W2 - $W2 - 0.014",
+           "$ys + 0.16"
+          ],
+          [
+           "0.975 * $W2 - $W2 - 0.014",
+           "$ys + 0.09"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014",
+           "$ys + 0.05"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0026",
+           "$ys + 0.05 - 0.0064"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.009",
+           "$ys + 0.05 - 0.009"
+          ],
+          [
+           "0.92 * $W2 - $W2 - 0.014 + 0.0154",
+           "$ys + 0.05 - 0.0064"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Handle",
+       "shape": "tube",
+       "material": "chrome",
+       "radius": 0.011,
+       "segments": 8,
+       "path": [
+        [
+         0.006,
+         "$bl - 0.135",
+         "-((-$L2 * 0.06) - (max(-$L2 * 0.40, -$z + $Ra + 0.04))) + 0.16 + 0.06"
+        ],
+        [
+         0.012,
+         "$bl - 0.135",
+         "-((-$L2 * 0.06) - (max(-$L2 * 0.40, -$z + $Ra + 0.04))) + 0.16"
+        ],
+        [
+         0.006,
+         "$bl - 0.135",
+         "-((-$L2 * 0.06) - (max(-$L2 * 0.40, -$z + $Ra + 0.04))) + 0.16 - 0.06"
+        ]
+       ]
+      }
+     ],
+     "vars": {
+      "bl": "0.93 + $dy"
+     }
     },
     {
      "name": "Wheels",
@@ -206,79 +5084,203 @@
         "$wheelRadius",
         "$z"
        ],
+       "mirror": "Wheel_FR",
        "children": [
         {
-         "name": "Tread",
+         "name": "Tyre",
          "shape": "lathe",
          "material": "rubber",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 32,
+         "segments": 40,
+         "caps": false,
          "profile": [
           [
-           "$wheelRadius*0.52",
-           "-$tyreWidth/2"
+           "0.68 * $wheelRadius",
+           "-0.40 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.9",
-           "-$tyreWidth/2"
+           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "-0.47 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "-0.512 * $tyreWidth"
+          ],
+          [
+           "$wheelRadius - 0.035 * $wheelRadius",
+           "-0.47 * $tyreWidth"
           ],
           [
            "$wheelRadius",
-           "-$tyreWidth*0.34"
+           "-0.36 * $tyreWidth"
           ],
           [
            "$wheelRadius",
-           "$tyreWidth*0.34"
+           "0.36 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.9",
-           "$tyreWidth/2"
+           "$wheelRadius - 0.035 * $wheelRadius",
+           "0.47 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.52",
-           "$tyreWidth/2"
+           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.512 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.47 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius",
+           "0.40 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius",
+           "-0.40 * $tyreWidth"
           ]
          ]
         },
         {
          "name": "Rim",
          "shape": "lathe",
-         "material": "metal",
+         "material": "aluminium",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 32,
+         "segments": 40,
+         "caps": false,
          "profile": [
           [
-           0,
-           "-$tyreWidth*0.53"
+           "0.68 * $wheelRadius - 0.03 * $wheelRadius",
+           "-0.42 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.53",
-           "-$tyreWidth*0.53"
+           "0.68 * $wheelRadius + 0.02 * $wheelRadius",
+           "-0.45 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.47",
-           0
+           "0.68 * $wheelRadius + 0.03 * $wheelRadius",
+           "-0.40 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.53",
-           "$tyreWidth*0.53"
+           "0.68 * $wheelRadius + 0.03 * $wheelRadius",
+           "0.40 * $tyreWidth"
           ],
           [
-           0,
-           "$tyreWidth*0.53"
+           "0.68 * $wheelRadius + 0.035 * $wheelRadius",
+           "0.47 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.005 * $wheelRadius",
+           "0.50 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.05 * $wheelRadius",
+           "0.44 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.05 * $wheelRadius",
+           "-0.38 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.03 * $wheelRadius",
+           "-0.42 * $tyreWidth"
           ]
          ]
+        },
+        {
+         "name": "Disc",
+         "shape": "cylinder",
+         "material": "steel",
+         "axis": "x",
+         "radius": "0.6000000000000001 * $wheelRadius",
+         "height": "0.06 * $tyreWidth",
+         "segments": 28,
+         "at": [
+          "-0.05 * $tyreWidth",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Spoke{i}",
+         "shape": "box",
+         "material": "aluminium",
+         "size": [
+          "0.10 * $tyreWidth",
+          "0.48000000000000004 * $wheelRadius",
+          "0.075 * $wheelRadius"
+         ],
+         "at": [
+          "0.34 * $tyreWidth",
+          "0.42000000000000004 * $wheelRadius",
+          0
+         ],
+         "rotate": [
+          0,
+          0,
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "around": "x"
+         }
+        },
+        {
+         "name": "Spoke{i}b",
+         "shape": "box",
+         "material": "aluminium",
+         "size": [
+          "0.10 * $tyreWidth",
+          "0.48000000000000004 * $wheelRadius",
+          "0.075 * $wheelRadius"
+         ],
+         "at": [
+          "0.34 * $tyreWidth",
+          "0.42000000000000004 * $wheelRadius",
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "around": "x",
+          "phase": 22
+         }
+        },
+        {
+         "name": "Hub",
+         "shape": "cylinder",
+         "material": "aluminium",
+         "axis": "x",
+         "radius": "0.2 * $wheelRadius",
+         "height": "0.16 * $tyreWidth",
+         "segments": 20,
+         "at": [
+          "0.36 * $tyreWidth",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Cap",
+         "shape": "cylinder",
+         "material": "trim_black",
+         "axis": "x",
+         "radius": "0.09 * $wheelRadius",
+         "height": "0.04 * $tyreWidth",
+         "segments": 16,
+         "at": [
+          "0.44 * $tyreWidth",
+          0,
+          0
+         ]
         }
-       ],
-       "mirror": "Wheel_FR"
+       ]
       },
       {
        "name": "Wheel_RL",
@@ -287,129 +5289,1286 @@
         "$wheelRadius",
         "-$z"
        ],
+       "mirror": "Wheel_RR",
        "children": [
         {
-         "name": "Tread",
+         "name": "Tyre",
          "shape": "lathe",
          "material": "rubber",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 32,
+         "segments": 40,
+         "caps": false,
          "profile": [
           [
-           "$wheelRadius*0.52",
-           "-$tyreWidth/2"
+           "0.68 * $wheelRadius",
+           "-0.40 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.9",
-           "-$tyreWidth/2"
+           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "-0.47 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "-0.512 * $tyreWidth"
+          ],
+          [
+           "$wheelRadius - 0.035 * $wheelRadius",
+           "-0.47 * $tyreWidth"
           ],
           [
            "$wheelRadius",
-           "-$tyreWidth*0.34"
+           "-0.36 * $tyreWidth"
           ],
           [
            "$wheelRadius",
-           "$tyreWidth*0.34"
+           "0.36 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.9",
-           "$tyreWidth/2"
+           "$wheelRadius - 0.035 * $wheelRadius",
+           "0.47 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.52",
-           "$tyreWidth/2"
+           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.512 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.47 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius",
+           "0.40 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius",
+           "-0.40 * $tyreWidth"
           ]
          ]
         },
         {
          "name": "Rim",
          "shape": "lathe",
-         "material": "metal",
+         "material": "aluminium",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 32,
+         "segments": 40,
+         "caps": false,
          "profile": [
           [
-           0,
-           "-$tyreWidth*0.53"
+           "0.68 * $wheelRadius - 0.03 * $wheelRadius",
+           "-0.42 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.53",
-           "-$tyreWidth*0.53"
+           "0.68 * $wheelRadius + 0.02 * $wheelRadius",
+           "-0.45 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.47",
-           0
+           "0.68 * $wheelRadius + 0.03 * $wheelRadius",
+           "-0.40 * $tyreWidth"
           ],
           [
-           "$wheelRadius*0.53",
-           "$tyreWidth*0.53"
+           "0.68 * $wheelRadius + 0.03 * $wheelRadius",
+           "0.40 * $tyreWidth"
           ],
           [
-           0,
-           "$tyreWidth*0.53"
+           "0.68 * $wheelRadius + 0.035 * $wheelRadius",
+           "0.47 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.005 * $wheelRadius",
+           "0.50 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.05 * $wheelRadius",
+           "0.44 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.05 * $wheelRadius",
+           "-0.38 * $tyreWidth"
+          ],
+          [
+           "0.68 * $wheelRadius - 0.03 * $wheelRadius",
+           "-0.42 * $tyreWidth"
           ]
          ]
+        },
+        {
+         "name": "Disc",
+         "shape": "cylinder",
+         "material": "steel",
+         "axis": "x",
+         "radius": "0.6000000000000001 * $wheelRadius",
+         "height": "0.06 * $tyreWidth",
+         "segments": 28,
+         "at": [
+          "-0.05 * $tyreWidth",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Spoke{i}",
+         "shape": "box",
+         "material": "aluminium",
+         "size": [
+          "0.10 * $tyreWidth",
+          "0.48000000000000004 * $wheelRadius",
+          "0.075 * $wheelRadius"
+         ],
+         "at": [
+          "0.34 * $tyreWidth",
+          "0.42000000000000004 * $wheelRadius",
+          0
+         ],
+         "rotate": [
+          0,
+          0,
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "around": "x"
+         }
+        },
+        {
+         "name": "Spoke{i}b",
+         "shape": "box",
+         "material": "aluminium",
+         "size": [
+          "0.10 * $tyreWidth",
+          "0.48000000000000004 * $wheelRadius",
+          "0.075 * $wheelRadius"
+         ],
+         "at": [
+          "0.34 * $tyreWidth",
+          "0.42000000000000004 * $wheelRadius",
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "around": "x",
+          "phase": 22
+         }
+        },
+        {
+         "name": "Hub",
+         "shape": "cylinder",
+         "material": "aluminium",
+         "axis": "x",
+         "radius": "0.2 * $wheelRadius",
+         "height": "0.16 * $tyreWidth",
+         "segments": 20,
+         "at": [
+          "0.36 * $tyreWidth",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Cap",
+         "shape": "cylinder",
+         "material": "trim_black",
+         "axis": "x",
+         "radius": "0.09 * $wheelRadius",
+         "height": "0.04 * $tyreWidth",
+         "segments": 16,
+         "at": [
+          "0.44 * $tyreWidth",
+          0,
+          0
+         ]
         }
-       ],
-       "mirror": "Wheel_RR"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "WellFront_L",
+     "shape": "loft",
+     "material": "trim_black",
+     "rotate": [
+      0,
+      -90,
+      0
+     ],
+     "mirror": "WellFront_R",
+     "vars": {
+      "thl": "asin(clamp(($ys + 0.01 - $wheelRadius) / $Ra, -0.95, 0.6))"
+     },
+     "sections": [
+      {
+       "z": "-$W2 + 0.012",
+       "points": [
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ]
+       ]
+      },
+      {
+       "z": "-$W2 + 0.40",
+       "points": [
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra - 0.006) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "$z + ($Ra + 0.03) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "WellRear_L",
+     "shape": "loft",
+     "material": "trim_black",
+     "rotate": [
+      0,
+      -90,
+      0
+     ],
+     "mirror": "WellRear_R",
+     "vars": {
+      "thl": "asin(clamp(($ys + 0.01 - $wheelRadius) / $Ra, -0.95, 0.6))"
+     },
+     "sections": [
+      {
+       "z": "-$W2 + 0.012",
+       "points": [
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ]
+       ]
+      },
+      {
+       "z": "-$W2 + 0.40",
+       "points": [
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra - 0.006) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra - 0.006) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 8 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 8 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 7 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 7 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 6 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 6 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 5 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 5 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 4 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 4 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 3 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 3 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 2 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 2 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 1 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 1 * (pi - 2 * $thl) / 8)"
+        ],
+        [
+         "-$z + ($Ra + 0.03) * cos((pi - $thl) - 0 * (pi - 2 * $thl) / 8)",
+         "$wheelRadius + ($Ra + 0.03) * sin((pi - $thl) - 0 * (pi - 2 * $thl) / 8)"
+        ]
+       ]
       }
      ]
     },
     {
      "name": "Headlight_L",
+     "at": [
+      "$W2 * 0.64",
+      "0.66 + $dy",
+      "$L2 - 0.06"
+     ],
+     "rotate": [
+      -26,
+      14,
+      0
+     ],
+     "mirror": "Headlight_R",
+     "children": [
+      {
+       "name": "Bezel",
+       "shape": "box",
+       "material": "lamp_bezel",
+       "size": [
+        "$W2 * 0.52",
+        0.1,
+        0.1
+       ],
+       "bevel": 0.025
+      },
+      {
+       "name": "Lens",
+       "shape": "box",
+       "material": "glass",
+       "size": [
+        "$W2 * 0.50",
+        0.085,
+        0.01
+       ],
+       "at": [
+        0,
+        0,
+        0.049
+       ]
+      },
+      {
+       "name": "Strip",
+       "shape": "box",
+       "material": "light",
+       "size": [
+        "$W2 * 0.46",
+        0.012,
+        0.012
+       ],
+       "at": [
+        0,
+        0.033,
+        0.044
+       ]
+      },
+      {
+       "name": "Projector{i}",
+       "shape": "cylinder",
+       "material": "light",
+       "axis": "z",
+       "radius": 0.026,
+       "height": 0.02,
+       "segments": 16,
+       "at": [
+        "$W2 * 0.10",
+        -0.01,
+        0.042
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         "-$W2 * 0.17",
+         0,
+         0
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Grille",
+     "at": [
+      0,
+      "0.57 + $dy",
+      "$L2 - 0.014"
+     ],
+     "rotate": [
+      -10,
+      0,
+      0
+     ],
+     "children": [
+      {
+       "name": "Frame",
+       "shape": "box",
+       "material": "trim_black",
+       "size": [
+        "$W2 * 0.80",
+        0.13,
+        0.05
+       ],
+       "bevel": 0.02
+      },
+      {
+       "name": "Slat{i}",
+       "shape": "box",
+       "material": "chrome",
+       "size": [
+        "$W2 * 0.74",
+        0.007,
+        0.012
+       ],
+       "at": [
+        0,
+        -0.042,
+        0.022
+       ],
+       "repeat": {
+        "count": 5,
+        "step": [
+         0,
+         0.021,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Surround",
+       "shape": "tube",
+       "material": "chrome",
+       "radius": 0.006,
+       "segments": 6,
+       "path": [
+        [
+         "-$W2 * 0.40",
+         0.064,
+         0.02
+        ],
+        [
+         "$W2 * 0.40",
+         0.064,
+         0.02
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Intake",
      "shape": "box",
-     "material": "lamp",
+     "material": "trim_black",
      "size": [
-      0.3,
-      0.12,
+      "$W2 * 1.2",
+      0.085,
       0.06
      ],
+     "bevel": 0.02,
      "at": [
-      "$width * 0.3",
-      0.62,
-      "$L2 * 0.97"
+      0,
+      "0.315 + 0.8 * $dyb + 0.2 * $dy",
+      "$L2 - 0.038"
+     ]
+    },
+    {
+     "name": "Foglight_L",
+     "shape": "cylinder",
+     "material": "light",
+     "axis": "z",
+     "radius": 0.03,
+     "height": 0.03,
+     "segments": 16,
+     "at": [
+      "$W2 * 0.68",
+      "0.33 + 0.8 * $dyb + 0.2 * $dy",
+      "$L2 - 0.075"
      ],
-     "mirror": "Headlight_R"
+     "mirror": "Foglight_R"
+    },
+    {
+     "name": "PlateFront",
+     "shape": "box",
+     "material": "plastic_white",
+     "size": [
+      0.5,
+      0.11,
+      0.012
+     ],
+     "bevel": 0.004,
+     "at": [
+      0,
+      "0.455 + $dy",
+      "$L2 - 0.0"
+     ]
     },
     {
      "name": "Taillight_L",
+     "at": [
+      "$W2 * 0.70",
+      "0.885 + $dy",
+      "-$L2 + 0.072"
+     ],
+     "rotate": [
+      4,
+      -14,
+      0
+     ],
+     "mirror": "Taillight_R",
+     "children": [
+      {
+       "name": "Lens",
+       "shape": "box",
+       "material": "light_red",
+       "size": [
+        "$W2 * 0.50",
+        0.1,
+        0.1
+       ],
+       "bevel": 0.025
+      },
+      {
+       "name": "Bezel",
+       "shape": "box",
+       "material": "lamp_bezel",
+       "size": [
+        "$W2 * 0.48",
+        0.03,
+        0.02
+       ],
+       "at": [
+        0,
+        -0.012,
+        -0.045
+       ]
+      },
+      {
+       "name": "Reverse",
+       "shape": "box",
+       "material": "frame_white",
+       "size": [
+        "$W2 * 0.12",
+        0.025,
+        0.01
+       ],
+       "at": [
+        "-$W2 * 0.14",
+        -0.012,
+        -0.056
+       ]
+      }
+     ]
+    },
+    {
+     "name": "TailStrip",
      "shape": "box",
-     "material": "taillamp",
+     "material": "light_red",
      "size": [
-      0.3,
-      0.1,
-      0.05
+      "$W2 * 0.50",
+      0.016,
+      0.02
      ],
      "at": [
-      "$width * 0.34",
-      0.75,
-      "-$L2 * 0.995"
+      0,
+      "0.90 + $dy",
+      "-$L2 + 0.011"
      ],
-     "mirror": "Taillight_R"
+     "rotate": [
+      8,
+      0,
+      0
+     ]
+    },
+    {
+     "name": "PlateRear",
+     "shape": "box",
+     "material": "plastic_white",
+     "size": [
+      0.5,
+      0.11,
+      0.012
+     ],
+     "bevel": 0.004,
+     "at": [
+      0,
+      "0.585 + $dy",
+      "-$L2 - 0.003"
+     ]
+    },
+    {
+     "name": "Diffuser",
+     "shape": "box",
+     "material": "trim_black",
+     "size": [
+      "$W2 * 1.4",
+      0.06,
+      0.16
+     ],
+     "bevel": 0.02,
+     "at": [
+      0,
+      "0.27 + $dyb",
+      "-$L2 + 0.11"
+     ]
+    },
+    {
+     "name": "Exhaust_L",
+     "shape": "cylinder",
+     "material": "chrome",
+     "axis": "z",
+     "radius": 0.034,
+     "height": 0.12,
+     "segments": 16,
+     "bevel": 0.006,
+     "at": [
+      "$W2 * 0.55",
+      "0.285 + $dyb",
+      "-$L2 + 0.05"
+     ],
+     "mirror": "Exhaust_R"
     },
     {
      "name": "Mirror_L",
+     "at": [
+      "$W2 - 0.035",
+      "0.95 + $dy",
+      "$L2 * 0.30"
+     ],
+     "mirror": "Mirror_R",
+     "children": [
+      {
+       "name": "Arm",
+       "shape": "tube",
+       "material": "trim_black",
+       "radius": 0.016,
+       "segments": 8,
+       "path": [
+        [
+         0,
+         -0.02,
+         0.02
+        ],
+        [
+         0.06,
+         0.0,
+         0.0
+        ],
+        [
+         0.09,
+         0.02,
+         -0.01
+        ]
+       ]
+      },
+      {
+       "name": "Housing",
+       "shape": "ellipsoid",
+       "material": "body_paint",
+       "radii": [
+        0.095,
+        0.062,
+        0.05
+       ],
+       "segments": 16,
+       "at": [
+        0.13,
+        0.03,
+        0
+       ]
+      },
+      {
+       "name": "Face",
+       "shape": "ellipsoid",
+       "material": "chrome",
+       "radii": [
+        0.084,
+        0.052,
+        0.012
+       ],
+       "segments": 16,
+       "at": [
+        0.13,
+        0.03,
+        -0.044
+       ]
+      },
+      {
+       "name": "Signal",
+       "shape": "box",
+       "material": "light_amber",
+       "size": [
+        0.07,
+        0.012,
+        0.02
+       ],
+       "at": [
+        0.15,
+        0.0,
+        0.03
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Wiper_L",
      "shape": "box",
-     "material": "paint",
+     "material": "trim_black",
      "size": [
-      0.16,
-      0.1,
-      0.08
+      0.5,
+      0.01,
+      0.018
      ],
      "at": [
-      "$width / 2 + 0.06",
-      0.95,
-      "$L2 * 0.2"
+      "$W2 * 0.27",
+      "0.89 + $dy",
+      "$L2 * 0.375"
      ],
-     "mirror": "Mirror_R"
+     "rotate": [
+      0,
+      -6,
+      2
+     ],
+     "mirror": "Wiper_R"
+    },
+    {
+     "name": "Antenna",
+     "shape": "ellipsoid",
+     "material": "trim_black",
+     "radii": [
+      0.025,
+      0.035,
+      0.09
+     ],
+     "segments": 12,
+     "at": [
+      0,
+      "1.425 + $dy",
+      "-$L2 * 0.33"
+     ]
+    },
+    {
+     "name": "Interior",
+     "material": "upholstery",
+     "children": [
+      {
+       "name": "Tub",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": "0.41 * $L2",
+         "points": [
+          [
+           "-$W2 + 0.09",
+           "0.8219 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.8219 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.8919 + $dy"
+          ],
+          [
+           "-$W2 + 0.09",
+           "0.8919 + $dy"
+          ]
+         ]
+        },
+        {
+         "z": "0.15 * $L2",
+         "points": [
+          [
+           "-$W2 + 0.09",
+           "0.869 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.869 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.939 + $dy"
+          ],
+          [
+           "-$W2 + 0.09",
+           "0.939 + $dy"
+          ]
+         ]
+        },
+        {
+         "z": "-0.2 * $L2",
+         "points": [
+          [
+           "-$W2 + 0.09",
+           "0.899 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.899 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.969 + $dy"
+          ],
+          [
+           "-$W2 + 0.09",
+           "0.969 + $dy"
+          ]
+         ]
+        },
+        {
+         "z": "-0.5 * $L2",
+         "points": [
+          [
+           "-$W2 + 0.09",
+           "0.919 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.919 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.989 + $dy"
+          ],
+          [
+           "-$W2 + 0.09",
+           "0.989 + $dy"
+          ]
+         ]
+        },
+        {
+         "z": "-0.72 * $L2",
+         "points": [
+          [
+           "-$W2 + 0.09",
+           "0.9411 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "0.9411 + $dy"
+          ],
+          [
+           "$W2 - 0.09",
+           "1.0111 + $dy"
+          ],
+          [
+           "-$W2 + 0.09",
+           "1.0111 + $dy"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Dash",
+       "shape": "box",
+       "material": "trim_black",
+       "size": [
+        "$width - 0.46",
+        0.11,
+        0.3
+       ],
+       "bevel": 0.04,
+       "at": [
+        0,
+        "0.905 + $dy",
+        "$L2 * 0.27"
+       ]
+      },
+      {
+       "name": "Seat_L",
+       "at": [
+        "$W2 * 0.42",
+        "0.62 + $dy",
+        "-$L2 * 0.12"
+       ],
+       "mirror": "Seat_R",
+       "children": [
+        {
+         "name": "Back",
+         "shape": "box",
+         "size": [
+          0.46,
+          0.55,
+          0.11
+         ],
+         "bevel": 0.04,
+         "at": [
+          0,
+          0.3,
+          -0.05
+         ],
+         "rotate": [
+          -14,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Headrest",
+         "shape": "box",
+         "size": [
+          0.26,
+          0.15,
+          0.08
+         ],
+         "bevel": 0.035,
+         "at": [
+          0,
+          0.62,
+          -0.12
+         ],
+         "rotate": [
+          -10,
+          0,
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Bench",
+       "shape": "box",
+       "size": [
+        "$width - 0.36",
+        0.4,
+        0.12
+       ],
+       "bevel": 0.04,
+       "at": [
+        0,
+        "0.97 + $dy",
+        "-$L2 * 0.47"
+       ],
+       "rotate": [
+        -18,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "RearHeadrest_L",
+       "shape": "box",
+       "size": [
+        0.24,
+        0.12,
+        0.07
+       ],
+       "bevel": 0.03,
+       "at": [
+        "$W2 * 0.42",
+        "1.20 + $dy",
+        "-$L2 * 0.49"
+       ],
+       "rotate": [
+        -14,
+        0,
+        0
+       ],
+       "mirror": "RearHeadrest_R"
+      }
+     ]
+    },
+    {
+     "name": "SteeringWheel",
+     "at": [
+      "$W2 * 0.42",
+      "0.99 + $dy",
+      "$L2 * 0.13"
+     ],
+     "rotate": [
+      -62,
+      0,
+      0
+     ],
+     "children": [
+      {
+       "name": "Ring",
+       "shape": "lathe",
+       "material": "trim_black",
+       "segments": 24,
+       "caps": false,
+       "profile": [
+        [
+         0.196,
+         0.0
+        ],
+        [
+         0.1913,
+         0.0113
+        ],
+        [
+         0.18,
+         0.016
+        ],
+        [
+         0.1687,
+         0.0113
+        ],
+        [
+         0.164,
+         0.0
+        ],
+        [
+         0.1687,
+         -0.0113
+        ],
+        [
+         0.18,
+         -0.016
+        ],
+        [
+         0.1913,
+         -0.0113
+        ],
+        [
+         0.196,
+         -0.0
+        ]
+       ]
+      },
+      {
+       "name": "Spokes",
+       "shape": "box",
+       "material": "trim_black",
+       "size": [
+        0.33,
+        0.02,
+        0.05
+       ]
+      },
+      {
+       "name": "Boss",
+       "shape": "cylinder",
+       "material": "trim_black",
+       "radius": 0.06,
+       "height": 0.04,
+       "segments": 16
+      }
+     ]
     }
    ]
   }
