@@ -121,7 +121,8 @@ function installDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string[
 /** Finds the Godot binary: explicit path, then $GODOT / $GODOT_BIN, then PATH, then common install spots. Always absolute. */
 export function findGodot(explicit?: string, env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string {
   for (const candidate of [explicit, env["GODOT"], env["GODOT_BIN"]]) {
-    if (candidate) {
+    // A host that fills $GODOT from an empty setting may pass the unexpanded `${...}` placeholder: treat it as unset.
+    if (candidate && !candidate.startsWith("${")) {
       // A bare name such as "godot" is looked up on PATH; a path is checked where it points.
       const bare = !/[\\/]/.test(candidate);
       const found = bare ? onPath(candidate, env, platform) : isExecutable(candidate) ? candidate : undefined;

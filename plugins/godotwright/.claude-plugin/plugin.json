@@ -1,0 +1,19 @@
+{
+  "name": "godotwright",
+  "version": "0.1.0",
+  "description": "Makes Claude Code better at Godot 4: the offline Godot 4.7 API, a map of your project, headless checks, safe edits, tests, play-testing, screenshots, 3D models and an AAA review of GDScript.",
+  "author": {
+    "name": "laaielichter",
+    "url": "https://github.com/laaielichter"
+  },
+  "homepage": "https://laaielichter.github.io/Godotwright/",
+  "repository": "https://github.com/laaielichter/Godotwright",
+  "license": "MIT",
+  "keywords": [
+    "godot",
+    "godot4",
+    "gdscript",
+    "gamedev",
+    "mcp"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "manifest_version": "0.3",
+  "name": "godotwright",
+  "display_name": "Godotwright",
+  "version": "0.0.0",
+  "description": "Godot 4 tools for Claude: offline Godot 4.7 API, project map, headless checks, safe edits, tests, 3D models and an AAA GDScript review.",
+  "long_description": "Godotwright gives Claude checked Godot 4.7 knowledge for your project: the official class reference offline (with Godot 3 names translated), a map of your scenes, scripts, signals and input actions, a static AAA review with scores, headless checks with Godot, safe edits to scenes and project settings, unit tests, play-testing with input, screenshots, and 3D models built, viewed and checked from code. Choose your Godot project folder in the settings; tools also accept a path.",
+  "author": {
+    "name": "laaielichter",
+    "url": "https://github.com/laaielichter"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/laaielichter/Godotwright"
+  },
+  "homepage": "https://laaielichter.github.io/Godotwright/",
+  "documentation": "https://github.com/laaielichter/Godotwright#readme",
+  "support": "https://github.com/laaielichter/Godotwright/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/cli.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/cli.js", "mcp", "--tier", "premium"],
+      "env": {
+        "GODOTWRIGHT_PROJECT": "${user_config.project}",
+        "GODOT": "${user_config.godot}"
+      }
+    }
+  },
+  "tools_generated": true,
+  "keywords": ["godot", "godot4", "gdscript", "gamedev"],
+  "license": "MIT",
+  "privacy_policies": ["https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md"],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=22.12.0" }
+  },
+  "user_config": {
+    "project": {
+      "type": "directory",
+      "title": "Godot project",
+      "description": "The folder with your project.godot. Tools use it when Claude does not pass a path.",
+      "required": false
+    },
+    "godot": {
+      "type": "file",
+      "title": "Godot 4.7 program (optional)",
+      "description": "Only for checks, tests, play and screenshots. Leave empty to look in the usual install folders.",
+      "required": false
+    }
+  }
+}

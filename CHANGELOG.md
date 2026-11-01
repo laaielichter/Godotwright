@@ -4,6 +4,15 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Install in one step everywhere.** A Claude Code plugin (`/plugin install godotwright --marketplace
+  laaielichter/Godotwright`) with the MCP server and three skills: `/godotwright:review` reviews the project and
+  fixes what it finds, `/godotwright:port` ports Godot 3 code to Godot 4, and a Godot workflow Claude follows on its
+  own. A Claude Desktop bundle (`godotwright.mcpb`, attached to every release) with a setting for the project folder.
+  A Gemini CLI extension (`gemini extensions install https://github.com/laaielichter/Godotwright`). One-click buttons
+  for Cursor and VS Code and setups for Codex, Windsurf and Zed on the new
+  [install page](https://laaielichter.github.io/Godotwright/install.html).
+- `godotwright mcp` reads the default project from `GODOTWRIGHT_PROJECT` when `--project` is not given.
+
 - **Review rule `api/physics-change-in-callback`** (warning): in a `body_entered`/`area_entered` (or exited) handler,
   adding a physics object with `add_child()`, or setting `monitoring`, `monitorable` or `disabled` directly, makes Godot
   print "Can't change this state while flushing queries" and the change is wrong; use `add_child.call_deferred()` and

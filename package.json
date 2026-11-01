@@ -28,7 +28,9 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build",
     "build:api": "node scripts/build-api.ts",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "version": "node scripts/sync-version.mjs && git add server.json plugins/godotwright gemini-extension.json",
+    "build:mcpb": "node scripts/build-mcpb.mjs"
   },
   "keywords": [
     "godot",
