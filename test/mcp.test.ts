@@ -14,7 +14,8 @@ async function connect(tier: Tier, root = DEMO) {
 }
 
 type Result = { content: { type: string; text: string }[]; isError?: boolean };
-const textOf = (r: unknown) => (r as Result).content.map((c) => c.text).join("\n");
+const textOf = (r: unknown) =>
+  (r as Result).content.map((c) => c.text).join("\n");
 
 describe("MCP server (cheap profile)", () => {
   let client: Client;
@@ -48,17 +49,26 @@ describe("MCP server (cheap profile)", () => {
       "godot_test",
       "godot_usages",
     ]);
-    expect(tools.find((t) => t.name === "godot_scan")?.annotations?.readOnlyHint).toBe(true);
-    expect(tools.find((t) => t.name === "godot_api")?.inputSchema.required).toEqual(["query"]);
+    expect(
+      tools.find((t) => t.name === "godot_scan")?.annotations?.readOnlyHint,
+    ).toBe(true);
+    expect(
+      tools.find((t) => t.name === "godot_api")?.inputSchema.required,
+    ).toEqual(["query"]);
   });
 
   it("does not call the tools that write learning read-only", async () => {
     const { tools } = await client.listTools();
-    for (const name of ["godot_review", "godot_api", "godot_api_search"]) {
+    for (const name of ["godot_review", "godot_api"]) {
       const annotations = tools.find((t) => t.name === name)?.annotations;
       expect(annotations?.readOnlyHint, name).toBe(false);
       expect(annotations?.destructiveHint, name).toBe(false);
     }
+    // Search records nothing, so it is read-only.
+    expect(
+      tools.find((t) => t.name === "godot_api_search")?.annotations
+        ?.readOnlyHint,
+    ).toBe(true);
   });
 
   it("sends step-by-step instructions", () => {
@@ -66,39 +76,72 @@ describe("MCP server (cheap profile)", () => {
   });
 
   it("scans the project briefly", async () => {
-    const out = textOf(await client.callTool({ name: "godot_scan", arguments: {} }));
+    const out = textOf(
+      await client.callTool({ name: "godot_scan", arguments: {} }),
+    );
     expect(out).toContain("project: Demo Game (Godot 4.7, Forward Plus)");
     expect(out).not.toContain(":12");
   });
 
   it("looks up the API and fails clearly on Godot 3 names", async () => {
-    const ok = await client.callTool({ name: "godot_api", arguments: { query: "CharacterBody2D.move_and_slide" } });
+    const ok = await client.callTool({
+      name: "godot_api",
+      arguments: { query: "CharacterBody2D.move_and_slide" },
+    });
     expect(textOf(ok)).toContain("CharacterBody2D.move_and_slide() -> bool");
-    const old = (await client.callTool({ name: "godot_api", arguments: { query: "KinematicBody2D" } })) as Result;
+    const old = (await client.callTool({
+      name: "godot_api",
+      arguments: { query: "KinematicBody2D" },
+    })) as Result;
     expect(old.isError).toBe(true);
     expect(textOf(old)).toContain("is called CharacterBody2D in Godot 4");
-    const search = await client.callTool({ name: "godot_api_search", arguments: { query: "is on floor", limit: 3 } });
+    const search = await client.callTool({
+      name: "godot_api_search",
+      arguments: { query: "is on floor", limit: 3 },
+    });
     expect(textOf(search)).toContain("CharacterBody2D.is_on_floor()");
   });
 
   it("reviews unsaved code before it is written", async () => {
-    const code = "extends CharacterBody2D\n\n\nfunc _physics_process(delta: float) -> void:\n\tvelocity = move_and_slide(velocity, Vector2.UP)\n";
-    const out = textOf(await client.callTool({ name: "godot_review", arguments: { code, file: "res://scripts/new_player.gd" } }));
-    expect(out).toContain("findings in res://scripts/new_player.gd: 1 (1 errors)");
-    expect(out).toContain("res://scripts/new_player.gd:5: error [api/wrong-arguments] move_and_slide() takes 0 arguments, but 2 are given.");
-    const fixed = "extends CharacterBody2D\n\n\nfunc _physics_process(_delta: float) -> void:\n\tmove_and_slide()\n";
-    const clean = textOf(await client.callTool({ name: "godot_review", arguments: { code: fixed, file: "scripts/new_player.gd" } }));
+    const code =
+      "extends CharacterBody2D\n\n\nfunc _physics_process(delta: float) -> void:\n\tvelocity = move_and_slide(velocity, Vector2.UP)\n";
+    const out = textOf(
+      await client.callTool({
+        name: "godot_review",
+        arguments: { code, file: "res://scripts/new_player.gd" },
+      }),
+    );
+    expect(out).toContain(
+      "findings in res://scripts/new_player.gd: 1 (1 errors)",
+    );
+    expect(out).toContain(
+      "res://scripts/new_player.gd:5: error [api/wrong-arguments] move_and_slide() takes 0 arguments, but 2 are given.",
+    );
+    const fixed =
+      "extends CharacterBody2D\n\n\nfunc _physics_process(_delta: float) -> void:\n\tmove_and_slide()\n";
+    const clean = textOf(
+      await client.callTool({
+        name: "godot_review",
+        arguments: { code: fixed, file: "scripts/new_player.gd" },
+      }),
+    );
     expect(clean).toContain("No errors in these files.");
   });
 
   it("explains how to continue without Godot", async () => {
-    const r = (await client.callTool({ name: "godot_check", arguments: {} })) as Result;
+    const r = (await client.callTool({
+      name: "godot_check",
+      arguments: {},
+    })) as Result;
     expect(r.isError).toBe(true);
     expect(textOf(r)).toContain("not found or not executable");
   });
 
   it("returns errors as tool errors, not crashes", async () => {
-    const r = (await client.callTool({ name: "godot_scan", arguments: { path: "/no/such/project" } })) as Result;
+    const r = (await client.callTool({
+      name: "godot_scan",
+      arguments: { path: "/no/such/project" },
+    })) as Result;
     expect(r.isError).toBe(true);
     expect(textOf(r)).toContain("No project.godot found");
   });
@@ -107,78 +150,167 @@ describe("MCP server (cheap profile)", () => {
 describe("MCP server (premium profile)", () => {
   let client: Client;
   let close: () => Promise<unknown>;
-  beforeAll(async () => ({ client, close } = await connect("premium", `${FIXTURES}/messy`)));
+  beforeAll(
+    async () =>
+      ({ client, close } = await connect("premium", `${FIXTURES}/messy`)),
+  );
   afterAll(() => close());
 
   it("gives full detail by default", async () => {
-    const scan = textOf(await client.callTool({ name: "godot_scan", arguments: {} }));
+    const scan = textOf(
+      await client.callTool({ name: "godot_scan", arguments: {} }),
+    );
     expect(scan).toContain("func DoDamage(amount)");
-    const review = textOf(await client.callTool({ name: "godot_review", arguments: { files: ["res://scripts/enemy.gd"] } }));
+    const review = textOf(
+      await client.callTool({
+        name: "godot_review",
+        arguments: { files: ["res://scripts/enemy.gd"] },
+      }),
+    );
     expect(review).toContain("fix: ");
     expect(review).toContain("[quality/naming]");
     expect(review).not.toContain("old_player.gd");
-    const rules = textOf(await client.callTool({ name: "godot_checklist", arguments: {} }));
+    const rules = textOf(
+      await client.callTool({ name: "godot_checklist", arguments: {} }),
+    );
     expect(rules).toContain("[api/wrong-arguments] (error)");
   });
 
   it("reads focus paths as the project names its files", async () => {
-    const exact = textOf(await client.callTool({ name: "godot_review", arguments: { files: ["res://scripts/enemy.gd"] } }));
+    const exact = textOf(
+      await client.callTool({
+        name: "godot_review",
+        arguments: { files: ["res://scripts/enemy.gd"] },
+      }),
+    );
     expect(exact).toContain("res://scripts/enemy.gd:");
-    for (const file of ["./scripts/enemy.gd", "scripts/../scripts/enemy.gd", "/scripts/enemy.gd"]) {
-      const out = textOf(await client.callTool({ name: "godot_review", arguments: { files: [file] } }));
+    for (const file of [
+      "./scripts/enemy.gd",
+      "scripts/../scripts/enemy.gd",
+      "/scripts/enemy.gd",
+    ]) {
+      const out = textOf(
+        await client.callTool({
+          name: "godot_review",
+          arguments: { files: [file] },
+        }),
+      );
       expect(out, file).toBe(exact);
     }
-    const code = "extends CharacterBody2D\n\n\nfunc _physics_process(delta: float) -> void:\n\tvelocity = move_and_slide(velocity, Vector2.UP)\n";
-    const fresh = await client.callTool({ name: "godot_review", arguments: { code, file: "./scripts/new_player.gd" } });
-    expect(textOf(fresh)).toContain("res://scripts/new_player.gd:5: error [api/wrong-arguments]");
+    const code =
+      "extends CharacterBody2D\n\n\nfunc _physics_process(delta: float) -> void:\n\tvelocity = move_and_slide(velocity, Vector2.UP)\n";
+    const fresh = await client.callTool({
+      name: "godot_review",
+      arguments: { code, file: "./scripts/new_player.gd" },
+    });
+    expect(textOf(fresh)).toContain(
+      "res://scripts/new_player.gd:5: error [api/wrong-arguments]",
+    );
     expect(textOf(fresh)).not.toContain("res://./");
   });
 
   it("does not report a clean verdict for a file that is not in the project", async () => {
-    const missing = (await client.callTool({ name: "godot_review", arguments: { files: ["./scripts/nope.gd"] } })) as Result;
+    const missing = (await client.callTool({
+      name: "godot_review",
+      arguments: { files: ["./scripts/nope.gd"] },
+    })) as Result;
     expect(missing.isError).toBe(true);
-    expect(textOf(missing)).toContain("no such file in the project: res://scripts/nope.gd");
+    expect(textOf(missing)).toContain(
+      "no such file in the project: res://scripts/nope.gd",
+    );
     expect(textOf(missing)).not.toContain("No errors");
-    const escape = (await client.callTool({ name: "godot_review", arguments: { files: ["../scripts/enemy.gd"] } })) as Result;
-    expect(textOf(escape)).toContain("no such file in the project: res://../scripts/enemy.gd");
+    const escape = (await client.callTool({
+      name: "godot_review",
+      arguments: { files: ["../scripts/enemy.gd"] },
+    })) as Result;
+    expect(textOf(escape)).toContain(
+      "no such file in the project: res://../scripts/enemy.gd",
+    );
   });
 
   it("describes all tools in its instructions", () => {
-    expect(client.getInstructions()).toContain("godot_checklist lists every AAA rule");
-    expect(client.getInstructions()).toContain("godot_feedback marks a review finding");
+    expect(client.getInstructions()).toContain(
+      "godot_checklist lists every AAA rule",
+    );
+    expect(client.getInstructions()).toContain(
+      "godot_feedback marks a review finding",
+    );
   });
 
   it("hides a finding after feedback says it is wrong", async () => {
     const files = ["res://scripts/old_player.gd"];
-    const before = textOf(await client.callTool({ name: "godot_review", arguments: { files } }));
-    const line = before.split("\n").find((l) => l.includes('Method "empty()"'))!;
+    const before = textOf(
+      await client.callTool({ name: "godot_review", arguments: { files } }),
+    );
+    const line = before
+      .split("\n")
+      .find((l) => l.includes('Method "empty()"'))!;
     expect(line).toBeTruthy();
-    const noted = textOf(await client.callTool({ name: "godot_feedback", arguments: { finding: line, verdict: "wrong" } }));
+    const noted = textOf(
+      await client.callTool({
+        name: "godot_feedback",
+        arguments: { finding: line, verdict: "wrong" },
+      }),
+    );
     expect(noted).toContain("api/unknown-member");
-    const after = textOf(await client.callTool({ name: "godot_review", arguments: { files } }));
+    const after = textOf(
+      await client.callTool({ name: "godot_review", arguments: { files } }),
+    );
     expect(after).not.toContain('Method "empty()"');
     expect(after).toContain("1 finding hidden");
-    const bad = (await client.callTool({ name: "godot_feedback", arguments: { finding: "nonsense", verdict: "wrong" } })) as Result;
+    const bad = (await client.callTool({
+      name: "godot_feedback",
+      arguments: { finding: "nonsense", verdict: "wrong" },
+    })) as Result;
     expect(bad.isError).toBe(true);
+  });
+
+  it("says so when learning is off instead of noting the feedback", async () => {
+    process.env["GODOTWRIGHT_LEARN"] = "0";
+    try {
+      const line =
+        "res://scripts/player.gd:3: warning [quality/unused-variable] x is never used";
+      const off = (await client.callTool({
+        name: "godot_feedback",
+        arguments: { finding: line, verdict: "wrong" },
+      })) as Result;
+      expect(off.isError).toBe(true);
+      expect(textOf(off)).toContain("Learning is off");
+    } finally {
+      delete process.env["GODOTWRIGHT_LEARN"];
+    }
   });
 });
 
 describe("MCP server tier", () => {
   it("names the valid tiers when the tier is neither cheap nor premium", () => {
     for (const tier of ["Premium", "fast", "", "toString"]) {
-      expect(() => createServer({ tier: tier as Tier, root: DEMO }), tier).toThrow(`tier must be cheap or premium, got "${tier}"`);
+      expect(
+        () => createServer({ tier: tier as Tier, root: DEMO }),
+        tier,
+      ).toThrow(`tier must be cheap or premium, got "${tier}"`);
     }
   });
 });
 
 describe("MCP Registry entry", () => {
-  const read = (file: string) => JSON.parse(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
-  const pkg = read("package.json") as { name: string; version: string; mcpName: string };
+  const read = (file: string) =>
+    JSON.parse(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+  const pkg = read("package.json") as {
+    name: string;
+    version: string;
+    mcpName: string;
+  };
   const server = read("server.json") as {
     name: string;
     description: string;
     version: string;
-    packages: { registryType: string; identifier: string; version: string; packageArguments: { value?: string }[] }[];
+    packages: {
+      registryType: string;
+      identifier: string;
+      version: string;
+      packageArguments: { value?: string }[];
+    }[];
   };
 
   it("matches the npm package, so the registry accepts it", () => {
@@ -186,7 +318,11 @@ describe("MCP Registry entry", () => {
     expect(server.version).toBe(pkg.version);
     expect(server.description.length).toBeLessThanOrEqual(100);
     expect(server.packages).toHaveLength(1);
-    expect(server.packages[0]).toMatchObject({ registryType: "npm", identifier: pkg.name, version: pkg.version });
+    expect(server.packages[0]).toMatchObject({
+      registryType: "npm",
+      identifier: pkg.name,
+      version: pkg.version,
+    });
     expect(server.packages[0]?.packageArguments[0]?.value).toBe("mcp");
   });
 });
