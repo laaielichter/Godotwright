@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadLibrary } from "../../src/archetype/library.js";
 import { buildGlb } from "../../src/build/glb.js";
 import { buildKind } from "../../src/build/generators/index.js";
-import { lakeOf, noise2, riverOf, terrain, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
+import { groundColor, lakeOf, noise2, riverOf, terrain, terrainHeight, TERRAIN_PARAMS } from "../../src/build/generators/terrain.js";
 import { resolveParams } from "../../src/build/params.js";
 import { lintModelFile } from "../../src/model/lint.js";
 import { runCli } from "../helpers.js";
@@ -54,6 +54,23 @@ describe("terrain", () => {
     const prim = scene.nodes[0]!.children![0]!.mesh!.prims.get("terrain_ground")!;
     expect(prim.indices.length / 3).toBe(32 * 32 * 2);
     expect(prim.normals.filter((_, i) => i % 3 === 1).every((v) => v > 0)).toBe(true);
+  });
+
+  it("colours the ground per vertex: grass on gentle slopes, rock on steep ones, sand at the water, snow on high peaks", () => {
+    const scene = buildKind("terrain", { resolution: "33" });
+    const prim = scene.nodes[0]!.children![0]!.mesh!.prims.get("terrain_ground")!;
+    expect(prim.colors!.length).toBe((prim.positions.length / 3) * 4);
+    expect(prim.colors!.every((c) => c >= 0 && c <= 1)).toBe(true);
+    const p = resolveParams(TERRAIN_PARAMS, { relief: "mountains", maxHeight: 100 }, "terrain");
+    const greenness = (c: number[]) => c[1]! - (c[0]! + c[2]!) / 2;
+    const flat = groundColor(p, 0, 0, 20, 1), steep = groundColor(p, 0, 0, 20, 0.6), shore = groundColor(p, 0, 0, 0.2, 1);
+    const peak = groundColor(p, 0, 0, 8 + 100, 1);
+    expect(greenness(flat)).toBeGreaterThan(0.03);
+    expect(greenness(steep)).toBeLessThan(0.02);
+    expect(shore[0]).toBeGreaterThan(flat[0]! * 2);
+    expect(Math.min(...peak)).toBeGreaterThan(0.6);
+    const json = JSON.parse(buildGlb(scene).subarray(20, 20 + buildGlb(scene).readUInt32LE(12)).toString()) as { meshes: { primitives: { attributes: Record<string, number> }[] }[] };
+    expect(Object.keys(json.meshes[0]!.primitives[0]!.attributes)).toContain("COLOR_0");
   });
 
   it("is deterministic, and a different seed gives a different landscape", () => {

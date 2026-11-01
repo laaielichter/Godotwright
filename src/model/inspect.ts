@@ -58,7 +58,8 @@ export interface ModelInfo {
   generator?: string;
   nodes: NodeInfo[];
   primitives: PrimitiveInfo[];
-  materials: { index: number; name: string; doubleSided: boolean; textured: boolean; normalMapped: boolean }[];
+  /** `repeats`: every texture of the material wraps around (glTF's default), so UVs outside 0..1 just tile it. */
+  materials: { index: number; name: string; doubleSided: boolean; textured: boolean; normalMapped: boolean; repeats: boolean }[];
   textures: TextureInfo[];
   triangles: number;
   animations: number;
@@ -131,9 +132,16 @@ function triangleIndices(model: LoadedGltf, prim: GltfPrimitive, vertexCount: nu
   return Uint32Array.from(out);
 }
 
-function materialInfo(m: GltfMaterial, index: number) {
-  const textured = Boolean(m.pbrMetallicRoughness?.baseColorTexture || m.pbrMetallicRoughness?.metallicRoughnessTexture || m.normalTexture || m.emissiveTexture || m.occlusionTexture);
-  return { index, name: m.name ?? `material_${index}`, doubleSided: Boolean(m.doubleSided), textured, normalMapped: Boolean(m.normalTexture) };
+/** glTF's CLAMP_TO_EDGE: the only wrap mode that does not repeat a texture. */
+const CLAMP_TO_EDGE = 33071;
+
+function materialInfo(json: Gltf, m: GltfMaterial, index: number) {
+  const used = [m.pbrMetallicRoughness?.baseColorTexture, m.pbrMetallicRoughness?.metallicRoughnessTexture, m.normalTexture, m.emissiveTexture, m.occlusionTexture].filter((t) => t !== undefined);
+  const repeats = used.every((t) => {
+    const sampler = json.samplers?.[json.textures?.[t.index]?.sampler ?? -1];
+    return sampler?.wrapS !== CLAMP_TO_EDGE && sampler?.wrapT !== CLAMP_TO_EDGE;
+  });
+  return { index, name: m.name ?? `material_${index}`, doubleSided: Boolean(m.doubleSided), textured: used.length > 0, normalMapped: Boolean(m.normalTexture), repeats };
 }
 
 function textureRoles(json: Gltf): Map<number, string[]> {
@@ -242,7 +250,7 @@ export function inspectModel(file: string): ModelInfo {
     generator: json.asset?.generator,
     nodes,
     primitives,
-    materials: (json.materials ?? []).map(materialInfo),
+    materials: (json.materials ?? []).map((m, i) => materialInfo(json, m, i)),
     textures: readTextures(model),
     triangles: primitives.reduce((n, p) => n + p.triangles, 0),
     animations: json.animations?.length ?? 0,
