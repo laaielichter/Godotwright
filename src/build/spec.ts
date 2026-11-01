@@ -1,9 +1,10 @@
 import type { BuildNode, BuildScene } from "./glb.js";
 import { evaluate, type Scope } from "./expr.js";
 import { MATERIALS, type Material } from "./materials.js";
+import { PATTERN_NAMES } from "./textures.js";
 import type { MeshBuilder, V3 } from "./mesh.js";
 import { BuildError, resolveParams, type ParamDef } from "./params.js";
-import { box, cylinder, ellipsoid, extrude, lathe, ringSurface, roof } from "./shapes.js";
+import { box, cylinder, ellipsoid, extrude, lathe, lumpyEllipsoid, ringSurface, roof, roundedBox, roundedCylinder, tube } from "./shapes.js";
 
 /** Limits that keep a spec from running away (a mistake or a hostile file). */
 export const LIMITS = { nodes: 5000, depth: 100, repeat: 500, triangles: 3_000_000, points: 256, sections: 200, segments: 128 };
@@ -12,9 +13,10 @@ type Obj = Record<string, unknown>;
 
 const COMMON_KEYS = ["name", "shape", "material", "at", "offset", "rotate", "mirror", "repeat", "vars", "children"];
 const SHAPE_KEYS: Record<string, string[]> = {
-  box: ["size", "anchor"],
-  cylinder: ["radius", "height", "axis", "segments", "anchor"],
-  ellipsoid: ["radii", "segments"],
+  box: ["size", "anchor", "bevel"],
+  cylinder: ["radius", "height", "axis", "segments", "anchor", "bevel"],
+  ellipsoid: ["radii", "segments", "lumps", "seed"],
+  tube: ["path", "radius", "radii", "segments", "caps"],
   lathe: ["profile", "segments", "caps"],
   loft: ["sections", "caps"],
   extrude: ["plan", "y0", "y1"],
@@ -119,7 +121,9 @@ function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
       const anchor = node["anchor"] ?? "center";
       if (anchor !== "center" && anchor !== "bottom") throw new BuildError(`${path}.anchor: use "center" or "bottom"`);
       const y0 = anchor === "bottom" ? 0 : -h / 2;
-      return box([-w / 2, y0, -d / 2], [w / 2, y0 + h, d / 2], m);
+      const bevel = get("bevel", 0);
+      if (bevel < 0) throw new BuildError(`${path}.bevel: must be 0 or more`);
+      return bevel > 0 ? roundedBox([-w / 2, y0, -d / 2], [w / 2, y0 + h, d / 2], bevel, m) : box([-w / 2, y0, -d / 2], [w / 2, y0 + h, d / 2], m);
     }
     case "cylinder": {
       const r = get("radius"), h = get("height");
@@ -127,7 +131,10 @@ function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
       const segments = node["segments"] === undefined ? 24 : integer(node["segments"], s, `${path}.segments`, 3, LIMITS.segments);
       const anchor = node["anchor"] ?? "center";
       if (anchor !== "center" && anchor !== "base") throw new BuildError(`${path}.anchor: use "center" or "base"`);
-      const mesh = cylinder(r, anchor === "base" ? 0 : -h / 2, h, segments, m);
+      const bevel = get("bevel", 0);
+      if (bevel < 0) throw new BuildError(`${path}.bevel: must be 0 or more`);
+      const y0 = anchor === "base" ? 0 : -h / 2;
+      const mesh = bevel > 0 ? roundedCylinder(r, y0, h, segments, bevel, m) : cylinder(r, y0, h, segments, m);
       const axis = node["axis"] ?? "y";
       if (axis === "x") return mesh.rotate("z", -Math.PI / 2);
       if (axis === "z") return mesh.rotate("x", Math.PI / 2);
@@ -137,7 +144,25 @@ function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
     case "ellipsoid": {
       const [rx, ry, rz] = vec(node["radii"], 3, s, `${path}.radii`) as [number, number, number];
       if (rx <= 0 || ry <= 0 || rz <= 0) throw new BuildError(`${path}.radii: all radii must be positive`);
-      return ellipsoid(rx, ry, rz, node["segments"] === undefined ? 24 : integer(node["segments"], s, `${path}.segments`, 6, LIMITS.segments), m);
+      const segments = node["segments"] === undefined ? 24 : integer(node["segments"], s, `${path}.segments`, 6, LIMITS.segments);
+      const lumps = get("lumps", 0);
+      if (lumps < 0 || lumps > 0.6) throw new BuildError(`${path}.lumps: must be from 0 (smooth) to 0.6`);
+      if (lumps === 0) return ellipsoid(rx, ry, rz, segments, m);
+      return lumpyEllipsoid(rx, ry, rz, segments, lumps, node["seed"] === undefined ? 1 : integer(node["seed"], s, `${path}.seed`, 0, 1_000_000), m);
+    }
+    case "tube": {
+      const points = list(node["path"], `${path}.path`, LIMITS.points, 2).map((q, i) => vec(q, 3, s, `${path}.path[${i}]`) as V3);
+      let radii: number[];
+      if (node["radii"] !== undefined) {
+        if (node["radius"] !== undefined) throw new BuildError(`${path}: give "radius" (one for the whole tube) or "radii" (one per point), not both`);
+        radii = list(node["radii"], `${path}.radii`, LIMITS.points, 1).map((r, i) => num(r, s, `${path}.radii[${i}]`));
+        if (radii.length !== points.length) throw new BuildError(`${path}.radii: has ${radii.length} values for ${points.length} points; give one per point`);
+      } else radii = [get("radius")];
+      if (radii.some((r) => r <= 0)) throw new BuildError(`${path}: every radius must be positive`);
+      const segments = node["segments"] === undefined ? 12 : integer(node["segments"], s, `${path}.segments`, 3, LIMITS.segments);
+      const mesh = tube(points, radii, segments, m, node["caps"] !== false);
+      if (mesh.empty) throw new BuildError(`${path}.path: needs at least two different points`);
+      return mesh;
     }
     case "lathe": {
       const profile = list(node["profile"], `${path}.profile`, LIMITS.points, 2).map((p, i) => vec(p, 2, s, `${path}.profile[${i}]`) as [number, number]);
@@ -372,7 +397,7 @@ function readMaterials(raw: unknown): Record<string, Material> {
   for (const [name, m] of Object.entries(raw)) {
     const path = `materials.${name}`;
     if (!isObj(m)) throw new BuildError(`${path}: expected an object`);
-    checkKeys(m, ["color", "metallic", "roughness", "alpha", "doubleSided", "emissive"], path);
+    checkKeys(m, ["color", "metallic", "roughness", "alpha", "doubleSided", "emissive", "texture"], path);
     const color = m["color"];
     if (!Array.isArray(color) || color.length < 3 || color.length > 4 || color.some((c) => typeof c !== "number" || c < 0 || c > 1)) throw new BuildError(`${path}.color: expected [r, g, b] or [r, g, b, a] with values from 0 to 1`);
     const unit = (key: string, fallback: number): number => {
@@ -384,6 +409,8 @@ function readMaterials(raw: unknown): Record<string, Material> {
     if (emissive !== undefined && (!Array.isArray(emissive) || emissive.length !== 3 || emissive.some((c) => typeof c !== "number" || c < 0 || c > 1))) throw new BuildError(`${path}.emissive: expected [r, g, b] with values from 0 to 1`);
     const alpha = m["alpha"];
     if (alpha !== undefined && alpha !== "BLEND" && alpha !== "OPAQUE") throw new BuildError(`${path}.alpha: use "BLEND" or "OPAQUE"`);
+    const texture = m["texture"];
+    if (texture !== undefined && (typeof texture !== "string" || !PATTERN_NAMES.includes(texture))) throw new BuildError(`${path}.texture: use one of ${PATTERN_NAMES.join(", ")}`);
     const doubleSided = m["doubleSided"];
     if (doubleSided !== undefined && typeof doubleSided !== "boolean") throw new BuildError(`${path}.doubleSided: expected true or false`);
     out[name] = {
@@ -394,6 +421,7 @@ function readMaterials(raw: unknown): Record<string, Material> {
       ...(alpha === "BLEND" ? { alpha: "BLEND" as const } : {}),
       ...(doubleSided === true ? { doubleSided: true } : {}),
       ...(emissive ? { emissive: emissive as [number, number, number] } : {}),
+      ...(typeof texture === "string" ? { texture } : {}),
     };
   }
   return out;

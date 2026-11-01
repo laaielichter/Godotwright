@@ -146,7 +146,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
       "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
-      "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, with expressions, mirror and repeat) and lists the ready-made kinds.",
+      "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, tube, with expressions, mirror, repeat, bevels and textured materials) and lists the ready-made kinds.",
       "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
       "- godot_model_view draws a .glb as text: front, side and top views made of letters (one letter per part), a table of the parts with sizes, and the parts that do not touch the rest (a ladder away from its tree, a wheel without an axle). You cannot see a picture, so use it after every build to check shape, proportions and that everything is attached.",
       "- godot_model_lint scores a .glb (geometry, materials, performance, rig), and with `archetype` also checks it is what it should be: parts, pivots, wheel axes, size, direction. godot_model_inspect shows what is in a .glb.",
@@ -1221,6 +1221,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe(
             "collision for Godot: convex (a hull per mesh on import, for props and vehicles), trimesh (exact triangles on import, for buildings), or heightmap (terrain tiles: writes <name>.heightmap.tres and <name>.tscn with a StaticBody3D, faster than trimesh)",
           ),
+        textures: z
+          .boolean()
+          .optional()
+          .describe(
+            "false writes plain colours instead of the texture maps of brick, wood, leaves and the like (smaller files, or for materials of your own); default true",
+          ),
         detail: modelDetail,
       },
       annotations: {
@@ -1238,6 +1244,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       params,
       contract_out,
       collision,
+      textures,
       detail,
     }) =>
       guard(() => {
@@ -1263,6 +1270,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           out: output(out),
           ...(contract_out ? { contractOut: output(contract_out) } : {}),
           ...(collision ? { collision } : {}),
+          ...(textures === false ? { textures: false } : {}),
         });
         const errors = outcome.report.categories.reduce(
           (n, c) => n + c.errors,

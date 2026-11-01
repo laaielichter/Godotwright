@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildGlb } from "../../src/build/glb.js";
 import { computeTangents } from "../../src/build/glb.js";
 import { MeshBuilder } from "../../src/build/mesh.js";
-import { box, cylinder, ellipsoid, extrude, lathe, roof, triangulate } from "../../src/build/shapes.js";
+import { box, cylinder, ellipsoid, extrude, lathe, lumpyEllipsoid, roof, roundedBox, roundedCylinder, triangulate, tube } from "../../src/build/shapes.js";
 import { inspectModel } from "../../src/model/inspect.js";
 import { lintModelFile } from "../../src/model/lint.js";
 import { loadGltf } from "../../src/model/gltf.js";
@@ -16,6 +16,69 @@ describe("box", () => {
     expect(b.triangles).toBe(12);
     expect(volume(b)).toBeCloseTo(24);
     expect(rules(b)).toEqual([]);
+  });
+});
+
+describe("rounded box", () => {
+  it("is a closed solid with outward faces, rounded corners and the box's outer size", () => {
+    const b = roundedBox([0, 0, 0], [2, 1, 3], 0.2, "paint");
+    expect(rules(b)).toEqual([]);
+    const r = 0.2;
+    // A box minus the edges and corners a rounding of radius r cuts away.
+    const expected = 2 * 1 * 3 - (4 - Math.PI) * r * r * (2 + 1 + 3 - 6 * r) - (8 - (4 / 3) * Math.PI) * r ** 3;
+    expect(volume(b)).toBeGreaterThan(expected * 0.995);
+    expect(volume(b)).toBeLessThan(2 * 1 * 3);
+    expect(inspectModel(writeScene(single(b))).bounds?.size).toEqual([2, 1, 3]);
+  });
+
+  it("clamps the radius to half the smallest side and stays closed, and is a plain box without one", () => {
+    expect(rules(roundedBox([0, 0, 0], [0.4, 2, 2], 0.5, "paint"))).toEqual([]);
+    expect(roundedBox([0, 0, 0], [1, 1, 1], 0, "paint").triangles).toBe(12);
+  });
+});
+
+describe("rounded cylinder", () => {
+  it("is closed, keeps its height and radius, and rounds the rims", () => {
+    const c = roundedCylinder(0.5, 0, 1, 24, 0.1, "metal");
+    expect(rules(c)).toEqual([]);
+    const size = inspectModel(writeScene(single(c))).bounds!.size;
+    expect(size[1]).toBeCloseTo(1);
+    expect(size[0]).toBeCloseTo(1, 2);
+    expect(volume(c)).toBeLessThan(volume(cylinder(0.5, 0, 1, 24, "metal")));
+  });
+});
+
+describe("lumpy ellipsoid", () => {
+  it("is closed, deterministic, changes with the seed and stays near its radii", () => {
+    const a = lumpyEllipsoid(2, 1.5, 2, 24, 0.3, 4, "leaf");
+    expect(rules(a)).toEqual([]);
+    expect(sha(buildGlb(single(a)))).toBe(sha(buildGlb(single(lumpyEllipsoid(2, 1.5, 2, 24, 0.3, 4, "leaf")))));
+    expect(sha(buildGlb(single(a)))).not.toBe(sha(buildGlb(single(lumpyEllipsoid(2, 1.5, 2, 24, 0.3, 5, "leaf")))));
+    const size = inspectModel(writeScene(single(a))).bounds!.size;
+    expect(size[0]).toBeGreaterThan(2.6);
+    expect(size[0]).toBeLessThan(5.4);
+    expect(lumpyEllipsoid(1, 1, 1, 12, 0, 1, "leaf").triangles).toBe(ellipsoid(1, 1, 1, 12, "leaf").triangles);
+  });
+});
+
+describe("tube", () => {
+  it("follows a bent path as a closed tube that keeps its thickness at the corner", () => {
+    const t = tube([[0, 0, 0], [0, 1, 0], [1, 1, 0]], [0.1], 16, "metal");
+    expect(rules(t)).toEqual([]);
+    const box = inspectModel(writeScene(single(t))).bounds!;
+    expect(box.min[1]).toBeCloseTo(0, 5);
+    expect(box.max[1]).toBeCloseTo(1.1, 2);
+    expect(box.max[0]).toBeCloseTo(1, 5);
+    expect(box.min[0]).toBeCloseTo(-0.1, 2);
+    // Two straight legs of length 1 with a mitred corner: the volume of a bent rod of that length.
+    const polygonArea = 0.5 * 16 * 0.01 * Math.sin((2 * Math.PI) / 16);
+    expect(volume(t)).toBeCloseTo(polygonArea * 2, 3);
+  });
+
+  it("tapers with one radius per point, skips repeated points, and is empty for a single point", () => {
+    const t = tube([[0, 0, 0], [0, 0, 0], [0, 1, 0], [0.5, 2, 0]], [0.2, 0.2, 0.12, 0.03], 8, "bark");
+    expect(rules(t)).toEqual([]);
+    expect(tube([[1, 1, 1], [1, 1, 1]], [0.1], 8, "metal").empty).toBe(true);
   });
 });
 

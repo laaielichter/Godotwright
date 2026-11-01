@@ -164,6 +164,7 @@ godotwright model recipes             # the ready-made recipes and the archetype
 godotwright model recipes tractor     # print one recipe as a spec to edit
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright model build house -o house.glb --collision trimesh   # Godot adds collision shapes on import (-col / -convcol names)
+godotwright model build tree -o tree.glb --no-textures   # plain colours instead of texture maps: smaller, or for your own materials
 godotwright model build terrain -o world/tile.glb --collision heightmap   # terrain: a HeightMapShape3D and a ready tile scene
 godotwright learn                     # what Godotwright learned on this machine
 ```
@@ -223,7 +224,9 @@ The exit code is 1 when there are errors, or when the score is below `--min-scor
 
 `model build` makes a model from code, with no Blender or other tool: a clean `.glb` with UVs and
 tangents, named parts with sensible pivots, standing on y = 0, and the same bytes every time for the
-same parameters. The result goes straight through `model lint`, and `--contract-out` writes a
+same parameters. Materials look like what they are: brick, roof tiles, slate, wood, bark, leaves, grass, stone,
+concrete, asphalt, sand and water get a seamless colour map and normal map at their real size, made by Godotwright
+itself and stored in the `.glb`; glass, chrome, steel, paint, plastic and lamps that glow are plain PBR materials. The result goes straight through `model lint`, and `--contract-out` writes a
 `model.contract.json` for it. `model kinds` lists the kinds with their parameters, ranges and defaults;
 set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
 to be refined, not hand-sculpted art. Kinds today: `house`, the open-world kinds `terrain` (a heightmap tile from seeded
@@ -262,8 +265,10 @@ of the score:
 | `archetype/optional-part` | the usual parts that are not there (info) |
 
 Anything else is built from a **model spec**: a JSON tree of named parts (box, cylinder, ellipsoid,
-lathe, loft, extrude, roof) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic
-expressions (`"$width / 2 - 0.1"`, never executed as code). `model spec` explains the format and prints a
+lathe, loft, extrude, roof, tube) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic
+expressions (`"$width / 2 - 0.1"`, never executed as code). Boxes and cylinders can have rounded edges (`bevel`),
+ellipsoids an organic, lumpy outline (`lumps`), a tube follows a path (frames, rails, pipes, branches), and a material
+of your own can use any of the texture patterns in its own colour (`"texture": "wood"`). `model spec` explains the format and prints a
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
