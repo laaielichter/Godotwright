@@ -2729,10 +2729,10 @@
       "$length*-0.39"
      ],
      "vars": {
-      "tiers": "max(2, round($hS / 2.9))",
-      "nwF": "max(2, floor($wS / 2.3))",
+      "tiers": "clamp(round($hS / 2.9), 2, 8)",
+      "nwF": "clamp(floor($wS / 2.3), 2, 12)",
       "pwF": "$wS*0.9 / $nwF",
-      "nwS": "max(2, floor($lS / 2.6))",
+      "nwS": "clamp(floor($lS / 2.6), 2, 10)",
       "pwS": "$lS*0.9 / $nwS"
      },
      "children": [
@@ -3263,361 +3263,225 @@
          "name": "Stacks",
          "vars": {
           "b": "$i",
-          "sh": "floor((sin($b*91.7 + $r*0 + 3.1)*43758.5453 - floor(sin($b*91.7 + $r*0 + 3.1)*43758.5453))*4)",
-          "sh2": "floor((sin($b*27.3 + $r*0 + 8.9)*43758.5453 - floor(sin($b*27.3 + $r*0 + 8.9)*43758.5453))*4)"
+          "sh": "floor((sin($b*91.7 + 3.1)*437.585 - floor(sin($b*91.7 + 3.1)*437.585))*4)",
+          "sh2": "floor((sin($b*27.3 + 8.9)*437.585 - floor(sin($b*27.3 + 8.9)*437.585))*4)"
          },
          "children": [
           {
            "name": "Lower1_{i}",
+           "shape": "box",
+           "material": "box_red",
+           "anchor": "bottom",
            "vars": {
             "f0": "(0 - $sh) - 4*floor((0 - $sh)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_red",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "$low*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Lower2_{i}",
+           "shape": "box",
+           "material": "box_blue",
+           "anchor": "bottom",
            "vars": {
             "f0": "(1 - $sh) - 4*floor((1 - $sh)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_blue",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "$low*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Lower3_{i}",
+           "shape": "box",
+           "material": "box_grey",
+           "anchor": "bottom",
            "vars": {
             "f0": "(2 - $sh) - 4*floor((2 - $sh)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_grey",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "$low*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Lower4_{i}",
+           "shape": "box",
+           "material": "box_green",
+           "anchor": "bottom",
            "vars": {
             "f0": "(3 - $sh) - 4*floor((3 - $sh)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_green",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "$low*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Upper1_{i}",
+           "shape": "box",
+           "material": "box_orange",
+           "anchor": "bottom",
            "vars": {
             "f0": "(0 - $sh2) - 4*floor((0 - $sh2)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(max($tmin, $tmax - floor(pow((sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585 - floor(sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585)), 3)*3.6)) - (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1))))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH + (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_orange",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "($tot - $low)*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH + $low*2.59",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Upper2_{i}",
+           "shape": "box",
+           "material": "box_white",
+           "anchor": "bottom",
            "vars": {
             "f0": "(1 - $sh2) - 4*floor((1 - $sh2)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(max($tmin, $tmax - floor(pow((sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585 - floor(sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585)), 3)*3.6)) - (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1))))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH + (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_white",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "($tot - $low)*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH + $low*2.59",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Upper3_{i}",
+           "shape": "box",
+           "material": "box_maroon",
+           "anchor": "bottom",
            "vars": {
             "f0": "(2 - $sh2) - 4*floor((2 - $sh2)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(max($tmin, $tmax - floor(pow((sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585 - floor(sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585)), 3)*3.6)) - (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1))))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH + (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_maroon",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "($tot - $low)*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH + $low*2.59",
-              0
-             ]
-            }
-           ]
+           }
           },
           {
            "name": "Upper4_{i}",
+           "shape": "box",
+           "material": "box_teal",
+           "anchor": "bottom",
            "vars": {
             "f0": "(3 - $sh2) - 4*floor((3 - $sh2)/4)"
            },
+           "size": [
+            "$pitch - 0.1",
+            "(max($tmin, $tmax - floor(pow((sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585 - floor(sin($b*12.9898 + ($f0 + 4*$i)*78.233 + 0.0)*437.585)), 3)*3.6)) - (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1))))*2.59 - 0.04",
+            "$bayL"
+           ],
            "at": [
-            "-$rows*$pitch/2 + ($f0 + 0.5)*$pitch",
-            0,
+            "-$rows*$pitch/2 + ($f0 + 0.5 + 4*$i)*$pitch",
+            "$hatchH + (1 + floor((sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585 - floor(sin($b*39.346 + ($f0 + 4*$i)*11.135 + 1.7)*437.585))*($tmin - 1)))*2.59",
             0
            ],
            "repeat": {
             "count": "floor(($rows - 1 - $f0)/4) + 1",
             "step": [
-             "4*$pitch",
+             0,
              0,
              0
             ]
-           },
-           "children": [
-            {
-             "name": "Box",
-             "shape": "box",
-             "material": "box_teal",
-             "anchor": "bottom",
-             "vars": {
-              "r": "$f0 + 4*$i",
-              "u": "sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453 - floor(sin($b*12.9898 + $r*78.233 + 0.0)*43758.5453)",
-              "v": "sin($b*39.346 + $r*11.135 + 1.7)*43758.5453 - floor(sin($b*39.346 + $r*11.135 + 1.7)*43758.5453)",
-              "tot": "max($tmin, $tmax - floor($u*$u*$u*3.6))",
-              "low": "1 + floor($v*($tot - 1))"
-             },
-             "size": [
-              "$pitch - 0.1",
-              "($tot - $low)*2.59 - 0.04",
-              "$bayL"
-             ],
-             "at": [
-              0,
-              "$hatchH + $low*2.59",
-              0
-             ]
-            }
-           ]
+           }
           }
          ]
         }
