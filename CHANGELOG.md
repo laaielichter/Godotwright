@@ -67,6 +67,14 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - Tangents follow glTF's normal-map convention (+Y towards the top of the image), so normal maps light the same
     in Godot and other viewers.
 - `model lint` reports UVs outside 0..1 only on a texture that does not repeat.
+- **New review rule `quality/json-parse-unchecked`:** warns when the result of `JSON.parse_string()` is used before it
+  is checked, used directly (`JSON.parse_string(t)["n"]`), or stored in another typed variable. It is null when the
+  text is not valid JSON, so a damaged data file stops the script with an error. A typed `Dictionary` or `Array`
+  stays with `api/parse-into-typed`, so each line is reported once.
+- **Canal locks and harbour basins** in `model identify` and the archetype library (English and Dutch names, parts,
+  sizes with their source), and new pitfalls for rivers, canals and hand-built water surfaces: coarse heightmaps,
+  several terrain grids, embankments and cuts, and triangle winding.
+- `LESSONS.md`: lessons from building an inland waterway network.
 - **Clearer MCP tool descriptions.** Each of the 22 tools now says when to use it and which tool to use instead,
   what its parameters change, what it returns, when it returns an error, and what it writes. The tool list costs
   about 2,500 more tokens.

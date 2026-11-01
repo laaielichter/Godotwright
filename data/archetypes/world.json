@@ -440,7 +440,8 @@
   ],
   "pitfalls": [
    "Modelling waves in geometry: it costs triangles and cannot move; use a shader.",
-   "A water plane that ends in the view: make it follow the camera or extend it far beyond the visible area."
+   "A water plane that ends in the view: make it follow the camera or extend it far beyond the visible area.",
+   "A water surface built by hand from triangles shows only from below when the winding is wrong: Godot draws clockwise faces as the front, so for a surface seen from above the cross product (b - a) x (c - a) must point down."
   ],
   "sheet": true
  },
@@ -614,7 +615,13 @@
    "A river always flows downhill: its surface height falls along the path, in small steps if the water is a series of flat pieces."
   ],
   "pitfalls": [
-   "A river that runs uphill or over a ridge: carve the channel into the terrain along the path instead of drawing a strip over it."
+   "A river that runs uphill or over a ridge: carve the channel into the terrain along the path instead of drawing a strip over it.",
+   "A channel narrower than about two cells of a coarse heightmap falls between its samples and comes out as a shallow dip; widen the carve by about 0.8 of a cell on coarse grids.",
+   "When several terrain grids cover the same place (fine near the player, coarse far away), carve the channel in all of them, or it appears and disappears with the level of detail.",
+   "A canal that crosses lower land needs embankments above the water level on both sides; one that crosses higher land needs a cut with sloping sides. Checking only the bed gives water standing above the fields or a canal in a trench."
+  ],
+  "anticipate": [
+   "A network test: every reach should be reachable from every other, counting locks as links and low fixed bridges as breaks for large boats."
   ]
  },
  {
