@@ -42,7 +42,7 @@ const list: Rule[] = [
   { id: "api/coroutine-without-await", category: "api", severity: "error", title: "Coroutine result used without await", fix: "Call the function with `await` where its result is used; a function that awaits is a coroutine." },
   { id: "api/timer-start-outside-tree", category: "api", severity: "warning", title: "Timer started before it is in the tree", fix: "Call add_child(timer) before timer.start(), or set autostart = true before adding it." },
   { id: "api/multimesh-format-after-count", category: "api", severity: "warning", title: "MultiMesh format set after instance_count", fix: "Set use_custom_data, use_colors and transform_format while instance_count is 0, then set instance_count." },
-  { id: "api/viewport-world-borrowed", category: "api", severity: "warning", title: "world_3d read from another viewport", fix: "Use find_world_3d() (or find_world_2d()): world_3d is null on a viewport that shows its parent's world." },
+  { id: "api/viewport-world-borrowed", category: "api", severity: "info", title: "world_3d read from another viewport", fix: "Use find_world_3d() (or find_world_2d()): world_3d is null on a viewport that shows its parent's world." },
   { id: "api/debug-only-monitor", category: "api", severity: "info", title: "Debug-only monitor read in every build", fix: "Read orphan-node and static-memory monitors only when OS.is_debug_build() is true; they are 0 in release exports." },
   // Performance.
   { id: "performance/node-lookup-per-frame", category: "performance", severity: "warning", title: "Node lookup every frame", fix: "Look the node up once in an @onready var and reuse it." },

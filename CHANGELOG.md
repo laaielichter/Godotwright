@@ -4,6 +4,16 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Fewer false alarms from the new rules**, found by running them over every overlay of the project the lessons came
+  from:
+  - `quality/standalone-ternary` reads the statement after a match pattern or an `if x:` on the same line, so
+    `"key": return a if c else b` is no longer reported (a match branch that only calls `a() if c else b()` still is).
+  - `quality/time-modulo-window` only looks at the conditions of `if`, `elif` and `while`, and leaves `% 2` alone: a
+    blink value that is true half the time is meant to be.
+  - `api/multimesh-format-after-count` knows that a MultiMesh made anew (once per pass of a loop) starts at
+    `instance_count` 0.
+  - `api/viewport-world-borrowed` is an info: the borrowed world works while the node is in the root viewport.
+
 ## 0.3.0 (agents in the loop, lessons from a large open world, prettier models)
 
 - **Godotwright in the agent's loop: hooks.** New command `godotwright hook <event>` reads a Claude Code hook's JSON on

@@ -830,3 +830,25 @@ describe("coroutines in lambdas over several lines", () => {
     expect(reviewProject(root).findings.filter((f) => f.rule === "api/coroutine-without-await")).toEqual([]);
   });
 });
+
+describe("runtime pitfalls stay quiet on idioms from a real project", () => {
+  const run = (code: string, rule: string) => {
+    const root = makeProject({ "project.godot": PROJECT, "a.gd": code });
+    return reviewProject(root).findings.filter((f) => f.rule === rule && f.file === "res://a.gd").map((f) => f.line);
+  };
+
+  it("a match branch that returns a ternary is not a lone ternary, but one that only calls is", () => {
+    const code = 'extends Node\n\n\nfunc a() -> void:\n\tpass\n\n\nfunc b() -> void:\n\tpass\n\n\nfunc value(key: String, on: bool) -> float:\n\tmatch key:\n\t\t"rpm": return 100.0 if on else 0.0\n\t\t"draw": a() if on else b()\n\treturn 0.0\n';
+    expect(run(code, "quality/standalone-ternary")).toEqual([15]);
+  });
+
+  it("a blink value is not a periodic trigger", () => {
+    const code = "extends Node\n\nvar t: float = 0.0\n\n\nfunc _process(delta: float) -> void:\n\tt += delta\n\tvar flash := int(t * 6.0) % 2 == 0\n\tif int(t * 6.0) % 2 == 0:\n\t\tprint(flash)\n";
+    expect(run(code, "quality/time-modulo-window")).toEqual([]);
+  });
+
+  it("a MultiMesh made anew in each pass of a loop starts at instance_count 0", () => {
+    const code = "extends Node\n\n\nfunc build() -> void:\n\tfor k in 3:\n\t\tvar mm := MultiMesh.new()\n\t\tmm.transform_format = MultiMesh.TRANSFORM_3D\n\t\tmm.use_colors = true\n\t\tmm.instance_count = 10\n";
+    expect(run(code, "api/multimesh-format-after-count")).toEqual([]);
+  });
+});
