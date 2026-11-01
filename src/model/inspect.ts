@@ -58,7 +58,19 @@ export interface ModelInfo {
   generator?: string;
   nodes: NodeInfo[];
   primitives: PrimitiveInfo[];
-  materials: { index: number; name: string; doubleSided: boolean; textured: boolean; normalMapped: boolean }[];
+  materials: {
+    index: number;
+    name: string;
+    doubleSided: boolean;
+    textured: boolean;
+    normalMapped: boolean;
+    /** OPAQUE, MASK or BLEND (glTF's default is OPAQUE). */
+    alphaMode: string;
+    /** Alpha of the base colour factor (1 when not set). */
+    alpha: number;
+    /** KHR_materials_transmission: light passes through, as through glass. */
+    transmission: boolean;
+  }[];
   textures: TextureInfo[];
   triangles: number;
   animations: number;
@@ -133,7 +145,17 @@ function triangleIndices(model: LoadedGltf, prim: GltfPrimitive, vertexCount: nu
 
 function materialInfo(m: GltfMaterial, index: number) {
   const textured = Boolean(m.pbrMetallicRoughness?.baseColorTexture || m.pbrMetallicRoughness?.metallicRoughnessTexture || m.normalTexture || m.emissiveTexture || m.occlusionTexture);
-  return { index, name: m.name ?? `material_${index}`, doubleSided: Boolean(m.doubleSided), textured, normalMapped: Boolean(m.normalTexture) };
+  const alpha = m.pbrMetallicRoughness?.baseColorFactor?.[3];
+  return {
+    index,
+    name: m.name ?? `material_${index}`,
+    doubleSided: Boolean(m.doubleSided),
+    textured,
+    normalMapped: Boolean(m.normalTexture),
+    alphaMode: m.alphaMode ?? "OPAQUE",
+    alpha: typeof alpha === "number" && Number.isFinite(alpha) ? alpha : 1,
+    transmission: Boolean(m.extensions?.["KHR_materials_transmission"]),
+  };
 }
 
 function textureRoles(json: Gltf): Map<number, string[]> {

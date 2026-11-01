@@ -26,7 +26,16 @@ export const DOWNGRADE_AFTER = 3;
 /** The same over all installs (shipped data): contradicted this often, never confirmed. */
 export const SHARED_DOWNGRADE_AFTER = 20;
 
-const HINT_NOTE = / \(Godot did not confirm this rule in \d+ checks; treat it as a hint\.\)$/;
+/**
+ * After this many findings of a rule were marked wrong here, and wrong outnumbers right (and Godot's confirmations)
+ * three to one, the rule's findings drop one level: an error becomes a warning, a warning an info.
+ */
+export const DISMISSED_AFTER = 5;
+
+/** The same over all installs that shared: marked wrong this often, by at least 3 installs. */
+export const SHARED_DISMISSED_AFTER = 30;
+
+const HINT_NOTE = / \((?:Godot did not confirm this rule in \d+ checks|marked as a false alarm \d+ times(?: by other installs)?); treat it as a hint\.\)$/;
 
 /** How long after a failed API lookup a successful one counts as its answer. */
 const RESOLVE_WINDOW_MS = 120_000;
@@ -40,6 +49,8 @@ export interface Adjusted {
   findings: Finding[];
   /** Rules whose errors were downgraded to warnings because Godot kept contradicting them here. */
   downgraded: string[];
+  /** Rules whose findings dropped a level because they were marked as false alarms much more often than right. */
+  softened?: string[];
   /** Findings hidden because they were marked as wrong. */
   hidden: number;
 }
@@ -50,6 +61,7 @@ export interface Adjusted {
  */
 export function adjustFindings(findings: Finding[], data: LearningData, shared?: LearnedData): Adjusted {
   const downgraded = new Set<string>();
+  const softened = new Set<string>();
   let hidden = 0;
   const out: Finding[] = [];
   for (const f of findings) {
@@ -63,9 +75,30 @@ export function adjustFindings(findings: Finding[], data: LearningData, shared?:
       out.push({ ...f, severity: "warning", message: `${f.message} (Godot did not confirm this rule in ${contradicted} checks; treat it as a hint.)` });
       continue;
     }
+    const dismissed = f.severity === "info" ? undefined : falseAlarms(f.rule, data, shared);
+    if (dismissed) {
+      softened.add(f.rule);
+      const note = dismissed.shared ? `marked as a false alarm ${dismissed.count} times by other installs` : `marked as a false alarm ${dismissed.count} times`;
+      out.push({ ...f, severity: f.severity === "error" ? "warning" : "info", message: `${f.message} (${note}; treat it as a hint.)` });
+      continue;
+    }
     out.push(f);
   }
-  return { findings: out, downgraded: [...downgraded].sort(), hidden };
+  return { findings: out, downgraded: [...downgraded].sort(), ...(softened.size ? { softened: [...softened].sort() } : {}), hidden };
+}
+
+/**
+ * How often a rule was marked as a false alarm, when that is far more often than it was right, or undefined.
+ * Feedback from this machine wins: a rule marked right here as often keeps its level, whatever others said.
+ */
+function falseAlarms(rule: string, data: LearningData, shared?: LearnedData): { count: number; shared: boolean } | undefined {
+  const local = data.rules[rule];
+  const right = (local?.verified ?? 0) + (local?.confirmed ?? 0);
+  if (local && local.dismissed >= DISMISSED_AFTER && local.dismissed >= 3 * right) return { count: local.dismissed, shared: false };
+  if (right > 0) return undefined;
+  const all = shared?.rules[rule];
+  if (all && all.installs >= 3 && all.dismissed >= SHARED_DISMISSED_AFTER && all.dismissed >= 3 * all.confirmed) return { count: all.dismissed, shared: true };
+  return undefined;
 }
 
 /** How often Godot contradicted a rule that it never confirmed, or 0 when the rule stays an error. */
