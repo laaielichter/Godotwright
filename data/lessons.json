@@ -115,6 +115,9 @@
       "symptom": "Parse error: the function signature does not match the parent, and every script that loads the child fails too.",
       "cause": "The base class got an extra optional parameter; the override still had the old list. An override may add trailing parameters that have defaults, never fewer than the parent.",
       "fix": "Give the override the same parameters as the parent, with the same defaults, and pass them on in the call to super.",
+      "rules": [
+        "api/override-signature"
+      ],
       "tags": [
         "override",
         "signature",
@@ -799,6 +802,9 @@
       "symptom": "The water showed foam everywhere, and the floor behind it could not be reconstructed.",
       "cause": "With the alpha depth prepass, the water writes into the depth texture it then reads.",
       "fix": "Use depth_draw_always instead of the alpha prepass when a water shader reads the depth texture.",
+      "rules": [
+        "quality/shader-reads-own-depth"
+      ],
       "tags": [
         "water",
         "shader",
@@ -1234,6 +1240,9 @@
       "symptom": "Frames of 50 to 60 ms in the first minute, from hundreds of texture reads.",
       "cause": "get_image() on a texture waits for the GPU to copy it back.",
       "fix": "Keep the image you uploaded, or read it back asynchronously; never call get_image() in a loop over materials.",
+      "rules": [
+        "performance/get-image-in-loop"
+      ],
       "tags": [
         "texture",
         "get_image",
@@ -1265,6 +1274,9 @@
       "symptom": "Over a hundred thousand errors that a node is not inside the tree, distances of minus 201 m and speeds of a million m/s.",
       "cause": "In _initialize() the nodes added to the root are not in the tree yet, so their global transforms are identity.",
       "fix": "Await process_frame after adding the scene and before the first check.",
+      "rules": [
+        "quality/tree-test-reads-too-early"
+      ],
       "tags": [
         "test",
         "headless",

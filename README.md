@@ -502,8 +502,9 @@ Lessons from real builds also become rules. `data/lessons.json` holds 77 anonymi
 projects (helicopters and ships landing on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
 headless test rigs): no code, no names, no paths, and a test runs every one through the same scrubber that local
 lessons go through. The ones a review can catch are rules, such as `api/infer-variant` on loop variables over
-untyped arrays, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
-`performance/runtime-gltf-mipmaps`, `quality/platform-layers-not-restored` and `model/opaque-glass`.
+untyped arrays, `api/override-signature`, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
+`performance/runtime-gltf-mipmaps`, `quality/shader-reads-own-depth`, `quality/platform-layers-not-restored` and
+`model/opaque-glass`.
 [LESSONS.md](LESSONS.md) tells the story behind them. Lessons you keep locally can be proposed for everyone:
 `godotwright lessons export` prints them as entries for `data/lessons.json`; nothing is sent.
 

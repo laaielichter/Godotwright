@@ -43,6 +43,19 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - `quality/mojibake` (warning): text encoded twice ("CafÃ©").
   - `quality/interpolation-reset-every-tick` (warning): `reset_physics_interpolation()` on every tick makes a node jitter.
   - `quality/platform-layers-not-restored` (warning): `platform_floor_layers = 0` that is never set back.
+  - `api/override-signature` (error): an override with fewer parameters than the function it overrides (in a script
+    it extends, or an engine virtual such as `_process`), or extra ones without a default. Godot stops with "The
+    function signature doesn't match the parent"; a base class that gains a parameter does this to every override.
+  - `performance/get-image-in-loop` (warning): `get_image()` inside a loop reads a texture back from the GPU on every
+    pass. Screenshots and test runners (SceneTree and EditorScript scripts) are left alone.
+  - `quality/tree-test-reads-too-early` (warning): a SceneTree test script that reads global transforms in
+    `_initialize()` before the scene it added is inside the tree.
+  - `quality/shader-reads-own-depth` (warning): a `.gdshader` that reads the depth texture while it writes depth in
+    the alpha prepass, so depth-based foam or fog shows everywhere.
+  - `api/duplicate-declaration` and `api/override-signature` are errors Godot itself reports, so `check` confirms or
+    contradicts them like the other API rules, and learning downgrades them if Godot keeps contradicting them.
+  - Checked on all 20 Godot projects of the large project the lessons came from and on the 139 official demos: these
+    four report nothing there.
 - **New model rules:** `model/opaque-glass` (a light-coloured glass, canopy or window material that light cannot pass;
   dark solid glass, as on a house without rooms, is left alone) and
   `model/renamed-on-import` (a node name with `. : @ / " %` or a `.001` suffix, which Godot changes).

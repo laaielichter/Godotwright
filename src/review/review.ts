@@ -5,7 +5,7 @@ import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
 import { checkScriptPhysics } from "./checks/physics.js";
-import { checkScenePitfalls, checkScriptPitfalls } from "./checks/pitfalls.js";
+import { checkScenePitfalls, checkScriptPitfalls, checkShaderPitfalls } from "./checks/pitfalls.js";
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
 import { checkScriptQuality, checkUnusedSignals, type TypingStats } from "./checks/quality.js";
 import { checkStructure } from "./checks/structure.js";
@@ -86,6 +86,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   }
   findings.push(...checkScenePerformance(pm).filter((f) => inScope(f.file)));
   findings.push(...checkScenePitfalls(pm).filter((f) => inScope(f.file)));
+  findings.push(...checkShaderPitfalls(pm).filter((f) => inScope(f.file)));
   findings.push(...checkUnusedSignals(pm).filter((f) => inScope(f.file)));
   findings.push(...checkStructure(pm, { foreignClasses }).filter((f) => inScope(f.file)));
 

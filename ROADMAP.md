@@ -134,7 +134,8 @@ Godotwright gets better with every use, without collecting anything personal.
     *Done when:* tests show a lesson kept here comes back for the same Godot error, a local lesson never reaches a
     report, and a gap shared by many installs can be read as the next rule.
 24. **From gaps to rules.** Turn the gaps many installs share into review rules, and proposed lessons
-    (`godotwright lessons export`) into bundled ones, each release.
+    (`godotwright lessons export`) into bundled ones, each release. First round done: override signatures, GPU
+    read-backs in loops, SceneTree tests that read too early and shaders that read their own depth became rules.
 
 ## After layer 1
 
