@@ -656,7 +656,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         spec_file: z.string().optional().describe("or a path to a spec JSON file inside the project"),
         params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("parameter values, e.g. { width: 9, roof: 'hip' }"),
         contract_out: z.string().optional().describe("also write a model.contract.json here (inside the project)"),
-        collision: z.enum(["convex", "trimesh"]).optional().describe("name the meshes so Godot makes collision shapes on import: convex (a hull per mesh, for props and vehicles) or trimesh (exact triangles, for buildings and terrain)"),
+        collision: z.enum(["convex", "trimesh", "heightmap"]).optional().describe("collision for Godot: convex (a hull per mesh on import, for props and vehicles), trimesh (exact triangles on import, for buildings), or heightmap (terrain tiles: writes <name>.heightmap.tres and <name>.tscn with a StaticBody3D, faster than trimesh)"),
         detail: modelDetail,
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },

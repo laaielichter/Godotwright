@@ -164,6 +164,7 @@ godotwright model recipes             # the ready-made recipes and the archetype
 godotwright model recipes tractor     # print one recipe as a spec to edit
 godotwright model build house -o house.glb --set floors=3 --set roof=hip
 godotwright model build house -o house.glb --collision trimesh   # Godot adds collision shapes on import (-col / -convcol names)
+godotwright model build terrain -o world/tile.glb --collision heightmap   # terrain: a HeightMapShape3D and a ready tile scene
 godotwright learn                     # what Godotwright learned on this machine
 ```
 

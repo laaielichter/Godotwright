@@ -18,6 +18,21 @@ export interface BuildScene {
   materials?: Record<string, Material>;
   /** What the model is, as an archetype id; `model build` checks the result against it. */
   archetype?: string;
+  /** For a heightmap terrain tile: its ground as a height grid, for a HeightMapShape3D (`model build --collision heightmap`). */
+  heightmap?: Heightmap;
+}
+
+/**
+ * A square grid of ground heights, centred on the model origin like Godot's HeightMapShape3D. `heights[j * size + i]` is the
+ * height at x = (i - (size - 1) / 2) * step, z = (j - (size - 1) / 2) * step. Each cell is split along the diagonal from
+ * (i + 1, j) to (i, j + 1), as in the mesh and in both Godot physics engines, so collision and ground agree everywhere.
+ */
+export interface Heightmap {
+  /** Points per side. */
+  size: number;
+  /** Metres between points. */
+  step: number;
+  heights: number[];
 }
 
 interface Chunk {
