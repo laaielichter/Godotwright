@@ -285,3 +285,15 @@ describe("statements joined with a semicolon", () => {
     expect(errors).toEqual([]);
   });
 });
+
+describe("constants that alias an inner class of another script", () => {
+  it("work as types", () => {
+    const root = makeProject({
+      "project.godot": PROJECT("Alias").replace('run/main_scene="res://main.tscn"\n', ""),
+      "kit.gd": "extends RefCounted\n\n\nclass Box:\n\tvar size: float = 1.0\n\n\tfunc _init(s: float) -> void:\n\t\tsize = s\n",
+      "a.gd": 'extends Node\nconst Kit = preload("res://kit.gd")\nconst B = Kit.Box\n\n\nfunc make(s: float) -> B:\n\tvar b: B = B.new(s)\n\tprint(b.size)\n\treturn b\n',
+    });
+    const errors = reviewProject(root).findings.filter((f) => f.severity === "error" && f.file === "res://a.gd").map((f) => f.message);
+    expect(errors).toEqual([]);
+  });
+});

@@ -54,6 +54,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - A script that extends a base that does not resolve no longer gets errors for names that may come from that base.
   - `extends` of a script that only the shipped game holds (listed as `.gd.remap` in `baseFiles`) is not an error.
   - Statements joined with `;` are read one by one, so `var a := f(); var b := g()` declares both locals.
+  - A constant that aliases an inner class of another script (`const B = Kit.Box`) works as a type.
 - **21 new archetypes** for `model identify`, with English and Dutch names, parts, sizes with their source, and
   pitfalls: tiltrotor, tandem-rotor helicopter, fixed-wing drone, bomber, cruise ship, warship, superyacht, ro-ro ferry,
   aircraft carrier, submarine, helideck, offshore platform, underground station, bascule bridge, overhead power line,
