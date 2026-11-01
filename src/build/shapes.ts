@@ -282,3 +282,164 @@ export function ellipsoid(rx: number, ry: number, rz: number, segments: number, 
   }
   return ringSurface(rings, { material, caps: false });
 }
+
+/**
+ * A box with rounded edges and corners of radius `radius` (clamped to half the smallest side). Flat faces stay flat;
+ * the rounded strips have smooth normals, so the edges catch the light. `steps` rows per half edge (2 = 4 rows per edge).
+ */
+export function roundedBox(min: V3, max: V3, radius: number, material: string, steps = 2): MeshBuilder {
+  const half: V3 = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
+  const centre: V3 = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+  const r = Math.min(radius, half[0], half[1], half[2]);
+  if (!(r > 1e-6)) return box(min, max, material);
+  const inner: V3 = [half[0] - r, half[1] - r, half[2] - r];
+  /** Sample points along one axis of a face: the rounded strip at each end at even angles, the flat part between. */
+  const samples = (axis: 0 | 1 | 2): number[] => {
+    const c = at(inner, axis);
+    // The last row is the face of the box itself (tan(pi / 4) is not exactly 1), so neighbouring faces meet exactly.
+    const edge = Array.from({ length: steps }, (_, k) => (k + 1 === steps ? at(half, axis) : c + r * Math.tan((((k + 1) / steps) * Math.PI) / 4)));
+    const out = [...edge.map((v) => -v).reverse(), -c, c, ...edge];
+    return out.filter((v, i) => i === 0 || Math.abs(v - (out[i - 1] as number)) > 1e-9);
+  };
+  const b = new MeshBuilder();
+  const p = b.prim(material);
+  // For a face along axis a, axes (u, v) are chosen so that u x v points along +a.
+  const faces: [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2][] = [[0, 1, 2], [1, 2, 0], [2, 0, 1]];
+  for (const [a, u, v] of faces) {
+    const su = samples(u), sv = samples(v);
+    for (const sign of [1, -1]) {
+      const faceNormal: V3 = [0, 0, 0];
+      faceNormal[a] = sign;
+      const ids: number[][] = su.map((pu) =>
+        sv.map((pv) => {
+          const q: V3 = [0, 0, 0];
+          q[a] = sign * at(half, a);
+          q[u] = pu;
+          q[v] = pv;
+          const core: V3 = [Math.max(-inner[0], Math.min(inner[0], q[0])), Math.max(-inner[1], Math.min(inner[1], q[1])), Math.max(-inner[2], Math.min(inner[2], q[2]))];
+          const n = normalize(sub(q, core));
+          const point: V3 = [centre[0] + core[0] + n[0] * r, centre[1] + core[1] + n[1] * r, centre[2] + core[2] + n[2] * r];
+          return b.vertex(p, point, n, projectUv(point, faceNormal));
+        }),
+      );
+      for (let i = 0; i + 1 < su.length; i++) {
+        for (let j = 0; j + 1 < sv.length; j++) {
+          const a0 = ids[i]![j]!, a1 = ids[i + 1]![j]!, a2 = ids[i + 1]![j + 1]!, a3 = ids[i]![j + 1]!;
+          if (sign > 0) p.indices.push(a0, a1, a2, a0, a2, a3);
+          else p.indices.push(a0, a2, a1, a0, a3, a2);
+        }
+      }
+    }
+  }
+  return b;
+}
+
+/** The (radius, y) profile of a cylinder on y0 of height h whose two rim edges are rounded with radius `bevel`. */
+export function roundedCylinderProfile(r: number, y0: number, h: number, bevel: number, steps = 4): [number, number][] {
+  const b = Math.min(bevel, r * 0.999, h / 2);
+  if (!(b > 1e-6)) return [[r, y0], [r, y0 + h]];
+  const arc = (cy: number, from: number, to: number): [number, number][] =>
+    Array.from({ length: steps + 1 }, (_, k): [number, number] => {
+      const t = from + ((to - from) * k) / steps;
+      return [r - b + b * Math.cos(t), cy + b * Math.sin(t)];
+    });
+  const bottom = arc(y0 + b, -Math.PI / 2, 0);
+  const top = arc(y0 + h - b, 0, Math.PI / 2);
+  const profile: [number, number][] = [[0, y0], ...bottom, ...(h - 2 * b > 1e-6 ? top : top.slice(1)), [0, y0 + h]];
+  return profile;
+}
+
+/** A cylinder standing on y0 with rounded rim edges. */
+export function roundedCylinder(r: number, y0: number, h: number, segments: number, bevel: number, material: string): MeshBuilder {
+  return lathe(roundedCylinderProfile(r, y0, h, bevel), segments, material, true);
+}
+
+/** Smooth 3D value noise in about -1..1, the same on every platform (integer hashing only). */
+export function noise3(x: number, y: number, z: number, seed: number): number {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const fx = x - xi, fy = y - yi, fz = z - zi;
+  const hash = (i: number, j: number, k: number): number => {
+    let h = Math.imul(i, 374761393) ^ Math.imul(j, 668265263) ^ Math.imul(k, 2147483647) ^ Math.imul(seed + 1, 1274126177);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    h ^= h >>> 16;
+    return ((h >>> 0) / 4294967295) * 2 - 1;
+  };
+  const s = (t: number): number => t * t * (3 - 2 * t);
+  const u = s(fx), v = s(fy), w = s(fz);
+  const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+  const x00 = lerp(hash(xi, yi, zi), hash(xi + 1, yi, zi), u), x10 = lerp(hash(xi, yi + 1, zi), hash(xi + 1, yi + 1, zi), u);
+  const x01 = lerp(hash(xi, yi, zi + 1), hash(xi + 1, yi, zi + 1), u), x11 = lerp(hash(xi, yi + 1, zi + 1), hash(xi + 1, yi + 1, zi + 1), u);
+  return lerp(lerp(x00, x10, v), lerp(x01, x11, v), w);
+}
+
+/**
+ * A sphere or ellipsoid whose surface bulges in and out by up to `lumps` of its radius (0 = smooth), from seeded noise
+ * over the direction: tree crowns, bushes, rocks, clouds. The same seed gives the same shape.
+ */
+export function lumpyEllipsoid(rx: number, ry: number, rz: number, segments: number, lumps: number, seed: number, material: string): MeshBuilder {
+  if (!(lumps > 0)) return ellipsoid(rx, ry, rz, segments, material);
+  const rows = Math.max(4, Math.round(segments / 2));
+  const rings: V3[][] = [];
+  for (let i = 0; i <= rows; i++) {
+    const phi = (i / rows) * Math.PI;
+    rings.push(
+      Array.from({ length: segments }, (_, k): V3 => {
+        const angle = (k / segments) * Math.PI * 2;
+        const d: V3 = [Math.sin(phi) * Math.cos(angle), Math.cos(phi), Math.sin(phi) * Math.sin(angle)];
+        const f = 1.7;
+        const bump = noise3(d[0] * f + 11.3, d[1] * f + 5.1, d[2] * f + 7.7, seed) + 0.5 * noise3(d[0] * f * 2.3, d[1] * f * 2.3, d[2] * f * 2.3, seed + 17);
+        const scale = Math.max(0.2, 1 + (lumps * bump) / 1.5);
+        return [rx * d[0] * scale, ry * d[1] * scale, rz * d[2] * scale];
+      }),
+    );
+  }
+  return ringSurface(rings, { material, caps: false });
+}
+
+/**
+ * A round tube along a path of points (pipes, rails, handlebars, frames, cables, branches). `radii` gives the radius at
+ * each point (one value for all). Corners are mitred so the tube keeps its thickness; add points to round a bend.
+ */
+export function tube(path: V3[], radii: number[], segments: number, material: string, caps = true): MeshBuilder {
+  const points: V3[] = [];
+  const rs: number[] = [];
+  path.forEach((q, i) => {
+    const last = points[points.length - 1];
+    if (last && length(sub(q, last)) < 1e-9) return;
+    points.push(q);
+    rs.push(radii[Math.min(i, radii.length - 1)] as number);
+  });
+  if (points.length < 2) return new MeshBuilder();
+  const dirs: V3[] = points.slice(1).map((q, i) => normalize(sub(q, points[i] as V3)));
+  let normal: V3 | undefined;
+  const rings: V3[][] = points.map((q, i) => {
+    const before = dirs[i - 1], after = dirs[i];
+    const both = before && after ? add(before, after) : undefined;
+    const t = both && length(both) > 1e-6 ? normalize(both) : ((after ?? before) as V3);
+    if (!normal) {
+      const helper: V3 = Math.abs(t[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+      normal = normalize(cross(cross(t, helper), t));
+    } else {
+      // Parallel transport: keep the previous normal, minus its part along the new direction.
+      const projected = sub(normal, [t[0] * dot(normal, t), t[1] * dot(normal, t), t[2] * dot(normal, t)]);
+      normal = length(projected) > 1e-6 ? normalize(projected) : normalize(cross(cross(t, [0, 1, 0]), t));
+    }
+    const binormal = cross(t, normal);
+    // A mitred corner: the ring is stretched along the bend so both legs of the tube keep their radius.
+    const bend = before && after ? sub(after, before) : undefined;
+    const m: V3 | undefined = bend && length(bend) > 1e-6 ? normalize(bend) : undefined;
+    const stretch = before ? 1 / Math.max(0.35, dot(t, before)) : 1;
+    const r = rs[i] as number;
+    const n0 = normal;
+    return Array.from({ length: segments }, (_, k): V3 => {
+      const angle = (k / segments) * Math.PI * 2;
+      let dir: V3 = add([n0[0] * Math.cos(angle), n0[1] * Math.cos(angle), n0[2] * Math.cos(angle)], [binormal[0] * Math.sin(angle), binormal[1] * Math.sin(angle), binormal[2] * Math.sin(angle)]);
+      if (m) {
+        const along = dot(dir, m) * (stretch - 1);
+        dir = add(dir, [m[0] * along, m[1] * along, m[2] * along]);
+      }
+      return [q[0] + dir[0] * r, q[1] + dir[1] * r, q[2] + dir[2] * r];
+    });
+  });
+  return ringSurface(rings, { material, caps });
+}

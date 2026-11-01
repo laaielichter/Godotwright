@@ -2,6 +2,7 @@ import { Command, InvalidArgumentError } from "commander";
 import { checkLearning } from "../learn/hooks.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
+import { lessonHintsForMessages } from "../lessons/hints.js";
 import { collect, parseNumber, writeOut } from "./output.js";
 
 interface Options {
@@ -72,6 +73,7 @@ export function checkCommand(): Command {
             `${result.errors} error${result.errors === 1 ? "" : "s"}, ${result.warnings} warning${result.warnings === 1 ? "" : "s"}` +
               ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
           );
+          lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
           writeOut(command, `${lines.join("\n")}\n`);
         }
         if (result.errors > 0) process.exitCode = 1;

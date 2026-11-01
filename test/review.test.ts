@@ -641,7 +641,10 @@ describe("quality/json-parse-unchecked", () => {
     ]);
     expect(run('func load_it(text: String) -> int:\n\treturn JSON.parse_string(text)["n"]\n')).toHaveLength(1);
     expect(run('func load_it(text: String) -> int:\n\treturn JSON.parse_string(text.strip_edges()).get("n", 0)\n')).toHaveLength(1);
-    expect(run("func load_it(text: String) -> int:\n\tvar data: Dictionary = JSON.parse_string(text)\n\treturn data.size()\n")[0]).toContain("null cannot be stored in a Dictionary");
+    expect(run("func load_it(text: String) -> int:\n\tvar data: int = JSON.parse_string(text)\n\treturn data\n")[0]).toContain("null cannot be stored in a int");
+    // A typed Array or Dictionary is api/parse-into-typed's finding, so this rule stays quiet there: one report per line.
+    const typed = findings({ "main.tscn": scene, "main.gd": "extends Node\n\n\nfunc load_it(text: String) -> int:\n\tvar data: Dictionary = JSON.parse_string(text)\n\treturn data.size()\n" });
+    expect(typed.filter((f) => f.includes("json-parse") || f.includes("parse-into-typed"))).toEqual([expect.stringContaining("[api/parse-into-typed]")]);
     expect(run("func load_it(text: String) -> int:\n\tvar rows := 0\n\tvar list = JSON.parse_string(text)\n\tfor r in list:\n\t\trows += 1\n\treturn rows\n")).toHaveLength(1);
   });
 
@@ -710,5 +713,36 @@ describe("members older Godot 4 releases had", () => {
     const found = all("func setup(follow: PathFollow2D) -> void:\n\tfollow.progres = 4.0\n");
     expect(found[0]).not.toContain("removed after");
     expect(found[0]).not.toContain("old name");
+  });
+});
+
+describe("api/open-compressed-gzip and quality/visibility-margin-hysteresis", () => {
+  const scene = '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node3D"]\nscript = ExtResource("1")\n';
+  const run = (body: string, key: string) =>
+    findings({ "main.tscn": scene, "main.gd": `extends Node3D\n\n\n${body}` }).filter((f) => f.includes(key));
+
+  it("flags a plain .gz file read with open_compressed()", () => {
+    expect(run('func load_h() -> void:\n\tvar f := FileAccess.open_compressed("res://data/h.bin.gz", FileAccess.READ, FileAccess.COMPRESSION_GZIP)\n\tprint(f)\n', "open-compressed")).toEqual([
+      "res://main.gd:5: error [api/open-compressed-gzip] open_compressed() only reads files Godot wrote with open_compressed(); a plain .gz file opens as null. Use FileAccess.get_file_as_bytes(path).decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP).",
+    ]);
+    expect(run('const ROOT := "res://d/"\n\n\nfunc load_h() -> void:\n\tvar f := FileAccess.open_compressed(ROOT + "h.bin.gz", FileAccess.READ)\n\tprint(f)\n', "open-compressed")).toHaveLength(1);
+  });
+
+  it("is quiet for Godot's own compressed files, for writing, and for get_file_as_bytes", () => {
+    expect(run('func save() -> void:\n\tvar f := FileAccess.open_compressed("user://save.dat", FileAccess.READ, FileAccess.COMPRESSION_ZSTD)\n\tprint(f)\n', "open-compressed")).toEqual([]);
+    expect(run('func save() -> void:\n\tvar f := FileAccess.open_compressed("user://save.gz", FileAccess.WRITE, FileAccess.COMPRESSION_GZIP)\n\tprint(f)\n', "open-compressed")).toEqual([]);
+    expect(run('func load_h() -> PackedByteArray:\n\treturn FileAccess.get_file_as_bytes("res://h.bin.gz").decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)\n', "open-compressed")).toEqual([]);
+    expect(run('func f() -> void:\n\t# FileAccess.open_compressed("res://h.gz", FileAccess.READ)\n\tprint("open_compressed(\\"x.gz\\")")\n', "open-compressed")).toEqual([]);
+  });
+
+  it("flags LOD margins without a fade mode", () => {
+    expect(run("func lod(mi: MeshInstance3D) -> void:\n\tmi.visibility_range_end = 700.0\n\tmi.visibility_range_end_margin = 30.0\n", "visibility-margin")).toEqual([
+      "res://main.gd:6: warning [quality/visibility-margin-hysteresis] Without visibility_range_fade_mode the margin is hysteresis: a level only switches once the camera is past the threshold by the margin, so at a LOD boundary both levels can stay hidden. Set a fade mode, or use margin 0.",
+    ]);
+  });
+
+  it("is quiet with a fade mode or a zero margin", () => {
+    expect(run("func lod(mi: MeshInstance3D) -> void:\n\tmi.visibility_range_end_margin = 30.0\n\tmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF\n", "visibility-margin")).toEqual([]);
+    expect(run("func lod(mi: MeshInstance3D) -> void:\n\tmi.visibility_range_end = 700.0\n\tmi.visibility_range_end_margin = 0.0\n", "visibility-margin")).toEqual([]);
   });
 });

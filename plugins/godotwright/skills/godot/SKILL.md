@@ -40,5 +40,15 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 `godot_model_view` (look at it as text) and `godot_model_lint` with the archetype. Models face +Z,
 +Y is up, units are metres.
 
+## Learn from real projects, and teach back
+
+- When Godot shows an error you do not understand, call `godot_lessons` with the message as `error`: lessons from real
+  Godot projects say what it usually means and how to fix it. Before you build moving platforms, vehicles, ships,
+  large worlds, runtime-loaded models, shaders or headless tests, call `godot_lessons` with a few words about it.
+- When a fix took more than one try, keep the lesson with `godot_lesson_add` (general words, the Godot message as
+  `error`, no names or code). The next check shows it when the same error comes back.
+- Say whether a lesson helped with `godot_feedback` (`lesson`, verdict `right` or `wrong`).
+- These tools come with Godotwright releases after 0.2.0; skip this part on an older server.
+
 If you verified that a review finding is a false alarm, report it with `godot_feedback` (verdict `wrong`).
 Keep changes small and use static types (`var speed: float = 200.0`, `func jump() -> void`).

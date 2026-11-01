@@ -71,6 +71,15 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
     add("model/triangle-budget", `${info.triangles.toLocaleString("en-US")} triangles; the budget is ${options.maxTriangles.toLocaleString("en-US")}.`);
   }
   if (info.materials.length > 32) add("model/many-materials", `${info.materials.length} materials; every one costs a draw call.`);
+  for (const m of info.materials) {
+    // A word for glass, not a material that only contains it ("fiberglass", "glassfibre").
+    if (!/(?:^|[^a-z])(?:glass|glazing|canopy|windscreen|windshield|windows?|visor|glas|ruit|ruiten)(?:$|[^a-z])/i.test(m.name) || /fib(?:er|re)|vezel/i.test(m.name)) continue;
+    if (m.transmission || (m.alphaMode === "BLEND" && m.alpha < 0.95)) continue;
+    // Dark, solid glass is a deliberate choice on a model with nothing behind it (a house without rooms).
+    if (m.alphaMode !== "BLEND" && m.luminance < 0.15) continue;
+    const why = m.alphaMode === "BLEND" ? `is BLEND with alpha ${m.alpha.toFixed(2)}, so it is as good as opaque` : m.alphaMode === "MASK" ? "is MASK (cut out or solid, never see-through)" : "is OPAQUE";
+    add("model/opaque-glass", `Material "${m.name}" looks like glass but ${why}: nothing behind it shows.`);
+  }
 
   const order: Record<ModelSeverity, number> = { error: 0, warning: 1, info: 2 };
   findings.sort((a, b) => order[a.severity] - order[b.severity] || a.rule.localeCompare(b.rule));
@@ -101,6 +110,10 @@ function checkRig(info: ModelInfo, add: Add): void {
   const seen = new Set<string>();
   for (const n of info.nodes) {
     if (/^node_\d+$/.test(n.name)) add("model/unnamed-node", `Node ${n.index} has no name.`, n.path);
+    else if (/[.:@/"%]/.test(n.name)) {
+      const godot = n.name.replace(/[.:@/"%]/g, "_");
+      add("model/renamed-on-import", `"${n.name}" becomes "${godot}" in Godot${/\.\d{3}$/.test(n.name) ? " (a .001 suffix is a duplicate name from the modelling tool)" : ""}, so a lookup by the name written here finds nothing.`, n.path);
+    }
     if (seen.has(n.path)) add("model/duplicate-node-names", `Another node at ${n.path} has the same name.`, n.path);
     seen.add(n.path);
     if (n.mirrored) add("model/mirrored-node", `Scale ${n.scale.map((v) => v.toFixed(2)).join(", ")} mirrors this node and everything under it.`, n.path);
@@ -147,8 +160,8 @@ function checkNode(info: ModelInfo, all: PrimitiveInfo[], add: Add, uvReported: 
     const mat = prim.material === undefined ? undefined : info.materials[prim.material];
     if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, node);
     if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, node);
-    // UVs outside 0..1 only matter when a texture is sampled with them.
-    if (prim.uvOutOfRange && mat?.textured && !uvReported.has(node)) {
+    // UVs outside 0..1 only matter when a texture is sampled with them and does not repeat.
+    if (prim.uvOutOfRange && mat?.textured && !mat.repeats && !uvReported.has(node)) {
       uvReported.add(node);
       add("model/uv-out-of-range", "Some UVs lie outside 0..1.", node);
     }

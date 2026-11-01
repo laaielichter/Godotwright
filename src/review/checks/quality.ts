@@ -131,6 +131,8 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
         const decl = /^(?:var\s+)?([A-Za-z_]\w*)\s*(?::\s*([A-Za-z_][\w.]*)\s*)?:?=\s*JSON\s*\.\s*parse_string\s*\(/.exec(ll.code);
         if (!decl) return;
         const [, name, type] = decl;
+        // A typed Array or Dictionary declared here is api/parse-into-typed; report it once.
+        if (type && /^(?:Array|Dictionary)\b/.test(type) && /^var\b/.test(ll.code)) return;
         if (type && type !== "Variant") {
           out.push(finding("quality/json-parse-unchecked", path, ll.line, `JSON.parse_string() returns null when the text is not valid JSON, and null cannot be stored in a ${type}; keep "${name}" as Variant and check it with \`is ${type}\` first.`));
           return;
@@ -148,6 +150,42 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
         }
       });
     }
+  }
+
+  // FileAccess.open_compressed() reads Godot's own compressed format (with its own header), not a plain .gz file:
+  // on a file made by gzip it returns null. Flag it when the path in the call is a ".gz" string.
+  for (const ll of script.logicalLines) {
+    const call = /\bopen_compressed\s*\(([^)]*)\)/.exec(ll.text);
+    if (call && /\bopen_compressed\s*\(/.test(ll.code) && /\.gz["']/.test(call[1]!) && !/\bWRITE\b/.test(call[1]!)) {
+      out.push(
+        finding(
+          "api/open-compressed-gzip",
+          path,
+          ll.line,
+          "open_compressed() only reads files Godot wrote with open_compressed(); a plain .gz file opens as null. Use FileAccess.get_file_as_bytes(path).decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP).",
+        ),
+      );
+    }
+  }
+
+  // Visibility-range margins without a fade mode are hysteresis: an instance only switches once it is past the
+  // threshold by the margin, so at a LOD boundary both levels can stay hidden (a hole in terrain or a crowd).
+  let margin = 0;
+  let fade = false;
+  for (const ll of script.logicalLines) {
+    const m = /\bvisibility_range_(?:begin|end)_margin\s*=(?!=)\s*([^\s#]+)/.exec(ll.code);
+    if (m && !/^0(\.0*)?$/.test(m[1]!) && !margin) margin = ll.line;
+    if (/\bvisibility_range_fade_mode\b/.test(ll.code)) fade = true;
+  }
+  if (margin && !fade) {
+    out.push(
+      finding(
+        "quality/visibility-margin-hysteresis",
+        path,
+        margin,
+        "Without visibility_range_fade_mode the margin is hysteresis: a level only switches once the camera is past the threshold by the margin, so at a LOD boundary both levels can stay hidden. Set a fade mode, or use margin 0.",
+      ),
+    );
   }
 
   for (const { line, text } of commentsOf(source)) {

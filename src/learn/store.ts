@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { lessonFrom } from "../lessons/library.js";
+import type { LessonStats, LocalLesson } from "../lessons/types.js";
 
 /**
  * What Godotwright has learned on this machine. It never holds code, paths or
@@ -42,6 +44,10 @@ export interface LearningData {
   missedByReview: Record<string, number>;
   /** Godot messages the log parser could not tie to a file, by template. */
   unparsed: Record<string, number>;
+  /** Per lesson id: how often it was shown, and how often it helped or was wrong. */
+  lessons: Record<string, LessonStats>;
+  /** Lessons learned on this machine, scrubbed of names, paths and code. Local only: never sent. */
+  localLessons: LocalLesson[];
   sharing: SharingState;
 }
 
@@ -71,6 +77,8 @@ export interface Snapshot {
   apiMisses: Record<string, ApiMiss>;
   missedByReview: Record<string, number>;
   unparsed: Record<string, number>;
+  /** Counts per lesson that ships with Godotwright (never a local lesson). */
+  lessons: Record<string, LessonStats>;
 }
 
 export function emptyLearning(): LearningData {
@@ -82,6 +90,8 @@ export function emptyLearning(): LearningData {
     apiMisses: {},
     missedByReview: {},
     unparsed: {},
+    lessons: {},
+    localLessons: [],
     sharing: { enabled: false },
   };
 }
@@ -126,6 +136,8 @@ function normalizeLearning(parsed: unknown): LearningData {
     lastMiss: lastMissFrom(top["lastMiss"]),
     missedByReview: counts(top["missedByReview"]),
     unparsed: counts(top["unparsed"]),
+    lessons: recordOf(top["lessons"], lessonStatsFrom),
+    localLessons: localLessonsFrom(top["localLessons"]),
     sharing: sharingFrom(top["sharing"]),
   };
 }
@@ -160,6 +172,21 @@ function ruleFrom(v: unknown): RuleStats | undefined {
   return stats;
 }
 
+export function lessonStatsFrom(v: unknown): LessonStats | undefined {
+  return isRecord(v) ? { shown: count(v["shown"]), helped: count(v["helped"]), wrong: count(v["wrong"]) } : undefined;
+}
+
+function localLessonsFrom(v: unknown): LocalLesson[] {
+  if (!Array.isArray(v)) return [];
+  const out: LocalLesson[] = [];
+  for (const item of v) {
+    const lesson = lessonFrom(item);
+    const added = isRecord(item) && typeof item["added"] === "string" ? item["added"] : undefined;
+    if (lesson && lesson.id.startsWith("local/") && added) out.push({ ...lesson, added });
+  }
+  return out;
+}
+
 function missFrom(v: unknown): ApiMiss | undefined {
   return isRecord(v) ? { count: count(v["count"]), resolved: counts(v["resolved"]) } : undefined;
 }
@@ -171,7 +198,13 @@ function lastMissFrom(v: unknown): LearningData["lastMiss"] {
 
 function snapshotFrom(v: unknown): Snapshot | undefined {
   if (!isRecord(v)) return undefined;
-  return { rules: recordOf(v["rules"], ruleFrom), apiMisses: recordOf(v["apiMisses"], missFrom), missedByReview: counts(v["missedByReview"]), unparsed: counts(v["unparsed"]) };
+  return {
+    rules: recordOf(v["rules"], ruleFrom),
+    apiMisses: recordOf(v["apiMisses"], missFrom),
+    missedByReview: counts(v["missedByReview"]),
+    unparsed: counts(v["unparsed"]),
+    lessons: recordOf(v["lessons"], lessonStatsFrom),
+  };
 }
 
 function sharingFrom(v: unknown): SharingState {
@@ -223,4 +256,8 @@ export function resetLearning(file = learningFile()): void {
 
 export function ruleStats(data: LearningData, rule: string): RuleStats {
   return (data.rules[rule] ??= { reported: 0, confirmed: 0, contradicted: 0, dismissed: 0 });
+}
+
+export function lessonStats(data: LearningData, id: string): LessonStats {
+  return (data.lessons[id] ??= { shown: 0, helped: 0, wrong: 0 });
 }

@@ -2,14 +2,14 @@
 
 > Godotwright is an MCP server and CLI that makes coding agents (Claude Code, Codex, and any agent that speaks MCP or can run a shell command) better at Godot 4.7. It gives them the real Godot 4.7 API offline, a map of the project, headless Godot checks, an AAA review of GDScript, and tools to build, view and check 3D models (.glb) from code. MIT licensed, runs with `npx -y godotwright`.
 
-Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict steps, for small models) or `--tier premium` (full detail). It is also listed in the official MCP Registry as io.github.laaielichter/godotwright. One-step installs: Claude Code plugin `/plugin install godotwright --marketplace laaielichter/Godotwright` (adds the skills /godotwright:review and /godotwright:port), Claude Desktop bundle `godotwright.mcpb` from the latest GitHub release, Gemini CLI `gemini extensions install https://github.com/laaielichter/Godotwright`, and one-click links for Cursor and VS Code on the [install page](https://laaielichter.github.io/Godotwright/install.html).
+Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict steps, for small models) or `--tier premium` (full detail). It is also listed in the official MCP Registry as io.github.laaielichter/godotwright. One-step installs: Claude Code plugin `/plugin install godotwright --marketplace laaielichter/Godotwright` (adds the skills /godotwright:review, /godotwright:port and /godotwright:learn), Claude Desktop bundle `godotwright.mcpb` from the latest GitHub release, Gemini CLI `gemini extensions install https://github.com/laaielichter/Godotwright`, and one-click links for Cursor and VS Code on the [install page](https://laaielichter.github.io/Godotwright/install.html).
 
 ## Docs
 
 - [README](https://github.com/laaielichter/Godotwright#readme): install, commands, MCP tools, FAQ
 - [Godot workflow skill](https://github.com/laaielichter/Godotwright/blob/main/plugins/godotwright/skills/godot/SKILL.md): how an agent should work in a Godot project with Godotwright
 - [AGENTS.md](https://github.com/laaielichter/Godotwright/blob/main/AGENTS.md): how to work on the Godotwright code itself
-- [3D model gallery](https://laaielichter.github.io/Godotwright/models.html): 53 ready-made parametric models and the commands that build them
+- [3D model gallery](https://laaielichter.github.io/Godotwright/models.html): 56 ready-made parametric models and the commands that build them
 - [Small, cheap models and 3D](https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md): a test with six small-model agents, what went wrong and what the tools do about it
 - [Small, cheap models and everyday tasks](https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models-code.md): twelve small-model agents on six Godot tasks, graded with real Godot, and the five tool fixes that came out of it
 - [Benchmark](https://github.com/laaielichter/Godotwright/blob/main/bench/RESULTS.md): 168 agent runs with and without the tools, with the limits stated
@@ -19,6 +19,9 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 ## Seeing the game run
 
 `godotwright check --scene res://x.tscn` (godot_check with scene or run_frames) runs a scene headless and returns what it printed: put print() calls in the code under test and read them back.
+## Lessons from real projects
+
+`godotwright lessons <words>` (godot_lessons) answers from anonymous lessons learned in real Godot 4 projects: symptom, cause, fix and how to test. Pass a Godot message (`--error`, MCP `error`) to get the lessons that explain it; godot_check prints them under the errors too. `godotwright lessons add` (godot_lesson_add) keeps a lesson learned here, scrubbed of names, paths and code, on this machine only. `godotwright learn gaps` lists the Godot errors no rule or lesson explains yet.
 ## Porting Godot 3 scripts
 
 `godotwright migrate` (MCP: godot_migrate) shows the mechanical Godot 3 to 4 rewrites it would make, `--write` applies them, and it lists what still needs a hand. Then `godotwright review`.
@@ -65,6 +68,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 4. `godotwright model lint out.glb --archetype <thing>` (godot_model_lint): score and what-it-should-be checks. Fix every error.
 
 Conventions: units are metres, +Y is up, the front of a model faces +Z, the model stands on y = 0, every moving part is its own node with its pivot at its origin.
+Looks: built models carry seamless textures with normal maps for brick, roof tiles, slate, wood, bark, leaves, grass, stone, concrete, asphalt, plaster, sand and water (inside the .glb), and PBR presets for glass, tinted glass, chrome, steel, aluminium, brass, paint, plastic, canvas and glowing lights. In a spec, use `bevel` on boxes and cylinders for rounded edges, `lumps` on ellipsoids for organic shapes, the `tube` shape for frames, rails and pipes, and `"texture": "<pattern>"` on a custom material to draw a pattern in its own colour.
 
 ## Optional
 

@@ -1,0 +1,108 @@
+{
+ "version": 1,
+ "name": "crash-barrier",
+ "archetype": "infrastructure.crash-barrier",
+ "description": "A motorsport guardrail section along z: steel posts every 2 m carrying two stacked W-beam rails on the track side (-x), with a 4 m catch fence of mesh on taller posts behind it. Tile sections end to end along the edge of the run-off.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 4,
+   "min": 2,
+   "max": 8,
+   "description": "Length of the section along z in metres."
+  },
+  {
+   "name": "fence",
+   "type": "number",
+   "default": 4.2,
+   "min": 1.5,
+   "max": 4.8,
+   "description": "Height of the catch fence in metres."
+  }
+ ],
+ "materials": {
+  "mesh": {
+   "color": [
+    0.3,
+    0.32,
+    0.33,
+    0.35
+   ],
+   "metallic": 0.6,
+   "roughness": 0.5,
+   "alpha": "BLEND",
+   "doubleSided": true
+  }
+ },
+ "nodes": [
+  {
+   "name": "CrashBarrier",
+   "material": "metal",
+   "vars": {
+    "L2": "$length / 2"
+   },
+   "children": [
+    {
+     "name": "Post_{i}",
+     "shape": "box",
+     "size": [
+      0.12,
+      "$fence",
+      0.1
+     ],
+     "at": [
+      0,
+      "$fence / 2",
+      "-$L2 + 0.05"
+     ],
+     "repeat": {
+      "count": "ceil(($length - 0.1) / 2) + 1",
+      "step": [
+       0,
+       0,
+       "($length - 0.1) / ceil(($length - 0.1) / 2)"
+      ]
+     }
+    },
+    {
+     "name": "Rail_{i}",
+     "shape": "box",
+     "size": [
+      0.08,
+      0.31,
+      "$length"
+     ],
+     "at": [
+      -0.1,
+      0.55,
+      0
+     ],
+     "repeat": {
+      "count": 2,
+      "step": [
+       0,
+       0.34,
+       0
+      ]
+     }
+    },
+    {
+     "name": "Fence",
+     "shape": "box",
+     "material": "mesh",
+     "size": [
+      0.02,
+      "$fence - 1.1",
+      "$length"
+     ],
+     "at": [
+      0.07,
+      "1.1 + ($fence - 1.1) / 2",
+      0
+     ]
+    }
+   ]
+  }
+ ]
+}

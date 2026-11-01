@@ -425,6 +425,151 @@
   ]
  },
  {
+  "id": "infrastructure.crash-barrier",
+  "name": "crash barrier",
+  "description": "A steel guardrail (W-beam) on posts beside a road or race track, optionally with a catch fence behind it.",
+  "aliases": [
+   "crash barrier",
+   "guardrail",
+   "guard rail",
+   "armco",
+   "w-beam",
+   "vangrail",
+   "geleiderail",
+   "catch fence",
+   "vangscherm",
+   "debris fence",
+   "safety barrier"
+  ],
+  "extends": "infrastructure",
+  "hints": [
+   "race track",
+   "circuit",
+   "motorway",
+   "snelweg"
+  ],
+  "parts": [
+   {
+    "name": "Post",
+    "role": "post",
+    "required": true,
+    "aliases": [
+     "post",
+     "posts",
+     "paal",
+     "palen",
+     "pole"
+    ],
+    "note": "Steel posts about every 2 m (guardrail) or 4 m (catch fence)."
+   },
+   {
+    "name": "Rail",
+    "role": "rail",
+    "required": true,
+    "aliases": [
+     "rail",
+     "rails",
+     "beam",
+     "w-beam",
+     "plank",
+     "ligger"
+    ],
+    "note": "The W-beam is about 0.31 m high with its centre about 0.55-0.75 m above the ground; motorsport uses two or three stacked."
+   },
+   {
+    "name": "Fence",
+    "role": "fence",
+    "required": false,
+    "aliases": [
+     "fence",
+     "catch fence",
+     "mesh",
+     "gaas",
+     "scherm",
+     "net"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2,
+    8
+   ],
+   "width": [
+    0.15,
+    0.6
+   ],
+   "height": [
+    0.6,
+    4.8
+   ],
+   "source": "general knowledge: road and motorsport guardrail sections; not a standard",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "A repeatable section with a post at each end; tile sections along the edge of the run-off area, not along the track edge."
+  ]
+ },
+ {
+  "id": "infrastructure.kerb",
+  "name": "race kerb",
+  "description": "A low red-and-white kerb at the edge of a race track in a corner.",
+  "aliases": [
+   "race kerb",
+   "racing kerb",
+   "kerb",
+   "kerbs",
+   "curb",
+   "rumble strip",
+   "sausage kerb",
+   "rood-wit",
+   "kerbstone"
+  ],
+  "extends": "infrastructure",
+  "hints": [
+   "race track",
+   "circuit",
+   "apex",
+   "corner"
+  ],
+  "parts": [
+   {
+    "name": "Block",
+    "role": "block",
+    "required": true,
+    "aliases": [
+     "block",
+     "blocks",
+     "stripe",
+     "stripes",
+     "segment",
+     "blok",
+     "strook"
+    ],
+    "note": "Alternating red and white blocks about 1-1.5 m long; the kerb rises a few centimetres towards the outside."
+   }
+  ],
+  "scale": {
+   "length": [
+    1,
+    30
+   ],
+   "width": [
+    0.5,
+    2
+   ],
+   "height": [
+    0.02,
+    0.2
+   ],
+   "source": "general knowledge: circuit kerbs; not a standard",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "Kerbs run on the inside of a corner along the apex and on the outside at the exit; they lie on the track surface, not on the grass."
+  ]
+ },
+ {
   "id": "infrastructure.power-pylon",
   "name": "power pylon",
   "description": "A high-voltage pylon or utility pole.",
