@@ -2,7 +2,7 @@
  "version": 1,
  "name": "road",
  "archetype": "infrastructure.road",
- "description": "A straight road segment along z: an asphalt surface, a dashed centre line, solid edge lines and a raised curb on each side.",
+ "description": "A straight road segment along z: a crowned asphalt surface with a dashed centre line and solid edge lines, a concrete channel with gully grates along each edge, a raised kerb on each side made of 1 m units, and a paved pavement behind it with an edging strip. The markings and kerb units are spaced evenly over the length, so segments tile end to end.",
  "params": [
   {
    "name": "length",
@@ -19,63 +19,252 @@
    "min": 3,
    "max": 20,
    "description": "Width of the asphalt between the curbs (a lane is about 3.5 m)."
+  },
+  {
+   "name": "sidewalk",
+   "type": "number",
+   "default": 1.8,
+   "min": 0.5,
+   "max": 5,
+   "description": "Width of the paved pavement behind each curb in metres."
   }
  ],
  "materials": {
-  "line_white": {
+  "road_asphalt": {
    "color": [
-    0.85,
-    0.85,
-    0.8
+    0.06,
+    0.06,
+    0.064
    ],
    "metallic": 0,
-   "roughness": 0.7
+   "roughness": 0.9,
+   "texture": "asphalt"
+  },
+  "line_white": {
+   "color": [
+    0.82,
+    0.82,
+    0.78
+   ],
+   "metallic": 0,
+   "roughness": 0.6
+  },
+  "kerb_concrete": {
+   "color": [
+    0.36,
+    0.355,
+    0.34
+   ],
+   "metallic": 0,
+   "roughness": 0.85,
+   "texture": "concrete"
+  },
+  "channel_concrete": {
+   "color": [
+    0.3,
+    0.295,
+    0.28
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "texture": "concrete"
+  },
+  "paving": {
+   "color": [
+    0.34,
+    0.33,
+    0.31
+   ],
+   "metallic": 0,
+   "roughness": 0.85,
+   "texture": "stone"
+  },
+  "cast_iron": {
+   "color": [
+    0.05,
+    0.05,
+    0.055
+   ],
+   "metallic": 0.6,
+   "roughness": 0.6
+  },
+  "grate_dark": {
+   "color": [
+    0.012,
+    0.012,
+    0.014
+   ],
+   "metallic": 0,
+   "roughness": 0.9
   }
  },
  "nodes": [
   {
    "name": "Road",
-   "material": "asphalt",
+   "material": "road_asphalt",
    "vars": {
     "L2": "$length / 2",
     "W2": "$width / 2",
-    "top": 0.15
+    "top": 0.15,
+    "ye": 0.12,
+    "c": "min(0.08, 0.025 * ($width / 2 - 0.15))",
+    "yc": "0.12 + min(0.08, 0.025 * ($width / 2 - 0.15))",
+    "sl": "min(0.08, 0.025 * ($width / 2 - 0.15)) / ($width / 2 - 0.15)",
+    "tilt": "deg(atan(min(0.08, 0.025 * ($width / 2 - 0.15)) / ($width / 2 - 0.15)))",
+    "gt": 0.132
    },
    "children": [
     {
      "name": "Surface",
-     "shape": "box",
-     "size": [
-      "$width",
-      "$top",
-      "$length"
-     ],
-     "at": [
-      0,
-      "$top / 2",
-      0
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "-$L2",
+       "points": [
+        [
+         "$W2 - 0.02",
+         0
+        ],
+        [
+         "$W2",
+         0
+        ],
+        [
+         "$W2",
+         0.02
+        ],
+        [
+         "$W2",
+         "$ye - 0.02"
+        ],
+        [
+         "$W2",
+         "$ye"
+        ],
+        [
+         "$W2 - 0.02",
+         "$ye + 0.02 * $sl"
+        ],
+        [
+         0.15,
+         "$yc"
+        ],
+        [
+         -0.15,
+         "$yc"
+        ],
+        [
+         "-($W2 - 0.02)",
+         "$ye + 0.02 * $sl"
+        ],
+        [
+         "-($W2)",
+         "$ye"
+        ],
+        [
+         "-($W2)",
+         "$ye - 0.02"
+        ],
+        [
+         "-($W2)",
+         0.02
+        ],
+        [
+         "-($W2)",
+         0
+        ],
+        [
+         "-($W2 - 0.02)",
+         0
+        ]
+       ]
+      },
+      {
+       "z": "$L2",
+       "points": [
+        [
+         "$W2 - 0.02",
+         0
+        ],
+        [
+         "$W2",
+         0
+        ],
+        [
+         "$W2",
+         0.02
+        ],
+        [
+         "$W2",
+         "$ye - 0.02"
+        ],
+        [
+         "$W2",
+         "$ye"
+        ],
+        [
+         "$W2 - 0.02",
+         "$ye + 0.02 * $sl"
+        ],
+        [
+         0.15,
+         "$yc"
+        ],
+        [
+         -0.15,
+         "$yc"
+        ],
+        [
+         "-($W2 - 0.02)",
+         "$ye + 0.02 * $sl"
+        ],
+        [
+         "-($W2)",
+         "$ye"
+        ],
+        [
+         "-($W2)",
+         "$ye - 0.02"
+        ],
+        [
+         "-($W2)",
+         0.02
+        ],
+        [
+         "-($W2)",
+         0
+        ],
+        [
+         "-($W2 - 0.02)",
+         0
+        ]
+       ]
+      }
      ]
     },
     {
      "name": "Marking_{i}",
      "shape": "box",
      "material": "line_white",
+     "vars": {
+      "p": "$length / max(1, round($length / 9))"
+     },
      "size": [
-      0.15,
-      0.01,
-      2.0
+      0.12,
+      0.006,
+      "$p / 3"
      ],
      "at": [
       0,
-      "$top + 0.005",
-      "-$L2 + 1.5"
+      "$yc + 0.002",
+      "-$L2 + $p * ($i + 0.5)"
      ],
      "repeat": {
-      "count": "max(1, floor(($length - 1) / 5))",
+      "count": "max(1, round($length / 9))",
       "step": [
        0,
        0,
-       5
+       0
       ]
      }
     },
@@ -83,33 +272,331 @@
      "name": "EdgeLine_L",
      "shape": "box",
      "material": "line_white",
+     "vars": {
+      "x": "$W2 - 0.5"
+     },
      "size": [
-      0.12,
-      0.01,
+      0.15,
+      0.006,
       "$length"
      ],
      "at": [
-      "$W2 - 0.3",
-      "$top + 0.005",
+      "$x",
+      "$yc - ($x - 0.15) * $sl + 0.002",
       0
+     ],
+     "rotate": [
+      0,
+      0,
+      "-$tilt"
      ],
      "mirror": "EdgeLine_R"
     },
     {
-     "name": "Curb_L",
+     "name": "Manhole",
+     "shape": "cylinder",
+     "material": "cast_iron",
+     "radius": 0.32,
+     "height": 0.02,
+     "segments": 28,
+     "bevel": 0.006,
+     "vars": {
+      "x": "-$W2 / 2"
+     },
+     "at": [
+      "$x",
+      "$yc - (abs($x) - 0.15) * $sl + 0.003",
+      "$length * 0.18"
+     ],
+     "rotate": [
+      0,
+      0,
+      "$tilt"
+     ]
+    },
+    {
+     "name": "Gutter_L",
      "shape": "box",
-     "material": "concrete",
+     "material": "channel_concrete",
      "size": [
       0.3,
-      "$top + 0.1",
+      0.07,
+      "$length"
+     ],
+     "bevel": 0.008,
+     "at": [
+      "$W2 - 0.15",
+      "$gt - 0.035",
+      0
+     ],
+     "mirror": "Gutter_R"
+    },
+    {
+     "name": "Gully_L_{i}",
+     "shape": "box",
+     "material": "grate_dark",
+     "vars": {
+      "p": "$length / max(1, round($length / 15))"
+     },
+     "size": [
+      0.26,
+      0.01,
+      0.46
+     ],
+     "at": [
+      "$W2 - 0.165",
+      "$gt - 0.003",
+      "-$L2 + $p * ($i + 0.5) - 1.2"
+     ],
+     "repeat": {
+      "count": "max(1, round($length / 15))",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     },
+     "mirror": "Gully_R_{i}",
+     "children": [
+      {
+       "name": "Frame",
+       "shape": "box",
+       "material": "cast_iron",
+       "size": [
+        0.3,
+        0.008,
+        0.5
+       ],
+       "at": [
+        0,
+        -0.001,
+        0
+       ]
+      },
+      {
+       "name": "Bar_{i}",
+       "shape": "box",
+       "material": "cast_iron",
+       "size": [
+        0.22,
+        0.008,
+        0.022
+       ],
+       "at": [
+        0,
+        0.002,
+        -0.192
+       ],
+       "repeat": {
+        "count": 8,
+        "step": [
+         0,
+         0,
+         0.055
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Curb_L",
+     "material": "kerb_concrete",
+     "at": [
+      "$W2",
+      0,
+      0
+     ],
+     "vars": {
+      "n": "max(1, round($length))"
+     },
+     "mirror": "Curb_R",
+     "children": [
+      {
+       "name": "Unit_{i}",
+       "shape": "loft",
+       "vars": {
+        "u": "$length / $n"
+       },
+       "at": [
+        0,
+        0,
+        "-$L2 + $u * ($i + 0.5)"
+       ],
+       "sections": [
+        {
+         "z": "-$u / 2 + 0.003",
+         "points": [
+          [
+           0,
+           0.012
+          ],
+          [
+           0,
+           0
+          ],
+          [
+           0.012,
+           0
+          ],
+          [
+           0.138,
+           0
+          ],
+          [
+           0.15,
+           0
+          ],
+          [
+           0.15,
+           0.012
+          ],
+          [
+           0.15,
+           0.226
+          ],
+          [
+           0.142,
+           0.238
+          ],
+          [
+           0.13,
+           0.24
+          ],
+          [
+           0.055,
+           0.24
+          ],
+          [
+           0.038,
+           0.234
+          ],
+          [
+           0.027,
+           0.222
+          ],
+          [
+           0.0031,
+           0.1316
+          ],
+          [
+           0,
+           0.12
+          ],
+          [
+           0,
+           0.108
+          ]
+         ]
+        },
+        {
+         "z": "$u / 2 - 0.003",
+         "points": [
+          [
+           0,
+           0.012
+          ],
+          [
+           0,
+           0
+          ],
+          [
+           0.012,
+           0
+          ],
+          [
+           0.138,
+           0
+          ],
+          [
+           0.15,
+           0
+          ],
+          [
+           0.15,
+           0.012
+          ],
+          [
+           0.15,
+           0.226
+          ],
+          [
+           0.142,
+           0.238
+          ],
+          [
+           0.13,
+           0.24
+          ],
+          [
+           0.055,
+           0.24
+          ],
+          [
+           0.038,
+           0.234
+          ],
+          [
+           0.027,
+           0.222
+          ],
+          [
+           0.0031,
+           0.1316
+          ],
+          [
+           0,
+           0.12
+          ],
+          [
+           0,
+           0.108
+          ]
+         ]
+        }
+       ],
+       "repeat": {
+        "count": "$n",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Sidewalk_L",
+     "shape": "box",
+     "material": "paving",
+     "size": [
+      "$sidewalk",
+      0.235,
       "$length"
      ],
      "at": [
-      "$W2 + 0.15",
-      "($top + 0.1) / 2",
+      "$W2 + 0.15 + $sidewalk / 2",
+      0.1175,
       0
      ],
-     "mirror": "Curb_R"
+     "mirror": "Sidewalk_R"
+    },
+    {
+     "name": "Edging_L",
+     "shape": "box",
+     "material": "kerb_concrete",
+     "size": [
+      0.08,
+      0.25,
+      "$length"
+     ],
+     "bevel": 0.01,
+     "at": [
+      "$W2 + 0.15 + $sidewalk + 0.04",
+      0.125,
+      0
+     ],
+     "mirror": "Edging_R"
     }
    ]
   }

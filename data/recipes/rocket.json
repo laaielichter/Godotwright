@@ -2,7 +2,7 @@
  "version": 1,
  "name": "rocket",
  "archetype": "spacecraft.rocket",
- "description": "A two-stage launch rocket standing upright on its engines: a ring of nozzle bells, four fins at the base, a first and a second stage and an ogive nose cone.",
+ "description": "A two-stage launch rocket standing upright on its engines: a ring of hollow nozzle bells (pivot at the throat) under a heat shield, a first stage with aft skirt, intertank band and cable raceway, four airfoil fins, a dark interstage, a second stage and an ogive payload fairing with its split line.",
  "params": [
   {
    "name": "height",
@@ -32,23 +32,54 @@
  "materials": {
   "rocket_white": {
    "color": [
-    0.92,
-    0.92,
     0.9,
+    0.9,
+    0.88,
     1
    ],
    "metallic": 0.1,
-   "roughness": 0.45
+   "roughness": 0.4
   },
   "rocket_dark": {
    "color": [
-    0.08,
-    0.08,
-    0.09,
+    0.06,
+    0.06,
+    0.07,
     1
    ],
-   "metallic": 0.2,
-   "roughness": 0.5
+   "metallic": 0.25,
+   "roughness": 0.55
+  },
+  "rocket_grey": {
+   "color": [
+    0.36,
+    0.37,
+    0.4,
+    1
+   ],
+   "metallic": 0.4,
+   "roughness": 0.45
+  },
+  "bell_metal": {
+   "color": [
+    0.22,
+    0.2,
+    0.19,
+    1
+   ],
+   "metallic": 0.85,
+   "roughness": 0.38
+  },
+  "heat_shield": {
+   "color": [
+    0.12,
+    0.11,
+    0.1,
+    1
+   ],
+   "metallic": 0.1,
+   "roughness": 0.9,
+   "texture": "concrete"
   }
  },
  "nodes": [
@@ -57,25 +88,28 @@
    "material": "rocket_white",
    "vars": {
     "H": "$height",
+    "D": "$diameter",
     "R": "$diameter / 2",
-    "hE": "$diameter * 0.45",
+    "hE": "min($diameter * 0.45, $height * 0.12)",
     "er": "$diameter / 2 * min(0.35, 0.9 / $engines + 0.05)",
     "ring": "min(1, $engines - 1) * $diameter / 2 * 0.55",
-    "s1": "$height * 0.6",
-    "s2": "$height * 0.25"
+    "fh": "min(max($height * 0.14, $diameter * 1.2), $height * 0.3)",
+    "rem": "$height - $hE - $fh",
+    "yb": "$hE * 0.82",
+    "y1": "$hE + $rem * 0.66",
+    "yi": "$y1 + $rem * 0.04",
+    "y2": "$yi + $rem * 0.3"
    },
    "children": [
     {
      "name": "Engines",
-     "material": "metal",
+     "material": "bell_metal",
      "children": [
       {
        "name": "Engine_{i}",
-       "shape": "lathe",
-       "segments": 16,
        "at": [
         "$ring",
-        0,
+        "$hE * 0.82",
         0
        ],
        "repeat": {
@@ -83,56 +117,174 @@
         "around": "y",
         "phase": 90
        },
-       "profile": [
-        [
-         "$er",
-         0
-        ],
-        [
-         "$er * 0.75",
-         "$hE * 0.45"
-        ],
-        [
-         "$er * 0.42",
-         "$hE * 0.85"
-        ],
-        [
-         "$er * 0.5",
-         "$hE"
-        ]
+       "children": [
+        {
+         "name": "Bell",
+         "shape": "lathe",
+         "segments": 20,
+         "caps": false,
+         "profile": [
+          [
+           "$er",
+           "$hE * -0.82"
+          ],
+          [
+           "$er * 0.93",
+           "$hE * -0.7"
+          ],
+          [
+           "$er * 0.8",
+           "$hE * -0.49"
+          ],
+          [
+           "$er * 0.64",
+           "$hE * -0.27"
+          ],
+          [
+           "$er * 0.5",
+           "$hE * -0.1"
+          ],
+          [
+           "$er * 0.42",
+           0
+          ],
+          [
+           "$er * 0.3948",
+           0
+          ],
+          [
+           "$er * 0.47",
+           "$hE * -0.1"
+          ],
+          [
+           "$er * 0.6016",
+           "$hE * -0.27"
+          ],
+          [
+           "$er * 0.752",
+           "$hE * -0.49"
+          ],
+          [
+           "$er * 0.8742",
+           "$hE * -0.7"
+          ],
+          [
+           "$er * 0.94",
+           "$hE * -0.815"
+          ],
+          [
+           "$er",
+           "$hE * -0.82"
+          ]
+         ]
+        },
+        {
+         "name": "Powerhead",
+         "shape": "cylinder",
+         "material": "rocket_grey",
+         "radius": "$er * 0.36",
+         "height": "$hE * 0.22",
+         "segments": 12,
+         "anchor": "base",
+         "at": [
+          0,
+          -0.01,
+          0
+         ]
+        }
        ]
       }
      ]
     },
     {
+     "name": "HeatShield",
+     "shape": "cylinder",
+     "material": "heat_shield",
+     "radius": "$R * 0.97",
+     "height": "$hE * 0.06",
+     "segments": 40,
+     "at": [
+      0,
+      "$hE * -0.02 + $yb",
+      0
+     ]
+    },
+    {
      "name": "Stage_1",
      "shape": "lathe",
-     "segments": 32,
+     "segments": 40,
      "profile": [
       [
-       "$R * 0.9",
-       "$hE * 0.9"
+       "$R * 0.97",
+       "$yb"
       ],
       [
        "$R",
-       "$hE * 1.1"
+       "$hE * 0.08 + $yb"
       ],
       [
        "$R",
-       "$hE + $s1"
+       "$y1"
       ]
      ]
+    },
+    {
+     "name": "AftSkirt",
+     "shape": "cylinder",
+     "material": "rocket_dark",
+     "radius": "$R * 1.006",
+     "height": "$hE * 1.1",
+     "segments": 40,
+     "anchor": "base",
+     "at": [
+      0,
+      "$hE * 0.08 + $yb",
+      0
+     ]
+    },
+    {
+     "name": "Intertank",
+     "shape": "cylinder",
+     "material": "rocket_grey",
+     "radius": "$R * 1.005",
+     "height": "$rem * 0.018",
+     "segments": 40,
+     "at": [
+      0,
+      "$hE + $rem * 0.4092",
+      0
+     ]
+    },
+    {
+     "name": "Raceway_1",
+     "shape": "tube",
+     "material": "rocket_grey",
+     "path": [
+      [
+       "$R * 0.7",
+       "$hE * 0.6 + $yb",
+       "$R * 0.7"
+      ],
+      [
+       "$R * 0.7",
+       "$hE * -0.1 + $y1",
+       "$R * 0.7"
+      ]
+     ],
+     "radius": "$R * 0.045",
+     "segments": 8
     },
     {
      "name": "Interstage",
      "shape": "cylinder",
      "material": "rocket_dark",
-     "radius": "$R * 1.001",
-     "height": "$H * 0.03",
-     "segments": 32,
+     "radius": "$R * 1.003",
+     "height": "-$y1 + $yi",
+     "segments": 40,
+     "anchor": "base",
      "at": [
       0,
-      "$hE + $s1 + $H * 0.015",
+      "$y1",
       0
      ]
     },
@@ -140,40 +292,167 @@
      "name": "Stage_2",
      "shape": "cylinder",
      "radius": "$R",
-     "height": "$s2",
-     "segments": 32,
+     "height": "$y2 - $yi",
+     "segments": 40,
+     "anchor": "base",
      "at": [
       0,
-      "$hE + $s1 + $H * 0.03 + $s2 / 2",
+      "$yi",
+      0
+     ]
+    },
+    {
+     "name": "Raceway_2",
+     "shape": "tube",
+     "material": "rocket_grey",
+     "path": [
+      [
+       "$R * 0.7",
+       "$hE * 0.1 + $yi",
+       "$R * 0.7"
+      ],
+      [
+       "$R * 0.7",
+       "$hE * -0.1 + $y2",
+       "$R * 0.7"
+      ]
+     ],
+     "radius": "$R * 0.035",
+     "segments": 8
+    },
+    {
+     "name": "Band_2",
+     "shape": "cylinder",
+     "material": "rocket_dark",
+     "radius": "$R * 1.005",
+     "height": "$rem * 0.012",
+     "segments": 40,
+     "at": [
+      0,
+      "$rem * -0.006 + $y2",
       0
      ]
     },
     {
      "name": "NoseCone",
      "shape": "lathe",
-     "segments": 32,
+     "segments": 40,
      "at": [
       0,
-      "$hE + $s1 + $H * 0.03 + $s2",
+      "$y2",
       0
      ],
      "profile": [
       [
-       "$R",
+       "$R * 1.02",
        0
       ],
       [
-       "$R * 0.92",
-       "($H - $hE - $s1 - $H * 0.03 - $s2) * 0.35"
+       "$R * 1.02",
+       "$fh * 0.3"
       ],
       [
-       "$R * 0.62",
-       "($H - $hE - $s1 - $H * 0.03 - $s2) * 0.7"
+       "$R * 0.98472",
+       "$fh * 0.384"
+      ],
+      [
+       "$R * 0.90854",
+       "$fh * 0.482"
+      ],
+      [
+       "$R * 0.80733",
+       "$fh * 0.58"
+      ],
+      [
+       "$R * 0.68357",
+       "$fh * 0.678"
+      ],
+      [
+       "$R * 0.54719",
+       "$fh * 0.769"
+      ],
+      [
+       "$R * 0.39853",
+       "$fh * 0.853"
+      ],
+      [
+       "$R * 0.24953",
+       "$fh * 0.923"
+      ],
+      [
+       "$R * 0.11815",
+       "$fh * 0.972"
+      ],
+      [
+       "$R * 0.04",
+       "$fh * 0.995"
       ],
       [
        0,
-       "$H - $hE - $s1 - $H * 0.03 - $s2"
+       "$fh"
       ]
+     ],
+     "children": [
+      {
+       "name": "Seam_L",
+       "shape": "tube",
+       "material": "rocket_grey",
+       "path": [
+        [
+         "$R * 1.02 + 0.004",
+         0,
+         0
+        ],
+        [
+         "$R * 1.02 + 0.004",
+         "$fh * 0.3",
+         0
+        ],
+        [
+         "$R * 0.98472 + 0.004",
+         "$fh * 0.384",
+         0
+        ],
+        [
+         "$R * 0.90854 + 0.004",
+         "$fh * 0.482",
+         0
+        ],
+        [
+         "$R * 0.80733 + 0.004",
+         "$fh * 0.58",
+         0
+        ],
+        [
+         "$R * 0.68357 + 0.004",
+         "$fh * 0.678",
+         0
+        ],
+        [
+         "$R * 0.54719 + 0.004",
+         "$fh * 0.769",
+         0
+        ],
+        [
+         "$R * 0.39853 + 0.004",
+         "$fh * 0.853",
+         0
+        ],
+        [
+         "$R * 0.24953 + 0.004",
+         "$fh * 0.923",
+         0
+        ],
+        [
+         "$R * 0.11815 + 0.004",
+         "$fh * 0.972",
+         0
+        ]
+       ],
+       "radius": "$R * 0.008",
+       "segments": 4,
+       "mirror": "Seam_R"
+      }
      ]
     },
     {
@@ -182,15 +461,15 @@
      "children": [
       {
        "name": "Fin_{i}",
-       "shape": "extrude",
+       "shape": "loft",
        "at": [
-        "$R * 0.98",
-        0,
+        "$R * 0.96",
+        "$yb",
         0
        ],
        "rotate": [
-        90,
         0,
+        90,
         0
        ],
        "repeat": {
@@ -198,26 +477,146 @@
         "around": "y",
         "phase": 45
        },
-       "plan": [
-        [
-         0,
-         "-$hE * 0.9"
-        ],
-        [
-         "$R * 0.7",
-         "-$hE * 0.9"
-        ],
-        [
-         "$R * 0.7",
-         "-$hE * 1.6"
-        ],
-        [
-         0,
-         "-$hE * 3.4"
-        ]
-       ],
-       "y0": -0.06,
-       "y1": 0.06
+       "sections": [
+        {
+         "z": 0,
+         "points": [
+          [
+           "$hE * 0.00191",
+           0
+          ],
+          [
+           "$hE * 0.00982",
+           "$hE * 0.09896"
+          ],
+          [
+           "$hE * 0.0305",
+           "$hE * 0.38076"
+          ],
+          [
+           "$hE * 0.05684",
+           "$hE * 0.80251"
+          ],
+          [
+           "$hE * 0.08029",
+           "$hE * 1.3"
+          ],
+          [
+           "$hE * 0.091",
+           "$hE * 1.79749"
+          ],
+          [
+           "$hE * 0.08051",
+           "$hE * 2.21924"
+          ],
+          [
+           "$hE * 0.0479",
+           "$hE * 2.50104"
+          ],
+          [
+           0,
+           "$hE * 2.6"
+          ],
+          [
+           "$hE * -0.0479",
+           "$hE * 2.50104"
+          ],
+          [
+           "$hE * -0.08051",
+           "$hE * 2.21924"
+          ],
+          [
+           "$hE * -0.091",
+           "$hE * 1.79749"
+          ],
+          [
+           "$hE * -0.08029",
+           "$hE * 1.3"
+          ],
+          [
+           "$hE * -0.05684",
+           "$hE * 0.80251"
+          ],
+          [
+           "$hE * -0.0305",
+           "$hE * 0.38076"
+          ],
+          [
+           "$hE * -0.00982",
+           "$hE * 0.09896"
+          ]
+         ]
+        },
+        {
+         "z": "$R * 0.72",
+         "points": [
+          [
+           "$hE * 0.00055",
+           "$hE * 0.05"
+          ],
+          [
+           "$hE * 0.00283",
+           "$hE * 0.08996"
+          ],
+          [
+           "$hE * 0.0088",
+           "$hE * 0.20377"
+          ],
+          [
+           "$hE * 0.0164",
+           "$hE * 0.37409"
+          ],
+          [
+           "$hE * 0.02316",
+           "$hE * 0.575"
+          ],
+          [
+           "$hE * 0.02625",
+           "$hE * 0.77591"
+          ],
+          [
+           "$hE * 0.02322",
+           "$hE * 0.94623"
+          ],
+          [
+           "$hE * 0.01382",
+           "$hE * 1.06004"
+          ],
+          [
+           0,
+           "$hE * 1.1"
+          ],
+          [
+           "$hE * -0.01382",
+           "$hE * 1.06004"
+          ],
+          [
+           "$hE * -0.02322",
+           "$hE * 0.94623"
+          ],
+          [
+           "$hE * -0.02625",
+           "$hE * 0.77591"
+          ],
+          [
+           "$hE * -0.02316",
+           "$hE * 0.575"
+          ],
+          [
+           "$hE * -0.0164",
+           "$hE * 0.37409"
+          ],
+          [
+           "$hE * -0.0088",
+           "$hE * 0.20377"
+          ],
+          [
+           "$hE * -0.00283",
+           "$hE * 0.08996"
+          ]
+         ]
+        }
+       ]
       }
      ]
     }

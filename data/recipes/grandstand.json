@@ -2,7 +2,7 @@
  "version": 1,
  "name": "grandstand",
  "archetype": "building.grandstand",
- "description": "A covered grandstand along z: stepped concrete rows rising towards -x with a seat bench on each row, front and back walls, a roof on columns along the back and a railing at the front. The front (x = 0) faces +x: turn it so +x points at the track.",
+ "description": "A covered grandstand along z: stepped concrete rows rising towards -x, split into blocks of seats with backrests by stepped aisles with handrails, a front wall with track-side boards and a railing, sloping end screens, a back wall with a glazed concourse and doors, and a cantilevered roof on masts with tie rods, a fascia and floodlights. The front (x = 0) faces +x: turn it so +x points at the track.",
  "params": [
   {
    "name": "length",
@@ -24,21 +24,64 @@
  "materials": {
   "seat": {
    "color": [
-    0.85,
-    0.25,
+    0.62,
+    0.11,
     0.02
    ],
-   "roughness": 0.6
+   "roughness": 0.45
   },
   "roof_sheet": {
    "color": [
-    0.8,
-    0.81,
-    0.82
+    0.42,
+    0.44,
+    0.47
    ],
-   "metallic": 0.3,
+   "metallic": 0.6,
    "roughness": 0.4,
    "doubleSided": true
+  },
+  "stand_steel": {
+   "color": [
+    0.78,
+    0.79,
+    0.8
+   ],
+   "metallic": 0.7,
+   "roughness": 0.35
+  },
+  "stand_dark": {
+   "color": [
+    0.03,
+    0.035,
+    0.04
+   ],
+   "metallic": 0.2,
+   "roughness": 0.3
+  },
+  "board_blue": {
+   "color": [
+    0.02,
+    0.09,
+    0.3
+   ],
+   "roughness": 0.4
+  },
+  "board_white": {
+   "color": [
+    0.85,
+    0.85,
+    0.83
+   ],
+   "roughness": 0.4
+  },
+  "stand_render": {
+   "color": [
+    0.2,
+    0.195,
+    0.185
+   ],
+   "metallic": 0,
+   "roughness": 0.9
   }
  },
  "nodes": [
@@ -49,8 +92,20 @@
     "L": "$length",
     "D": "$rows * 0.85 + 0.5",
     "F": "1.2",
-    "T": "1.2 + $rows * 0.42"
+    "T": "1.2 + $rows * 0.42",
+    "nr": "floor($rows)",
+    "nb": "max(1, round(($length - 2) / 13))",
+    "aw": 1.2,
+    "bl": "($length - (max(1, round(($length - 2) / 13)) + 1) * 1.2) / max(1, round(($length - 2) / 13))",
+    "nc": "floor(($length - 0.6) / 8) + 1",
+    "cs": "($length - 0.6) / floor(($length - 0.6) / 8)",
+    "RY": "1.2 + $rows * 0.42 + 5.4"
    },
+   "rotate": [
+    0,
+    180,
+    0
+   ],
    "children": [
     {
      "name": "Wall_Front",
@@ -67,6 +122,128 @@
      ]
     },
     {
+     "name": "Boards",
+     "at": [
+      -0.03,
+      0.62,
+      0
+     ],
+     "children": [
+      {
+       "name": "BoardA_{i}",
+       "shape": "box",
+       "size": [
+        0.05,
+        0.8,
+        2.9
+       ],
+       "at": [
+        0,
+        0,
+        "-$L / 2 + 1.6"
+       ],
+       "material": "board_blue",
+       "repeat": {
+        "count": "floor(($L - 3.2) / 6) + 1",
+        "step": [
+         0,
+         0,
+         6
+        ]
+       }
+      },
+      {
+       "name": "BoardB_{i}",
+       "shape": "box",
+       "size": [
+        0.05,
+        0.8,
+        2.9
+       ],
+       "at": [
+        0,
+        0,
+        "-$L / 2 + 4.6"
+       ],
+       "material": "board_white",
+       "repeat": {
+        "count": "max(1, floor(($L - 9.2) / 6) + 1)",
+        "step": [
+         0,
+         0,
+         6
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Railing",
+     "at": [
+      0.15,
+      "$F",
+      0
+     ],
+     "material": "stand_steel",
+     "children": [
+      {
+       "name": "Rail",
+       "shape": "tube",
+       "path": [
+        [
+         0,
+         1,
+         "-$L / 2 + 0.05"
+        ],
+        [
+         0,
+         1,
+         "$L / 2 - 0.05"
+        ]
+       ],
+       "segments": 8,
+       "radius": 0.04
+      },
+      {
+       "name": "Post_{i}",
+       "shape": "box",
+       "size": [
+        0.05,
+        1,
+        0.05
+       ],
+       "at": [
+        0,
+        0.5,
+        "-$L / 2 + 0.1"
+       ],
+       "repeat": {
+        "count": "floor(($L - 0.2) / 3) + 1",
+        "step": [
+         0,
+         0,
+         "($L - 0.2) / floor(($L - 0.2) / 3)"
+        ]
+       }
+      },
+      {
+       "name": "Panel",
+       "shape": "box",
+       "size": [
+        0.02,
+        0.85,
+        "$L - 0.2"
+       ],
+       "at": [
+        0,
+        0.48,
+        0
+       ],
+       "material": "glass"
+      }
+     ]
+    },
+    {
      "name": "Row_{i}",
      "shape": "box",
      "size": [
@@ -80,7 +257,7 @@
       0
      ],
      "repeat": {
-      "count": "$rows",
+      "count": "$nr",
       "step": [
        0,
        0,
@@ -89,27 +266,276 @@
      }
     },
     {
-     "name": "Seat_{i}",
-     "shape": "box",
-     "material": "seat",
-     "size": [
-      0.38,
-      0.42,
-      "$L - 0.6"
+     "name": "Seats",
+     "children": [
+      {
+       "name": "Block_{i}",
+       "at": [
+        0,
+        0,
+        "-$L / 2 + $aw + $bl / 2"
+       ],
+       "repeat": {
+        "count": "$nb",
+        "step": [
+         0,
+         0,
+         "$bl + $aw"
+        ]
+       },
+       "children": [
+        {
+         "name": "Seat_{i}",
+         "shape": "box",
+         "size": [
+          0.42,
+          0.08,
+          "$bl - 0.1"
+         ],
+         "at": [
+          "0.3 + 0.37 + $i * 0.85",
+          "$F + 0.42 * ($i + 1) + 0.42",
+          0
+         ],
+         "material": "seat",
+         "repeat": {
+          "count": "$nr",
+          "step": [
+           0,
+           0,
+           0
+          ]
+         },
+         "children": [
+          {
+           "name": "Back",
+           "shape": "box",
+           "size": [
+            0.06,
+            0.42,
+            "$bl - 0.1"
+           ],
+           "at": [
+            0.24,
+            0.22,
+            0
+           ],
+           "rotate": [
+            0,
+            0,
+            -12
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Aisles",
+     "children": [
+      {
+       "name": "Aisle_{i}",
+       "at": [
+        0,
+        0,
+        "-$L / 2 + $aw / 2"
+       ],
+       "repeat": {
+        "count": "$nb + 1",
+        "step": [
+         0,
+         0,
+         "$bl + $aw"
+        ]
+       },
+       "children": [
+        {
+         "name": "Handrail",
+         "shape": "tube",
+         "path": [
+          [
+           0.5,
+           "$F + 0.42 + 1.0",
+           0
+          ],
+          [
+           "$D - 0.5",
+           "$F + 0.42 * $rows + 0.95",
+           0
+          ]
+         ],
+         "material": "stand_steel",
+         "segments": 8,
+         "radius": 0.035
+        },
+        {
+         "name": "Stanchion_{i}",
+         "shape": "tube",
+         "path": [
+          [
+           0,
+           -0.95,
+           0
+          ],
+          [
+           0,
+           0,
+           0
+          ]
+         ],
+         "at": [
+          "0.5 + ($D - 1.0) * $i / 3",
+          "$F + 1.42 + (0.42 * $rows - 0.47) * $i / 3",
+          0
+         ],
+         "material": "stand_steel",
+         "segments": 6,
+         "repeat": {
+          "count": 4,
+          "step": [
+           0,
+           0,
+           0
+          ]
+         },
+         "radius": 0.03
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "End_{i}",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": -0.15,
+       "points": [
+        [
+         "(0) + 0.02 * ((0.0) - (0)) / hypot(((0.0) - (0)), (($F + 1.4) - (0)))",
+         "(0) + 0.02 * (($F + 1.4) - (0)) / hypot(((0.0) - (0)), (($F + 1.4) - (0)))"
+        ],
+        [
+         "(0) + 0.02 * (($D + 0.1) - (0)) / hypot((($D + 0.1) - (0)), ((0) - (0)))",
+         "(0) + 0.02 * ((0) - (0)) / hypot((($D + 0.1) - (0)), ((0) - (0)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * ((0) - ($D + 0.1)) / hypot(((0) - ($D + 0.1)), ((0) - (0)))",
+         "(0) + 0.02 * ((0) - (0)) / hypot(((0) - ($D + 0.1)), ((0) - (0)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * (($D + 0.1) - ($D + 0.1)) / hypot((($D + 0.1) - ($D + 0.1)), (($T + 1.25) - (0)))",
+         "(0) + 0.02 * (($T + 1.25) - (0)) / hypot((($D + 0.1) - ($D + 0.1)), (($T + 1.25) - (0)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * (($D + 0.1) - ($D + 0.1)) / hypot((($D + 0.1) - ($D + 0.1)), ((0) - ($T + 1.25)))",
+         "($T + 1.25) + 0.02 * ((0) - ($T + 1.25)) / hypot((($D + 0.1) - ($D + 0.1)), ((0) - ($T + 1.25)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * ((0.0) - ($D + 0.1)) / hypot(((0.0) - ($D + 0.1)), (($F + 1.4) - ($T + 1.25)))",
+         "($T + 1.25) + 0.02 * (($F + 1.4) - ($T + 1.25)) / hypot(((0.0) - ($D + 0.1)), (($F + 1.4) - ($T + 1.25)))"
+        ],
+        [
+         "(0.0) + 0.02 * (($D + 0.1) - (0.0)) / hypot((($D + 0.1) - (0.0)), (($T + 1.25) - ($F + 1.4)))",
+         "($F + 1.4) + 0.02 * (($T + 1.25) - ($F + 1.4)) / hypot((($D + 0.1) - (0.0)), (($T + 1.25) - ($F + 1.4)))"
+        ],
+        [
+         "(0.0) + 0.02 * ((0) - (0.0)) / hypot(((0) - (0.0)), ((0) - ($F + 1.4)))",
+         "($F + 1.4) + 0.02 * ((0) - ($F + 1.4)) / hypot(((0) - (0.0)), ((0) - ($F + 1.4)))"
+        ]
+       ]
+      },
+      {
+       "z": 0.15,
+       "points": [
+        [
+         "(0) + 0.02 * ((0.0) - (0)) / hypot(((0.0) - (0)), (($F + 1.4) - (0)))",
+         "(0) + 0.02 * (($F + 1.4) - (0)) / hypot(((0.0) - (0)), (($F + 1.4) - (0)))"
+        ],
+        [
+         "(0) + 0.02 * (($D + 0.1) - (0)) / hypot((($D + 0.1) - (0)), ((0) - (0)))",
+         "(0) + 0.02 * ((0) - (0)) / hypot((($D + 0.1) - (0)), ((0) - (0)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * ((0) - ($D + 0.1)) / hypot(((0) - ($D + 0.1)), ((0) - (0)))",
+         "(0) + 0.02 * ((0) - (0)) / hypot(((0) - ($D + 0.1)), ((0) - (0)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * (($D + 0.1) - ($D + 0.1)) / hypot((($D + 0.1) - ($D + 0.1)), (($T + 1.25) - (0)))",
+         "(0) + 0.02 * (($T + 1.25) - (0)) / hypot((($D + 0.1) - ($D + 0.1)), (($T + 1.25) - (0)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * (($D + 0.1) - ($D + 0.1)) / hypot((($D + 0.1) - ($D + 0.1)), ((0) - ($T + 1.25)))",
+         "($T + 1.25) + 0.02 * ((0) - ($T + 1.25)) / hypot((($D + 0.1) - ($D + 0.1)), ((0) - ($T + 1.25)))"
+        ],
+        [
+         "($D + 0.1) + 0.02 * ((0.0) - ($D + 0.1)) / hypot(((0.0) - ($D + 0.1)), (($F + 1.4) - ($T + 1.25)))",
+         "($T + 1.25) + 0.02 * (($F + 1.4) - ($T + 1.25)) / hypot(((0.0) - ($D + 0.1)), (($F + 1.4) - ($T + 1.25)))"
+        ],
+        [
+         "(0.0) + 0.02 * (($D + 0.1) - (0.0)) / hypot((($D + 0.1) - (0.0)), (($T + 1.25) - ($F + 1.4)))",
+         "($F + 1.4) + 0.02 * (($T + 1.25) - ($F + 1.4)) / hypot((($D + 0.1) - (0.0)), (($T + 1.25) - ($F + 1.4)))"
+        ],
+        [
+         "(0.0) + 0.02 * ((0) - (0.0)) / hypot(((0) - (0.0)), ((0) - ($F + 1.4)))",
+         "($F + 1.4) + 0.02 * ((0) - ($F + 1.4)) / hypot(((0) - (0.0)), ((0) - ($F + 1.4)))"
+        ]
+       ]
+      }
      ],
      "at": [
-      "0.3 + 0.62 + $i * 0.85",
-      "$F + 0.42 * ($i + 1) + 0.21",
-      0
+      0,
+      0,
+      "-$L / 2 - 0.15"
      ],
+     "material": "stand_render",
      "repeat": {
-      "count": "$rows",
+      "count": 2,
       "step": [
        0,
        0,
-       0
+       "$L + 0.3"
       ]
-     }
+     },
+     "children": [
+      {
+       "name": "Coping",
+       "shape": "box",
+       "size": [
+        "hypot($D + 0.1, $T - $F - 0.15)",
+        0.14,
+        0.42
+       ],
+       "at": [
+        "($D + 0.1) / 2",
+        "($F + 1.4 + $T + 1.25) / 2 + 0.05",
+        0
+       ],
+       "material": "stand_steel",
+       "rotate": [
+        0,
+        0,
+        "deg(atan2($T - $F - 0.15, $D + 0.1))"
+       ]
+      },
+      {
+       "name": "Plinth",
+       "shape": "box",
+       "size": [
+        "$D + 0.2",
+        0.4,
+        0.4
+       ],
+       "at": [
+        "($D + 0.1) / 2",
+        0.2,
+        0
+       ],
+       "material": "concrete"
+      }
+     ]
     },
     {
      "name": "Wall_Back",
@@ -123,66 +549,284 @@
       "$D - 0.05",
       "($T + 1.2) / 2",
       0
+     ],
+     "children": [
+      {
+       "name": "Concourse",
+       "shape": "box",
+       "size": [
+        0.06,
+        1.5,
+        "$L - 3"
+       ],
+       "at": [
+        0.17,
+        "3.2 - ($T + 1.2) / 2",
+        0
+       ],
+       "material": "stand_dark"
+      },
+      {
+       "name": "Mullion_{i}",
+       "shape": "box",
+       "size": [
+        0.1,
+        1.5,
+        0.08
+       ],
+       "at": [
+        0.2,
+        "3.2 - ($T + 1.2) / 2",
+        "-$L / 2 + 1.5"
+       ],
+       "material": "stand_steel",
+       "repeat": {
+        "count": "floor(($L - 3) / 1.5) + 1",
+        "step": [
+         0,
+         0,
+         "($L - 3) / floor(($L - 3) / 1.5)"
+        ]
+       }
+      },
+      {
+       "name": "Door_{i}",
+       "shape": "box",
+       "size": [
+        0.08,
+        2.2,
+        1.8
+       ],
+       "at": [
+        0.17,
+        "1.1 - ($T + 1.2) / 2",
+        "-$L / 2 + $aw + $bl / 2"
+       ],
+       "material": "stand_steel",
+       "repeat": {
+        "count": "$nb",
+        "step": [
+         0,
+         0,
+         "$bl + $aw"
+        ]
+       }
+      },
+      {
+       "name": "Plinth",
+       "shape": "box",
+       "size": [
+        0.42,
+        0.4,
+        "$L + 0.12"
+       ],
+       "at": [
+        0.02,
+        "0.2 - ($T + 1.2) / 2",
+        0
+       ],
+       "material": "concrete"
+      }
      ]
     },
     {
      "name": "Column_{i}",
      "shape": "box",
-     "material": "metal",
      "size": [
-      0.3,
-      "$T + 5 - ($T + 1.2)",
-      0.3
+      0.45,
+      "$RY + 2.4 - ($T + 1.2)",
+      0.45
      ],
      "at": [
       "$D - 0.05",
-      "$T + 1.2 + ($T + 5 - ($T + 1.2)) / 2",
+      "($T + 1.2 + $RY + 2.4) / 2",
       "-$L / 2 + 0.3"
      ],
+     "material": "stand_steel",
      "repeat": {
-      "count": "floor(($L - 0.6) / 8) + 1",
+      "count": "$nc",
       "step": [
        0,
        0,
-       "($L - 0.6) / floor(($L - 0.6) / 8)"
+       "$cs"
       ]
      }
     },
     {
      "name": "Roof",
      "shape": "box",
-     "material": "roof_sheet",
      "size": [
-      "$D + 1.5",
-      0.2,
+      "$D + 1.6",
+      0.18,
       "$L + 1"
      ],
      "at": [
-      "($D + 0.1) / 2",
-      "$T + 5.1",
+      "($D - 1.6) / 2 + 0.3",
+      "$RY",
       0
-     ]
-    },
-    {
-     "name": "Railing",
-     "shape": "box",
-     "material": "metal",
-     "size": [
-      0.06,
-      1.0,
-      "$L"
      ],
-     "at": [
-      0.15,
-      "$F + 0.5",
-      0
+     "material": "roof_sheet",
+     "children": [
+      {
+       "name": "Fascia",
+       "shape": "box",
+       "size": [
+        0.3,
+        0.9,
+        "$L + 1.04"
+       ],
+       "at": [
+        "-($D + 1.6) / 2",
+        -0.3,
+        0
+       ],
+       "material": "board_white"
+      },
+      {
+       "name": "Stripe",
+       "shape": "box",
+       "size": [
+        0.32,
+        0.18,
+        "$L + 1.06"
+       ],
+       "at": [
+        "-($D + 1.6) / 2",
+        -0.5,
+        0
+       ],
+       "material": "seat"
+      },
+      {
+       "name": "Seam_{i}",
+       "shape": "box",
+       "size": [
+        "$D + 1.6",
+        0.06,
+        0.08
+       ],
+       "at": [
+        0,
+        0.12,
+        "-$L / 2 - 0.4"
+       ],
+       "material": "stand_steel",
+       "repeat": {
+        "count": "floor(($L + 0.8) / 1.5) + 1",
+        "step": [
+         0,
+         0,
+         "($L + 0.8) / floor(($L + 0.8) / 1.5)"
+        ]
+       }
+      },
+      {
+       "name": "Gutter",
+       "shape": "box",
+       "size": [
+        0.3,
+        0.3,
+        "$L + 1.04"
+       ],
+       "at": [
+        "($D + 1.6) / 2",
+        -0.15,
+        0
+       ],
+       "material": "stand_steel"
+      },
+      {
+       "name": "Light_{i}",
+       "shape": "box",
+       "size": [
+        0.45,
+        0.25,
+        0.8
+       ],
+       "at": [
+        "-($D + 1.6) / 2 + 0.5",
+        -0.2,
+        "-$L / 2 + 2"
+       ],
+       "material": "light",
+       "repeat": {
+        "count": "max(1, floor(($L - 4) / 5) + 1)",
+        "step": [
+         0,
+         0,
+         "($L - 4) / max(1, floor(($L - 4) / 5))"
+        ]
+       }
+      },
+      {
+       "name": "Beam_{i}",
+       "shape": "tube",
+       "path": [
+        [
+         "($D + 1.6) / 2 - 0.35",
+         -0.38,
+         0
+        ],
+        [
+         "-($D + 1.6) / 2 + 0.2",
+         -0.2,
+         0
+        ]
+       ],
+       "at": [
+        0,
+        0,
+        "-$L / 2 + 0.3"
+       ],
+       "material": "stand_steel",
+       "segments": 10,
+       "repeat": {
+        "count": "$nc",
+        "step": [
+         0,
+         0,
+         "$cs"
+        ]
+       },
+       "radii": [
+        0.36,
+        0.12
+       ]
+      },
+      {
+       "name": "Stay_{i}",
+       "shape": "tube",
+       "path": [
+        [
+         "($D + 1.6) / 2 - 0.35",
+         2.3,
+         0
+        ],
+        [
+         "-($D + 1.6) / 2 + ($D + 1.6) * 0.45",
+         0.1,
+         0
+        ]
+       ],
+       "at": [
+        0,
+        0,
+        "-$L / 2 + 0.3"
+       ],
+       "material": "stand_steel",
+       "segments": 6,
+       "repeat": {
+        "count": "$nc",
+        "step": [
+         0,
+         0,
+         "$cs"
+        ]
+       },
+       "radius": 0.05
+      }
      ]
     }
-   ],
-   "rotate": [
-    0,
-    180,
-    0
    ]
   }
  ]

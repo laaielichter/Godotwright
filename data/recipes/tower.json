@@ -2,7 +2,7 @@
  "version": 1,
  "name": "tower",
  "archetype": "building.tower",
- "description": "A high-rise office tower: a wide podium with a glass entrance on the +Z side, a tall shaft with a band of glass at every floor, a setback upper block and a crown with an antenna.",
+ "description": "A high-rise office tower: a stone-clad podium on a paved plaza with a glazed ground floor and a glass entrance with a canopy, revolving door and steps on the +Z side, a curtain-wall shaft of dark glass with aluminium mullions, floor bands and recessed corners, a setback upper block with a terrace, a louvred plant crown and a tapering mast with a warning light.",
  "params": [
   {
    "name": "width",
@@ -24,11 +24,58 @@
  "materials": {
   "tower_concrete": {
    "color": [
-    0.6,
-    0.62,
-    0.65
+    0.42,
+    0.42,
+    0.41
    ],
-   "metallic": 0.1,
+   "metallic": 0,
+   "roughness": 0.85,
+   "texture": "concrete"
+  },
+  "tower_stone": {
+   "color": [
+    0.5,
+    0.48,
+    0.44
+   ],
+   "metallic": 0,
+   "roughness": 0.7,
+   "texture": "stone"
+  },
+  "curtain_glass": {
+   "color": [
+    0.05,
+    0.09,
+    0.12
+   ],
+   "metallic": 0.7,
+   "roughness": 0.06
+  },
+  "tower_spandrel": {
+   "color": [
+    0.4,
+    0.42,
+    0.45
+   ],
+   "metallic": 0.6,
+   "roughness": 0.35
+  },
+  "tower_metal": {
+   "color": [
+    0.55,
+    0.57,
+    0.6
+   ],
+   "metallic": 0.9,
+   "roughness": 0.32
+  },
+  "tower_dark": {
+   "color": [
+    0.04,
+    0.042,
+    0.045
+   ],
+   "metallic": 0.3,
    "roughness": 0.6
   }
  },
@@ -39,51 +86,618 @@
    "vars": {
     "W": "$width",
     "H": "$height",
+    "W2": "$width / 2",
     "podium": "min(12, $height * 0.15)",
-    "upperStart": "$height * 0.75"
+    "lobby": "min(5.5, $podium * 0.6)",
+    "upperStart": "$height * 0.75",
+    "U2": "$width * 0.4",
+    "nf": "max(1, floor(($height * 0.75 - min(12, $height * 0.15)) / 4))",
+    "fs": "($height * 0.75 - min(12, $height * 0.15)) / max(1, floor(($height * 0.75 - min(12, $height * 0.15)) / 4))",
+    "nu": "max(1, floor(($height - $height * 0.75 - 1.5) / 4))",
+    "us": "($height - $height * 0.75 - 1.5) / max(1, floor(($height - $height * 0.75 - 1.5) / 4))",
+    "nm": "max(3, floor($width / 3.1))",
+    "ms": "$width / max(3, floor($width / 3.1))",
+    "nmu": "max(3, floor($width * 0.8 / 3.1))",
+    "mu": "$width * 0.8 / max(3, floor($width * 0.8 / 3.1))",
+    "cn": 1.2
    },
    "children": [
+    {
+     "name": "Plaza",
+     "shape": "box",
+     "size": [
+      "$W * 1.5 + 12",
+      0.08,
+      "$W * 1.5 + 12"
+     ],
+     "at": [
+      0,
+      0.04,
+      2
+     ],
+     "material": "concrete",
+     "children": [
+      {
+       "name": "Bollard_{i}",
+       "at": [
+        "-$W * 0.3",
+        0.5,
+        "$W * 0.75 + 5.2"
+       ],
+       "repeat": {
+        "count": 7,
+        "step": [
+         "$W * 0.1",
+         0,
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Post",
+         "shape": "cylinder",
+         "radius": 0.12,
+         "height": 0.9,
+         "material": "tower_metal",
+         "segments": 10
+        }
+       ]
+      },
+      {
+       "name": "Planter_L",
+       "at": [
+        "-$W * 0.75 - 3",
+        0.04,
+        "$W * 0.75 + 1"
+       ],
+       "mirror": "Planter_R",
+       "children": [
+        {
+         "name": "Bed",
+         "shape": "box",
+         "size": [
+          3,
+          0.7,
+          3
+         ],
+         "at": [
+          0,
+          0.35,
+          0
+         ],
+         "material": "tower_stone",
+         "bevel": 0.05
+        },
+        {
+         "name": "Soil",
+         "shape": "box",
+         "size": [
+          2.7,
+          0.06,
+          2.7
+         ],
+         "at": [
+          0,
+          0.7,
+          0
+         ],
+         "material": "tower_dark"
+        },
+        {
+         "name": "Shrub",
+         "shape": "ellipsoid",
+         "radii": [
+          1.1,
+          0.9,
+          1.1
+         ],
+         "lumps": 0.35,
+         "segments": 12,
+         "at": [
+          0,
+          1.25,
+          0
+         ],
+         "material": "leaf"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Lobby",
+     "shape": "box",
+     "size": [
+      "$W * 1.5 - 1.2",
+      "$lobby",
+      "$W * 1.5 - 1.2"
+     ],
+     "at": [
+      0,
+      "$lobby / 2",
+      0
+     ],
+     "material": "curtain_glass",
+     "children": [
+      {
+       "name": "Mullion_{i}",
+       "shape": "box",
+       "size": [
+        0.12,
+        "$lobby",
+        "$W * 1.5 - 1.1"
+       ],
+       "at": [
+        "-$W * 0.75 + 0.6 + 2.0",
+        0,
+        0
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": "max(1, floor(($W * 1.5 - 1.2) / 2.0) - 1)",
+        "step": [
+         2,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "MullionZ_{i}",
+       "shape": "box",
+       "size": [
+        "$W * 1.5 - 1.1",
+        "$lobby",
+        0.12
+       ],
+       "at": [
+        0,
+        0,
+        "-$W * 0.75 + 0.6 + 2.0"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": "max(1, floor(($W * 1.5 - 1.2) / 2.0) - 1)",
+        "step": [
+         0,
+         0,
+         2
+        ]
+       }
+      },
+      {
+       "name": "Column_{i}",
+       "shape": "box",
+       "size": [
+        0.7,
+        "$lobby",
+        0.7
+       ],
+       "at": [
+        "$W * 0.75 - 0.35",
+        0,
+        "$W * 0.75 - 0.35"
+       ],
+       "material": "tower_stone",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      }
+     ]
+    },
     {
      "name": "Podium",
      "shape": "box",
      "size": [
       "$W * 1.5",
-      "$podium",
+      "$podium - $lobby",
       "$W * 1.5"
      ],
      "at": [
       0,
-      "$podium / 2",
+      "($podium + $lobby) / 2",
       0
+     ],
+     "material": "tower_stone",
+     "children": [
+      {
+       "name": "Coping",
+       "shape": "box",
+       "size": [
+        "$W * 1.5 + 0.4",
+        0.5,
+        "$W * 1.5 + 0.4"
+       ],
+       "at": [
+        0,
+        "($podium - $lobby) / 2 + 0.05",
+        0
+       ],
+       "material": "tower_metal"
+      },
+      {
+       "name": "Strip",
+       "shape": "box",
+       "size": [
+        "$W * 1.5 + 0.12",
+        "($podium - $lobby) * 0.36",
+        "$W * 1.5 + 0.12"
+       ],
+       "at": [
+        0,
+        -0.1,
+        0
+       ],
+       "material": "curtain_glass"
+      },
+      {
+       "name": "Roofdeck",
+       "shape": "box",
+       "size": [
+        "$W * 1.5 - 1.6",
+        0.12,
+        "$W * 1.5 - 1.6"
+       ],
+       "at": [
+        0,
+        "($podium - $lobby) / 2 + 0.36",
+        0
+       ],
+       "material": "grass"
+      }
      ]
     },
     {
      "name": "Entrance",
-     "shape": "box",
-     "material": "glass",
-     "size": [
-      "$W * 0.4",
-      "min(5, $podium)",
-      0.2
-     ],
      "at": [
       0,
-      "min(5, $podium) / 2",
-      "$W * 0.75 + 0.05"
+      0,
+      "$W * 0.75 - 0.6"
+     ],
+     "children": [
+      {
+       "name": "Portal",
+       "shape": "box",
+       "size": [
+        "$W * 0.45",
+        "$lobby",
+        0.6
+       ],
+       "at": [
+        0,
+        "$lobby / 2",
+        0.3
+       ],
+       "material": "glass"
+      },
+      {
+       "name": "Frame",
+       "shape": "box",
+       "size": [
+        "$W * 0.45 + 0.4",
+        0.4,
+        0.8
+       ],
+       "at": [
+        0,
+        "$lobby - 0.2",
+        0.4
+       ],
+       "material": "tower_metal"
+      },
+      {
+       "name": "FrameSide_L",
+       "shape": "box",
+       "size": [
+        0.25,
+        "$lobby",
+        0.8
+       ],
+       "at": [
+        "-$W * 0.225 - 0.1",
+        "$lobby / 2",
+        0.4
+       ],
+       "material": "tower_metal",
+       "mirror": "FrameSide_R"
+      },
+      {
+       "name": "Revolving",
+       "at": [
+        0,
+        0,
+        0.9
+       ],
+       "children": [
+        {
+         "name": "Drum",
+         "shape": "cylinder",
+         "radius": 1.4,
+         "height": "min(2.6, $lobby - 0.75)",
+         "at": [
+          0,
+          0.3,
+          0
+         ],
+         "material": "glass",
+         "anchor": "base",
+         "segments": 24
+        },
+        {
+         "name": "Top",
+         "shape": "cylinder",
+         "radius": 1.5,
+         "height": 0.25,
+         "at": [
+          0,
+          "0.3 + min(2.6, $lobby - 0.75)",
+          0
+         ],
+         "material": "tower_metal",
+         "anchor": "base",
+         "segments": 24
+        },
+        {
+         "name": "Wing_{i}",
+         "shape": "box",
+         "size": [
+          2.7,
+          "min(2.6, $lobby - 0.75) - 0.2",
+          0.05
+         ],
+         "at": [
+          0,
+          "0.3 + min(2.6, $lobby - 0.75) / 2",
+          0
+         ],
+         "material": "tower_metal",
+         "repeat": {
+          "count": 2,
+          "around": "y",
+          "phase": 45
+         }
+        }
+       ]
+      },
+      {
+       "name": "Canopy",
+       "shape": "box",
+       "size": [
+        "$W * 0.55",
+        0.35,
+        4
+       ],
+       "at": [
+        0,
+        "min(4.2, $lobby - 0.2)",
+        2.4
+       ],
+       "material": "tower_metal"
+      },
+      {
+       "name": "Step_{i}",
+       "shape": "box",
+       "size": [
+        "$W * 0.5 - $i * 1.0",
+        0.15,
+        "3.2 - $i * 0.6"
+       ],
+       "at": [
+        0,
+        0.075,
+        2
+       ],
+       "material": "tower_stone",
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0.15,
+         -0.3
+        ]
+       }
+      }
      ]
     },
     {
      "name": "Shaft",
-     "shape": "box",
-     "size": [
-      "$W",
-      "$upperStart - $podium",
-      "$W"
+     "shape": "extrude",
+     "plan": [
+      [
+       "-$W2",
+       "-$W2 + $cn"
+      ],
+      [
+       "-$W2 + $cn",
+       "-$W2 + $cn"
+      ],
+      [
+       "-$W2 + $cn",
+       "-$W2"
+      ],
+      [
+       "$W2 - $cn",
+       "-$W2"
+      ],
+      [
+       "$W2 - $cn",
+       "-$W2 + $cn"
+      ],
+      [
+       "$W2",
+       "-$W2 + $cn"
+      ],
+      [
+       "$W2",
+       "$W2 - $cn"
+      ],
+      [
+       "$W2 - $cn",
+       "$W2 - $cn"
+      ],
+      [
+       "$W2 - $cn",
+       "$W2"
+      ],
+      [
+       "-$W2 + $cn",
+       "$W2"
+      ],
+      [
+       "-$W2 + $cn",
+       "$W2 - $cn"
+      ],
+      [
+       "-$W2",
+       "$W2 - $cn"
+      ]
      ],
-     "at": [
-      0,
-      "($upperStart + $podium) / 2",
-      0
+     "y0": "$podium",
+     "y1": "$upperStart",
+     "material": "curtain_glass",
+     "children": [
+      {
+       "name": "FinX_{i}",
+       "shape": "box",
+       "size": [
+        0.22,
+        "$upperStart - $podium",
+        "$W + 0.5"
+       ],
+       "at": [
+        "-$W2 + $ms",
+        "($upperStart + $podium) / 2",
+        0
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": "$nm - 1",
+        "step": [
+         "$ms",
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "FinZ_{i}",
+       "shape": "box",
+       "size": [
+        "$W + 0.5",
+        "$upperStart - $podium",
+        0.22
+       ],
+       "at": [
+        0,
+        "($upperStart + $podium) / 2",
+        "-$W2 + $ms"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": "$nm - 1",
+        "step": [
+         0,
+         0,
+         "$ms"
+        ]
+       }
+      },
+      {
+       "name": "Band_{i}",
+       "shape": "box",
+       "size": [
+        "$W - 2 * $cn + 0.3",
+        0.9,
+        "$W + 0.3"
+       ],
+       "at": [
+        0,
+        "$podium + $fs",
+        0
+       ],
+       "material": "tower_spandrel",
+       "repeat": {
+        "count": "$nf",
+        "step": [
+         0,
+         "$fs",
+         0
+        ]
+       }
+      },
+      {
+       "name": "BandX_{i}",
+       "shape": "box",
+       "size": [
+        "$W + 0.3",
+        0.9,
+        "$W - 2 * $cn + 0.3"
+       ],
+       "at": [
+        0,
+        "$podium + $fs",
+        0
+       ],
+       "material": "tower_spandrel",
+       "repeat": {
+        "count": "$nf",
+        "step": [
+         0,
+         "$fs",
+         0
+        ]
+       }
+      },
+      {
+       "name": "Corner_{i}",
+       "shape": "box",
+       "size": [
+        0.5,
+        "$upperStart - $podium",
+        0.5
+       ],
+       "at": [
+        "$W2 - $cn + 0.25",
+        "($upperStart + $podium) / 2",
+        "$W2 - $cn + 0.25"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      },
+      {
+       "name": "Cornice",
+       "shape": "box",
+       "size": [
+        "$W + 0.8",
+        1.2,
+        "$W + 0.8"
+       ],
+       "at": [
+        0,
+        "$upperStart - 0.6",
+        0
+       ],
+       "material": "tower_metal"
+      },
+      {
+       "name": "Base",
+       "shape": "box",
+       "size": [
+        "$W + 0.4",
+        1,
+        "$W + 0.4"
+       ],
+       "at": [
+        0,
+        "$podium + 0.5",
+        0
+       ],
+       "material": "tower_stone"
+      }
      ]
     },
     {
@@ -98,80 +712,354 @@
       0,
       "($H + $upperStart) / 2",
       0
+     ],
+     "material": "curtain_glass",
+     "children": [
+      {
+       "name": "FinX_{i}",
+       "shape": "box",
+       "size": [
+        0.2,
+        "$H - $upperStart",
+        "$W * 0.8 + 0.45"
+       ],
+       "at": [
+        "-$U2 + $mu",
+        0,
+        0
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": "$nmu - 1",
+        "step": [
+         "$mu",
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "FinZ_{i}",
+       "shape": "box",
+       "size": [
+        "$W * 0.8 + 0.45",
+        "$H - $upperStart",
+        0.2
+       ],
+       "at": [
+        0,
+        0,
+        "-$U2 + $mu"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": "$nmu - 1",
+        "step": [
+         0,
+         0,
+         "$mu"
+        ]
+       }
+      },
+      {
+       "name": "Band_{i}",
+       "shape": "box",
+       "size": [
+        "$W * 0.8 + 0.3",
+        0.9,
+        "$W * 0.8 + 0.3"
+       ],
+       "at": [
+        0,
+        "-($H - $upperStart) / 2 + $us",
+        0
+       ],
+       "material": "tower_spandrel",
+       "repeat": {
+        "count": "$nu",
+        "step": [
+         0,
+         "$us",
+         0
+        ]
+       }
+      },
+      {
+       "name": "Edge_{i}",
+       "shape": "box",
+       "size": [
+        0.45,
+        "$H - $upperStart",
+        0.45
+       ],
+       "at": [
+        "$U2",
+        0,
+        "$U2"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      },
+      {
+       "name": "Parapet",
+       "shape": "box",
+       "size": [
+        "$W * 0.8 + 0.6",
+        1.6,
+        "$W * 0.8 + 0.6"
+       ],
+       "at": [
+        0,
+        "($H - $upperStart) / 2 + 0.3",
+        0
+       ],
+       "material": "tower_metal"
+      },
+      {
+       "name": "Rail_{i}",
+       "shape": "box",
+       "size": [
+        "$W - 0.2",
+        1.1,
+        0.06
+       ],
+       "at": [
+        0,
+        "-($H - $upperStart) / 2 + 0.55",
+        "$W2 - 0.1"
+       ],
+       "material": "glass",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      }
      ]
     },
     {
-     "name": "Band_{i}",
-     "shape": "box",
-     "material": "glass",
-     "size": [
-      "$W + 0.1",
-      1.6,
-      "$W + 0.1"
-     ],
-     "at": [
-      0,
-      "$podium + 2.2",
-      0
-     ],
-     "repeat": {
-      "count": "floor(($upperStart - $podium - 2.5) / 4)",
-      "step": [
-       0,
-       4,
-       0
-      ]
-     }
-    },
-    {
-     "name": "UpperBand_{i}",
-     "shape": "box",
-     "material": "glass",
-     "size": [
-      "$W * 0.8 + 0.1",
-      1.6,
-      "$W * 0.8 + 0.1"
-     ],
-     "at": [
-      0,
-      "$upperStart + 1.7",
-      0
-     ],
-     "repeat": {
-      "count": "max(1, floor(($H - $upperStart - 2.5) / 4))",
-      "step": [
-       0,
-       4,
-       0
-      ]
-     }
-    },
-    {
      "name": "Crown",
-     "shape": "box",
-     "material": "metal",
-     "size": [
-      "$W * 0.4",
-      3,
-      "$W * 0.4"
-     ],
      "at": [
       0,
-      "$H + 1.5",
+      "$H",
       0
+     ],
+     "children": [
+      {
+       "name": "Plant",
+       "shape": "box",
+       "size": [
+        "$W * 0.5",
+        4,
+        "$W * 0.5"
+       ],
+       "at": [
+        0,
+        2,
+        0
+       ],
+       "material": "tower_dark"
+      },
+      {
+       "name": "Louvre_{i}",
+       "shape": "box",
+       "size": [
+        "$W * 0.5 + 0.3",
+        0.12,
+        "$W * 0.5 + 0.3"
+       ],
+       "at": [
+        0,
+        0.5,
+        0
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": 8,
+        "step": [
+         0,
+         0.42,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Post_{i}",
+       "shape": "box",
+       "size": [
+        0.3,
+        4,
+        0.3
+       ],
+       "at": [
+        "$W * 0.25 + 0.1",
+        2,
+        "$W * 0.25 + 0.1"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      },
+      {
+       "name": "Lid",
+       "shape": "box",
+       "size": [
+        "$W * 0.5 + 0.8",
+        0.4,
+        "$W * 0.5 + 0.8"
+       ],
+       "at": [
+        0,
+        4.2,
+        0
+       ],
+       "material": "tower_metal"
+      },
+      {
+       "name": "Unit_{i}",
+       "shape": "box",
+       "size": [
+        2.4,
+        1.4,
+        1.6
+       ],
+       "at": [
+        "-$W * 0.32 + 1.2",
+        0.7,
+        "$W * 0.31"
+       ],
+       "material": "aluminium",
+       "repeat": {
+        "count": 2,
+        "step": [
+         "$W * 0.64 - 2.4",
+         0,
+         0
+        ]
+       },
+       "bevel": 0.05
+      },
+      {
+       "name": "Stack_{i}",
+       "shape": "cylinder",
+       "radius": 0.35,
+       "height": 2.2,
+       "at": [
+        "$W * 0.33",
+        1.1,
+        "-$W * 0.3"
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0,
+         1.2
+        ]
+       },
+       "segments": 12
+      }
      ]
     },
     {
      "name": "Antenna",
-     "shape": "cylinder",
-     "material": "metal",
-     "radius": 0.25,
-     "height": "$H * 0.12",
-     "segments": 8,
+     "shape": "lathe",
+     "profile": [
+      [
+       0.9,
+       0
+      ],
+      [
+       0.9,
+       1.2
+      ],
+      [
+       0.45,
+       1.6
+      ],
+      [
+       0.32,
+       "$H * 0.05"
+      ],
+      [
+       0.16,
+       "$H * 0.09"
+      ],
+      [
+       0.06,
+       "$H * 0.12"
+      ],
+      [
+       0,
+       "$H * 0.12 + 0.2"
+      ]
+     ],
      "at": [
       0,
-      "$H + 3 + $H * 0.06",
+      "$H + 4.4",
       0
+     ],
+     "material": "tower_metal",
+     "segments": 10,
+     "children": [
+      {
+       "name": "Beacon",
+       "shape": "ellipsoid",
+       "radii": [
+        0.25,
+        0.25,
+        0.25
+       ],
+       "segments": 10,
+       "at": [
+        0,
+        "$H * 0.12 + 0.1",
+        0
+       ],
+       "material": "light_red"
+      },
+      {
+       "name": "Beacon2",
+       "shape": "ellipsoid",
+       "radii": [
+        0.3,
+        0.3,
+        0.3
+       ],
+       "segments": 10,
+       "at": [
+        0,
+        "$H * 0.06",
+        0
+       ],
+       "material": "light_red"
+      },
+      {
+       "name": "Ring_{i}",
+       "shape": "cylinder",
+       "radius": 0.6,
+       "height": 0.12,
+       "at": [
+        0,
+        "$H * 0.03",
+        0
+       ],
+       "material": "tower_metal",
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         "$H * 0.03",
+         0
+        ]
+       },
+       "segments": 10
+      }
      ]
     }
    ]

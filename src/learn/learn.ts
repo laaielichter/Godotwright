@@ -18,6 +18,8 @@ export const GODOT_CHECKED_RULES = new Set([
   "api/unknown-function",
   "api/unknown-member",
   "api/wrong-arguments",
+  "api/duplicate-declaration",
+  "api/override-signature",
 ]);
 
 /** After this many contradictions and no confirmation, a rule's errors become warnings here. */

@@ -2,7 +2,7 @@
  "version": 1,
  "name": "bicycle",
  "archetype": "vehicle.wheeled.bicycle",
- "description": "A city bicycle: a diamond frame of round tubes, a steering fork with handlebar that carries the front wheel, a rear wheel with spokes, a saddle and a crank with pedals.",
+ "description": "A city bicycle: a diamond frame of round tubes with a sprung leather saddle, rear rack with lamp, mudguards, chain guard and kickstand; spoked wheels (36 laced spokes) on hubs with their pivot at the hub; a crank with chainring, arms and pedals that spins about the bottom bracket; and a fork with swept-back bar, grips, bell and lamp that steers the front wheel.",
  "params": [
   {
    "name": "length",
@@ -24,12 +24,93 @@
  "materials": {
   "bike_paint": {
    "color": [
+    0.05,
+    0.22,
+    0.38
+   ],
+   "metallic": 0.5,
+   "roughness": 0.25
+  },
+  "tyre": {
+   "color": [
+    0.03,
+    0.028,
+    0.026
+   ],
+   "metallic": 0,
+   "roughness": 0.85
+  },
+  "rim": {
+   "color": [
+    0.7,
+    0.71,
+    0.73
+   ],
+   "metallic": 1,
+   "roughness": 0.25
+  },
+  "spoke": {
+   "color": [
+    0.75,
+    0.76,
+    0.78
+   ],
+   "metallic": 1,
+   "roughness": 0.2
+  },
+  "leather": {
+   "color": [
+    0.22,
     0.1,
-    0.35,
-    0.55
+    0.04
+   ],
+   "metallic": 0,
+   "roughness": 0.55
+  },
+  "fender": {
+   "color": [
+    0.05,
+    0.22,
+    0.38
+   ],
+   "metallic": 0.5,
+   "roughness": 0.25
+  },
+  "rack": {
+   "color": [
+    0.03,
+    0.03,
+    0.032
    ],
    "metallic": 0.4,
-   "roughness": 0.35
+   "roughness": 0.45
+  },
+  "chain": {
+   "color": [
+    0.15,
+    0.15,
+    0.16
+   ],
+   "metallic": 0.8,
+   "roughness": 0.4
+  },
+  "pedal": {
+   "color": [
+    0.03,
+    0.03,
+    0.032
+   ],
+   "metallic": 0.2,
+   "roughness": 0.6
+  },
+  "trim_black": {
+   "color": [
+    0.018,
+    0.018,
+    0.02
+   ],
+   "metallic": 0.1,
+   "roughness": 0.45
   }
  },
  "nodes": [
@@ -53,133 +134,659 @@
      "name": "Frame",
      "children": [
       {
-       "name": "DownTube",
-       "shape": "cylinder",
-       "radius": 0.017,
+       "name": "TopTube",
+       "shape": "tube",
+       "radius": 0.016,
        "segments": 10,
-       "height": "hypot(($hby) - ($bby), ($hbz) - ($bbz))",
-       "at": [
-        0,
-        "(($bby) + ($hby)) / 2",
-        "(($bbz) + ($hbz)) / 2"
-       ],
-       "rotate": [
-        "deg(atan2(($hbz) - ($bbz), ($hby) - ($bby)))",
-        0,
-        0
+       "path": [
+        [
+         0,
+         "$sty - 0.04",
+         "$stz"
+        ],
+        [
+         0,
+         "$hty - 0.03",
+         "$htz"
+        ]
        ]
       },
       {
-       "name": "TopTube",
-       "shape": "cylinder",
-       "radius": 0.015,
+       "name": "DownTube",
+       "shape": "tube",
+       "radius": 0.02,
        "segments": 10,
-       "height": "hypot(($hty) - ($sty - 0.05), ($htz) - ($stz))",
-       "at": [
-        0,
-        "(($sty - 0.05) + ($hty)) / 2",
-        "(($stz) + ($htz)) / 2"
-       ],
-       "rotate": [
-        "deg(atan2(($htz) - ($stz), ($hty) - ($sty - 0.05)))",
-        0,
-        0
+       "path": [
+        [
+         0,
+         "$bby",
+         "$bbz"
+        ],
+        [
+         0,
+         "$hby + 0.03",
+         "$hbz - 0.01"
+        ]
        ]
       },
       {
        "name": "SeatTube",
-       "shape": "cylinder",
-       "radius": 0.015,
+       "shape": "tube",
+       "radius": 0.016,
        "segments": 10,
-       "height": "hypot(($sty) - ($bby), ($stz) - ($bbz))",
-       "at": [
-        0,
-        "(($bby) + ($sty)) / 2",
-        "(($bbz) + ($stz)) / 2"
-       ],
-       "rotate": [
-        "deg(atan2(($stz) - ($bbz), ($sty) - ($bby)))",
-        0,
-        0
-       ]
-      },
-      {
-       "name": "ChainStay",
-       "shape": "cylinder",
-       "radius": 0.011,
-       "segments": 8,
-       "height": "hypot(($R) - ($bby), (-$wb / 2) - ($bbz))",
-       "at": [
-        0,
-        "(($bby) + ($R)) / 2",
-        "(($bbz) + (-$wb / 2)) / 2"
-       ],
-       "rotate": [
-        "deg(atan2((-$wb / 2) - ($bbz), ($R) - ($bby)))",
-        0,
-        0
-       ]
-      },
-      {
-       "name": "SeatStay",
-       "shape": "cylinder",
-       "radius": 0.01,
-       "segments": 8,
-       "height": "hypot(($R) - ($sty - 0.04), (-$wb / 2) - ($stz))",
-       "at": [
-        0,
-        "(($sty - 0.04) + ($R)) / 2",
-        "(($stz) + (-$wb / 2)) / 2"
-       ],
-       "rotate": [
-        "deg(atan2((-$wb / 2) - ($stz), ($R) - ($sty - 0.04)))",
-        0,
-        0
+       "path": [
+        [
+         0,
+         "$bby",
+         "$bbz"
+        ],
+        [
+         0,
+         "$sty",
+         "$stz"
+        ]
        ]
       },
       {
        "name": "HeadTube",
-       "shape": "cylinder",
-       "radius": 0.02,
+       "shape": "tube",
+       "radius": 0.022,
        "segments": 10,
-       "height": "hypot(($hty) - ($hby), ($htz) - ($hbz))",
+       "path": [
+        [
+         0,
+         "$hby - 0.01",
+         "$hbz + 0.002"
+        ],
+        [
+         0,
+         "$hty + 0.01",
+         "$htz - 0.002"
+        ]
+       ]
+      },
+      {
+       "name": "ChainStay_L",
+       "shape": "tube",
+       "radius": 0.011,
+       "segments": 10,
+       "path": [
+        [
+         0.02,
+         "$bby",
+         "$bbz"
+        ],
+        [
+         0.062,
+         "$R",
+         "-$wb / 2"
+        ]
+       ],
+       "mirror": "ChainStay_R"
+      },
+      {
+       "name": "SeatStay_L",
+       "shape": "tube",
+       "radius": 0.009,
+       "segments": 10,
+       "path": [
+        [
+         0.018,
+         "$sty - 0.04",
+         "$stz"
+        ],
+        [
+         0.062,
+         "$R",
+         "-$wb / 2"
+        ]
+       ],
+       "mirror": "SeatStay_R"
+      },
+      {
+       "name": "Shell",
+       "shape": "cylinder",
+       "axis": "x",
+       "radius": 0.022,
+       "height": 0.075,
+       "segments": 14,
        "at": [
         0,
-        "(($hby) + ($hty)) / 2",
-        "(($hbz) + ($htz)) / 2"
+        "$bby",
+        "$bbz"
+       ]
+      },
+      {
+       "name": "Dropout_L",
+       "shape": "box",
+       "size": [
+        0.006,
+        0.04,
+        0.04
+       ],
+       "at": [
+        0.062,
+        "$R",
+        "-$wb / 2"
+       ],
+       "mirror": "Dropout_R"
+      },
+      {
+       "name": "Seatpost",
+       "shape": "tube",
+       "material": "aluminium",
+       "radius": 0.0135,
+       "segments": 10,
+       "path": [
+        [
+         0,
+         "$sty - 0.02",
+         "$stz"
+        ],
+        [
+         0,
+         "$sty + 0.12",
+         "$stz - 0.038"
+        ]
+       ]
+      },
+      {
+       "name": "Saddle",
+       "shape": "loft",
+       "material": "leather",
+       "sections": [
+        {
+         "z": "$stz - 0.16",
+         "superellipse": {
+          "width": 0.2,
+          "height": 0.05,
+          "n": 2.5,
+          "count": 20,
+          "cy": "$sty + 0.175"
+         }
+        },
+        {
+         "z": "$stz - 0.1",
+         "superellipse": {
+          "width": 0.22,
+          "height": 0.06,
+          "n": 2.5,
+          "count": 20,
+          "cy": "$sty + 0.17"
+         }
+        },
+        {
+         "z": "$stz - 0.01",
+         "superellipse": {
+          "width": 0.13,
+          "height": 0.05,
+          "n": 2.5,
+          "count": 20,
+          "cy": "$sty + 0.165"
+         }
+        },
+        {
+         "z": "$stz + 0.08",
+         "superellipse": {
+          "width": 0.05,
+          "height": 0.035,
+          "n": 2.5,
+          "count": 20,
+          "cy": "$sty + 0.16"
+         }
+        }
+       ]
+      },
+      {
+       "name": "Spring_L",
+       "shape": "cylinder",
+       "material": "chrome",
+       "radius": 0.012,
+       "height": 0.04,
+       "segments": 8,
+       "at": [
+        0.05,
+        "$sty + 0.13",
+        "$stz - 0.12"
+       ],
+       "mirror": "Spring_R"
+      },
+      {
+       "name": "Rails",
+       "shape": "box",
+       "material": "chrome",
+       "size": [
+        0.11,
+        0.01,
+        0.2
+       ],
+       "at": [
+        0,
+        "$sty + 0.128",
+        "$stz - 0.05"
+       ]
+      },
+      {
+       "name": "RackRail_L",
+       "shape": "tube",
+       "material": "rack",
+       "radius": 0.006,
+       "segments": 10,
+       "path": [
+        [
+         0.06,
+         "$R + 0.36",
+         "$stz - 0.05"
+        ],
+        [
+         0.06,
+         "$R + 0.36",
+         "-$wb / 2 - 0.12"
+        ]
+       ],
+       "mirror": "RackRail_R"
+      },
+      {
+       "name": "RackStay_L",
+       "shape": "tube",
+       "material": "rack",
+       "radius": 0.006,
+       "segments": 10,
+       "path": [
+        [
+         0.06,
+         "$R + 0.36",
+         "-$wb / 2 - 0.08"
+        ],
+        [
+         0.065,
+         "$R + 0.02",
+         "-$wb / 2 - 0.01"
+        ]
+       ],
+       "mirror": "RackStay_R"
+      },
+      {
+       "name": "RackArm_L",
+       "shape": "tube",
+       "material": "rack",
+       "radius": 0.005,
+       "segments": 10,
+       "path": [
+        [
+         0.06,
+         "$R + 0.36",
+         "$stz - 0.05"
+        ],
+        [
+         0.02,
+         "$sty - 0.06",
+         "$stz + 0.01"
+        ]
+       ],
+       "mirror": "RackArm_R"
+      },
+      {
+       "name": "RackSlat{i}",
+       "shape": "box",
+       "material": "rack",
+       "size": [
+        0.12,
+        0.006,
+        0.01
+       ],
+       "at": [
+        0,
+        "$R + 0.36",
+        "$stz - 0.1"
+       ],
+       "repeat": {
+        "count": 4,
+        "step": [
+         0,
+         0,
+         "(-$wb / 2 - 0.1 - $stz + 0.1) / 3"
+        ]
+       }
+      },
+      {
+       "name": "RearLamp",
+       "shape": "box",
+       "material": "light_red",
+       "size": [
+        0.07,
+        0.035,
+        0.025
+       ],
+       "bevel": 0.008,
+       "at": [
+        0,
+        "$R + 0.34",
+        "-$wb / 2 - 0.14"
+       ]
+      },
+      {
+       "name": "FenderRear",
+       "shape": "loft",
+       "material": "fender",
+       "rotate": [
+        0,
+        -90,
+        0
+       ],
+       "sections": [
+        {
+         "z": -0.03,
+         "points": [
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.025)",
+           "$R + 0.342 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.8241 * ($R + 0.025)",
+           "$R + 0.5664 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.6561 * ($R + 0.025)",
+           "$R + 0.7547 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.4462 * ($R + 0.025)",
+           "$R + 0.8949 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.2079 * ($R + 0.025)",
+           "$R + 0.9781 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.0436 * ($R + 0.025)",
+           "$R + 0.999 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.2924 * ($R + 0.025)",
+           "$R + 0.9563 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.5225 * ($R + 0.025)",
+           "$R + 0.8526 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.7193 * ($R + 0.025)",
+           "$R + 0.6947 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.8704 * ($R + 0.025)",
+           "$R + 0.4924 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025)",
+           "$R + 0.2588 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025) - 0.0012",
+           "$R + 0.2588 * ($R + 0.025) - 0.0015"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025) - 0.0031",
+           "$R + 0.2588 * ($R + 0.025) - 0.0018"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025) - 0.0046",
+           "$R + 0.2588 * ($R + 0.025) - 0.0006"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.03)",
+           "$R + 0.2588 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.8704 * ($R + 0.03)",
+           "$R + 0.4924 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.7193 * ($R + 0.03)",
+           "$R + 0.6947 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.5225 * ($R + 0.03)",
+           "$R + 0.8526 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.2924 * ($R + 0.03)",
+           "$R + 0.9563 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.0436 * ($R + 0.03)",
+           "$R + 0.999 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.2079 * ($R + 0.03)",
+           "$R + 0.9781 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.4462 * ($R + 0.03)",
+           "$R + 0.8949 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.6561 * ($R + 0.03)",
+           "$R + 0.7547 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.8241 * ($R + 0.03)",
+           "$R + 0.5664 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03)",
+           "$R + 0.342 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03) - 0.0001",
+           "$R + 0.342 * ($R + 0.03) - 0.0019"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03) - 0.0015",
+           "$R + 0.342 * ($R + 0.03) - 0.0032"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03) - 0.0034",
+           "$R + 0.342 * ($R + 0.03) - 0.0031"
+          ]
+         ]
+        },
+        {
+         "z": 0.03,
+         "points": [
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.025)",
+           "$R + 0.342 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.8241 * ($R + 0.025)",
+           "$R + 0.5664 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.6561 * ($R + 0.025)",
+           "$R + 0.7547 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.4462 * ($R + 0.025)",
+           "$R + 0.8949 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + 0.2079 * ($R + 0.025)",
+           "$R + 0.9781 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.0436 * ($R + 0.025)",
+           "$R + 0.999 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.2924 * ($R + 0.025)",
+           "$R + 0.9563 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.5225 * ($R + 0.025)",
+           "$R + 0.8526 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.7193 * ($R + 0.025)",
+           "$R + 0.6947 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.8704 * ($R + 0.025)",
+           "$R + 0.4924 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025)",
+           "$R + 0.2588 * ($R + 0.025)"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025) - 0.0012",
+           "$R + 0.2588 * ($R + 0.025) - 0.0015"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025) - 0.0031",
+           "$R + 0.2588 * ($R + 0.025) - 0.0018"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.025) - 0.0046",
+           "$R + 0.2588 * ($R + 0.025) - 0.0006"
+          ],
+          [
+           "-$wb / 2 + -0.9659 * ($R + 0.03)",
+           "$R + 0.2588 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.8704 * ($R + 0.03)",
+           "$R + 0.4924 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.7193 * ($R + 0.03)",
+           "$R + 0.6947 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.5225 * ($R + 0.03)",
+           "$R + 0.8526 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.2924 * ($R + 0.03)",
+           "$R + 0.9563 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + -0.0436 * ($R + 0.03)",
+           "$R + 0.999 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.2079 * ($R + 0.03)",
+           "$R + 0.9781 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.4462 * ($R + 0.03)",
+           "$R + 0.8949 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.6561 * ($R + 0.03)",
+           "$R + 0.7547 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.8241 * ($R + 0.03)",
+           "$R + 0.5664 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03)",
+           "$R + 0.342 * ($R + 0.03)"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03) - 0.0001",
+           "$R + 0.342 * ($R + 0.03) - 0.0019"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03) - 0.0015",
+           "$R + 0.342 * ($R + 0.03) - 0.0032"
+          ],
+          [
+           "-$wb / 2 + 0.9397 * ($R + 0.03) - 0.0034",
+           "$R + 0.342 * ($R + 0.03) - 0.0031"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "ChainGuard",
+       "shape": "box",
+       "material": "fender",
+       "size": [
+        0.006,
+        0.05,
+        "$wb / 2 + $bbz + 0.08"
+       ],
+       "bevel": 0.002,
+       "at": [
+        -0.07,
+        "($bby + $R) / 2 + 0.07",
+        "($bbz - $wb / 2) / 2 + 0.03"
        ],
        "rotate": [
-        "deg(atan2(($htz) - ($hbz), ($hty) - ($hby)))",
+        "deg(atan2($R - $bby, $wb / 2 + $bbz))",
         0,
         0
        ]
       },
       {
-       "name": "Saddle",
-       "shape": "box",
-       "material": "rubber",
-       "size": [
-        0.14,
-        0.04,
-        0.26
-       ],
-       "at": [
-        0,
-        "$sty + 0.07",
-        "$stz - 0.03"
+       "name": "ChainTop",
+       "shape": "tube",
+       "material": "chain",
+       "radius": 0.004,
+       "segments": 5,
+       "path": [
+        [
+         -0.05,
+         "$bby + 0.09",
+         "$bbz"
+        ],
+        [
+         -0.05,
+         "$R + 0.045",
+         "-$wb / 2"
+        ]
        ]
       },
       {
-       "name": "Seatpost",
-       "shape": "cylinder",
-       "material": "metal",
-       "radius": 0.014,
-       "height": 0.16,
-       "segments": 8,
-       "at": [
-        0,
-        "$sty + 0.02",
-        "$stz"
+       "name": "ChainLow",
+       "shape": "tube",
+       "material": "chain",
+       "radius": 0.004,
+       "segments": 5,
+       "path": [
+        [
+         -0.05,
+         "$bby - 0.09",
+         "$bbz"
+        ],
+        [
+         -0.05,
+         "$R - 0.045",
+         "-$wb / 2"
+        ]
+       ]
+      },
+      {
+       "name": "Kickstand",
+       "shape": "tube",
+       "material": "rack",
+       "radius": 0.008,
+       "segments": 10,
+       "path": [
+        [
+         0.05,
+         "$bby + 0.02",
+         "$bbz - 0.12"
+        ],
+        [
+         0.07,
+         "$bby - 0.03",
+         "$bbz - 0.36"
+        ]
        ]
       }
      ]
@@ -195,56 +802,102 @@
       {
        "name": "Spindle",
        "shape": "cylinder",
-       "material": "metal",
-       "rotate": [
-        0,
-        0,
-        90
-       ],
-       "radius": 0.02,
-       "height": 0.2,
+       "material": "steel",
+       "axis": "x",
+       "radius": 0.012,
+       "height": 0.15,
        "segments": 10
       },
       {
        "name": "Chainring",
        "shape": "lathe",
-       "material": "metal",
+       "material": "aluminium",
        "rotate": [
         0,
         0,
-        90
+        -90
        ],
-       "segments": 28,
+       "segments": 40,
+       "at": [
+        -0.05,
+        0,
+        0
+       ],
+       "caps": false,
        "profile": [
         [
-         0,
-         -0.05
+         0.07,
+         -0.002
         ],
         [
-         0.1,
-         -0.05
+         0.095,
+         -0.002
         ],
         [
-         0.1,
-         -0.044
+         0.095,
+         0.002
         ],
         [
-         0,
-         -0.044
+         0.07,
+         0.002
+        ],
+        [
+         0.07,
+         -0.002
         ]
        ]
       },
       {
-       "name": "Arm_R",
+       "name": "Tooth{i}",
        "shape": "box",
-       "material": "metal",
+       "material": "aluminium",
        "size": [
-        0.02,
-        0.17,
-        0.03
+        0.004,
+        0.008,
+        0.008
        ],
        "at": [
-        -0.09,
+        -0.05,
+        0.098,
+        0
+       ],
+       "repeat": {
+        "count": 38,
+        "around": "x"
+       }
+      },
+      {
+       "name": "Spider{i}",
+       "shape": "box",
+       "material": "aluminium",
+       "size": [
+        0.006,
+        0.07,
+        0.014
+       ],
+       "at": [
+        -0.05,
+        0.04,
+        0
+       ],
+       "repeat": {
+        "count": 5,
+        "around": "x",
+        "phase": 18
+       }
+      },
+      {
+       "name": "Arm_R",
+       "shape": "box",
+       "material": "aluminium",
+       "size": [
+        0.016,
+        0.175,
+        0.03
+       ],
+       "bevel": 0.006,
+       "at": [
+        -0.075,
         -0.08,
         0
        ]
@@ -252,46 +905,127 @@
       {
        "name": "Arm_L",
        "shape": "box",
-       "material": "metal",
+       "material": "aluminium",
        "size": [
-        0.02,
-        0.17,
+        0.016,
+        0.175,
         0.03
        ],
+       "bevel": 0.006,
        "at": [
-        0.09,
+        0.075,
         0.08,
         0
        ]
       },
       {
        "name": "Footplate_R",
-       "shape": "box",
-       "material": "rubber",
-       "size": [
-        0.07,
-        0.025,
-        0.1
-       ],
        "at": [
-        -0.13,
+        -0.085,
         -0.16,
         0
+       ],
+       "children": [
+        {
+         "name": "Axle",
+         "shape": "cylinder",
+         "material": "steel",
+         "axis": "x",
+         "radius": 0.006,
+         "height": 0.05,
+         "segments": 6,
+         "at": [
+          -0.025,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Body",
+         "shape": "box",
+         "material": "pedal",
+         "size": [
+          0.09,
+          0.022,
+          0.07
+         ],
+         "bevel": 0.006,
+         "at": [
+          -0.06,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Reflector",
+         "shape": "box",
+         "material": "light_amber",
+         "size": [
+          0.05,
+          0.012,
+          0.004
+         ],
+         "at": [
+          -0.06,
+          0,
+          0.036
+         ]
+        }
        ]
       },
       {
        "name": "Footplate_L",
-       "shape": "box",
-       "material": "rubber",
-       "size": [
-        0.07,
-        0.025,
-        0.1
-       ],
        "at": [
-        0.13,
+        0.085,
         0.16,
         0
+       ],
+       "children": [
+        {
+         "name": "Axle",
+         "shape": "cylinder",
+         "material": "steel",
+         "axis": "x",
+         "radius": 0.006,
+         "height": 0.05,
+         "segments": 6,
+         "at": [
+          0.025,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Body",
+         "shape": "box",
+         "material": "pedal",
+         "size": [
+          0.09,
+          0.022,
+          0.07
+         ],
+         "bevel": 0.006,
+         "at": [
+          0.06,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Reflector",
+         "shape": "box",
+         "material": "light_amber",
+         "size": [
+          0.05,
+          0.012,
+          0.004
+         ],
+         "at": [
+          0.06,
+          0,
+          0.036
+         ]
+        }
        ]
       }
      ]
@@ -305,126 +1039,303 @@
      ],
      "children": [
       {
-       "name": "Tread",
+       "name": "Tyre",
        "shape": "lathe",
-       "material": "rubber",
+       "material": "tyre",
        "rotate": [
         0,
         0,
-        90
+        -90
        ],
-       "segments": 36,
+       "segments": 48,
        "caps": false,
        "profile": [
         [
-         "($R) - 0.03 + 0.03*1.00000",
-         "0.03*0.00000"
+         "$R - 0.04 + 0.004",
+         -0.012
         ],
         [
-         "($R) - 0.03 + 0.03*0.80902",
-         "0.03*0.58779"
+         "$R - 0.04 + 0.012",
+         -0.02
         ],
         [
-         "($R) - 0.03 + 0.03*0.30902",
-         "0.03*0.95106"
+         "$R - 0.019 + 0.0065",
+         -0.0179
         ],
         [
-         "($R) - 0.03 + 0.03*-0.30902",
-         "0.03*0.95106"
+         "$R - 0.019 + 0.0146",
+         -0.0122
         ],
         [
-         "($R) - 0.03 + 0.03*-0.80902",
-         "0.03*0.58779"
+         "$R - 0.019 + 0.0184",
+         -0.0049
         ],
         [
-         "($R) - 0.03 + 0.03*-1.00000",
-         "0.03*0.00000"
+         "$R - 0.019 + 0.0184",
+         0.0049
         ],
         [
-         "($R) - 0.03 + 0.03*-0.80902",
-         "0.03*-0.58779"
+         "$R - 0.019 + 0.0146",
+         0.0122
         ],
         [
-         "($R) - 0.03 + 0.03*-0.30902",
-         "0.03*-0.95106"
+         "$R - 0.019 + 0.0065",
+         0.0179
         ],
         [
-         "($R) - 0.03 + 0.03*0.30902",
-         "0.03*-0.95106"
+         "$R - 0.04 + 0.012",
+         0.02
         ],
         [
-         "($R) - 0.03 + 0.03*0.80902",
-         "0.03*-0.58779"
+         "$R - 0.04 + 0.004",
+         0.012
         ],
         [
-         "($R) - 0.03 + 0.03*1.00000",
-         "0.03*-0.00000"
+         "$R - 0.04 + 0.004",
+         -0.012
         ]
        ]
       },
       {
        "name": "Rim",
        "shape": "lathe",
-       "material": "metal",
+       "material": "rim",
        "rotate": [
         0,
         0,
-        90
+        -90
        ],
-       "segments": 36,
+       "segments": 48,
        "caps": false,
        "profile": [
         [
-         "$R*0.9",
-         -0.012
+         "$R - 0.04 + 0.006",
+         -0.011
         ],
         [
-         "$R*0.93",
-         -0.012
+         "$R - 0.04 + 0.006",
+         0.011
         ],
         [
-         "$R*0.93",
-         0.012
+         "$R - 0.04 - 0.012",
+         0.008
         ],
         [
-         "$R*0.9",
-         0.012
+         "$R - 0.04 - 0.018",
+         0.0
         ],
         [
-         "$R*0.9",
-         -0.012
+         "$R - 0.04 - 0.012",
+         -0.008
+        ],
+        [
+         "$R - 0.04 + 0.006",
+         -0.011
         ]
        ]
       },
       {
        "name": "Hub",
-       "shape": "cylinder",
-       "material": "metal",
+       "shape": "lathe",
+       "material": "aluminium",
        "rotate": [
         0,
         0,
-        90
+        -90
        ],
-       "radius": 0.025,
-       "height": 0.1,
-       "segments": 12
+       "segments": 16,
+       "profile": [
+        [
+         0,
+         -0.05
+        ],
+        [
+         0.012,
+         -0.05
+        ],
+        [
+         0.012,
+         -0.036
+        ],
+        [
+         0.028,
+         -0.034
+        ],
+        [
+         0.028,
+         -0.028
+        ],
+        [
+         0.016,
+         -0.024
+        ],
+        [
+         0.016,
+         0.024
+        ],
+        [
+         0.028,
+         0.028
+        ],
+        [
+         0.028,
+         0.034
+        ],
+        [
+         0.012,
+         0.036
+        ],
+        [
+         0.012,
+         0.05
+        ],
+        [
+         0,
+         0.05
+        ]
+       ]
       },
       {
-       "name": "Spoke",
-       "shape": "cylinder",
-       "material": "metal",
-       "radius": 0.003,
-       "height": "$R*0.88",
+       "name": "Spoke1_{i}",
+       "shape": "tube",
+       "material": "spoke",
+       "radius": 0.0012,
        "segments": 4,
-       "offset": [
-        0,
-        "$R*0.44",
-        0
+       "caps": true,
+       "path": [
+        [
+         0.031,
+         0.025,
+         0
+        ],
+        [
+         0.0062,
+         "($R - 0.04 - 0.014) * 0.7431",
+         "($R - 0.04 - 0.014) * 0.6691"
+        ]
        ],
        "repeat": {
-        "count": 12,
-        "around": "x"
+        "count": 9,
+        "around": "x",
+        "phase": 0
        }
+      },
+      {
+       "name": "Spoke2_{i}",
+       "shape": "tube",
+       "material": "spoke",
+       "radius": 0.0012,
+       "segments": 4,
+       "caps": true,
+       "path": [
+        [
+         0.031,
+         0.025,
+         0
+        ],
+        [
+         0.0062,
+         "($R - 0.04 - 0.014) * 0.7431",
+         "($R - 0.04 - 0.014) * -0.6691"
+        ]
+       ],
+       "repeat": {
+        "count": 9,
+        "around": "x",
+        "phase": 10
+       }
+      },
+      {
+       "name": "Spoke3_{i}",
+       "shape": "tube",
+       "material": "spoke",
+       "radius": 0.0012,
+       "segments": 4,
+       "caps": true,
+       "path": [
+        [
+         -0.031,
+         0.025,
+         0
+        ],
+        [
+         -0.0062,
+         "($R - 0.04 - 0.014) * 0.7431",
+         "($R - 0.04 - 0.014) * 0.6691"
+        ]
+       ],
+       "repeat": {
+        "count": 9,
+        "around": "x",
+        "phase": 20
+       }
+      },
+      {
+       "name": "Spoke4_{i}",
+       "shape": "tube",
+       "material": "spoke",
+       "radius": 0.0012,
+       "segments": 4,
+       "caps": true,
+       "path": [
+        [
+         -0.031,
+         0.025,
+         0
+        ],
+        [
+         -0.0062,
+         "($R - 0.04 - 0.014) * 0.7431",
+         "($R - 0.04 - 0.014) * -0.6691"
+        ]
+       ],
+       "repeat": {
+        "count": 9,
+        "around": "x",
+        "phase": 30
+       }
+      },
+      {
+       "name": "Sprocket",
+       "shape": "cylinder",
+       "material": "steel",
+       "axis": "x",
+       "radius": 0.045,
+       "height": 0.004,
+       "segments": 20,
+       "at": [
+        -0.042,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "HubGear",
+       "shape": "cylinder",
+       "material": "aluminium",
+       "axis": "x",
+       "radius": 0.032,
+       "height": 0.05,
+       "segments": 16,
+       "bevel": 0.01,
+       "at": [
+        0,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Valve",
+       "shape": "cylinder",
+       "material": "steel",
+       "radius": 0.003,
+       "height": 0.03,
+       "segments": 6,
+       "at": [
+        0,
+        "$R - 0.04 - 0.025",
+        0
+       ]
       }
      ]
     },
@@ -437,187 +1348,717 @@
      ],
      "children": [
       {
-       "name": "Blade",
-       "shape": "cylinder",
-       "radius": 0.012,
-       "segments": 8,
-       "height": "hypot(($R - $hby) - (0), ($wb / 2 - $hbz) - (0))",
+       "name": "Crown",
+       "shape": "box",
+       "size": [
+        0.1,
+        0.03,
+        0.045
+       ],
+       "bevel": 0.008,
        "at": [
         0,
-        "((0) + ($R - $hby)) / 2",
-        "((0) + ($wb / 2 - $hbz)) / 2"
-       ],
-       "rotate": [
-        "deg(atan2(($wb / 2 - $hbz) - (0), ($R - $hby) - (0)))",
-        0,
+        -0.005,
         0
        ]
       },
       {
-       "name": "Stem",
-       "shape": "cylinder",
+       "name": "Blade_L",
+       "shape": "tube",
        "radius": 0.012,
-       "segments": 8,
-       "height": "hypot(($hty - $hby + 0.1) - (0), ($htz - $hbz) - (0))",
-       "at": [
-        0,
-        "((0) + ($hty - $hby + 0.1)) / 2",
-        "((0) + ($htz - $hbz)) / 2"
+       "segments": 10,
+       "path": [
+        [
+         0.045,
+         -0.01,
+         0
+        ],
+        [
+         0.05,
+         "($R - $hby) * 0.5",
+         "($wb / 2 - $hbz) * 0.3"
+        ],
+        [
+         0.05,
+         "($R - $hby) + 0.01",
+         "($wb / 2 - $hbz)"
+        ]
        ],
-       "rotate": [
-        "deg(atan2(($htz - $hbz) - (0), ($hty - $hby + 0.1) - (0)))",
-        0,
-        0
-       ],
-       "material": "metal"
+       "mirror": "Blade_R"
+      },
+      {
+       "name": "Steerer",
+       "shape": "tube",
+       "material": "aluminium",
+       "radius": 0.013,
+       "segments": 10,
+       "path": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         "$hty - $hby + 0.06",
+         "$htz - $hbz - 0.013"
+        ]
+       ]
+      },
+      {
+       "name": "Stem",
+       "shape": "tube",
+       "material": "aluminium",
+       "radius": 0.014,
+       "segments": 10,
+       "path": [
+        [
+         0,
+         "$hty - $hby + 0.05",
+         "$htz - $hbz - 0.012"
+        ],
+        [
+         0,
+         "$hty - $hby + 0.1",
+         "$htz - $hbz + 0.06"
+        ]
+       ]
       },
       {
        "name": "Handlebar",
+       "shape": "tube",
+       "material": "aluminium",
+       "radius": 0.011,
+       "segments": 8,
+       "path": [
+        [
+         -0.3,
+         "$hty - $hby + 0.14",
+         "$htz - $hbz - 0.12"
+        ],
+        [
+         -0.25,
+         "$hty - $hby + 0.12",
+         "$htz - $hbz - 0.03"
+        ],
+        [
+         -0.12,
+         "$hty - $hby + 0.1",
+         "$htz - $hbz + 0.06"
+        ],
+        [
+         0.12,
+         "$hty - $hby + 0.1",
+         "$htz - $hbz + 0.06"
+        ],
+        [
+         0.25,
+         "$hty - $hby + 0.12",
+         "$htz - $hbz - 0.03"
+        ],
+        [
+         0.3,
+         "$hty - $hby + 0.14",
+         "$htz - $hbz - 0.12"
+        ]
+       ]
+      },
+      {
+       "name": "Grip_L",
        "shape": "cylinder",
-       "material": "metal",
+       "material": "leather",
+       "axis": "x",
+       "radius": 0.017,
+       "height": 0.11,
+       "segments": 10,
+       "bevel": 0.006,
+       "at": [
+        0.25,
+        "$hty - $hby + 0.135",
+        "$htz - $hbz - 0.105"
+       ],
        "rotate": [
         0,
-        0,
-        90
+        30,
+        0
        ],
-       "radius": 0.011,
-       "height": 0.56,
-       "segments": 8,
+       "mirror": "Grip_R"
+      },
+      {
+       "name": "Lever_L",
+       "shape": "box",
+       "material": "aluminium",
+       "size": [
+        0.12,
+        0.008,
+        0.018
+       ],
+       "at": [
+        0.2,
+        "$hty - $hby + 0.13",
+        "$htz - $hbz - 0.03"
+       ],
+       "rotate": [
+        0,
+        25,
+        0
+       ],
+       "mirror": "Lever_R"
+      },
+      {
+       "name": "Bell",
+       "shape": "cylinder",
+       "material": "chrome",
+       "radius": 0.026,
+       "height": 0.02,
+       "segments": 14,
+       "bevel": 0.008,
+       "at": [
+        0.14,
+        "$hty - $hby + 0.125",
+        "$htz - $hbz + 0.045"
+       ]
+      },
+      {
+       "name": "Lamp",
        "at": [
         0,
-        "$hty - $hby + 0.1",
-        "$htz - $hbz"
+        "-0.02",
+        0.07
+       ],
+       "children": [
+        {
+         "name": "Housing",
+         "shape": "cylinder",
+         "material": "trim_black",
+         "axis": "z",
+         "radius": 0.035,
+         "height": 0.06,
+         "segments": 16,
+         "bevel": 0.01
+        },
+        {
+         "name": "Lens",
+         "shape": "cylinder",
+         "material": "light",
+         "axis": "z",
+         "radius": 0.03,
+         "height": 0.01,
+         "segments": 16,
+         "at": [
+          0,
+          0,
+          0.03
+         ]
+        },
+        {
+         "name": "Bracket",
+         "shape": "box",
+         "material": "trim_black",
+         "size": [
+          0.015,
+          0.03,
+          0.06
+         ],
+         "at": [
+          0,
+          0.01,
+          -0.04
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Fender",
+       "shape": "loft",
+       "material": "fender",
+       "rotate": [
+        0,
+        -90,
+        0
+       ],
+       "sections": [
+        {
+         "z": -0.03,
+         "points": [
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.025)",
+           "($R - $hby) + 0.5 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.6915 * ($R + 0.025)",
+           "($R - $hby) + 0.7224 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.4617 * ($R + 0.025)",
+           "($R - $hby) + 0.887 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.1951 * ($R + 0.025)",
+           "($R - $hby) + 0.9808 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.0872 * ($R + 0.025)",
+           "($R - $hby) + 0.9962 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.3624 * ($R + 0.025)",
+           "($R - $hby) + 0.932 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.6088 * ($R + 0.025)",
+           "($R - $hby) + 0.7934 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.8064 * ($R + 0.025)",
+           "($R - $hby) + 0.5913 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025)",
+           "($R - $hby) + 0.342 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025) - 0.0013",
+           "($R - $hby) + 0.342 * ($R + 0.025) - 0.0014"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025) - 0.0032",
+           "($R - $hby) + 0.342 * ($R + 0.025) - 0.0015"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025) - 0.0046",
+           "($R - $hby) + 0.342 * ($R + 0.025) - 0.0002"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.03)",
+           "($R - $hby) + 0.342 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.8064 * ($R + 0.03)",
+           "($R - $hby) + 0.5913 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.6088 * ($R + 0.03)",
+           "($R - $hby) + 0.7934 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.3624 * ($R + 0.03)",
+           "($R - $hby) + 0.932 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.0872 * ($R + 0.03)",
+           "($R - $hby) + 0.9962 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.1951 * ($R + 0.03)",
+           "($R - $hby) + 0.9808 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.4617 * ($R + 0.03)",
+           "($R - $hby) + 0.887 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.6915 * ($R + 0.03)",
+           "($R - $hby) + 0.7224 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03)",
+           "($R - $hby) + 0.5 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03) + 0.0002",
+           "($R - $hby) + 0.5 * ($R + 0.03) - 0.0019"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03) - 0.0009",
+           "($R - $hby) + 0.5 * ($R + 0.03) - 0.0034"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03) - 0.0028",
+           "($R - $hby) + 0.5 * ($R + 0.03) - 0.0037"
+          ]
+         ]
+        },
+        {
+         "z": 0.03,
+         "points": [
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.025)",
+           "($R - $hby) + 0.5 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.6915 * ($R + 0.025)",
+           "($R - $hby) + 0.7224 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.4617 * ($R + 0.025)",
+           "($R - $hby) + 0.887 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.1951 * ($R + 0.025)",
+           "($R - $hby) + 0.9808 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.0872 * ($R + 0.025)",
+           "($R - $hby) + 0.9962 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.3624 * ($R + 0.025)",
+           "($R - $hby) + 0.932 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.6088 * ($R + 0.025)",
+           "($R - $hby) + 0.7934 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.8064 * ($R + 0.025)",
+           "($R - $hby) + 0.5913 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025)",
+           "($R - $hby) + 0.342 * ($R + 0.025)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025) - 0.0013",
+           "($R - $hby) + 0.342 * ($R + 0.025) - 0.0014"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025) - 0.0032",
+           "($R - $hby) + 0.342 * ($R + 0.025) - 0.0015"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.025) - 0.0046",
+           "($R - $hby) + 0.342 * ($R + 0.025) - 0.0002"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.9397 * ($R + 0.03)",
+           "($R - $hby) + 0.342 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.8064 * ($R + 0.03)",
+           "($R - $hby) + 0.5913 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.6088 * ($R + 0.03)",
+           "($R - $hby) + 0.7934 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.3624 * ($R + 0.03)",
+           "($R - $hby) + 0.932 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + -0.0872 * ($R + 0.03)",
+           "($R - $hby) + 0.9962 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.1951 * ($R + 0.03)",
+           "($R - $hby) + 0.9808 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.4617 * ($R + 0.03)",
+           "($R - $hby) + 0.887 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.6915 * ($R + 0.03)",
+           "($R - $hby) + 0.7224 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03)",
+           "($R - $hby) + 0.5 * ($R + 0.03)"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03) + 0.0002",
+           "($R - $hby) + 0.5 * ($R + 0.03) - 0.0019"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03) - 0.0009",
+           "($R - $hby) + 0.5 * ($R + 0.03) - 0.0034"
+          ],
+          [
+           "($wb / 2 - $hbz) + 0.866 * ($R + 0.03) - 0.0028",
+           "($R - $hby) + 0.5 * ($R + 0.03) - 0.0037"
+          ]
+         ]
+        }
        ]
       },
       {
        "name": "WheelFront",
        "at": [
         0,
-        "$R - $hby",
-        "$wb / 2 - $hbz"
+        "($R - $hby)",
+        "($wb / 2 - $hbz)"
        ],
        "children": [
         {
-         "name": "Tread",
+         "name": "Tyre",
          "shape": "lathe",
-         "material": "rubber",
+         "material": "tyre",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 36,
+         "segments": 48,
          "caps": false,
          "profile": [
           [
-           "($R) - 0.03 + 0.03*1.00000",
-           "0.03*0.00000"
+           "$R - 0.04 + 0.004",
+           -0.012
           ],
           [
-           "($R) - 0.03 + 0.03*0.80902",
-           "0.03*0.58779"
+           "$R - 0.04 + 0.012",
+           -0.02
           ],
           [
-           "($R) - 0.03 + 0.03*0.30902",
-           "0.03*0.95106"
+           "$R - 0.019 + 0.0065",
+           -0.0179
           ],
           [
-           "($R) - 0.03 + 0.03*-0.30902",
-           "0.03*0.95106"
+           "$R - 0.019 + 0.0146",
+           -0.0122
           ],
           [
-           "($R) - 0.03 + 0.03*-0.80902",
-           "0.03*0.58779"
+           "$R - 0.019 + 0.0184",
+           -0.0049
           ],
           [
-           "($R) - 0.03 + 0.03*-1.00000",
-           "0.03*0.00000"
+           "$R - 0.019 + 0.0184",
+           0.0049
           ],
           [
-           "($R) - 0.03 + 0.03*-0.80902",
-           "0.03*-0.58779"
+           "$R - 0.019 + 0.0146",
+           0.0122
           ],
           [
-           "($R) - 0.03 + 0.03*-0.30902",
-           "0.03*-0.95106"
+           "$R - 0.019 + 0.0065",
+           0.0179
           ],
           [
-           "($R) - 0.03 + 0.03*0.30902",
-           "0.03*-0.95106"
+           "$R - 0.04 + 0.012",
+           0.02
           ],
           [
-           "($R) - 0.03 + 0.03*0.80902",
-           "0.03*-0.58779"
+           "$R - 0.04 + 0.004",
+           0.012
           ],
           [
-           "($R) - 0.03 + 0.03*1.00000",
-           "0.03*-0.00000"
+           "$R - 0.04 + 0.004",
+           -0.012
           ]
          ]
         },
         {
          "name": "Rim",
          "shape": "lathe",
-         "material": "metal",
+         "material": "rim",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 36,
+         "segments": 48,
          "caps": false,
          "profile": [
           [
-           "$R*0.9",
-           -0.012
+           "$R - 0.04 + 0.006",
+           -0.011
           ],
           [
-           "$R*0.93",
-           -0.012
+           "$R - 0.04 + 0.006",
+           0.011
           ],
           [
-           "$R*0.93",
-           0.012
+           "$R - 0.04 - 0.012",
+           0.008
           ],
           [
-           "$R*0.9",
-           0.012
+           "$R - 0.04 - 0.018",
+           0.0
           ],
           [
-           "$R*0.9",
-           -0.012
+           "$R - 0.04 - 0.012",
+           -0.008
+          ],
+          [
+           "$R - 0.04 + 0.006",
+           -0.011
           ]
          ]
         },
         {
          "name": "Hub",
-         "shape": "cylinder",
-         "material": "metal",
+         "shape": "lathe",
+         "material": "aluminium",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "radius": 0.025,
-         "height": 0.1,
-         "segments": 12
+         "segments": 16,
+         "profile": [
+          [
+           0,
+           -0.05
+          ],
+          [
+           0.012,
+           -0.05
+          ],
+          [
+           0.012,
+           -0.036
+          ],
+          [
+           0.028,
+           -0.034
+          ],
+          [
+           0.028,
+           -0.028
+          ],
+          [
+           0.016,
+           -0.024
+          ],
+          [
+           0.016,
+           0.024
+          ],
+          [
+           0.028,
+           0.028
+          ],
+          [
+           0.028,
+           0.034
+          ],
+          [
+           0.012,
+           0.036
+          ],
+          [
+           0.012,
+           0.05
+          ],
+          [
+           0,
+           0.05
+          ]
+         ]
         },
         {
-         "name": "Spoke",
-         "shape": "cylinder",
-         "material": "metal",
-         "radius": 0.003,
-         "height": "$R*0.88",
+         "name": "Spoke1_{i}",
+         "shape": "tube",
+         "material": "spoke",
+         "radius": 0.0012,
          "segments": 4,
-         "offset": [
-          0,
-          "$R*0.44",
-          0
+         "caps": true,
+         "path": [
+          [
+           0.031,
+           0.025,
+           0
+          ],
+          [
+           0.0062,
+           "($R - 0.04 - 0.014) * 0.7431",
+           "($R - 0.04 - 0.014) * 0.6691"
+          ]
          ],
          "repeat": {
-          "count": 12,
-          "around": "x"
+          "count": 9,
+          "around": "x",
+          "phase": 0
          }
+        },
+        {
+         "name": "Spoke2_{i}",
+         "shape": "tube",
+         "material": "spoke",
+         "radius": 0.0012,
+         "segments": 4,
+         "caps": true,
+         "path": [
+          [
+           0.031,
+           0.025,
+           0
+          ],
+          [
+           0.0062,
+           "($R - 0.04 - 0.014) * 0.7431",
+           "($R - 0.04 - 0.014) * -0.6691"
+          ]
+         ],
+         "repeat": {
+          "count": 9,
+          "around": "x",
+          "phase": 10
+         }
+        },
+        {
+         "name": "Spoke3_{i}",
+         "shape": "tube",
+         "material": "spoke",
+         "radius": 0.0012,
+         "segments": 4,
+         "caps": true,
+         "path": [
+          [
+           -0.031,
+           0.025,
+           0
+          ],
+          [
+           -0.0062,
+           "($R - 0.04 - 0.014) * 0.7431",
+           "($R - 0.04 - 0.014) * 0.6691"
+          ]
+         ],
+         "repeat": {
+          "count": 9,
+          "around": "x",
+          "phase": 20
+         }
+        },
+        {
+         "name": "Spoke4_{i}",
+         "shape": "tube",
+         "material": "spoke",
+         "radius": 0.0012,
+         "segments": 4,
+         "caps": true,
+         "path": [
+          [
+           -0.031,
+           0.025,
+           0
+          ],
+          [
+           -0.0062,
+           "($R - 0.04 - 0.014) * 0.7431",
+           "($R - 0.04 - 0.014) * -0.6691"
+          ]
+         ],
+         "repeat": {
+          "count": 9,
+          "around": "x",
+          "phase": 30
+         }
+        },
+        {
+         "name": "Valve",
+         "shape": "cylinder",
+         "material": "steel",
+         "radius": 0.003,
+         "height": 0.03,
+         "segments": 6,
+         "at": [
+          0,
+          "$R - 0.04 - 0.025",
+          0
+         ]
         }
        ]
       }

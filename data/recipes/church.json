@@ -2,7 +2,7 @@
  "version": 1,
  "name": "church",
  "archetype": "building.church",
- "description": "A parish church: a long nave with a gable roof and tall side windows, a square belfry at the +Z end with a pyramid spire, and a doorway in the tower.",
+ "description": "A stone parish church: a long nave on a plinth with stepped buttresses between tall pointed (lancet) windows, a steep slate roof between coped gable parapets with a cross and a rose window at the east end, and a square west belfry at the +Z end with corner piers, string courses, a pointed doorway with steps, clock faces, paired louvred belfry openings, a parapet with corner pinnacles and an octagonal slate spire with lucarnes and a gilded cross.",
  "params": [
   {
    "name": "naveLength",
@@ -40,21 +40,67 @@
  "materials": {
   "church_stone": {
    "color": [
-    0.7,
-    0.65,
-    0.55
+    0.3,
+    0.27,
+    0.22
    ],
    "metallic": 0,
-   "roughness": 0.85
+   "roughness": 0.88,
+   "texture": "stone"
+  },
+  "church_dress": {
+   "color": [
+    0.42,
+    0.39,
+    0.33
+   ],
+   "metallic": 0,
+   "roughness": 0.8
+  },
+  "church_glass": {
+   "color": [
+    0.02,
+    0.028,
+    0.045
+   ],
+   "metallic": 0.3,
+   "roughness": 0.12
   },
   "church_dark": {
    "color": [
-    0.1,
-    0.1,
-    0.12
+    0.025,
+    0.025,
+    0.03
+   ],
+   "metallic": 0,
+   "roughness": 0.95
+  },
+  "church_louvre": {
+   "color": [
+    0.035,
+    0.032,
+    0.03
    ],
    "metallic": 0,
    "roughness": 0.9
+  },
+  "church_dial": {
+   "color": [
+    0.78,
+    0.75,
+    0.66
+   ],
+   "metallic": 0,
+   "roughness": 0.5
+  },
+  "church_lead": {
+   "color": [
+    0.12,
+    0.13,
+    0.14
+   ],
+   "metallic": 0.4,
+   "roughness": 0.5
   }
  },
  "nodes": [
@@ -64,130 +110,2540 @@
    "vars": {
     "L2": "$naveLength / 2",
     "W2": "$naveWidth / 2",
-    "tw": "$naveWidth * 0.5",
-    "belfryTop": "$towerHeight * 0.6",
-    "rise": "$naveWidth * 0.35"
+    "h": "$wallHeight",
+    "tw": "clamp($naveWidth * 0.55, 4.6, 10)",
+    "bt": "$towerHeight * 0.55",
+    "bz": "$L2 + $tw / 2 - 0.5",
+    "rise": "min($W2, max(2.5, $bt - $wallHeight - 0.5))",
+    "eb": "$W2 + 0.35",
+    "th": "atan($rise / $eb)",
+    "nb": "max(2, round(($naveLength - 1.5) / 4.6))",
+    "bay": "$naveLength / $nb",
+    "ww": "clamp($wallHeight * 0.16, 0.9, 1.7)",
+    "sill": "max(1.4, $wallHeight * 0.25)",
+    "spring": "$wallHeight * 0.82 - 0.866 * $ww",
+    "m": 0.35,
+    "dw": "clamp($tw * 0.34, 1.5, 2.4)",
+    "dsp": "clamp($bt * 0.15, 1.9, 2.7)",
+    "s1": "max($bt * 0.36, $dsp + 0.866 * ($dw + 0.7) + 0.8)",
+    "s2": "$bt * 0.7",
+    "cr": "max(0.25, min($tw * 0.17, 1.3, ($bt * 0.7 - $s1) / 2 - 0.35))",
+    "Hs": "$towerHeight - 1.6 - $bt - 0.35"
    },
    "children": [
+    {
+     "name": "Plinth",
+     "shape": "box",
+     "size": [
+      "$naveWidth + 0.4",
+      0.7,
+      "$naveLength + 0.3"
+     ],
+     "at": [
+      0,
+      0.35,
+      -0.15
+     ],
+     "material": "stone"
+    },
     {
      "name": "Nave",
      "shape": "box",
      "size": [
       "$naveWidth",
-      "$wallHeight",
+      "$h",
       "$naveLength"
      ],
      "at": [
       0,
-      "$wallHeight / 2",
+      "$h / 2",
       0
      ]
     },
     {
      "name": "Roof",
      "shape": "roof",
-     "material": "roof_slate",
-     "x0": "-$W2 - 0.3",
-     "x1": "$W2 + 0.3",
-     "z0": "-$L2 - 0.3",
+     "x0": "-$eb",
+     "x1": "$eb",
+     "z0": "-$L2 - 0.05",
      "z1": "$L2 - 0.5",
-     "y": "$wallHeight",
+     "y": "$h",
      "rise": "$rise",
-     "kind": "gable"
+     "kind": "gable",
+     "material": "roof_slate"
+    },
+    {
+     "name": "RoofRidge",
+     "shape": "cylinder",
+     "radius": 0.11,
+     "height": "$naveLength - 0.4",
+     "at": [
+      0,
+      "$h + $rise",
+      -0.25
+     ],
+     "material": "church_lead",
+     "axis": "z",
+     "segments": 10
+    },
+    {
+     "name": "Cornice_L",
+     "shape": "box",
+     "size": [
+      0.45,
+      0.35,
+      "$naveLength"
+     ],
+     "at": [
+      "$W2 + 0.12",
+      "$h - 0.175",
+      0
+     ],
+     "material": "church_dress",
+     "mirror": "Cornice_R"
+    },
+    {
+     "name": "GableBack",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "-$L2 - 0.25 - (-$L2)",
+       "points": [
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(0) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ],
+        [
+         "(0) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ]
+       ]
+      },
+      {
+       "z": "-$L2 + 0.35 - (-$L2)",
+       "points": [
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(0) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ],
+        [
+         "(0) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ]
+       ]
+      }
+     ],
+     "at": [
+      0,
+      0,
+      "-$L2"
+     ],
+     "children": [
+      {
+       "name": "Coping_L",
+       "shape": "box",
+       "size": [
+        "($rise + $m / cos($th) + 0.3) / sin($th)",
+        0.14,
+        "-$L2 + 0.35 - (-$L2 - 0.25) + 0.14"
+       ],
+       "at": [
+        "-($rise + $m / cos($th) + 0.3) * $eb / $rise / 2 - 0.07 * sin($th)",
+        "$h - 0.3 + ($rise + $m / cos($th) + 0.3) / 2 + 0.07 * cos($th)",
+        "((-$L2 - 0.25) + (-$L2 + 0.35)) / 2 - (-$L2)"
+       ],
+       "material": "church_dress",
+       "rotate": [
+        0,
+        0,
+        "deg($th)"
+       ],
+       "mirror": "Coping_R"
+      },
+      {
+       "name": "Kneeler_L",
+       "shape": "box",
+       "size": [
+        0.8,
+        0.5,
+        "-$L2 + 0.35 - (-$L2 - 0.25) + 0.1"
+       ],
+       "at": [
+        "-($rise + $m / cos($th) + 0.3) * $eb / $rise + 0.3",
+        "$h - 0.05",
+        "((-$L2 - 0.25) + (-$L2 + 0.35)) / 2 - (-$L2)"
+       ],
+       "material": "church_dress",
+       "mirror": "Kneeler_R"
+      },
+      {
+       "name": "Cross",
+       "at": [
+        0,
+        "$h + $rise + $m / cos($th) + 0.1",
+        "((-$L2 - 0.25) + (-$L2 + 0.35)) / 2 - (-$L2)"
+       ],
+       "material": "church_dress",
+       "children": [
+        {
+         "name": "Stem",
+         "shape": "box",
+         "size": [
+          0.18,
+          1.3,
+          0.18
+         ],
+         "at": [
+          0,
+          0.6,
+          0
+         ]
+        },
+        {
+         "name": "Arm",
+         "shape": "box",
+         "size": [
+          0.75,
+          0.18,
+          0.18
+         ],
+         "at": [
+          0,
+          0.8,
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Rose",
+       "at": [
+        0,
+        "$h + $rise * 0.3",
+        "-$L2 - 0.25 - (-$L2)"
+       ],
+       "vars": {
+        "rr": "min($naveWidth * 0.11, $rise * 0.28)"
+       },
+       "children": [
+        {
+         "name": "Ring",
+         "shape": "cylinder",
+         "radius": "$rr + 0.25",
+         "height": 0.2,
+         "material": "church_dress",
+         "axis": "z",
+         "segments": 24
+        },
+        {
+         "name": "Pane",
+         "shape": "cylinder",
+         "radius": "$rr",
+         "height": 0.3,
+         "material": "church_glass",
+         "axis": "z",
+         "segments": 24
+        },
+        {
+         "name": "Spoke_{i}",
+         "shape": "box",
+         "size": [
+          0.07,
+          "$rr * 2",
+          0.36
+         ],
+         "material": "church_dress",
+         "repeat": {
+          "count": 4,
+          "around": "z"
+         }
+        },
+        {
+         "name": "Hub",
+         "shape": "cylinder",
+         "radius": "$rr * 0.22",
+         "height": 0.4,
+         "material": "church_dress",
+         "axis": "z",
+         "segments": 12
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "GableFront",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "$L2 - 0.75 - ($L2)",
+       "points": [
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(0) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ],
+        [
+         "(0) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ]
+       ]
+      },
+      {
+       "z": "$L2 + 0.05 - ($L2)",
+       "points": [
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(-($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (-($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h - 0.3) - ($h - 0.3)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h - 0.3) - ($h - 0.3)))"
+        ],
+        [
+         "(($rise + $m / cos($th) + 0.3) * $eb / $rise) + 0.02 * ((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))",
+         "($h - 0.3) + 0.02 * (($h + $rise + $m / cos($th)) - ($h - 0.3)) / hypot(((0) - (($rise + $m / cos($th) + 0.3) * $eb / $rise)), (($h + $rise + $m / cos($th)) - ($h - 0.3)))"
+        ],
+        [
+         "(0) + 0.02 * ((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ],
+        [
+         "(0) + 0.02 * ((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))",
+         "($h + $rise + $m / cos($th)) + 0.02 * (($h - 0.3) - ($h + $rise + $m / cos($th))) / hypot(((-($rise + $m / cos($th) + 0.3) * $eb / $rise) - (0)), (($h - 0.3) - ($h + $rise + $m / cos($th))))"
+        ]
+       ]
+      }
+     ],
+     "at": [
+      0,
+      0,
+      "$L2"
+     ],
+     "children": [
+      {
+       "name": "Coping_L",
+       "shape": "box",
+       "size": [
+        "($rise + $m / cos($th) + 0.3) / sin($th)",
+        0.14,
+        "$L2 + 0.05 - ($L2 - 0.75) + 0.14"
+       ],
+       "at": [
+        "-($rise + $m / cos($th) + 0.3) * $eb / $rise / 2 - 0.07 * sin($th)",
+        "$h - 0.3 + ($rise + $m / cos($th) + 0.3) / 2 + 0.07 * cos($th)",
+        "(($L2 - 0.75) + ($L2 + 0.05)) / 2 - ($L2)"
+       ],
+       "material": "church_dress",
+       "rotate": [
+        0,
+        0,
+        "deg($th)"
+       ],
+       "mirror": "Coping_R"
+      },
+      {
+       "name": "Kneeler_L",
+       "shape": "box",
+       "size": [
+        0.8,
+        0.5,
+        "$L2 + 0.05 - ($L2 - 0.75) + 0.1"
+       ],
+       "at": [
+        "-($rise + $m / cos($th) + 0.3) * $eb / $rise + 0.3",
+        "$h - 0.05",
+        "(($L2 - 0.75) + ($L2 + 0.05)) / 2 - ($L2)"
+       ],
+       "material": "church_dress",
+       "mirror": "Kneeler_R"
+      },
+      {
+       "name": "Cross",
+       "at": [
+        0,
+        "$h + $rise + $m / cos($th) + 0.1",
+        "(($L2 - 0.75) + ($L2 + 0.05)) / 2 - ($L2)"
+       ],
+       "material": "church_dress",
+       "children": [
+        {
+         "name": "Stem",
+         "shape": "box",
+         "size": [
+          0.18,
+          1.3,
+          0.18
+         ],
+         "at": [
+          0,
+          0.6,
+          0
+         ]
+        },
+        {
+         "name": "Arm",
+         "shape": "box",
+         "size": [
+          0.75,
+          0.18,
+          0.18
+         ],
+         "at": [
+          0,
+          0.8,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Buttress_L{i}",
+     "at": [
+      "$W2",
+      0,
+      "-$L2 + 0.35"
+     ],
+     "repeat": {
+      "count": "$nb + 1",
+      "step": [
+       0,
+       0,
+       "($naveLength - 0.7) / $nb"
+      ]
+     },
+     "mirror": "Buttress_R{i}",
+     "vars": {
+      "bh": "$h * 0.8"
+     },
+     "material": "church_stone",
+     "children": [
+      {
+       "name": "Low",
+       "shape": "box",
+       "size": [
+        0.95,
+        "$bh * 0.5",
+        0.7
+       ],
+       "at": [
+        0.42,
+        "$bh * 0.25",
+        0
+       ]
+      },
+      {
+       "name": "High",
+       "shape": "box",
+       "size": [
+        0.65,
+        "$bh",
+        0.62
+       ],
+       "at": [
+        0.28,
+        "$bh / 2",
+        0
+       ]
+      },
+      {
+       "name": "SetOff",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": -0.36,
+         "points": [
+          [
+           "(0.58) + 0.01 * ((0.58) - (0.58)) / hypot(((0.58) - (0.58)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)) / hypot(((0.58) - (0.58)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.58) + 0.01 * ((0.94) - (0.58)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.94) + 0.01 * ((0.58) - (0.94)) / hypot(((0.58) - (0.94)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)) / hypot(((0.58) - (0.94)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.94) + 0.01 * ((0.58) - (0.94)) / hypot(((0.58) - (0.94)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)) / hypot(((0.58) - (0.94)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.58) + 0.01 * ((0.94) - (0.58)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))",
+           "($bh * 0.5 + 0.42) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))"
+          ],
+          [
+           "(0.58) + 0.01 * ((0.58) - (0.58)) / hypot(((0.58) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))",
+           "($bh * 0.5 + 0.42) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)) / hypot(((0.58) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))"
+          ]
+         ]
+        },
+        {
+         "z": 0.36,
+         "points": [
+          [
+           "(0.58) + 0.01 * ((0.58) - (0.58)) / hypot(((0.58) - (0.58)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)) / hypot(((0.58) - (0.58)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.58) + 0.01 * ((0.94) - (0.58)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.94) + 0.01 * ((0.58) - (0.94)) / hypot(((0.58) - (0.94)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)) / hypot(((0.58) - (0.94)), (($bh * 0.5 - 0.02) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.94) + 0.01 * ((0.58) - (0.94)) / hypot(((0.58) - (0.94)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))",
+           "($bh * 0.5 - 0.02) + 0.01 * (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)) / hypot(((0.58) - (0.94)), (($bh * 0.5 + 0.42) - ($bh * 0.5 - 0.02)))"
+          ],
+          [
+           "(0.58) + 0.01 * ((0.94) - (0.58)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))",
+           "($bh * 0.5 + 0.42) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)) / hypot(((0.94) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))"
+          ],
+          [
+           "(0.58) + 0.01 * ((0.58) - (0.58)) / hypot(((0.58) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))",
+           "($bh * 0.5 + 0.42) + 0.01 * (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)) / hypot(((0.58) - (0.58)), (($bh * 0.5 - 0.02) - ($bh * 0.5 + 0.42)))"
+          ]
+         ]
+        }
+       ],
+       "material": "church_dress"
+      },
+      {
+       "name": "Weathering",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": -0.32,
+         "points": [
+          [
+           "(-0.06) + 0.01 * ((-0.06) - (-0.06)) / hypot(((-0.06) - (-0.06)), (($bh + 0.85) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh + 0.85) - ($bh - 0.02)) / hypot(((-0.06) - (-0.06)), (($bh + 0.85) - ($bh - 0.02)))"
+          ],
+          [
+           "(-0.06) + 0.01 * ((0.63) - (-0.06)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh - 0.02) - ($bh - 0.02)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh - 0.02)))"
+          ],
+          [
+           "(0.63) + 0.01 * ((-0.06) - (0.63)) / hypot(((-0.06) - (0.63)), (($bh - 0.02) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh - 0.02) - ($bh - 0.02)) / hypot(((-0.06) - (0.63)), (($bh - 0.02) - ($bh - 0.02)))"
+          ],
+          [
+           "(0.63) + 0.01 * ((-0.06) - (0.63)) / hypot(((-0.06) - (0.63)), (($bh + 0.85) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh + 0.85) - ($bh - 0.02)) / hypot(((-0.06) - (0.63)), (($bh + 0.85) - ($bh - 0.02)))"
+          ],
+          [
+           "(-0.06) + 0.01 * ((0.63) - (-0.06)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))",
+           "($bh + 0.85) + 0.01 * (($bh - 0.02) - ($bh + 0.85)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))"
+          ],
+          [
+           "(-0.06) + 0.01 * ((-0.06) - (-0.06)) / hypot(((-0.06) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))",
+           "($bh + 0.85) + 0.01 * (($bh - 0.02) - ($bh + 0.85)) / hypot(((-0.06) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))"
+          ]
+         ]
+        },
+        {
+         "z": 0.32,
+         "points": [
+          [
+           "(-0.06) + 0.01 * ((-0.06) - (-0.06)) / hypot(((-0.06) - (-0.06)), (($bh + 0.85) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh + 0.85) - ($bh - 0.02)) / hypot(((-0.06) - (-0.06)), (($bh + 0.85) - ($bh - 0.02)))"
+          ],
+          [
+           "(-0.06) + 0.01 * ((0.63) - (-0.06)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh - 0.02) - ($bh - 0.02)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh - 0.02)))"
+          ],
+          [
+           "(0.63) + 0.01 * ((-0.06) - (0.63)) / hypot(((-0.06) - (0.63)), (($bh - 0.02) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh - 0.02) - ($bh - 0.02)) / hypot(((-0.06) - (0.63)), (($bh - 0.02) - ($bh - 0.02)))"
+          ],
+          [
+           "(0.63) + 0.01 * ((-0.06) - (0.63)) / hypot(((-0.06) - (0.63)), (($bh + 0.85) - ($bh - 0.02)))",
+           "($bh - 0.02) + 0.01 * (($bh + 0.85) - ($bh - 0.02)) / hypot(((-0.06) - (0.63)), (($bh + 0.85) - ($bh - 0.02)))"
+          ],
+          [
+           "(-0.06) + 0.01 * ((0.63) - (-0.06)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))",
+           "($bh + 0.85) + 0.01 * (($bh - 0.02) - ($bh + 0.85)) / hypot(((0.63) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))"
+          ],
+          [
+           "(-0.06) + 0.01 * ((-0.06) - (-0.06)) / hypot(((-0.06) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))",
+           "($bh + 0.85) + 0.01 * (($bh - 0.02) - ($bh + 0.85)) / hypot(((-0.06) - (-0.06)), (($bh - 0.02) - ($bh + 0.85)))"
+          ]
+         ]
+        }
+       ],
+       "material": "church_dress"
+      },
+      {
+       "name": "Foot",
+       "shape": "box",
+       "size": [
+        1.1,
+        0.75,
+        0.82
+       ],
+       "at": [
+        0.48,
+        0.375,
+        0
+       ],
+       "material": "stone"
+      }
+     ]
+    },
+    {
+     "name": "Window_L{i}",
+     "at": [
+      "$W2",
+      "$sill",
+      "-$L2 + $bay / 2"
+     ],
+     "repeat": {
+      "count": "$nb",
+      "step": [
+       0,
+       0,
+       "$bay"
+      ]
+     },
+     "mirror": "Window_R{i}",
+     "children": [
+      {
+       "name": "Surround",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": -0.1,
+         "points": [
+          [
+           "-($ww + 0.34) / 2",
+           0.012
+          ],
+          [
+           "-($ww + 0.34) / 2 + 0.012",
+           0
+          ],
+          [
+           "($ww + 0.34) / 2 - 0.012",
+           0
+          ],
+          [
+           "($ww + 0.34) / 2",
+           0.012
+          ],
+          [
+           "($ww + 0.34) * 0.50000",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.00000"
+          ],
+          [
+           "($ww + 0.34) * 0.46593",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.25882"
+          ],
+          [
+           "($ww + 0.34) * 0.36603",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.50000"
+          ],
+          [
+           "($ww + 0.34) * 0.20711",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.70711"
+          ],
+          [
+           "0.01039",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.86603 - 0.00600"
+          ],
+          [
+           "-0.01039",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.86603 - 0.00600"
+          ],
+          [
+           "-($ww + 0.34) * 0.20711",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.70711"
+          ],
+          [
+           "-($ww + 0.34) * 0.36603",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.50000"
+          ],
+          [
+           "-($ww + 0.34) * 0.46593",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.25882"
+          ],
+          [
+           "-($ww + 0.34) * 0.50000",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.00000"
+          ]
+         ]
+        },
+        {
+         "z": 0.07,
+         "points": [
+          [
+           "-($ww + 0.34) / 2",
+           0.012
+          ],
+          [
+           "-($ww + 0.34) / 2 + 0.012",
+           0
+          ],
+          [
+           "($ww + 0.34) / 2 - 0.012",
+           0
+          ],
+          [
+           "($ww + 0.34) / 2",
+           0.012
+          ],
+          [
+           "($ww + 0.34) * 0.50000",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.00000"
+          ],
+          [
+           "($ww + 0.34) * 0.46593",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.25882"
+          ],
+          [
+           "($ww + 0.34) * 0.36603",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.50000"
+          ],
+          [
+           "($ww + 0.34) * 0.20711",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.70711"
+          ],
+          [
+           "0.01039",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.86603 - 0.00600"
+          ],
+          [
+           "-0.01039",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.86603 - 0.00600"
+          ],
+          [
+           "-($ww + 0.34) * 0.20711",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.70711"
+          ],
+          [
+           "-($ww + 0.34) * 0.36603",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.50000"
+          ],
+          [
+           "-($ww + 0.34) * 0.46593",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.25882"
+          ],
+          [
+           "-($ww + 0.34) * 0.50000",
+           "($spring - $sill + 0.17) + ($ww + 0.34) * 0.00000"
+          ]
+         ]
+        }
+       ],
+       "at": [
+        0,
+        -0.15,
+        0
+       ],
+       "material": "church_dress",
+       "rotate": [
+        0,
+        90,
+        0
+       ]
+      },
+      {
+       "name": "Glass",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": -0.1,
+         "points": [
+          [
+           "-($ww) / 2",
+           0.012
+          ],
+          [
+           "-($ww) / 2 + 0.012",
+           0
+          ],
+          [
+           "($ww) / 2 - 0.012",
+           0
+          ],
+          [
+           "($ww) / 2",
+           0.012
+          ],
+          [
+           "($ww) * 0.50000",
+           "($spring - $sill) + ($ww) * 0.00000"
+          ],
+          [
+           "($ww) * 0.46593",
+           "($spring - $sill) + ($ww) * 0.25882"
+          ],
+          [
+           "($ww) * 0.36603",
+           "($spring - $sill) + ($ww) * 0.50000"
+          ],
+          [
+           "($ww) * 0.20711",
+           "($spring - $sill) + ($ww) * 0.70711"
+          ],
+          [
+           "0.01039",
+           "($spring - $sill) + ($ww) * 0.86603 - 0.00600"
+          ],
+          [
+           "-0.01039",
+           "($spring - $sill) + ($ww) * 0.86603 - 0.00600"
+          ],
+          [
+           "-($ww) * 0.20711",
+           "($spring - $sill) + ($ww) * 0.70711"
+          ],
+          [
+           "-($ww) * 0.36603",
+           "($spring - $sill) + ($ww) * 0.50000"
+          ],
+          [
+           "-($ww) * 0.46593",
+           "($spring - $sill) + ($ww) * 0.25882"
+          ],
+          [
+           "-($ww) * 0.50000",
+           "($spring - $sill) + ($ww) * 0.00000"
+          ]
+         ]
+        },
+        {
+         "z": 0.12,
+         "points": [
+          [
+           "-($ww) / 2",
+           0.012
+          ],
+          [
+           "-($ww) / 2 + 0.012",
+           0
+          ],
+          [
+           "($ww) / 2 - 0.012",
+           0
+          ],
+          [
+           "($ww) / 2",
+           0.012
+          ],
+          [
+           "($ww) * 0.50000",
+           "($spring - $sill) + ($ww) * 0.00000"
+          ],
+          [
+           "($ww) * 0.46593",
+           "($spring - $sill) + ($ww) * 0.25882"
+          ],
+          [
+           "($ww) * 0.36603",
+           "($spring - $sill) + ($ww) * 0.50000"
+          ],
+          [
+           "($ww) * 0.20711",
+           "($spring - $sill) + ($ww) * 0.70711"
+          ],
+          [
+           "0.01039",
+           "($spring - $sill) + ($ww) * 0.86603 - 0.00600"
+          ],
+          [
+           "-0.01039",
+           "($spring - $sill) + ($ww) * 0.86603 - 0.00600"
+          ],
+          [
+           "-($ww) * 0.20711",
+           "($spring - $sill) + ($ww) * 0.70711"
+          ],
+          [
+           "-($ww) * 0.36603",
+           "($spring - $sill) + ($ww) * 0.50000"
+          ],
+          [
+           "-($ww) * 0.46593",
+           "($spring - $sill) + ($ww) * 0.25882"
+          ],
+          [
+           "-($ww) * 0.50000",
+           "($spring - $sill) + ($ww) * 0.00000"
+          ]
+         ]
+        }
+       ],
+       "material": "church_glass",
+       "rotate": [
+        0,
+        90,
+        0
+       ]
+      },
+      {
+       "name": "Mullion",
+       "shape": "box",
+       "size": [
+        0.1,
+        "$spring - $sill + $ww * 0.4",
+        0.08
+       ],
+       "at": [
+        0.12,
+        "($spring - $sill + $ww * 0.4) / 2",
+        0
+       ],
+       "material": "church_dress"
+      },
+      {
+       "name": "Bar_{i}",
+       "shape": "box",
+       "size": [
+        0.05,
+        0.04,
+        "$ww"
+       ],
+       "at": [
+        0.12,
+        "($spring - $sill) * 0.33",
+        0
+       ],
+       "material": "church_lead",
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         "($spring - $sill) * 0.33",
+         0
+        ]
+       }
+      },
+      {
+       "name": "Sill",
+       "shape": "box",
+       "size": [
+        0.34,
+        0.14,
+        "$ww + 0.55"
+       ],
+       "at": [
+        0.12,
+        -0.2,
+        0
+       ],
+       "material": "church_dress"
+      }
+     ]
     },
     {
      "name": "Belfry",
      "shape": "box",
      "size": [
       "$tw",
-      "$belfryTop",
+      "$bt",
       "$tw"
      ],
      "at": [
       0,
-      "$belfryTop / 2",
-      "$L2 + $tw / 2 - 0.5"
+      "$bt / 2",
+      "$bz"
+     ]
+    },
+    {
+     "name": "BelfryDetail",
+     "at": [
+      0,
+      0,
+      "$bz"
+     ],
+     "children": [
+      {
+       "name": "BelfryPlinth",
+       "shape": "box",
+       "size": [
+        "$tw + 0.5",
+        0.9,
+        "$tw + 0.5"
+       ],
+       "at": [
+        0,
+        0.45,
+        0
+       ],
+       "material": "stone"
+      },
+      {
+       "name": "Pier_{i}",
+       "at": [
+        "$tw / 2 - 0.2",
+        0,
+        "$tw / 2 - 0.2"
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       },
+       "children": [
+        {
+         "name": "Low",
+         "shape": "box",
+         "size": [
+          1.15,
+          "$bt * 0.42",
+          1.15
+         ],
+         "at": [
+          0,
+          "$bt * 0.21",
+          0
+         ]
+        },
+        {
+         "name": "High",
+         "shape": "box",
+         "size": [
+          0.85,
+          "$bt * 0.9",
+          0.85
+         ],
+         "at": [
+          0,
+          "$bt * 0.45",
+          0
+         ]
+        },
+        {
+         "name": "Cap",
+         "shape": "box",
+         "size": [
+          1,
+          0.16,
+          1
+         ],
+         "at": [
+          0,
+          "$bt * 0.42 + 0.05",
+          0
+         ],
+         "material": "church_dress"
+        }
+       ]
+      },
+      {
+       "name": "String_1",
+       "shape": "box",
+       "size": [
+        "$tw + 0.3",
+        0.24,
+        "$tw + 0.3"
+       ],
+       "at": [
+        0,
+        "$s1",
+        0
+       ],
+       "material": "church_dress"
+      },
+      {
+       "name": "String_2",
+       "shape": "box",
+       "size": [
+        "$tw + 0.3",
+        0.24,
+        "$tw + 0.3"
+       ],
+       "at": [
+        0,
+        "$s2",
+        0
+       ],
+       "material": "church_dress"
+      },
+      {
+       "name": "Cornice",
+       "shape": "box",
+       "size": [
+        "$tw + 0.6",
+        0.4,
+        "$tw + 0.6"
+       ],
+       "at": [
+        0,
+        "$bt + 0.15",
+        0
+       ],
+       "material": "church_dress"
+      },
+      {
+       "name": "Parapet_{i}",
+       "shape": "box",
+       "size": [
+        "$tw + 0.3",
+        1,
+        0.3
+       ],
+       "at": [
+        0,
+        "$bt + 0.85",
+        "$tw / 2"
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      },
+      {
+       "name": "Coping_{i}",
+       "shape": "box",
+       "size": [
+        "$tw + 0.42",
+        0.14,
+        0.44
+       ],
+       "at": [
+        0,
+        "$bt + 1.4",
+        "$tw / 2"
+       ],
+       "material": "church_dress",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       }
+      },
+      {
+       "name": "Pinnacle_{i}",
+       "at": [
+        "$tw / 2",
+        "$bt + 0.35",
+        "$tw / 2"
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       },
+       "children": [
+        {
+         "name": "Shaft",
+         "shape": "box",
+         "size": [
+          0.62,
+          1.7,
+          0.62
+         ],
+         "at": [
+          0,
+          0.85,
+          0
+         ]
+        },
+        {
+         "name": "Band",
+         "shape": "box",
+         "size": [
+          0.72,
+          0.14,
+          0.72
+         ],
+         "at": [
+          0,
+          1.72,
+          0
+         ],
+         "material": "church_dress"
+        },
+        {
+         "name": "Point",
+         "shape": "lathe",
+         "profile": [
+          [
+           0.5,
+           0
+          ],
+          [
+           0,
+           1.9
+          ]
+         ],
+         "at": [
+          0,
+          1.79,
+          0
+         ],
+         "material": "church_dress",
+         "segments": 4,
+         "rotate": [
+          0,
+          45,
+          0
+         ]
+        },
+        {
+         "name": "Knob",
+         "shape": "ellipsoid",
+         "radii": [
+          0.09,
+          0.12,
+          0.09
+         ],
+         "segments": 8,
+         "at": [
+          0,
+          3.72,
+          0
+         ],
+         "material": "church_dress"
+        }
+       ]
+      },
+      {
+       "name": "Doorway",
+       "at": [
+        0,
+        0.3,
+        "$tw / 2"
+       ],
+       "children": [
+        {
+         "name": "Arch",
+         "shape": "loft",
+         "sections": [
+          {
+           "z": -0.05,
+           "points": [
+            [
+             "-($dw + 0.7) / 2",
+             0.012
+            ],
+            [
+             "-($dw + 0.7) / 2 + 0.012",
+             0
+            ],
+            [
+             "($dw + 0.7) / 2 - 0.012",
+             0
+            ],
+            [
+             "($dw + 0.7) / 2",
+             0.012
+            ],
+            [
+             "($dw + 0.7) * 0.50000",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.00000"
+            ],
+            [
+             "($dw + 0.7) * 0.46593",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.25882"
+            ],
+            [
+             "($dw + 0.7) * 0.36603",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.50000"
+            ],
+            [
+             "($dw + 0.7) * 0.20711",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.70711"
+            ],
+            [
+             "0.01039",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.86603 - 0.00600"
+            ],
+            [
+             "-0.01039",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.86603 - 0.00600"
+            ],
+            [
+             "-($dw + 0.7) * 0.20711",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.70711"
+            ],
+            [
+             "-($dw + 0.7) * 0.36603",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.50000"
+            ],
+            [
+             "-($dw + 0.7) * 0.46593",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.25882"
+            ],
+            [
+             "-($dw + 0.7) * 0.50000",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.00000"
+            ]
+           ]
+          },
+          {
+           "z": 0.5,
+           "points": [
+            [
+             "-($dw + 0.7) / 2",
+             0.012
+            ],
+            [
+             "-($dw + 0.7) / 2 + 0.012",
+             0
+            ],
+            [
+             "($dw + 0.7) / 2 - 0.012",
+             0
+            ],
+            [
+             "($dw + 0.7) / 2",
+             0.012
+            ],
+            [
+             "($dw + 0.7) * 0.50000",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.00000"
+            ],
+            [
+             "($dw + 0.7) * 0.46593",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.25882"
+            ],
+            [
+             "($dw + 0.7) * 0.36603",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.50000"
+            ],
+            [
+             "($dw + 0.7) * 0.20711",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.70711"
+            ],
+            [
+             "0.01039",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.86603 - 0.00600"
+            ],
+            [
+             "-0.01039",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.86603 - 0.00600"
+            ],
+            [
+             "-($dw + 0.7) * 0.20711",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.70711"
+            ],
+            [
+             "-($dw + 0.7) * 0.36603",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.50000"
+            ],
+            [
+             "-($dw + 0.7) * 0.46593",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.25882"
+            ],
+            [
+             "-($dw + 0.7) * 0.50000",
+             "($dsp + 0.15) + ($dw + 0.7) * 0.00000"
+            ]
+           ]
+          }
+         ],
+         "at": [
+          0,
+          -0.15,
+          0
+         ],
+         "material": "church_dress"
+        },
+        {
+         "name": "Reveal",
+         "shape": "loft",
+         "sections": [
+          {
+           "z": 0,
+           "points": [
+            [
+             "-($dw + 0.3) / 2",
+             0.012
+            ],
+            [
+             "-($dw + 0.3) / 2 + 0.012",
+             0
+            ],
+            [
+             "($dw + 0.3) / 2 - 0.012",
+             0
+            ],
+            [
+             "($dw + 0.3) / 2",
+             0.012
+            ],
+            [
+             "($dw + 0.3) * 0.50000",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.00000"
+            ],
+            [
+             "($dw + 0.3) * 0.46593",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.25882"
+            ],
+            [
+             "($dw + 0.3) * 0.36603",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.50000"
+            ],
+            [
+             "($dw + 0.3) * 0.20711",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.70711"
+            ],
+            [
+             "0.01039",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.86603 - 0.00600"
+            ],
+            [
+             "-0.01039",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.86603 - 0.00600"
+            ],
+            [
+             "-($dw + 0.3) * 0.20711",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.70711"
+            ],
+            [
+             "-($dw + 0.3) * 0.36603",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.50000"
+            ],
+            [
+             "-($dw + 0.3) * 0.46593",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.25882"
+            ],
+            [
+             "-($dw + 0.3) * 0.50000",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.00000"
+            ]
+           ]
+          },
+          {
+           "z": 0.53,
+           "points": [
+            [
+             "-($dw + 0.3) / 2",
+             0.012
+            ],
+            [
+             "-($dw + 0.3) / 2 + 0.012",
+             0
+            ],
+            [
+             "($dw + 0.3) / 2 - 0.012",
+             0
+            ],
+            [
+             "($dw + 0.3) / 2",
+             0.012
+            ],
+            [
+             "($dw + 0.3) * 0.50000",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.00000"
+            ],
+            [
+             "($dw + 0.3) * 0.46593",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.25882"
+            ],
+            [
+             "($dw + 0.3) * 0.36603",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.50000"
+            ],
+            [
+             "($dw + 0.3) * 0.20711",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.70711"
+            ],
+            [
+             "0.01039",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.86603 - 0.00600"
+            ],
+            [
+             "-0.01039",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.86603 - 0.00600"
+            ],
+            [
+             "-($dw + 0.3) * 0.20711",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.70711"
+            ],
+            [
+             "-($dw + 0.3) * 0.36603",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.50000"
+            ],
+            [
+             "-($dw + 0.3) * 0.46593",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.25882"
+            ],
+            [
+             "-($dw + 0.3) * 0.50000",
+             "($dsp + 0.05) + ($dw + 0.3) * 0.00000"
+            ]
+           ]
+          }
+         ],
+         "at": [
+          0,
+          -0.05,
+          0
+         ],
+         "material": "church_stone"
+        },
+        {
+         "name": "Step_{i}",
+         "shape": "box",
+         "size": [
+          "$dw + 1.8 - $i * 0.5",
+          0.15,
+          "0.9 - $i * 0.3"
+         ],
+         "at": [
+          0,
+          -0.225,
+          0.95
+         ],
+         "material": "stone",
+         "repeat": {
+          "count": 2,
+          "step": [
+           0,
+           0.15,
+           -0.15
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "Door",
+       "shape": "loft",
+       "sections": [
+        {
+         "z": 0.5,
+         "points": [
+          [
+           "-($dw) / 2",
+           0.012
+          ],
+          [
+           "-($dw) / 2 + 0.012",
+           0
+          ],
+          [
+           "($dw) / 2 - 0.012",
+           0
+          ],
+          [
+           "($dw) / 2",
+           0.012
+          ],
+          [
+           "($dw) * 0.50000",
+           "($dsp) + ($dw) * 0.00000"
+          ],
+          [
+           "($dw) * 0.46593",
+           "($dsp) + ($dw) * 0.25882"
+          ],
+          [
+           "($dw) * 0.36603",
+           "($dsp) + ($dw) * 0.50000"
+          ],
+          [
+           "($dw) * 0.20711",
+           "($dsp) + ($dw) * 0.70711"
+          ],
+          [
+           "0.01039",
+           "($dsp) + ($dw) * 0.86603 - 0.00600"
+          ],
+          [
+           "-0.01039",
+           "($dsp) + ($dw) * 0.86603 - 0.00600"
+          ],
+          [
+           "-($dw) * 0.20711",
+           "($dsp) + ($dw) * 0.70711"
+          ],
+          [
+           "-($dw) * 0.36603",
+           "($dsp) + ($dw) * 0.50000"
+          ],
+          [
+           "-($dw) * 0.46593",
+           "($dsp) + ($dw) * 0.25882"
+          ],
+          [
+           "-($dw) * 0.50000",
+           "($dsp) + ($dw) * 0.00000"
+          ]
+         ]
+        },
+        {
+         "z": 0.57,
+         "points": [
+          [
+           "-($dw) / 2",
+           0.012
+          ],
+          [
+           "-($dw) / 2 + 0.012",
+           0
+          ],
+          [
+           "($dw) / 2 - 0.012",
+           0
+          ],
+          [
+           "($dw) / 2",
+           0.012
+          ],
+          [
+           "($dw) * 0.50000",
+           "($dsp) + ($dw) * 0.00000"
+          ],
+          [
+           "($dw) * 0.46593",
+           "($dsp) + ($dw) * 0.25882"
+          ],
+          [
+           "($dw) * 0.36603",
+           "($dsp) + ($dw) * 0.50000"
+          ],
+          [
+           "($dw) * 0.20711",
+           "($dsp) + ($dw) * 0.70711"
+          ],
+          [
+           "0.01039",
+           "($dsp) + ($dw) * 0.86603 - 0.00600"
+          ],
+          [
+           "-0.01039",
+           "($dsp) + ($dw) * 0.86603 - 0.00600"
+          ],
+          [
+           "-($dw) * 0.20711",
+           "($dsp) + ($dw) * 0.70711"
+          ],
+          [
+           "-($dw) * 0.36603",
+           "($dsp) + ($dw) * 0.50000"
+          ],
+          [
+           "-($dw) * 0.46593",
+           "($dsp) + ($dw) * 0.25882"
+          ],
+          [
+           "-($dw) * 0.50000",
+           "($dsp) + ($dw) * 0.00000"
+          ]
+         ]
+        }
+       ],
+       "at": [
+        0,
+        0.3,
+        "$tw / 2"
+       ],
+       "material": "wood",
+       "children": [
+        {
+         "name": "Seam",
+         "shape": "box",
+         "size": [
+          0.05,
+          "$dsp + 0.85 * $dw",
+          0.04
+         ],
+         "at": [
+          0,
+          "($dsp + 0.85 * $dw) / 2",
+          0.58
+         ],
+         "material": "church_dark"
+        },
+        {
+         "name": "Strap_{i}",
+         "shape": "box",
+         "size": [
+          "$dw * 0.9",
+          0.07,
+          0.03
+         ],
+         "at": [
+          0,
+          "$dsp * 0.2",
+          0.58
+         ],
+         "material": "church_dark",
+         "repeat": {
+          "count": 3,
+          "step": [
+           0,
+           "$dsp * 0.3",
+           0
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "Clock_{i}",
+       "at": [
+        0,
+        "($s1 + $s2) / 2",
+        "$tw / 2"
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       },
+       "children": [
+        {
+         "name": "Ring",
+         "shape": "cylinder",
+         "radius": "$cr + 0.14",
+         "height": 0.16,
+         "material": "brass",
+         "axis": "z",
+         "segments": 32
+        },
+        {
+         "name": "Dial",
+         "shape": "cylinder",
+         "radius": "$cr",
+         "height": 0.22,
+         "material": "church_dial",
+         "axis": "z",
+         "segments": 32
+        },
+        {
+         "name": "Mark_{i}",
+         "shape": "box",
+         "size": [
+          0.07,
+          "$cr * 0.16",
+          0.26
+         ],
+         "at": [
+          0,
+          "$cr * 0.82",
+          0
+         ],
+         "material": "church_dark",
+         "repeat": {
+          "count": 4,
+          "around": "z"
+         }
+        },
+        {
+         "name": "HourHand",
+         "shape": "box",
+         "size": [
+          0.09,
+          "$cr * 0.55",
+          0.04
+         ],
+         "at": [
+          0,
+          0,
+          0.13
+         ],
+         "material": "church_dark",
+         "offset": [
+          0,
+          "$cr * 0.22",
+          0
+         ],
+         "rotate": [
+          0,
+          0,
+          -60
+         ]
+        },
+        {
+         "name": "MinuteHand",
+         "shape": "box",
+         "size": [
+          0.06,
+          "$cr * 0.8",
+          0.04
+         ],
+         "at": [
+          0,
+          0,
+          0.16
+         ],
+         "material": "church_dark",
+         "offset": [
+          0,
+          "$cr * 0.36",
+          0
+         ],
+         "rotate": [
+          0,
+          0,
+          70
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Openings_{i}",
+       "at": [
+        0,
+        "$bt * 0.73",
+        0
+       ],
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       },
+       "children": [
+        {
+         "name": "Lancet_L",
+         "at": [
+          "-$tw * 0.13",
+          0,
+          0
+         ],
+         "mirror": "Lancet_R",
+         "children": [
+          {
+           "name": "Surround",
+           "shape": "loft",
+           "sections": [
+            {
+             "z": "$tw / 2 - 0.2",
+             "points": [
+              [
+               "-($tw * 0.15 + 0.26) / 2",
+               0.012
+              ],
+              [
+               "-($tw * 0.15 + 0.26) / 2 + 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15 + 0.26) / 2 - 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15 + 0.26) / 2",
+               0.012
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.00000"
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.25882"
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.50000"
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.70711"
+              ],
+              [
+               "0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.86603 - 0.00600"
+              ],
+              [
+               "-0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.86603 - 0.00600"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.70711"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.50000"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.25882"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.00000"
+              ]
+             ]
+            },
+            {
+             "z": "$tw / 2 + 0.07",
+             "points": [
+              [
+               "-($tw * 0.15 + 0.26) / 2",
+               0.012
+              ],
+              [
+               "-($tw * 0.15 + 0.26) / 2 + 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15 + 0.26) / 2 - 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15 + 0.26) / 2",
+               0.012
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.00000"
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.25882"
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.50000"
+              ],
+              [
+               "($tw * 0.15 + 0.26) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.70711"
+              ],
+              [
+               "0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.86603 - 0.00600"
+              ],
+              [
+               "-0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.86603 - 0.00600"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.70711"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.50000"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.25882"
+              ],
+              [
+               "-($tw * 0.15 + 0.26) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.13) + ($tw * 0.15 + 0.26) * 0.00000"
+              ]
+             ]
+            }
+           ],
+           "at": [
+            0,
+            -0.13,
+            0
+           ],
+           "material": "church_dress"
+          },
+          {
+           "name": "Dark",
+           "shape": "loft",
+           "sections": [
+            {
+             "z": "$tw / 2 - 0.3",
+             "points": [
+              [
+               "-($tw * 0.15) / 2",
+               0.012
+              ],
+              [
+               "-($tw * 0.15) / 2 + 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15) / 2 - 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15) / 2",
+               0.012
+              ],
+              [
+               "($tw * 0.15) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.00000"
+              ],
+              [
+               "($tw * 0.15) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.25882"
+              ],
+              [
+               "($tw * 0.15) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.50000"
+              ],
+              [
+               "($tw * 0.15) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.70711"
+              ],
+              [
+               "0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.86603 - 0.00600"
+              ],
+              [
+               "-0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.86603 - 0.00600"
+              ],
+              [
+               "-($tw * 0.15) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.70711"
+              ],
+              [
+               "-($tw * 0.15) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.50000"
+              ],
+              [
+               "-($tw * 0.15) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.25882"
+              ],
+              [
+               "-($tw * 0.15) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.00000"
+              ]
+             ]
+            },
+            {
+             "z": "$tw / 2 + 0.1",
+             "points": [
+              [
+               "-($tw * 0.15) / 2",
+               0.012
+              ],
+              [
+               "-($tw * 0.15) / 2 + 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15) / 2 - 0.012",
+               0
+              ],
+              [
+               "($tw * 0.15) / 2",
+               0.012
+              ],
+              [
+               "($tw * 0.15) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.00000"
+              ],
+              [
+               "($tw * 0.15) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.25882"
+              ],
+              [
+               "($tw * 0.15) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.50000"
+              ],
+              [
+               "($tw * 0.15) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.70711"
+              ],
+              [
+               "0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.86603 - 0.00600"
+              ],
+              [
+               "-0.01039",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.86603 - 0.00600"
+              ],
+              [
+               "-($tw * 0.15) * 0.20711",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.70711"
+              ],
+              [
+               "-($tw * 0.15) * 0.36603",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.50000"
+              ],
+              [
+               "-($tw * 0.15) * 0.46593",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.25882"
+              ],
+              [
+               "-($tw * 0.15) * 0.50000",
+               "($bt * 0.17 - 0.866 * $tw * 0.15) + ($tw * 0.15) * 0.00000"
+              ]
+             ]
+            }
+           ],
+           "material": "church_dark"
+          },
+          {
+           "name": "Louvre_{i}",
+           "shape": "box",
+           "size": [
+            "$tw * 0.15 - 0.04",
+            0.05,
+            0.2
+           ],
+           "at": [
+            0,
+            "($bt * 0.17 - 0.866 * $tw * 0.15) * 0.15",
+            "$tw / 2 + 0.12"
+           ],
+           "material": "church_louvre",
+           "rotate": [
+            -35,
+            0,
+            0
+           ],
+           "repeat": {
+            "count": 4,
+            "step": [
+             0,
+             "($bt * 0.17 - 0.866 * $tw * 0.15) * 0.24",
+             0
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "name": "Shaft",
+         "shape": "box",
+         "size": [
+          0.24,
+          "$bt * 0.17 - 0.866 * $tw * 0.15 + 0.5",
+          0.2
+         ],
+         "at": [
+          0,
+          "($bt * 0.17 - 0.866 * $tw * 0.15 + 0.5) / 2",
+          "$tw / 2 + 0.03"
+         ],
+         "material": "church_dress"
+        },
+        {
+         "name": "Hood",
+         "shape": "box",
+         "size": [
+          "$tw * 0.6",
+          0.16,
+          0.24
+         ],
+         "at": [
+          0,
+          "$bt * 0.17 - 0.866 * $tw * 0.15 + 0.866 * $tw * 0.15 + 0.45",
+          "$tw / 2 + 0.05"
+         ],
+         "material": "church_dress"
+        },
+        {
+         "name": "Sill",
+         "shape": "box",
+         "size": [
+          "$tw * 0.62",
+          0.14,
+          0.32
+         ],
+         "at": [
+          0,
+          -0.2,
+          "$tw / 2 + 0.06"
+         ],
+         "material": "church_dress"
+        }
+       ]
+      }
      ]
     },
     {
      "name": "Spire",
-     "shape": "lathe",
+     "shape": "loft",
+     "sections": [
+      {
+       "z": 0,
+       "points": [
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.92388",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.35268"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.90267",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.40390",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.35268",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.35268",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.40390",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.90267",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.92388",
+         "(($tw / 2 - 0.3) / 0.92388) * 0.35268"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.92388",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.35268"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.90267",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.40390",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * -0.35268",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.35268",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.40390",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.90267",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388) * 0.92388",
+         "(($tw / 2 - 0.3) / 0.92388) * -0.35268"
+        ]
+       ]
+      },
+      {
+       "z": 0.5,
+       "points": [
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.92388",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.35268"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.90267",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.40390",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.35268",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.35268",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.40390",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.90267",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.92388",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.35268"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.92388",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.35268"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.90267",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.40390",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.35268",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.35268",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.92388"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.40390",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.90267"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.90267",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.40390"
+        ],
+        [
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * 0.92388",
+         "(($tw / 2 - 0.3) / 0.92388 * 0.97) * -0.35268"
+        ]
+       ]
+      },
+      {
+       "z": "$Hs",
+       "points": [
+        [
+         "(0.07) * 0.92388",
+         "(0.07) * 0.35268"
+        ],
+        [
+         "(0.07) * 0.90267",
+         "(0.07) * 0.40390"
+        ],
+        [
+         "(0.07) * 0.40390",
+         "(0.07) * 0.90267"
+        ],
+        [
+         "(0.07) * 0.35268",
+         "(0.07) * 0.92388"
+        ],
+        [
+         "(0.07) * -0.35268",
+         "(0.07) * 0.92388"
+        ],
+        [
+         "(0.07) * -0.40390",
+         "(0.07) * 0.90267"
+        ],
+        [
+         "(0.07) * -0.90267",
+         "(0.07) * 0.40390"
+        ],
+        [
+         "(0.07) * -0.92388",
+         "(0.07) * 0.35268"
+        ],
+        [
+         "(0.07) * -0.92388",
+         "(0.07) * -0.35268"
+        ],
+        [
+         "(0.07) * -0.90267",
+         "(0.07) * -0.40390"
+        ],
+        [
+         "(0.07) * -0.40390",
+         "(0.07) * -0.90267"
+        ],
+        [
+         "(0.07) * -0.35268",
+         "(0.07) * -0.92388"
+        ],
+        [
+         "(0.07) * 0.35268",
+         "(0.07) * -0.92388"
+        ],
+        [
+         "(0.07) * 0.40390",
+         "(0.07) * -0.90267"
+        ],
+        [
+         "(0.07) * 0.90267",
+         "(0.07) * -0.40390"
+        ],
+        [
+         "(0.07) * 0.92388",
+         "(0.07) * -0.35268"
+        ]
+       ]
+      }
+     ],
+     "at": [
+      0,
+      "$bt + 0.35",
+      "$bz"
+     ],
      "material": "roof_slate",
-     "segments": 4,
      "rotate": [
+      -90,
       0,
-      45,
       0
-     ],
-     "at": [
-      0,
-      "$belfryTop",
-      "$L2 + $tw / 2 - 0.5"
-     ],
-     "profile": [
-      [
-       "$tw * 0.7071",
-       0
-      ],
-      [
-       0.12,
-       "$towerHeight - $belfryTop"
-      ]
      ]
     },
     {
-     "name": "Door",
-     "shape": "box",
-     "material": "church_dark",
-     "size": [
-      "$tw * 0.45",
-      "min(4, $belfryTop * 0.3)",
-      0.15
-     ],
+     "name": "Finial",
      "at": [
       0,
-      "min(4, $belfryTop * 0.3) / 2",
-      "$L2 + $tw - 0.5 + 0.03"
+      "$towerHeight - 1.6",
+      "$bz"
+     ],
+     "material": "brass",
+     "children": [
+      {
+       "name": "Rod",
+       "shape": "cylinder",
+       "radius": 0.05,
+       "height": 1,
+       "at": [
+        0,
+        0.4,
+        0
+       ],
+       "segments": 8
+      },
+      {
+       "name": "Ball",
+       "shape": "ellipsoid",
+       "radii": [
+        0.22,
+        0.22,
+        0.22
+       ],
+       "segments": 12,
+       "at": [
+        0,
+        0.2,
+        0
+       ]
+      },
+      {
+       "name": "CrossStem",
+       "shape": "box",
+       "size": [
+        0.1,
+        1.2,
+        0.1
+       ],
+       "at": [
+        0,
+        1,
+        0
+       ]
+      },
+      {
+       "name": "CrossArm",
+       "shape": "box",
+       "size": [
+        0.75,
+        0.1,
+        0.1
+       ],
+       "at": [
+        0,
+        1.25,
+        0
+       ]
+      }
      ]
     },
     {
-     "name": "LouvreWindow",
-     "shape": "box",
-     "material": "church_dark",
-     "size": [
-      "$tw * 0.3",
-      "$belfryTop * 0.18",
-      "$tw + 0.1"
-     ],
+     "name": "Lucarnes",
      "at": [
       0,
-      "$belfryTop * 0.85",
-      "$L2 + $tw / 2 - 0.5"
-     ]
-    },
-    {
-     "name": "Window_L{i}",
-     "shape": "box",
-     "material": "church_dark",
-     "size": [
-      0.12,
-      "$wallHeight * 0.55",
-      0.9
+      "$bt + 0.35 + ($Hs) * 0.2",
+      "$bz"
      ],
-     "at": [
-      "$W2 + 0.02",
-      "$wallHeight * 0.55",
-      "-$L2 + 3"
-     ],
-     "repeat": {
-      "count": "floor(($naveLength - $tw - 4) / 4.5)",
-      "step": [
-       0,
-       0,
-       4.5
-      ]
+     "vars": {
+      "ap": "($tw / 2 - 0.3) * 0.8 + 0.25"
      },
-     "mirror": "Window_R{i}"
+     "children": [
+      {
+       "name": "Lucarne_{i}",
+       "repeat": {
+        "count": 4,
+        "around": "y"
+       },
+       "children": [
+        {
+         "name": "Front",
+         "shape": "box",
+         "size": [
+          0.9,
+          1.5,
+          0.9
+         ],
+         "at": [
+          0,
+          0.55,
+          "$ap - 0.45"
+         ],
+         "material": "church_dress"
+        },
+        {
+         "name": "Dark",
+         "shape": "box",
+         "size": [
+          0.5,
+          0.9,
+          0.1
+         ],
+         "at": [
+          0,
+          0.45,
+          "$ap + 0.0"
+         ],
+         "material": "church_dark"
+        },
+        {
+         "name": "Hat",
+         "shape": "roof",
+         "x0": -0.6,
+         "x1": 0.6,
+         "z0": "$ap - 1.1",
+         "z1": "$ap + 0.15",
+         "y": 1.3,
+         "rise": 0.75,
+         "kind": "gable",
+         "material": "roof_slate"
+        }
+       ]
+      }
+     ]
     }
    ]
   }

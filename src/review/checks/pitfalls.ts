@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import type { ApiMethod } from "../../api/types.js";
 import type { LogicalLine } from "../../godot/gdscript.js";
+import { fromResPath } from "../../project/files.js";
 import { finding, type Finding } from "../rules.js";
-import type { ProjectModel } from "../model.js";
+import type { ClassModel, ProjectModel } from "../model.js";
 import { bodyOf } from "./performance.js";
 
 /**
@@ -114,7 +117,141 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
     }
   }
 
+  // A GPU texture read back on every pass of a loop: each get_image() waits for the GPU. Test runners and editor
+  // scripts read textures on purpose, and a screenshot (a viewport's texture) can only be read back.
+  for (const model of [...pm.allModels()].filter((m) => m.path === path && !["SceneTree", "EditorScript"].includes(pm.nativeOf(m)) && !script.tool)) {
+    for (const fn of model.outline.functions) {
+      const body = bodyOf(lines, fn);
+      const read = body.find((ll) => /\.\s*get_image\s*\(\s*\)/.test(ll.code) && !/get_texture\s*\(\s*\)\s*\.\s*get_image/.test(ll.code) && insideLoop(body, ll));
+      if (read) {
+        out.push(
+          finding(
+            "performance/get-image-in-loop",
+            path,
+            read.line,
+            "get_image() inside a loop reads a texture back from the GPU on every pass, and each read waits for the GPU (stalls of milliseconds each). Keep the Image you uploaded, or read back once outside the loop.",
+          ),
+        );
+      }
+    }
+  }
+
+  out.push(...treeTestReadsTooEarly(pm, path, lines));
+  out.push(...overrideSignatures(pm, path));
   out.push(...duplicateDeclarations(pm, path));
+  return out;
+}
+
+/** True when a line runs inside a for or while loop of its function. */
+function insideLoop(body: LogicalLine[], ll: LogicalLine): boolean {
+  let indent = ll.indent;
+  for (const prev of [...body].filter((l) => l.line < ll.line).reverse()) {
+    if (prev.indent >= indent) continue;
+    if (/^(?:for|while)\b/.test(prev.code)) return true;
+    indent = prev.indent;
+  }
+  return false;
+}
+
+/**
+ * A test script that extends SceneTree adds its scene in _initialize(), but the nodes are only inside the tree after
+ * the first frame: global positions read before an await are identity, and every call prints !is_inside_tree().
+ */
+function treeTestReadsTooEarly(pm: ProjectModel, path: string, lines: LogicalLine[]): Finding[] {
+  const model = [...pm.allModels()].find((m) => m.path === path && !m.owner);
+  if (!model || pm.nativeOf(model) !== "SceneTree") return [];
+  const fn = model.outline.functions.find((f) => f.name === "_initialize");
+  if (!fn) return [];
+  let added = false;
+  for (const ll of bodyOf(lines, fn)) {
+    if (/\bawait\b/.test(ll.code)) return [];
+    if (/\b(?:root|get_root\s*\(\s*\))\s*\.\s*add_child\s*\(/.test(ll.code)) {
+      added = true;
+      continue;
+    }
+    if (added && /\.\s*(?:global_(?:position|transform|rotation|rotation_degrees|basis)\b|to_global\s*\(|to_local\s*\(|get_global_transform\s*\()/.test(ll.code)) {
+      return [
+        finding(
+          "quality/tree-test-reads-too-early",
+          path,
+          ll.line,
+          "This reads a global transform in _initialize() right after adding the scene to the root, before the nodes are inside the tree: the values are identity and Godot prints !is_inside_tree() for each call. Await process_frame after add_child() first.",
+        ),
+      ];
+    }
+  }
+  return [];
+}
+
+/**
+ * An override with fewer parameters than the function it overrides, or extra ones without a default: Godot stops with
+ * "The function signature doesn't match the parent". A base class that gains a parameter does this to every override.
+ */
+function overrideSignatures(pm: ProjectModel, path: string): Finding[] {
+  const out: Finding[] = [];
+  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+    for (const fn of model.outline.functions) {
+      if (fn.static || fn.name === "_init" || fn.name === "_static_init") continue;
+      const parent = parentSignature(pm, model, fn.name);
+      if (!parent) continue;
+      const count = fn.params.length;
+      const defaults = fn.params.filter((p) => p.hasDefault).length;
+      const extra = count - parent.count;
+      if (extra >= 0 && defaults >= parent.defaults + extra) continue;
+      const why =
+        extra < 0
+          ? `takes ${count} parameter${count === 1 ? "" : "s"} here, but ${parent.where} takes ${parent.count}`
+          : `adds ${extra} parameter${extra === 1 ? "" : "s"} to ${parent.where} without a default`;
+      out.push(
+        finding(
+          "api/override-signature",
+          path,
+          fn.line,
+          `${fn.name}() ${why}. Godot stops with "The function signature doesn't match the parent". Keep the parent's parameters; extra ones need a default value.`,
+        ),
+      );
+    }
+  }
+  return out;
+}
+
+/** The parameters of the function a method overrides: in a script it extends, or a virtual method of the engine class. */
+function parentSignature(pm: ProjectModel, model: ClassModel, name: string): { count: number; defaults: number; where: string } | undefined {
+  for (const m of pm.chain(model).slice(1)) {
+    const f = m.outline.functions.find((x) => x.name === name && !x.static);
+    if (f) return { count: f.params.length, defaults: f.params.filter((p) => p.hasDefault).length, where: `the version in ${m.name ?? m.path}` };
+  }
+  const base = pm.nativeOf(model);
+  const method = pm.api.member(base, name).find((e) => e.kind === "method")?.item as ApiMethod | undefined;
+  if (!method || !/\bvirtual\b/.test(method.qualifiers ?? "") || /\bvararg\b/.test(method.qualifiers ?? "")) return undefined;
+  const params = method.params ?? [];
+  return { count: params.length, defaults: params.filter((p) => p.default !== undefined).length, where: `${base}.${name}()` };
+}
+
+/** A water or glass shader that reads the depth texture while it writes depth in a prepass reads its own surface. */
+export function checkShaderPitfalls(pm: ProjectModel): Finding[] {
+  const out: Finding[] = [];
+  for (const shader of pm.data.map.shaders) {
+    if (shader.external) continue;
+    let source: string;
+    try {
+      source = readFileSync(fromResPath(pm.data.root, shader.path), "utf8");
+    } catch {
+      continue;
+    }
+    // Comments blanked to spaces, so positions (and line numbers) stay the same.
+    const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (c) => c.replace(/[^\n]/g, " "));
+    const mode = /\brender_mode\b[^;]*\bdepth_prepass_alpha\b[^;]*;/.exec(code);
+    if (!mode || !/\bhint_depth_texture\b/.test(code)) continue;
+    out.push(
+      finding(
+        "quality/shader-reads-own-depth",
+        shader.path,
+        code.slice(0, mode.index).split("\n").length,
+        "This shader writes its own depth in the alpha prepass and also reads the depth texture, so it reads its own surface: depth-based foam or fog shows everywhere. Use depth_draw_always instead of depth_prepass_alpha.",
+      ),
+    );
+  }
   return out;
 }
 

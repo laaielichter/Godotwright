@@ -2,7 +2,7 @@
  "version": 1,
  "name": "apartment",
  "archetype": "building.apartment",
- "description": "A block of flats: a long rectangular block with a flat roof and parapet, a glazed band of windows on every floor, a glass entrance with a canopy on the +Z side and a stair core that rises above the roof.",
+ "description": "A block of flats: a long brick block on a dark plinth with a flat roof behind a parapet with aluminium coping, framed windows with sills on every floor front and back, balconies with glass balustrades on the +Z front, a glazed stair core in the middle of the front with the entrance, a canopy and steps at its foot, gable windows, and a stair housing, plant and solar panels on the roof.",
  "params": [
   {
    "name": "floors",
@@ -32,12 +32,49 @@
  "materials": {
   "apt_brick": {
    "color": [
-    0.65,
-    0.4,
-    0.3
+    0.27,
+    0.11,
+    0.065
    ],
    "metallic": 0,
-   "roughness": 0.9
+   "roughness": 0.9,
+   "texture": "brick"
+  },
+  "apt_frame": {
+   "color": [
+    0.12,
+    0.125,
+    0.13
+   ],
+   "metallic": 0.5,
+   "roughness": 0.4
+  },
+  "apt_window": {
+   "color": [
+    0.022,
+    0.03,
+    0.04
+   ],
+   "metallic": 0.2,
+   "roughness": 0.06
+  },
+  "apt_balustrade": {
+   "color": [
+    0.3,
+    0.32,
+    0.34
+   ],
+   "metallic": 0.6,
+   "roughness": 0.45
+  },
+  "apt_solar": {
+   "color": [
+    0.015,
+    0.025,
+    0.07
+   ],
+   "metallic": 0.6,
+   "roughness": 0.18
   }
  },
  "nodes": [
@@ -48,7 +85,15 @@
     "fh": 3.0,
     "H": "$floors * 3.0",
     "L2": "$length / 2",
-    "D2": "$depth / 2"
+    "D2": "$depth / 2",
+    "cw": 3.6,
+    "m": "max(1, floor(($length / 2 - 1.8 - 0.6) / 3.0))",
+    "s": "($length / 2 - 1.8 - 0.6) / $m",
+    "x0": "1.8 + 0.3",
+    "ww": "min(1.8, $s - 0.9)",
+    "wh": 1.55,
+    "wy": 1.65,
+    "bw": "min(3.2, $s - 0.45)"
    },
    "children": [
     {
@@ -63,90 +108,873 @@
       0,
       "$H / 2",
       0
+     ],
+     "children": [
+      {
+       "name": "Plinth",
+       "shape": "box",
+       "size": [
+        "$length + 0.08",
+        2.9,
+        "$depth + 0.08"
+       ],
+       "at": [
+        0,
+        "1.45 - $H / 2",
+        0
+       ],
+       "material": "asphalt"
+      },
+      {
+       "name": "Band",
+       "shape": "box",
+       "size": [
+        "$length + 0.14",
+        0.22,
+        "$depth + 0.14"
+       ],
+       "at": [
+        0,
+        "2.95 - $H / 2",
+        0
+       ],
+       "material": "concrete"
+      },
+      {
+       "name": "Parapet_F",
+       "shape": "box",
+       "size": [
+        "$length",
+        0.75,
+        0.3
+       ],
+       "at": [
+        0,
+        "$H / 2 + 0.375",
+        "$D2 - 0.15"
+       ]
+      },
+      {
+       "name": "Parapet_B",
+       "shape": "box",
+       "size": [
+        "$length",
+        0.75,
+        0.3
+       ],
+       "at": [
+        0,
+        "$H / 2 + 0.375",
+        "-$D2 + 0.15"
+       ]
+      },
+      {
+       "name": "Parapet_L",
+       "shape": "box",
+       "size": [
+        0.3,
+        0.75,
+        "$depth - 0.6"
+       ],
+       "at": [
+        "$L2 - 0.15",
+        "$H / 2 + 0.375",
+        0
+       ],
+       "mirror": "Parapet_R"
+      }
      ]
     },
     {
      "name": "Roof",
      "shape": "box",
-     "material": "concrete",
      "size": [
-      "$length + 0.4",
+      "$length - 0.6",
       0.3,
-      "$depth + 0.4"
+      "$depth - 0.6"
      ],
      "at": [
       0,
       "$H + 0.15",
       0
+     ],
+     "material": "asphalt",
+     "children": [
+      {
+       "name": "Coping_F",
+       "shape": "box",
+       "size": [
+        "$length + 0.12",
+        0.12,
+        0.42
+       ],
+       "at": [
+        0,
+        0.66,
+        "$D2 - 0.15"
+       ],
+       "material": "aluminium"
+      },
+      {
+       "name": "Coping_B",
+       "shape": "box",
+       "size": [
+        "$length + 0.12",
+        0.12,
+        0.42
+       ],
+       "at": [
+        0,
+        0.66,
+        "-$D2 + 0.15"
+       ],
+       "material": "aluminium"
+      },
+      {
+       "name": "Coping_L",
+       "shape": "box",
+       "size": [
+        0.42,
+        0.12,
+        "$depth + 0.12"
+       ],
+       "at": [
+        "$L2 - 0.15",
+        0.66,
+        0
+       ],
+       "material": "aluminium",
+       "mirror": "Coping_R"
+      }
      ]
     },
     {
-     "name": "Windows_{i}",
-     "shape": "box",
-     "material": "glass",
-     "size": [
-      "$length * 0.9",
-      1.3,
-      "$depth + 0.08"
-     ],
-     "at": [
-      0,
-      "$fh * 0.65 + 0.6",
-      0
-     ],
-     "repeat": {
-      "count": "$floors",
-      "step": [
-       0,
-       "$fh",
-       0
-      ]
-     }
+     "name": "Windows",
+     "children": [
+      {
+       "name": "Floor_{i}",
+       "at": [
+        0,
+        "$wy",
+        0
+       ],
+       "repeat": {
+        "count": "$floors",
+        "step": [
+         0,
+         "$fh",
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Win_L{i}",
+         "shape": "box",
+         "size": [
+          "$ww + 0.14",
+          "$wh + 0.14",
+          "$depth + 0.16"
+         ],
+         "at": [
+          "$x0 + $s / 2",
+          0,
+          0
+         ],
+         "material": "apt_frame",
+         "repeat": {
+          "count": "$m",
+          "step": [
+           "$s",
+           0,
+           0
+          ]
+         },
+         "mirror": "Win_R{i}",
+         "children": [
+          {
+           "name": "Glass",
+           "shape": "box",
+           "size": [
+            "$ww",
+            "$wh",
+            "$depth + 0.2"
+           ],
+           "material": "apt_window"
+          }
+         ]
+        },
+        {
+         "name": "SillBand",
+         "shape": "box",
+         "size": [
+          "$length - 0.4",
+          0.12,
+          "$depth + 0.3"
+         ],
+         "at": [
+          0,
+          "-$wh / 2 - 0.13",
+          0
+         ],
+         "material": "concrete"
+        }
+       ]
+      },
+      {
+       "name": "Back_{i}",
+       "at": [
+        0,
+        "$wy + 0.1",
+        "-$D2"
+       ],
+       "repeat": {
+        "count": "$floors",
+        "step": [
+         0,
+         "$fh",
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Frame",
+         "shape": "box",
+         "size": [
+          1.24,
+          1.34,
+          0.16
+         ],
+         "material": "apt_frame"
+        },
+        {
+         "name": "Glass",
+         "shape": "box",
+         "size": [
+          1.1,
+          1.2,
+          0.2
+         ],
+         "material": "apt_window"
+        },
+        {
+         "name": "Sill",
+         "shape": "box",
+         "size": [
+          1.4,
+          0.08,
+          0.4
+         ],
+         "at": [
+          0,
+          -0.7,
+          0
+         ],
+         "material": "aluminium"
+        }
+       ]
+      },
+      {
+       "name": "Gable_{i}",
+       "at": [
+        0,
+        "$wy + 0.1",
+        0
+       ],
+       "repeat": {
+        "count": "$floors",
+        "step": [
+         0,
+         "$fh",
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Frame",
+         "shape": "box",
+         "size": [
+          "$length + 0.16",
+          1.34,
+          1.04
+         ],
+         "material": "apt_frame"
+        },
+        {
+         "name": "Glass",
+         "shape": "box",
+         "size": [
+          "$length + 0.2",
+          1.2,
+          0.9
+         ],
+         "material": "apt_window"
+        },
+        {
+         "name": "Sill",
+         "shape": "box",
+         "size": [
+          "$length + 0.44",
+          0.08,
+          1.2
+         ],
+         "at": [
+          0,
+          -0.7,
+          0
+         ],
+         "material": "aluminium"
+        }
+       ]
+      }
+     ]
     },
     {
-     "name": "Core",
-     "shape": "box",
-     "material": "concrete",
-     "size": [
-      3.5,
-      2.8,
-      3.5
-     ],
+     "name": "Balconies",
      "at": [
       0,
-      "$H + 0.3 + 1.4",
-      0
+      "$fh",
+      "$D2"
+     ],
+     "children": [
+      {
+       "name": "Level_{i}",
+       "repeat": {
+        "count": "$floors - 1",
+        "step": [
+         0,
+         "$fh",
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Balcony_L{i}",
+         "shape": "box",
+         "size": [
+          "$bw",
+          0.2,
+          1.5
+         ],
+         "at": [
+          "$x0 + $s / 2",
+          -0.02,
+          0.75
+         ],
+         "material": "concrete",
+         "repeat": {
+          "count": "ceil($m / 2)",
+          "step": [
+           "2 * $s",
+           0,
+           0
+          ]
+         },
+         "mirror": "Balcony_R{i}",
+         "children": [
+          {
+           "name": "Pane",
+           "shape": "box",
+           "size": [
+            "$bw - 0.1",
+            0.95,
+            0.03
+           ],
+           "at": [
+            0,
+            0.6,
+            0.69
+           ],
+           "material": "apt_balustrade"
+          },
+          {
+           "name": "Rail",
+           "shape": "box",
+           "size": [
+            "$bw",
+            0.07,
+            0.09
+           ],
+           "at": [
+            0,
+            1.12,
+            0.69
+           ],
+           "material": "aluminium"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Stairwell",
+     "at": [
+      0,
+      0,
+      "$D2"
+     ],
+     "children": [
+      {
+       "name": "Face",
+       "shape": "box",
+       "size": [
+        "$cw",
+        "$H + 0.75",
+        0.3
+       ],
+       "at": [
+        0,
+        "($H + 0.75) / 2",
+        0.1
+       ],
+       "material": "concrete"
+      },
+      {
+       "name": "Glazing",
+       "shape": "box",
+       "size": [
+        "$cw - 1.1",
+        "$H - 3.5",
+        0.2
+       ],
+       "at": [
+        0,
+        "($H + 3.1) / 2 + 0.05",
+        0.2
+       ],
+       "material": "apt_window"
+      },
+      {
+       "name": "Mullion_{i}",
+       "shape": "box",
+       "size": [
+        0.08,
+        "$H - 3.5",
+        0.26
+       ],
+       "at": [
+        "-($cw - 1.1) / 2 + ($cw - 1.1) / 3",
+        "($H + 3.1) / 2 + 0.05",
+        0.2
+       ],
+       "material": "apt_frame",
+       "repeat": {
+        "count": 2,
+        "step": [
+         "($cw - 1.1) / 3",
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Landing_{i}",
+       "shape": "box",
+       "size": [
+        "$cw - 1.0",
+        0.12,
+        0.28
+       ],
+       "at": [
+        0,
+        "$fh + 1.5",
+        0.21
+       ],
+       "material": "apt_frame",
+       "repeat": {
+        "count": "$floors - 1",
+        "step": [
+         0,
+         "$fh",
+         0
+        ]
+       }
+      }
      ]
     },
     {
      "name": "Entrance",
-     "shape": "box",
-     "material": "glass",
-     "size": [
-      3.0,
-      2.4,
-      0.15
-     ],
      "at": [
       0,
-      1.2,
-      "$D2 + 0.05"
+      0,
+      "$D2 + 0.25"
+     ],
+     "children": [
+      {
+       "name": "Doors",
+       "shape": "box",
+       "size": [
+        2.1,
+        2.42,
+        0.12
+       ],
+       "at": [
+        0,
+        1.52,
+        0
+       ],
+       "material": "apt_window"
+      },
+      {
+       "name": "DoorFrame",
+       "shape": "box",
+       "size": [
+        2.35,
+        2.54,
+        0.08
+       ],
+       "at": [
+        0,
+        1.55,
+        -0.04
+       ],
+       "material": "apt_frame"
+      },
+      {
+       "name": "Split",
+       "shape": "box",
+       "size": [
+        0.06,
+        2.42,
+        0.16
+       ],
+       "at": [
+        0,
+        1.52,
+        0
+       ],
+       "material": "apt_frame"
+      },
+      {
+       "name": "Handle_{i}",
+       "shape": "box",
+       "size": [
+        0.04,
+        0.9,
+        0.06
+       ],
+       "at": [
+        -0.12,
+        1.4,
+        0.1
+       ],
+       "material": "aluminium",
+       "repeat": {
+        "count": 2,
+        "step": [
+         0.24,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Canopy",
+       "shape": "box",
+       "size": [
+        "$cw + 1.2",
+        0.22,
+        1.9
+       ],
+       "at": [
+        0,
+        2.95,
+        0.85
+       ],
+       "material": "concrete",
+       "bevel": 0.03
+      },
+      {
+       "name": "CanopyEdge",
+       "shape": "box",
+       "size": [
+        "$cw + 1.24",
+        0.1,
+        0.06
+       ],
+       "at": [
+        0,
+        2.9,
+        1.8
+       ],
+       "material": "aluminium"
+      },
+      {
+       "name": "Lamp_{i}",
+       "shape": "box",
+       "size": [
+        0.3,
+        0.06,
+        0.3
+       ],
+       "at": [
+        -0.9,
+        2.82,
+        0.9
+       ],
+       "material": "light",
+       "repeat": {
+        "count": 2,
+        "step": [
+         1.8,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Step_{i}",
+       "shape": "box",
+       "size": [
+        "$cw + 0.6 - $i * 0.6",
+        0.15,
+        "2.1 - $i * 0.5"
+       ],
+       "at": [
+        0,
+        0.075,
+        1
+       ],
+       "material": "concrete",
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0.15,
+         -0.25
+        ]
+       }
+      },
+      {
+       "name": "Path",
+       "shape": "box",
+       "size": [
+        2.4,
+        0.04,
+        3
+       ],
+       "at": [
+        0,
+        0.02,
+        3.5
+       ],
+       "material": "concrete"
+      }
      ]
     },
     {
-     "name": "Canopy",
-     "shape": "box",
-     "material": "concrete",
-     "size": [
-      4.0,
-      0.2,
-      1.6
-     ],
+     "name": "Rooftop",
      "at": [
       0,
-      2.7,
-      "$D2 + 0.8"
+      "$H + 0.3",
+      0
+     ],
+     "children": [
+      {
+       "name": "Core",
+       "shape": "box",
+       "size": [
+        3.6,
+        2.8,
+        4.2
+       ],
+       "at": [
+        0,
+        1.4,
+        "$D2 - 2.8"
+       ],
+       "material": "concrete",
+       "children": [
+        {
+         "name": "Lid",
+         "shape": "box",
+         "size": [
+          4,
+          0.2,
+          4.6
+         ],
+         "at": [
+          0,
+          1.5,
+          0
+         ],
+         "material": "concrete"
+        },
+        {
+         "name": "CoreDoor",
+         "shape": "box",
+         "size": [
+          0.12,
+          2.1,
+          1
+         ],
+         "at": [
+          1.82,
+          -0.35,
+          0
+         ],
+         "material": "apt_frame"
+        }
+       ]
+      },
+      {
+       "name": "Plant",
+       "at": [
+        "-$length * 0.25",
+        0,
+        "$D2 - 3.0"
+       ],
+       "children": [
+        {
+         "name": "Unit",
+         "shape": "box",
+         "size": [
+          2.2,
+          1.2,
+          1.4
+         ],
+         "at": [
+          0,
+          0.6,
+          0
+         ],
+         "material": "aluminium",
+         "bevel": 0.04
+        },
+        {
+         "name": "Fan_{i}",
+         "shape": "cylinder",
+         "radius": 0.42,
+         "height": 0.1,
+         "at": [
+          -0.55,
+          1.22,
+          0
+         ],
+         "material": "apt_frame",
+         "repeat": {
+          "count": 2,
+          "step": [
+           1.1,
+           0,
+           0
+          ]
+         },
+         "segments": 16
+        }
+       ]
+      },
+      {
+       "name": "Vent_{i}",
+       "shape": "cylinder",
+       "radius": 0.12,
+       "height": 0.9,
+       "at": [
+        "$length * 0.22",
+        0.45,
+        "$D2 - 2.2"
+       ],
+       "material": "aluminium",
+       "repeat": {
+        "count": 3,
+        "step": [
+         1.2,
+         0,
+         0
+        ]
+       },
+       "segments": 10
+      },
+      {
+       "name": "Solar_{i}",
+       "at": [
+        "-$length / 2 + 4.5 + 1.1",
+        0,
+        "-$D2 + 2.6"
+       ],
+       "repeat": {
+        "count": "max(1, floor(($length - 9) / 2.2))",
+        "step": [
+         2.2,
+         0,
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Panel",
+         "shape": "box",
+         "size": [
+          2,
+          0.05,
+          1.7
+         ],
+         "at": [
+          0,
+          0.7,
+          0
+         ],
+         "material": "apt_solar",
+         "rotate": [
+          25,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Leg",
+         "shape": "box",
+         "size": [
+          1.6,
+          0.6,
+          0.06
+         ],
+         "at": [
+          0,
+          0.3,
+          -0.7
+         ],
+         "material": "aluminium"
+        },
+        {
+         "name": "Foot",
+         "shape": "box",
+         "size": [
+          1.8,
+          0.08,
+          1.9
+         ],
+         "at": [
+          0,
+          0.04,
+          0
+         ],
+         "material": "concrete"
+        }
+       ]
+      }
      ]
+    },
+    {
+     "name": "Downpipe_L",
+     "shape": "tube",
+     "path": [
+      [
+       "$L2 + 0.1",
+       "$H + 0.55",
+       "$D2 - 0.4"
+      ],
+      [
+       "$L2 + 0.1",
+       0.2,
+       "$D2 - 0.4"
+      ]
+     ],
+     "material": "aluminium",
+     "segments": 8,
+     "mirror": "Downpipe_R",
+     "radius": 0.06
     }
    ]
   }

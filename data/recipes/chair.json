@@ -2,7 +2,7 @@
  "version": 1,
  "name": "chair",
  "archetype": "prop.chair",
- "description": "A wooden dining chair facing +Z: a square seat on four legs and a backrest with two uprights and a rail at the back (-Z side).",
+ "description": "A solid-wood dining chair facing +Z: a seat of glued boards on an apron frame, four legs joined by an H-stretcher, and back legs that rise into raked posts holding a crest rail, a low rail and slats (back at -Z).",
  "params": [
   {
    "name": "seatHeight",
@@ -29,88 +29,680 @@
    "description": "Height of the backrest above the seat."
   }
  ],
+ "materials": {
+  "chair_wood": {
+   "color": [
+    0.29,
+    0.15,
+    0.065,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.5,
+   "texture": "wood"
+  }
+ },
  "nodes": [
   {
    "name": "Chair",
-   "material": "wood",
+   "material": "chair_wood",
    "vars": {
     "SH": "$seatHeight",
     "W": "$width",
     "D": "$width",
-    "BH": "$backHeight"
+    "BH": "$backHeight",
+    "lw": 0.038,
+    "st": 0.026,
+    "ov": 0.016,
+    "xl": "$width / 2 - 0.016 - 0.019",
+    "zf": "$width / 2 - 0.022 - 0.019",
+    "zb": "-$width / 2 + 0.019 + 0.004",
+    "ys": "$seatHeight - 0.026",
+    "kick": 0.03,
+    "rake": 9,
+    "ah": 0.065,
+    "ys2": 0.13,
+    "zk": "-$width / 2 + 0.023 - 0.03 * (1 - 0.13 / ($seatHeight - 0.026))"
    },
    "children": [
     {
      "name": "Seat",
-     "shape": "box",
-     "size": [
-      "$W",
-      0.04,
-      "$D"
-     ],
-     "at": [
-      0,
-      "$SH - 0.02",
-      0
+     "children": [
+      {
+       "name": "Board{i}",
+       "at": [
+        0,
+        "$SH - $st / 2",
+        "-$D / 2 + $D / ceil($D / 0.135) / 2"
+       ],
+       "repeat": {
+        "count": "ceil($D / 0.135)",
+        "step": [
+         0,
+         0,
+         "$D / ceil($D / 0.135)"
+        ]
+       },
+       "children": [
+        {
+         "name": "Wood",
+         "vars": {
+          "k": "round(($i * 3 + 2)) % 8",
+          "u0": "1.2 * (0.658 * max(0, 1 - abs($k - 0)) + 0.744 * max(0, 1 - abs($k - 1)) + 0.011 * max(0, 1 - abs($k - 2)) + 0.506 * max(0, 1 - abs($k - 3)) + 0.581 * max(0, 1 - abs($k - 4)) + 0.223 * max(0, 1 - abs($k - 5)) + 0.766 * max(0, 1 - abs($k - 6)) + 0.147 * max(0, 1 - abs($k - 7))) + 0.012",
+          "vn": "0.15 * (7 - $k) + 0.004",
+          "vp": "0.15 * $k + 0.004"
+         },
+         "shape": "extrude",
+         "plan": [
+          [
+           "$u0",
+           "$vp"
+          ],
+          [
+           "$u0 + ($W)",
+           "$vp"
+          ],
+          [
+           "$u0 + ($W)",
+           "$vp + ($D / ceil($D / 0.135))"
+          ],
+          [
+           "$u0",
+           "$vp + ($D / ceil($D / 0.135))"
+          ]
+         ],
+         "y0": "$vn",
+         "y1": "$vn + ($st)",
+         "at": [
+          "-$u0 - ($W) / 2",
+          "-$vn - ($st) / 2",
+          "-$vp - ($D / ceil($D / 0.135)) / 2"
+         ]
+        }
+       ]
+      }
      ]
     },
     {
      "name": "Leg_FL",
-     "shape": "box",
-     "size": [
-      0.04,
-      "$SH - 0.04",
-      0.04
-     ],
      "at": [
-      "$W / 2 - 0.03",
-      "($SH - 0.04) / 2",
-      "$D / 2 - 0.03"
+      "$xl",
+      "$ys / 2",
+      "$zf"
      ],
-     "mirror": "Leg_FR"
+     "mirror": "Leg_FR",
+     "rotate": [
+      0,
+      0,
+      90
+     ],
+     "vars": {
+      "k": 1,
+      "u0": 0.9048,
+      "vn": 0.904,
+      "vp": 0.154
+     },
+     "shape": "extrude",
+     "plan": [
+      [
+       "$u0",
+       "$vp"
+      ],
+      [
+       "$u0 + ($ys)",
+       "$vp"
+      ],
+      [
+       "$u0 + ($ys)",
+       "$vp + ($lw)"
+      ],
+      [
+       "$u0",
+       "$vp + ($lw)"
+      ]
+     ],
+     "y0": "$vn",
+     "y1": "$vn + ($lw)",
+     "offset": [
+      "-$u0 - ($ys) / 2",
+      "-$vn - ($lw) / 2",
+      "-$vp - ($lw) / 2"
+     ]
     },
     {
      "name": "Leg_BL",
-     "shape": "box",
-     "size": [
-      0.04,
-      "$SH - 0.04",
-      0.04
-     ],
      "at": [
-      "$W / 2 - 0.03",
-      "($SH - 0.04) / 2",
-      "-$D / 2 + 0.03"
+      "$xl",
+      "$ys / 2",
+      "$zb - $kick / 2"
      ],
-     "mirror": "Leg_BR"
+     "mirror": "Leg_BR",
+     "rotate": [
+      0,
+      "-deg(atan($kick / $ys))",
+      90
+     ],
+     "vars": {
+      "k": 4,
+      "u0": 0.7092,
+      "vn": 0.454,
+      "vp": 0.604
+     },
+     "shape": "extrude",
+     "plan": [
+      [
+       "$u0",
+       "$vp"
+      ],
+      [
+       "$u0 + (sqrt($ys * $ys + $kick * $kick))",
+       "$vp"
+      ],
+      [
+       "$u0 + (sqrt($ys * $ys + $kick * $kick))",
+       "$vp + ($lw)"
+      ],
+      [
+       "$u0",
+       "$vp + ($lw)"
+      ]
+     ],
+     "y0": "$vn",
+     "y1": "$vn + ($lw)",
+     "offset": [
+      "-$u0 - (sqrt($ys * $ys + $kick * $kick)) / 2",
+      "-$vn - ($lw) / 2",
+      "-$vp - ($lw) / 2"
+     ]
     },
     {
-     "name": "Upright_L",
-     "shape": "box",
-     "size": [
-      0.04,
-      "$BH",
-      0.03
-     ],
-     "at": [
-      "$W / 2 - 0.03",
-      "$SH + $BH / 2",
-      "-$D / 2 + 0.03"
-     ],
-     "mirror": "Upright_R"
+     "name": "Apron",
+     "children": [
+      {
+       "name": "Apron_F",
+       "at": [
+        0,
+        "$ys - $ah / 2",
+        "$zf + $lw / 2 - 0.014"
+       ],
+       "vars": {
+        "k": 6,
+        "u0": 0.9312,
+        "vn": 0.154,
+        "vp": 0.904
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl - $lw + 0.004)",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl - $lw + 0.004)",
+         "$vp + 0.02"
+        ],
+        [
+         "$u0",
+         "$vp + 0.02"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + ($ah)",
+       "offset": [
+        "-$u0 - (2 * $xl - $lw + 0.004) / 2",
+        "-$vn - ($ah) / 2",
+        "-$vp - 0.02 / 2"
+       ]
+      },
+      {
+       "name": "Apron_B",
+       "at": [
+        0,
+        "$ys - $ah / 2",
+        "$zb"
+       ],
+       "vars": {
+        "k": 0,
+        "u0": 0.8016,
+        "vn": 1.054,
+        "vp": 0.004
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl - $lw + 0.004)",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl - $lw + 0.004)",
+         "$vp + 0.02"
+        ],
+        [
+         "$u0",
+         "$vp + 0.02"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + ($ah)",
+       "offset": [
+        "-$u0 - (2 * $xl - $lw + 0.004) / 2",
+        "-$vn - ($ah) / 2",
+        "-$vp - 0.02 / 2"
+       ]
+      },
+      {
+       "name": "Apron_L",
+       "at": [
+        "$xl + $lw / 2 - 0.014",
+        "$ys - $ah / 2",
+        "($zf + $zb) / 2"
+       ],
+       "mirror": "Apron_R",
+       "rotate": [
+        0,
+        90,
+        0
+       ],
+       "vars": {
+        "k": 5,
+        "u0": 0.2796,
+        "vn": 0.304,
+        "vp": 0.754
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + ($zf - $zb - $lw + 0.004)",
+         "$vp"
+        ],
+        [
+         "$u0 + ($zf - $zb - $lw + 0.004)",
+         "$vp + 0.02"
+        ],
+        [
+         "$u0",
+         "$vp + 0.02"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + ($ah)",
+       "offset": [
+        "-$u0 - ($zf - $zb - $lw + 0.004) / 2",
+        "-$vn - ($ah) / 2",
+        "-$vp - 0.02 / 2"
+       ]
+      }
+     ]
     },
     {
-     "name": "BackRail",
-     "shape": "box",
-     "size": [
-      "$W - 0.1",
-      "$BH * 0.35",
-      0.025
-     ],
+     "name": "Stretchers",
+     "children": [
+      {
+       "name": "Stretcher_L",
+       "at": [
+        "$xl",
+        "$ys2",
+        "($zf + $zk) / 2"
+       ],
+       "mirror": "Stretcher_R",
+       "rotate": [
+        0,
+        90,
+        0
+       ],
+       "vars": {
+        "k": 2,
+        "u0": 0.0252,
+        "vn": 0.754,
+        "vp": 0.304
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + ($zf - $zk)",
+         "$vp"
+        ],
+        [
+         "$u0 + ($zf - $zk)",
+         "$vp + 0.02"
+        ],
+        [
+         "$u0",
+         "$vp + 0.02"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + 0.024",
+       "offset": [
+        "-$u0 - ($zf - $zk) / 2",
+        "-$vn - 0.024 / 2",
+        "-$vp - 0.02 / 2"
+       ]
+      },
+      {
+       "name": "Stretcher_M",
+       "at": [
+        0,
+        "$ys2",
+        "($zf + $zk) / 2"
+       ],
+       "vars": {
+        "k": 7,
+        "u0": 0.1884,
+        "vn": 0.004,
+        "vp": 1.054
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl)",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl)",
+         "$vp + 0.02"
+        ],
+        [
+         "$u0",
+         "$vp + 0.02"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + 0.024",
+       "offset": [
+        "-$u0 - (2 * $xl) / 2",
+        "-$vn - 0.024 / 2",
+        "-$vp - 0.02 / 2"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Back",
      "at": [
       0,
-      "$SH + $BH * 0.62",
-      "-$D / 2 + 0.03"
+      "$ys",
+      "$zb"
+     ],
+     "rotate": [
+      "-$rake",
+      0,
+      0
+     ],
+     "vars": {
+      "pb": "$BH + $st",
+      "ch": "min(0.07, $BH * 0.18)",
+      "lr": "$st + 0.085",
+      "nsl": "2 * round(($W - 0.2) / 0.2) + 1",
+      "sp": "(2 * $xl - $lw) / (2 * round(($W - 0.2) / 0.2) + 2)"
+     },
+     "children": [
+      {
+       "name": "Post_L",
+       "at": [
+        "$xl",
+        "($pb - $ch) / 2",
+        0
+       ],
+       "mirror": "Post_R",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "vars": {
+        "k": 3,
+        "u0": 0.6192,
+        "vn": 0.604,
+        "vp": 0.454
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + ($pb - $ch)",
+         "$vp"
+        ],
+        [
+         "$u0 + ($pb - $ch)",
+         "$vp + ($lw)"
+        ],
+        [
+         "$u0",
+         "$vp + ($lw)"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + ($lw)",
+       "offset": [
+        "-$u0 - ($pb - $ch) / 2",
+        "-$vn - ($lw) / 2",
+        "-$vp - ($lw) / 2"
+       ]
+      },
+      {
+       "name": "CrestRail",
+       "at": [
+        0,
+        "$pb - $ch",
+        0
+       ],
+       "rotate": [
+        90,
+        0,
+        0
+       ],
+       "children": [
+        {
+         "name": "Wood",
+         "vars": {
+          "k": 5,
+          "u0": 0.2796,
+          "vn": 0.304,
+          "zb": "0.754 + $ch + 0.018"
+         },
+         "shape": "extrude",
+         "plan": [
+          [
+           "$u0 + 0.004",
+           "$zb"
+          ],
+          [
+           "$u0 + (2 * $xl + $lw + 0.024) - 0.004",
+           "$zb"
+          ],
+          [
+           "$u0 + (2 * $xl + $lw + 0.024)",
+           "$zb - 0.006"
+          ],
+          [
+           "$u0 + (2 * $xl + $lw + 0.024)",
+           "$zb - $ch + 0.012"
+          ],
+          [
+           "$u0 + (2 * $xl + $lw + 0.024) - 0.0035",
+           "$zb - $ch + 0.0035"
+          ],
+          [
+           "$u0 + (2 * $xl + $lw + 0.024) - 0.012",
+           "$zb - $ch"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.875",
+           "$zb - $ch - 0.018 * 0.3827"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.75",
+           "$zb - $ch - 0.018 * 0.7071"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.625",
+           "$zb - $ch - 0.018 * 0.9239"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.5",
+           "$zb - $ch - 0.018 * 1.0000"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.375",
+           "$zb - $ch - 0.018 * 0.9239"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.25",
+           "$zb - $ch - 0.018 * 0.7071"
+          ],
+          [
+           "$u0 + 0.012 + ((2 * $xl + $lw + 0.024) - 0.024) * 0.125",
+           "$zb - $ch - 0.018 * 0.3827"
+          ],
+          [
+           "$u0 + 0.012",
+           "$zb - $ch"
+          ],
+          [
+           "$u0 + 0.0035",
+           "$zb - $ch + 0.0035"
+          ],
+          [
+           "$u0",
+           "$zb - $ch + 0.012"
+          ],
+          [
+           "$u0",
+           "$zb - 0.006"
+          ]
+         ],
+         "y0": "$vn",
+         "y1": "$vn + 0.026",
+         "at": [
+          "-$u0 - (2 * $xl + $lw + 0.024) / 2",
+          "-$vn - 0.026 / 2",
+          "-$zb"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "LowRail",
+       "at": [
+        0,
+        "$lr + 0.0175",
+        0
+       ],
+       "vars": {
+        "k": 1,
+        "u0": 0.9048,
+        "vn": 0.904,
+        "vp": 0.154
+       },
+       "shape": "extrude",
+       "plan": [
+        [
+         "$u0",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl - $lw + 0.004)",
+         "$vp"
+        ],
+        [
+         "$u0 + (2 * $xl - $lw + 0.004)",
+         "$vp + 0.02"
+        ],
+        [
+         "$u0",
+         "$vp + 0.02"
+        ]
+       ],
+       "y0": "$vn",
+       "y1": "$vn + 0.035",
+       "offset": [
+        "-$u0 - (2 * $xl - $lw + 0.004) / 2",
+        "-$vn - 0.035 / 2",
+        "-$vp - 0.02 / 2"
+       ]
+      },
+      {
+       "name": "Slat_{i}",
+       "at": [
+        "-($nsl - 1) / 2 * $sp",
+        "($pb - $ch + $lr + 0.035) / 2",
+        0
+       ],
+       "repeat": {
+        "count": "$nsl",
+        "step": [
+         "$sp",
+         0,
+         0
+        ]
+       },
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "children": [
+        {
+         "name": "Wood",
+         "vars": {
+          "k": "round(($i * 3 + 6)) % 8",
+          "u0": "1.2 * (0.658 * max(0, 1 - abs($k - 0)) + 0.744 * max(0, 1 - abs($k - 1)) + 0.011 * max(0, 1 - abs($k - 2)) + 0.506 * max(0, 1 - abs($k - 3)) + 0.581 * max(0, 1 - abs($k - 4)) + 0.223 * max(0, 1 - abs($k - 5)) + 0.766 * max(0, 1 - abs($k - 6)) + 0.147 * max(0, 1 - abs($k - 7))) + 0.012",
+          "vn": "0.15 * (7 - $k) + 0.004",
+          "vp": "0.15 * $k + 0.004"
+         },
+         "shape": "extrude",
+         "plan": [
+          [
+           "$u0",
+           "$vp"
+          ],
+          [
+           "$u0 + ($pb - $ch - $lr - 0.035 + 0.006)",
+           "$vp"
+          ],
+          [
+           "$u0 + ($pb - $ch - $lr - 0.035 + 0.006)",
+           "$vp + 0.012"
+          ],
+          [
+           "$u0",
+           "$vp + 0.012"
+          ]
+         ],
+         "y0": "$vn",
+         "y1": "$vn + 0.034",
+         "at": [
+          "-$u0 - ($pb - $ch - $lr - 0.035 + 0.006) / 2",
+          "-$vn - 0.034 / 2",
+          "-$vp - 0.012 / 2"
+         ]
+        }
+       ]
+      }
      ]
     }
    ]

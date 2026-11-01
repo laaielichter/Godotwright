@@ -4,7 +4,10 @@
 //   npm run build
 //   npm install --no-save three@0.170.0 playwright && npx playwright install chromium
 //   node scripts/render-gallery.mjs [kind ...]
+//   node scripts/render-gallery.mjs --out /tmp/preview --view back car   # previews elsewhere, from another side
 //
+// --view is front (the gallery view, from the front left), back (from the back right), side (from the left, low) or
+// top (from above). --set name=value builds the kinds with that parameter (previews only).
 // Each picture is the default model of its kind, rendered with three.js in headless Chromium: a sky for light and
 // reflections, one sun with soft shadows, ACES tone mapping, a grass ground (water for boats and ships), and a camera
 // that frames the model's bounding box from the front left. Rendered at twice the size and scaled down, for clean edges.
@@ -20,7 +23,24 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 // "three" resolves to build/three.cjs; the files the page loads sit next to it and under examples/.
 const threeRoot = dirname(dirname(require.resolve("three")));
-const docs = (name) => fileURLToPath(new URL(`../docs/${name}`, import.meta.url));
+// Options: --out <dir> writes the pictures to <dir> instead of docs/gallery (and makes no overview), --view and --set.
+const args = process.argv.slice(2);
+const option = (name) => {
+  const at = args.indexOf(name);
+  if (at < 0) return undefined;
+  const value = args[at + 1];
+  args.splice(at, 2);
+  return value;
+};
+const outDir = option("--out");
+const view = option("--view") ?? "front";
+const sets = {};
+for (let s; (s = option("--set")) !== undefined; ) {
+  const [k, v] = s.split("=");
+  sets[k] = Number.isNaN(Number(v)) ? v : Number(v);
+}
+if (!["front", "back", "side", "top"].includes(view)) throw new Error(`--view must be front, back, side or top, not ${view}`);
+const docs = (name) => (outDir ? join(outDir, name.replace(/^gallery\//, "")) : fileURLToPath(new URL(`../docs/${name}`, import.meta.url)));
 
 const W = 400, H = 300;
 
@@ -72,7 +92,7 @@ const background = (() => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 })();
 
-window.render = async (b64, family) => {
+window.render = async (b64, family, view) => {
   const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   const model = (await new GLTFLoader().parseAsync(bin.buffer, "")).scene;
   const scene = new THREE.Scene();
@@ -102,7 +122,9 @@ window.render = async (b64, family) => {
 
   // From the front left and above, as far away as the bounding box needs to fill about 85 % of the picture.
   const cam = new THREE.PerspectiveCamera(32, W / H, radius / 100, radius * 50);
-  const back = new THREE.Vector3(1, 0.55, 1.35).normalize();
+  // Terrain tiles are open at their border: from higher up the camera never looks under the edge of the sheet.
+  const sides = { front: [1, family === "world" ? 1.7 : 0.55, 1.35], back: [-1, 0.55, -1.35], side: [1.6, 0.25, 0.02], top: [0.05, 3, 0.4] };
+  const back = new THREE.Vector3(...sides[view]).normalize();
   cam.position.copy(center).add(back); cam.lookAt(center); cam.updateMatrixWorld();
   const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
   const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2) * 0.85, tanH = tanV * cam.aspect;
@@ -152,18 +174,19 @@ await tab.goto(`http://127.0.0.1:${server.address().port}/`);
 await tab.waitForFunction(() => window.ready === true);
 
 const kinds = allKinds();
-const only = process.argv.slice(2);
-const jobs = [...kinds.map((k) => ({ file: k.kind, kind: k.kind, params: {} })), ...EXTRAS].filter((j) => !only.length || only.includes(j.file));
+const only = args;
+const jobs = [...kinds.map((k) => ({ file: k.kind, kind: k.kind, params: { ...sets } })), ...EXTRAS].filter((j) => !only.length || only.includes(j.file));
 const pictures = new Map();
 for (const job of jobs) {
   const family = (kinds.find((k) => k.kind === job.kind)?.archetype ?? "").split(".")[0];
   const glb = buildGlb(buildKind(job.kind, job.params));
-  const url = await tab.evaluate(([b64, f]) => window.render(b64, f), [glb.toString("base64"), family]);
+  const url = await tab.evaluate(([b64, f, v]) => window.render(b64, f, v), [glb.toString("base64"), family, view]);
   pictures.set(job.file, url);
-  writeFileSync(docs(`gallery/${job.file}.jpg`), Buffer.from(url.split(",")[1], "base64"));
-  console.log(`docs/gallery/${job.file}.jpg`);
+  const name = outDir && view !== "front" ? `${job.file}-${view}` : job.file;
+  writeFileSync(docs(`gallery/${name}.jpg`), Buffer.from(url.split(",")[1], "base64"));
+  console.log(outDir ? join(outDir, `${name}.jpg`) : `docs/gallery/${name}.jpg`);
 }
-if (OVERVIEW.every((f) => pictures.has(f))) {
+if (!outDir && OVERVIEW.every((f) => pictures.has(f))) {
   const url = await tab.evaluate(([urls]) => window.sheet(urls, 6, 200, 150), [OVERVIEW.map((f) => pictures.get(f))]);
   writeFileSync(docs("gallery/overview.jpg"), Buffer.from(url.split(",")[1], "base64"));
   console.log("docs/gallery/overview.jpg");
