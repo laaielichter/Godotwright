@@ -2,13 +2,13 @@
  "version": 1,
  "name": "shipping-container",
  "archetype": "prop.shipping-container",
- "description": "An ISO shipping container: 8 ft wide, 8 ft 6 in tall (9 ft 6 in high cube), corrugated sides and double doors on hinges at the rear (-z).",
+ "description": "An ISO shipping container, 8 ft wide and 8 ft 6 in tall (9 ft 6 in high cube): trapezoidal corrugated side and front walls, a roof with shallow bows, corner posts, rails and corner castings with apertures, forklift pockets, and recessed double doors at the rear (-z) hinged at the outer edges, each with corrugated panels, two locking bars with cams, guides and handles, and keepers on the frame.",
  "params": [
   {
    "name": "length",
    "type": "number",
    "default": 6.058,
-   "min": 6.0,
+   "min": 6,
    "max": 12.2,
    "description": "6.058 m is a 20 ft container, 12.192 m a 40 ft one."
   },
@@ -24,12 +24,49 @@
  "materials": {
   "container_paint": {
    "color": [
-    0.55,
-    0.12,
-    0.08
+    0.29,
+    0.048,
+    0.027
    ],
    "metallic": 0.3,
-   "roughness": 0.55
+   "roughness": 0.55,
+   "texture": "concrete"
+  },
+  "frame_paint": {
+   "color": [
+    0.23,
+    0.038,
+    0.022
+   ],
+   "metallic": 0.3,
+   "roughness": 0.6
+  },
+  "hole": {
+   "color": [
+    0.015,
+    0.013,
+    0.012
+   ],
+   "metallic": 0,
+   "roughness": 0.95
+  },
+  "galvanised": {
+   "color": [
+    0.58,
+    0.59,
+    0.58
+   ],
+   "metallic": 0.9,
+   "roughness": 0.42
+  },
+  "door_seal": {
+   "color": [
+    0.02,
+    0.02,
+    0.022
+   ],
+   "metallic": 0,
+   "roughness": 0.9
   }
  },
  "nodes": [
@@ -38,77 +75,1011 @@
    "material": "container_paint",
    "vars": {
     "W": 2.438,
-    "H": "2.591 + $highCube * 0.305"
+    "H": "2.591 + $highCube * 0.305",
+    "zf": "$length / 2",
+    "zr": "-$length / 2",
+    "pitch": 0.278
    },
    "children": [
     {
      "name": "Body",
      "shape": "box",
      "size": [
-      "$W - 0.1",
-      "$H",
-      "$length"
+      "$W - 0.09",
+      "$H - 0.042",
+      "$length - 0.16"
      ],
      "at": [
       0,
-      "$H / 2",
-      0
+      "0.012 + ($H - 0.042) / 2",
+      "($zf - 0.05 + $zr + 0.11) / 2"
      ]
     },
     {
-     "name": "Ribs_L",
-     "at": [
-      "$W / 2 - 0.05",
-      "$H / 2",
-      0
-     ],
-     "mirror": "Ribs_R",
+     "name": "Wall_L",
+     "vars": {
+      "za": "$zr + 0.31",
+      "zb": "$zf - 0.17",
+      "nc": "floor(($length - 0.48) / 0.278)"
+     },
+     "mirror": "Wall_R",
      "children": [
       {
-       "name": "Rib",
-       "shape": "box",
-       "size": [
-        0.1,
-        "$H - 0.3",
-        0.08
+       "name": "Hat_{i}",
+       "shape": "extrude",
+       "plan": [
+        [
+         "$W / 2 - 0.047 + 0",
+         "-0.205 / 2"
+        ],
+        [
+         "$W / 2 - 0.047 + 0",
+         "0.205 / 2"
+        ],
+        [
+         "$W / 2 - 0.047 + 0.036",
+         "0.07 / 2"
+        ],
+        [
+         "$W / 2 - 0.047 + 0.036",
+         "-0.07 / 2"
+        ]
        ],
+       "y0": 0.17,
+       "y1": "$H - 0.066",
        "at": [
         0,
         0,
-        "-$length / 2 + 0.3"
+        "($za + $zb) / 2 - ($nc - 1) / 2 * $pitch"
        ],
        "repeat": {
-        "count": "floor(($length - 0.6) / 0.24)",
+        "count": "$nc",
         "step": [
          0,
          0,
-         0.24
+         "$pitch"
         ]
        }
       }
      ]
     },
     {
+     "name": "Wall_F",
+     "children": [
+      {
+       "name": "Hat_{i}",
+       "shape": "extrude",
+       "plan": [
+        [
+         "-0.205 / 2",
+         "$zf - 0.052 + 0"
+        ],
+        [
+         "0.205 / 2",
+         "$zf - 0.052 + 0"
+        ],
+        [
+         "0.07 / 2",
+         "$zf - 0.052 + 0.034"
+        ],
+        [
+         "-0.07 / 2",
+         "$zf - 0.052 + 0.034"
+        ]
+       ],
+       "y0": 0.16,
+       "y1": "$H - 0.105",
+       "at": [
+        "-3 * $pitch",
+        0,
+        0
+       ],
+       "repeat": {
+        "count": 7,
+        "step": [
+         "$pitch",
+         0,
+         0
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Roof",
+     "vars": {
+      "nr": "floor(($length - 0.5) / 0.3)"
+     },
+     "children": [
+      {
+       "name": "Bow_{i}",
+       "shape": "extrude",
+       "rotate": [
+        0,
+        0,
+        90
+       ],
+       "plan": [
+        [
+         0,
+         -0.09
+        ],
+        [
+         0,
+         0.09
+        ],
+        [
+         0.018,
+         0.05
+        ],
+        [
+         0.018,
+         -0.05
+        ]
+       ],
+       "y0": "-$W / 2 + 0.08",
+       "y1": "$W / 2 - 0.08",
+       "at": [
+        0,
+        "$H - 0.031",
+        "-($nr - 1) / 2 * 0.3 + 0.03"
+       ],
+       "repeat": {
+        "count": "$nr",
+        "step": [
+         0,
+         0,
+         0.3
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Frame",
+     "material": "frame_paint",
+     "children": [
+      {
+       "name": "PostFront_L",
+       "shape": "box",
+       "size": [
+        0.15,
+        "$H - 0.236",
+        0.15
+       ],
+       "at": [
+        "$W / 2 - 0.078",
+        "$H / 2",
+        "$zf - 0.078"
+       ],
+       "mirror": "PostFront_R"
+      },
+      {
+       "name": "PostRear_L",
+       "shape": "box",
+       "size": [
+        0.07,
+        "$H - 0.236",
+        0.24
+       ],
+       "at": [
+        "$W / 2 - 0.038",
+        "$H / 2",
+        "$zr + 0.06 + 0.12"
+       ],
+       "mirror": "PostRear_R"
+      },
+      {
+       "name": "TopRail_L",
+       "shape": "box",
+       "size": [
+        0.07,
+        0.06,
+        "$length - 0.356"
+       ],
+       "at": [
+        "$W / 2 - 0.044",
+        "$H - 0.036",
+        0
+       ],
+       "mirror": "TopRail_R"
+      },
+      {
+       "name": "BottomRail_L",
+       "shape": "box",
+       "size": [
+        0.05,
+        0.158,
+        "$length - 0.356"
+       ],
+       "at": [
+        "$W / 2 - 0.028",
+        0.0915,
+        0
+       ],
+       "mirror": "BottomRail_R"
+      },
+      {
+       "name": "FrontHeader",
+       "shape": "box",
+       "size": [
+        "$W - 0.324",
+        0.1,
+        0.06
+       ],
+       "at": [
+        0,
+        "$H - 0.056",
+        "$zf - 0.033"
+       ]
+      },
+      {
+       "name": "FrontSill",
+       "shape": "box",
+       "size": [
+        "$W - 0.324",
+        0.15,
+        0.06
+       ],
+       "at": [
+        0,
+        0.0875,
+        "$zf - 0.033"
+       ]
+      },
+      {
+       "name": "RearHeader",
+       "shape": "box",
+       "size": [
+        "$W - 0.324",
+        0.2,
+        0.15
+       ],
+       "at": [
+        0,
+        "$H - 0.105",
+        "$zr + 0.11 + 0.075"
+       ]
+      },
+      {
+       "name": "RearSill",
+       "shape": "box",
+       "size": [
+        "$W - 0.324",
+        0.19,
+        0.15
+       ],
+       "at": [
+        0,
+        0.1075,
+        "$zr + 0.11 + 0.075"
+       ]
+      },
+      {
+       "name": "Pocket_L{i}",
+       "at": [
+        "$W / 2 - 0.009",
+        0.09,
+        -1.025
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0,
+         2.05
+        ]
+       },
+       "mirror": "Pocket_R{i}",
+       "children": [
+        {
+         "name": "Lip",
+         "shape": "box",
+         "size": [
+          0.012,
+          0.15,
+          0.4
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Mouth",
+         "shape": "box",
+         "size": [
+          0.004,
+          0.115,
+          0.36
+         ],
+         "at": [
+          0.0045,
+          0,
+          0
+         ],
+         "material": "hole"
+        }
+       ]
+      },
+      {
+       "name": "Casting_FTL",
+       "at": [
+        "$W / 2 - 0.0816",
+        "$H - 0.0596",
+        "$zf - 0.0896"
+       ],
+       "mirror": "Casting_FTR",
+       "children": [
+        {
+         "name": "Block",
+         "shape": "box",
+         "size": [
+          0.162,
+          0.118,
+          0.178
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ],
+         "bevel": 0.006
+        },
+        {
+         "name": "HoleSide",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "x",
+         "radius": 0.032,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0.0795,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "HoleEnd",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "z",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          0,
+          "1 * 0.0875"
+         ]
+        },
+        {
+         "name": "HoleTop",
+         "shape": "cylinder",
+         "material": "hole",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          "1 * 0.0575",
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Casting_FBL",
+       "at": [
+        "$W / 2 - 0.0816",
+        0.0596,
+        "$zf - 0.0896"
+       ],
+       "mirror": "Casting_FBR",
+       "children": [
+        {
+         "name": "Block",
+         "shape": "box",
+         "size": [
+          0.162,
+          0.118,
+          0.178
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ],
+         "bevel": 0.006
+        },
+        {
+         "name": "HoleSide",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "x",
+         "radius": 0.032,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0.0795,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "HoleEnd",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "z",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          0,
+          "1 * 0.0875"
+         ]
+        },
+        {
+         "name": "HoleTop",
+         "shape": "cylinder",
+         "material": "hole",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          "-1 * 0.0575",
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Casting_RTL",
+       "at": [
+        "$W / 2 - 0.0816",
+        "$H - 0.0596",
+        "$zr + 0.0896"
+       ],
+       "mirror": "Casting_RTR",
+       "children": [
+        {
+         "name": "Block",
+         "shape": "box",
+         "size": [
+          0.162,
+          0.118,
+          0.178
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ],
+         "bevel": 0.006
+        },
+        {
+         "name": "HoleSide",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "x",
+         "radius": 0.032,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0.0795,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "HoleEnd",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "z",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          0,
+          "-1 * 0.0875"
+         ]
+        },
+        {
+         "name": "HoleTop",
+         "shape": "cylinder",
+         "material": "hole",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          "1 * 0.0575",
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Casting_RBL",
+       "at": [
+        "$W / 2 - 0.0816",
+        0.0596,
+        "$zr + 0.0896"
+       ],
+       "mirror": "Casting_RBR",
+       "children": [
+        {
+         "name": "Block",
+         "shape": "box",
+         "size": [
+          0.162,
+          0.118,
+          0.178
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ],
+         "bevel": 0.006
+        },
+        {
+         "name": "HoleSide",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "x",
+         "radius": 0.032,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0.0795,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "HoleEnd",
+         "shape": "cylinder",
+         "material": "hole",
+         "axis": "z",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          0,
+          "-1 * 0.0875"
+         ]
+        },
+        {
+         "name": "HoleTop",
+         "shape": "cylinder",
+         "material": "hole",
+         "radius": 0.03,
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          "-1 * 0.0575",
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Keeper_TL{i}",
+       "at": [
+        "$W / 2 - 0.45",
+        "$H - 0.075",
+        "$zr + 0.075"
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         -0.58,
+         0,
+         0
+        ]
+       },
+       "mirror": "Keeper_TR{i}",
+       "children": [
+        {
+         "name": "Plate",
+         "shape": "box",
+         "size": [
+          0.09,
+          0.075,
+          0.07
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Keeper_BL{i}",
+       "at": [
+        "$W / 2 - 0.45",
+        0.075,
+        "$zr + 0.075"
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         -0.58,
+         0,
+         0
+        ]
+       },
+       "mirror": "Keeper_BR{i}",
+       "children": [
+        {
+         "name": "Plate",
+         "shape": "box",
+         "size": [
+          0.09,
+          0.075,
+          0.07
+         ],
+         "at": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
      "name": "Door_L",
      "at": [
-      "$W / 2 - 0.02",
+      "$W / 2 - 0.03",
       "$H / 2",
-      "-$length / 2 - 0.02"
+      "$zr + 0.045"
      ],
+     "vars": {
+      "dw": "$W / 2 - 0.034 - 0.05",
+      "dh": "$H - 0.26",
+      "xi": "-($W / 2 - 0.034)"
+     },
      "mirror": "Door_R",
      "children": [
       {
-       "name": "Panel",
+       "name": "Leaf",
+       "material": "frame_paint",
+       "children": [
+        {
+         "name": "Top",
+         "shape": "box",
+         "size": [
+          "$dw",
+          0.11,
+          0.05
+         ],
+         "at": [
+          "-0.05 - $dw / 2",
+          "$dh / 2 - 0.055",
+          0.04
+         ]
+        },
+        {
+         "name": "Bottom",
+         "shape": "box",
+         "size": [
+          "$dw",
+          0.13,
+          0.05
+         ],
+         "at": [
+          "-0.05 - $dw / 2",
+          "-$dh / 2 + 0.065",
+          0.04
+         ]
+        },
+        {
+         "name": "Outer",
+         "shape": "box",
+         "size": [
+          0.07,
+          "$dh",
+          0.05
+         ],
+         "at": [
+          -0.085,
+          0,
+          0.04
+         ]
+        },
+        {
+         "name": "Inner",
+         "shape": "box",
+         "size": [
+          0.07,
+          "$dh",
+          0.05
+         ],
+         "at": [
+          "$xi + 0.035",
+          0,
+          0.04
+         ]
+        },
+        {
+         "name": "Panel",
+         "shape": "box",
+         "size": [
+          "$dw - 0.13",
+          "$dh - 0.23",
+          0.02
+         ],
+         "at": [
+          "-0.05 - $dw / 2",
+          0.01,
+          0.045
+         ],
+         "material": "container_paint"
+        },
+        {
+         "name": "Hat_{i}",
+         "shape": "extrude",
+         "material": "container_paint",
+         "rotate": [
+          0,
+          0,
+          90
+         ],
+         "plan": [
+          [
+           "-0.19 / 2",
+           0.036
+          ],
+          [
+           "0.19 / 2",
+           0.036
+          ],
+          [
+           "0.065 / 2",
+           0.016
+          ],
+          [
+           "-0.065 / 2",
+           0.016
+          ]
+         ],
+         "y0": 0.12,
+         "y1": "-$xi - 0.07",
+         "at": [
+          0,
+          "-2 * ($dh - 0.23) / 5 + 0.01",
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "step": [
+           0,
+           "($dh - 0.23) / 5",
+           0
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "name": "Seal",
        "shape": "box",
        "size": [
-        "$W / 2 - 0.1",
-        "$H - 0.12",
-        0.05
+        0.014,
+        "$dh",
+        0.04
        ],
        "at": [
-        "-($W / 2 - 0.1) / 2",
+        "$xi - 0.003",
         0,
+        0.045
+       ],
+       "material": "door_seal"
+      },
+      {
+       "name": "Bar_{i}",
+       "material": "galvanised",
+       "at": [
+        -0.42,
+        0,
+        -0.007
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         -0.58,
+         0,
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Rod",
+         "shape": "cylinder",
+         "radius": 0.0165,
+         "height": "$dh + 0.1",
+         "segments": 10
+        },
+        {
+         "name": "CamTop",
+         "shape": "box",
+         "size": [
+          0.05,
+          0.05,
+          0.045
+         ],
+         "at": [
+          0,
+          "$dh / 2 + 0.05",
+          0.004
+         ]
+        },
+        {
+         "name": "CamBottom",
+         "shape": "box",
+         "size": [
+          0.05,
+          0.05,
+          0.045
+         ],
+         "at": [
+          0,
+          "-$dh / 2 - 0.05",
+          0.004
+         ]
+        },
+        {
+         "name": "GuideTop",
+         "shape": "box",
+         "size": [
+          0.075,
+          0.035,
+          0.06
+         ],
+         "at": [
+          0,
+          "$dh / 2 - 0.1",
+          -0.005
+         ],
+         "material": "frame_paint"
+        },
+        {
+         "name": "GuideMid",
+         "shape": "box",
+         "size": [
+          0.075,
+          0.035,
+          0.06
+         ],
+         "at": [
+          0,
+          "$dh * 0.12",
+          -0.005
+         ],
+         "material": "frame_paint"
+        },
+        {
+         "name": "GuideBottom",
+         "shape": "box",
+         "size": [
+          0.075,
+          0.035,
+          0.06
+         ],
+         "at": [
+          0,
+          "-$dh / 2 + 0.1",
+          -0.005
+         ],
+         "material": "frame_paint"
+        },
+        {
+         "name": "Hub",
+         "shape": "cylinder",
+         "radius": 0.026,
+         "height": 0.07,
+         "segments": 12,
+         "at": [
+          0,
+          "1.05 - $H / 2",
+          0
+         ]
+        },
+        {
+         "name": "Handle",
+         "shape": "tube",
+         "radius": 0.011,
+         "segments": 8,
+         "path": [
+          [
+           0.015,
+           "1.05 - $H / 2",
+           -0.012
+          ],
+          [
+           0.07,
+           "1.05 - $H / 2",
+           -0.022
+          ],
+          [
+           0.3,
+           "1.05 - $H / 2",
+           -0.022
+          ],
+          [
+           0.33,
+           "1.05 - $H / 2",
+           -0.012
+          ]
+         ]
+        },
+        {
+         "name": "Catch",
+         "shape": "box",
+         "size": [
+          0.04,
+          0.07,
+          0.045
+         ],
+         "at": [
+          0.35,
+          "1.05 - $H / 2",
+          0.012
+         ],
+         "material": "frame_paint"
+        }
+       ]
+      },
+      {
+       "name": "Hinge_{i}",
+       "material": "frame_paint",
+       "at": [
+        0,
+        "-$dh * 0.42",
         0
+       ],
+       "repeat": {
+        "count": 4,
+        "step": [
+         0,
+         "$dh * 0.28",
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Blade",
+         "shape": "box",
+         "size": [
+          0.13,
+          0.07,
+          0.016
+         ],
+         "at": [
+          -0.06,
+          0,
+          0.006
+         ]
+        },
+        {
+         "name": "Knuckle",
+         "shape": "cylinder",
+         "radius": 0.022,
+         "height": 0.1,
+         "segments": 12
+        }
        ]
       }
      ]

@@ -2,7 +2,7 @@
  "version": 1,
  "name": "horse",
  "archetype": "creature.quadruped",
- "description": "A horse-shaped four-legged animal: a barrel body, a neck leaning forward, a head with ears, four legs with hooves and a hanging tail; every leg, the head and the tail a node with its pivot at the joint. Head towards +Z, hooves on y = 0.",
+ "description": "A horse in true proportions (a bay with black legs, mane and tail): a lofted barrel with withers, back and croup, a deep, arched neck with a mane, a long head carried nose-down with eyes, nostrils, pricked ears and a forelock, slender legs with knees, hocks that bend backwards, fetlocks, pasterns and hooves, and a full tail. Every leg, joint, the head and the tail is a node with its pivot at the joint. Head towards +Z, hooves on y = 0.",
  "params": [
   {
    "name": "length",
@@ -24,23 +24,54 @@
  "materials": {
   "coat": {
    "color": [
-    0.42,
-    0.27,
-    0.16,
+    0.2,
+    0.085,
+    0.035,
     1
    ],
    "metallic": 0,
-   "roughness": 0.8
+   "roughness": 0.5
   },
-  "hoof": {
+  "points": {
    "color": [
-    0.12,
-    0.1,
-    0.09,
+    0.03,
+    0.025,
+    0.022,
     1
    ],
    "metallic": 0,
    "roughness": 0.6
+  },
+  "hair": {
+   "color": [
+    0.02,
+    0.017,
+    0.015,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.7,
+   "texture": "bark"
+  },
+  "hoof": {
+   "color": [
+    0.07,
+    0.065,
+    0.06,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.45
+  },
+  "eye": {
+   "color": [
+    0.015,
+    0.012,
+    0.01,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.1
   }
  },
  "nodes": [
@@ -48,182 +79,1020 @@
    "name": "Horse",
    "material": "coat",
    "vars": {
-    "L": "$length",
-    "lg": "$length * 0.34 * $legs",
-    "by": "$length * 0.34 * $legs + $length * 0.14",
-    "rl": "$length * 0.042",
-    "lx": "$length * 0.09",
-    "lz": "$length * 0.32"
+    "s": "$length / 2.4",
+    "sl": "$length / 2.4 * $legs",
+    "lift": "$length / 2.4 * 0.95 * ($legs - 1)"
    },
    "children": [
     {
      "name": "Body",
-     "shape": "ellipsoid",
-     "segments": 20,
-     "radii": [
-      "$L * 0.16",
-      "$L * 0.18",
-      "$L * 0.46"
-     ],
-     "at": [
-      0,
-      "$by",
-      0
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "-$s * 0.84",
+       "superellipse": {
+        "width": "$s * 0.14",
+        "height": "$s * 0.16",
+        "n": 2.0,
+        "count": 32,
+        "cy": "$s * 1.28 + $lift"
+       }
+      },
+      {
+       "z": "-$s * 0.79",
+       "superellipse": {
+        "width": "$s * 0.34",
+        "height": "$s * 0.41",
+        "n": 2.2,
+        "count": 32,
+        "cy": "$s * 1.265 + $lift"
+       }
+      },
+      {
+       "z": "-$s * 0.68",
+       "superellipse": {
+        "width": "$s * 0.47",
+        "height": "$s * 0.6",
+        "n": 2.3,
+        "count": 32,
+        "cy": "$s * 1.25 + $lift"
+       }
+      },
+      {
+       "z": "-$s * 0.5",
+       "superellipse": {
+        "width": "$s * 0.53",
+        "height": "$s * 0.665",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.2525 + $lift"
+       }
+      },
+      {
+       "z": "-$s * 0.28",
+       "superellipse": {
+        "width": "$s * 0.55",
+        "height": "$s * 0.64",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.22 + $lift"
+       }
+      },
+      {
+       "z": "-$s * 0.02",
+       "superellipse": {
+        "width": "$s * 0.57",
+        "height": "$s * 0.645",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.1825 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.25",
+       "superellipse": {
+        "width": "$s * 0.54",
+        "height": "$s * 0.69",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.2 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.42",
+       "superellipse": {
+        "width": "$s * 0.48",
+        "height": "$s * 0.73",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.255 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.6",
+       "superellipse": {
+        "width": "$s * 0.43",
+        "height": "$s * 0.65",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.275 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.76",
+       "superellipse": {
+        "width": "$s * 0.37",
+        "height": "$s * 0.45",
+        "n": 2.3,
+        "count": 32,
+        "cy": "$s * 1.245 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.84",
+       "superellipse": {
+        "width": "$s * 0.24",
+        "height": "$s * 0.28",
+        "n": 2.2,
+        "count": 32,
+        "cy": "$s * 1.23 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.875",
+       "superellipse": {
+        "width": "$s * 0.08",
+        "height": "$s * 0.12",
+        "n": 2.0,
+        "count": 32,
+        "cy": "$s * 1.23 + $lift"
+       }
+      }
      ]
     },
     {
      "name": "Neck",
-     "shape": "cylinder",
-     "radius": "$L * 0.055",
-     "segments": 14,
-     "height": "hypot(($by + $L * 0.32) - ($by + $L * 0.06), ($L * 0.48) - ($L * 0.33))",
-     "at": [
-      0,
-      "(($by + $L * 0.06) + ($by + $L * 0.32)) / 2",
-      "(($L * 0.33) + ($L * 0.48)) / 2"
+     "shape": "loft",
+     "sections": [
+      {
+       "z": "$s * 0.45",
+       "superellipse": {
+        "width": "$s * 0.38",
+        "height": "$s * 0.45",
+        "n": 2.4,
+        "count": 24,
+        "cy": "$s * 1.375 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.6",
+       "superellipse": {
+        "width": "$s * 0.36",
+        "height": "$s * 0.52",
+        "n": 2.4,
+        "count": 24,
+        "cy": "$s * 1.43 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.74",
+       "superellipse": {
+        "width": "$s * 0.31",
+        "height": "$s * 0.53",
+        "n": 2.3,
+        "count": 24,
+        "cy": "$s * 1.505 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.85",
+       "superellipse": {
+        "width": "$s * 0.26",
+        "height": "$s * 0.5",
+        "n": 2.3,
+        "count": 24,
+        "cy": "$s * 1.59 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.92",
+       "superellipse": {
+        "width": "$s * 0.23",
+        "height": "$s * 0.48",
+        "n": 2.2,
+        "count": 24,
+        "cy": "$s * 1.66 + $lift"
+       }
+      },
+      {
+       "z": "$s * 1.03",
+       "superellipse": {
+        "width": "$s * 0.196",
+        "height": "$s * 0.41",
+        "n": 2.2,
+        "count": 24,
+        "cy": "$s * 1.765 + $lift"
+       }
+      },
+      {
+       "z": "$s * 1.12",
+       "superellipse": {
+        "width": "$s * 0.176",
+        "height": "$s * 0.34",
+        "n": 2.1,
+        "count": 24,
+        "cy": "$s * 1.85 + $lift"
+       }
+      },
+      {
+       "z": "$s * 1.19",
+       "superellipse": {
+        "width": "$s * 0.156",
+        "height": "$s * 0.26",
+        "n": 2.0,
+        "count": 24,
+        "cy": "$s * 1.91 + $lift"
+       }
+      }
      ],
-     "rotate": [
-      "deg(atan2(($L * 0.48) - ($L * 0.33), ($by + $L * 0.32) - ($by + $L * 0.06)))",
-      0,
-      0
+     "children": [
+      {
+       "name": "Mane",
+       "shape": "loft",
+       "material": "hair",
+       "sections": [
+        {
+         "z": "$s * 0.45",
+         "superellipse": {
+          "width": "$s * 0.024",
+          "height": "$s * 0.048",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 1.584 + $lift"
+         }
+        },
+        {
+         "z": "$s * 0.52",
+         "superellipse": {
+          "width": "$s * 0.056",
+          "height": "$s * 0.085",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 1.6445 + $lift"
+         }
+        },
+        {
+         "z": "$s * 0.64",
+         "superellipse": {
+          "width": "$s * 0.056",
+          "height": "$s * 0.085",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 1.7154 + $lift"
+         }
+        },
+        {
+         "z": "$s * 0.76",
+         "superellipse": {
+          "width": "$s * 0.056",
+          "height": "$s * 0.085",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 1.7852 + $lift"
+         }
+        },
+        {
+         "z": "$s * 0.88",
+         "superellipse": {
+          "width": "$s * 0.056",
+          "height": "$s * 0.085",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 1.8682 + $lift"
+         }
+        },
+        {
+         "z": "$s * 1",
+         "superellipse": {
+          "width": "$s * 0.056",
+          "height": "$s * 0.085",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 1.9534 + $lift"
+         }
+        },
+        {
+         "z": "$s * 1.1",
+         "superellipse": {
+          "width": "$s * 0.056",
+          "height": "$s * 0.085",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 2.0114 + $lift"
+         }
+        },
+        {
+         "z": "$s * 1.17",
+         "superellipse": {
+          "width": "$s * 0.024",
+          "height": "$s * 0.048",
+          "n": 2.0,
+          "count": 12,
+          "cy": "$s * 2.0183 + $lift"
+         }
+        }
+       ]
+      }
      ]
     },
     {
      "name": "Head",
      "at": [
       0,
-      "$by + $L * 0.28",
-      "$L * 0.48"
+      "$s * 2.1384 + $lift",
+      "$s * 1.035"
      ],
      "children": [
       {
-       "name": "Muzzle",
-       "shape": "ellipsoid",
-       "segments": 14,
-       "radii": [
-        "$L * 0.05",
-        "$L * 0.055",
-        "$L * 0.14"
-       ],
-       "offset": [
-        0,
-        "$L * 0.055",
-        "$L * 0.14"
-       ]
-      },
-      {
-       "name": "Ear_L",
-       "shape": "lathe",
-       "segments": 8,
+       "name": "Poll",
        "at": [
-        "$L * 0.03",
-        "$L * 0.1",
-        "$L * 0.03"
+        0,
+        "-$s * 0.1184",
+        "$s * 0.145"
        ],
-       "profile": [
-        [
-         "$L * 0.015",
-         0
-        ],
-        [
-         0,
-         "$L * 0.06"
-        ]
-       ],
-       "mirror": "Ear_R"
+       "children": [
+        {
+         "name": "Face",
+         "shape": "loft",
+         "rotate": [
+          52,
+          0,
+          0
+         ],
+         "sections": [
+          {
+           "z": "-$s * 0.03",
+           "superellipse": {
+            "width": "$s * 0.12",
+            "height": "$s * 0.09",
+            "n": 2.0,
+            "count": 24,
+            "cy": "$s * 0.005"
+           }
+          },
+          {
+           "z": "$s * 0.03",
+           "superellipse": {
+            "width": "$s * 0.19",
+            "height": "$s * 0.265",
+            "n": 2.2,
+            "count": 24,
+            "cy": "-$s * 0.0675"
+           }
+          },
+          {
+           "z": "$s * 0.11",
+           "superellipse": {
+            "width": "$s * 0.22",
+            "height": "$s * 0.335",
+            "n": 2.3,
+            "count": 24,
+            "cy": "-$s * 0.1025"
+           }
+          },
+          {
+           "z": "$s * 0.2",
+           "superellipse": {
+            "width": "$s * 0.21",
+            "height": "$s * 0.31",
+            "n": 2.3,
+            "count": 24,
+            "cy": "-$s * 0.1"
+           }
+          },
+          {
+           "z": "$s * 0.3",
+           "superellipse": {
+            "width": "$s * 0.17",
+            "height": "$s * 0.235",
+            "n": 2.3,
+            "count": 24,
+            "cy": "-$s * 0.0725"
+           }
+          },
+          {
+           "z": "$s * 0.42",
+           "superellipse": {
+            "width": "$s * 0.14",
+            "height": "$s * 0.19",
+            "n": 2.3,
+            "count": 24,
+            "cy": "-$s * 0.06"
+           }
+          },
+          {
+           "z": "$s * 0.52",
+           "superellipse": {
+            "width": "$s * 0.142",
+            "height": "$s * 0.178",
+            "n": 2.4,
+            "count": 24,
+            "cy": "-$s * 0.061"
+           }
+          },
+          {
+           "z": "$s * 0.585",
+           "superellipse": {
+            "width": "$s * 0.132",
+            "height": "$s * 0.154",
+            "n": 2.3,
+            "count": 24,
+            "cy": "-$s * 0.065"
+           }
+          },
+          {
+           "z": "$s * 0.625",
+           "superellipse": {
+            "width": "$s * 0.096",
+            "height": "$s * 0.115",
+            "n": 2.1,
+            "count": 24,
+            "cy": "-$s * 0.0625"
+           }
+          },
+          {
+           "z": "$s * 0.645",
+           "superellipse": {
+            "width": "$s * 0.044",
+            "height": "$s * 0.06",
+            "n": 2.0,
+            "count": 24,
+            "cy": "-$s * 0.06"
+           }
+          }
+         ]
+        },
+        {
+         "name": "Eye_L",
+         "shape": "ellipsoid",
+         "material": "eye",
+         "segments": 12,
+         "mirror": "Eye_R",
+         "at": [
+          "$s * 0.098",
+          "-$s * 0.1607",
+          "$s * 0.1192"
+         ],
+         "radii": [
+          "$s * 0.018",
+          "$s * 0.024",
+          "$s * 0.03"
+         ],
+         "rotate": [
+          52,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Nostril_L",
+         "shape": "ellipsoid",
+         "material": "eye",
+         "segments": 10,
+         "mirror": "Nostril_R",
+         "at": [
+          "$s * 0.05",
+          "-$s * 0.5133",
+          "$s * 0.2932"
+         ],
+         "radii": [
+          "$s * 0.016",
+          "$s * 0.026",
+          "$s * 0.02"
+         ],
+         "rotate": [
+          52,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Ear_L",
+         "shape": "lathe",
+         "segments": 10,
+         "mirror": "Ear_R",
+         "at": [
+          "$s * 0.055",
+          "-$s * 0.0038",
+          "$s * 0.0601"
+         ],
+         "rotate": [
+          -12,
+          0,
+          -16
+         ],
+         "profile": [
+          [
+           "$s * 0.033",
+           "-$s * 0.01"
+          ],
+          [
+           "$s * 0.035",
+           "$s * 0.035"
+          ],
+          [
+           "$s * 0.025",
+           "$s * 0.085"
+          ],
+          [
+           "$s * 0.008",
+           "$s * 0.12"
+          ],
+          [
+           0,
+           "$s * 0.13"
+          ]
+         ]
+        },
+        {
+         "name": "Forelock",
+         "shape": "ellipsoid",
+         "material": "hair",
+         "segments": 12,
+         "at": [
+          0,
+          "-$s * 0.048",
+          "$s * 0.101"
+         ],
+         "rotate": [
+          62,
+          0,
+          0
+         ],
+         "radii": [
+          "$s * 0.05",
+          "$s * 0.03",
+          "$s * 0.11"
+         ]
+        }
+       ]
       }
      ]
     },
     {
      "name": "Leg_FL",
      "at": [
-      "$lx + $rl * 2",
-      "$lg + $L * 0.06",
-      "$lz"
+      "$s * 0.2",
+      "$s * 1.15 + $lift",
+      "$s * 0.56"
      ],
+     "mirror": "Leg_FR",
      "children": [
       {
-       "name": "Bone",
-       "shape": "cylinder",
-       "radius": "$rl",
-       "height": "$lg + $L * 0.06",
-       "segments": 12,
-       "offset": [
-        "-($rl)",
-        "-($lg + $L * 0.06) / 2",
-        0
+       "name": "Forearm",
+       "shape": "tube",
+       "segments": 14,
+       "path": [
+        [
+         "-$s * 0.105",
+         0,
+         0
+        ],
+        [
+         "-$s * 0.105",
+         "-($s * 0.06)",
+         "-$s * 0.005"
+        ],
+        [
+         "-$s * 0.105",
+         "-($s * 0.2)",
+         "-$s * 0.035"
+        ],
+        [
+         "-$s * 0.105",
+         "-($s * 0.2 + $sl * 0.12)",
+         "-$s * 0.02"
+        ],
+        [
+         "-$s * 0.105",
+         "-($s * 0.2 + $sl * 0.3)",
+         0
+        ],
+        [
+         "-$s * 0.105",
+         "-($s * 0.2 + $sl * 0.46)",
+         0
+        ]
+       ],
+       "radii": [
+        "$s * 0.105",
+        "$s * 0.104",
+        "$s * 0.1",
+        "$s * 0.085",
+        "$s * 0.063",
+        "$s * 0.052"
        ]
       },
       {
-       "name": "Hoof",
-       "shape": "cylinder",
-       "material": "hoof",
-       "radius": "$rl * 1.15",
-       "height": "$L * 0.04",
-       "segments": 12,
+       "name": "Knee",
        "at": [
-        "-$rl",
-        "-$lg - $L * 0.04",
+        "-$s * 0.105",
+        "-($s * 0.2 + $sl * 0.45)",
         0
+       ],
+       "material": "points",
+       "children": [
+        {
+         "name": "Cannon",
+         "shape": "tube",
+         "segments": 12,
+         "path": [
+          [
+           0,
+           "$s * 0.02",
+           0
+          ],
+          [
+           0,
+           "-$sl * 0.04",
+           "$s * 0.004"
+          ],
+          [
+           0,
+           "-$sl * 0.1",
+           0
+          ],
+          [
+           0,
+           "-$sl * 0.24",
+           "-$s * 0.004"
+          ],
+          [
+           0,
+           "-$sl * 0.29",
+           "-$s * 0.006"
+          ]
+         ],
+         "radii": [
+          "$s * 0.05",
+          "$s * 0.054",
+          "$s * 0.04",
+          "$s * 0.037",
+          "$s * 0.046"
+         ]
+        },
+        {
+         "name": "Fetlock",
+         "at": [
+          0,
+          "-$sl * 0.28",
+          0
+         ],
+         "children": [
+          {
+           "name": "Pastern",
+           "shape": "tube",
+           "segments": 12,
+           "path": [
+            [
+             0,
+             "$s * 0.01",
+             "-$s * 0.01"
+            ],
+            [
+             0,
+             "-$sl * 0.07",
+             "$s * 0.025"
+            ],
+            [
+             0,
+             "-$sl * 0.13",
+             "$s * 0.05"
+            ]
+           ],
+           "radii": [
+            "$s * 0.05",
+            "$s * 0.04",
+            "$s * 0.042"
+           ]
+          },
+          {
+           "name": "Hoof",
+           "shape": "lathe",
+           "material": "hoof",
+           "segments": 14,
+           "at": [
+            0,
+            "-$sl * 0.14",
+            "$s * 0.06"
+           ],
+           "profile": [
+            [
+             "$s * 0.045",
+             "$s * 0.012"
+            ],
+            [
+             "$s * 0.052",
+             "-$s * 0.02"
+            ],
+            [
+             "$s * 0.064",
+             "-($sl * 0.08 - $s * 0.0)"
+            ],
+            [
+             0,
+             "-($sl * 0.08 - $s * 0.0)"
+            ]
+           ]
+          }
+         ]
+        }
        ]
       }
-     ],
-     "mirror": "Leg_FR"
+     ]
     },
     {
      "name": "Leg_BL",
      "at": [
-      "$lx + $rl * 2",
-      "$lg + $L * 0.06",
-      "-$lz"
+      "$s * 0.21",
+      "$s * 1.25 + $lift",
+      "-$s * 0.54"
      ],
+     "mirror": "Leg_BR",
      "children": [
       {
-       "name": "Bone",
-       "shape": "cylinder",
-       "radius": "$rl",
-       "height": "$lg + $L * 0.06",
-       "segments": 12,
-       "offset": [
-        "-($rl)",
-        "-($lg + $L * 0.06) / 2",
-        0
+       "name": "Gaskin",
+       "shape": "tube",
+       "segments": 14,
+       "path": [
+        [
+         "-$s * 0.135",
+         0,
+         0
+        ],
+        [
+         "-$s * 0.135",
+         "-($s * 0.06)",
+         0
+        ],
+        [
+         "-$s * 0.135",
+         "-($s * 0.3 + $sl * -0.04)",
+         "$s * 0.1"
+        ],
+        [
+         "-$s * 0.135",
+         "-($s * 0.3 + $sl * 0.12)",
+         "-$s * 0.06"
+        ],
+        [
+         "-$s * 0.135",
+         "-($s * 0.3 + $sl * 0.28)",
+         "-$s * 0.17"
+        ],
+        [
+         "-$s * 0.135",
+         "-($s * 0.3 + $sl * 0.36)",
+         "-$s * 0.21"
+        ]
+       ],
+       "radii": [
+        "$s * 0.135",
+        "$s * 0.135",
+        "$s * 0.132",
+        "$s * 0.112",
+        "$s * 0.08",
+        "$s * 0.06"
        ]
       },
       {
-       "name": "Hoof",
-       "shape": "cylinder",
-       "material": "hoof",
-       "radius": "$rl * 1.15",
-       "height": "$L * 0.04",
-       "segments": 12,
+       "name": "Hock",
        "at": [
-        "-$rl",
-        "-$lg - $L * 0.04",
-        0
+        "-$s * 0.135",
+        "-($s * 0.3 + $sl * 0.36)",
+        "-$s * 0.205"
+       ],
+       "material": "points",
+       "children": [
+        {
+         "name": "Point",
+         "shape": "ellipsoid",
+         "material": "coat",
+         "segments": 10,
+         "at": [
+          0,
+          "$s * 0.02",
+          "-$s * 0.035"
+         ],
+         "radii": [
+          "$s * 0.04",
+          "$s * 0.06",
+          "$s * 0.045"
+         ]
+        },
+        {
+         "name": "Cannon",
+         "shape": "tube",
+         "segments": 12,
+         "path": [
+          [
+           0,
+           "$s * 0.04",
+           "-$s * 0.01"
+          ],
+          [
+           0,
+           "-$sl * 0.05",
+           "$s * 0.012"
+          ],
+          [
+           0,
+           "-$sl * 0.2",
+           "$s * 0.02"
+          ],
+          [
+           0,
+           "-$sl * 0.33",
+           "$s * 0.022"
+          ],
+          [
+           0,
+           "-$sl * 0.38",
+           "$s * 0.022"
+          ]
+         ],
+         "radii": [
+          "$s * 0.06",
+          "$s * 0.05",
+          "$s * 0.04",
+          "$s * 0.038",
+          "$s * 0.047"
+         ]
+        },
+        {
+         "name": "Fetlock",
+         "at": [
+          0,
+          "-$sl * 0.37",
+          "$s * 0.022"
+         ],
+         "children": [
+          {
+           "name": "Pastern",
+           "shape": "tube",
+           "segments": 12,
+           "path": [
+            [
+             0,
+             "$s * 0.01",
+             "-$s * 0.01"
+            ],
+            [
+             0,
+             "-$sl * 0.07",
+             "$s * 0.025"
+            ],
+            [
+             0,
+             "-$sl * 0.13",
+             "$s * 0.05"
+            ]
+           ],
+           "radii": [
+            "$s * 0.05",
+            "$s * 0.04",
+            "$s * 0.042"
+           ]
+          },
+          {
+           "name": "Hoof",
+           "shape": "lathe",
+           "material": "hoof",
+           "segments": 14,
+           "at": [
+            0,
+            "-$sl * 0.14",
+            "$s * 0.06"
+           ],
+           "profile": [
+            [
+             "$s * 0.045",
+             "$s * 0.012"
+            ],
+            [
+             "$s * 0.052",
+             "-$s * 0.02"
+            ],
+            [
+             "$s * 0.064",
+             "-$sl * 0.08"
+            ],
+            [
+             0,
+             "-$sl * 0.08"
+            ]
+           ]
+          }
+         ]
+        }
        ]
       }
-     ],
-     "mirror": "Leg_BR"
+     ]
     },
     {
      "name": "Tail",
      "at": [
       0,
-      "$by + $L * 0.1",
-      "-$L * 0.43"
+      "$s * 1.47 + $lift",
+      "-$s * 0.79"
      ],
      "children": [
       {
+       "name": "Dock",
+       "shape": "tube",
+       "segments": 12,
+       "path": [
+        [
+         0,
+         "-$s * 0.0389",
+         "-$s * 0.0389"
+        ],
+        [
+         0,
+         "-$s * 0.1389",
+         "-$s * 0.1389"
+        ],
+        [
+         0,
+         "-$s * 0.2",
+         "-$s * 0.19"
+        ],
+        [
+         0,
+         "-$s * 0.3",
+         "-$s * 0.22"
+        ]
+       ],
+       "radii": [
+        "$s * 0.055",
+        "$s * 0.05",
+        "$s * 0.04",
+        "$s * 0.034"
+       ]
+      },
+      {
        "name": "Hair",
-       "shape": "cylinder",
-       "radius": "$L * 0.035",
-       "height": "$L * 0.3",
-       "segments": 10,
-       "offset": [
-        0,
-        "-$L * 0.15",
-        "-$L * 0.035"
+       "shape": "tube",
+       "material": "hair",
+       "segments": 12,
+       "path": [
+        [
+         0,
+         "-$s * 0.07",
+         "-$s * 0.09"
+        ],
+        [
+         0,
+         "-$s * 0.2",
+         "-$s * 0.2"
+        ],
+        [
+         0,
+         "-$s * 0.38",
+         "-$s * 0.25"
+        ],
+        [
+         0,
+         "-$s * 0.6 - ($sl - $s) * 0.4",
+         "-$s * 0.24"
+        ],
+        [
+         0,
+         "-$s * 0.8 - ($sl - $s) * 0.6",
+         "-$s * 0.19"
+        ]
+       ],
+       "radii": [
+        "$s * 0.05",
+        "$s * 0.08",
+        "$s * 0.085",
+        "$s * 0.065",
+        "$s * 0.02"
+       ]
+      },
+      {
+       "name": "Strand_L",
+       "shape": "tube",
+       "material": "hair",
+       "segments": 8,
+       "mirror": "Strand_R",
+       "path": [
+        [
+         "-$s * 0.01",
+         "-$s * 0.12",
+         "-$s * 0.14"
+        ],
+        [
+         "$s * 0.03",
+         "-$s * 0.3",
+         "-$s * 0.24"
+        ],
+        [
+         "$s * 0.045",
+         "-$s * 0.5 - ($sl - $s) * 0.3",
+         "-$s * 0.26"
+        ],
+        [
+         "$s * 0.04",
+         "-$s * 0.7 - ($sl - $s) * 0.5",
+         "-$s * 0.22"
+        ]
+       ],
+       "radii": [
+        "$s * 0.04",
+        "$s * 0.05",
+        "$s * 0.04",
+        "$s * 0.012"
        ]
       }
      ]

@@ -2,7 +2,7 @@
  "version": 1,
  "name": "humanoid",
  "archetype": "creature.humanoid",
- "description": "A person-shaped character in a T-pose for rigging: torso, neck and head, arms straight out with hands, legs with feet; every limb a node with its pivot at the joint (shoulder, hip, neck). Faces +Z, feet on y = 0.",
+ "description": "A person in a T-pose for rigging, in real proportions (about 7.5 heads tall): a shaped torso and hips, a neck and a head with hair, eyes, nose and ears, arms with elbows, hands with fingers and a thumb, legs with knees and shoes, in a T-shirt and trousers. Every limb is a node with its pivot at the joint (shoulder, elbow, hip, knee, ankle, neck). Faces +Z, feet on y = 0.",
  "params": [
   {
    "name": "height",
@@ -24,23 +24,84 @@
  "materials": {
   "skin": {
    "color": [
-    0.78,
-    0.6,
-    0.48,
+    0.72,
+    0.5,
+    0.38,
     1
    ],
    "metallic": 0,
-   "roughness": 0.7
+   "roughness": 0.6
   },
   "cloth": {
    "color": [
-    0.2,
-    0.28,
-    0.42,
+    0.12,
+    0.22,
+    0.36,
     1
    ],
    "metallic": 0,
-   "roughness": 0.85
+   "roughness": 0.9
+  },
+  "trousers": {
+   "color": [
+    0.07,
+    0.08,
+    0.11,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.9
+  },
+  "leather": {
+   "color": [
+    0.08,
+    0.05,
+    0.03,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.55
+  },
+  "hair": {
+   "color": [
+    0.07,
+    0.04,
+    0.022,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.65,
+   "texture": "bark"
+  },
+  "eye": {
+   "color": [
+    0.03,
+    0.02,
+    0.012,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.1
+  },
+  "eye_white": {
+   "color": [
+    0.8,
+    0.78,
+    0.74,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.2
+  },
+  "lips": {
+   "color": [
+    0.55,
+    0.3,
+    0.25,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.5
   }
  },
  "nodes": [
@@ -49,66 +110,605 @@
    "material": "cloth",
    "vars": {
     "H": "$height",
-    "w": "$build",
-    "legL": "$height * 0.47",
-    "rl": "$height * 0.045 * $build",
-    "hipX": "$height * 0.02 * $build",
-    "sh": "$height * 0.81",
-    "tx": "$height * 0.11 * $build",
-    "armL": "$height * 0.36",
-    "ra": "$height * 0.03 * $build"
+    "w": "$build"
    },
    "children": [
     {
      "name": "Torso",
-     "shape": "ellipsoid",
-     "segments": 20,
-     "radii": [
-      "$tx",
-      "($sh - $legL) / 2 + 0.04",
-      "$H * 0.065 * $w"
-     ],
-     "at": [
+     "shape": "loft",
+     "rotate": [
+      -90,
       0,
-      "($sh + $legL) / 2",
       0
+     ],
+     "sections": [
+      {
+       "z": "$H * 0.55556",
+       "superellipse": {
+        "width": "$H * $w * 0.15778",
+        "height": "$H * $w * 0.10889",
+        "n": 2.3,
+        "count": 28,
+        "cy": 0
+       }
+      },
+      {
+       "z": "$H * 0.61111",
+       "superellipse": {
+        "width": "$H * $w * 0.16444",
+        "height": "$H * $w * 0.11556",
+        "n": 2.4,
+        "count": 28,
+        "cy": "$H * $w * -0.00278"
+       }
+      },
+      {
+       "z": "$H * 0.66667",
+       "superellipse": {
+        "width": "$H * $w * 0.17556",
+        "height": "$H * $w * 0.12222",
+        "n": 2.5,
+        "count": 28,
+        "cy": "$H * $w * -0.00667"
+       }
+      },
+      {
+       "z": "$H * 0.72222",
+       "superellipse": {
+        "width": "$H * $w * 0.19111",
+        "height": "$H * $w * 0.13111",
+        "n": 2.6,
+        "count": 28,
+        "cy": "$H * $w * -0.00889"
+       }
+      },
+      {
+       "z": "$H * 0.76667",
+       "superellipse": {
+        "width": "$H * $w * 0.20556",
+        "height": "$H * $w * 0.12444",
+        "n": 2.7,
+        "count": 28,
+        "cy": "$H * $w * -0.00444"
+       }
+      },
+      {
+       "z": "$H * 0.8",
+       "superellipse": {
+        "width": "$H * $w * 0.21111",
+        "height": "$H * $w * 0.10667",
+        "n": 2.6,
+        "count": 28,
+        "cy": "$H * $w * 0.00222"
+       }
+      },
+      {
+       "z": "$H * 0.81944",
+       "superellipse": {
+        "width": "$H * $w * 0.18333",
+        "height": "$H * $w * 0.09333",
+        "n": 2.4,
+        "count": 28,
+        "cy": "$H * $w * 0.00556"
+       }
+      },
+      {
+       "z": "$H * 0.83611",
+       "superellipse": {
+        "width": "$H * $w * 0.13889",
+        "height": "$H * $w * 0.08222",
+        "n": 2.2,
+        "count": 28,
+        "cy": "$H * $w * 0.00778"
+       }
+      },
+      {
+       "z": "$H * 0.85",
+       "superellipse": {
+        "width": "$H * $w * 0.08889",
+        "height": "$H * $w * 0.07111",
+        "n": 2.0,
+        "count": 28,
+        "cy": "$H * $w * 0.00889"
+       }
+      },
+      {
+       "z": "$H * 0.86111",
+       "superellipse": {
+        "width": "$H * $w * 0.06889",
+        "height": "$H * $w * 0.06333",
+        "n": 2.0,
+        "count": 28,
+        "cy": "$H * $w * 0.00889"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Hips",
+     "shape": "loft",
+     "material": "trousers",
+     "rotate": [
+      -90,
+      0,
+      0
+     ],
+     "sections": [
+      {
+       "z": "$H * 0.46667",
+       "superellipse": {
+        "width": "$H * $w * 0.15556",
+        "height": "$H * $w * 0.09778",
+        "n": 2.4,
+        "count": 28,
+        "cy": "$H * $w * 0.00278"
+       }
+      },
+      {
+       "z": "$H * 0.5",
+       "superellipse": {
+        "width": "$H * $w * 0.19111",
+        "height": "$H * $w * 0.11778",
+        "n": 2.6,
+        "count": 28,
+        "cy": "$H * $w * 0.00667"
+       }
+      },
+      {
+       "z": "$H * 0.52778",
+       "superellipse": {
+        "width": "$H * $w * 0.19556",
+        "height": "$H * $w * 0.12",
+        "n": 2.6,
+        "count": 28,
+        "cy": "$H * $w * 0.00667"
+       }
+      },
+      {
+       "z": "$H * 0.55556",
+       "superellipse": {
+        "width": "$H * $w * 0.18333",
+        "height": "$H * $w * 0.11556",
+        "n": 2.5,
+        "count": 28,
+        "cy": "$H * $w * 0.00333"
+       }
+      },
+      {
+       "z": "$H * 0.57778",
+       "superellipse": {
+        "width": "$H * $w * 0.16889",
+        "height": "$H * $w * 0.11222",
+        "n": 2.4,
+        "count": 28,
+        "cy": 0
+       }
+      },
+      {
+       "z": "$H * 0.59444",
+       "superellipse": {
+        "width": "$H * $w * 0.16333",
+        "height": "$H * $w * 0.11111",
+        "n": 2.3,
+        "count": 28,
+        "cy": 0
+       }
+      }
+     ]
+    },
+    {
+     "name": "Belt",
+     "shape": "loft",
+     "material": "leather",
+     "rotate": [
+      -90,
+      0,
+      0
+     ],
+     "sections": [
+      {
+       "z": "$H * 0.575",
+       "superellipse": {
+        "width": "$H * $w * 0.17556",
+        "height": "$H * $w * 0.11889",
+        "n": 2.4,
+        "count": 28,
+        "cy": 0
+       }
+      },
+      {
+       "z": "$H * 0.59889",
+       "superellipse": {
+        "width": "$H * $w * 0.17111",
+        "height": "$H * $w * 0.11778",
+        "n": 2.3,
+        "count": 28,
+        "cy": 0
+       }
+      }
      ]
     },
     {
      "name": "Neck",
-     "shape": "cylinder",
+     "shape": "tube",
      "material": "skin",
-     "radius": "$H * 0.028",
-     "height": "$H * 0.07",
-     "segments": 10,
-     "at": [
-      0,
-      "$sh + $H * 0.03",
-      0
+     "segments": 12,
+     "path": [
+      [
+       0,
+       "$H * 0.81667",
+       "$H * $w * -0.00889"
+      ],
+      [
+       0,
+       "$H * 0.86111",
+       "$H * $w * -0.00889"
+      ],
+      [
+       0,
+       "$H * 0.90556",
+       "$H * $w * -0.00667"
+      ]
+     ],
+     "radii": [
+      "$H * $w * 0.03444",
+      "$H * $w * 0.03111",
+      "$H * $w * 0.03"
      ]
     },
     {
      "name": "Head",
-     "material": "skin",
      "at": [
       0,
-      "$sh + $H * 0.055",
-      "-$H * 0.06"
+      "$H * 0.85833",
+      "$H * -0.06778"
      ],
      "children": [
       {
+       "name": "Hair",
+       "shape": "loft",
+       "material": "hair",
+       "rotate": [
+        -90,
+        0,
+        0
+       ],
+       "sections": [
+        {
+         "z": "$H * 0.03333",
+         "superellipse": {
+          "width": "$H * 0.05",
+          "height": "$H * 0.02778",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.04111"
+         }
+        },
+        {
+         "z": "$H * 0.05278",
+         "superellipse": {
+          "width": "$H * 0.07111",
+          "height": "$H * 0.04611",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.03917"
+         }
+        },
+        {
+         "z": "$H * 0.06944",
+         "superellipse": {
+          "width": "$H * 0.08778",
+          "height": "$H * 0.07722",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.04583"
+         }
+        },
+        {
+         "z": "$H * 0.08889",
+         "superellipse": {
+          "width": "$H * 0.09222",
+          "height": "$H * 0.09944",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.05139"
+         }
+        },
+        {
+         "z": "$H * 0.10556",
+         "superellipse": {
+          "width": "$H * 0.09111",
+          "height": "$H * 0.10889",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.055"
+         }
+        },
+        {
+         "z": "$H * 0.11667",
+         "superellipse": {
+          "width": "$H * 0.08667",
+          "height": "$H * 0.11056",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.0575"
+         }
+        },
+        {
+         "z": "$H * 0.12944",
+         "superellipse": {
+          "width": "$H * 0.06889",
+          "height": "$H * 0.08889",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.05667"
+         }
+        },
+        {
+         "z": "$H * 0.13611",
+         "superellipse": {
+          "width": "$H * 0.04222",
+          "height": "$H * 0.05111",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.05667"
+         }
+        },
+        {
+         "z": "$H * 0.14056",
+         "superellipse": {
+          "width": "$H * 0.01556",
+          "height": "$H * 0.01889",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.05722"
+         }
+        },
+        {
+         "z": "$H * 0.14222",
+         "superellipse": {
+          "width": "$H * 0.00444",
+          "height": "$H * 0.00444",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.05778"
+         }
+        }
+       ]
+      },
+      {
        "name": "Skull",
+       "shape": "loft",
+       "material": "skin",
+       "rotate": [
+        -90,
+        0,
+        0
+       ],
+       "sections": [
+        {
+         "z": 0,
+         "superellipse": {
+          "width": "$H * 0.02444",
+          "height": "$H * 0.02",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.1"
+         }
+        },
+        {
+         "z": "$H * 0.00556",
+         "superellipse": {
+          "width": "$H * 0.04444",
+          "height": "$H * 0.04444",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.09278"
+         }
+        },
+        {
+         "z": "$H * 0.01944",
+         "superellipse": {
+          "width": "$H * 0.06111",
+          "height": "$H * 0.07333",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.08167"
+         }
+        },
+        {
+         "z": "$H * 0.03889",
+         "superellipse": {
+          "width": "$H * 0.07111",
+          "height": "$H * 0.08889",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.07056"
+         }
+        },
+        {
+         "z": "$H * 0.06111",
+         "superellipse": {
+          "width": "$H * 0.07889",
+          "height": "$H * 0.1",
+          "n": 2.05,
+          "count": 28,
+          "cy": "$H * -0.06444"
+         }
+        },
+        {
+         "z": "$H * 0.08056",
+         "superellipse": {
+          "width": "$H * 0.08444",
+          "height": "$H * 0.10667",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.06111"
+         }
+        },
+        {
+         "z": "$H * 0.1",
+         "superellipse": {
+          "width": "$H * 0.08556",
+          "height": "$H * 0.10889",
+          "n": 2.1,
+          "count": 28,
+          "cy": "$H * -0.05889"
+         }
+        },
+        {
+         "z": "$H * 0.11667",
+         "superellipse": {
+          "width": "$H * 0.07889",
+          "height": "$H * 0.10222",
+          "n": 2.05,
+          "count": 28,
+          "cy": "$H * -0.05778"
+         }
+        },
+        {
+         "z": "$H * 0.12944",
+         "superellipse": {
+          "width": "$H * 0.06",
+          "height": "$H * 0.08",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.05667"
+         }
+        },
+        {
+         "z": "$H * 0.13611",
+         "superellipse": {
+          "width": "$H * 0.02889",
+          "height": "$H * 0.04",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.05667"
+         }
+        },
+        {
+         "z": "$H * 0.13778",
+         "superellipse": {
+          "width": "$H * 0.00667",
+          "height": "$H * 0.00889",
+          "n": 2.0,
+          "count": 28,
+          "cy": "$H * -0.05667"
+         }
+        }
+       ]
+      },
+      {
+       "name": "Nose",
        "shape": "ellipsoid",
-       "segments": 16,
+       "material": "skin",
+       "segments": 12,
+       "at": [
+        0,
+        "$H * 0.06111",
+        "$H * 0.11944"
+       ],
        "radii": [
-        "$H * 0.05",
-        "$H * 0.065",
+        "$H * 0.00583",
+        "$H * 0.01333",
+        "$H * 0.00889"
+       ]
+      },
+      {
+       "name": "Lips",
+       "shape": "ellipsoid",
+       "material": "lips",
+       "segments": 12,
+       "at": [
+        0,
+        "$H * 0.03333",
+        "$H * 0.11167"
+       ],
+       "radii": [
+        "$H * 0.01167",
+        "$H * 0.00361",
+        "$H * 0.00556"
+       ]
+      },
+      {
+       "name": "Eye_L",
+       "shape": "ellipsoid",
+       "material": "eye_white",
+       "segments": 12,
+       "mirror": "Eye_R",
+       "at": [
+        "$H * 0.01722",
+        "$H * 0.07389",
+        "$H * 0.10667"
+       ],
+       "radii": [
+        "$H * 0.00639",
+        "$H * 0.00472",
+        "$H * 0.005"
+       ],
+       "children": [
+        {
+         "name": "Iris",
+         "shape": "ellipsoid",
+         "material": "eye",
+         "segments": 8,
+         "at": [
+          0,
+          0,
+          "$H * 0.00417"
+         ],
+         "radii": [
+          "$H * 0.00306",
+          "$H * 0.00306",
+          "$H * 0.00139"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Brow_L",
+       "shape": "tube",
+       "material": "hair",
+       "segments": 5,
+       "mirror": "Brow_R",
+       "path": [
+        [
+         "$H * 0.00778",
+         "$H * 0.085",
+         "$H * 0.11278"
+        ],
+        [
+         "$H * 0.01722",
+         "$H * 0.08722",
+         "$H * 0.11056"
+        ],
+        [
+         "$H * 0.02611",
+         "$H * 0.08444",
+         "$H * 0.10389"
+        ]
+       ],
+       "radii": [
+        "$H * 0.00194",
+        "$H * 0.00194",
+        "$H * 0.00122"
+       ]
+      },
+      {
+       "name": "Ear_L",
+       "shape": "ellipsoid",
+       "material": "skin",
+       "segments": 10,
+       "mirror": "Ear_R",
+       "at": [
+        "$H * 0.04056",
+        "$H * 0.06833",
         "$H * 0.06"
        ],
-       "offset": [
-        0,
-        "$H * 0.065",
-        "$H * 0.06"
+       "radii": [
+        "$H * 0.005",
+        "$H * 0.01556",
+        "$H * 0.01"
        ]
       }
      ]
@@ -116,77 +716,451 @@
     {
      "name": "Arm_L",
      "at": [
-      "$tx * 0.85",
-      "$sh",
+      "$H * $w * 0.09167",
+      "$H * 0.81944",
       0
      ],
      "mirror": "Arm_R",
      "children": [
       {
-       "name": "Sleeve",
-       "shape": "cylinder",
-       "axis": "x",
-       "radius": "$ra",
-       "height": "$armL",
-       "segments": 10,
-       "offset": [
-        "$armL / 2",
-        "-$ra",
-        0
+       "name": "Upper",
+       "shape": "tube",
+       "material": "skin",
+       "segments": 12,
+       "path": [
+        [
+         0,
+         "-$H * $w * 0.02611",
+         0
+        ],
+        [
+         "$H * 0.03333",
+         "-$H * $w * 0.02611",
+         0
+        ],
+        [
+         "$H * 0.09444",
+         "-$H * $w * 0.02611",
+         0
+        ],
+        [
+         "$H * 0.18889",
+         "-$H * $w * 0.02611",
+         0
+        ]
+       ],
+       "radii": [
+        "$H * $w * 0.02611",
+        "$H * $w * 0.02556",
+        "$H * $w * 0.02278",
+        "$H * $w * 0.02"
        ]
       },
       {
-       "name": "Hand_L",
-       "shape": "ellipsoid",
-       "material": "skin",
-       "segments": 10,
-       "radii": [
-        "$H * 0.05",
-        "$ra * 0.9",
-        "$ra * 1.2"
+       "name": "Sleeve",
+       "shape": "tube",
+       "segments": 12,
+       "path": [
+        [
+         0,
+         "-$H * $w * 0.03111",
+         0
+        ],
+        [
+         "$H * 0.05556",
+         "-$H * $w * 0.03",
+         0
+        ],
+        [
+         "$H * 0.09444",
+         "-$H * $w * 0.02889",
+         0
+        ]
        ],
+       "radii": [
+        "$H * $w * 0.03111",
+        "$H * $w * 0.03056",
+        "$H * $w * 0.02889"
+       ]
+      },
+      {
+       "name": "Elbow",
        "at": [
-        "$armL + $H * 0.04",
-        "-$ra",
+        "$H * 0.17778",
+        "-$H * $w * 0.02611",
         0
+       ],
+       "children": [
+        {
+         "name": "Forearm",
+         "shape": "tube",
+         "material": "skin",
+         "segments": 12,
+         "path": [
+          [
+           "$H * -0.01111",
+           0,
+           0
+          ],
+          [
+           "$H * 0.03333",
+           0,
+           0
+          ],
+          [
+           "$H * 0.08889",
+           0,
+           0
+          ],
+          [
+           "$H * 0.14167",
+           0,
+           0
+          ]
+         ],
+         "radii": [
+          "$H * $w * 0.02",
+          "$H * $w * 0.02167",
+          "$H * $w * 0.01833",
+          "$H * $w * 0.01444"
+         ]
+        },
+        {
+         "name": "Hand",
+         "material": "skin",
+         "at": [
+          "$H * 0.14167",
+          0,
+          0
+         ],
+         "children": [
+          {
+           "name": "Palm",
+           "shape": "ellipsoid",
+           "segments": 12,
+           "at": [
+            "$H * 0.025",
+            0,
+            0
+           ],
+           "radii": [
+            "$H * 0.02778",
+            "$H * $w * 0.00889",
+            "$H * $w * 0.02333"
+           ]
+          },
+          {
+           "name": "Finger_1",
+           "shape": "tube",
+           "segments": 6,
+           "path": [
+            [
+             "$H * 0.03889",
+             0,
+             "$H * $w * 0.01444"
+            ],
+            [
+             "$H * 0.06272",
+             "-$H * 0.00222",
+             "$H * $w * 0.0156"
+            ],
+            [
+             "$H * 0.08222",
+             "-$H * 0.00778",
+             "$H * $w * 0.01618"
+            ]
+           ],
+           "radii": [
+            "$H * $w * 0.00528",
+            "$H * $w * 0.00472",
+            "$H * $w * 0.00389"
+           ]
+          },
+          {
+           "name": "Finger_2",
+           "shape": "tube",
+           "segments": 6,
+           "path": [
+            [
+             "$H * 0.03889",
+             0,
+             "$H * $w * 0.005"
+            ],
+            [
+             "$H * 0.06578",
+             "-$H * 0.00222",
+             "$H * $w * 0.0054"
+            ],
+            [
+             "$H * 0.08778",
+             "-$H * 0.00778",
+             "$H * $w * 0.0056"
+            ]
+           ],
+           "radii": [
+            "$H * $w * 0.00528",
+            "$H * $w * 0.00472",
+            "$H * $w * 0.00389"
+           ]
+          },
+          {
+           "name": "Finger_3",
+           "shape": "tube",
+           "segments": 6,
+           "path": [
+            [
+             "$H * 0.03889",
+             0,
+             "$H * $w * -0.005"
+            ],
+            [
+             "$H * 0.06456",
+             "-$H * 0.00222",
+             "$H * $w * -0.0054"
+            ],
+            [
+             "$H * 0.08556",
+             "-$H * 0.00778",
+             "$H * $w * -0.0056"
+            ]
+           ],
+           "radii": [
+            "$H * $w * 0.00528",
+            "$H * $w * 0.00472",
+            "$H * $w * 0.00389"
+           ]
+          },
+          {
+           "name": "Finger_4",
+           "shape": "tube",
+           "segments": 6,
+           "path": [
+            [
+             "$H * 0.03889",
+             0,
+             "$H * $w * -0.01389"
+            ],
+            [
+             "$H * 0.06028",
+             "-$H * 0.00222",
+             "$H * $w * -0.015"
+            ],
+            [
+             "$H * 0.07778",
+             "-$H * 0.00778",
+             "$H * $w * -0.01556"
+            ]
+           ],
+           "radii": [
+            "$H * $w * 0.00528",
+            "$H * $w * 0.00472",
+            "$H * $w * 0.00389"
+           ]
+          },
+          {
+           "name": "Thumb",
+           "shape": "tube",
+           "segments": 6,
+           "path": [
+            [
+             "$H * 0.00833",
+             "-$H * 0.00222",
+             "$H * $w * 0.01389"
+            ],
+            [
+             "$H * 0.02222",
+             "-$H * 0.00556",
+             "$H * $w * 0.02778"
+            ],
+            [
+             "$H * 0.03611",
+             "-$H * 0.00889",
+             "$H * $w * 0.03611"
+            ]
+           ],
+           "radii": [
+            "$H * $w * 0.00667",
+            "$H * $w * 0.00583",
+            "$H * $w * 0.005"
+           ]
+          }
+         ]
+        }
        ]
       }
      ]
     },
     {
      "name": "Leg_L",
+     "material": "trousers",
      "at": [
-      "$hipX + 2 * $rl",
-      "$legL",
+      "$H * $w * 0.09556",
+      "$H * 0.52222",
       0
      ],
      "mirror": "Leg_R",
      "children": [
       {
-       "name": "Trouser",
-       "shape": "cylinder",
-       "radius": "$rl",
-       "height": "$legL",
-       "segments": 12,
-       "offset": [
-        "-$rl",
-        "-$legL / 2",
-        0
+       "name": "Thigh",
+       "shape": "tube",
+       "segments": 14,
+       "path": [
+        [
+         "-$H * $w * 0.04889",
+         0,
+         0
+        ],
+        [
+         "-$H * $w * 0.05",
+         "-$H * 0.06667",
+         "$H * $w * 0.00222"
+        ],
+        [
+         "-$H * $w * 0.05222",
+         "-$H * 0.16667",
+         "$H * $w * 0.00222"
+        ],
+        [
+         "-$H * $w * 0.05556",
+         "-$H * 0.25556",
+         0
+        ]
+       ],
+       "radii": [
+        "$H * $w * 0.04889",
+        "$H * $w * 0.04611",
+        "$H * $w * 0.03722",
+        "$H * $w * 0.03111"
        ]
       },
       {
-       "name": "Foot_L",
-       "shape": "box",
-       "material": "skin",
-       "size": [
-        "$rl * 1.8",
-        "$H * 0.035",
-        "$H * 0.14"
-       ],
+       "name": "Knee",
        "at": [
-        "-$rl",
-        "-$legL + $H * 0.0175",
-        "$H * 0.035"
+        "-$H * $w * 0.05556",
+        "-$H * 0.23889",
+        0
+       ],
+       "children": [
+        {
+         "name": "Shin",
+         "shape": "tube",
+         "segments": 14,
+         "path": [
+          [
+           0,
+           "$H * 0.01667",
+           0
+          ],
+          [
+           0,
+           "-$H * 0.05556",
+           "$H * $w * -0.00333"
+          ],
+          [
+           0,
+           "-$H * 0.16667",
+           "$H * $w * -0.00111"
+          ],
+          [
+           0,
+           "-$H * 0.23889",
+           0
+          ]
+         ],
+         "radii": [
+          "$H * $w * 0.03111",
+          "$H * $w * 0.03333",
+          "$H * $w * 0.02778",
+          "$H * $w * 0.02611"
+         ]
+        },
+        {
+         "name": "Foot",
+         "at": [
+          0,
+          "-$H * 0.22778",
+          0
+         ],
+         "children": [
+          {
+           "name": "Shoe",
+           "shape": "loft",
+           "material": "leather",
+           "sections": [
+            {
+             "z": "$H * $w * -0.04167",
+             "superellipse": {
+              "width": "$H * $w * 0.03556",
+              "height": "$H * 0.03889",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.03611"
+             }
+            },
+            {
+             "z": "$H * $w * -0.02222",
+             "superellipse": {
+              "width": "$H * $w * 0.04667",
+              "height": "$H * 0.05",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.03056"
+             }
+            },
+            {
+             "z": "$H * $w * 0.01111",
+             "superellipse": {
+              "width": "$H * $w * 0.05222",
+              "height": "$H * 0.04722",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.03194"
+             }
+            },
+            {
+             "z": "$H * $w * 0.05",
+             "superellipse": {
+              "width": "$H * $w * 0.05778",
+              "height": "$H * 0.03778",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.03667"
+             }
+            },
+            {
+             "z": "$H * $w * 0.08333",
+             "superellipse": {
+              "width": "$H * $w * 0.05556",
+              "height": "$H * 0.02889",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.04111"
+             }
+            },
+            {
+             "z": "$H * $w * 0.10556",
+             "superellipse": {
+              "width": "$H * $w * 0.04444",
+              "height": "$H * 0.02111",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.045"
+             }
+            },
+            {
+             "z": "$H * $w * 0.11389",
+             "superellipse": {
+              "width": "$H * $w * 0.02778",
+              "height": "$H * 0.01444",
+              "n": 2.6,
+              "count": 20,
+              "cy": "$H * -0.04833"
+             }
+            }
+           ]
+          }
+         ]
+        }
        ]
       }
      ]

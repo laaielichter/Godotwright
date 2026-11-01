@@ -3708,20 +3708,23 @@
        "shape": "box",
        "material": "white_paint",
        "size": [
-        "$hb*0.62",
+        "$bw",
         "$length*0.014",
         "0.3"
        ],
        "anchor": "bottom",
+       "vars": {
+        "bw": "min($hb*0.62, $length*0.035)"
+       },
        "rotate": [
         0,
         -24,
         0
        ],
        "at": [
-        "$hb*0.27",
+        "$bw*0.44",
         "$Ff",
-        "$length*0.409 + $hb*0.12"
+        "$length*0.411 + $bw*0.2"
        ],
        "mirror": "Breakwater_R"
       },

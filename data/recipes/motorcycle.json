@@ -2,7 +2,7 @@
  "version": 1,
  "name": "motorcycle",
  "archetype": "vehicle.wheeled.motorcycle",
- "description": "A motorcycle: a frame with tank, seat and engine, a rear wheel on a swingarm, and a fork that steers about a raked axis and carries the front wheel and handlebar.",
+ "description": "A naked motorcycle: a trellis frame with a finned twin engine, radiator and exhaust headers into a side silencer, a sculpted tank, seat and tail, a swingarm with chain and shock, and a fork on a raked steering head that carries the handlebar, headlight, mirrors and the front wheel with twin discs; cast wheels with the pivot at the hub.",
  "params": [
   {
    "name": "length",
@@ -24,21 +24,134 @@
  "materials": {
   "mc_paint": {
    "color": [
-    0.7,
-    0.05,
-    0.05
+    0.6,
+    0.03,
+    0.03
    ],
-   "metallic": 0.3,
+   "metallic": 0.5,
+   "roughness": 0.22
+  },
+  "frame_grey": {
+   "color": [
+    0.12,
+    0.12,
+    0.13
+   ],
+   "metallic": 0.7,
    "roughness": 0.35
   },
-  "mc_black": {
+  "engine": {
+   "color": [
+    0.06,
+    0.06,
+    0.065
+   ],
+   "metallic": 0.6,
+   "roughness": 0.45
+  },
+  "engine_cover": {
+   "color": [
+    0.5,
+    0.5,
+    0.52
+   ],
+   "metallic": 1,
+   "roughness": 0.3
+  },
+  "trim_black": {
+   "color": [
+    0.018,
+    0.018,
+    0.02
+   ],
+   "metallic": 0.1,
+   "roughness": 0.45
+  },
+  "seat": {
+   "color": [
+    0.03,
+    0.03,
+    0.032
+   ],
+   "metallic": 0,
+   "roughness": 0.7
+  },
+  "rim": {
    "color": [
     0.05,
     0.05,
-    0.06
+    0.055
+   ],
+   "metallic": 0.6,
+   "roughness": 0.3
+  },
+  "disc": {
+   "color": [
+    0.55,
+    0.55,
+    0.57
+   ],
+   "metallic": 1,
+   "roughness": 0.25
+  },
+  "caliper": {
+   "color": [
+    0.75,
+    0.45,
+    0.05
+   ],
+   "metallic": 0.6,
+   "roughness": 0.3
+  },
+  "fork_leg": {
+   "color": [
+    0.7,
+    0.5,
+    0.15
+   ],
+   "metallic": 0.9,
+   "roughness": 0.25
+  },
+  "spring": {
+   "color": [
+    0.85,
+    0.65,
+    0.05
    ],
    "metallic": 0.5,
-   "roughness": 0.4
+   "roughness": 0.3
+  },
+  "header": {
+   "color": [
+    0.45,
+    0.35,
+    0.25
+   ],
+   "metallic": 1,
+   "roughness": 0.25
+  },
+  "muffler": {
+   "color": [
+    0.12,
+    0.12,
+    0.13
+   ],
+   "metallic": 0.8,
+   "roughness": 0.3
+  },
+  "led": {
+   "color": [
+    0.2,
+    0.5,
+    0.9
+   ],
+   "metallic": 0,
+   "roughness": 0.2,
+   "emissive": [
+    0.1,
+    0.35,
+    0.7
+   ]
   }
  },
  "nodes": [
@@ -47,113 +160,800 @@
    "material": "mc_paint",
    "vars": {
     "R": "$wheelRadius",
-    "wb": "$length * 0.7",
-    "hy": "$wheelRadius + 0.72",
-    "hz": "$length * 0.35 - 0.36"
+    "wb": "max(1.1, $length - 2 * $wheelRadius - 0.04)",
+    "zr": "-$wb / 2",
+    "zf": "$wb / 2",
+    "Lf": "0.74 + ($wheelRadius - 0.32) * 0.4",
+    "hz": "$zf - $Lf * sin(rad(25))",
+    "hy": "$R + $Lf * cos(rad(25))",
+    "pz": "$zr + 0.42 * $wb",
+    "py": "$R + 0.12",
+    "ez": "($pz + $hz) / 2 + 0.02",
+    "ey": "$R + 0.2",
+    "wf": "0.37 * $wheelRadius",
+    "wr": "0.55 * $wheelRadius"
    },
    "children": [
     {
      "name": "Frame",
      "children": [
       {
-       "name": "Tank",
-       "shape": "ellipsoid",
-       "radii": [
-        0.18,
-        0.17,
-        0.32
+       "name": "RailUpper_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.014,
+       "segments": 8,
+       "path": [
+        [
+         0.07,
+         "$hy + 0.04",
+         "$hz - 0.03"
+        ],
+        [
+         0.12,
+         "$R + 0.6",
+         "$pz + 0.28"
+        ],
+        [
+         0.12,
+         "$R + 0.56",
+         "$pz + 0.02"
+        ]
+       ],
+       "mirror": "RailUpper_R"
+      },
+      {
+       "name": "RailLower_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.014,
+       "segments": 8,
+       "path": [
+        [
+         0.06,
+         "$hy - 0.12",
+         "$hz + 0.02"
+        ],
+        [
+         0.13,
+         "$R + 0.32",
+         "$ez + 0.2"
+        ],
+        [
+         0.13,
+         "$py + 0.04",
+         "$pz + 0.02"
+        ]
+       ],
+       "mirror": "RailLower_R"
+      },
+      {
+       "name": "Brace{i}_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.014,
+       "segments": 8,
+       "path": [
+        [
+         0.125,
+         "$R + 0.36",
+         "$ez + 0.19"
+        ],
+        [
+         0.12,
+         "$R + 0.6",
+         "$pz + 0.3"
+        ]
+       ],
+       "mirror": "Brace{i}_R"
+      },
+      {
+       "name": "BraceRear_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.014,
+       "segments": 8,
+       "path": [
+        [
+         0.13,
+         "$R + 0.3",
+         "$pz + 0.08"
+        ],
+        [
+         0.12,
+         "$R + 0.57",
+         "$pz + 0.06"
+        ]
+       ],
+       "mirror": "BraceRear_R"
+      },
+      {
+       "name": "Subframe_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.012,
+       "segments": 8,
+       "path": [
+        [
+         0.12,
+         "$R + 0.56",
+         "$pz + 0.02"
+        ],
+        [
+         0.09,
+         "$R + 0.62",
+         "$zr + 0.1"
+        ]
+       ],
+       "mirror": "Subframe_R"
+      },
+      {
+       "name": "SubframeLow_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.011,
+       "segments": 8,
+       "path": [
+        [
+         0.13,
+         "$py + 0.06",
+         "$pz - 0.02"
+        ],
+        [
+         0.09,
+         "$R + 0.6",
+         "$zr + 0.16"
+        ]
+       ],
+       "mirror": "SubframeLow_R"
+      },
+      {
+       "name": "Head",
+       "shape": "cylinder",
+       "material": "frame_grey",
+       "radius": 0.035,
+       "height": 0.2,
+       "segments": 12,
+       "at": [
+        0,
+        "$hy - 0.04",
+        "$hz"
+       ],
+       "rotate": [
+        -25,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Crankcase",
+       "shape": "box",
+       "material": "engine",
+       "size": [
+        0.36,
+        0.26,
+        0.42
+       ],
+       "bevel": 0.05,
+       "at": [
+        0,
+        "$ey - 0.05",
+        "$ez"
+       ]
+      },
+      {
+       "name": "Cover_L",
+       "shape": "cylinder",
+       "material": "engine_cover",
+       "axis": "x",
+       "radius": 0.11,
+       "height": 0.04,
+       "segments": 20,
+       "bevel": 0.012,
+       "at": [
+        0.19,
+        "$ey - 0.04",
+        "$ez - 0.06"
+       ],
+       "mirror": "Cover_R"
+      },
+      {
+       "name": "Cylinders",
+       "shape": "box",
+       "material": "engine",
+       "size": [
+        0.34,
+        0.24,
+        0.2
+       ],
+       "bevel": 0.03,
+       "at": [
+        0,
+        "$ey + 0.17",
+        "$ez + 0.1"
+       ],
+       "rotate": [
+        -28,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Fin{i}",
+       "shape": "box",
+       "material": "engine_cover",
+       "size": [
+        0.38,
+        0.012,
+        0.22
        ],
        "at": [
         0,
-        "$R + 0.78",
-        "$wb * 0.12"
+        "$ey + 0.1",
+        "$ez + 0.06"
        ],
-       "segments": 20
+       "rotate": [
+        -28,
+        0,
+        0
+       ],
+       "repeat": {
+        "count": 5,
+        "step": [
+         0,
+         0.035,
+         0.019
+        ]
+       }
+      },
+      {
+       "name": "CamCover",
+       "shape": "box",
+       "material": "engine_cover",
+       "size": [
+        0.3,
+        0.07,
+        0.18
+       ],
+       "bevel": 0.025,
+       "at": [
+        0,
+        "$ey + 0.3",
+        "$ez + 0.17"
+       ],
+       "rotate": [
+        -28,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Radiator",
+       "shape": "box",
+       "material": "trim_black",
+       "size": [
+        0.3,
+        0.26,
+        0.05
+       ],
+       "bevel": 0.01,
+       "at": [
+        0,
+        "$ey + 0.2",
+        "$ez + 0.3"
+       ],
+       "rotate": [
+        -14,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Tank",
+       "shape": "loft",
+       "material": "mc_paint",
+       "sections": [
+        {
+         "z": "$hz - 0.04",
+         "superellipse": {
+          "width": 0.2,
+          "height": 0.16,
+          "n": 2.6,
+          "count": 24,
+          "cx": 0,
+          "cy": "$R + 0.72"
+         }
+        },
+        {
+         "z": "$hz - 0.12",
+         "superellipse": {
+          "width": 0.34,
+          "height": 0.26,
+          "n": 2.6,
+          "count": 24,
+          "cx": 0,
+          "cy": "$R + 0.68"
+         }
+        },
+        {
+         "z": "($hz + $pz) / 2 + 0.05",
+         "superellipse": {
+          "width": 0.38,
+          "height": 0.28,
+          "n": 2.6,
+          "count": 24,
+          "cx": 0,
+          "cy": "$R + 0.66"
+         }
+        },
+        {
+         "z": "$pz + 0.12",
+         "superellipse": {
+          "width": 0.3,
+          "height": 0.2,
+          "n": 2.6,
+          "count": 24,
+          "cx": 0,
+          "cy": "$R + 0.6"
+         }
+        },
+        {
+         "z": "$pz + 0.04",
+         "superellipse": {
+          "width": 0.22,
+          "height": 0.1,
+          "n": 2.6,
+          "count": 24,
+          "cx": 0,
+          "cy": "$R + 0.57"
+         }
+        }
+       ]
+      },
+      {
+       "name": "Cap",
+       "shape": "cylinder",
+       "material": "chrome",
+       "radius": 0.035,
+       "height": 0.02,
+       "segments": 14,
+       "at": [
+        0,
+        "$R + 0.805",
+        "($hz + $pz) / 2 + 0.1"
+       ]
       },
       {
        "name": "Seat",
-       "shape": "box",
-       "material": "mc_black",
-       "size": [
-        0.26,
-        0.1,
-        "$wb * 0.42"
-       ],
-       "at": [
-        0,
-        "$R + 0.7",
-        "-$wb * 0.2"
-       ]
-      },
-      {
-       "name": "Engine",
-       "shape": "box",
-       "material": "mc_black",
-       "size": [
-        0.3,
-        0.32,
-        0.4
-       ],
-       "at": [
-        0,
-        "$R + 0.2",
-        0
-       ]
-      },
-      {
-       "name": "Spine",
-       "shape": "box",
-       "size": [
-        0.12,
-        0.5,
-        0.3
-       ],
-       "at": [
-        0,
-        "$R + 0.5",
-        0
+       "shape": "loft",
+       "material": "seat",
+       "sections": [
+        {
+         "z": "$pz + 0.08",
+         "superellipse": {
+          "width": 0.2,
+          "height": 0.08,
+          "n": 3,
+          "count": 20,
+          "cy": "$R + 0.555"
+         }
+        },
+        {
+         "z": "$pz - 0.02",
+         "superellipse": {
+          "width": 0.3,
+          "height": 0.1,
+          "n": 3,
+          "count": 20,
+          "cy": "$R + 0.55"
+         }
+        },
+        {
+         "z": "$pz - 0.28",
+         "superellipse": {
+          "width": 0.28,
+          "height": 0.1,
+          "n": 3,
+          "count": 20,
+          "cy": "$R + 0.56"
+         }
+        },
+        {
+         "z": "$pz - 0.36",
+         "superellipse": {
+          "width": 0.22,
+          "height": 0.1,
+          "n": 3,
+          "count": 20,
+          "cy": "$R + 0.62"
+         }
+        },
+        {
+         "z": "$zr + 0.2",
+         "superellipse": {
+          "width": 0.18,
+          "height": 0.09,
+          "n": 3,
+          "count": 20,
+          "cy": "$R + 0.65"
+         }
+        }
        ]
       },
       {
        "name": "Tail",
+       "shape": "loft",
+       "material": "mc_paint",
+       "sections": [
+        {
+         "z": "$pz - 0.1",
+         "superellipse": {
+          "width": 0.26,
+          "height": 0.12,
+          "n": 2.4,
+          "count": 20,
+          "cy": "$R + 0.5"
+         }
+        },
+        {
+         "z": "$pz - 0.36",
+         "superellipse": {
+          "width": 0.24,
+          "height": 0.12,
+          "n": 2.4,
+          "count": 20,
+          "cy": "$R + 0.56"
+         }
+        },
+        {
+         "z": "$zr + 0.12",
+         "superellipse": {
+          "width": 0.16,
+          "height": 0.1,
+          "n": 2.4,
+          "count": 20,
+          "cy": "$R + 0.6"
+         }
+        },
+        {
+         "z": "$zr + 0.04",
+         "superellipse": {
+          "width": 0.1,
+          "height": 0.06,
+          "n": 2.4,
+          "count": 20,
+          "cy": "$R + 0.6"
+         }
+        }
+       ]
+      },
+      {
+       "name": "SidePanel_L",
        "shape": "box",
+       "material": "engine",
        "size": [
-        0.2,
+        0.03,
+        0.11,
+        0.2
+       ],
+       "bevel": 0.012,
+       "at": [
         0.12,
-        0.35
+        "$R + 0.47",
+        "$pz - 0.02"
        ],
+       "rotate": [
+        8,
+        0,
+        0
+       ],
+       "mirror": "SidePanel_R"
+      },
+      {
+       "name": "Taillight",
+       "shape": "box",
+       "material": "light_red",
+       "size": [
+        0.12,
+        0.04,
+        0.03
+       ],
+       "bevel": 0.01,
        "at": [
         0,
-        "$R + 0.78",
-        "-$wb * 0.43"
+        "$R + 0.6",
+        "$zr + 0.03"
        ]
       },
       {
-       "name": "Exhaust",
+       "name": "Hugger",
+       "shape": "tube",
+       "material": "trim_black",
+       "radius": 0.012,
+       "segments": 6,
+       "path": [
+        [
+         0,
+         "$R + 0.58",
+         "$zr + 0.1"
+        ],
+        [
+         0,
+         "$R + 0.5",
+         "$zr - 0.04"
+        ],
+        [
+         0,
+         "$R + 0.36",
+         "$zr - 0.06"
+        ]
+       ]
+      },
+      {
+       "name": "Plate",
+       "shape": "box",
+       "material": "plastic_white",
+       "size": [
+        0.18,
+        0.12,
+        0.008
+       ],
+       "at": [
+        0,
+        "$R + 0.36",
+        "$zr - 0.07"
+       ],
+       "rotate": [
+        -20,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Indicator_L",
+       "shape": "tube",
+       "material": "light_amber",
+       "radius": 0.012,
+       "segments": 8,
+       "path": [
+        [
+         0.04,
+         "$R + 0.52",
+         "$zr - 0.02"
+        ],
+        [
+         0.12,
+         "$R + 0.52",
+         "$zr - 0.03"
+        ]
+       ],
+       "mirror": "Indicator_R"
+      },
+      {
+       "name": "Peg_L",
        "shape": "cylinder",
-       "material": "metal",
-       "axis": "z",
-       "radius": 0.05,
-       "height": "$wb * 0.55",
+       "material": "trim_black",
+       "axis": "x",
+       "radius": 0.012,
+       "height": 0.1,
+       "segments": 8,
        "at": [
         0.2,
-        "$R + 0.12",
-        "-$wb * 0.22"
+        "$py + 0.02",
+        "$pz + 0.1"
+       ],
+       "mirror": "Peg_R"
+      },
+      {
+       "name": "PegRear_L",
+       "shape": "cylinder",
+       "material": "trim_black",
+       "axis": "x",
+       "radius": 0.011,
+       "height": 0.08,
+       "segments": 8,
+       "at": [
+        0.17,
+        "$py + 0.1",
+        "$pz - 0.18"
+       ],
+       "mirror": "PegRear_R"
+      },
+      {
+       "name": "Shock",
+       "shape": "cylinder",
+       "material": "spring",
+       "radius": 0.03,
+       "height": 0.28,
+       "segments": 10,
+       "at": [
+        0,
+        "$py + 0.18",
+        "$pz - 0.08"
+       ],
+       "rotate": [
+        60,
+        0,
+        0
        ]
       },
       {
-       "name": "Swingarm",
-       "shape": "box",
-       "material": "mc_black",
-       "size": [
-        0.22,
-        0.07,
-        "$wb * 0.42"
+       "name": "Swingarm_L",
+       "shape": "tube",
+       "material": "frame_grey",
+       "radius": 0.022,
+       "segments": 8,
+       "path": [
+        [
+         0.11,
+         "$py",
+         "$pz"
+        ],
+        [
+         0.11,
+         "($py + $R) / 2 + 0.02",
+         "($pz + $zr) / 2"
+        ],
+        [
+         0.11,
+         "$R",
+         "$zr"
+        ]
        ],
+       "mirror": "Swingarm_R"
+      },
+      {
+       "name": "SwingBrace",
+       "shape": "cylinder",
+       "material": "frame_grey",
+       "axis": "x",
+       "radius": 0.018,
+       "height": 0.22,
+       "segments": 8,
        "at": [
         0,
-        "$R + 0.05",
-        "-$wb * 0.3"
+        "$py - 0.01",
+        "$pz - 0.1"
+       ]
+      },
+      {
+       "name": "ChainTop",
+       "shape": "tube",
+       "material": "trim_black",
+       "radius": 0.008,
+       "segments": 6,
+       "path": [
+        [
+         0.14,
+         "$py + 0.045",
+         "$pz + 0.06"
+        ],
+        [
+         0.14,
+         "$R + 0.11",
+         "$zr"
+        ]
+       ]
+      },
+      {
+       "name": "ChainLow",
+       "shape": "tube",
+       "material": "trim_black",
+       "radius": 0.008,
+       "segments": 6,
+       "path": [
+        [
+         0.14,
+         "$py - 0.045",
+         "$pz + 0.06"
+        ],
+        [
+         0.14,
+         "$R - 0.11",
+         "$zr"
+        ]
+       ]
+      },
+      {
+       "name": "Sprocket",
+       "shape": "cylinder",
+       "material": "steel",
+       "axis": "x",
+       "radius": 0.045,
+       "height": 0.015,
+       "segments": 14,
+       "at": [
+        0.14,
+        "$py",
+        "$pz + 0.06"
+       ]
+      },
+      {
+       "name": "Header{i}",
+       "shape": "tube",
+       "material": "header",
+       "radius": 0.018,
+       "segments": 8,
+       "path": [
+        [
+         -0.06,
+         "$ey + 0.22",
+         "$ez + 0.22"
+        ],
+        [
+         -0.08,
+         "$ey + 0.02",
+         "$ez + 0.3"
+        ],
+        [
+         -0.1,
+         "$R - 0.1",
+         "$ez + 0.15"
+        ],
+        [
+         -0.12,
+         "$R - 0.11",
+         "$ez - 0.1"
+        ],
+        [
+         -0.15,
+         "$py - 0.04",
+         "$pz + 0.02"
+        ]
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         0.05,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Muffler",
+       "shape": "tube",
+       "material": "muffler",
+       "radii": [
+        0.05,
+        0.065,
+        0.06
+       ],
+       "segments": 16,
+       "path": [
+        [
+         -0.16,
+         "$py - 0.04",
+         "$pz + 0.02"
+        ],
+        [
+         -0.18,
+         "$py + 0.06",
+         "$pz - 0.22"
+        ],
+        [
+         -0.19,
+         "$py + 0.14",
+         "$pz - 0.42"
+        ]
+       ]
+      },
+      {
+       "name": "Tip",
+       "shape": "cylinder",
+       "material": "chrome",
+       "radius": 0.045,
+       "height": 0.04,
+       "segments": 14,
+       "at": [
+        -0.19,
+        "$py + 0.15",
+        "$pz - 0.44"
+       ],
+       "rotate": [
+        65,
+        0,
+        0
        ]
       }
      ]
@@ -163,77 +963,184 @@
      "at": [
       0,
       "$R",
-      "-$wb / 2"
+      "$zr"
      ],
      "children": [
       {
-       "name": "Tread",
+       "name": "Tyre",
        "shape": "lathe",
        "material": "rubber",
        "rotate": [
         0,
         0,
-        90
+        -90
        ],
-       "segments": 28,
+       "segments": 36,
+       "caps": false,
        "profile": [
         [
-         "$R*0.52",
-         "-0.18/2"
+         "0.67 * $R",
+         "-0.36 * $wr"
         ],
         [
-         "$R*0.9",
-         "-0.18/2"
+         "0.67 * $R + 0.3 * ($R - 0.67 * $R - (0.5 * $wr))",
+         "-0.48 * $wr"
         ],
         [
-         "$R",
-         "-0.18*0.34"
+         "$R - (0.5 * $wr) + 0.2588 * (0.5 * $wr)",
+         "-0.9659 * (0.5 * $wr)"
         ],
         [
-         "$R",
-         "0.18*0.34"
+         "$R - (0.5 * $wr) + 0.6428 * (0.5 * $wr)",
+         "-0.766 * (0.5 * $wr)"
         ],
         [
-         "$R*0.9",
-         "0.18/2"
+         "$R - (0.5 * $wr) + 0.9063 * (0.5 * $wr)",
+         "-0.4226 * (0.5 * $wr)"
         ],
         [
-         "$R*0.52",
-         "0.18/2"
+         "$R - (0.5 * $wr) + 1 * (0.5 * $wr)",
+         "0 * (0.5 * $wr)"
+        ],
+        [
+         "$R - (0.5 * $wr) + 0.9063 * (0.5 * $wr)",
+         "0.4226 * (0.5 * $wr)"
+        ],
+        [
+         "$R - (0.5 * $wr) + 0.6428 * (0.5 * $wr)",
+         "0.766 * (0.5 * $wr)"
+        ],
+        [
+         "$R - (0.5 * $wr) + 0.2588 * (0.5 * $wr)",
+         "0.9659 * (0.5 * $wr)"
+        ],
+        [
+         "0.67 * $R + 0.3 * ($R - 0.67 * $R - (0.5 * $wr))",
+         "0.48 * $wr"
+        ],
+        [
+         "0.67 * $R",
+         "0.36 * $wr"
+        ],
+        [
+         "0.67 * $R",
+         "-0.36 * $wr"
         ]
        ]
       },
       {
        "name": "Rim",
        "shape": "lathe",
-       "material": "metal",
+       "material": "rim",
        "rotate": [
         0,
         0,
-        90
+        -90
        ],
-       "segments": 28,
+       "segments": 36,
+       "caps": false,
        "profile": [
         [
-         0,
-         "-0.18*0.53"
+         "0.67 * $R - 0.03 * $R",
+         "-0.38 * $wr"
         ],
         [
-         "$R*0.53",
-         "-0.18*0.53"
+         "0.67 * $R + 0.02 * $R",
+         "-0.42 * $wr"
         ],
         [
-         "$R*0.47",
-         0
+         "0.67 * $R + 0.03 * $R",
+         "-0.36 * $wr"
         ],
         [
-         "$R*0.53",
-         "0.18*0.53"
+         "0.67 * $R + 0.03 * $R",
+         "0.36 * $wr"
         ],
         [
-         0,
-         "0.18*0.53"
+         "0.67 * $R + 0.02 * $R",
+         "0.42 * $wr"
+        ],
+        [
+         "0.67 * $R - 0.03 * $R",
+         "0.38 * $wr"
+        ],
+        [
+         "0.67 * $R - 0.05 * $R",
+         "0.2 * $wr"
+        ],
+        [
+         "0.67 * $R - 0.05 * $R",
+         "-0.2 * $wr"
+        ],
+        [
+         "0.67 * $R - 0.03 * $R",
+         "-0.38 * $wr"
         ]
+       ]
+      },
+      {
+       "name": "Spoke{i}",
+       "shape": "box",
+       "material": "rim",
+       "size": [
+        "0.16 * $wr",
+        "0.67 * $R - 0.18 * $R",
+        "0.07 * $R"
+       ],
+       "at": [
+        0,
+        "(0.67 * $R + 0.14 * $R) / 2",
+        0
+       ],
+       "repeat": {
+        "count": 5,
+        "around": "x"
+       }
+      },
+      {
+       "name": "Hub",
+       "shape": "cylinder",
+       "material": "rim",
+       "axis": "x",
+       "radius": "0.16 * $R",
+       "height": "0.75 * $wr",
+       "segments": 16
+      },
+      {
+       "name": "Axle",
+       "shape": "cylinder",
+       "material": "chrome",
+       "axis": "x",
+       "radius": "0.05 * $R",
+       "height": "0.95 * $wr",
+       "segments": 10
+      },
+      {
+       "name": "Disc",
+       "shape": "cylinder",
+       "material": "disc",
+       "axis": "x",
+       "radius": "0.5 * $R",
+       "height": 0.006,
+       "segments": 28,
+       "at": [
+        -0.07,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "SprocketRear",
+       "shape": "cylinder",
+       "material": "steel",
+       "axis": "x",
+       "radius": "0.36 * $R",
+       "height": 0.008,
+       "segments": 24,
+       "at": [
+        0.08,
+        0,
+        0
        ]
       }
      ]
@@ -246,132 +1153,717 @@
       "$hz"
      ],
      "rotate": [
-      -27,
+      -25,
       0,
       0
      ],
      "children": [
       {
-       "name": "Tubes",
+       "name": "ClampTop",
        "shape": "box",
-       "material": "metal",
+       "material": "frame_grey",
        "size": [
-        0.2,
-        0.8,
-        0.05
+        0.24,
+        0.035,
+        0.1
        ],
-       "offset": [
+       "bevel": 0.012,
+       "at": [
         0,
-        -0.4,
+        0.06,
         0
        ]
       },
       {
-       "name": "Handlebar",
+       "name": "ClampBottom",
        "shape": "box",
-       "material": "mc_black",
+       "material": "frame_grey",
        "size": [
-        0.72,
+        0.24,
         0.04,
-        0.05
+        0.1
+       ],
+       "bevel": 0.012,
+       "at": [
+        0,
+        -0.12,
+        0.01
+       ]
+      },
+      {
+       "name": "Stanchion_L",
+       "shape": "cylinder",
+       "material": "chrome",
+       "radius": 0.021,
+       "height": 0.5,
+       "segments": 12,
+       "at": [
+        0.095,
+        -0.16,
+        0.02
+       ],
+       "mirror": "Stanchion_R"
+      },
+      {
+       "name": "Leg_L",
+       "shape": "cylinder",
+       "material": "fork_leg",
+       "radius": 0.028,
+       "height": "$Lf - 0.36",
+       "segments": 12,
+       "at": [
+        0.095,
+        "-0.36 - ($Lf - 0.36) / 2 + 0.02",
+        0.02
+       ],
+       "mirror": "Leg_R"
+      },
+      {
+       "name": "Caliper_L",
+       "shape": "box",
+       "material": "caliper",
+       "size": [
+        0.03,
+        0.12,
+        0.06
+       ],
+       "bevel": 0.012,
+       "at": [
+        0.075,
+        "-$Lf + 0.12",
+        -0.07
+       ],
+       "rotate": [
+        25,
+        0,
+        0
+       ],
+       "mirror": "Caliper_R"
+      },
+      {
+       "name": "Fender",
+       "shape": "loft",
+       "material": "mc_paint",
+       "rotate": [
+        0,
+        -90,
+        0
+       ],
+       "sections": [
+        {
+         "z": -0.065,
+         "points": [
+          [
+           "0.9848 * ($R + 0.03)",
+           "-$Lf + -0.1736 * ($R + 0.03)"
+          ],
+          [
+           "0.9979 * ($R + 0.03)",
+           "-$Lf + 0.0654 * ($R + 0.03)"
+          ],
+          [
+           "0.9537 * ($R + 0.03)",
+           "-$Lf + 0.3007 * ($R + 0.03)"
+          ],
+          [
+           "0.8549 * ($R + 0.03)",
+           "-$Lf + 0.5188 * ($R + 0.03)"
+          ],
+          [
+           "0.7071 * ($R + 0.03)",
+           "-$Lf + 0.7071 * ($R + 0.03)"
+          ],
+          [
+           "0.5188 * ($R + 0.03)",
+           "-$Lf + 0.8549 * ($R + 0.03)"
+          ],
+          [
+           "0.3007 * ($R + 0.03)",
+           "-$Lf + 0.9537 * ($R + 0.03)"
+          ],
+          [
+           "0.0654 * ($R + 0.03)",
+           "-$Lf + 0.9979 * ($R + 0.03)"
+          ],
+          [
+           "-0.1736 * ($R + 0.03)",
+           "-$Lf + 0.9848 * ($R + 0.03)"
+          ],
+          [
+           "-0.1736 * ($R + 0.045)",
+           "-$Lf + 0.9848 * ($R + 0.045)"
+          ],
+          [
+           "0.0654 * ($R + 0.045)",
+           "-$Lf + 0.9979 * ($R + 0.045)"
+          ],
+          [
+           "0.3007 * ($R + 0.045)",
+           "-$Lf + 0.9537 * ($R + 0.045)"
+          ],
+          [
+           "0.5188 * ($R + 0.045)",
+           "-$Lf + 0.8549 * ($R + 0.045)"
+          ],
+          [
+           "0.7071 * ($R + 0.045)",
+           "-$Lf + 0.7071 * ($R + 0.045)"
+          ],
+          [
+           "0.8549 * ($R + 0.045)",
+           "-$Lf + 0.5188 * ($R + 0.045)"
+          ],
+          [
+           "0.9537 * ($R + 0.045)",
+           "-$Lf + 0.3007 * ($R + 0.045)"
+          ],
+          [
+           "0.9979 * ($R + 0.045)",
+           "-$Lf + 0.0654 * ($R + 0.045)"
+          ],
+          [
+           "0.9848 * ($R + 0.045)",
+           "-$Lf + -0.1736 * ($R + 0.045)"
+          ]
+         ]
+        },
+        {
+         "z": 0.065,
+         "points": [
+          [
+           "0.9848 * ($R + 0.03)",
+           "-$Lf + -0.1736 * ($R + 0.03)"
+          ],
+          [
+           "0.9979 * ($R + 0.03)",
+           "-$Lf + 0.0654 * ($R + 0.03)"
+          ],
+          [
+           "0.9537 * ($R + 0.03)",
+           "-$Lf + 0.3007 * ($R + 0.03)"
+          ],
+          [
+           "0.8549 * ($R + 0.03)",
+           "-$Lf + 0.5188 * ($R + 0.03)"
+          ],
+          [
+           "0.7071 * ($R + 0.03)",
+           "-$Lf + 0.7071 * ($R + 0.03)"
+          ],
+          [
+           "0.5188 * ($R + 0.03)",
+           "-$Lf + 0.8549 * ($R + 0.03)"
+          ],
+          [
+           "0.3007 * ($R + 0.03)",
+           "-$Lf + 0.9537 * ($R + 0.03)"
+          ],
+          [
+           "0.0654 * ($R + 0.03)",
+           "-$Lf + 0.9979 * ($R + 0.03)"
+          ],
+          [
+           "-0.1736 * ($R + 0.03)",
+           "-$Lf + 0.9848 * ($R + 0.03)"
+          ],
+          [
+           "-0.1736 * ($R + 0.045)",
+           "-$Lf + 0.9848 * ($R + 0.045)"
+          ],
+          [
+           "0.0654 * ($R + 0.045)",
+           "-$Lf + 0.9979 * ($R + 0.045)"
+          ],
+          [
+           "0.3007 * ($R + 0.045)",
+           "-$Lf + 0.9537 * ($R + 0.045)"
+          ],
+          [
+           "0.5188 * ($R + 0.045)",
+           "-$Lf + 0.8549 * ($R + 0.045)"
+          ],
+          [
+           "0.7071 * ($R + 0.045)",
+           "-$Lf + 0.7071 * ($R + 0.045)"
+          ],
+          [
+           "0.8549 * ($R + 0.045)",
+           "-$Lf + 0.5188 * ($R + 0.045)"
+          ],
+          [
+           "0.9537 * ($R + 0.045)",
+           "-$Lf + 0.3007 * ($R + 0.045)"
+          ],
+          [
+           "0.9979 * ($R + 0.045)",
+           "-$Lf + 0.0654 * ($R + 0.045)"
+          ],
+          [
+           "0.9848 * ($R + 0.045)",
+           "-$Lf + -0.1736 * ($R + 0.045)"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Handlebar",
+       "shape": "tube",
+       "material": "trim_black",
+       "radius": 0.012,
+       "segments": 8,
+       "path": [
+        [
+         -0.36,
+         0.17,
+         -0.1
+        ],
+        [
+         -0.18,
+         0.12,
+         -0.04
+        ],
+        [
+         0,
+         0.11,
+         -0.02
+        ],
+        [
+         0.18,
+         0.12,
+         -0.04
+        ],
+        [
+         0.36,
+         0.17,
+         -0.1
+        ]
+       ]
+      },
+      {
+       "name": "Grip_L",
+       "shape": "cylinder",
+       "material": "rubber",
+       "axis": "x",
+       "radius": 0.018,
+       "height": 0.12,
+       "segments": 10,
+       "at": [
+        0.36,
+        0.17,
+        -0.1
+       ],
+       "rotate": [
+        0,
+        18,
+        0
+       ],
+       "mirror": "Grip_R"
+      },
+      {
+       "name": "Lever_L",
+       "shape": "box",
+       "material": "aluminium",
+       "size": [
+        0.16,
+        0.012,
+        0.02
+       ],
+       "at": [
+        0.3,
+        0.16,
+        -0.04
+       ],
+       "rotate": [
+        0,
+        -18,
+        0
+       ],
+       "mirror": "Lever_R"
+      },
+      {
+       "name": "Clocks",
+       "shape": "box",
+       "material": "trim_black",
+       "size": [
+        0.16,
+        0.06,
+        0.1
+       ],
+       "bevel": 0.02,
+       "at": [
+        0,
+        0.14,
+        0.04
+       ],
+       "rotate": [
+        30,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "Screen",
+       "shape": "box",
+       "material": "led",
+       "size": [
+        0.12,
+        0.004,
+        0.07
        ],
        "at": [
         0,
-        0.07,
+        0.172,
+        0.05
+       ],
+       "rotate": [
+        30,
+        0,
         0
        ]
       },
       {
        "name": "Headlight",
-       "shape": "ellipsoid",
-       "material": "frame_white",
-       "radii": [
-        0.1,
-        0.1,
-        0.07
-       ],
        "at": [
         0,
-        -0.05,
-        0.12
+        -0.04,
+        0.17
+       ],
+       "children": [
+        {
+         "name": "Shell",
+         "shape": "ellipsoid",
+         "material": "trim_black",
+         "radii": [
+          0.1,
+          0.1,
+          0.07
+         ],
+         "segments": 18
+        },
+        {
+         "name": "Lens",
+         "shape": "cylinder",
+         "material": "light",
+         "axis": "z",
+         "radius": 0.085,
+         "height": 0.02,
+         "segments": 24,
+         "bevel": 0.008,
+         "at": [
+          0,
+          0,
+          0.05
+         ]
+        },
+        {
+         "name": "Ring",
+         "shape": "lathe",
+         "material": "chrome",
+         "segments": 24,
+         "caps": false,
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "at": [
+          0,
+          0,
+          0.056
+         ],
+         "profile": [
+          [
+           0.096,
+           0.0
+          ],
+          [
+           0.092,
+           0.0069
+          ],
+          [
+           0.084,
+           0.0069
+          ],
+          [
+           0.08,
+           0.0
+          ],
+          [
+           0.084,
+           -0.0069
+          ],
+          [
+           0.092,
+           -0.0069
+          ],
+          [
+           0.096,
+           -0.0
+          ]
+         ]
+        }
        ]
+      },
+      {
+       "name": "Mirror_L",
+       "at": [
+        0.24,
+        0.16,
+        -0.06
+       ],
+       "mirror": "Mirror_R",
+       "children": [
+        {
+         "name": "Stalk",
+         "shape": "tube",
+         "material": "trim_black",
+         "radius": 0.007,
+         "segments": 6,
+         "path": [
+          [
+           0,
+           0,
+           0
+          ],
+          [
+           0.04,
+           0.12,
+           -0.02
+          ],
+          [
+           0.07,
+           0.2,
+           -0.02
+          ]
+         ]
+        },
+        {
+         "name": "Head",
+         "shape": "ellipsoid",
+         "material": "trim_black",
+         "radii": [
+          0.06,
+          0.04,
+          0.02
+         ],
+         "segments": 12,
+         "at": [
+          0.09,
+          0.22,
+          -0.02
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Indicator_L",
+       "shape": "tube",
+       "material": "light_amber",
+       "radius": 0.011,
+       "segments": 8,
+       "path": [
+        [
+         0.1,
+         -0.06,
+         0.1
+        ],
+        [
+         0.16,
+         -0.06,
+         0.1
+        ]
+       ],
+       "mirror": "Indicator_R"
       },
       {
        "name": "WheelFront",
        "at": [
         0,
-        -0.8,
+        "-$Lf",
+        0
+       ],
+       "rotate": [
+        25,
+        0,
         0
        ],
        "children": [
         {
-         "name": "Tread",
+         "name": "Tyre",
          "shape": "lathe",
          "material": "rubber",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 28,
+         "segments": 36,
+         "caps": false,
          "profile": [
           [
-           "$R*0.52",
-           "-0.15/2"
+           "0.67 * $R",
+           "-0.36 * $wf"
           ],
           [
-           "$R*0.9",
-           "-0.15/2"
+           "0.67 * $R + 0.3 * ($R - 0.67 * $R - (0.5 * $wf))",
+           "-0.48 * $wf"
           ],
           [
-           "$R",
-           "-0.15*0.34"
+           "$R - (0.5 * $wf) + 0.2588 * (0.5 * $wf)",
+           "-0.9659 * (0.5 * $wf)"
           ],
           [
-           "$R",
-           "0.15*0.34"
+           "$R - (0.5 * $wf) + 0.6428 * (0.5 * $wf)",
+           "-0.766 * (0.5 * $wf)"
           ],
           [
-           "$R*0.9",
-           "0.15/2"
+           "$R - (0.5 * $wf) + 0.9063 * (0.5 * $wf)",
+           "-0.4226 * (0.5 * $wf)"
           ],
           [
-           "$R*0.52",
-           "0.15/2"
+           "$R - (0.5 * $wf) + 1 * (0.5 * $wf)",
+           "0 * (0.5 * $wf)"
+          ],
+          [
+           "$R - (0.5 * $wf) + 0.9063 * (0.5 * $wf)",
+           "0.4226 * (0.5 * $wf)"
+          ],
+          [
+           "$R - (0.5 * $wf) + 0.6428 * (0.5 * $wf)",
+           "0.766 * (0.5 * $wf)"
+          ],
+          [
+           "$R - (0.5 * $wf) + 0.2588 * (0.5 * $wf)",
+           "0.9659 * (0.5 * $wf)"
+          ],
+          [
+           "0.67 * $R + 0.3 * ($R - 0.67 * $R - (0.5 * $wf))",
+           "0.48 * $wf"
+          ],
+          [
+           "0.67 * $R",
+           "0.36 * $wf"
+          ],
+          [
+           "0.67 * $R",
+           "-0.36 * $wf"
           ]
          ]
         },
         {
          "name": "Rim",
          "shape": "lathe",
-         "material": "metal",
+         "material": "rim",
          "rotate": [
           0,
           0,
-          90
+          -90
          ],
-         "segments": 28,
+         "segments": 36,
+         "caps": false,
          "profile": [
           [
-           0,
-           "-0.15*0.53"
+           "0.67 * $R - 0.03 * $R",
+           "-0.38 * $wf"
           ],
           [
-           "$R*0.53",
-           "-0.15*0.53"
+           "0.67 * $R + 0.02 * $R",
+           "-0.42 * $wf"
           ],
           [
-           "$R*0.47",
-           0
+           "0.67 * $R + 0.03 * $R",
+           "-0.36 * $wf"
           ],
           [
-           "$R*0.53",
-           "0.15*0.53"
+           "0.67 * $R + 0.03 * $R",
+           "0.36 * $wf"
           ],
           [
-           0,
-           "0.15*0.53"
+           "0.67 * $R + 0.02 * $R",
+           "0.42 * $wf"
+          ],
+          [
+           "0.67 * $R - 0.03 * $R",
+           "0.38 * $wf"
+          ],
+          [
+           "0.67 * $R - 0.05 * $R",
+           "0.2 * $wf"
+          ],
+          [
+           "0.67 * $R - 0.05 * $R",
+           "-0.2 * $wf"
+          ],
+          [
+           "0.67 * $R - 0.03 * $R",
+           "-0.38 * $wf"
           ]
+         ]
+        },
+        {
+         "name": "Spoke{i}",
+         "shape": "box",
+         "material": "rim",
+         "size": [
+          "0.16 * $wf",
+          "0.67 * $R - 0.18 * $R",
+          "0.07 * $R"
+         ],
+         "at": [
+          0,
+          "(0.67 * $R + 0.14 * $R) / 2",
+          0
+         ],
+         "repeat": {
+          "count": 5,
+          "around": "x"
+         }
+        },
+        {
+         "name": "Hub",
+         "shape": "cylinder",
+         "material": "rim",
+         "axis": "x",
+         "radius": "0.16 * $R",
+         "height": "0.75 * $wf",
+         "segments": 16
+        },
+        {
+         "name": "Axle",
+         "shape": "cylinder",
+         "material": "chrome",
+         "axis": "x",
+         "radius": "0.05 * $R",
+         "height": "0.95 * $wf",
+         "segments": 10
+        },
+        {
+         "name": "Disc_L",
+         "shape": "cylinder",
+         "material": "disc",
+         "axis": "x",
+         "radius": "0.5 * $R",
+         "height": 0.006,
+         "segments": 28,
+         "at": [
+          0.075,
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Disc_R",
+         "shape": "cylinder",
+         "material": "disc",
+         "axis": "x",
+         "radius": "0.5 * $R",
+         "height": 0.006,
+         "segments": 28,
+         "at": [
+          -0.075,
+          0,
+          0
          ]
         }
        ]

@@ -2,7 +2,7 @@
  "version": 1,
  "name": "campfire",
  "archetype": "prop.campfire",
- "description": "A campfire: logs leaning together in a cone over a glowing bed of embers, a low flame and a ring of stones around it, on y = 0.",
+ "description": "A burning campfire: logs of varying size leaning together in a teepee (bark below, charred black above with glowing tips and pale cut ends), a glowing bed of embers with charcoal, translucent flame tongues with a marker for particles and a light, a scorched hearth and a ring of irregular stones, on y = 0.",
  "params": [
   {
    "name": "logs",
@@ -32,17 +32,96 @@
  "materials": {
   "fire_stone": {
    "color": [
-    0.42,
-    0.4,
-    0.38,
+    0.19,
+    0.18,
+    0.165,
     1
    ],
    "metallic": 0,
-   "roughness": 0.95
+   "roughness": 0.88,
+   "texture": "concrete"
+  },
+  "log_bark": {
+   "color": [
+    0.24,
+    0.16,
+    0.1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.95,
+   "texture": "bark"
+  },
+  "char": {
+   "color": [
+    0.035,
+    0.03,
+    0.028,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "texture": "bark"
+  },
+  "sapwood": {
+   "color": [
+    0.62,
+    0.46,
+    0.3,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.85
+  },
+  "heartwood": {
+   "color": [
+    0.45,
+    0.3,
+    0.17,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.85
+  },
+  "ash": {
+   "color": [
+    0.075,
+    0.068,
+    0.062,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1,
+   "texture": "ground"
+  },
+  "ember_bed": {
+   "color": [
+    0.05,
+    0.035,
+    0.03,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1,
+   "emissive": [
+    0.3,
+    0.045,
+    0.004
+   ]
+  },
+  "charcoal": {
+   "color": [
+    0.04,
+    0.035,
+    0.035,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.85
   },
   "ember": {
    "color": [
-    0.25,
+    0.3,
     0.06,
     0.02,
     1
@@ -50,24 +129,41 @@
    "metallic": 0,
    "roughness": 0.9,
    "emissive": [
-    1.0,
-    0.28,
+    1,
+    0.32,
     0.05
    ]
   },
   "flame": {
    "color": [
-    1.0,
-    0.55,
+    0.45,
     0.1,
-    1
+    0.01,
+    0.8
    ],
    "metallic": 0,
    "roughness": 1,
+   "alpha": "BLEND",
    "emissive": [
-    1.0,
+    1,
+    0.36,
+    0.03
+   ]
+  },
+  "flame_core": {
+   "color": [
     0.6,
-    0.15
+    0.35,
+    0.05,
+    0.9
+   ],
+   "metallic": 0,
+   "roughness": 1,
+   "alpha": "BLEND",
+   "emissive": [
+    1,
+    0.68,
+    0.16
    ]
   }
  },
@@ -76,84 +172,339 @@
    "name": "Campfire",
    "vars": {
     "L": "$logLength",
-    "lr": "$logLength * 0.07",
-    "tilt": 55,
-    "r0": "$logLength * sin(rad(55)) * 0.85",
-    "R": "$logLength * sin(rad(55)) * 0.85 + 0.08"
+    "lr": "$logLength * 0.072",
+    "rb": "$logLength * sin(rad(34)) * 0.9",
+    "R": "$logLength * sin(rad(34)) * 0.9 + 0.17",
+    "rs": "min(0.05 + 0.1 * $logLength, pi * ($logLength * sin(rad(34)) * 0.9 + 0.17) / $stones * 0.85)"
    },
    "children": [
     {
+     "name": "Hearth",
+     "shape": "lathe",
+     "material": "ash",
+     "segments": 32,
+     "profile": [
+      [
+       0,
+       0.012
+      ],
+      [
+       "$rb * 0.9",
+       0.01
+      ],
+      [
+       "$R - $rs * 0.5",
+       0.006
+      ],
+      [
+       "$R + $rs * 0.3",
+       0
+      ]
+     ]
+    },
+    {
      "name": "Logs",
-     "material": "bark",
      "children": [
       {
        "name": "Log_{i}",
-       "shape": "cylinder",
-       "radius": "$lr",
-       "height": "$L",
-       "segments": 10,
        "at": [
-        "$r0",
-        "$lr * sin(rad($tilt))",
+        "(($L * (0.9 + 0.14 * (0.5 + 0.5 * sin($i * 1.618 + 2.1)))) * sin(rad((31 + 6 * (0.5 + 0.5 * sin($i * 2.399 + 0.5))))) * 0.9)",
+        "($lr * (0.85 + 0.3 * (0.5 + 0.5 * sin($i * 3.7 + 1.3)))) * sin(rad((31 + 6 * (0.5 + 0.5 * sin($i * 2.399 + 0.5)))))",
         0
        ],
        "rotate": [
         0,
-        0,
-        "$tilt"
-       ],
-       "offset": [
-        0,
-        "$L / 2",
-        0
+        "$i * 77",
+        "(31 + 6 * (0.5 + 0.5 * sin($i * 2.399 + 0.5)))"
        ],
        "repeat": {
         "count": "$logs",
         "around": "y"
-       }
+       },
+       "children": [
+        {
+         "name": "Bark",
+         "vars": {
+          "ll": "($L * (0.9 + 0.14 * (0.5 + 0.5 * sin($i * 1.618 + 2.1))))",
+          "r": "($lr * (0.85 + 0.3 * (0.5 + 0.5 * sin($i * 3.7 + 1.3))))"
+         },
+         "shape": "cylinder",
+         "material": "log_bark",
+         "radius": "$r",
+         "height": "$ll * 0.58",
+         "segments": 12,
+         "offset": [
+          0,
+          "$ll * 0.29",
+          0
+         ]
+        },
+        {
+         "name": "Char",
+         "vars": {
+          "ll": "($L * (0.9 + 0.14 * (0.5 + 0.5 * sin($i * 1.618 + 2.1))))",
+          "r": "($lr * (0.85 + 0.3 * (0.5 + 0.5 * sin($i * 3.7 + 1.3))))"
+         },
+         "shape": "cylinder",
+         "material": "char",
+         "radius": "$r * 0.93",
+         "height": "$ll * 0.42 - 0.02",
+         "segments": 12,
+         "at": [
+          0,
+          "$ll * 0.79 - 0.02",
+          0
+         ]
+        },
+        {
+         "name": "Tip",
+         "vars": {
+          "ll": "($L * (0.9 + 0.14 * (0.5 + 0.5 * sin($i * 1.618 + 2.1))))",
+          "r": "($lr * (0.85 + 0.3 * (0.5 + 0.5 * sin($i * 3.7 + 1.3))))"
+         },
+         "shape": "ellipsoid",
+         "material": "ember",
+         "radii": [
+          "$r * 0.86",
+          0.03,
+          "$r * 0.86"
+         ],
+         "lumps": 0.25,
+         "seed": "$i + 1",
+         "segments": 10,
+         "at": [
+          0,
+          "$ll - 0.035",
+          0
+         ]
+        },
+        {
+         "name": "Cut",
+         "vars": {
+          "r": "($lr * (0.85 + 0.3 * (0.5 + 0.5 * sin($i * 3.7 + 1.3))))"
+         },
+         "shape": "cylinder",
+         "material": "sapwood",
+         "radius": "$r * 0.94",
+         "height": 0.004,
+         "segments": 12,
+         "at": [
+          0,
+          0.0005,
+          0
+         ]
+        },
+        {
+         "name": "Heart",
+         "vars": {
+          "r": "($lr * (0.85 + 0.3 * (0.5 + 0.5 * sin($i * 3.7 + 1.3))))"
+         },
+         "shape": "cylinder",
+         "material": "heartwood",
+         "radius": "$r * 0.5",
+         "height": 0.004,
+         "segments": 10,
+         "at": [
+          0,
+          -0.0005,
+          0
+         ]
+        }
+       ]
       }
      ]
     },
     {
      "name": "Embers",
-     "shape": "cylinder",
-     "material": "ember",
-     "radius": "$r0 * 0.95",
-     "height": 0.04,
-     "segments": 20,
-     "at": [
-      0,
-      0.02,
-      0
+     "shape": "lathe",
+     "material": "ember_bed",
+     "segments": 24,
+     "profile": [
+      [
+       0,
+       0.06
+      ],
+      [
+       "$rb * 0.25",
+       0.055
+      ],
+      [
+       "$rb * 0.5",
+       0.038
+      ],
+      [
+       "$rb * 0.68",
+       0.018
+      ],
+      [
+       "$rb * 0.78",
+       0.004
+      ]
+     ],
+     "children": [
+      {
+       "name": "Cinder_{i}",
+       "shape": "ellipsoid",
+       "material": "charcoal",
+       "radii": [
+        "$L * (0.04 + 0.02 * (0.5 + 0.5 * sin($i * 2.3 + 0.2)))",
+        "$L * 0.022",
+        "$L * (0.03 + 0.015 * (0.5 + 0.5 * sin($i * 1.9 + 1.1)))"
+       ],
+       "lumps": 0.4,
+       "seed": "$i * 3 + 2",
+       "segments": 8,
+       "at": [
+        "$rb * (0.22 + 0.4 * (0.5 + 0.5 * sin($i * 1.37 + 0.4)))",
+        "max(0.05 - 0.045 * (0.22 + 0.4 * (0.5 + 0.5 * sin($i * 1.37 + 0.4))), $L * 0.03)",
+        0
+       ],
+       "rotate": [
+        0,
+        "$i * 41",
+        0
+       ],
+       "repeat": {
+        "count": 9,
+        "around": "y",
+        "phase": 11
+       }
+      },
+      {
+       "name": "Glow_{i}",
+       "shape": "ellipsoid",
+       "material": "ember",
+       "radii": [
+        "$L * 0.035",
+        "$L * 0.02",
+        "$L * 0.028"
+       ],
+       "lumps": 0.4,
+       "seed": "$i * 5 + 1",
+       "segments": 8,
+       "at": [
+        "$rb * (0.12 + 0.35 * (0.5 + 0.5 * sin($i * 2.9 + 1.7)))",
+        0.05,
+        0
+       ],
+       "rotate": [
+        0,
+        "$i * 67",
+        0
+       ],
+       "repeat": {
+        "count": 8,
+        "around": "y",
+        "phase": 37
+       }
+      }
      ]
     },
     {
      "name": "Flame",
-     "shape": "lathe",
-     "material": "flame",
-     "segments": 12,
      "at": [
       0,
-      0.03,
+      0.035,
       0
      ],
-     "profile": [
-      [
-       "$r0 * 0.3",
-       0
-      ],
-      [
-       "$r0 * 0.32",
-       "$L * 0.12"
-      ],
-      [
-       "$r0 * 0.14",
-       "$L * 0.3"
-      ],
-      [
-       0,
-       "$L * 0.42"
-      ]
+     "children": [
+      {
+       "name": "Tongue_{i}",
+       "material": "flame",
+       "at": [
+        "$L * (0.08 + 0.05 * (0.5 + 0.5 * sin($i * 1.3 + 0.2)))",
+        0,
+        0
+       ],
+       "rotate": [
+        0,
+        "$i * 13",
+        0
+       ],
+       "repeat": {
+        "count": 7,
+        "around": "y",
+        "phase": 20
+       },
+       "shape": "tube",
+       "segments": 10,
+       "path": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         -0.012,
+         "($L * (0.5 + 0.3 * (0.5 + 0.5 * sin($i * 2.1 + 1)))) * 0.3",
+         0.012
+        ],
+        [
+         "-($L * 0.07) * 0.5",
+         "($L * (0.5 + 0.3 * (0.5 + 0.5 * sin($i * 2.1 + 1)))) * 0.6",
+         -0.01
+        ],
+        [
+         "-($L * 0.07) * 0.9",
+         "($L * (0.5 + 0.3 * (0.5 + 0.5 * sin($i * 2.1 + 1)))) * 0.85",
+         0.006
+        ],
+        [
+         "-($L * 0.07) * 0.8",
+         "($L * (0.5 + 0.3 * (0.5 + 0.5 * sin($i * 2.1 + 1))))",
+         0
+        ]
+       ],
+       "radii": [
+        "($L * 0.07)",
+        "($L * 0.07) * 0.95",
+        "($L * 0.07) * 0.7",
+        "($L * 0.07) * 0.33",
+        0.003
+       ]
+      },
+      {
+       "name": "Core",
+       "material": "flame_core",
+       "shape": "tube",
+       "segments": 10,
+       "path": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0.006,
+         "$L * 0.25",
+         0
+        ],
+        [
+         -0.01,
+         "$L * 0.52",
+         0.006
+        ],
+        [
+         0.004,
+         "$L * 0.75",
+         0
+        ]
+       ],
+       "radii": [
+        "$L * 0.075",
+        "$L * 0.066",
+        "$L * 0.03",
+        0.003
+       ]
+      },
+      {
+       "name": "ParticleOrigin",
+       "at": [
+        0,
+        0.02,
+        0
+       ]
+      }
      ]
     },
     {
@@ -164,14 +515,21 @@
        "name": "Stone_{i}",
        "shape": "ellipsoid",
        "radii": [
-        0.13,
-        0.08,
-        0.1
+        "$rs * (0.62 + 0.2 * (0.5 + 0.5 * sin($i * 1.9 + 0.3)))",
+        "$rs * (0.5 + 0.22 * (0.5 + 0.5 * sin($i * 2.7 + 1.9)))",
+        "$rs * (0.8 + 0.25 * (0.5 + 0.5 * sin($i * 1.3 + 2.6)))"
        ],
-       "segments": 10,
+       "lumps": 0.3,
+       "seed": "5 + 3 * $i",
+       "segments": 12,
        "at": [
-        "$R",
-        0.08,
+        "$R + 0.025 * sin($i * 1.7)",
+        "$rs * (0.5 + 0.22 * (0.5 + 0.5 * sin($i * 2.7 + 1.9))) * 1.03",
+        0
+       ],
+       "rotate": [
+        0,
+        "$i * 23 - 10",
         0
        ],
        "repeat": {
