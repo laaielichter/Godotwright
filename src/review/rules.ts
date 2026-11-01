@@ -34,6 +34,7 @@ const list: Rule[] = [
   { id: "api/unknown-signal", category: "api", severity: "error", title: "Unknown signal", fix: "Declare the signal, or use one that exists on this class." },
   { id: "api/duplicate-declaration", category: "api", severity: "error", title: "Declared twice", fix: "Remove the second declaration (a merge or a patch often adds the same code twice), or rename one." },
   // Runtime pitfalls from real projects (see data/lessons.json and `godotwright lessons`).
+  { id: "api/override-signature", category: "api", severity: "error", title: "Override does not match its parent", fix: "Give the override the parent's parameters; parameters it adds need a default value." },
   { id: "api/freed-check-order", category: "api", severity: "warning", title: "Type test before the freed check", fix: "Check is_instance_valid(x) first and test `x is T` after it: a type test on a freed object is itself an error." },
   { id: "api/get-meta-null-default", category: "api", severity: "warning", title: "get_meta() with a null default", fix: "Check has_meta() first, or pass a default that is not null: with null, Godot prints an error when the entry is missing." },
   { id: "api/parse-into-typed", category: "api", severity: "warning", title: "Parsed data put straight into a typed variable", fix: "Parse into a Variant, check it with `is Dictionary` or `is Array`, then use it: a missing or broken input gives null and stops the function." },
@@ -48,6 +49,7 @@ const list: Rule[] = [
   { id: "performance/many-shadow-lights", category: "performance", severity: "warning", title: "Many shadow-casting lights", fix: "Turn off shadows on lights that do not need them." },
   { id: "performance/huge-scene", category: "performance", severity: "info", title: "Very large scene", fix: "Split the scene into sub-scenes, or use MultiMesh/GridMap for repeated objects." },
   { id: "performance/runtime-gltf-mipmaps", category: "performance", severity: "warning", title: "glTF loaded at runtime without mipmaps", fix: "Call Image.generate_mipmaps() on the model's images, or bake it into a scene with imported (VRAM-compressed) textures." },
+  { id: "performance/get-image-in-loop", category: "performance", severity: "warning", title: "Texture read back from the GPU in a loop", fix: "Keep the Image you uploaded, or call get_image() once outside the loop." },
   { id: "performance/small-light-cube-shadow", category: "performance", severity: "info", title: "Small omni light with a cube shadow", fix: "Turn the shadow off on small fill lights, or use omni_shadow_mode dual paraboloid: a cube shadow costs six passes." },
   // Code quality.
   { id: "api/physics-change-in-callback", category: "api", severity: "warning", title: "Physics change while Godot reports overlaps", fix: "In a body/area entered or exited handler, add physics nodes with add_child.call_deferred() and change monitoring or disabled with set_deferred()." },
@@ -67,6 +69,8 @@ const list: Rule[] = [
   { id: "quality/todo", category: "quality", severity: "info", title: "TODO left in code", fix: "Do the TODO, or track it outside the code." },
   { id: "quality/mojibake", category: "quality", severity: "warning", title: "Text encoded twice", fix: "Retype the characters (\"Ã©\" is \"é\" read with the wrong encoding) and save the file as UTF-8." },
   { id: "quality/interpolation-reset-every-tick", category: "quality", severity: "warning", title: "Physics interpolation reset every tick", fix: "Call reset_physics_interpolation() only after a teleport; on every tick the node draws at its raw pose and jitters." },
+  { id: "quality/tree-test-reads-too-early", category: "quality", severity: "warning", title: "Test reads global positions before the scene is in the tree", fix: "In a SceneTree script, await process_frame after adding the scene to the root, before reading global transforms." },
+  { id: "quality/shader-reads-own-depth", category: "quality", severity: "warning", title: "Shader reads the depth it writes itself", fix: "Use depth_draw_always instead of depth_prepass_alpha in a shader that reads the depth texture." },
   { id: "quality/platform-layers-not-restored", category: "quality", severity: "warning", title: "Moving platforms switched off for good", fix: "Save platform_floor_layers before setting it to 0 and restore it when your own carrying ends." },
   // Project structure.
   { id: "structure/broken-reference", category: "structure", severity: "error", title: "Broken reference", fix: "Fix the path or uid, or restore the missing file." },

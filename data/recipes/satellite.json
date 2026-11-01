@@ -2,14 +2,14 @@
  "version": 1,
  "name": "satellite",
  "archetype": "spacecraft.satellite",
- "description": "A communications satellite: a box-shaped bus with gold foil, a solar panel wing on each side that hinges at the bus, and a dish antenna facing +Z. It sits on y = 0, as on a launch adapter.",
+ "description": "A communications satellite on its launch adapter ring: a box-shaped bus in crinkled gold foil with mirror radiators on the sides, a solar array wing on each side (a yoke and three cell panels with bus bars, hinged at the bus), two large reflectors with feed horns on arms, a small top dish, horns and an omni antenna, star trackers and thrusters at the corners.",
  "params": [
   {
    "name": "busSize",
    "type": "number",
    "default": 2.2,
-   "min": 1.0,
-   "max": 4.0,
+   "min": 1,
+   "max": 4,
    "description": "Edge length of the bus in metres."
   },
   {
@@ -24,23 +24,64 @@
  "materials": {
   "foil": {
    "color": [
-    0.85,
+    0.86,
     0.62,
     0.2,
     1
    ],
+   "metallic": 0.95,
+   "roughness": 0.32,
+   "texture": "plaster"
+  },
+  "foil_dark": {
+   "color": [
+    0.06,
+    0.06,
+    0.07,
+    1
+   ],
+   "metallic": 0.6,
+   "roughness": 0.4
+  },
+  "radiator": {
+   "color": [
+    0.86,
+    0.88,
+    0.9,
+    1
+   ],
    "metallic": 0.9,
-   "roughness": 0.3
+   "roughness": 0.12
   },
   "solar_cell": {
    "color": [
-    0.05,
-    0.08,
-    0.25,
+    0.03,
+    0.06,
+    0.22,
     1
    ],
-   "metallic": 0.4,
-   "roughness": 0.25
+   "metallic": 0.5,
+   "roughness": 0.2
+  },
+  "reflector": {
+   "color": [
+    0.88,
+    0.88,
+    0.85,
+    1
+   ],
+   "metallic": 0.15,
+   "roughness": 0.55
+  },
+  "thruster": {
+   "color": [
+    0.3,
+    0.28,
+    0.26,
+    1
+   ],
+   "metallic": 0.8,
+   "roughness": 0.4
   }
  },
  "nodes": [
@@ -48,9 +89,31 @@
    "name": "Satellite",
    "vars": {
     "S": "$busSize",
-    "P": "$panelSpan"
+    "P": "$panelSpan",
+    "ad": "$busSize * 0.14",
+    "yc": "$busSize * 0.64"
    },
    "children": [
+    {
+     "name": "Adapter",
+     "shape": "lathe",
+     "material": "aluminium",
+     "segments": 32,
+     "profile": [
+      [
+       "$S * 0.36",
+       0
+      ],
+      [
+       "$S * 0.38",
+       "$S * 0.02"
+      ],
+      [
+       "$S * 0.3",
+       "$ad + 0.01"
+      ]
+     ]
+    },
     {
      "name": "Bus",
      "shape": "box",
@@ -60,83 +123,534 @@
       "$S",
       "$S"
      ],
+     "bevel": "$S * 0.02",
+     "at": [
+      0,
+      "$ad",
+      0
+     ],
      "anchor": "bottom"
     },
     {
-     "name": "SolarPanel_L",
+     "name": "Radiator_L",
+     "shape": "box",
+     "material": "radiator",
+     "size": [
+      "$S * 0.02",
+      "$S * 0.86",
+      "$S * 0.86"
+     ],
      "at": [
-      "$S / 2",
-      "$S / 2",
+      "$S * 0.5",
+      "$yc",
+      0
+     ],
+     "mirror": "Radiator_R"
+    },
+    {
+     "name": "TopDeck",
+     "shape": "box",
+     "material": "foil_dark",
+     "size": [
+      "$S * 0.9",
+      "$S * 0.02",
+      "$S * 0.9"
+     ],
+     "at": [
+      0,
+      "$S + $ad",
+      0
+     ]
+    },
+    {
+     "name": "SolarPanel_L",
+     "material": "solar_cell",
+     "at": [
+      "$S * 0.5",
+      "$yc",
       0
      ],
      "mirror": "SolarPanel_R",
      "children": [
       {
-       "name": "Yoke",
+       "name": "Drive",
        "shape": "cylinder",
-       "material": "metal",
+       "material": "foil_dark",
        "axis": "x",
-       "radius": 0.04,
-       "height": "$S * 0.4",
-       "segments": 8,
-       "offset": [
-        "$S * 0.2",
+       "radius": "$S * 0.04",
+       "height": "$S * 0.08",
+       "segments": 12,
+       "at": [
+        "$S * 0.04",
         0,
         0
        ]
       },
       {
-       "name": "Cells",
-       "shape": "box",
-       "material": "solar_cell",
-       "size": [
-        "$P",
-        "$S * 0.9",
-        0.04
+       "name": "Yoke_Top",
+       "shape": "tube",
+       "material": "aluminium",
+       "path": [
+        [
+         "$S * 0.06",
+         0,
+         0
+        ],
+        [
+         "$S * 0.4",
+         "$S * 0.4",
+         0
+        ]
        ],
-       "offset": [
-        "$S * 0.4 + $P / 2",
+       "radius": "$S * 0.012",
+       "segments": 6
+      },
+      {
+       "name": "Yoke_Bottom",
+       "shape": "tube",
+       "material": "aluminium",
+       "path": [
+        [
+         "$S * 0.06",
+         0,
+         0
+        ],
+        [
+         "$S * 0.4",
+         "$S * -0.4",
+         0
+        ]
+       ],
+       "radius": "$S * 0.012",
+       "segments": 6
+      },
+      {
+       "name": "Section_{i}",
+       "at": [
+        "$P * 0.16667 + $S * 0.4",
         0,
         0
+       ],
+       "repeat": {
+        "count": 3,
+        "step": [
+         "$P * 0.33333",
+         0,
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "Cells",
+         "shape": "box",
+         "size": [
+          "$P * 0.33333 - 0.04",
+          "$S * 0.9",
+          0.03
+         ]
+        },
+        {
+         "name": "Frame",
+         "shape": "box",
+         "material": "aluminium",
+         "size": [
+          "$P * 0.33333 - 0.03",
+          "$S * 0.92",
+          0.02
+         ]
+        },
+        {
+         "name": "BusBar_1",
+         "shape": "box",
+         "material": "radiator",
+         "size": [
+          0.015,
+          "$S * 0.88",
+          0.034
+         ],
+         "at": [
+          "$P * -0.05556",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "BusBar_2",
+         "shape": "box",
+         "material": "radiator",
+         "size": [
+          0.015,
+          "$S * 0.88",
+          0.034
+         ],
+         "at": [
+          "$P * 0.05556",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Hinge",
+         "shape": "box",
+         "material": "aluminium",
+         "size": [
+          0.06,
+          "$S * 0.1",
+          0.04
+         ],
+         "at": [
+          "$P * -0.16667",
+          "$S * 0.3",
+          0
+         ]
+        }
        ]
       }
      ]
     },
     {
      "name": "Antenna",
-     "material": "metal",
+     "material": "reflector",
      "at": [
       0,
-      "$S * 0.55",
-      "$S / 2"
+      "$S * 0.05 + $yc",
+      "$S * 0.5"
+     ],
+     "rotate": [
+      -12,
+      0,
+      0
      ],
      "children": [
       {
-       "name": "Feed",
-       "shape": "cylinder",
-       "axis": "z",
-       "radius": 0.05,
-       "height": "$S * 0.35",
-       "segments": 8,
-       "offset": [
+       "name": "Arm",
+       "shape": "tube",
+       "material": "aluminium",
+       "path": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         "$S * 0.1",
+         "$S * 0.22"
+        ]
+       ],
+       "radius": "$S * 0.025",
+       "segments": 8
+      },
+      {
+       "name": "Optics",
+       "at": [
         0,
-        0,
-        "$S * 0.175"
+        "$S * 0.1",
+        0
+       ],
+       "children": [
+        {
+         "name": "Dish",
+         "shape": "lathe",
+         "segments": 32,
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "at": [
+          0,
+          0,
+          "$S * 0.22"
+         ],
+         "profile": [
+          [
+           0,
+           0
+          ],
+          [
+           "$S * 0.125",
+           "$S * 0.0075"
+          ],
+          [
+           "$S * 0.25",
+           "$S * 0.03"
+          ],
+          [
+           "$S * 0.375",
+           "$S * 0.0675"
+          ],
+          [
+           "$S * 0.5",
+           "$S * 0.12"
+          ],
+          [
+           "$S * 0.5",
+           "$S * 0.132"
+          ],
+          [
+           "$S * 0.375",
+           "$S * 0.0795"
+          ],
+          [
+           "$S * 0.25",
+           "$S * 0.042"
+          ],
+          [
+           "$S * 0.125",
+           "$S * 0.0195"
+          ],
+          [
+           0,
+           "$S * 0.012"
+          ]
+         ]
+        },
+        {
+         "name": "Feed",
+         "shape": "lathe",
+         "material": "foil",
+         "segments": 12,
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "at": [
+          0,
+          0,
+          "$S * 0.72"
+         ],
+         "profile": [
+          [
+           "$S * 0.06",
+           0
+          ],
+          [
+           "$S * 0.035",
+           "$S * 0.12"
+          ],
+          [
+           0,
+           "$S * 0.12"
+          ]
+         ]
+        },
+        {
+         "name": "Strut_{i}",
+         "shape": "tube",
+         "material": "aluminium",
+         "path": [
+          [
+           "$S * 0.42",
+           0,
+           "$S * 0.31"
+          ],
+          [
+           "$S * 0.04",
+           0,
+           "$S * 0.72"
+          ]
+         ],
+         "radius": "$S * 0.008",
+         "segments": 4,
+         "repeat": {
+          "count": 3,
+          "around": "z",
+          "phase": 90
+         }
+        }
        ]
+      }
+     ]
+    },
+    {
+     "name": "Antenna_Back",
+     "material": "reflector",
+     "at": [
+      0,
+      "$S * 0.05 + $yc",
+      "$S * -0.5"
+     ],
+     "rotate": [
+      -12,
+      180,
+      0
+     ],
+     "children": [
+      {
+       "name": "Arm",
+       "shape": "tube",
+       "material": "aluminium",
+       "path": [
+        [
+         0,
+         0,
+         0
+        ],
+        [
+         0,
+         "$S * 0.1",
+         "$S * 0.22"
+        ]
+       ],
+       "radius": "$S * 0.025",
+       "segments": 8
+      },
+      {
+       "name": "Optics",
+       "at": [
+        0,
+        "$S * 0.1",
+        0
+       ],
+       "children": [
+        {
+         "name": "Dish",
+         "shape": "lathe",
+         "segments": 32,
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "at": [
+          0,
+          0,
+          "$S * 0.22"
+         ],
+         "profile": [
+          [
+           0,
+           0
+          ],
+          [
+           "$S * 0.125",
+           "$S * 0.0075"
+          ],
+          [
+           "$S * 0.25",
+           "$S * 0.03"
+          ],
+          [
+           "$S * 0.375",
+           "$S * 0.0675"
+          ],
+          [
+           "$S * 0.5",
+           "$S * 0.12"
+          ],
+          [
+           "$S * 0.5",
+           "$S * 0.132"
+          ],
+          [
+           "$S * 0.375",
+           "$S * 0.0795"
+          ],
+          [
+           "$S * 0.25",
+           "$S * 0.042"
+          ],
+          [
+           "$S * 0.125",
+           "$S * 0.0195"
+          ],
+          [
+           0,
+           "$S * 0.012"
+          ]
+         ]
+        },
+        {
+         "name": "Feed",
+         "shape": "lathe",
+         "material": "foil",
+         "segments": 12,
+         "rotate": [
+          90,
+          0,
+          0
+         ],
+         "at": [
+          0,
+          0,
+          "$S * 0.72"
+         ],
+         "profile": [
+          [
+           "$S * 0.06",
+           0
+          ],
+          [
+           "$S * 0.035",
+           "$S * 0.12"
+          ],
+          [
+           0,
+           "$S * 0.12"
+          ]
+         ]
+        },
+        {
+         "name": "Strut_{i}",
+         "shape": "tube",
+         "material": "aluminium",
+         "path": [
+          [
+           "$S * 0.42",
+           0,
+           "$S * 0.31"
+          ],
+          [
+           "$S * 0.04",
+           0,
+           "$S * 0.72"
+          ]
+         ],
+         "radius": "$S * 0.008",
+         "segments": 4,
+         "repeat": {
+          "count": 3,
+          "around": "z",
+          "phase": 90
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Antenna_Top",
+     "material": "reflector",
+     "at": [
+      "$S * 0.18",
+      "$S + $ad",
+      "$S * 0.12"
+     ],
+     "children": [
+      {
+       "name": "Mast",
+       "shape": "cylinder",
+       "material": "aluminium",
+       "radius": "$S * 0.03",
+       "height": "$S * 0.16",
+       "anchor": "base",
+       "segments": 8
       },
       {
        "name": "Dish",
        "shape": "lathe",
        "segments": 24,
        "rotate": [
-        90,
+        55,
         0,
         0
        ],
        "at": [
         0,
-        0,
-        "$S * 0.3"
+        "$S * 0.17",
+        0
        ],
        "profile": [
         [
@@ -144,23 +658,199 @@
          0
         ],
         [
-         "$S * 0.2",
-         "$S * 0.03"
+         "$S * 0.04",
+         "$S * 0.00313"
         ],
         [
-         "$S * 0.38",
-         "$S * 0.12"
+         "$S * 0.08",
+         "$S * 0.0125"
         ],
         [
-         "$S * 0.38",
-         "$S * 0.14"
+         "$S * 0.12",
+         "$S * 0.02813"
+        ],
+        [
+         "$S * 0.16",
+         "$S * 0.05"
+        ],
+        [
+         "$S * 0.16",
+         "$S * 0.058"
+        ],
+        [
+         "$S * 0.12",
+         "$S * 0.03613"
+        ],
+        [
+         "$S * 0.08",
+         "$S * 0.0205"
+        ],
+        [
+         "$S * 0.04",
+         "$S * 0.01113"
         ],
         [
          0,
-         "$S * 0.03"
+         "$S * 0.008"
         ]
        ]
       }
+     ]
+    },
+    {
+     "name": "Horn_L",
+     "shape": "lathe",
+     "material": "foil",
+     "segments": 12,
+     "at": [
+      "$S * -0.22",
+      "$S + $ad",
+      "$S * -0.2"
+     ],
+     "profile": [
+      [
+       "$S * 0.04",
+       0
+      ],
+      [
+       "$S * 0.06",
+       "$S * 0.06"
+      ],
+      [
+       "$S * 0.12",
+       "$S * 0.18"
+      ],
+      [
+       0,
+       "$S * 0.18"
+      ]
+     ],
+     "mirror": "Horn_R"
+    },
+    {
+     "name": "Omni",
+     "shape": "tube",
+     "material": "aluminium",
+     "path": [
+      [
+       "$S * -0.32",
+       "$S + $ad",
+       "$S * 0.3"
+      ],
+      [
+       "$S * -0.32",
+       "$S * 1.3 + $ad",
+       "$S * 0.3"
+      ]
+     ],
+     "radii": [
+      "$S * 0.015",
+      "$S * 0.008"
+     ],
+     "segments": 6
+    },
+    {
+     "name": "StarTracker_{i}",
+     "material": "foil_dark",
+     "at": [
+      "$S * 0.32",
+      "$S + $ad",
+      "$S * -0.32"
+     ],
+     "repeat": {
+      "count": 2,
+      "step": [
+       "$S * -0.16",
+       0,
+       0
+      ]
+     },
+     "children": [
+      {
+       "name": "Head",
+       "shape": "box",
+       "size": [
+        "$S * 0.08",
+        "$S * 0.08",
+        "$S * 0.08"
+       ],
+       "anchor": "bottom"
+      },
+      {
+       "name": "Shade",
+       "shape": "lathe",
+       "segments": 12,
+       "rotate": [
+        35,
+        0,
+        0
+       ],
+       "at": [
+        0,
+        "$S * 0.08",
+        0
+       ],
+       "profile": [
+        [
+         "$S * 0.03",
+         0
+        ],
+        [
+         "$S * 0.05",
+         "$S * 0.1"
+        ],
+        [
+         "$S * 0.045",
+         "$S * 0.1"
+        ],
+        [
+         "$S * 0.025",
+         "$S * 0.01"
+        ],
+        [
+         0,
+         "$S * 0.01"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Thruster_{i}",
+     "shape": "lathe",
+     "material": "thruster",
+     "segments": 10,
+     "at": [
+      "$S * 0.5",
+      "$S * 0.08 + $ad",
+      "$S * 0.5"
+     ],
+     "rotate": [
+      180,
+      0,
+      0
+     ],
+     "repeat": {
+      "count": 4,
+      "around": "y"
+     },
+     "profile": [
+      [
+       "$S * 0.015",
+       0
+      ],
+      [
+       "$S * 0.04",
+       "$S * 0.07"
+      ],
+      [
+       "$S * 0.035",
+       "$S * 0.07"
+      ],
+      [
+       0,
+       "$S * 0.01"
+      ]
      ]
     }
    ]

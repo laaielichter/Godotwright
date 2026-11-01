@@ -64,6 +64,10 @@ describe("bundled lessons", () => {
       "quality/time-scale-not-restored",
       "model/opaque-glass",
       "model/renamed-on-import",
+      "api/override-signature",
+      "performance/get-image-in-loop",
+      "quality/tree-test-reads-too-early",
+      "quality/shader-reads-own-depth",
     ])
       expect(explained, rule).toContain(rule);
   });

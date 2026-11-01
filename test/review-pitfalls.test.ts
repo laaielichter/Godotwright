@@ -175,6 +175,79 @@ describe("performance/small-light-cube-shadow", () => {
   });
 });
 
+describe("api/override-signature", () => {
+  const base = "class_name Weapon\nextends Node3D\n\n\nfunc apply_hit(at: Vector3, damage: float, surface: String = \"\") -> void:\n\tprint(at, damage, surface)\n";
+  const run = (body: string) => lines(body, "api/override-signature", { "weapon.gd": base });
+
+  it("reports an override with fewer parameters, or extra ones without a default", () => {
+    expect(run("func apply_hit(at: Vector3, damage: float) -> void:\n\tprint(at, damage)\n").length).toBe(0);
+    const child = (fn: string) =>
+      lines("", "api/override-signature", { "weapon.gd": base, "gun.gd": `extends Weapon\n\n\n${fn}` });
+    expect(child("func apply_hit(at: Vector3) -> void:\n\tprint(at)\n")).toEqual([
+      'res://gun.gd:4: error [api/override-signature] apply_hit() takes 1 parameter here, but the version in Weapon takes 3. Godot stops with "The function signature doesn\'t match the parent". Keep the parent\'s parameters; extra ones need a default value.',
+    ]);
+    expect(child("func apply_hit(at: Vector3, damage: float, surface: String, crit: bool) -> void:\n\tprint(at, damage, surface, crit)\n")).toHaveLength(1);
+    expect(lines("func _process() -> void:\n\tpass\n", "api/override-signature")).toHaveLength(1);
+    expect(lines("func _ready(extra: int) -> void:\n\tprint(extra)\n", "api/override-signature")).toHaveLength(1);
+  });
+
+  it("stays quiet for matching overrides, extra parameters with defaults, constructors and static functions", () => {
+    const child = (fn: string) =>
+      lines("", "api/override-signature", { "weapon.gd": base, "gun.gd": `extends Weapon\n\n\n${fn}` });
+    expect(child("func apply_hit(at: Vector3, damage: float, surface: String = \"\", crit := false) -> void:\n\tprint(at, damage, surface, crit)\n")).toEqual([]);
+    expect(child("func apply_hit(a: Vector3, b: float, c: String = \"x\") -> void:\n\tprint(a, b, c)\n")).toEqual([]);
+    expect(child("func _init(power: int) -> void:\n\tprint(power)\n")).toEqual([]);
+    expect(lines("func _process(delta: float) -> void:\n\tprint(delta)\n\n\nfunc _input(_event: InputEvent) -> void:\n\tpass\n", "api/override-signature")).toEqual([]);
+    expect(lines("func set_speed(v: float) -> void:\n\tprint(v)\n", "api/override-signature")).toEqual([]);
+  });
+});
+
+describe("performance/get-image-in-loop", () => {
+  it("reports a texture read back inside a loop", () => {
+    expect(lines("func f(textures: Array[Texture2D]) -> void:\n\tfor t in textures:\n\t\tvar img := t.get_image()\n\t\tprint(img)\n", "performance/get-image-in-loop")).toHaveLength(1);
+  });
+
+  it("stays quiet for one read outside a loop, for screenshots, and in test runners", () => {
+    expect(lines("func f(t: Texture2D) -> void:\n\tvar img := t.get_image()\n\tfor i in 3:\n\t\tprint(img, i)\n", "performance/get-image-in-loop")).toEqual([]);
+    expect(lines("func f() -> void:\n\tfor i in 3:\n\t\tawait RenderingServer.frame_post_draw\n\t\tget_viewport().get_texture().get_image().save_png(\"user://shot.png\")\n", "performance/get-image-in-loop")).toEqual([]);
+    const runner = "extends SceneTree\n\n\nfunc check(textures: Array[Texture2D]) -> void:\n\tfor t in textures:\n\t\tprint(t.get_image().has_mipmaps())\n";
+    expect(lines("", "performance/get-image-in-loop", { "tests/check.gd": runner })).toEqual([]);
+  });
+});
+
+describe("quality/tree-test-reads-too-early", () => {
+  const test = (body: string) => lines("", "quality/tree-test-reads-too-early", { "tests/check.gd": `extends SceneTree\n\n\n${body}` });
+
+  it("reports global positions read before the scene is inside the tree", () => {
+    expect(test("func _initialize() -> void:\n\tvar world := Node3D.new()\n\troot.add_child(world)\n\tprint(world.global_position)\n\tquit()\n")).toHaveLength(1);
+  });
+
+  it("stays quiet after an await, and in scripts that are not SceneTree tests", () => {
+    expect(test("func _initialize() -> void:\n\tvar world := Node3D.new()\n\troot.add_child(world)\n\tawait process_frame\n\tprint(world.global_position)\n\tquit()\n")).toEqual([]);
+    expect(lines("func _ready() -> void:\n\tget_tree().root.add_child(Node3D.new())\n\tprint(global_position)\n", "quality/tree-test-reads-too-early")).toEqual([]);
+  });
+});
+
+describe("quality/shader-reads-own-depth", () => {
+  const shader = (mode: string) =>
+    `shader_type spatial;\nrender_mode ${mode};\n\nuniform sampler2D depth_tex : hint_depth_texture;\n\nvoid fragment() {\n\tALBEDO = vec3(texture(depth_tex, SCREEN_UV).r);\n}\n`;
+  const run = (source: string) => {
+    const root = makeProject({ "project.godot": PROJECT, ".gitignore": ".godot/\n", "water.gdshader": source });
+    return reviewProject(root).findings.filter((f) => f.rule === "quality/shader-reads-own-depth").map(formatFinding);
+  };
+
+  it("reports a shader that reads the depth texture and writes depth in the alpha prepass", () => {
+    expect(run(shader("blend_mix, depth_prepass_alpha"))).toEqual([
+      "res://water.gdshader:2: warning [quality/shader-reads-own-depth] This shader writes its own depth in the alpha prepass and also reads the depth texture, so it reads its own surface: depth-based foam or fog shows everywhere. Use depth_draw_always instead of depth_prepass_alpha.",
+    ]);
+  });
+
+  it("stays quiet with another depth mode, or in a comment", () => {
+    expect(run(shader("blend_mix, depth_draw_always"))).toEqual([]);
+    expect(run(shader("blend_mix // , depth_prepass_alpha"))).toEqual([]);
+  });
+});
+
 describe("model rules from lessons", () => {
   const rules = (path: string) => lintModelFile(path).findings.map((f) => f.rule);
 

@@ -101,7 +101,7 @@ Twelve small-model agents did six everyday tasks like this: [what we measured](d
 
 A coding agent can also **make, look at and check 3D models** for Godot with no Blender: `model identify` says what a
 thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
-[56 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
+[59 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
 terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
 It is set up to work with small, cheap models too: what we tested and learned [with 3D models](docs/cheap-models.md) and [with everyday Godot tasks](docs/cheap-models-code.md).
 
@@ -502,8 +502,9 @@ Lessons from real builds also become rules. `data/lessons.json` holds 77 anonymi
 projects (helicopters and ships landing on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
 headless test rigs): no code, no names, no paths, and a test runs every one through the same scrubber that local
 lessons go through. The ones a review can catch are rules, such as `api/infer-variant` on loop variables over
-untyped arrays, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
-`performance/runtime-gltf-mipmaps`, `quality/platform-layers-not-restored` and `model/opaque-glass`.
+untyped arrays, `api/override-signature`, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
+`performance/runtime-gltf-mipmaps`, `quality/shader-reads-own-depth`, `quality/platform-layers-not-restored` and
+`model/opaque-glass`.
 [LESSONS.md](LESSONS.md) tells the story behind them, and [LESSONS-ROADS.md](LESSONS-ROADS.md) does the same for
 a road network generator (links, bridges, viaducts over rail and motorways, roundabouts, guard rails). Lessons you keep locally can be proposed for everyone:
 `godotwright lessons export` prints them as entries for `data/lessons.json`; nothing is sent.

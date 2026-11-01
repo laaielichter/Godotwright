@@ -2,7 +2,7 @@
  "version": 1,
  "name": "bush",
  "archetype": "plant.bush",
- "description": "A shrub: a cluster of overlapping rounded leaf masses around a central one, on short woody stems, standing on y = 0. The number of masses sets how wide and full it is.",
+ "description": "A shrub: a dome of many overlapping, lumpy leaf masses in two greens around a central core (a low ring whose count sets how full it is, a ring above it and a crown on top), over short woody stems; it stands on y = 0.",
  "params": [
   {
    "name": "width",
@@ -29,61 +29,185 @@
    "description": "Number of leaf masses around the centre."
   }
  ],
+ "materials": {
+  "bush_leaf": {
+   "color": [
+    0.05,
+    0.13,
+    0.03,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.8,
+   "texture": "leaf"
+  },
+  "bush_leaf_sun": {
+   "color": [
+    0.085,
+    0.185,
+    0.035,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 0.78,
+   "texture": "leaf"
+  }
+ },
  "nodes": [
   {
    "name": "Bush",
-   "material": "leaf",
+   "material": "bush_leaf",
    "vars": {
     "w": "$width",
-    "h": "$height"
+    "h": "$height",
+    "lp": "0.26 * min(1, 1.6 * min($width, 2 * $height) / max($width, 2 * $height))",
+    "k": "min(1.15, 6 / $masses + 0.15)"
    },
    "children": [
     {
-     "name": "Stem",
-     "shape": "cylinder",
+     "name": "Stem_{i}",
+     "shape": "tube",
      "material": "bark",
-     "radius": "$w * 0.04",
-     "height": "$h * 0.35",
-     "segments": 8,
-     "at": [
-      0,
-      "$h * 0.175",
-      0
+     "segments": 6,
+     "repeat": {
+      "count": 3,
+      "around": "y",
+      "phase": 30
+     },
+     "path": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       "$h * 0.12",
+       0
+      ],
+      [
+       "$w * 0.08",
+       "$h * 0.3",
+       "$w * 0.02"
+      ],
+      [
+       "$w * 0.16",
+       "$h * 0.45",
+       0
+      ]
+     ],
+     "radii": [
+      "$w * 0.035",
+      "$w * 0.03",
+      "$w * 0.022",
+      "$w * 0.012"
      ]
     },
     {
      "name": "Core",
      "shape": "ellipsoid",
-     "radii": [
-      "$w * 0.32",
-      "$h * 0.5",
-      "$w * 0.32"
-     ],
+     "segments": 22,
+     "lumps": "$lp",
+     "seed": 23,
      "at": [
       0,
-      "$h * 0.5",
+      "$h * 0.55",
       0
      ],
-     "segments": 16
+     "rotate": [
+      -18,
+      37,
+      0
+     ],
+     "radii": [
+      "$w * 0.3",
+      "$h * 0.42",
+      "$w * 0.3"
+     ]
     },
     {
      "name": "Mass_{i}",
      "shape": "ellipsoid",
-     "radii": [
-      "$w * 0.24",
-      "$h * 0.36",
-      "$w * 0.24"
-     ],
-     "at": [
-      "$w * 0.26",
-      "$h * 0.38",
-      0
-     ],
-     "segments": 12,
+     "material": "bush_leaf",
+     "segments": 18,
+     "lumps": "$lp",
+     "seed": "$i * 7 + 2",
      "repeat": {
       "count": "$masses",
-      "around": "y"
-     }
+      "around": "y",
+      "phase": 11
+     },
+     "rotate": [
+      -18,
+      "37 - (11) - $i * 360 / ($masses)",
+      0
+     ],
+     "at": [
+      "$w * (0.26 + 0.04 * (0.5 + 0.5 * sin($i * 3.7 + 2.1)))",
+      "0.19 * $k * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4))) * hypot($h * 1.15 * 0.951, $w * 0.309) * (1 + $lp) + $h * (0.01 + 0.04 * (0.5 + 0.5 * cos($i * 1.61 + 1.2)))",
+      0
+     ],
+     "radii": [
+      "$w * 0.19 * $k * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))",
+      "$h * 0.19 * $k * 1.15 * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))",
+      "$w * 0.19 * $k * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))"
+     ]
+    },
+    {
+     "name": "Upper_{i}",
+     "shape": "ellipsoid",
+     "material": "bush_leaf_sun",
+     "segments": 16,
+     "lumps": "$lp",
+     "seed": "$i * 5 + 41",
+     "repeat": {
+      "count": "$masses",
+      "around": "y",
+      "phase": "11 + 180 / $masses"
+     },
+     "rotate": [
+      -18,
+      "37 - (11 + 180 / $masses) - $i * 360 / ($masses)",
+      0
+     ],
+     "at": [
+      "$w * (0.2 + 0.04 * (0.5 + 0.5 * sin($i * 3.7 + 2.1)))",
+      "$h * (0.54 + 0.07 * (0.5 + 0.5 * cos($i * 1.61 + 1.2)))",
+      0
+     ],
+     "radii": [
+      "$w * 0.16 * $k * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))",
+      "$h * 0.16 * $k * 1.15 * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))",
+      "$w * 0.16 * $k * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))"
+     ]
+    },
+    {
+     "name": "Top_{i}",
+     "shape": "ellipsoid",
+     "material": "bush_leaf_sun",
+     "segments": 16,
+     "lumps": "$lp",
+     "seed": "$i * 13 + 5",
+     "repeat": {
+      "count": 4,
+      "around": "y",
+      "phase": 50
+     },
+     "rotate": [
+      -18,
+      "37 - (50) - $i * 360 / (4)",
+      0
+     ],
+     "at": [
+      "$w * 0.1",
+      "$h * 0.78",
+      0
+     ],
+     "radii": [
+      "$w * 0.15 * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))",
+      "$h * 0.15 * 1.15 * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))",
+      "$w * 0.15 * (0.86 + 0.28 * (0.5 + 0.5 * sin($i * 2.17 + 0.4)))"
+     ]
     }
    ]
   }
