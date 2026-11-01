@@ -67,6 +67,15 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - Tangents follow glTF's normal-map convention (+Y towards the top of the image), so normal maps light the same
     in Godot and other viewers.
 - `model lint` reports UVs outside 0..1 only on a texture that does not repeat.
+- **Road furniture recipes:** `traffic-sign` (a round sign on a 76 mm pole, plate size and height as parameters),
+  `guard-rail` (posts every 2 m, spacers and a corrugated beam, segments that tile) and `delineator` (a roadside post
+  with a reflector), each with its archetype (`infrastructure.traffic-sign`, `infrastructure.guard-rail`,
+  `infrastructure.delineator`) and English and Dutch names (verkeersbord, vangrail, reflectorpaal).
+  A road guard rail (vangrail, geleiderail, w-beam) is `infrastructure.guard-rail`; a motorsport barrier (crash barrier,
+  Armco, catch fence) stays `infrastructure.crash-barrier`.
+- **[LESSONS-ROADS.md](LESSONS-ROADS.md):** lessons from building a road network with Godotwright: connectivity per pair
+  of places, repairs that pass the final check, clearances over roads, water and electrified rail, terrain under the
+  road, and MultiMesh for roadside objects.
 - **New review rule `quality/json-parse-unchecked`:** warns when the result of `JSON.parse_string()` is used before it
   is checked, used directly (`JSON.parse_string(t)["n"]`), or stored in another typed variable. It is null when the
   text is not valid JSON, so a damaged data file stops the script with an error. A typed `Dictionary` or `Array`
