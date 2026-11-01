@@ -12,6 +12,10 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   for Cursor and VS Code and setups for Codex, Windsurf and Zed on the new
   [install page](https://laaielichter.github.io/Godotwright/install.html).
 - `godotwright mcp` reads the default project from `GODOTWRIGHT_PROJECT` when `--project` is not given.
+- **Collision for terrain tiles:** `model build terrain --collision heightmap` (and `collision: "heightmap"` in
+  `godot_model_build`) writes `<name>.heightmap.tres`, a `HeightMapShape3D` of the tile's own grid, and inside a Godot
+  project `<name>.tscn`: the tile with a `StaticBody3D`, ready to place. Faster than a trimesh and the same ground: tested
+  in Godot 4.7.2 with GodotPhysics3D and Jolt, rays land within half a millimetre of the mesh. A scene you changed is kept.
 - **Site and README:** the site lists all 22 MCP tools with a CLI example each; Lighthouse accessibility is 100 on every
   page (darker green and amber in the light theme for contrast); the Godot 3 to 4 page has share previews and structured
   data; the README starts with the quickstart and the one-line Claude Code install.

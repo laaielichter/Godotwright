@@ -339,7 +339,9 @@ export const terrain: Generator = {
         materials["lake_water"] = LAKE_WATER;
       }
     }
-    return { materials, nodes: [{ name: "Terrain", children }] };
+    const ground: number[] = [];
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) ground.push(H(i, j));
+    return { materials, nodes: [{ name: "Terrain", children }], heightmap: { size: n, step, heights: ground } };
   },
 };
 
