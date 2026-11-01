@@ -75,6 +75,8 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
     // A word for glass, not a material that only contains it ("fiberglass", "glassfibre").
     if (!/(?:^|[^a-z])(?:glass|glazing|canopy|windscreen|windshield|windows?|visor|glas|ruit|ruiten)(?:$|[^a-z])/i.test(m.name) || /fib(?:er|re)|vezel/i.test(m.name)) continue;
     if (m.transmission || (m.alphaMode === "BLEND" && m.alpha < 0.95)) continue;
+    // Dark, solid glass is a deliberate choice on a model with nothing behind it (a house without rooms).
+    if (m.alphaMode !== "BLEND" && m.luminance < 0.15) continue;
     const why = m.alphaMode === "BLEND" ? `is BLEND with alpha ${m.alpha.toFixed(2)}, so it is as good as opaque` : m.alphaMode === "MASK" ? "is MASK (cut out or solid, never see-through)" : "is OPAQUE";
     add("model/opaque-glass", `Material "${m.name}" looks like glass but ${why}: nothing behind it shows.`);
   }
@@ -158,8 +160,8 @@ function checkNode(info: ModelInfo, all: PrimitiveInfo[], add: Add, uvReported: 
     const mat = prim.material === undefined ? undefined : info.materials[prim.material];
     if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, node);
     if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, node);
-    // UVs outside 0..1 only matter when a texture is sampled with them.
-    if (prim.uvOutOfRange && mat?.textured && !uvReported.has(node)) {
+    // UVs outside 0..1 only matter when a texture is sampled with them and does not repeat.
+    if (prim.uvOutOfRange && mat?.textured && !mat.repeats && !uvReported.has(node)) {
       uvReported.add(node);
       add("model/uv-out-of-range", "Some UVs lie outside 0..1.", node);
     }

@@ -186,6 +186,8 @@ describe("model rules from lessons", () => {
     expect(rules(glass({ name: "Glass", extensions: { KHR_materials_transmission: { transmissionFactor: 1 } } }))).not.toContain("model/opaque-glass");
     expect(rules(glass({ name: "Fiberglass hull" }))).not.toContain("model/opaque-glass");
     expect(rules(glass({ name: "Paint" }))).not.toContain("model/opaque-glass");
+    // Dark, solid glass on a model with nothing behind it (a house without rooms) is a choice, not a mistake.
+    expect(rules(glass({ name: "window_glass", pbrMetallicRoughness: { baseColorFactor: [0.03, 0.045, 0.06, 1] } }))).not.toContain("model/opaque-glass");
   });
 
   it("model/renamed-on-import: names Godot changes", () => {

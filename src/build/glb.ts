@@ -1,7 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { at } from "../model/num.js";
 import { MATERIALS, type Material } from "./materials.js";
-import { MeshBuilder, cross, dot, normalize, sub, type Prim, type V3 } from "./mesh.js";
+import { MeshBuilder, UV_PER_METER, cross, dot, normalize, sub, type Prim, type V3 } from "./mesh.js";
+import { texturesFor } from "./textures.js";
 
 export interface BuildNode {
   name: string;
@@ -40,7 +41,10 @@ interface Chunk {
   target?: number;
 }
 
-/** Per-vertex tangents (xyz + handedness) from the UVs, averaged over the triangles at a vertex. */
+/**
+ * Per-vertex tangents (xyz + handedness) from the UVs, averaged over the triangles at a vertex. The tangent points to +u;
+ * the handedness makes cross(normal, tangent) * w point to -v, the top of the image, as glTF normal maps expect.
+ */
 export function computeTangents(p: Prim): number[] {
   const n = p.positions.length / 3;
   const tan = new Array<number>(n * 3).fill(0);
@@ -69,7 +73,7 @@ export function computeTangents(p: Prim): number[] {
     let t = normalize([tv[0] - nv[0] * d, tv[1] - nv[1] * d, tv[2] - nv[2] * d]);
     if (Math.hypot(...tv) < 1e-12) t = normalize(Math.abs(nv[1]) < 0.9 ? cross([0, 1, 0], nv) : cross([1, 0, 0], nv));
     const bv: V3 = [at(bit, i * 3), at(bit, i * 3 + 1), at(bit, i * 3 + 2)];
-    out.push(t[0], t[1], t[2], dot(cross(nv, t), bv) < 0 ? -1 : 1);
+    out.push(t[0], t[1], t[2], dot(cross(nv, t), bv) < 0 ? 1 : -1);
   }
   return out;
 }
@@ -85,8 +89,13 @@ function floats(values: number[]): Buffer {
   return data;
 }
 
+export interface GlbOptions {
+  /** Write texture maps for materials that have a pattern (default true); false keeps plain colours and smaller files. */
+  textures?: boolean;
+}
+
 /** Builds a binary glTF. The same scene always gives the same bytes. */
-export function buildGlb(scene: BuildScene): Buffer {
+export function buildGlb(scene: BuildScene, options: GlbOptions = {}): Buffer {
   const chunks: Chunk[] = [];
   const views: object[] = [];
   const accessors: object[] = [];
@@ -94,6 +103,10 @@ export function buildGlb(scene: BuildScene): Buffer {
   const materialIndex = new Map<string, number>();
   const meshes: object[] = [];
   const nodes: object[] = [];
+  const images: object[] = [];
+  const textures: object[] = [];
+  const textureIndex = new Map<Buffer, number>();
+  const extensionsUsed = new Set<string>();
   let offset = 0;
 
   const view = (data: Buffer, target?: number): number => {
@@ -119,14 +132,35 @@ export function buildGlb(scene: BuildScene): Buffer {
     accessors.push(entry);
     return accessors.length - 1;
   };
+  /** An embedded PNG as a texture (one sampler: linear, mipmapped, repeating). The same bytes are stored once. */
+  const texture = (png: Buffer, name: string): number => {
+    const known = textureIndex.get(png);
+    if (known !== undefined) return known;
+    images.push({ name, mimeType: "image/png", bufferView: view(png) });
+    textures.push({ sampler: 0, source: images.length - 1 });
+    textureIndex.set(png, textures.length - 1);
+    return textures.length - 1;
+  };
   const material = (name: string): number => {
     const known = materialIndex.get(name);
     if (known !== undefined) return known;
     const m = scene.materials?.[name] ?? MATERIALS[name];
     if (!m) throw new Error(`unknown material "${name}"`);
+    let pbr: Record<string, unknown> = { baseColorFactor: m.color, metallicFactor: m.metallic, roughnessFactor: m.roughness };
+    let normalTexture: Record<string, unknown> | undefined;
+    if (m.texture && options.textures !== false) {
+      const maps = texturesFor(m.texture, [m.color[0], m.color[1], m.color[2]]);
+      const repeat = (m.uvMeters ?? 1 / UV_PER_METER) / maps.tile;
+      const transform = repeat === 1 ? {} : { extensions: { KHR_texture_transform: { scale: [repeat, repeat] } } };
+      if (repeat !== 1) extensionsUsed.add("KHR_texture_transform");
+      // The colour is in the colour map; the factor keeps only the alpha.
+      pbr = { ...pbr, baseColorFactor: [1, 1, 1, m.color[3]], baseColorTexture: { index: texture(maps.albedo, `${m.texture}_${m.name}_color`), ...transform } };
+      normalTexture = { index: texture(maps.normal, `${m.texture}_${m.name}_normal`), ...transform };
+    }
     materials.push({
       name: m.name,
-      pbrMetallicRoughness: { baseColorFactor: m.color, metallicFactor: m.metallic, roughnessFactor: m.roughness },
+      pbrMetallicRoughness: pbr,
+      ...(normalTexture ? { normalTexture } : {}),
       ...(m.alpha ? { alphaMode: m.alpha } : {}),
       ...(m.doubleSided ? { doubleSided: true } : {}),
       ...(m.emissive ? { emissiveFactor: m.emissive } : {}),
@@ -143,6 +177,7 @@ export function buildGlb(scene: BuildScene): Buffer {
           NORMAL: accessor(p.normals, "VEC3", 3),
           TEXCOORD_0: accessor(p.uvs, "VEC2", 2),
           TANGENT: accessor(computeTangents(p), "VEC4", 4),
+          ...(p.colors && p.colors.length === (p.positions.length / 3) * 4 ? { COLOR_0: accessor(p.colors, "VEC4", 4) } : {}),
         };
         const idx = Buffer.alloc(p.indices.length * 4);
         p.indices.forEach((v, i) => idx.writeUInt32LE(v, i * 4));
@@ -169,11 +204,13 @@ export function buildGlb(scene: BuildScene): Buffer {
 
   const json = {
     asset: { version: "2.0", generator: "Godotwright" },
+    ...(extensionsUsed.size ? { extensionsUsed: [...extensionsUsed].sort() } : {}),
     scene: 0,
     scenes: [{ nodes: roots }],
     nodes,
     meshes,
     materials,
+    ...(textures.length ? { textures, images, samplers: [{ magFilter: 9729, minFilter: 9987, wrapS: 10497, wrapT: 10497 }] } : {}),
     accessors,
     bufferViews: views,
     buffers: [{ byteLength: offset }],

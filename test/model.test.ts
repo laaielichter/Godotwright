@@ -425,6 +425,19 @@ describe("model surfaces split over primitives", () => {
     expect(lintModelFile(split).findings.map((f) => f.rule)).toEqual([]);
   });
 
+  it("reports UVs outside 0..1 only on a texture that does not repeat", () => {
+    const textured = [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }];
+    const images = [{ width: 64, height: 64 }];
+    const wide: TestMesh = { ...box(), material: 0, uv: box().uv!.map((v) => v * 3) };
+    const repeating = writeGlb({ meshes: [wide], materials: textured, images });
+    expect(ids(repeating)).not.toContain("model/uv-out-of-range");
+    const clamped = editGlbJson(writeGlb({ meshes: [wide], materials: textured, images }), (j) => {
+      j.samplers = [{ wrapS: 33071, wrapT: 33071 }];
+      j.textures[0].sampler = 0;
+    });
+    expect(ids(clamped)).toContain("model/uv-out-of-range");
+  });
+
   it("does not check a line or point primitive as a surface", () => {
     const textured = [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }];
     const images = [{ width: 64, height: 64 }];

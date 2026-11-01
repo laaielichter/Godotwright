@@ -9,7 +9,8 @@ export interface Gltf {
   nodes?: GltfNode[];
   meshes?: { name?: string; primitives: GltfPrimitive[] }[];
   materials?: GltfMaterial[];
-  textures?: { source?: number }[];
+  textures?: { source?: number; sampler?: number }[];
+  samplers?: { wrapS?: number; wrapT?: number; magFilter?: number; minFilter?: number }[];
   images?: { uri?: string; bufferView?: number; mimeType?: string; name?: string }[];
   accessors?: GltfAccessor[];
   bufferViews?: { buffer: number; byteOffset?: number; byteLength: number; byteStride?: number }[];
