@@ -6,7 +6,7 @@ import { buildKind } from "../../src/build/generators/index.js";
 import { heightmapSceneText, heightmapShapeText, heightmapTransform } from "../../src/build/heightmap.js";
 import { BuildError } from "../../src/build/params.js";
 import { buildModel } from "../../src/build/run.js";
-import { makeProject, runCli } from "../helpers.js";
+import { CAN_SYMLINK, makeProject, runCli } from "../helpers.js";
 
 const PROJECT = '[application]\nconfig/name="HM"\nconfig/features=PackedStringArray("4.7")\n';
 
@@ -69,14 +69,16 @@ describe("model build --collision heightmap", () => {
     expect(outcome.summary).toContain("uniform scale of 8");
   });
 
-  it("never writes through a link, and leaves an identical scene as it is", () => {
+  it.skipIf(!CAN_SYMLINK)("never writes through a link", () => {
     const root = makeProject({ "project.godot": PROJECT });
     const outside = mkdtempSync(join(tmpdir(), "gw-hm-outside-"));
     writeFileSync(join(outside, "target.txt"), "keep me");
     symlinkSync(join(outside, "target.txt"), join(root, "t.heightmap.tres"));
     expect(() => buildModel({ kind: "terrain", params: { resolution: "33" }, out: join(root, "t.glb"), collision: "heightmap" })).toThrow(/is a link/);
     expect(readFileSync(join(outside, "target.txt"), "utf8")).toBe("keep me");
+  });
 
+  it("leaves an identical scene as it is", () => {
     const again = makeProject({ "project.godot": PROJECT });
     const first = buildModel({ kind: "terrain", params: { resolution: "33" }, out: join(again, "t.glb"), collision: "heightmap" });
     const second = buildModel({ kind: "terrain", params: { resolution: "33" }, out: join(again, "t.glb"), collision: "heightmap" });

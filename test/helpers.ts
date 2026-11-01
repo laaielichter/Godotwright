@@ -1,9 +1,27 @@
 import { afterAll } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createProgram } from "../src/program.js";
+
+/**
+ * Whether this machine can make symbolic links. Windows only allows it with Developer Mode on or as an administrator, so
+ * the tests about links are skipped there instead of failing for every contributor on Windows.
+ */
+export const CAN_SYMLINK: boolean = (() => {
+  const dir = mkdtempSync(join(tmpdir(), "gw-link-"));
+  try {
+    mkdirSync(join(dir, "target"));
+    symlinkSync(join(dir, "target"), join(dir, "link"), "dir");
+    symlinkSync(join(dir, "missing"), join(dir, "file-link"));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+})();
 
 export const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 export const DEMO = join(FIXTURES, "demo");
