@@ -65,6 +65,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 4. `godotwright model lint out.glb --archetype <thing>` (godot_model_lint): score and what-it-should-be checks. Fix every error.
 
 Conventions: units are metres, +Y is up, the front of a model faces +Z, the model stands on y = 0, every moving part is its own node with its pivot at its origin.
+Looks: built models carry seamless textures with normal maps for brick, roof tiles, slate, wood, bark, leaves, grass, stone, concrete, asphalt, plaster, sand and water (inside the .glb), and PBR presets for glass, tinted glass, chrome, steel, aluminium, brass, paint, plastic, canvas and glowing lights. In a spec, use `bevel` on boxes and cylinders for rounded edges, `lumps` on ellipsoids for organic shapes, the `tube` shape for frames, rails and pipes, and `"texture": "<pattern>"` on a custom material to draw a pattern in its own colour.
 
 ## Optional
 

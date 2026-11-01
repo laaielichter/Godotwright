@@ -4,6 +4,25 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Prettier, better 3D models.** Every ready-made kind was rebuilt with more detail, truer proportions and real
+  materials, and the gallery was rendered again (`scripts/render-gallery.mjs`):
+  - **Textures.** Brick, roof tiles, slate, wood, bark, leaves, grass, stone, concrete, asphalt, plaster, sand and water
+    get a seamless colour map and normal map at their real size, made by Godotwright (no files, no network) and stored
+    in the `.glb` as PNG, repeated per metre with `KHR_texture_transform`. A custom material can use any pattern in its
+    own colour: `"texture": "wood"`.
+  - **More presets:** `stone`, `glass_tinted`, `steel`, `chrome`, `aluminium`, `brass`, `plastic`, `plastic_white`,
+    `canvas`, `light`, `light_red`, `light_amber` (lamps that glow), `grass`, `soil`, `sand`, `water`.
+  - **New in the spec:** `bevel` on boxes and cylinders (rounded edges that catch the light), `lumps` and `seed` on
+    ellipsoids (tree crowns, bushes, rocks), and the `tube` shape along a path (frames, rails, pipes, branches).
+  - **Terrain** is coloured per vertex: grass in lusher and drier patches, sand at the water, bare earth and rock on
+    steep slopes, snow on high mountains. Lakes, rivers and the sea get rippling water.
+  - **House:** brick or rendered walls, windows with frames, glazing bars and sills, slate or tile roofs, gutters and
+    downpipes, a panelled door with a knob.
+  - Roof tiles and other patterns on a sloping face run along the slope.
+  - `model build --no-textures` (MCP `textures: false`) keeps plain colours and small files.
+  - Tangents follow glTF's normal-map convention (+Y towards the top of the image), so normal maps light the same
+    in Godot and other viewers.
+- `model lint` reports UVs outside 0..1 only on a texture that does not repeat.
 - **Clearer MCP tool descriptions.** Each of the 22 tools now says when to use it and which tool to use instead,
   what its parameters change, what it returns, when it returns an error, and what it writes. The tool list costs
   about 2,500 more tokens.
