@@ -1,0 +1,33 @@
+# Weekly update pull requests for npm dependencies and for the GitHub Actions the workflows use
+# (they are pinned to commits; Dependabot moves the pin and the version comment together).
+# Security fixes come as soon as an advisory is out, outside this schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/*
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Amsterdam
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

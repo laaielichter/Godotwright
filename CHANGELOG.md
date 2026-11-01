@@ -12,6 +12,9 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   for Cursor and VS Code and setups for Codex, Windsurf and Zed on the new
   [install page](https://laaielichter.github.io/Godotwright/install.html).
 - `godotwright mcp` reads the default project from `GODOTWRIGHT_PROJECT` when `--project` is not given.
+- **Security:** CodeQL scans the code and the workflows on every change and weekly; Dependabot proposes npm and
+  GitHub Actions updates weekly; every action in the workflows and in the receipt action is pinned to a commit, and
+  checkouts no longer keep git credentials. `SECURITY.md` says how releases are made and checked.
 
 - **Review rule `api/physics-change-in-callback`** (warning): in a `body_entered`/`area_entered` (or exited) handler,
   adding a physics object with `add_child()`, or setting `monitoring`, `monitorable` or `disabled` directly, makes Godot
