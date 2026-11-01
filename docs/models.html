@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>53 ready-made 3D models for Godot, built from code | Godotwright</title>
-<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 53 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
+<title>56 ready-made 3D models for Godot, built from code | Godotwright</title>
+<meta name="description" content="Cars, aircraft, ships, buildings, trees, terrain with lakes and rivers and more: 56 parametric 3D models that a coding agent can build, view and check for Godot 4 with Godotwright. Clean .glb files, no Blender needed.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/models.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
-<meta property="og:title" content="53 ready-made 3D models for Godot, built from code">
+<meta property="og:title" content="56 ready-made 3D models for Godot, built from code">
 <meta property="og:description" content="Parametric .glb models a coding agent can build, view and check: vehicles, aircraft, ships, buildings, plants, terrain. MIT, no Blender.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/models.html">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="53 ready-made 3D models for Godot, built from code">
+<meta name="twitter:title" content="56 ready-made 3D models for Godot, built from code">
 <meta name="twitter:description" content="Parametric .glb models a coding agent can build, view and check. MIT, no Blender.">
 <meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/gallery/overview.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,6 +128,7 @@ p { margin: 0; }
 .dock .body { padding: 1rem; overflow-x: auto; }
 .demo .body { padding: 0; background: #1d2229; }
 .demo img { display: block; width: 100%; min-width: 760px; }
+.demo video { display: block; width: 100%; height: auto; }
 .caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
 
 section { padding-block: 3rem; border-top: 1px solid var(--line); }
@@ -229,14 +230,14 @@ footer a { color: var(--muted); }
 <main>
   <div class="wrap hero">
     <p class="eyebrow">3D models from code</p>
-    <h1>53 ready-made models for <em>Godot&nbsp;4</em>.</h1>
-    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with UVs, tangents, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
+    <h1>56 ready-made models for <em>Godot&nbsp;4</em>.</h1>
+    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with textures and normal maps for brick, tiles, wood, bark, leaves and more, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/laaielichter/Godotwright#readme">Install in 1 minute</a>
       <a class="btn" href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">Works with small, cheap models too</a>
     </div>
     <img src="gallery/overview.jpg" width="1200" height="600" alt="A sheet of models built by Godotwright: cars, aircraft, boats, buildings, trees and terrain" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)">
-    <p class="caption">Real renders of the default model of each kind, with a simple three.js viewer. They are clean base models, meant to be refined, not hand-sculpted art.</p>
+    <p class="caption">Real renders of the default model of each kind in three.js, with the textures and materials in the <code>.glb</code> and nothing added. They are game-ready base models, meant to be refined, not hand-sculpted art.</p>
   </div>
 
   <section id="how">
@@ -480,6 +481,14 @@ footer a { color: var(--muted); }
           </figcaption>
         </figure>
         <figure class="model">
+          <img src="gallery/grandstand.jpg" width="400" height="300" loading="lazy" alt="Grandstand: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Grandstand</h3>
+            <p>A covered grandstand along z: stepped concrete rows rising towards -x with a seat bench on each row, front and back walls, a roof on columns along the back and a railing at the front.</p>
+            <code>npx -y godotwright model build grandstand -o grandstand.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
           <img src="gallery/house.jpg" width="400" height="300" loading="lazy" alt="House: a 3D model built by Godotwright">
           <figcaption>
             <h3>House</h3>
@@ -520,6 +529,14 @@ footer a { color: var(--muted); }
           </figcaption>
         </figure>
         <figure class="model">
+          <img src="gallery/crash-barrier.jpg" width="400" height="300" loading="lazy" alt="Crash barrier: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Crash barrier</h3>
+            <p>A motorsport guardrail section along z: steel posts every 2 m carrying two stacked W-beam rails on the track side (-x), with a 4 m catch fence of mesh on taller posts behind it.</p>
+            <code>npx -y godotwright model build crash-barrier -o crash-barrier.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
           <img src="gallery/fence.jpg" width="400" height="300" loading="lazy" alt="Fence: a 3D model built by Godotwright">
           <figcaption>
             <h3>Fence</h3>
@@ -533,6 +550,14 @@ footer a { color: var(--muted); }
             <h3>Power pylon</h3>
             <p>A lattice transmission pylon: four tapering legs braced by square frames at regular heights, three crossarms near the top with a hanging insulator at each end and a peak.</p>
             <code>npx -y godotwright model build power-pylon -o power-pylon.glb</code>
+          </figcaption>
+        </figure>
+        <figure class="model">
+          <img src="gallery/race-kerb.jpg" width="400" height="300" loading="lazy" alt="Race kerb: a 3D model built by Godotwright">
+          <figcaption>
+            <h3>Race kerb</h3>
+            <p>A red-and-white race kerb along z, 1.2 m wide: blocks 1.5 m long that rise from flush at the track edge (x = 0) to about 6 cm at the outer edge.</p>
+            <code>npx -y godotwright model build race-kerb -o race-kerb.glb</code>
           </figcaption>
         </figure>
         <figure class="model">
@@ -794,7 +819,7 @@ footer a { color: var(--muted); }
         <details><summary>Do I need Blender or Godot installed?</summary><p>No. Models are built and checked by Godotwright itself. Godot only loads the result when you open the <code>.glb</code> in your project.</p></details>
         <details><summary>Can I change the models?</summary><p>Yes. Every kind has parameters with ranges (<code>godotwright model kinds</code> lists them), and every recipe is a JSON spec you can copy and edit.</p></details>
         <details><summary>Can a cheap model like Haiku or a Flash model do this?</summary><p>Yes, with limits. In a small test, six Haiku agents each built a recognisable model, but they worked blind; that is why <code>model view</code> and a check for loose parts exist. See <a href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">the write-up</a>.</p></details>
-        <details><summary>How good are they?</summary><p>They are clean, correctly scaled base models with the right parts and pivots, not sculpted art. The point is a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
+        <details><summary>How good are they?</summary><p>They are correctly scaled, textured low-poly models with the right parts and pivots: real windows and frames, bevelled edges, glowing lamps, brick, tiles, wood and foliage with normal maps. Not sculpted art, but a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
       </div>
     </div>
   </section>
