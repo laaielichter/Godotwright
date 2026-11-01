@@ -117,6 +117,39 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
     );
   }
 
+  // JSON.parse_string() returns null for text that is not valid JSON (a damaged or half-written file); using the
+  // result as a Dictionary or Array without a check then stops the script with an error.
+  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+    for (const fn of model.outline.functions) {
+      const body = bodyOf(script.logicalLines, fn);
+      body.forEach((ll, i) => {
+        if (!/\bJSON\s*\.\s*parse_string\s*\(/.test(ll.code)) return;
+        if (/\bJSON\s*\.\s*parse_string\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*(?:\.|\[)/.test(ll.code)) {
+          out.push(finding("quality/json-parse-unchecked", path, ll.line, "The result of JSON.parse_string() is used directly, but it is null when the text is not valid JSON; store it, check it with `is Dictionary` (or `is Array`), then use it."));
+          return;
+        }
+        const decl = /^(?:var\s+)?([A-Za-z_]\w*)\s*(?::\s*([A-Za-z_][\w.]*)\s*)?:?=\s*JSON\s*\.\s*parse_string\s*\(/.exec(ll.code);
+        if (!decl) return;
+        const [, name, type] = decl;
+        if (type && type !== "Variant") {
+          out.push(finding("quality/json-parse-unchecked", path, ll.line, `JSON.parse_string() returns null when the text is not valid JSON, and null cannot be stored in a ${type}; keep "${name}" as Variant and check it with \`is ${type}\` first.`));
+          return;
+        }
+        const n = name!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const guard = new RegExp(`\\b${n}\\s+is\\b|\\b${n}\\s*[!=]=\\s*null\\b|\\bnull\\s*[!=]=\\s*${n}\\b|\\btypeof\\s*\\(\\s*${n}\\s*\\)|\\b(?:if|elif|while|and|or|not|assert\\s*\\()\\s*(?:not\\s+)?${n}\\b`);
+        const use = new RegExp(`\\b${n}\\s*(?:\\.|\\[)|\\bin\\s+${n}\\b`);
+        for (const later of body.slice(i + 1)) {
+          if (guard.test(later.code)) return;
+          if (new RegExp(`^(?:var\\s+)?${n}\\s*(?::[^=]*)?=(?!=)`).test(later.code)) return;
+          if (use.test(later.code)) {
+            out.push(finding("quality/json-parse-unchecked", path, ll.line, `"${name}" comes from JSON.parse_string() and is used on line ${later.line} without a check; it is null when the text is not valid JSON, so check it with \`is Dictionary\` (or \`is Array\`) first.`));
+            return;
+          }
+        }
+      });
+    }
+  }
+
   for (const { line, text } of commentsOf(source)) {
     const todo = /#.*\b(TODO|FIXME|HACK|XXX)\b:?\s*(.*)$/.exec(text);
     if (todo) out.push(finding("quality/todo", path, line, `${todo[1]}: ${todo[2]!.trim().slice(0, 80) || "(no text)"}`));
