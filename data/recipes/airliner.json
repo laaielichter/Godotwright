@@ -148,160 +148,128 @@
          "$c + $diameter * -0.115"
         ],
         [
-         "$diameter * 0.03951",
-         "$c + $diameter * -0.10874"
+         "$diameter * 0.03923",
+         "$c + $diameter * -0.1072"
         ],
         [
-         "$diameter * 0.03804",
-         "$c + $diameter * -0.10264"
+         "$diameter * 0.03696",
+         "$c + $diameter * -0.09969"
         ],
         [
-         "$diameter * 0.03564",
-         "$c + $diameter * -0.09684"
-        ],
-        [
-         "$diameter * 0.03236",
-         "$c + $diameter * -0.09149"
+         "$diameter * 0.03326",
+         "$c + $diameter * -0.09278"
         ],
         [
          "$diameter * 0.02828",
          "$c + $diameter * -0.08672"
         ],
         [
-         "$diameter * 0.02351",
-         "$c + $diameter * -0.08264"
+         "$diameter * 0.02222",
+         "$c + $diameter * -0.08174"
         ],
         [
-         "$diameter * 0.01816",
-         "$c + $diameter * -0.07936"
+         "$diameter * 0.01531",
+         "$c + $diameter * -0.07804"
         ],
         [
-         "$diameter * 0.01236",
-         "$c + $diameter * -0.07696"
-        ],
-        [
-         "$diameter * 0.00626",
-         "$c + $diameter * -0.07549"
+         "$diameter * 0.0078",
+         "$c + $diameter * -0.07577"
         ],
         [
          0,
          "$c + $diameter * -0.075"
         ],
         [
-         "$diameter * -0.00626",
-         "$c + $diameter * -0.07549"
+         "$diameter * -0.0078",
+         "$c + $diameter * -0.07577"
         ],
         [
-         "$diameter * -0.01236",
-         "$c + $diameter * -0.07696"
+         "$diameter * -0.01531",
+         "$c + $diameter * -0.07804"
         ],
         [
-         "$diameter * -0.01816",
-         "$c + $diameter * -0.07936"
-        ],
-        [
-         "$diameter * -0.02351",
-         "$c + $diameter * -0.08264"
+         "$diameter * -0.02222",
+         "$c + $diameter * -0.08174"
         ],
         [
          "$diameter * -0.02828",
          "$c + $diameter * -0.08672"
         ],
         [
-         "$diameter * -0.03236",
-         "$c + $diameter * -0.09149"
+         "$diameter * -0.03326",
+         "$c + $diameter * -0.09278"
         ],
         [
-         "$diameter * -0.03564",
-         "$c + $diameter * -0.09684"
+         "$diameter * -0.03696",
+         "$c + $diameter * -0.09969"
         ],
         [
-         "$diameter * -0.03804",
-         "$c + $diameter * -0.10264"
-        ],
-        [
-         "$diameter * -0.03951",
-         "$c + $diameter * -0.10874"
+         "$diameter * -0.03923",
+         "$c + $diameter * -0.1072"
         ],
         [
          "$diameter * -0.04",
          "$c + $diameter * -0.115"
         ],
         [
-         "$diameter * -0.03951",
-         "$c + $diameter * -0.12126"
+         "$diameter * -0.03923",
+         "$c + $diameter * -0.1228"
         ],
         [
-         "$diameter * -0.03804",
-         "$c + $diameter * -0.12736"
+         "$diameter * -0.03696",
+         "$c + $diameter * -0.13031"
         ],
         [
-         "$diameter * -0.03564",
-         "$c + $diameter * -0.13316"
-        ],
-        [
-         "$diameter * -0.03236",
-         "$c + $diameter * -0.13851"
+         "$diameter * -0.03326",
+         "$c + $diameter * -0.13722"
         ],
         [
          "$diameter * -0.02828",
          "$c + $diameter * -0.14328"
         ],
         [
-         "$diameter * -0.02351",
-         "$c + $diameter * -0.14736"
+         "$diameter * -0.02222",
+         "$c + $diameter * -0.14826"
         ],
         [
-         "$diameter * -0.01816",
-         "$c + $diameter * -0.15064"
+         "$diameter * -0.01531",
+         "$c + $diameter * -0.15196"
         ],
         [
-         "$diameter * -0.01236",
-         "$c + $diameter * -0.15304"
-        ],
-        [
-         "$diameter * -0.00626",
-         "$c + $diameter * -0.15451"
+         "$diameter * -0.0078",
+         "$c + $diameter * -0.15423"
         ],
         [
          0,
          "$c + $diameter * -0.155"
         ],
         [
-         "$diameter * 0.00626",
-         "$c + $diameter * -0.15451"
+         "$diameter * 0.0078",
+         "$c + $diameter * -0.15423"
         ],
         [
-         "$diameter * 0.01236",
-         "$c + $diameter * -0.15304"
+         "$diameter * 0.01531",
+         "$c + $diameter * -0.15196"
         ],
         [
-         "$diameter * 0.01816",
-         "$c + $diameter * -0.15064"
-        ],
-        [
-         "$diameter * 0.02351",
-         "$c + $diameter * -0.14736"
+         "$diameter * 0.02222",
+         "$c + $diameter * -0.14826"
         ],
         [
          "$diameter * 0.02828",
          "$c + $diameter * -0.14328"
         ],
         [
-         "$diameter * 0.03236",
-         "$c + $diameter * -0.13851"
+         "$diameter * 0.03326",
+         "$c + $diameter * -0.13722"
         ],
         [
-         "$diameter * 0.03564",
-         "$c + $diameter * -0.13316"
+         "$diameter * 0.03696",
+         "$c + $diameter * -0.13031"
         ],
         [
-         "$diameter * 0.03804",
-         "$c + $diameter * -0.12736"
-        ],
-        [
-         "$diameter * 0.03951",
-         "$c + $diameter * -0.12126"
+         "$diameter * 0.03923",
+         "$c + $diameter * -0.1228"
         ]
        ]
       },
@@ -313,160 +281,128 @@
          "$c + $diameter * -0.112"
         ],
         [
-         "$diameter * 0.13828",
-         "$c + $diameter * -0.09166"
+         "$diameter * 0.13731",
+         "$c + $diameter * -0.08664"
         ],
         [
-         "$diameter * 0.13315",
-         "$c + $diameter * -0.07183"
+         "$diameter * 0.12934",
+         "$c + $diameter * -0.06225"
         ],
         [
-         "$diameter * 0.12474",
-         "$c + $diameter * -0.05298"
-        ],
-        [
-         "$diameter * 0.11326",
-         "$c + $diameter * -0.03559"
+         "$diameter * 0.11641",
+         "$c + $diameter * -0.03978"
         ],
         [
          "$diameter * 0.09899",
          "$c + $diameter * -0.02008"
         ],
         [
-         "$diameter * 0.08229",
-         "$c + $diameter * -0.00683"
+         "$diameter * 0.07778",
+         "$c + $diameter * -0.00391"
         ],
         [
-         "$diameter * 0.06356",
-         "$c + $diameter * 0.00383"
+         "$diameter * 0.05358",
+         "$c + $diameter * 0.0081"
         ],
         [
-         "$diameter * 0.04326",
-         "$c + $diameter * 0.01164"
-        ],
-        [
-         "$diameter * 0.0219",
-         "$c + $diameter * 0.0164"
+         "$diameter * 0.02731",
+         "$c + $diameter * 0.0155"
         ],
         [
          0,
          "$c + $diameter * 0.018"
         ],
         [
-         "$diameter * -0.0219",
-         "$c + $diameter * 0.0164"
+         "$diameter * -0.02731",
+         "$c + $diameter * 0.0155"
         ],
         [
-         "$diameter * -0.04326",
-         "$c + $diameter * 0.01164"
+         "$diameter * -0.05358",
+         "$c + $diameter * 0.0081"
         ],
         [
-         "$diameter * -0.06356",
-         "$c + $diameter * 0.00383"
-        ],
-        [
-         "$diameter * -0.08229",
-         "$c + $diameter * -0.00683"
+         "$diameter * -0.07778",
+         "$c + $diameter * -0.00391"
         ],
         [
          "$diameter * -0.09899",
          "$c + $diameter * -0.02008"
         ],
         [
-         "$diameter * -0.11326",
-         "$c + $diameter * -0.03559"
+         "$diameter * -0.11641",
+         "$c + $diameter * -0.03978"
         ],
         [
-         "$diameter * -0.12474",
-         "$c + $diameter * -0.05298"
+         "$diameter * -0.12934",
+         "$c + $diameter * -0.06225"
         ],
         [
-         "$diameter * -0.13315",
-         "$c + $diameter * -0.07183"
-        ],
-        [
-         "$diameter * -0.13828",
-         "$c + $diameter * -0.09166"
+         "$diameter * -0.13731",
+         "$c + $diameter * -0.08664"
         ],
         [
          "$diameter * -0.14",
          "$c + $diameter * -0.112"
         ],
         [
-         "$diameter * -0.13828",
-         "$c + $diameter * -0.13234"
+         "$diameter * -0.13731",
+         "$c + $diameter * -0.13736"
         ],
         [
-         "$diameter * -0.13315",
-         "$c + $diameter * -0.15217"
+         "$diameter * -0.12934",
+         "$c + $diameter * -0.16175"
         ],
         [
-         "$diameter * -0.12474",
-         "$c + $diameter * -0.17102"
-        ],
-        [
-         "$diameter * -0.11326",
-         "$c + $diameter * -0.18841"
+         "$diameter * -0.11641",
+         "$c + $diameter * -0.18422"
         ],
         [
          "$diameter * -0.09899",
          "$c + $diameter * -0.20392"
         ],
         [
-         "$diameter * -0.08229",
-         "$c + $diameter * -0.21717"
+         "$diameter * -0.07778",
+         "$c + $diameter * -0.22009"
         ],
         [
-         "$diameter * -0.06356",
-         "$c + $diameter * -0.22783"
+         "$diameter * -0.05358",
+         "$c + $diameter * -0.2321"
         ],
         [
-         "$diameter * -0.04326",
-         "$c + $diameter * -0.23564"
-        ],
-        [
-         "$diameter * -0.0219",
-         "$c + $diameter * -0.2404"
+         "$diameter * -0.02731",
+         "$c + $diameter * -0.2395"
         ],
         [
          0,
          "$c + $diameter * -0.242"
         ],
         [
-         "$diameter * 0.0219",
-         "$c + $diameter * -0.2404"
+         "$diameter * 0.02731",
+         "$c + $diameter * -0.2395"
         ],
         [
-         "$diameter * 0.04326",
-         "$c + $diameter * -0.23564"
+         "$diameter * 0.05358",
+         "$c + $diameter * -0.2321"
         ],
         [
-         "$diameter * 0.06356",
-         "$c + $diameter * -0.22783"
-        ],
-        [
-         "$diameter * 0.08229",
-         "$c + $diameter * -0.21717"
+         "$diameter * 0.07778",
+         "$c + $diameter * -0.22009"
         ],
         [
          "$diameter * 0.09899",
          "$c + $diameter * -0.20392"
         ],
         [
-         "$diameter * 0.11326",
-         "$c + $diameter * -0.18841"
+         "$diameter * 0.11641",
+         "$c + $diameter * -0.18422"
         ],
         [
-         "$diameter * 0.12474",
-         "$c + $diameter * -0.17102"
+         "$diameter * 0.12934",
+         "$c + $diameter * -0.16175"
         ],
         [
-         "$diameter * 0.13315",
-         "$c + $diameter * -0.15217"
-        ],
-        [
-         "$diameter * 0.13828",
-         "$c + $diameter * -0.13234"
+         "$diameter * 0.13731",
+         "$c + $diameter * -0.13736"
         ]
        ]
       },
@@ -478,160 +414,128 @@
          "$c + $diameter * -0.105"
         ],
         [
-         "$diameter * 0.22717",
-         "$c + $diameter * -0.07215"
+         "$diameter * 0.22558",
+         "$c + $diameter * -0.06403"
         ],
         [
-         "$diameter * 0.21874",
-         "$c + $diameter * -0.04011"
+         "$diameter * 0.21249",
+         "$c + $diameter * -0.02464"
         ],
         [
-         "$diameter * 0.20493",
-         "$c + $diameter * -0.00966"
-        ],
-        [
-         "$diameter * 0.18607",
-         "$c + $diameter * 0.01843"
+         "$diameter * 0.19124",
+         "$c + $diameter * 0.01167"
         ],
         [
          "$diameter * 0.16263",
          "$c + $diameter * 0.04349"
         ],
         [
-         "$diameter * 0.13519",
-         "$c + $diameter * 0.06489"
+         "$diameter * 0.12778",
+         "$c + $diameter * 0.06961"
         ],
         [
-         "$diameter * 0.10442",
-         "$c + $diameter * 0.08211"
+         "$diameter * 0.08802",
+         "$c + $diameter * 0.08901"
         ],
         [
-         "$diameter * 0.07107",
-         "$c + $diameter * 0.09472"
-        ],
-        [
-         "$diameter * 0.03598",
-         "$c + $diameter * 0.10241"
+         "$diameter * 0.04487",
+         "$c + $diameter * 0.10096"
         ],
         [
          0,
          "$c + $diameter * 0.105"
         ],
         [
-         "$diameter * -0.03598",
-         "$c + $diameter * 0.10241"
+         "$diameter * -0.04487",
+         "$c + $diameter * 0.10096"
         ],
         [
-         "$diameter * -0.07107",
-         "$c + $diameter * 0.09472"
+         "$diameter * -0.08802",
+         "$c + $diameter * 0.08901"
         ],
         [
-         "$diameter * -0.10442",
-         "$c + $diameter * 0.08211"
-        ],
-        [
-         "$diameter * -0.13519",
-         "$c + $diameter * 0.06489"
+         "$diameter * -0.12778",
+         "$c + $diameter * 0.06961"
         ],
         [
          "$diameter * -0.16263",
          "$c + $diameter * 0.04349"
         ],
         [
-         "$diameter * -0.18607",
-         "$c + $diameter * 0.01843"
+         "$diameter * -0.19124",
+         "$c + $diameter * 0.01167"
         ],
         [
-         "$diameter * -0.20493",
-         "$c + $diameter * -0.00966"
+         "$diameter * -0.21249",
+         "$c + $diameter * -0.02464"
         ],
         [
-         "$diameter * -0.21874",
-         "$c + $diameter * -0.04011"
-        ],
-        [
-         "$diameter * -0.22717",
-         "$c + $diameter * -0.07215"
+         "$diameter * -0.22558",
+         "$c + $diameter * -0.06403"
         ],
         [
          "$diameter * -0.23",
          "$c + $diameter * -0.105"
         ],
         [
-         "$diameter * -0.22717",
-         "$c + $diameter * -0.13785"
+         "$diameter * -0.22558",
+         "$c + $diameter * -0.14597"
         ],
         [
-         "$diameter * -0.21874",
-         "$c + $diameter * -0.16989"
+         "$diameter * -0.21249",
+         "$c + $diameter * -0.18536"
         ],
         [
-         "$diameter * -0.20493",
-         "$c + $diameter * -0.20034"
-        ],
-        [
-         "$diameter * -0.18607",
-         "$c + $diameter * -0.22843"
+         "$diameter * -0.19124",
+         "$c + $diameter * -0.22167"
         ],
         [
          "$diameter * -0.16263",
          "$c + $diameter * -0.25349"
         ],
         [
-         "$diameter * -0.13519",
-         "$c + $diameter * -0.27489"
+         "$diameter * -0.12778",
+         "$c + $diameter * -0.27961"
         ],
         [
-         "$diameter * -0.10442",
-         "$c + $diameter * -0.29211"
+         "$diameter * -0.08802",
+         "$c + $diameter * -0.29901"
         ],
         [
-         "$diameter * -0.07107",
-         "$c + $diameter * -0.30472"
-        ],
-        [
-         "$diameter * -0.03598",
-         "$c + $diameter * -0.31241"
+         "$diameter * -0.04487",
+         "$c + $diameter * -0.31096"
         ],
         [
          0,
          "$c + $diameter * -0.315"
         ],
         [
-         "$diameter * 0.03598",
-         "$c + $diameter * -0.31241"
+         "$diameter * 0.04487",
+         "$c + $diameter * -0.31096"
         ],
         [
-         "$diameter * 0.07107",
-         "$c + $diameter * -0.30472"
+         "$diameter * 0.08802",
+         "$c + $diameter * -0.29901"
         ],
         [
-         "$diameter * 0.10442",
-         "$c + $diameter * -0.29211"
-        ],
-        [
-         "$diameter * 0.13519",
-         "$c + $diameter * -0.27489"
+         "$diameter * 0.12778",
+         "$c + $diameter * -0.27961"
         ],
         [
          "$diameter * 0.16263",
          "$c + $diameter * -0.25349"
         ],
         [
-         "$diameter * 0.18607",
-         "$c + $diameter * -0.22843"
+         "$diameter * 0.19124",
+         "$c + $diameter * -0.22167"
         ],
         [
-         "$diameter * 0.20493",
-         "$c + $diameter * -0.20034"
+         "$diameter * 0.21249",
+         "$c + $diameter * -0.18536"
         ],
         [
-         "$diameter * 0.21874",
-         "$c + $diameter * -0.16989"
-        ],
-        [
-         "$diameter * 0.22717",
-         "$c + $diameter * -0.13785"
+         "$diameter * 0.22558",
+         "$c + $diameter * -0.14597"
         ]
        ]
       },
@@ -643,160 +547,128 @@
          "$c + $diameter * -0.096"
         ],
         [
-         "$diameter * 0.28445",
-         "$c + $diameter * -0.05408"
+         "$diameter * 0.28247",
+         "$c + $diameter * -0.04372"
         ],
         [
-         "$diameter * 0.2739",
-         "$c + $diameter * -0.01318"
+         "$diameter * 0.26608",
+         "$c + $diameter * 0.00656"
         ],
         [
-         "$diameter * 0.25661",
-         "$c + $diameter * 0.02567"
-        ],
-        [
-         "$diameter * 0.233",
-         "$c + $diameter * 0.06153"
+         "$diameter * 0.23946",
+         "$c + $diameter * 0.05289"
         ],
         [
          "$diameter * 0.20365",
          "$c + $diameter * 0.0935"
         ],
         [
-         "$diameter * 0.16928",
-         "$c + $diameter * 0.12082"
+         "$diameter * 0.16",
+         "$c + $diameter * 0.12683"
         ],
         [
-         "$diameter * 0.13075",
-         "$c + $diameter * 0.14279"
+         "$diameter * 0.11021",
+         "$c + $diameter * 0.1516"
         ],
         [
-         "$diameter * 0.089",
-         "$c + $diameter * 0.15888"
-        ],
-        [
-         "$diameter * 0.04505",
-         "$c + $diameter * 0.1687"
+         "$diameter * 0.05619",
+         "$c + $diameter * 0.16685"
         ],
         [
          0,
          "$c + $diameter * 0.172"
         ],
         [
-         "$diameter * -0.04505",
-         "$c + $diameter * 0.1687"
+         "$diameter * -0.05619",
+         "$c + $diameter * 0.16685"
         ],
         [
-         "$diameter * -0.089",
-         "$c + $diameter * 0.15888"
+         "$diameter * -0.11021",
+         "$c + $diameter * 0.1516"
         ],
         [
-         "$diameter * -0.13075",
-         "$c + $diameter * 0.14279"
-        ],
-        [
-         "$diameter * -0.16928",
-         "$c + $diameter * 0.12082"
+         "$diameter * -0.16",
+         "$c + $diameter * 0.12683"
         ],
         [
          "$diameter * -0.20365",
          "$c + $diameter * 0.0935"
         ],
         [
-         "$diameter * -0.233",
-         "$c + $diameter * 0.06153"
+         "$diameter * -0.23946",
+         "$c + $diameter * 0.05289"
         ],
         [
-         "$diameter * -0.25661",
-         "$c + $diameter * 0.02567"
+         "$diameter * -0.26608",
+         "$c + $diameter * 0.00656"
         ],
         [
-         "$diameter * -0.2739",
-         "$c + $diameter * -0.01318"
-        ],
-        [
-         "$diameter * -0.28445",
-         "$c + $diameter * -0.05408"
+         "$diameter * -0.28247",
+         "$c + $diameter * -0.04372"
         ],
         [
          "$diameter * -0.288",
          "$c + $diameter * -0.096"
         ],
         [
-         "$diameter * -0.28445",
-         "$c + $diameter * -0.13792"
+         "$diameter * -0.28247",
+         "$c + $diameter * -0.14828"
         ],
         [
-         "$diameter * -0.2739",
-         "$c + $diameter * -0.17882"
+         "$diameter * -0.26608",
+         "$c + $diameter * -0.19856"
         ],
         [
-         "$diameter * -0.25661",
-         "$c + $diameter * -0.21767"
-        ],
-        [
-         "$diameter * -0.233",
-         "$c + $diameter * -0.25353"
+         "$diameter * -0.23946",
+         "$c + $diameter * -0.24489"
         ],
         [
          "$diameter * -0.20365",
          "$c + $diameter * -0.2855"
         ],
         [
-         "$diameter * -0.16928",
-         "$c + $diameter * -0.31282"
+         "$diameter * -0.16",
+         "$c + $diameter * -0.31883"
         ],
         [
-         "$diameter * -0.13075",
-         "$c + $diameter * -0.33479"
+         "$diameter * -0.11021",
+         "$c + $diameter * -0.3436"
         ],
         [
-         "$diameter * -0.089",
-         "$c + $diameter * -0.35088"
-        ],
-        [
-         "$diameter * -0.04505",
-         "$c + $diameter * -0.3607"
+         "$diameter * -0.05619",
+         "$c + $diameter * -0.35885"
         ],
         [
          0,
          "$c + $diameter * -0.364"
         ],
         [
-         "$diameter * 0.04505",
-         "$c + $diameter * -0.3607"
+         "$diameter * 0.05619",
+         "$c + $diameter * -0.35885"
         ],
         [
-         "$diameter * 0.089",
-         "$c + $diameter * -0.35088"
+         "$diameter * 0.11021",
+         "$c + $diameter * -0.3436"
         ],
         [
-         "$diameter * 0.13075",
-         "$c + $diameter * -0.33479"
-        ],
-        [
-         "$diameter * 0.16928",
-         "$c + $diameter * -0.31282"
+         "$diameter * 0.16",
+         "$c + $diameter * -0.31883"
         ],
         [
          "$diameter * 0.20365",
          "$c + $diameter * -0.2855"
         ],
         [
-         "$diameter * 0.233",
-         "$c + $diameter * -0.25353"
+         "$diameter * 0.23946",
+         "$c + $diameter * -0.24489"
         ],
         [
-         "$diameter * 0.25661",
-         "$c + $diameter * -0.21767"
+         "$diameter * 0.26608",
+         "$c + $diameter * -0.19856"
         ],
         [
-         "$diameter * 0.2739",
-         "$c + $diameter * -0.17882"
-        ],
-        [
-         "$diameter * 0.28445",
-         "$c + $diameter * -0.13792"
+         "$diameter * 0.28247",
+         "$c + $diameter * -0.14828"
         ]
        ]
       },
@@ -808,160 +680,128 @@
          "$c + $diameter * -0.09"
         ],
         [
-         "$diameter * 0.31408",
-         "$c + $diameter * -0.04338"
+         "$diameter * 0.31189",
+         "$c + $diameter * -0.03186"
         ],
         [
-         "$diameter * 0.30244",
-         "$c + $diameter * 0.00209"
+         "$diameter * 0.29379",
+         "$c + $diameter * 0.02404"
         ],
         [
-         "$diameter * 0.28334",
-         "$c + $diameter * 0.04529"
-        ],
-        [
-         "$diameter * 0.25727",
-         "$c + $diameter * 0.08516"
+         "$diameter * 0.26441",
+         "$c + $diameter * 0.07556"
         ],
         [
          "$diameter * 0.22486",
          "$c + $diameter * 0.12072"
         ],
         [
-         "$diameter * 0.18692",
-         "$c + $diameter * 0.15109"
+         "$diameter * 0.17667",
+         "$c + $diameter * 0.15778"
         ],
         [
-         "$diameter * 0.14437",
-         "$c + $diameter * 0.17552"
+         "$diameter * 0.12169",
+         "$c + $diameter * 0.18532"
         ],
         [
-         "$diameter * 0.09827",
-         "$c + $diameter * 0.19341"
-        ],
-        [
-         "$diameter * 0.04975",
-         "$c + $diameter * 0.20433"
+         "$diameter * 0.06204",
+         "$c + $diameter * 0.20227"
         ],
         [
          0,
          "$c + $diameter * 0.208"
         ],
         [
-         "$diameter * -0.04975",
-         "$c + $diameter * 0.20433"
+         "$diameter * -0.06204",
+         "$c + $diameter * 0.20227"
         ],
         [
-         "$diameter * -0.09827",
-         "$c + $diameter * 0.19341"
+         "$diameter * -0.12169",
+         "$c + $diameter * 0.18532"
         ],
         [
-         "$diameter * -0.14437",
-         "$c + $diameter * 0.17552"
-        ],
-        [
-         "$diameter * -0.18692",
-         "$c + $diameter * 0.15109"
+         "$diameter * -0.17667",
+         "$c + $diameter * 0.15778"
         ],
         [
          "$diameter * -0.22486",
          "$c + $diameter * 0.12072"
         ],
         [
-         "$diameter * -0.25727",
-         "$c + $diameter * 0.08516"
+         "$diameter * -0.26441",
+         "$c + $diameter * 0.07556"
         ],
         [
-         "$diameter * -0.28334",
-         "$c + $diameter * 0.04529"
+         "$diameter * -0.29379",
+         "$c + $diameter * 0.02404"
         ],
         [
-         "$diameter * -0.30244",
-         "$c + $diameter * 0.00209"
-        ],
-        [
-         "$diameter * -0.31408",
-         "$c + $diameter * -0.04338"
+         "$diameter * -0.31189",
+         "$c + $diameter * -0.03186"
         ],
         [
          "$diameter * -0.318",
          "$c + $diameter * -0.09"
         ],
         [
-         "$diameter * -0.31408",
-         "$c + $diameter * -0.13662"
+         "$diameter * -0.31189",
+         "$c + $diameter * -0.14814"
         ],
         [
-         "$diameter * -0.30244",
-         "$c + $diameter * -0.18209"
+         "$diameter * -0.29379",
+         "$c + $diameter * -0.20404"
         ],
         [
-         "$diameter * -0.28334",
-         "$c + $diameter * -0.22529"
-        ],
-        [
-         "$diameter * -0.25727",
-         "$c + $diameter * -0.26516"
+         "$diameter * -0.26441",
+         "$c + $diameter * -0.25556"
         ],
         [
          "$diameter * -0.22486",
          "$c + $diameter * -0.30072"
         ],
         [
-         "$diameter * -0.18692",
-         "$c + $diameter * -0.33109"
+         "$diameter * -0.17667",
+         "$c + $diameter * -0.33778"
         ],
         [
-         "$diameter * -0.14437",
-         "$c + $diameter * -0.35552"
+         "$diameter * -0.12169",
+         "$c + $diameter * -0.36532"
         ],
         [
-         "$diameter * -0.09827",
-         "$c + $diameter * -0.37341"
-        ],
-        [
-         "$diameter * -0.04975",
-         "$c + $diameter * -0.38433"
+         "$diameter * -0.06204",
+         "$c + $diameter * -0.38227"
         ],
         [
          0,
          "$c + $diameter * -0.388"
         ],
         [
-         "$diameter * 0.04975",
-         "$c + $diameter * -0.38433"
+         "$diameter * 0.06204",
+         "$c + $diameter * -0.38227"
         ],
         [
-         "$diameter * 0.09827",
-         "$c + $diameter * -0.37341"
+         "$diameter * 0.12169",
+         "$c + $diameter * -0.36532"
         ],
         [
-         "$diameter * 0.14437",
-         "$c + $diameter * -0.35552"
-        ],
-        [
-         "$diameter * 0.18692",
-         "$c + $diameter * -0.33109"
+         "$diameter * 0.17667",
+         "$c + $diameter * -0.33778"
         ],
         [
          "$diameter * 0.22486",
          "$c + $diameter * -0.30072"
         ],
         [
-         "$diameter * 0.25727",
-         "$c + $diameter * -0.26516"
+         "$diameter * 0.26441",
+         "$c + $diameter * -0.25556"
         ],
         [
-         "$diameter * 0.28334",
-         "$c + $diameter * -0.22529"
+         "$diameter * 0.29379",
+         "$c + $diameter * -0.20404"
         ],
         [
-         "$diameter * 0.30244",
-         "$c + $diameter * -0.18209"
-        ],
-        [
-         "$diameter * 0.31408",
-         "$c + $diameter * -0.13662"
+         "$diameter * 0.31189",
+         "$c + $diameter * -0.14814"
         ]
        ]
       },
@@ -973,160 +813,128 @@
          "$c + $diameter * -0.083"
         ],
         [
-         "$diameter * 0.34075",
-         "$c + $diameter * -0.032"
+         "$diameter * 0.33837",
+         "$c + $diameter * -0.0194"
         ],
         [
-         "$diameter * 0.32811",
-         "$c + $diameter * 0.01774"
+         "$diameter * 0.31874",
+         "$c + $diameter * 0.04175"
         ],
         [
-         "$diameter * 0.3074",
-         "$c + $diameter * 0.065"
-        ],
-        [
-         "$diameter * 0.27911",
-         "$c + $diameter * 0.10862"
+         "$diameter * 0.28686",
+         "$c + $diameter * 0.09812"
         ],
         [
          "$diameter * 0.24395",
          "$c + $diameter * 0.14752"
         ],
         [
-         "$diameter * 0.20279",
-         "$c + $diameter * 0.18074"
+         "$diameter * 0.19167",
+         "$c + $diameter * 0.18806"
         ],
         [
-         "$diameter * 0.15663",
-         "$c + $diameter * 0.20747"
+         "$diameter * 0.13203",
+         "$c + $diameter * 0.21818"
         ],
         [
-         "$diameter * 0.10661",
-         "$c + $diameter * 0.22704"
-        ],
-        [
-         "$diameter * 0.05397",
-         "$c + $diameter * 0.23899"
+         "$diameter * 0.06731",
+         "$c + $diameter * 0.23674"
         ],
         [
          0,
          "$c + $diameter * 0.243"
         ],
         [
-         "$diameter * -0.05397",
-         "$c + $diameter * 0.23899"
+         "$diameter * -0.06731",
+         "$c + $diameter * 0.23674"
         ],
         [
-         "$diameter * -0.10661",
-         "$c + $diameter * 0.22704"
+         "$diameter * -0.13203",
+         "$c + $diameter * 0.21818"
         ],
         [
-         "$diameter * -0.15663",
-         "$c + $diameter * 0.20747"
-        ],
-        [
-         "$diameter * -0.20279",
-         "$c + $diameter * 0.18074"
+         "$diameter * -0.19167",
+         "$c + $diameter * 0.18806"
         ],
         [
          "$diameter * -0.24395",
          "$c + $diameter * 0.14752"
         ],
         [
-         "$diameter * -0.27911",
-         "$c + $diameter * 0.10862"
+         "$diameter * -0.28686",
+         "$c + $diameter * 0.09812"
         ],
         [
-         "$diameter * -0.3074",
-         "$c + $diameter * 0.065"
+         "$diameter * -0.31874",
+         "$c + $diameter * 0.04175"
         ],
         [
-         "$diameter * -0.32811",
-         "$c + $diameter * 0.01774"
-        ],
-        [
-         "$diameter * -0.34075",
-         "$c + $diameter * -0.032"
+         "$diameter * -0.33837",
+         "$c + $diameter * -0.0194"
         ],
         [
          "$diameter * -0.345",
          "$c + $diameter * -0.083"
         ],
         [
-         "$diameter * -0.34075",
-         "$c + $diameter * -0.134"
+         "$diameter * -0.33837",
+         "$c + $diameter * -0.1466"
         ],
         [
-         "$diameter * -0.32811",
-         "$c + $diameter * -0.18374"
+         "$diameter * -0.31874",
+         "$c + $diameter * -0.20775"
         ],
         [
-         "$diameter * -0.3074",
-         "$c + $diameter * -0.231"
-        ],
-        [
-         "$diameter * -0.27911",
-         "$c + $diameter * -0.27462"
+         "$diameter * -0.28686",
+         "$c + $diameter * -0.26412"
         ],
         [
          "$diameter * -0.24395",
          "$c + $diameter * -0.31352"
         ],
         [
-         "$diameter * -0.20279",
-         "$c + $diameter * -0.34674"
+         "$diameter * -0.19167",
+         "$c + $diameter * -0.35406"
         ],
         [
-         "$diameter * -0.15663",
-         "$c + $diameter * -0.37347"
+         "$diameter * -0.13203",
+         "$c + $diameter * -0.38418"
         ],
         [
-         "$diameter * -0.10661",
-         "$c + $diameter * -0.39304"
-        ],
-        [
-         "$diameter * -0.05397",
-         "$c + $diameter * -0.40499"
+         "$diameter * -0.06731",
+         "$c + $diameter * -0.40274"
         ],
         [
          0,
          "$c + $diameter * -0.409"
         ],
         [
-         "$diameter * 0.05397",
-         "$c + $diameter * -0.40499"
+         "$diameter * 0.06731",
+         "$c + $diameter * -0.40274"
         ],
         [
-         "$diameter * 0.10661",
-         "$c + $diameter * -0.39304"
+         "$diameter * 0.13203",
+         "$c + $diameter * -0.38418"
         ],
         [
-         "$diameter * 0.15663",
-         "$c + $diameter * -0.37347"
-        ],
-        [
-         "$diameter * 0.20279",
-         "$c + $diameter * -0.34674"
+         "$diameter * 0.19167",
+         "$c + $diameter * -0.35406"
         ],
         [
          "$diameter * 0.24395",
          "$c + $diameter * -0.31352"
         ],
         [
-         "$diameter * 0.27911",
-         "$c + $diameter * -0.27462"
+         "$diameter * 0.28686",
+         "$c + $diameter * -0.26412"
         ],
         [
-         "$diameter * 0.3074",
-         "$c + $diameter * -0.231"
+         "$diameter * 0.31874",
+         "$c + $diameter * -0.20775"
         ],
         [
-         "$diameter * 0.32811",
-         "$c + $diameter * -0.18374"
-        ],
-        [
-         "$diameter * 0.34075",
-         "$c + $diameter * -0.134"
+         "$diameter * 0.33837",
+         "$c + $diameter * -0.1466"
         ]
        ]
       },
@@ -1138,160 +946,128 @@
          "$c + $diameter * -0.077"
         ],
         [
-         "$diameter * 0.36544",
-         "$c + $diameter * -0.02194"
+         "$diameter * 0.36289",
+         "$c + $diameter * -0.00833"
         ],
         [
-         "$diameter * 0.35189",
-         "$c + $diameter * 0.03177"
+         "$diameter * 0.34184",
+         "$c + $diameter * 0.0577"
         ],
         [
-         "$diameter * 0.32967",
-         "$c + $diameter * 0.0828"
-        ],
-        [
-         "$diameter * 0.29934",
-         "$c + $diameter * 0.1299"
+         "$diameter * 0.30764",
+         "$c + $diameter * 0.11856"
         ],
         [
          "$diameter * 0.26163",
          "$c + $diameter * 0.1719"
         ],
         [
-         "$diameter * 0.21748",
-         "$c + $diameter * 0.20777"
+         "$diameter * 0.20556",
+         "$c + $diameter * 0.21568"
         ],
         [
-         "$diameter * 0.16798",
-         "$c + $diameter * 0.23663"
+         "$diameter * 0.14159",
+         "$c + $diameter * 0.24821"
         ],
         [
-         "$diameter * 0.11434",
-         "$c + $diameter * 0.25777"
-        ],
-        [
-         "$diameter * 0.05788",
-         "$c + $diameter * 0.27067"
+         "$diameter * 0.07218",
+         "$c + $diameter * 0.26824"
         ],
         [
          0,
          "$c + $diameter * 0.275"
         ],
         [
-         "$diameter * -0.05788",
-         "$c + $diameter * 0.27067"
+         "$diameter * -0.07218",
+         "$c + $diameter * 0.26824"
         ],
         [
-         "$diameter * -0.11434",
-         "$c + $diameter * 0.25777"
+         "$diameter * -0.14159",
+         "$c + $diameter * 0.24821"
         ],
         [
-         "$diameter * -0.16798",
-         "$c + $diameter * 0.23663"
-        ],
-        [
-         "$diameter * -0.21748",
-         "$c + $diameter * 0.20777"
+         "$diameter * -0.20556",
+         "$c + $diameter * 0.21568"
         ],
         [
          "$diameter * -0.26163",
          "$c + $diameter * 0.1719"
         ],
         [
-         "$diameter * -0.29934",
-         "$c + $diameter * 0.1299"
+         "$diameter * -0.30764",
+         "$c + $diameter * 0.11856"
         ],
         [
-         "$diameter * -0.32967",
-         "$c + $diameter * 0.0828"
+         "$diameter * -0.34184",
+         "$c + $diameter * 0.0577"
         ],
         [
-         "$diameter * -0.35189",
-         "$c + $diameter * 0.03177"
-        ],
-        [
-         "$diameter * -0.36544",
-         "$c + $diameter * -0.02194"
+         "$diameter * -0.36289",
+         "$c + $diameter * -0.00833"
         ],
         [
          "$diameter * -0.37",
          "$c + $diameter * -0.077"
         ],
         [
-         "$diameter * -0.36544",
-         "$c + $diameter * -0.13206"
+         "$diameter * -0.36289",
+         "$c + $diameter * -0.14567"
         ],
         [
-         "$diameter * -0.35189",
-         "$c + $diameter * -0.18577"
+         "$diameter * -0.34184",
+         "$c + $diameter * -0.2117"
         ],
         [
-         "$diameter * -0.32967",
-         "$c + $diameter * -0.2368"
-        ],
-        [
-         "$diameter * -0.29934",
-         "$c + $diameter * -0.2839"
+         "$diameter * -0.30764",
+         "$c + $diameter * -0.27256"
         ],
         [
          "$diameter * -0.26163",
          "$c + $diameter * -0.3259"
         ],
         [
-         "$diameter * -0.21748",
-         "$c + $diameter * -0.36177"
+         "$diameter * -0.20556",
+         "$c + $diameter * -0.36968"
         ],
         [
-         "$diameter * -0.16798",
-         "$c + $diameter * -0.39063"
+         "$diameter * -0.14159",
+         "$c + $diameter * -0.40221"
         ],
         [
-         "$diameter * -0.11434",
-         "$c + $diameter * -0.41177"
-        ],
-        [
-         "$diameter * -0.05788",
-         "$c + $diameter * -0.42467"
+         "$diameter * -0.07218",
+         "$c + $diameter * -0.42224"
         ],
         [
          0,
          "$c + $diameter * -0.429"
         ],
         [
-         "$diameter * 0.05788",
-         "$c + $diameter * -0.42467"
+         "$diameter * 0.07218",
+         "$c + $diameter * -0.42224"
         ],
         [
-         "$diameter * 0.11434",
-         "$c + $diameter * -0.41177"
+         "$diameter * 0.14159",
+         "$c + $diameter * -0.40221"
         ],
         [
-         "$diameter * 0.16798",
-         "$c + $diameter * -0.39063"
-        ],
-        [
-         "$diameter * 0.21748",
-         "$c + $diameter * -0.36177"
+         "$diameter * 0.20556",
+         "$c + $diameter * -0.36968"
         ],
         [
          "$diameter * 0.26163",
          "$c + $diameter * -0.3259"
         ],
         [
-         "$diameter * 0.29934",
-         "$c + $diameter * -0.2839"
+         "$diameter * 0.30764",
+         "$c + $diameter * -0.27256"
         ],
         [
-         "$diameter * 0.32967",
-         "$c + $diameter * -0.2368"
+         "$diameter * 0.34184",
+         "$c + $diameter * -0.2117"
         ],
         [
-         "$diameter * 0.35189",
-         "$c + $diameter * -0.18577"
-        ],
-        [
-         "$diameter * 0.36544",
-         "$c + $diameter * -0.13206"
+         "$diameter * 0.36289",
+         "$c + $diameter * -0.14567"
         ]
        ]
       },
@@ -1303,160 +1079,128 @@
          "$c + $diameter * -0.069"
         ],
         [
-         "$diameter * 0.38717",
-         "$c + $diameter * -0.01049"
+         "$diameter * 0.38447",
+         "$c + $diameter * 0.00396"
         ],
         [
-         "$diameter * 0.37281",
-         "$c + $diameter * 0.04657"
+         "$diameter * 0.36216",
+         "$c + $diameter * 0.07412"
         ],
         [
-         "$diameter * 0.34927",
-         "$c + $diameter * 0.10079"
-        ],
-        [
-         "$diameter * 0.31713",
-         "$c + $diameter * 0.15083"
+         "$diameter * 0.32594",
+         "$c + $diameter * 0.13878"
         ],
         [
          "$diameter * 0.27719",
          "$c + $diameter * 0.19546"
         ],
         [
-         "$diameter * 0.23041",
-         "$c + $diameter * 0.23357"
+         "$diameter * 0.21778",
+         "$c + $diameter * 0.24197"
         ],
         [
-         "$diameter * 0.17796",
-         "$c + $diameter * 0.26424"
+         "$diameter * 0.15001",
+         "$c + $diameter * 0.27653"
         ],
         [
-         "$diameter * 0.12113",
-         "$c + $diameter * 0.2867"
-        ],
-        [
-         "$diameter * 0.06132",
-         "$c + $diameter * 0.3004"
+         "$diameter * 0.07648",
+         "$c + $diameter * 0.29781"
         ],
         [
          0,
          "$c + $diameter * 0.305"
         ],
         [
-         "$diameter * -0.06132",
-         "$c + $diameter * 0.3004"
+         "$diameter * -0.07648",
+         "$c + $diameter * 0.29781"
         ],
         [
-         "$diameter * -0.12113",
-         "$c + $diameter * 0.2867"
+         "$diameter * -0.15001",
+         "$c + $diameter * 0.27653"
         ],
         [
-         "$diameter * -0.17796",
-         "$c + $diameter * 0.26424"
-        ],
-        [
-         "$diameter * -0.23041",
-         "$c + $diameter * 0.23357"
+         "$diameter * -0.21778",
+         "$c + $diameter * 0.24197"
         ],
         [
          "$diameter * -0.27719",
          "$c + $diameter * 0.19546"
         ],
         [
-         "$diameter * -0.31713",
-         "$c + $diameter * 0.15083"
+         "$diameter * -0.32594",
+         "$c + $diameter * 0.13878"
         ],
         [
-         "$diameter * -0.34927",
-         "$c + $diameter * 0.10079"
+         "$diameter * -0.36216",
+         "$c + $diameter * 0.07412"
         ],
         [
-         "$diameter * -0.37281",
-         "$c + $diameter * 0.04657"
-        ],
-        [
-         "$diameter * -0.38717",
-         "$c + $diameter * -0.01049"
+         "$diameter * -0.38447",
+         "$c + $diameter * 0.00396"
         ],
         [
          "$diameter * -0.392",
          "$c + $diameter * -0.069"
         ],
         [
-         "$diameter * -0.38717",
-         "$c + $diameter * -0.12751"
+         "$diameter * -0.38447",
+         "$c + $diameter * -0.14196"
         ],
         [
-         "$diameter * -0.37281",
-         "$c + $diameter * -0.18457"
+         "$diameter * -0.36216",
+         "$c + $diameter * -0.21212"
         ],
         [
-         "$diameter * -0.34927",
-         "$c + $diameter * -0.23879"
-        ],
-        [
-         "$diameter * -0.31713",
-         "$c + $diameter * -0.28883"
+         "$diameter * -0.32594",
+         "$c + $diameter * -0.27678"
         ],
         [
          "$diameter * -0.27719",
          "$c + $diameter * -0.33346"
         ],
         [
-         "$diameter * -0.23041",
-         "$c + $diameter * -0.37157"
+         "$diameter * -0.21778",
+         "$c + $diameter * -0.37997"
         ],
         [
-         "$diameter * -0.17796",
-         "$c + $diameter * -0.40224"
+         "$diameter * -0.15001",
+         "$c + $diameter * -0.41453"
         ],
         [
-         "$diameter * -0.12113",
-         "$c + $diameter * -0.4247"
-        ],
-        [
-         "$diameter * -0.06132",
-         "$c + $diameter * -0.4384"
+         "$diameter * -0.07648",
+         "$c + $diameter * -0.43581"
         ],
         [
          0,
          "$c + $diameter * -0.443"
         ],
         [
-         "$diameter * 0.06132",
-         "$c + $diameter * -0.4384"
+         "$diameter * 0.07648",
+         "$c + $diameter * -0.43581"
         ],
         [
-         "$diameter * 0.12113",
-         "$c + $diameter * -0.4247"
+         "$diameter * 0.15001",
+         "$c + $diameter * -0.41453"
         ],
         [
-         "$diameter * 0.17796",
-         "$c + $diameter * -0.40224"
-        ],
-        [
-         "$diameter * 0.23041",
-         "$c + $diameter * -0.37157"
+         "$diameter * 0.21778",
+         "$c + $diameter * -0.37997"
         ],
         [
          "$diameter * 0.27719",
          "$c + $diameter * -0.33346"
         ],
         [
-         "$diameter * 0.31713",
-         "$c + $diameter * -0.28883"
+         "$diameter * 0.32594",
+         "$c + $diameter * -0.27678"
         ],
         [
-         "$diameter * 0.34927",
-         "$c + $diameter * -0.23879"
+         "$diameter * 0.36216",
+         "$c + $diameter * -0.21212"
         ],
         [
-         "$diameter * 0.37281",
-         "$c + $diameter * -0.18457"
-        ],
-        [
-         "$diameter * 0.38717",
-         "$c + $diameter * -0.12751"
+         "$diameter * 0.38447",
+         "$c + $diameter * -0.14196"
         ]
        ]
       },
@@ -1468,160 +1212,128 @@
          "$c + $diameter * -0.06"
         ],
         [
-         "$diameter * 0.40495",
-         "$c + $diameter * 0.00179"
+         "$diameter * 0.40212",
+         "$c + $diameter * 0.01706"
         ],
         [
-         "$diameter * 0.38993",
-         "$c + $diameter * 0.06206"
+         "$diameter * 0.37879",
+         "$c + $diameter * 0.09116"
         ],
         [
-         "$diameter * 0.36531",
-         "$c + $diameter * 0.11933"
-        ],
-        [
-         "$diameter * 0.3317",
-         "$c + $diameter * 0.17218"
+         "$diameter * 0.3409",
+         "$c + $diameter * 0.15945"
         ],
         [
          "$diameter * 0.28991",
          "$c + $diameter * 0.21931"
         ],
         [
-         "$diameter * 0.24099",
-         "$c + $diameter * 0.25956"
+         "$diameter * 0.22778",
+         "$c + $diameter * 0.26843"
         ],
         [
-         "$diameter * 0.18614",
-         "$c + $diameter * 0.29195"
+         "$diameter * 0.1569",
+         "$c + $diameter * 0.30493"
         ],
         [
-         "$diameter * 0.1267",
-         "$c + $diameter * 0.31567"
-        ],
-        [
-         "$diameter * 0.06414",
-         "$c + $diameter * 0.33014"
+         "$diameter * 0.07999",
+         "$c + $diameter * 0.32741"
         ],
         [
          0,
          "$c + $diameter * 0.335"
         ],
         [
-         "$diameter * -0.06414",
-         "$c + $diameter * 0.33014"
+         "$diameter * -0.07999",
+         "$c + $diameter * 0.32741"
         ],
         [
-         "$diameter * -0.1267",
-         "$c + $diameter * 0.31567"
+         "$diameter * -0.1569",
+         "$c + $diameter * 0.30493"
         ],
         [
-         "$diameter * -0.18614",
-         "$c + $diameter * 0.29195"
-        ],
-        [
-         "$diameter * -0.24099",
-         "$c + $diameter * 0.25956"
+         "$diameter * -0.22778",
+         "$c + $diameter * 0.26843"
         ],
         [
          "$diameter * -0.28991",
          "$c + $diameter * 0.21931"
         ],
         [
-         "$diameter * -0.3317",
-         "$c + $diameter * 0.17218"
+         "$diameter * -0.3409",
+         "$c + $diameter * 0.15945"
         ],
         [
-         "$diameter * -0.36531",
-         "$c + $diameter * 0.11933"
+         "$diameter * -0.37879",
+         "$c + $diameter * 0.09116"
         ],
         [
-         "$diameter * -0.38993",
-         "$c + $diameter * 0.06206"
-        ],
-        [
-         "$diameter * -0.40495",
-         "$c + $diameter * 0.00179"
+         "$diameter * -0.40212",
+         "$c + $diameter * 0.01706"
         ],
         [
          "$diameter * -0.41",
          "$c + $diameter * -0.06"
         ],
         [
-         "$diameter * -0.40495",
-         "$c + $diameter * -0.12179"
+         "$diameter * -0.40212",
+         "$c + $diameter * -0.13706"
         ],
         [
-         "$diameter * -0.38993",
-         "$c + $diameter * -0.18206"
+         "$diameter * -0.37879",
+         "$c + $diameter * -0.21116"
         ],
         [
-         "$diameter * -0.36531",
-         "$c + $diameter * -0.23933"
-        ],
-        [
-         "$diameter * -0.3317",
-         "$c + $diameter * -0.29218"
+         "$diameter * -0.3409",
+         "$c + $diameter * -0.27945"
         ],
         [
          "$diameter * -0.28991",
          "$c + $diameter * -0.33931"
         ],
         [
-         "$diameter * -0.24099",
-         "$c + $diameter * -0.37956"
+         "$diameter * -0.22778",
+         "$c + $diameter * -0.38843"
         ],
         [
-         "$diameter * -0.18614",
-         "$c + $diameter * -0.41195"
+         "$diameter * -0.1569",
+         "$c + $diameter * -0.42493"
         ],
         [
-         "$diameter * -0.1267",
-         "$c + $diameter * -0.43567"
-        ],
-        [
-         "$diameter * -0.06414",
-         "$c + $diameter * -0.45014"
+         "$diameter * -0.07999",
+         "$c + $diameter * -0.44741"
         ],
         [
          0,
          "$c + $diameter * -0.455"
         ],
         [
-         "$diameter * 0.06414",
-         "$c + $diameter * -0.45014"
+         "$diameter * 0.07999",
+         "$c + $diameter * -0.44741"
         ],
         [
-         "$diameter * 0.1267",
-         "$c + $diameter * -0.43567"
+         "$diameter * 0.1569",
+         "$c + $diameter * -0.42493"
         ],
         [
-         "$diameter * 0.18614",
-         "$c + $diameter * -0.41195"
-        ],
-        [
-         "$diameter * 0.24099",
-         "$c + $diameter * -0.37956"
+         "$diameter * 0.22778",
+         "$c + $diameter * -0.38843"
         ],
         [
          "$diameter * 0.28991",
          "$c + $diameter * -0.33931"
         ],
         [
-         "$diameter * 0.3317",
-         "$c + $diameter * -0.29218"
+         "$diameter * 0.3409",
+         "$c + $diameter * -0.27945"
         ],
         [
-         "$diameter * 0.36531",
-         "$c + $diameter * -0.23933"
+         "$diameter * 0.37879",
+         "$c + $diameter * -0.21116"
         ],
         [
-         "$diameter * 0.38993",
-         "$c + $diameter * -0.18206"
-        ],
-        [
-         "$diameter * 0.40495",
-         "$c + $diameter * -0.12179"
+         "$diameter * 0.40212",
+         "$c + $diameter * -0.13706"
         ]
        ]
       },
@@ -1633,160 +1345,128 @@
          "$c + $diameter * -0.045"
         ],
         [
-         "$diameter * 0.43458",
-         "$c + $diameter * 0.02227"
+         "$diameter * 0.43155",
+         "$c + $diameter * 0.03889"
         ],
         [
-         "$diameter * 0.41846",
-         "$c + $diameter * 0.08788"
+         "$diameter * 0.40651",
+         "$c + $diameter * 0.11955"
         ],
         [
-         "$diameter * 0.39204",
-         "$c + $diameter * 0.15022"
-        ],
-        [
-         "$diameter * 0.35597",
-         "$c + $diameter * 0.20775"
+         "$diameter * 0.36585",
+         "$c + $diameter * 0.1939"
         ],
         [
          "$diameter * 0.31113",
          "$c + $diameter * 0.25906"
         ],
         [
-         "$diameter * 0.25863",
-         "$c + $diameter * 0.30288"
+         "$diameter * 0.24445",
+         "$c + $diameter * 0.31253"
         ],
         [
-         "$diameter * 0.19976",
-         "$c + $diameter * 0.33813"
+         "$diameter * 0.16838",
+         "$c + $diameter * 0.35227"
         ],
         [
-         "$diameter * 0.13597",
-         "$c + $diameter * 0.36395"
-        ],
-        [
-         "$diameter * 0.06883",
-         "$c + $diameter * 0.37971"
+         "$diameter * 0.08584",
+         "$c + $diameter * 0.37674"
         ],
         [
          0,
          "$c + $diameter * 0.385"
         ],
         [
-         "$diameter * -0.06883",
-         "$c + $diameter * 0.37971"
+         "$diameter * -0.08584",
+         "$c + $diameter * 0.37674"
         ],
         [
-         "$diameter * -0.13597",
-         "$c + $diameter * 0.36395"
+         "$diameter * -0.16838",
+         "$c + $diameter * 0.35227"
         ],
         [
-         "$diameter * -0.19976",
-         "$c + $diameter * 0.33813"
-        ],
-        [
-         "$diameter * -0.25863",
-         "$c + $diameter * 0.30288"
+         "$diameter * -0.24445",
+         "$c + $diameter * 0.31253"
         ],
         [
          "$diameter * -0.31113",
          "$c + $diameter * 0.25906"
         ],
         [
-         "$diameter * -0.35597",
-         "$c + $diameter * 0.20775"
+         "$diameter * -0.36585",
+         "$c + $diameter * 0.1939"
         ],
         [
-         "$diameter * -0.39204",
-         "$c + $diameter * 0.15022"
+         "$diameter * -0.40651",
+         "$c + $diameter * 0.11955"
         ],
         [
-         "$diameter * -0.41846",
-         "$c + $diameter * 0.08788"
-        ],
-        [
-         "$diameter * -0.43458",
-         "$c + $diameter * 0.02227"
+         "$diameter * -0.43155",
+         "$c + $diameter * 0.03889"
         ],
         [
          "$diameter * -0.44",
          "$c + $diameter * -0.045"
         ],
         [
-         "$diameter * -0.43458",
-         "$c + $diameter * -0.11227"
+         "$diameter * -0.43155",
+         "$c + $diameter * -0.12889"
         ],
         [
-         "$diameter * -0.41846",
-         "$c + $diameter * -0.17788"
+         "$diameter * -0.40651",
+         "$c + $diameter * -0.20955"
         ],
         [
-         "$diameter * -0.39204",
-         "$c + $diameter * -0.24022"
-        ],
-        [
-         "$diameter * -0.35597",
-         "$c + $diameter * -0.29775"
+         "$diameter * -0.36585",
+         "$c + $diameter * -0.2839"
         ],
         [
          "$diameter * -0.31113",
          "$c + $diameter * -0.34906"
         ],
         [
-         "$diameter * -0.25863",
-         "$c + $diameter * -0.39288"
+         "$diameter * -0.24445",
+         "$c + $diameter * -0.40253"
         ],
         [
-         "$diameter * -0.19976",
-         "$c + $diameter * -0.42813"
+         "$diameter * -0.16838",
+         "$c + $diameter * -0.44227"
         ],
         [
-         "$diameter * -0.13597",
-         "$c + $diameter * -0.45395"
-        ],
-        [
-         "$diameter * -0.06883",
-         "$c + $diameter * -0.46971"
+         "$diameter * -0.08584",
+         "$c + $diameter * -0.46674"
         ],
         [
          0,
          "$c + $diameter * -0.475"
         ],
         [
-         "$diameter * 0.06883",
-         "$c + $diameter * -0.46971"
+         "$diameter * 0.08584",
+         "$c + $diameter * -0.46674"
         ],
         [
-         "$diameter * 0.13597",
-         "$c + $diameter * -0.45395"
+         "$diameter * 0.16838",
+         "$c + $diameter * -0.44227"
         ],
         [
-         "$diameter * 0.19976",
-         "$c + $diameter * -0.42813"
-        ],
-        [
-         "$diameter * 0.25863",
-         "$c + $diameter * -0.39288"
+         "$diameter * 0.24445",
+         "$c + $diameter * -0.40253"
         ],
         [
          "$diameter * 0.31113",
          "$c + $diameter * -0.34906"
         ],
         [
-         "$diameter * 0.35597",
-         "$c + $diameter * -0.29775"
+         "$diameter * 0.36585",
+         "$c + $diameter * -0.2839"
         ],
         [
-         "$diameter * 0.39204",
-         "$c + $diameter * -0.24022"
+         "$diameter * 0.40651",
+         "$c + $diameter * -0.20955"
         ],
         [
-         "$diameter * 0.41846",
-         "$c + $diameter * -0.17788"
-        ],
-        [
-         "$diameter * 0.43458",
-         "$c + $diameter * -0.11227"
+         "$diameter * 0.43155",
+         "$c + $diameter * -0.12889"
         ]
        ]
       },
@@ -1798,160 +1478,128 @@
          "$c + $diameter * -0.03"
         ],
         [
-         "$diameter * 0.45928",
-         "$c + $diameter * 0.04196"
+         "$diameter * 0.45607",
+         "$c + $diameter * 0.05974"
         ],
         [
-         "$diameter * 0.44224",
-         "$c + $diameter * 0.11215"
+         "$diameter * 0.4296",
+         "$c + $diameter * 0.14603"
         ],
         [
-         "$diameter * 0.41432",
-         "$c + $diameter * 0.17884"
-        ],
-        [
-         "$diameter * 0.37619",
-         "$c + $diameter * 0.24038"
+         "$diameter * 0.38663",
+         "$c + $diameter * 0.22556"
         ],
         [
          "$diameter * 0.3288",
          "$c + $diameter * 0.29527"
         ],
         [
-         "$diameter * 0.27332",
-         "$c + $diameter * 0.34215"
+         "$diameter * 0.25834",
+         "$c + $diameter * 0.35248"
         ],
         [
-         "$diameter * 0.21111",
-         "$c + $diameter * 0.37986"
+         "$diameter * 0.17795",
+         "$c + $diameter * 0.39498"
         ],
         [
-         "$diameter * 0.14369",
-         "$c + $diameter * 0.40749"
-        ],
-        [
-         "$diameter * 0.07274",
-         "$c + $diameter * 0.42434"
+         "$diameter * 0.09072",
+         "$c + $diameter * 0.42116"
         ],
         [
          0,
          "$c + $diameter * 0.43"
         ],
         [
-         "$diameter * -0.07274",
-         "$c + $diameter * 0.42434"
+         "$diameter * -0.09072",
+         "$c + $diameter * 0.42116"
         ],
         [
-         "$diameter * -0.14369",
-         "$c + $diameter * 0.40749"
+         "$diameter * -0.17795",
+         "$c + $diameter * 0.39498"
         ],
         [
-         "$diameter * -0.21111",
-         "$c + $diameter * 0.37986"
-        ],
-        [
-         "$diameter * -0.27332",
-         "$c + $diameter * 0.34215"
+         "$diameter * -0.25834",
+         "$c + $diameter * 0.35248"
         ],
         [
          "$diameter * -0.3288",
          "$c + $diameter * 0.29527"
         ],
         [
-         "$diameter * -0.37619",
-         "$c + $diameter * 0.24038"
+         "$diameter * -0.38663",
+         "$c + $diameter * 0.22556"
         ],
         [
-         "$diameter * -0.41432",
-         "$c + $diameter * 0.17884"
+         "$diameter * -0.4296",
+         "$c + $diameter * 0.14603"
         ],
         [
-         "$diameter * -0.44224",
-         "$c + $diameter * 0.11215"
-        ],
-        [
-         "$diameter * -0.45928",
-         "$c + $diameter * 0.04196"
+         "$diameter * -0.45607",
+         "$c + $diameter * 0.05974"
         ],
         [
          "$diameter * -0.465",
          "$c + $diameter * -0.03"
         ],
         [
-         "$diameter * -0.45928",
-         "$c + $diameter * -0.10196"
+         "$diameter * -0.45607",
+         "$c + $diameter * -0.11974"
         ],
         [
-         "$diameter * -0.44224",
-         "$c + $diameter * -0.17215"
+         "$diameter * -0.4296",
+         "$c + $diameter * -0.20603"
         ],
         [
-         "$diameter * -0.41432",
-         "$c + $diameter * -0.23884"
-        ],
-        [
-         "$diameter * -0.37619",
-         "$c + $diameter * -0.30038"
+         "$diameter * -0.38663",
+         "$c + $diameter * -0.28556"
         ],
         [
          "$diameter * -0.3288",
          "$c + $diameter * -0.35527"
         ],
         [
-         "$diameter * -0.27332",
-         "$c + $diameter * -0.40215"
+         "$diameter * -0.25834",
+         "$c + $diameter * -0.41248"
         ],
         [
-         "$diameter * -0.21111",
-         "$c + $diameter * -0.43986"
+         "$diameter * -0.17795",
+         "$c + $diameter * -0.45498"
         ],
         [
-         "$diameter * -0.14369",
-         "$c + $diameter * -0.46749"
-        ],
-        [
-         "$diameter * -0.07274",
-         "$c + $diameter * -0.48434"
+         "$diameter * -0.09072",
+         "$c + $diameter * -0.48116"
         ],
         [
          0,
          "$c + $diameter * -0.49"
         ],
         [
-         "$diameter * 0.07274",
-         "$c + $diameter * -0.48434"
+         "$diameter * 0.09072",
+         "$c + $diameter * -0.48116"
         ],
         [
-         "$diameter * 0.14369",
-         "$c + $diameter * -0.46749"
+         "$diameter * 0.17795",
+         "$c + $diameter * -0.45498"
         ],
         [
-         "$diameter * 0.21111",
-         "$c + $diameter * -0.43986"
-        ],
-        [
-         "$diameter * 0.27332",
-         "$c + $diameter * -0.40215"
+         "$diameter * 0.25834",
+         "$c + $diameter * -0.41248"
         ],
         [
          "$diameter * 0.3288",
          "$c + $diameter * -0.35527"
         ],
         [
-         "$diameter * 0.37619",
-         "$c + $diameter * -0.30038"
+         "$diameter * 0.38663",
+         "$c + $diameter * -0.28556"
         ],
         [
-         "$diameter * 0.41432",
-         "$c + $diameter * -0.23884"
+         "$diameter * 0.4296",
+         "$c + $diameter * -0.20603"
         ],
         [
-         "$diameter * 0.44224",
-         "$c + $diameter * -0.17215"
-        ],
-        [
-         "$diameter * 0.45928",
-         "$c + $diameter * -0.10196"
+         "$diameter * 0.45607",
+         "$c + $diameter * -0.11974"
         ]
        ]
       },
@@ -1963,160 +1611,128 @@
          "$c + $diameter * -0.017"
         ],
         [
-         "$diameter * 0.47705",
-         "$c + $diameter * 0.05809"
+         "$diameter * 0.47372",
+         "$c + $diameter * 0.07664"
         ],
         [
-         "$diameter * 0.45936",
-         "$c + $diameter * 0.13133"
+         "$diameter * 0.44623",
+         "$c + $diameter * 0.16669"
         ],
         [
-         "$diameter * 0.43036",
-         "$c + $diameter * 0.20092"
-        ],
-        [
-         "$diameter * 0.39076",
-         "$c + $diameter * 0.26514"
+         "$diameter * 0.4016",
+         "$c + $diameter * 0.24967"
         ],
         [
          "$diameter * 0.34153",
          "$c + $diameter * 0.32241"
         ],
         [
-         "$diameter * 0.2839",
-         "$c + $diameter * 0.37133"
+         "$diameter * 0.26834",
+         "$c + $diameter * 0.38211"
         ],
         [
-         "$diameter * 0.21928",
-         "$c + $diameter * 0.41068"
+         "$diameter * 0.18484",
+         "$c + $diameter * 0.42646"
         ],
         [
-         "$diameter * 0.14926",
-         "$c + $diameter * 0.43951"
-        ],
-        [
-         "$diameter * 0.07556",
-         "$c + $diameter * 0.45709"
+         "$diameter * 0.09423",
+         "$c + $diameter * 0.45378"
         ],
         [
          0,
          "$c + $diameter * 0.463"
         ],
         [
-         "$diameter * -0.07556",
-         "$c + $diameter * 0.45709"
+         "$diameter * -0.09423",
+         "$c + $diameter * 0.45378"
         ],
         [
-         "$diameter * -0.14926",
-         "$c + $diameter * 0.43951"
+         "$diameter * -0.18484",
+         "$c + $diameter * 0.42646"
         ],
         [
-         "$diameter * -0.21928",
-         "$c + $diameter * 0.41068"
-        ],
-        [
-         "$diameter * -0.2839",
-         "$c + $diameter * 0.37133"
+         "$diameter * -0.26834",
+         "$c + $diameter * 0.38211"
         ],
         [
          "$diameter * -0.34153",
          "$c + $diameter * 0.32241"
         ],
         [
-         "$diameter * -0.39076",
-         "$c + $diameter * 0.26514"
+         "$diameter * -0.4016",
+         "$c + $diameter * 0.24967"
         ],
         [
-         "$diameter * -0.43036",
-         "$c + $diameter * 0.20092"
+         "$diameter * -0.44623",
+         "$c + $diameter * 0.16669"
         ],
         [
-         "$diameter * -0.45936",
-         "$c + $diameter * 0.13133"
-        ],
-        [
-         "$diameter * -0.47705",
-         "$c + $diameter * 0.05809"
+         "$diameter * -0.47372",
+         "$c + $diameter * 0.07664"
         ],
         [
          "$diameter * -0.483",
          "$c + $diameter * -0.017"
         ],
         [
-         "$diameter * -0.47705",
-         "$c + $diameter * -0.09209"
+         "$diameter * -0.47372",
+         "$c + $diameter * -0.11064"
         ],
         [
-         "$diameter * -0.45936",
-         "$c + $diameter * -0.16533"
+         "$diameter * -0.44623",
+         "$c + $diameter * -0.20069"
         ],
         [
-         "$diameter * -0.43036",
-         "$c + $diameter * -0.23492"
-        ],
-        [
-         "$diameter * -0.39076",
-         "$c + $diameter * -0.29914"
+         "$diameter * -0.4016",
+         "$c + $diameter * -0.28367"
         ],
         [
          "$diameter * -0.34153",
          "$c + $diameter * -0.35641"
         ],
         [
-         "$diameter * -0.2839",
-         "$c + $diameter * -0.40533"
+         "$diameter * -0.26834",
+         "$c + $diameter * -0.41611"
         ],
         [
-         "$diameter * -0.21928",
-         "$c + $diameter * -0.44468"
+         "$diameter * -0.18484",
+         "$c + $diameter * -0.46046"
         ],
         [
-         "$diameter * -0.14926",
-         "$c + $diameter * -0.47351"
-        ],
-        [
-         "$diameter * -0.07556",
-         "$c + $diameter * -0.49109"
+         "$diameter * -0.09423",
+         "$c + $diameter * -0.48778"
         ],
         [
          0,
          "$c + $diameter * -0.497"
         ],
         [
-         "$diameter * 0.07556",
-         "$c + $diameter * -0.49109"
+         "$diameter * 0.09423",
+         "$c + $diameter * -0.48778"
         ],
         [
-         "$diameter * 0.14926",
-         "$c + $diameter * -0.47351"
+         "$diameter * 0.18484",
+         "$c + $diameter * -0.46046"
         ],
         [
-         "$diameter * 0.21928",
-         "$c + $diameter * -0.44468"
-        ],
-        [
-         "$diameter * 0.2839",
-         "$c + $diameter * -0.40533"
+         "$diameter * 0.26834",
+         "$c + $diameter * -0.41611"
         ],
         [
          "$diameter * 0.34153",
          "$c + $diameter * -0.35641"
         ],
         [
-         "$diameter * 0.39076",
-         "$c + $diameter * -0.29914"
+         "$diameter * 0.4016",
+         "$c + $diameter * -0.28367"
         ],
         [
-         "$diameter * 0.43036",
-         "$c + $diameter * -0.23492"
+         "$diameter * 0.44623",
+         "$c + $diameter * -0.20069"
         ],
         [
-         "$diameter * 0.45936",
-         "$c + $diameter * -0.16533"
-        ],
-        [
-         "$diameter * 0.47705",
-         "$c + $diameter * -0.09209"
+         "$diameter * 0.47372",
+         "$c + $diameter * -0.11064"
         ]
        ]
       },
@@ -2128,160 +1744,128 @@
          "$c + $diameter * -0.005"
         ],
         [
-         "$diameter * 0.48891",
-         "$c + $diameter * 0.07244"
+         "$diameter * 0.48549",
+         "$c + $diameter * 0.09157"
         ],
         [
-         "$diameter * 0.47077",
-         "$c + $diameter * 0.14796"
+         "$diameter * 0.45732",
+         "$c + $diameter * 0.18443"
         ],
         [
-         "$diameter * 0.44105",
-         "$c + $diameter * 0.21973"
-        ],
-        [
-         "$diameter * 0.40046",
-         "$c + $diameter * 0.28595"
+         "$diameter * 0.41158",
+         "$c + $diameter * 0.27001"
         ],
         [
          "$diameter * 0.35002",
          "$c + $diameter * 0.34502"
         ],
         [
-         "$diameter * 0.29095",
-         "$c + $diameter * 0.39546"
+         "$diameter * 0.27501",
+         "$c + $diameter * 0.40658"
         ],
         [
-         "$diameter * 0.22473",
-         "$c + $diameter * 0.43605"
+         "$diameter * 0.18943",
+         "$c + $diameter * 0.45232"
         ],
         [
-         "$diameter * 0.15296",
-         "$c + $diameter * 0.46577"
-        ],
-        [
-         "$diameter * 0.07744",
-         "$c + $diameter * 0.48391"
+         "$diameter * 0.09657",
+         "$c + $diameter * 0.48049"
         ],
         [
          0,
          "$c + $diameter * 0.49"
         ],
         [
-         "$diameter * -0.07744",
-         "$c + $diameter * 0.48391"
+         "$diameter * -0.09657",
+         "$c + $diameter * 0.48049"
         ],
         [
-         "$diameter * -0.15296",
-         "$c + $diameter * 0.46577"
+         "$diameter * -0.18943",
+         "$c + $diameter * 0.45232"
         ],
         [
-         "$diameter * -0.22473",
-         "$c + $diameter * 0.43605"
-        ],
-        [
-         "$diameter * -0.29095",
-         "$c + $diameter * 0.39546"
+         "$diameter * -0.27501",
+         "$c + $diameter * 0.40658"
         ],
         [
          "$diameter * -0.35002",
          "$c + $diameter * 0.34502"
         ],
         [
-         "$diameter * -0.40046",
-         "$c + $diameter * 0.28595"
+         "$diameter * -0.41158",
+         "$c + $diameter * 0.27001"
         ],
         [
-         "$diameter * -0.44105",
-         "$c + $diameter * 0.21973"
+         "$diameter * -0.45732",
+         "$c + $diameter * 0.18443"
         ],
         [
-         "$diameter * -0.47077",
-         "$c + $diameter * 0.14796"
-        ],
-        [
-         "$diameter * -0.48891",
-         "$c + $diameter * 0.07244"
+         "$diameter * -0.48549",
+         "$c + $diameter * 0.09157"
         ],
         [
          "$diameter * -0.495",
          "$c + $diameter * -0.005"
         ],
         [
-         "$diameter * -0.48891",
-         "$c + $diameter * -0.08244"
+         "$diameter * -0.48549",
+         "$c + $diameter * -0.10157"
         ],
         [
-         "$diameter * -0.47077",
-         "$c + $diameter * -0.15796"
+         "$diameter * -0.45732",
+         "$c + $diameter * -0.19443"
         ],
         [
-         "$diameter * -0.44105",
-         "$c + $diameter * -0.22973"
-        ],
-        [
-         "$diameter * -0.40046",
-         "$c + $diameter * -0.29595"
+         "$diameter * -0.41158",
+         "$c + $diameter * -0.28001"
         ],
         [
          "$diameter * -0.35002",
          "$c + $diameter * -0.35502"
         ],
         [
-         "$diameter * -0.29095",
-         "$c + $diameter * -0.40546"
+         "$diameter * -0.27501",
+         "$c + $diameter * -0.41658"
         ],
         [
-         "$diameter * -0.22473",
-         "$c + $diameter * -0.44605"
+         "$diameter * -0.18943",
+         "$c + $diameter * -0.46232"
         ],
         [
-         "$diameter * -0.15296",
-         "$c + $diameter * -0.47577"
-        ],
-        [
-         "$diameter * -0.07744",
-         "$c + $diameter * -0.49391"
+         "$diameter * -0.09657",
+         "$c + $diameter * -0.49049"
         ],
         [
          0,
          "$c + $diameter * -0.5"
         ],
         [
-         "$diameter * 0.07744",
-         "$c + $diameter * -0.49391"
+         "$diameter * 0.09657",
+         "$c + $diameter * -0.49049"
         ],
         [
-         "$diameter * 0.15296",
-         "$c + $diameter * -0.47577"
+         "$diameter * 0.18943",
+         "$c + $diameter * -0.46232"
         ],
         [
-         "$diameter * 0.22473",
-         "$c + $diameter * -0.44605"
-        ],
-        [
-         "$diameter * 0.29095",
-         "$c + $diameter * -0.40546"
+         "$diameter * 0.27501",
+         "$c + $diameter * -0.41658"
         ],
         [
          "$diameter * 0.35002",
          "$c + $diameter * -0.35502"
         ],
         [
-         "$diameter * 0.40046",
-         "$c + $diameter * -0.29595"
+         "$diameter * 0.41158",
+         "$c + $diameter * -0.28001"
         ],
         [
-         "$diameter * 0.44105",
-         "$c + $diameter * -0.22973"
+         "$diameter * 0.45732",
+         "$c + $diameter * -0.19443"
         ],
         [
-         "$diameter * 0.47077",
-         "$c + $diameter * -0.15796"
-        ],
-        [
-         "$diameter * 0.48891",
-         "$c + $diameter * -0.08244"
+         "$diameter * 0.48549",
+         "$c + $diameter * -0.10157"
         ]
        ]
       },
@@ -2293,160 +1877,128 @@
          "$c"
         ],
         [
-         "$diameter * 0.49384",
-         "$c + $diameter * 0.07822"
+         "$diameter * 0.49039",
+         "$c + $diameter * 0.09755"
         ],
         [
-         "$diameter * 0.47553",
-         "$c + $diameter * 0.15451"
+         "$diameter * 0.46194",
+         "$c + $diameter * 0.19134"
         ],
         [
-         "$diameter * 0.4455",
-         "$c + $diameter * 0.227"
-        ],
-        [
-         "$diameter * 0.40451",
-         "$c + $diameter * 0.29389"
+         "$diameter * 0.41573",
+         "$c + $diameter * 0.27779"
         ],
         [
          "$diameter * 0.35355",
          "$c + $diameter * 0.35355"
         ],
         [
-         "$diameter * 0.29389",
-         "$c + $diameter * 0.40451"
+         "$diameter * 0.27779",
+         "$c + $diameter * 0.41573"
         ],
         [
-         "$diameter * 0.227",
-         "$c + $diameter * 0.4455"
+         "$diameter * 0.19134",
+         "$c + $diameter * 0.46194"
         ],
         [
-         "$diameter * 0.15451",
-         "$c + $diameter * 0.47553"
-        ],
-        [
-         "$diameter * 0.07822",
-         "$c + $diameter * 0.49384"
+         "$diameter * 0.09755",
+         "$c + $diameter * 0.49039"
         ],
         [
          0,
          "$c + $diameter * 0.5"
         ],
         [
-         "$diameter * -0.07822",
-         "$c + $diameter * 0.49384"
+         "$diameter * -0.09755",
+         "$c + $diameter * 0.49039"
         ],
         [
-         "$diameter * -0.15451",
-         "$c + $diameter * 0.47553"
+         "$diameter * -0.19134",
+         "$c + $diameter * 0.46194"
         ],
         [
-         "$diameter * -0.227",
-         "$c + $diameter * 0.4455"
-        ],
-        [
-         "$diameter * -0.29389",
-         "$c + $diameter * 0.40451"
+         "$diameter * -0.27779",
+         "$c + $diameter * 0.41573"
         ],
         [
          "$diameter * -0.35355",
          "$c + $diameter * 0.35355"
         ],
         [
-         "$diameter * -0.40451",
-         "$c + $diameter * 0.29389"
+         "$diameter * -0.41573",
+         "$c + $diameter * 0.27779"
         ],
         [
-         "$diameter * -0.4455",
-         "$c + $diameter * 0.227"
+         "$diameter * -0.46194",
+         "$c + $diameter * 0.19134"
         ],
         [
-         "$diameter * -0.47553",
-         "$c + $diameter * 0.15451"
-        ],
-        [
-         "$diameter * -0.49384",
-         "$c + $diameter * 0.07822"
+         "$diameter * -0.49039",
+         "$c + $diameter * 0.09755"
         ],
         [
          "$diameter * -0.5",
          "$c"
         ],
         [
-         "$diameter * -0.49384",
-         "$c + $diameter * -0.07822"
+         "$diameter * -0.49039",
+         "$c + $diameter * -0.09755"
         ],
         [
-         "$diameter * -0.47553",
-         "$c + $diameter * -0.15451"
+         "$diameter * -0.46194",
+         "$c + $diameter * -0.19134"
         ],
         [
-         "$diameter * -0.4455",
-         "$c + $diameter * -0.227"
-        ],
-        [
-         "$diameter * -0.40451",
-         "$c + $diameter * -0.29389"
+         "$diameter * -0.41573",
+         "$c + $diameter * -0.27779"
         ],
         [
          "$diameter * -0.35355",
          "$c + $diameter * -0.35355"
         ],
         [
-         "$diameter * -0.29389",
-         "$c + $diameter * -0.40451"
+         "$diameter * -0.27779",
+         "$c + $diameter * -0.41573"
         ],
         [
-         "$diameter * -0.227",
-         "$c + $diameter * -0.4455"
+         "$diameter * -0.19134",
+         "$c + $diameter * -0.46194"
         ],
         [
-         "$diameter * -0.15451",
-         "$c + $diameter * -0.47553"
-        ],
-        [
-         "$diameter * -0.07822",
-         "$c + $diameter * -0.49384"
+         "$diameter * -0.09755",
+         "$c + $diameter * -0.49039"
         ],
         [
          0,
          "$c + $diameter * -0.5"
         ],
         [
-         "$diameter * 0.07822",
-         "$c + $diameter * -0.49384"
+         "$diameter * 0.09755",
+         "$c + $diameter * -0.49039"
         ],
         [
-         "$diameter * 0.15451",
-         "$c + $diameter * -0.47553"
+         "$diameter * 0.19134",
+         "$c + $diameter * -0.46194"
         ],
         [
-         "$diameter * 0.227",
-         "$c + $diameter * -0.4455"
-        ],
-        [
-         "$diameter * 0.29389",
-         "$c + $diameter * -0.40451"
+         "$diameter * 0.27779",
+         "$c + $diameter * -0.41573"
         ],
         [
          "$diameter * 0.35355",
          "$c + $diameter * -0.35355"
         ],
         [
-         "$diameter * 0.40451",
-         "$c + $diameter * -0.29389"
+         "$diameter * 0.41573",
+         "$c + $diameter * -0.27779"
         ],
         [
-         "$diameter * 0.4455",
-         "$c + $diameter * -0.227"
+         "$diameter * 0.46194",
+         "$c + $diameter * -0.19134"
         ],
         [
-         "$diameter * 0.47553",
-         "$c + $diameter * -0.15451"
-        ],
-        [
-         "$diameter * 0.49384",
-         "$c + $diameter * -0.07822"
+         "$diameter * 0.49039",
+         "$c + $diameter * -0.09755"
         ]
        ]
       },
@@ -2458,160 +2010,128 @@
          "$c"
         ],
         [
-         "$diameter * 0.49384",
-         "$c + $diameter * 0.07822"
+         "$diameter * 0.49039",
+         "$c + $diameter * 0.09755"
         ],
         [
-         "$diameter * 0.47553",
-         "$c + $diameter * 0.15451"
+         "$diameter * 0.46194",
+         "$c + $diameter * 0.19134"
         ],
         [
-         "$diameter * 0.4455",
-         "$c + $diameter * 0.227"
-        ],
-        [
-         "$diameter * 0.40451",
-         "$c + $diameter * 0.29389"
+         "$diameter * 0.41573",
+         "$c + $diameter * 0.27779"
         ],
         [
          "$diameter * 0.35355",
          "$c + $diameter * 0.35355"
         ],
         [
-         "$diameter * 0.29389",
-         "$c + $diameter * 0.40451"
+         "$diameter * 0.27779",
+         "$c + $diameter * 0.41573"
         ],
         [
-         "$diameter * 0.227",
-         "$c + $diameter * 0.4455"
+         "$diameter * 0.19134",
+         "$c + $diameter * 0.46194"
         ],
         [
-         "$diameter * 0.15451",
-         "$c + $diameter * 0.47553"
-        ],
-        [
-         "$diameter * 0.07822",
-         "$c + $diameter * 0.49384"
+         "$diameter * 0.09755",
+         "$c + $diameter * 0.49039"
         ],
         [
          0,
          "$c + $diameter * 0.5"
         ],
         [
-         "$diameter * -0.07822",
-         "$c + $diameter * 0.49384"
+         "$diameter * -0.09755",
+         "$c + $diameter * 0.49039"
         ],
         [
-         "$diameter * -0.15451",
-         "$c + $diameter * 0.47553"
+         "$diameter * -0.19134",
+         "$c + $diameter * 0.46194"
         ],
         [
-         "$diameter * -0.227",
-         "$c + $diameter * 0.4455"
-        ],
-        [
-         "$diameter * -0.29389",
-         "$c + $diameter * 0.40451"
+         "$diameter * -0.27779",
+         "$c + $diameter * 0.41573"
         ],
         [
          "$diameter * -0.35355",
          "$c + $diameter * 0.35355"
         ],
         [
-         "$diameter * -0.40451",
-         "$c + $diameter * 0.29389"
+         "$diameter * -0.41573",
+         "$c + $diameter * 0.27779"
         ],
         [
-         "$diameter * -0.4455",
-         "$c + $diameter * 0.227"
+         "$diameter * -0.46194",
+         "$c + $diameter * 0.19134"
         ],
         [
-         "$diameter * -0.47553",
-         "$c + $diameter * 0.15451"
-        ],
-        [
-         "$diameter * -0.49384",
-         "$c + $diameter * 0.07822"
+         "$diameter * -0.49039",
+         "$c + $diameter * 0.09755"
         ],
         [
          "$diameter * -0.5",
          "$c"
         ],
         [
-         "$diameter * -0.49384",
-         "$c + $diameter * -0.07822"
+         "$diameter * -0.49039",
+         "$c + $diameter * -0.09755"
         ],
         [
-         "$diameter * -0.47553",
-         "$c + $diameter * -0.15451"
+         "$diameter * -0.46194",
+         "$c + $diameter * -0.19134"
         ],
         [
-         "$diameter * -0.4455",
-         "$c + $diameter * -0.227"
-        ],
-        [
-         "$diameter * -0.40451",
-         "$c + $diameter * -0.29389"
+         "$diameter * -0.41573",
+         "$c + $diameter * -0.27779"
         ],
         [
          "$diameter * -0.35355",
          "$c + $diameter * -0.35355"
         ],
         [
-         "$diameter * -0.29389",
-         "$c + $diameter * -0.40451"
+         "$diameter * -0.27779",
+         "$c + $diameter * -0.41573"
         ],
         [
-         "$diameter * -0.227",
-         "$c + $diameter * -0.4455"
+         "$diameter * -0.19134",
+         "$c + $diameter * -0.46194"
         ],
         [
-         "$diameter * -0.15451",
-         "$c + $diameter * -0.47553"
-        ],
-        [
-         "$diameter * -0.07822",
-         "$c + $diameter * -0.49384"
+         "$diameter * -0.09755",
+         "$c + $diameter * -0.49039"
         ],
         [
          0,
          "$c + $diameter * -0.5"
         ],
         [
-         "$diameter * 0.07822",
-         "$c + $diameter * -0.49384"
+         "$diameter * 0.09755",
+         "$c + $diameter * -0.49039"
         ],
         [
-         "$diameter * 0.15451",
-         "$c + $diameter * -0.47553"
+         "$diameter * 0.19134",
+         "$c + $diameter * -0.46194"
         ],
         [
-         "$diameter * 0.227",
-         "$c + $diameter * -0.4455"
-        ],
-        [
-         "$diameter * 0.29389",
-         "$c + $diameter * -0.40451"
+         "$diameter * 0.27779",
+         "$c + $diameter * -0.41573"
         ],
         [
          "$diameter * 0.35355",
          "$c + $diameter * -0.35355"
         ],
         [
-         "$diameter * 0.40451",
-         "$c + $diameter * -0.29389"
+         "$diameter * 0.41573",
+         "$c + $diameter * -0.27779"
         ],
         [
-         "$diameter * 0.4455",
-         "$c + $diameter * -0.227"
+         "$diameter * 0.46194",
+         "$c + $diameter * -0.19134"
         ],
         [
-         "$diameter * 0.47553",
-         "$c + $diameter * -0.15451"
-        ],
-        [
-         "$diameter * 0.49384",
-         "$c + $diameter * -0.07822"
+         "$diameter * 0.49039",
+         "$c + $diameter * -0.09755"
         ]
        ]
       },
@@ -2623,160 +2143,128 @@
          "$c + $diameter * 0.005"
         ],
         [
-         "$diameter * 0.48891",
-         "$c + $diameter * 0.08275"
+         "$diameter * 0.48549",
+         "$c + $diameter * 0.10196"
         ],
         [
-         "$diameter * 0.47077",
-         "$c + $diameter * 0.15858"
+         "$diameter * 0.45732",
+         "$c + $diameter * 0.19519"
         ],
         [
-         "$diameter * 0.44105",
-         "$c + $diameter * 0.23063"
-        ],
-        [
-         "$diameter * 0.40046",
-         "$c + $diameter * 0.29713"
+         "$diameter * 0.41158",
+         "$c + $diameter * 0.28112"
         ],
         [
          "$diameter * 0.35002",
          "$c + $diameter * 0.35643"
         ],
         [
-         "$diameter * 0.29095",
-         "$c + $diameter * 0.40708"
+         "$diameter * 0.27501",
+         "$c + $diameter * 0.41824"
         ],
         [
-         "$diameter * 0.22473",
-         "$c + $diameter * 0.44783"
+         "$diameter * 0.18943",
+         "$c + $diameter * 0.46417"
         ],
         [
-         "$diameter * 0.15296",
-         "$c + $diameter * 0.47768"
-        ],
-        [
-         "$diameter * 0.07744",
-         "$c + $diameter * 0.49588"
+         "$diameter * 0.09657",
+         "$c + $diameter * 0.49245"
         ],
         [
          0,
          "$c + $diameter * 0.502"
         ],
         [
-         "$diameter * -0.07744",
-         "$c + $diameter * 0.49588"
+         "$diameter * -0.09657",
+         "$c + $diameter * 0.49245"
         ],
         [
-         "$diameter * -0.15296",
-         "$c + $diameter * 0.47768"
+         "$diameter * -0.18943",
+         "$c + $diameter * 0.46417"
         ],
         [
-         "$diameter * -0.22473",
-         "$c + $diameter * 0.44783"
-        ],
-        [
-         "$diameter * -0.29095",
-         "$c + $diameter * 0.40708"
+         "$diameter * -0.27501",
+         "$c + $diameter * 0.41824"
         ],
         [
          "$diameter * -0.35002",
          "$c + $diameter * 0.35643"
         ],
         [
-         "$diameter * -0.40046",
-         "$c + $diameter * 0.29713"
+         "$diameter * -0.41158",
+         "$c + $diameter * 0.28112"
         ],
         [
-         "$diameter * -0.44105",
-         "$c + $diameter * 0.23063"
+         "$diameter * -0.45732",
+         "$c + $diameter * 0.19519"
         ],
         [
-         "$diameter * -0.47077",
-         "$c + $diameter * 0.15858"
-        ],
-        [
-         "$diameter * -0.48891",
-         "$c + $diameter * 0.08275"
+         "$diameter * -0.48549",
+         "$c + $diameter * 0.10196"
         ],
         [
          "$diameter * -0.495",
          "$c + $diameter * 0.005"
         ],
         [
-         "$diameter * -0.48891",
-         "$c + $diameter * -0.07275"
+         "$diameter * -0.48549",
+         "$c + $diameter * -0.09196"
         ],
         [
-         "$diameter * -0.47077",
-         "$c + $diameter * -0.14858"
+         "$diameter * -0.45732",
+         "$c + $diameter * -0.18519"
         ],
         [
-         "$diameter * -0.44105",
-         "$c + $diameter * -0.22063"
-        ],
-        [
-         "$diameter * -0.40046",
-         "$c + $diameter * -0.28713"
+         "$diameter * -0.41158",
+         "$c + $diameter * -0.27112"
         ],
         [
          "$diameter * -0.35002",
          "$c + $diameter * -0.34643"
         ],
         [
-         "$diameter * -0.29095",
-         "$c + $diameter * -0.39708"
+         "$diameter * -0.27501",
+         "$c + $diameter * -0.40824"
         ],
         [
-         "$diameter * -0.22473",
-         "$c + $diameter * -0.43783"
+         "$diameter * -0.18943",
+         "$c + $diameter * -0.45417"
         ],
         [
-         "$diameter * -0.15296",
-         "$c + $diameter * -0.46768"
-        ],
-        [
-         "$diameter * -0.07744",
-         "$c + $diameter * -0.48588"
+         "$diameter * -0.09657",
+         "$c + $diameter * -0.48245"
         ],
         [
          0,
          "$c + $diameter * -0.492"
         ],
         [
-         "$diameter * 0.07744",
-         "$c + $diameter * -0.48588"
+         "$diameter * 0.09657",
+         "$c + $diameter * -0.48245"
         ],
         [
-         "$diameter * 0.15296",
-         "$c + $diameter * -0.46768"
+         "$diameter * 0.18943",
+         "$c + $diameter * -0.45417"
         ],
         [
-         "$diameter * 0.22473",
-         "$c + $diameter * -0.43783"
-        ],
-        [
-         "$diameter * 0.29095",
-         "$c + $diameter * -0.39708"
+         "$diameter * 0.27501",
+         "$c + $diameter * -0.40824"
         ],
         [
          "$diameter * 0.35002",
          "$c + $diameter * -0.34643"
         ],
         [
-         "$diameter * 0.40046",
-         "$c + $diameter * -0.28713"
+         "$diameter * 0.41158",
+         "$c + $diameter * -0.27112"
         ],
         [
-         "$diameter * 0.44105",
-         "$c + $diameter * -0.22063"
+         "$diameter * 0.45732",
+         "$c + $diameter * -0.18519"
         ],
         [
-         "$diameter * 0.47077",
-         "$c + $diameter * -0.14858"
-        ],
-        [
-         "$diameter * 0.48891",
-         "$c + $diameter * -0.07275"
+         "$diameter * 0.48549",
+         "$c + $diameter * -0.09196"
         ]
        ]
       },
@@ -2788,160 +2276,128 @@
          "$c + $diameter * 0.015"
         ],
         [
-         "$diameter * 0.47409",
-         "$c + $diameter * 0.09087"
+         "$diameter * 0.47078",
+         "$c + $diameter * 0.10962"
         ],
         [
-         "$diameter * 0.45651",
-         "$c + $diameter * 0.16487"
+         "$diameter * 0.44346",
+         "$c + $diameter * 0.2006"
         ],
         [
-         "$diameter * 0.42768",
-         "$c + $diameter * 0.23519"
-        ],
-        [
-         "$diameter * 0.38833",
-         "$c + $diameter * 0.30008"
+         "$diameter * 0.39911",
+         "$c + $diameter * 0.28445"
         ],
         [
          "$diameter * 0.33941",
          "$c + $diameter * 0.35795"
         ],
         [
-         "$diameter * 0.28214",
-         "$c + $diameter * 0.40737"
+         "$diameter * 0.26667",
+         "$c + $diameter * 0.41826"
         ],
         [
-         "$diameter * 0.21792",
-         "$c + $diameter * 0.44714"
+         "$diameter * 0.18369",
+         "$c + $diameter * 0.46308"
         ],
         [
-         "$diameter * 0.14833",
-         "$c + $diameter * 0.47626"
-        ],
-        [
-         "$diameter * 0.07509",
-         "$c + $diameter * 0.49403"
+         "$diameter * 0.09364",
+         "$c + $diameter * 0.49068"
         ],
         [
          0,
          "$c + $diameter * 0.5"
         ],
         [
-         "$diameter * -0.07509",
-         "$c + $diameter * 0.49403"
+         "$diameter * -0.09364",
+         "$c + $diameter * 0.49068"
         ],
         [
-         "$diameter * -0.14833",
-         "$c + $diameter * 0.47626"
+         "$diameter * -0.18369",
+         "$c + $diameter * 0.46308"
         ],
         [
-         "$diameter * -0.21792",
-         "$c + $diameter * 0.44714"
-        ],
-        [
-         "$diameter * -0.28214",
-         "$c + $diameter * 0.40737"
+         "$diameter * -0.26667",
+         "$c + $diameter * 0.41826"
         ],
         [
          "$diameter * -0.33941",
          "$c + $diameter * 0.35795"
         ],
         [
-         "$diameter * -0.38833",
-         "$c + $diameter * 0.30008"
+         "$diameter * -0.39911",
+         "$c + $diameter * 0.28445"
         ],
         [
-         "$diameter * -0.42768",
-         "$c + $diameter * 0.23519"
+         "$diameter * -0.44346",
+         "$c + $diameter * 0.2006"
         ],
         [
-         "$diameter * -0.45651",
-         "$c + $diameter * 0.16487"
-        ],
-        [
-         "$diameter * -0.47409",
-         "$c + $diameter * 0.09087"
+         "$diameter * -0.47078",
+         "$c + $diameter * 0.10962"
         ],
         [
          "$diameter * -0.48",
          "$c + $diameter * 0.015"
         ],
         [
-         "$diameter * -0.47409",
-         "$c + $diameter * -0.06087"
+         "$diameter * -0.47078",
+         "$c + $diameter * -0.07962"
         ],
         [
-         "$diameter * -0.45651",
-         "$c + $diameter * -0.13487"
+         "$diameter * -0.44346",
+         "$c + $diameter * -0.1706"
         ],
         [
-         "$diameter * -0.42768",
-         "$c + $diameter * -0.20519"
-        ],
-        [
-         "$diameter * -0.38833",
-         "$c + $diameter * -0.27008"
+         "$diameter * -0.39911",
+         "$c + $diameter * -0.25445"
         ],
         [
          "$diameter * -0.33941",
          "$c + $diameter * -0.32795"
         ],
         [
-         "$diameter * -0.28214",
-         "$c + $diameter * -0.37737"
+         "$diameter * -0.26667",
+         "$c + $diameter * -0.38826"
         ],
         [
-         "$diameter * -0.21792",
-         "$c + $diameter * -0.41714"
+         "$diameter * -0.18369",
+         "$c + $diameter * -0.43308"
         ],
         [
-         "$diameter * -0.14833",
-         "$c + $diameter * -0.44626"
-        ],
-        [
-         "$diameter * -0.07509",
-         "$c + $diameter * -0.46403"
+         "$diameter * -0.09364",
+         "$c + $diameter * -0.46068"
         ],
         [
          0,
          "$c + $diameter * -0.47"
         ],
         [
-         "$diameter * 0.07509",
-         "$c + $diameter * -0.46403"
+         "$diameter * 0.09364",
+         "$c + $diameter * -0.46068"
         ],
         [
-         "$diameter * 0.14833",
-         "$c + $diameter * -0.44626"
+         "$diameter * 0.18369",
+         "$c + $diameter * -0.43308"
         ],
         [
-         "$diameter * 0.21792",
-         "$c + $diameter * -0.41714"
-        ],
-        [
-         "$diameter * 0.28214",
-         "$c + $diameter * -0.37737"
+         "$diameter * 0.26667",
+         "$c + $diameter * -0.38826"
         ],
         [
          "$diameter * 0.33941",
          "$c + $diameter * -0.32795"
         ],
         [
-         "$diameter * 0.38833",
-         "$c + $diameter * -0.27008"
+         "$diameter * 0.39911",
+         "$c + $diameter * -0.25445"
         ],
         [
-         "$diameter * 0.42768",
-         "$c + $diameter * -0.20519"
+         "$diameter * 0.44346",
+         "$c + $diameter * -0.1706"
         ],
         [
-         "$diameter * 0.45651",
-         "$c + $diameter * -0.13487"
-        ],
-        [
-         "$diameter * 0.47409",
-         "$c + $diameter * -0.06087"
+         "$diameter * 0.47078",
+         "$c + $diameter * -0.07962"
         ]
        ]
       },
@@ -2953,160 +2409,128 @@
          "$c + $diameter * 0.045"
         ],
         [
-         "$diameter * 0.43458",
-         "$c + $diameter * 0.1154"
+         "$diameter * 0.43155",
+         "$c + $diameter * 0.13279"
         ],
         [
-         "$diameter * 0.41846",
-         "$c + $diameter * 0.18406"
+         "$diameter * 0.40651",
+         "$c + $diameter * 0.21721"
         ],
         [
-         "$diameter * 0.39204",
-         "$c + $diameter * 0.2493"
-        ],
-        [
-         "$diameter * 0.35597",
-         "$c + $diameter * 0.3095"
+         "$diameter * 0.36585",
+         "$c + $diameter * 0.29501"
         ],
         [
          "$diameter * 0.31113",
          "$c + $diameter * 0.3632"
         ],
         [
-         "$diameter * 0.25863",
-         "$c + $diameter * 0.40906"
+         "$diameter * 0.24445",
+         "$c + $diameter * 0.41916"
         ],
         [
-         "$diameter * 0.19976",
-         "$c + $diameter * 0.44595"
+         "$diameter * 0.16838",
+         "$c + $diameter * 0.46075"
         ],
         [
-         "$diameter * 0.13597",
-         "$c + $diameter * 0.47298"
-        ],
-        [
-         "$diameter * 0.06883",
-         "$c + $diameter * 0.48946"
+         "$diameter * 0.08584",
+         "$c + $diameter * 0.48635"
         ],
         [
          0,
          "$c + $diameter * 0.495"
         ],
         [
-         "$diameter * -0.06883",
-         "$c + $diameter * 0.48946"
+         "$diameter * -0.08584",
+         "$c + $diameter * 0.48635"
         ],
         [
-         "$diameter * -0.13597",
-         "$c + $diameter * 0.47298"
+         "$diameter * -0.16838",
+         "$c + $diameter * 0.46075"
         ],
         [
-         "$diameter * -0.19976",
-         "$c + $diameter * 0.44595"
-        ],
-        [
-         "$diameter * -0.25863",
-         "$c + $diameter * 0.40906"
+         "$diameter * -0.24445",
+         "$c + $diameter * 0.41916"
         ],
         [
          "$diameter * -0.31113",
          "$c + $diameter * 0.3632"
         ],
         [
-         "$diameter * -0.35597",
-         "$c + $diameter * 0.3095"
+         "$diameter * -0.36585",
+         "$c + $diameter * 0.29501"
         ],
         [
-         "$diameter * -0.39204",
-         "$c + $diameter * 0.2493"
+         "$diameter * -0.40651",
+         "$c + $diameter * 0.21721"
         ],
         [
-         "$diameter * -0.41846",
-         "$c + $diameter * 0.18406"
-        ],
-        [
-         "$diameter * -0.43458",
-         "$c + $diameter * 0.1154"
+         "$diameter * -0.43155",
+         "$c + $diameter * 0.13279"
         ],
         [
          "$diameter * -0.44",
          "$c + $diameter * 0.045"
         ],
         [
-         "$diameter * -0.43458",
-         "$c + $diameter * -0.0254"
+         "$diameter * -0.43155",
+         "$c + $diameter * -0.04279"
         ],
         [
-         "$diameter * -0.41846",
-         "$c + $diameter * -0.09406"
+         "$diameter * -0.40651",
+         "$c + $diameter * -0.12721"
         ],
         [
-         "$diameter * -0.39204",
-         "$c + $diameter * -0.1593"
-        ],
-        [
-         "$diameter * -0.35597",
-         "$c + $diameter * -0.2195"
+         "$diameter * -0.36585",
+         "$c + $diameter * -0.20501"
         ],
         [
          "$diameter * -0.31113",
          "$c + $diameter * -0.2732"
         ],
         [
-         "$diameter * -0.25863",
-         "$c + $diameter * -0.31906"
+         "$diameter * -0.24445",
+         "$c + $diameter * -0.32916"
         ],
         [
-         "$diameter * -0.19976",
-         "$c + $diameter * -0.35595"
+         "$diameter * -0.16838",
+         "$c + $diameter * -0.37075"
         ],
         [
-         "$diameter * -0.13597",
-         "$c + $diameter * -0.38298"
-        ],
-        [
-         "$diameter * -0.06883",
-         "$c + $diameter * -0.39946"
+         "$diameter * -0.08584",
+         "$c + $diameter * -0.39635"
         ],
         [
          0,
          "$c + $diameter * -0.405"
         ],
         [
-         "$diameter * 0.06883",
-         "$c + $diameter * -0.39946"
+         "$diameter * 0.08584",
+         "$c + $diameter * -0.39635"
         ],
         [
-         "$diameter * 0.13597",
-         "$c + $diameter * -0.38298"
+         "$diameter * 0.16838",
+         "$c + $diameter * -0.37075"
         ],
         [
-         "$diameter * 0.19976",
-         "$c + $diameter * -0.35595"
-        ],
-        [
-         "$diameter * 0.25863",
-         "$c + $diameter * -0.31906"
+         "$diameter * 0.24445",
+         "$c + $diameter * -0.32916"
         ],
         [
          "$diameter * 0.31113",
          "$c + $diameter * -0.2732"
         ],
         [
-         "$diameter * 0.35597",
-         "$c + $diameter * -0.2195"
+         "$diameter * 0.36585",
+         "$c + $diameter * -0.20501"
         ],
         [
-         "$diameter * 0.39204",
-         "$c + $diameter * -0.1593"
+         "$diameter * 0.40651",
+         "$c + $diameter * -0.12721"
         ],
         [
-         "$diameter * 0.41846",
-         "$c + $diameter * -0.09406"
-        ],
-        [
-         "$diameter * 0.43458",
-         "$c + $diameter * -0.0254"
+         "$diameter * 0.43155",
+         "$c + $diameter * -0.04279"
         ]
        ]
       },
@@ -3118,160 +2542,128 @@
          "$c + $diameter * 0.09"
         ],
         [
-         "$diameter * 0.37532",
-         "$c + $diameter * 0.15023"
+         "$diameter * 0.3727",
+         "$c + $diameter * 0.16511"
         ],
         [
-         "$diameter * 0.3614",
-         "$c + $diameter * 0.20897"
+         "$diameter * 0.35107",
+         "$c + $diameter * 0.23733"
         ],
         [
-         "$diameter * 0.33858",
-         "$c + $diameter * 0.26479"
-        ],
-        [
-         "$diameter * 0.30743",
-         "$c + $diameter * 0.3163"
+         "$diameter * 0.31596",
+         "$c + $diameter * 0.30389"
         ],
         [
          "$diameter * 0.2687",
          "$c + $diameter * 0.36224"
         ],
         [
-         "$diameter * 0.22336",
-         "$c + $diameter * 0.40147"
+         "$diameter * 0.21112",
+         "$c + $diameter * 0.41012"
         ],
         [
-         "$diameter * 0.17252",
-         "$c + $diameter * 0.43304"
+         "$diameter * 0.14542",
+         "$c + $diameter * 0.44569"
         ],
         [
-         "$diameter * 0.11743",
-         "$c + $diameter * 0.45616"
-        ],
-        [
-         "$diameter * 0.05945",
-         "$c + $diameter * 0.47026"
+         "$diameter * 0.07413",
+         "$c + $diameter * 0.4676"
         ],
         [
          0,
          "$c + $diameter * 0.475"
         ],
         [
-         "$diameter * -0.05945",
-         "$c + $diameter * 0.47026"
+         "$diameter * -0.07413",
+         "$c + $diameter * 0.4676"
         ],
         [
-         "$diameter * -0.11743",
-         "$c + $diameter * 0.45616"
+         "$diameter * -0.14542",
+         "$c + $diameter * 0.44569"
         ],
         [
-         "$diameter * -0.17252",
-         "$c + $diameter * 0.43304"
-        ],
-        [
-         "$diameter * -0.22336",
-         "$c + $diameter * 0.40147"
+         "$diameter * -0.21112",
+         "$c + $diameter * 0.41012"
         ],
         [
          "$diameter * -0.2687",
          "$c + $diameter * 0.36224"
         ],
         [
-         "$diameter * -0.30743",
-         "$c + $diameter * 0.3163"
+         "$diameter * -0.31596",
+         "$c + $diameter * 0.30389"
         ],
         [
-         "$diameter * -0.33858",
-         "$c + $diameter * 0.26479"
+         "$diameter * -0.35107",
+         "$c + $diameter * 0.23733"
         ],
         [
-         "$diameter * -0.3614",
-         "$c + $diameter * 0.20897"
-        ],
-        [
-         "$diameter * -0.37532",
-         "$c + $diameter * 0.15023"
+         "$diameter * -0.3727",
+         "$c + $diameter * 0.16511"
         ],
         [
          "$diameter * -0.38",
          "$c + $diameter * 0.09"
         ],
         [
-         "$diameter * -0.37532",
-         "$c + $diameter * 0.02977"
+         "$diameter * -0.3727",
+         "$c + $diameter * 0.01489"
         ],
         [
-         "$diameter * -0.3614",
-         "$c + $diameter * -0.02897"
+         "$diameter * -0.35107",
+         "$c + $diameter * -0.05733"
         ],
         [
-         "$diameter * -0.33858",
-         "$c + $diameter * -0.08479"
-        ],
-        [
-         "$diameter * -0.30743",
-         "$c + $diameter * -0.1363"
+         "$diameter * -0.31596",
+         "$c + $diameter * -0.12389"
         ],
         [
          "$diameter * -0.2687",
          "$c + $diameter * -0.18224"
         ],
         [
-         "$diameter * -0.22336",
-         "$c + $diameter * -0.22147"
+         "$diameter * -0.21112",
+         "$c + $diameter * -0.23012"
         ],
         [
-         "$diameter * -0.17252",
-         "$c + $diameter * -0.25304"
+         "$diameter * -0.14542",
+         "$c + $diameter * -0.26569"
         ],
         [
-         "$diameter * -0.11743",
-         "$c + $diameter * -0.27616"
-        ],
-        [
-         "$diameter * -0.05945",
-         "$c + $diameter * -0.29026"
+         "$diameter * -0.07413",
+         "$c + $diameter * -0.2876"
         ],
         [
          0,
          "$c + $diameter * -0.295"
         ],
         [
-         "$diameter * 0.05945",
-         "$c + $diameter * -0.29026"
+         "$diameter * 0.07413",
+         "$c + $diameter * -0.2876"
         ],
         [
-         "$diameter * 0.11743",
-         "$c + $diameter * -0.27616"
+         "$diameter * 0.14542",
+         "$c + $diameter * -0.26569"
         ],
         [
-         "$diameter * 0.17252",
-         "$c + $diameter * -0.25304"
-        ],
-        [
-         "$diameter * 0.22336",
-         "$c + $diameter * -0.22147"
+         "$diameter * 0.21112",
+         "$c + $diameter * -0.23012"
         ],
         [
          "$diameter * 0.2687",
          "$c + $diameter * -0.18224"
         ],
         [
-         "$diameter * 0.30743",
-         "$c + $diameter * -0.1363"
+         "$diameter * 0.31596",
+         "$c + $diameter * -0.12389"
         ],
         [
-         "$diameter * 0.33858",
-         "$c + $diameter * -0.08479"
+         "$diameter * 0.35107",
+         "$c + $diameter * -0.05733"
         ],
         [
-         "$diameter * 0.3614",
-         "$c + $diameter * -0.02897"
-        ],
-        [
-         "$diameter * 0.37532",
-         "$c + $diameter * 0.02977"
+         "$diameter * 0.3727",
+         "$c + $diameter * 0.01489"
         ]
        ]
       },
@@ -3283,160 +2675,128 @@
          "$c + $diameter * 0.15"
         ],
         [
-         "$diameter * 0.29631",
-         "$c + $diameter * 0.19693"
+         "$diameter * 0.29424",
+         "$c + $diameter * 0.20853"
         ],
         [
-         "$diameter * 0.28532",
-         "$c + $diameter * 0.24271"
+         "$diameter * 0.27716",
+         "$c + $diameter * 0.26481"
         ],
         [
-         "$diameter * 0.2673",
-         "$c + $diameter * 0.2862"
-        ],
-        [
-         "$diameter * 0.24271",
-         "$c + $diameter * 0.32634"
+         "$diameter * 0.24944",
+         "$c + $diameter * 0.31667"
         ],
         [
          "$diameter * 0.21213",
          "$c + $diameter * 0.36213"
         ],
         [
-         "$diameter * 0.17634",
-         "$c + $diameter * 0.39271"
+         "$diameter * 0.16667",
+         "$c + $diameter * 0.39944"
         ],
         [
-         "$diameter * 0.1362",
-         "$c + $diameter * 0.4173"
+         "$diameter * 0.11481",
+         "$c + $diameter * 0.42716"
         ],
         [
-         "$diameter * 0.09271",
-         "$c + $diameter * 0.43532"
-        ],
-        [
-         "$diameter * 0.04693",
-         "$c + $diameter * 0.44631"
+         "$diameter * 0.05853",
+         "$c + $diameter * 0.44424"
         ],
         [
          0,
          "$c + $diameter * 0.45"
         ],
         [
-         "$diameter * -0.04693",
-         "$c + $diameter * 0.44631"
+         "$diameter * -0.05853",
+         "$c + $diameter * 0.44424"
         ],
         [
-         "$diameter * -0.09271",
-         "$c + $diameter * 0.43532"
+         "$diameter * -0.11481",
+         "$c + $diameter * 0.42716"
         ],
         [
-         "$diameter * -0.1362",
-         "$c + $diameter * 0.4173"
-        ],
-        [
-         "$diameter * -0.17634",
-         "$c + $diameter * 0.39271"
+         "$diameter * -0.16667",
+         "$c + $diameter * 0.39944"
         ],
         [
          "$diameter * -0.21213",
          "$c + $diameter * 0.36213"
         ],
         [
-         "$diameter * -0.24271",
-         "$c + $diameter * 0.32634"
+         "$diameter * -0.24944",
+         "$c + $diameter * 0.31667"
         ],
         [
-         "$diameter * -0.2673",
-         "$c + $diameter * 0.2862"
+         "$diameter * -0.27716",
+         "$c + $diameter * 0.26481"
         ],
         [
-         "$diameter * -0.28532",
-         "$c + $diameter * 0.24271"
-        ],
-        [
-         "$diameter * -0.29631",
-         "$c + $diameter * 0.19693"
+         "$diameter * -0.29424",
+         "$c + $diameter * 0.20853"
         ],
         [
          "$diameter * -0.3",
          "$c + $diameter * 0.15"
         ],
         [
-         "$diameter * -0.29631",
-         "$c + $diameter * 0.10307"
+         "$diameter * -0.29424",
+         "$c + $diameter * 0.09147"
         ],
         [
-         "$diameter * -0.28532",
-         "$c + $diameter * 0.05729"
+         "$diameter * -0.27716",
+         "$c + $diameter * 0.03519"
         ],
         [
-         "$diameter * -0.2673",
-         "$c + $diameter * 0.0138"
-        ],
-        [
-         "$diameter * -0.24271",
-         "$c + $diameter * -0.02634"
+         "$diameter * -0.24944",
+         "$c + $diameter * -0.01667"
         ],
         [
          "$diameter * -0.21213",
          "$c + $diameter * -0.06213"
         ],
         [
-         "$diameter * -0.17634",
-         "$c + $diameter * -0.09271"
+         "$diameter * -0.16667",
+         "$c + $diameter * -0.09944"
         ],
         [
-         "$diameter * -0.1362",
-         "$c + $diameter * -0.1173"
+         "$diameter * -0.11481",
+         "$c + $diameter * -0.12716"
         ],
         [
-         "$diameter * -0.09271",
-         "$c + $diameter * -0.13532"
-        ],
-        [
-         "$diameter * -0.04693",
-         "$c + $diameter * -0.14631"
+         "$diameter * -0.05853",
+         "$c + $diameter * -0.14424"
         ],
         [
          0,
          "$c + $diameter * -0.15"
         ],
         [
-         "$diameter * 0.04693",
-         "$c + $diameter * -0.14631"
+         "$diameter * 0.05853",
+         "$c + $diameter * -0.14424"
         ],
         [
-         "$diameter * 0.09271",
-         "$c + $diameter * -0.13532"
+         "$diameter * 0.11481",
+         "$c + $diameter * -0.12716"
         ],
         [
-         "$diameter * 0.1362",
-         "$c + $diameter * -0.1173"
-        ],
-        [
-         "$diameter * 0.17634",
-         "$c + $diameter * -0.09271"
+         "$diameter * 0.16667",
+         "$c + $diameter * -0.09944"
         ],
         [
          "$diameter * 0.21213",
          "$c + $diameter * -0.06213"
         ],
         [
-         "$diameter * 0.24271",
-         "$c + $diameter * -0.02634"
+         "$diameter * 0.24944",
+         "$c + $diameter * -0.01667"
         ],
         [
-         "$diameter * 0.2673",
-         "$c + $diameter * 0.0138"
+         "$diameter * 0.27716",
+         "$c + $diameter * 0.03519"
         ],
         [
-         "$diameter * 0.28532",
-         "$c + $diameter * 0.05729"
-        ],
-        [
-         "$diameter * 0.29631",
-         "$c + $diameter * 0.10307"
+         "$diameter * 0.29424",
+         "$c + $diameter * 0.09147"
         ]
        ]
       },
@@ -3448,160 +2808,128 @@
          "$c + $diameter * 0.21"
         ],
         [
-         "$diameter * 0.21729",
-         "$c + $diameter * 0.24442"
+         "$diameter * 0.21577",
+         "$c + $diameter * 0.25292"
         ],
         [
-         "$diameter * 0.20923",
-         "$c + $diameter * 0.27798"
+         "$diameter * 0.20325",
+         "$c + $diameter * 0.29419"
         ],
         [
-         "$diameter * 0.19602",
-         "$c + $diameter * 0.30988"
-        ],
-        [
-         "$diameter * 0.17798",
-         "$c + $diameter * 0.33931"
+         "$diameter * 0.18292",
+         "$c + $diameter * 0.33223"
         ],
         [
          "$diameter * 0.15556",
          "$c + $diameter * 0.36556"
         ],
         [
-         "$diameter * 0.12931",
-         "$c + $diameter * 0.38798"
+         "$diameter * 0.12223",
+         "$c + $diameter * 0.39292"
         ],
         [
-         "$diameter * 0.09988",
-         "$c + $diameter * 0.40602"
+         "$diameter * 0.08419",
+         "$c + $diameter * 0.41325"
         ],
         [
-         "$diameter * 0.06798",
-         "$c + $diameter * 0.41923"
-        ],
-        [
-         "$diameter * 0.03442",
-         "$c + $diameter * 0.42729"
+         "$diameter * 0.04292",
+         "$c + $diameter * 0.42577"
         ],
         [
          0,
          "$c + $diameter * 0.43"
         ],
         [
-         "$diameter * -0.03442",
-         "$c + $diameter * 0.42729"
+         "$diameter * -0.04292",
+         "$c + $diameter * 0.42577"
         ],
         [
-         "$diameter * -0.06798",
-         "$c + $diameter * 0.41923"
+         "$diameter * -0.08419",
+         "$c + $diameter * 0.41325"
         ],
         [
-         "$diameter * -0.09988",
-         "$c + $diameter * 0.40602"
-        ],
-        [
-         "$diameter * -0.12931",
-         "$c + $diameter * 0.38798"
+         "$diameter * -0.12223",
+         "$c + $diameter * 0.39292"
         ],
         [
          "$diameter * -0.15556",
          "$c + $diameter * 0.36556"
         ],
         [
-         "$diameter * -0.17798",
-         "$c + $diameter * 0.33931"
+         "$diameter * -0.18292",
+         "$c + $diameter * 0.33223"
         ],
         [
-         "$diameter * -0.19602",
-         "$c + $diameter * 0.30988"
+         "$diameter * -0.20325",
+         "$c + $diameter * 0.29419"
         ],
         [
-         "$diameter * -0.20923",
-         "$c + $diameter * 0.27798"
-        ],
-        [
-         "$diameter * -0.21729",
-         "$c + $diameter * 0.24442"
+         "$diameter * -0.21577",
+         "$c + $diameter * 0.25292"
         ],
         [
          "$diameter * -0.22",
          "$c + $diameter * 0.21"
         ],
         [
-         "$diameter * -0.21729",
-         "$c + $diameter * 0.17558"
+         "$diameter * -0.21577",
+         "$c + $diameter * 0.16708"
         ],
         [
-         "$diameter * -0.20923",
-         "$c + $diameter * 0.14202"
+         "$diameter * -0.20325",
+         "$c + $diameter * 0.12581"
         ],
         [
-         "$diameter * -0.19602",
-         "$c + $diameter * 0.11012"
-        ],
-        [
-         "$diameter * -0.17798",
-         "$c + $diameter * 0.08069"
+         "$diameter * -0.18292",
+         "$c + $diameter * 0.08777"
         ],
         [
          "$diameter * -0.15556",
          "$c + $diameter * 0.05444"
         ],
         [
-         "$diameter * -0.12931",
-         "$c + $diameter * 0.03202"
+         "$diameter * -0.12223",
+         "$c + $diameter * 0.02708"
         ],
         [
-         "$diameter * -0.09988",
-         "$c + $diameter * 0.01398"
+         "$diameter * -0.08419",
+         "$c + $diameter * 0.00675"
         ],
         [
-         "$diameter * -0.06798",
-         "$c + $diameter * 0.00077"
-        ],
-        [
-         "$diameter * -0.03442",
-         "$c + $diameter * -0.00729"
+         "$diameter * -0.04292",
+         "$c + $diameter * -0.00577"
         ],
         [
          0,
          "$c + $diameter * -0.01"
         ],
         [
-         "$diameter * 0.03442",
-         "$c + $diameter * -0.00729"
+         "$diameter * 0.04292",
+         "$c + $diameter * -0.00577"
         ],
         [
-         "$diameter * 0.06798",
-         "$c + $diameter * 0.00077"
+         "$diameter * 0.08419",
+         "$c + $diameter * 0.00675"
         ],
         [
-         "$diameter * 0.09988",
-         "$c + $diameter * 0.01398"
-        ],
-        [
-         "$diameter * 0.12931",
-         "$c + $diameter * 0.03202"
+         "$diameter * 0.12223",
+         "$c + $diameter * 0.02708"
         ],
         [
          "$diameter * 0.15556",
          "$c + $diameter * 0.05444"
         ],
         [
-         "$diameter * 0.17798",
-         "$c + $diameter * 0.08069"
+         "$diameter * 0.18292",
+         "$c + $diameter * 0.08777"
         ],
         [
-         "$diameter * 0.19602",
-         "$c + $diameter * 0.11012"
+         "$diameter * 0.20325",
+         "$c + $diameter * 0.12581"
         ],
         [
-         "$diameter * 0.20923",
-         "$c + $diameter * 0.14202"
-        ],
-        [
-         "$diameter * 0.21729",
-         "$c + $diameter * 0.17558"
+         "$diameter * 0.21577",
+         "$c + $diameter * 0.16708"
         ]
        ]
       },
@@ -3613,160 +2941,128 @@
          "$c + $diameter * 0.27"
         ],
         [
-         "$diameter * 0.13828",
-         "$c + $diameter * 0.2919"
+         "$diameter * 0.13731",
+         "$c + $diameter * 0.29731"
         ],
         [
-         "$diameter * 0.13315",
-         "$c + $diameter * 0.31326"
+         "$diameter * 0.12934",
+         "$c + $diameter * 0.32358"
         ],
         [
-         "$diameter * 0.12474",
-         "$c + $diameter * 0.33356"
-        ],
-        [
-         "$diameter * 0.11326",
-         "$c + $diameter * 0.35229"
+         "$diameter * 0.11641",
+         "$c + $diameter * 0.34778"
         ],
         [
          "$diameter * 0.09899",
          "$c + $diameter * 0.36899"
         ],
         [
-         "$diameter * 0.08229",
-         "$c + $diameter * 0.38326"
+         "$diameter * 0.07778",
+         "$c + $diameter * 0.38641"
         ],
         [
-         "$diameter * 0.06356",
-         "$c + $diameter * 0.39474"
+         "$diameter * 0.05358",
+         "$c + $diameter * 0.39934"
         ],
         [
-         "$diameter * 0.04326",
-         "$c + $diameter * 0.40315"
-        ],
-        [
-         "$diameter * 0.0219",
-         "$c + $diameter * 0.40828"
+         "$diameter * 0.02731",
+         "$c + $diameter * 0.40731"
         ],
         [
          0,
          "$c + $diameter * 0.41"
         ],
         [
-         "$diameter * -0.0219",
-         "$c + $diameter * 0.40828"
+         "$diameter * -0.02731",
+         "$c + $diameter * 0.40731"
         ],
         [
-         "$diameter * -0.04326",
-         "$c + $diameter * 0.40315"
+         "$diameter * -0.05358",
+         "$c + $diameter * 0.39934"
         ],
         [
-         "$diameter * -0.06356",
-         "$c + $diameter * 0.39474"
-        ],
-        [
-         "$diameter * -0.08229",
-         "$c + $diameter * 0.38326"
+         "$diameter * -0.07778",
+         "$c + $diameter * 0.38641"
         ],
         [
          "$diameter * -0.09899",
          "$c + $diameter * 0.36899"
         ],
         [
-         "$diameter * -0.11326",
-         "$c + $diameter * 0.35229"
+         "$diameter * -0.11641",
+         "$c + $diameter * 0.34778"
         ],
         [
-         "$diameter * -0.12474",
-         "$c + $diameter * 0.33356"
+         "$diameter * -0.12934",
+         "$c + $diameter * 0.32358"
         ],
         [
-         "$diameter * -0.13315",
-         "$c + $diameter * 0.31326"
-        ],
-        [
-         "$diameter * -0.13828",
-         "$c + $diameter * 0.2919"
+         "$diameter * -0.13731",
+         "$c + $diameter * 0.29731"
         ],
         [
          "$diameter * -0.14",
          "$c + $diameter * 0.27"
         ],
         [
-         "$diameter * -0.13828",
-         "$c + $diameter * 0.2481"
+         "$diameter * -0.13731",
+         "$c + $diameter * 0.24269"
         ],
         [
-         "$diameter * -0.13315",
-         "$c + $diameter * 0.22674"
+         "$diameter * -0.12934",
+         "$c + $diameter * 0.21642"
         ],
         [
-         "$diameter * -0.12474",
-         "$c + $diameter * 0.20644"
-        ],
-        [
-         "$diameter * -0.11326",
-         "$c + $diameter * 0.18771"
+         "$diameter * -0.11641",
+         "$c + $diameter * 0.19222"
         ],
         [
          "$diameter * -0.09899",
          "$c + $diameter * 0.17101"
         ],
         [
-         "$diameter * -0.08229",
-         "$c + $diameter * 0.15674"
+         "$diameter * -0.07778",
+         "$c + $diameter * 0.15359"
         ],
         [
-         "$diameter * -0.06356",
-         "$c + $diameter * 0.14526"
+         "$diameter * -0.05358",
+         "$c + $diameter * 0.14066"
         ],
         [
-         "$diameter * -0.04326",
-         "$c + $diameter * 0.13685"
-        ],
-        [
-         "$diameter * -0.0219",
-         "$c + $diameter * 0.13172"
+         "$diameter * -0.02731",
+         "$c + $diameter * 0.13269"
         ],
         [
          0,
          "$c + $diameter * 0.13"
         ],
         [
-         "$diameter * 0.0219",
-         "$c + $diameter * 0.13172"
+         "$diameter * 0.02731",
+         "$c + $diameter * 0.13269"
         ],
         [
-         "$diameter * 0.04326",
-         "$c + $diameter * 0.13685"
+         "$diameter * 0.05358",
+         "$c + $diameter * 0.14066"
         ],
         [
-         "$diameter * 0.06356",
-         "$c + $diameter * 0.14526"
-        ],
-        [
-         "$diameter * 0.08229",
-         "$c + $diameter * 0.15674"
+         "$diameter * 0.07778",
+         "$c + $diameter * 0.15359"
         ],
         [
          "$diameter * 0.09899",
          "$c + $diameter * 0.17101"
         ],
         [
-         "$diameter * 0.11326",
-         "$c + $diameter * 0.18771"
+         "$diameter * 0.11641",
+         "$c + $diameter * 0.19222"
         ],
         [
-         "$diameter * 0.12474",
-         "$c + $diameter * 0.20644"
+         "$diameter * 0.12934",
+         "$c + $diameter * 0.21642"
         ],
         [
-         "$diameter * 0.13315",
-         "$c + $diameter * 0.22674"
-        ],
-        [
-         "$diameter * 0.13828",
-         "$c + $diameter * 0.2481"
+         "$diameter * 0.13731",
+         "$c + $diameter * 0.24269"
         ]
        ]
       },
@@ -3778,160 +3074,128 @@
          "$c + $diameter * 0.33"
         ],
         [
-         "$diameter * 0.06914",
-         "$c + $diameter * 0.34173"
+         "$diameter * 0.06865",
+         "$c + $diameter * 0.34463"
         ],
         [
-         "$diameter * 0.06657",
-         "$c + $diameter * 0.35318"
+         "$diameter * 0.06467",
+         "$c + $diameter * 0.3587"
         ],
         [
-         "$diameter * 0.06237",
-         "$c + $diameter * 0.36405"
-        ],
-        [
-         "$diameter * 0.05663",
-         "$c + $diameter * 0.37408"
+         "$diameter * 0.0582",
+         "$c + $diameter * 0.37167"
         ],
         [
          "$diameter * 0.0495",
          "$c + $diameter * 0.38303"
         ],
         [
-         "$diameter * 0.04114",
-         "$c + $diameter * 0.39068"
+         "$diameter * 0.03889",
+         "$c + $diameter * 0.39236"
         ],
         [
-         "$diameter * 0.03178",
-         "$c + $diameter * 0.39683"
+         "$diameter * 0.02679",
+         "$c + $diameter * 0.39929"
         ],
         [
-         "$diameter * 0.02163",
-         "$c + $diameter * 0.40133"
-        ],
-        [
-         "$diameter * 0.01095",
-         "$c + $diameter * 0.40408"
+         "$diameter * 0.01366",
+         "$c + $diameter * 0.40356"
         ],
         [
          0,
          "$c + $diameter * 0.405"
         ],
         [
-         "$diameter * -0.01095",
-         "$c + $diameter * 0.40408"
+         "$diameter * -0.01366",
+         "$c + $diameter * 0.40356"
         ],
         [
-         "$diameter * -0.02163",
-         "$c + $diameter * 0.40133"
+         "$diameter * -0.02679",
+         "$c + $diameter * 0.39929"
         ],
         [
-         "$diameter * -0.03178",
-         "$c + $diameter * 0.39683"
-        ],
-        [
-         "$diameter * -0.04114",
-         "$c + $diameter * 0.39068"
+         "$diameter * -0.03889",
+         "$c + $diameter * 0.39236"
         ],
         [
          "$diameter * -0.0495",
          "$c + $diameter * 0.38303"
         ],
         [
-         "$diameter * -0.05663",
-         "$c + $diameter * 0.37408"
+         "$diameter * -0.0582",
+         "$c + $diameter * 0.37167"
         ],
         [
-         "$diameter * -0.06237",
-         "$c + $diameter * 0.36405"
+         "$diameter * -0.06467",
+         "$c + $diameter * 0.3587"
         ],
         [
-         "$diameter * -0.06657",
-         "$c + $diameter * 0.35318"
-        ],
-        [
-         "$diameter * -0.06914",
-         "$c + $diameter * 0.34173"
+         "$diameter * -0.06865",
+         "$c + $diameter * 0.34463"
         ],
         [
          "$diameter * -0.07",
          "$c + $diameter * 0.33"
         ],
         [
-         "$diameter * -0.06914",
-         "$c + $diameter * 0.31827"
+         "$diameter * -0.06865",
+         "$c + $diameter * 0.31537"
         ],
         [
-         "$diameter * -0.06657",
-         "$c + $diameter * 0.30682"
+         "$diameter * -0.06467",
+         "$c + $diameter * 0.3013"
         ],
         [
-         "$diameter * -0.06237",
-         "$c + $diameter * 0.29595"
-        ],
-        [
-         "$diameter * -0.05663",
-         "$c + $diameter * 0.28592"
+         "$diameter * -0.0582",
+         "$c + $diameter * 0.28833"
         ],
         [
          "$diameter * -0.0495",
          "$c + $diameter * 0.27697"
         ],
         [
-         "$diameter * -0.04114",
-         "$c + $diameter * 0.26932"
+         "$diameter * -0.03889",
+         "$c + $diameter * 0.26764"
         ],
         [
-         "$diameter * -0.03178",
-         "$c + $diameter * 0.26317"
+         "$diameter * -0.02679",
+         "$c + $diameter * 0.26071"
         ],
         [
-         "$diameter * -0.02163",
-         "$c + $diameter * 0.25867"
-        ],
-        [
-         "$diameter * -0.01095",
-         "$c + $diameter * 0.25592"
+         "$diameter * -0.01366",
+         "$c + $diameter * 0.25644"
         ],
         [
          0,
          "$c + $diameter * 0.255"
         ],
         [
-         "$diameter * 0.01095",
-         "$c + $diameter * 0.25592"
+         "$diameter * 0.01366",
+         "$c + $diameter * 0.25644"
         ],
         [
-         "$diameter * 0.02163",
-         "$c + $diameter * 0.25867"
+         "$diameter * 0.02679",
+         "$c + $diameter * 0.26071"
         ],
         [
-         "$diameter * 0.03178",
-         "$c + $diameter * 0.26317"
-        ],
-        [
-         "$diameter * 0.04114",
-         "$c + $diameter * 0.26932"
+         "$diameter * 0.03889",
+         "$c + $diameter * 0.26764"
         ],
         [
          "$diameter * 0.0495",
          "$c + $diameter * 0.27697"
         ],
         [
-         "$diameter * 0.05663",
-         "$c + $diameter * 0.28592"
+         "$diameter * 0.0582",
+         "$c + $diameter * 0.28833"
         ],
         [
-         "$diameter * 0.06237",
-         "$c + $diameter * 0.29595"
+         "$diameter * 0.06467",
+         "$c + $diameter * 0.3013"
         ],
         [
-         "$diameter * 0.06657",
-         "$c + $diameter * 0.30682"
-        ],
-        [
-         "$diameter * 0.06914",
-         "$c + $diameter * 0.31827"
+         "$diameter * 0.06865",
+         "$c + $diameter * 0.31537"
         ]
        ]
       }
@@ -9001,10 +8265,21 @@
     },
     {
      "name": "Window_L",
+     "shape": "cylinder",
+     "material": "interior",
+     "axis": "x",
+     "radius": "min(0.15, $diameter * 0.04)",
+     "height": 0.024,
+     "segments": 6,
      "at": [
       "$diameter * 0.48719 - 0.0039",
       "$c + $diameter * 0.11248 - 0.0009",
       "$L2 - $nl - 1.6"
+     ],
+     "rotate": [
+      0,
+      0,
+      13
      ],
      "repeat": {
       "count": "floor(($length - $nl - $tl - 2.5) / 0.533) + 1",
@@ -9017,35 +8292,16 @@
      "mirror": "Window_R",
      "children": [
       {
-       "name": "Shade",
-       "shape": "cylinder",
-       "material": "interior",
-       "axis": "x",
-       "radius": "min(0.15, $diameter * 0.04)",
-       "height": 0.024,
-       "segments": 8,
-       "rotate": [
-        0,
-        0,
-        13
-       ]
-      },
-      {
        "name": "Pane",
        "shape": "cylinder",
        "material": "glass",
        "axis": "x",
        "radius": "min(0.15, $diameter * 0.04)",
        "height": 0.012,
-       "segments": 8,
-       "rotate": [
-        0,
-        0,
-        13
-       ],
+       "segments": 6,
        "at": [
-        0.01559,
-        0.0036,
+        0.016,
+        0,
         0
        ]
       }
@@ -13973,7 +13229,7 @@
            "radius": "$diameter * 0.095",
            "height": "$diameter * 0.055",
            "bevel": "$diameter * 0.0165",
-           "segments": 18
+           "segments": 14
           },
           {
            "name": "Rim",
@@ -14002,7 +13258,7 @@
            "radius": "$diameter * 0.095",
            "height": "$diameter * 0.055",
            "bevel": "$diameter * 0.0165",
-           "segments": 18
+           "segments": 14
           },
           {
            "name": "Rim",
@@ -14127,7 +13383,7 @@
            "radius": "$diameter * 0.145",
            "height": "$diameter * 0.085",
            "bevel": "$diameter * 0.0255",
-           "segments": 18
+           "segments": 14
           },
           {
            "name": "Rim",
@@ -14156,7 +13412,7 @@
            "radius": "$diameter * 0.145",
            "height": "$diameter * 0.085",
            "bevel": "$diameter * 0.0255",
-           "segments": 18
+           "segments": 14
           },
           {
            "name": "Rim",

@@ -57,26 +57,6 @@
    "metallic": 0,
    "roughness": 0.95
   },
-  "barn_stone": {
-   "color": [
-    0.36,
-    0.34,
-    0.31
-   ],
-   "metallic": 0,
-   "roughness": 0.9,
-   "texture": "stone"
-  },
-  "barn_roof": {
-   "color": [
-    0.075,
-    0.08,
-    0.085
-   ],
-   "metallic": 0,
-   "roughness": 0.65,
-   "texture": "roof_slate"
-  },
   "barn_window": {
    "color": [
     0.025,
@@ -142,7 +122,7 @@
       "$pl / 2",
       0
      ],
-     "material": "barn_stone",
+     "material": "stone",
      "bevel": 0.03
     },
     {
@@ -251,7 +231,7 @@
         "$h + ($W2 - $oh) / 2 * tan($th) + $t / 2 * cos($th) + $t * tan($th) / 2 * sin($th)",
         0
        ],
-       "material": "barn_roof",
+       "material": "roof_slate",
        "rotate": [
         0,
         90,
@@ -269,7 +249,7 @@
         "$ridge - 0.04",
         0
        ],
-       "material": "barn_roof",
+       "material": "roof_slate",
        "axis": "z",
        "segments": 12
       },
@@ -1282,7 +1262,7 @@
         "$ch + 0.12",
         0
        ],
-       "material": "barn_roof",
+       "material": "roof_slate",
        "segments": 4,
        "rotate": [
         0,

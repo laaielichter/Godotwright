@@ -489,7 +489,7 @@
      ]
     },
     {
-     "name": "Propeller_FL",
+     "name": "Propeller_1",
      "at": [
       "$A * 0.70711",
       "$A * 0.19 + $base",
@@ -1167,7 +1167,7 @@
      ]
     },
     {
-     "name": "Propeller_RR",
+     "name": "Propeller_3",
      "at": [
       "$A * -0.70711",
       "$A * 0.19 + $base",
@@ -1845,7 +1845,7 @@
      ]
     },
     {
-     "name": "Propeller_FR",
+     "name": "Propeller_4",
      "at": [
       "$A * -0.70711",
       "$A * 0.19 + $base",
@@ -2523,7 +2523,7 @@
      ]
     },
     {
-     "name": "Propeller_RL",
+     "name": "Propeller_2",
      "at": [
       "$A * 0.70711",
       "$A * 0.19 + $base",

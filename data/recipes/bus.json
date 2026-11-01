@@ -2189,7 +2189,7 @@
           0,
           -90
          ],
-         "segments": 28,
+         "segments": 24,
          "caps": false,
          "profile": [
           [
@@ -2247,7 +2247,7 @@
           0,
           -90
          ],
-         "segments": 28,
+         "segments": 24,
          "caps": false,
          "profile": [
           [
@@ -2297,7 +2297,7 @@
           0,
           -90
          ],
-         "segments": 28,
+         "segments": 24,
          "caps": false,
          "profile": [
           [
@@ -2333,7 +2333,7 @@
          "axis": "x",
          "radius": "0.085 * 0.6 * $wheelRadius",
          "height": "0.03 * $tw",
-         "segments": 8,
+         "segments": 6,
          "at": [
           "0.255 * $tw",
           "0.80 * 0.6 * $wheelRadius",
@@ -2411,7 +2411,7 @@
           0,
           -90
          ],
-         "segments": 28,
+         "segments": 24,
          "caps": false,
          "profile": [
           [
@@ -2469,7 +2469,7 @@
           0,
           -90
          ],
-         "segments": 28,
+         "segments": 24,
          "caps": false,
          "profile": [
           [
@@ -2519,7 +2519,7 @@
           0,
           -90
          ],
-         "segments": 28,
+         "segments": 24,
          "caps": false,
          "profile": [
           [
@@ -2555,7 +2555,7 @@
          "axis": "x",
          "radius": "0.085 * 0.6 * $wheelRadius",
          "height": "0.03 * $tw",
-         "segments": 8,
+         "segments": 6,
          "at": [
           "0.255 * $tw",
           "0.80 * 0.6 * $wheelRadius",
@@ -2633,7 +2633,7 @@
           0,
           -90
          ],
-         "segments": 20,
+         "segments": 16,
          "caps": false,
          "profile": [
           [
@@ -2691,7 +2691,7 @@
           0,
           -90
          ],
-         "segments": 18,
+         "segments": 14,
          "caps": false,
          "profile": [
           [
@@ -3529,35 +3529,6 @@
           0,
           0.16,
           0
-         ]
-        },
-        {
-         "name": "Grip",
-         "shape": "tube",
-         "material": "pole",
-         "radius": 0.012,
-         "segments": 6,
-         "path": [
-          [
-           -0.35,
-           0.37,
-           0.0
-          ],
-          [
-           -0.35,
-           0.42,
-           0.04
-          ],
-          [
-           0.35,
-           0.42,
-           0.04
-          ],
-          [
-           0.35,
-           0.37,
-           0.0
-          ]
          ]
         }
        ]

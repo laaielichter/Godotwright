@@ -76,9 +76,9 @@
   },
   "stand_render": {
    "color": [
-    0.36,
-    0.355,
-    0.34
+    0.2,
+    0.195,
+    0.185
    ],
    "metallic": 0,
    "roughness": 0.9
@@ -218,11 +218,11 @@
         "-$L / 2 + 0.1"
        ],
        "repeat": {
-        "count": "floor(($L - 0.2) / 2) + 1",
+        "count": "floor(($L - 0.2) / 3) + 1",
         "step": [
          0,
          0,
-         "($L - 0.2) / floor(($L - 0.2) / 2)"
+         "($L - 0.2) / floor(($L - 0.2) / 3)"
         ]
        }
       },
@@ -325,21 +325,6 @@
             0,
             -12
            ]
-          },
-          {
-           "name": "Stand",
-           "shape": "box",
-           "size": [
-            0.1,
-            0.4,
-            "$bl - 0.3"
-           ],
-           "at": [
-            0,
-            -0.22,
-            0
-           ],
-           "material": "stand_dark"
           }
          ]
         }
@@ -366,29 +351,6 @@
         ]
        },
        "children": [
-        {
-         "name": "Step_{i}",
-         "shape": "box",
-         "size": [
-          0.425,
-          0.21,
-          "$aw"
-         ],
-         "at": [
-          "0.3 + 0.2125 + $i * 0.85",
-          "$F + 0.42 * ($i + 1) + 0.105",
-          0
-         ],
-         "material": "stand_render",
-         "repeat": {
-          "count": "$nr",
-          "step": [
-           0,
-           0,
-           0
-          ]
-         }
-        },
         {
          "name": "Handrail",
          "shape": "tube",

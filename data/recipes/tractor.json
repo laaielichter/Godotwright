@@ -555,7 +555,6 @@
         "$ch - 0.02",
         0.07
        ],
-       "bevel": 0.02,
        "at": [
         "$cw / 2 - 0.035",
         "$cy0 + $ch / 2",
@@ -1490,7 +1489,7 @@
         0,
         -90
        ],
-       "segments": 36,
+       "segments": 32,
        "caps": false,
        "profile": [
         [
@@ -1598,7 +1597,7 @@
         0,
         -90
        ],
-       "segments": 36,
+       "segments": 32,
        "caps": false,
        "profile": [
         [
@@ -1648,7 +1647,7 @@
         0,
         -90
        ],
-       "segments": 36,
+       "segments": 32,
        "caps": false,
        "profile": [
         [

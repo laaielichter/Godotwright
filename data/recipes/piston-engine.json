@@ -2,7 +2,7 @@
  "version": 1,
  "name": "piston-engine",
  "archetype": "machine.piston-engine",
- "description": "An inline piston engine: a crankcase block with an oil pan, a row of cylinders with a piston in each, a cylinder head and cover, a crankshaft along the length and a flywheel at the rear. The pistons and the crankshaft are separate nodes so they can move.",
+ "description": "An air-cooled inline piston engine: a ribbed aluminium crankcase on a finned sump with mounting feet, a row of finned cast-iron cylinder barrels with a finned head and red rocker cover on each, pushrod tubes, exhaust runners into a collector, an intake plenum with air filter, injection pump and fuel lines, an alternator on a belt, a starter, and an exposed flywheel with a ring gear. The pistons (one per barrel, alternately up and down), the crankshaft with its throws and pulley, and the flywheel are separate nodes so they can move.",
  "params": [
   {
    "name": "cylinders",
@@ -22,155 +22,1697 @@
   }
  ],
  "materials": {
-  "engine_block": {
+  "cast_alu": {
    "color": [
-    0.35,
-    0.36,
-    0.4
+    0.5,
+    0.51,
+    0.52
    ],
-   "metallic": 0.7,
-   "roughness": 0.5
+   "metallic": 0.55,
+   "roughness": 0.55,
+   "texture": "concrete"
   },
-  "engine_head": {
+  "cast_iron": {
    "color": [
-    0.6,
-    0.6,
-    0.62
+    0.07,
+    0.07,
+    0.075
    ],
-   "metallic": 0.8,
+   "metallic": 0.6,
+   "roughness": 0.5,
+   "texture": "concrete"
+  },
+  "enamel_red": {
+   "color": [
+    0.42,
+    0.02,
+    0.015
+   ],
+   "metallic": 0.25,
+   "roughness": 0.22
+  },
+  "exhaust_steel": {
+   "color": [
+    0.2,
+    0.12,
+    0.08
+   ],
+   "metallic": 0.85,
+   "roughness": 0.45
+  },
+  "machined": {
+   "color": [
+    0.7,
+    0.71,
+    0.72
+   ],
+   "metallic": 1.0,
+   "roughness": 0.22
+  },
+  "filter_blue": {
+   "color": [
+    0.03,
+    0.09,
+    0.32
+   ],
+   "metallic": 0.2,
    "roughness": 0.35
+  },
+  "dipstick_yellow": {
+   "color": [
+    0.8,
+    0.5,
+    0.02
+   ],
+   "metallic": 0,
+   "roughness": 0.4
+  },
+  "piston_alu": {
+   "color": [
+    0.72,
+    0.72,
+    0.7
+   ],
+   "metallic": 0.9,
+   "roughness": 0.3
   }
  },
  "nodes": [
   {
    "name": "PistonEngine",
-   "material": "engine_block",
+   "material": "cast_alu",
    "vars": {
-    "pitch": "$bore * 1.25",
-    "len": "$cylinders * $bore * 1.25 + 0.1",
-    "yb": 0.22
+    "b": "$bore",
+    "p": "$bore*1.65",
+    "len": "$cylinders*$bore*1.65",
+    "z0": "$len/2 - $p/2",
+    "st": "$bore*1.05",
+    "yc": "$bore*1.75 + 0.03",
+    "ys": "$yc - $bore*0.95",
+    "yd": "$yc + $bore*1.8",
+    "yh": "$yd + $bore*1.9",
+    "wb": "$bore*2.6"
    },
    "children": [
     {
-     "name": "Block",
+     "name": "Sump",
      "shape": "box",
+     "material": "cast_alu",
      "size": [
-      "$bore * 3.2",
-      "$yb",
-      "$len"
+      "$wb*0.86",
+      "$ys + $b*0.05",
+      "$len*0.94"
      ],
-     "at": [
-      0,
-      "$yb / 2 + 0.06",
-      0
+     "bevel": "$b*0.08",
+     "anchor": "bottom",
+     "children": [
+      {
+       "name": "Fin_{i}",
+       "shape": "box",
+       "size": [
+        "$wb*0.86 + $b*0.12",
+        "$ys*0.7",
+        "$b*0.05"
+       ],
+       "anchor": "bottom",
+       "at": [
+        0,
+        "$ys*0.12",
+        "$len*0.4 - $i*$len*0.8/max(1, $nf - 1)"
+       ],
+       "repeat": {
+        "count": "$nf",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       },
+       "vars": {
+        "nf": "max(3, $cylinders*2)"
+       }
+      },
+      {
+       "name": "Flange",
+       "shape": "box",
+       "size": [
+        "$wb + $b*0.04",
+        "$b*0.06",
+        "$len + $b*0.4"
+       ],
+       "at": [
+        0,
+        "$ys",
+        0
+       ]
+      },
+      {
+       "name": "DrainPlug",
+       "shape": "cylinder",
+       "material": "machined",
+       "radius": "$b*0.1",
+       "height": "$b*0.12",
+       "segments": 6,
+       "axis": "x",
+       "at": [
+        "$wb*0.43 + $b*0.04",
+        "$ys*0.3",
+        "-$len*0.3"
+       ]
+      }
      ]
     },
     {
-     "name": "Pan",
-     "shape": "box",
-     "material": "metal",
-     "size": [
-      "$bore * 2.6",
-      0.07,
-      "$len * 0.9"
-     ],
+     "name": "Block",
+     "shape": "loft",
+     "material": "cast_alu",
      "at": [
       0,
-      0.035,
+      "$ys",
       0
+     ],
+     "vars": {
+      "hc": "$yd - $ys"
+     },
+     "sections": [
+      {
+       "z": "-$len/2 - $b*0.25",
+       "points": [
+        [
+         "$b*0.98 + 0",
+         "$hc"
+        ],
+        [
+         "$b*1.06 + 0",
+         "$hc - $b*0.08"
+        ],
+        [
+         "$b*1.12 + 0",
+         "$hc - $b*0.45"
+        ],
+        [
+         "$b*1.42 + 0",
+         "$yc - $ys + $b*0.25"
+        ],
+        [
+         "$b*1.46 + 0",
+         "$yc - $ys + $b*0.1"
+        ],
+        [
+         "$b*1.46 + 0",
+         "$yc - $ys - $b*0.35"
+        ],
+        [
+         "$b*1.34 + 0",
+         "$b*0.08"
+        ],
+        [
+         "$b*1.3 + 0",
+         0
+        ],
+        [
+         "-($b*1.3 + 0)",
+         0
+        ],
+        [
+         "-($b*1.34 + 0)",
+         "$b*0.08"
+        ],
+        [
+         "-($b*1.46 + 0)",
+         "$yc - $ys - $b*0.35"
+        ],
+        [
+         "-($b*1.46 + 0)",
+         "$yc - $ys + $b*0.1"
+        ],
+        [
+         "-($b*1.42 + 0)",
+         "$yc - $ys + $b*0.25"
+        ],
+        [
+         "-($b*1.12 + 0)",
+         "$hc - $b*0.45"
+        ],
+        [
+         "-($b*1.06 + 0)",
+         "$hc - $b*0.08"
+        ],
+        [
+         "-($b*0.98 + 0)",
+         "$hc"
+        ]
+       ]
+      },
+      {
+       "z": "$len/2 + $b*0.25",
+       "points": [
+        [
+         "$b*0.98 + 0",
+         "$hc"
+        ],
+        [
+         "$b*1.06 + 0",
+         "$hc - $b*0.08"
+        ],
+        [
+         "$b*1.12 + 0",
+         "$hc - $b*0.45"
+        ],
+        [
+         "$b*1.42 + 0",
+         "$yc - $ys + $b*0.25"
+        ],
+        [
+         "$b*1.46 + 0",
+         "$yc - $ys + $b*0.1"
+        ],
+        [
+         "$b*1.46 + 0",
+         "$yc - $ys - $b*0.35"
+        ],
+        [
+         "$b*1.34 + 0",
+         "$b*0.08"
+        ],
+        [
+         "$b*1.3 + 0",
+         0
+        ],
+        [
+         "-($b*1.3 + 0)",
+         0
+        ],
+        [
+         "-($b*1.34 + 0)",
+         "$b*0.08"
+        ],
+        [
+         "-($b*1.46 + 0)",
+         "$yc - $ys - $b*0.35"
+        ],
+        [
+         "-($b*1.46 + 0)",
+         "$yc - $ys + $b*0.1"
+        ],
+        [
+         "-($b*1.42 + 0)",
+         "$yc - $ys + $b*0.25"
+        ],
+        [
+         "-($b*1.12 + 0)",
+         "$hc - $b*0.45"
+        ],
+        [
+         "-($b*1.06 + 0)",
+         "$hc - $b*0.08"
+        ],
+        [
+         "-($b*0.98 + 0)",
+         "$hc"
+        ]
+       ]
+      }
+     ],
+     "children": [
+      {
+       "name": "Rib_{i}",
+       "shape": "loft",
+       "at": [
+        0,
+        0,
+        "$z0 + $p/2 - $i*$p"
+       ],
+       "repeat": {
+        "count": "$cylinders + 1",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       },
+       "sections": [
+        {
+         "z": "-$b*0.045",
+         "points": [
+          [
+           "$b*0.98 + $b*0.05",
+           "($hc) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.06 + $b*0.05",
+           "($hc - $b*0.08) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.12 + $b*0.05",
+           "($hc - $b*0.45) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.42 + $b*0.05",
+           "($yc - $ys + $b*0.25) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.46 + $b*0.05",
+           "($yc - $ys + $b*0.1) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.46 + $b*0.05",
+           "($yc - $ys - $b*0.35) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.34 + $b*0.05",
+           "($b*0.08) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.3 + $b*0.05",
+           "(0) + ($b*0.05)*0"
+          ],
+          [
+           "-($b*1.3 + $b*0.05)",
+           0
+          ],
+          [
+           "-($b*1.34 + $b*0.05)",
+           "$b*0.08"
+          ],
+          [
+           "-($b*1.46 + $b*0.05)",
+           "$yc - $ys - $b*0.35"
+          ],
+          [
+           "-($b*1.46 + $b*0.05)",
+           "$yc - $ys + $b*0.1"
+          ],
+          [
+           "-($b*1.42 + $b*0.05)",
+           "$yc - $ys + $b*0.25"
+          ],
+          [
+           "-($b*1.12 + $b*0.05)",
+           "$hc - $b*0.45"
+          ],
+          [
+           "-($b*1.06 + $b*0.05)",
+           "$hc - $b*0.08"
+          ],
+          [
+           "-($b*0.98 + $b*0.05)",
+           "$hc"
+          ]
+         ]
+        },
+        {
+         "z": "$b*0.045",
+         "points": [
+          [
+           "$b*0.98 + $b*0.05",
+           "($hc) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.06 + $b*0.05",
+           "($hc - $b*0.08) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.12 + $b*0.05",
+           "($hc - $b*0.45) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.42 + $b*0.05",
+           "($yc - $ys + $b*0.25) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.46 + $b*0.05",
+           "($yc - $ys + $b*0.1) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.46 + $b*0.05",
+           "($yc - $ys - $b*0.35) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.34 + $b*0.05",
+           "($b*0.08) + ($b*0.05)*0"
+          ],
+          [
+           "$b*1.3 + $b*0.05",
+           "(0) + ($b*0.05)*0"
+          ],
+          [
+           "-($b*1.3 + $b*0.05)",
+           0
+          ],
+          [
+           "-($b*1.34 + $b*0.05)",
+           "$b*0.08"
+          ],
+          [
+           "-($b*1.46 + $b*0.05)",
+           "$yc - $ys - $b*0.35"
+          ],
+          [
+           "-($b*1.46 + $b*0.05)",
+           "$yc - $ys + $b*0.1"
+          ],
+          [
+           "-($b*1.42 + $b*0.05)",
+           "$yc - $ys + $b*0.25"
+          ],
+          [
+           "-($b*1.12 + $b*0.05)",
+           "$hc - $b*0.45"
+          ],
+          [
+           "-($b*1.06 + $b*0.05)",
+           "$hc - $b*0.08"
+          ],
+          [
+           "-($b*0.98 + $b*0.05)",
+           "$hc"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Deck",
+       "shape": "box",
+       "size": [
+        "$b*2.06",
+        "$b*0.08",
+        "$len + $b*0.56"
+       ],
+       "at": [
+        0,
+        "$hc - $b*0.02",
+        0
+       ]
+      },
+      {
+       "name": "PanRail",
+       "shape": "box",
+       "size": [
+        "$b*2.72",
+        "$b*0.07",
+        "$len + $b*0.56"
+       ],
+       "at": [
+        0,
+        "$b*0.03",
+        0
+       ]
+      },
+      {
+       "name": "Foot_L",
+       "shape": "box",
+       "size": [
+        "$b*0.6",
+        "$b*0.16",
+        "$b*1.0"
+       ],
+       "at": [
+        "$b*1.66",
+        "$yc - $ys - $b*0.2",
+        "$len*0.36"
+       ],
+       "mirror": "Foot_R"
+      },
+      {
+       "name": "FootAft_L",
+       "shape": "box",
+       "size": [
+        "$b*0.6",
+        "$b*0.16",
+        "$b*1.0"
+       ],
+       "at": [
+        "$b*1.66",
+        "$yc - $ys - $b*0.2",
+        "-$len*0.36"
+       ],
+       "mirror": "FootAft_R"
+      },
+      {
+       "name": "FrontCover",
+       "shape": "box",
+       "size": [
+        "$b*2.5",
+        "$hc*0.86",
+        "$b*0.5"
+       ],
+       "bevel": "$b*0.12",
+       "at": [
+        0,
+        "$hc*0.46",
+        "$len/2 + $b*0.2"
+       ]
+      },
+      {
+       "name": "Breather",
+       "shape": "cylinder",
+       "material": "machined",
+       "radius": "$b*0.12",
+       "height": "$b*0.3",
+       "segments": 10,
+       "anchor": "base",
+       "at": [
+        "-$b*0.6",
+        "$hc",
+        "-$len/2 + $b*0.1"
+       ]
+      }
      ]
     },
     {
      "name": "Cylinder_{i}",
-     "shape": "cylinder",
-     "material": "engine_head",
-     "radius": "$bore * 0.62",
-     "height": 0.1,
-     "segments": 20,
+     "shape": "lathe",
+     "material": "cast_iron",
+     "segments": 16,
+     "profile": [
+      [
+       "$b*0.56",
+       "$b*0"
+      ],
+      [
+       "$b*0.74",
+       "$b*0"
+      ],
+      [
+       "$b*0.74",
+       "$b*0.07"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.09"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.16"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.175"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.22"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.235"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.315"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.33"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.375"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.39"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.47"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.485"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.53"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.545"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.625"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.64"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.685"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.7"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.78"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.795"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.84"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.855"
+      ],
+      [
+       "$b*0.6",
+       "$b*0.935"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.95"
+      ],
+      [
+       "$b*0.8",
+       "$b*0.995"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.01"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.09"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.105"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.15"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.165"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.245"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.26"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.305"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.32"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.4"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.415"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.46"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.475"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.555"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.57"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.615"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.63"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.71"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.725"
+      ],
+      [
+       "$b*0.8",
+       "$b*1.77"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.785"
+      ],
+      [
+       "$b*0.6",
+       "$b*1.9"
+      ],
+      [
+       "$b*0.56",
+       "$b*1.9"
+      ]
+     ],
      "at": [
       0,
-      "$yb + 0.06 + 0.05",
-      "$len / 2 - 0.05 - $pitch / 2"
+      "$yd",
+      "$z0 - $i*$p"
      ],
      "repeat": {
       "count": "$cylinders",
       "step": [
        0,
        0,
-       "-$pitch"
+       0
       ]
      }
+    },
+    {
+     "name": "Head_{i}",
+     "material": "cast_alu",
+     "at": [
+      0,
+      "$yh",
+      "$z0 - $i*$p"
+     ],
+     "repeat": {
+      "count": "$cylinders",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     },
+     "children": [
+      {
+       "name": "Casting",
+       "shape": "box",
+       "size": [
+        "$b*1.56",
+        "$b*0.78",
+        "$p*0.94"
+       ],
+       "bevel": "$b*0.05",
+       "anchor": "bottom"
+      },
+      {
+       "name": "Fin_{i}",
+       "shape": "box",
+       "size": [
+        "$b*1.7",
+        "$b*0.025",
+        "$p*0.98"
+       ],
+       "at": [
+        0,
+        "$b*0.14 + $i*$b*0.2",
+        0
+       ],
+       "repeat": {
+        "count": 3,
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "RockerCover",
+       "shape": "box",
+       "material": "enamel_red",
+       "size": [
+        "$b*1.28",
+        "$b*0.36",
+        "$p*0.82"
+       ],
+       "bevel": "$b*0.1",
+       "anchor": "bottom",
+       "at": [
+        0,
+        "$b*0.76",
+        0
+       ]
+      },
+      {
+       "name": "CoverBolt_L",
+       "shape": "cylinder",
+       "material": "machined",
+       "radius": "$b*0.05",
+       "height": "$b*0.06",
+       "segments": 8,
+       "anchor": "base",
+       "at": [
+        "$b*0.42",
+        "$b*1.1",
+        0
+       ],
+       "mirror": "CoverBolt_R"
+      },
+      {
+       "name": "Injector",
+       "shape": "cylinder",
+       "material": "machined",
+       "radius": "$b*0.07",
+       "height": "$b*0.32",
+       "segments": 10,
+       "rotate": [
+        0,
+        0,
+        -55
+       ],
+       "at": [
+        "$b*0.78",
+        "$b*0.5",
+        "$p*0.18"
+       ]
+      },
+      {
+       "name": "ExhaustPort",
+       "shape": "box",
+       "size": [
+        "$b*0.2",
+        "$b*0.32",
+        "$b*0.42"
+       ],
+       "at": [
+        "-$b*0.86",
+        "$b*0.36",
+        0
+       ]
+      },
+      {
+       "name": "IntakePort",
+       "shape": "box",
+       "size": [
+        "$b*0.2",
+        "$b*0.28",
+        "$b*0.36"
+       ],
+       "at": [
+        "$b*0.86",
+        "$b*0.4",
+        "-$p*0.14"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Pushrods_{i}",
+     "material": "machined",
+     "at": [
+      0,
+      0,
+      "$z0 - $i*$p"
+     ],
+     "repeat": {
+      "count": "$cylinders",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     },
+     "children": [
+      {
+       "name": "Tube_{i}",
+       "shape": "tube",
+       "radius": "$b*0.055",
+       "segments": 8,
+       "path": [
+        [
+         "-$wb/2 + $b*0.05",
+         "$yd - $b*0.05",
+         "-$p*0.12 + $i*$p*0.24"
+        ],
+        [
+         "-$b*0.9",
+         "$yh + $b*0.2",
+         "-$p*0.1 + $i*$p*0.2"
+        ]
+       ],
+       "repeat": {
+        "count": 2,
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Exhaust",
+     "material": "exhaust_steel",
+     "children": [
+      {
+       "name": "Runner_{i}",
+       "shape": "tube",
+       "radius": "$b*0.13",
+       "segments": 10,
+       "path": [
+        [
+         "-$b*0.92",
+         "$yh + $b*0.36",
+         "$z0 - $i*$p"
+        ],
+        [
+         "-$b*1.3",
+         "$yh + $b*0.3",
+         "$z0 - $i*$p"
+        ],
+        [
+         "-$b*1.55",
+         "$yh - $b*0.15",
+         "$z0 - $i*$p"
+        ],
+        [
+         "-$b*1.6",
+         "$yd + $b*0.35",
+         "$z0 - $i*$p - $p*0.15"
+        ]
+       ],
+       "repeat": {
+        "count": "$cylinders",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Collector",
+       "shape": "tube",
+       "radius": "$b*0.2",
+       "segments": 12,
+       "path": [
+        [
+         "-$b*1.6",
+         "$yd + $b*0.35",
+         "$z0 + $p*0.3"
+        ],
+        [
+         "-$b*1.6",
+         "$yd + $b*0.35",
+         "-$z0 - $p*0.6"
+        ],
+        [
+         "-$b*1.6",
+         "$yd - $b*0.2",
+         "-$len/2 - $b*0.9"
+        ],
+        [
+         "-$b*1.6",
+         "$yd - $b*1.1",
+         "-$len/2 - $b*1.2"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Intake",
+     "material": "cast_alu",
+     "children": [
+      {
+       "name": "Runner_{i}",
+       "shape": "tube",
+       "radius": "$b*0.11",
+       "segments": 10,
+       "path": [
+        [
+         "$b*0.92",
+         "$yh + $b*0.4",
+         "$z0 - $i*$p - $p*0.14"
+        ],
+        [
+         "$b*1.3",
+         "$yh + $b*0.45",
+         "$z0 - $i*$p - $p*0.14"
+        ],
+        [
+         "$b*1.5",
+         "$yh + $b*0.62",
+         "$z0 - $i*$p - $p*0.1"
+        ]
+       ],
+       "repeat": {
+        "count": "$cylinders",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Plenum",
+       "shape": "tube",
+       "radius": "$b*0.16",
+       "segments": 14,
+       "path": [
+        [
+         "$b*1.5",
+         "$yh + $b*0.64",
+         "$z0 + $p*0.3"
+        ],
+        [
+         "$b*1.5",
+         "$yh + $b*0.64",
+         "-$z0 - $p*0.45"
+        ]
+       ]
+      },
+      {
+       "name": "AirFilter",
+       "shape": "cylinder",
+       "material": "filter_blue",
+       "axis": "z",
+       "radius": "$b*0.46",
+       "height": "$b*0.75",
+       "segments": 20,
+       "bevel": "$b*0.06",
+       "at": [
+        "$b*1.5",
+        "$yh + $b*0.64",
+        "-$z0 - $p*0.45 - $b*0.36"
+       ]
+      },
+      {
+       "name": "InjectionPump",
+       "shape": "box",
+       "material": "cast_alu",
+       "size": [
+        "$b*0.55",
+        "$b*0.8",
+        "$len*0.5"
+       ],
+       "bevel": "$b*0.06",
+       "at": [
+        "$wb/2 + $b*0.3",
+        "$yd - $b*0.8",
+        "$len*0.1"
+       ]
+      },
+      {
+       "name": "FuelLine_{i}",
+       "shape": "tube",
+       "material": "machined",
+       "radius": "$b*0.028",
+       "segments": 6,
+       "path": [
+        [
+         "$wb/2 + $b*0.3",
+         "$yd - $b*0.38",
+         "$len*0.1 + $len*0.2 - $i*$len*0.4/max(1, $cylinders - 1)"
+        ],
+        [
+         "$wb/2 + $b*0.32",
+         "$yd + $b*0.6",
+         "$z0 - $i*$p + $p*0.18"
+        ],
+        [
+         "$b*0.95",
+         "$yh + $b*0.62",
+         "$z0 - $i*$p + $p*0.18"
+        ]
+       ],
+       "repeat": {
+        "count": "$cylinders",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "OilFilter",
+       "shape": "cylinder",
+       "material": "filter_blue",
+       "axis": "x",
+       "radius": "$b*0.38",
+       "height": "$b*0.9",
+       "segments": 18,
+       "bevel": "$b*0.05",
+       "at": [
+        "$wb/2 + $b*0.45",
+        "$yc - $b*0.2",
+        "-$len*0.25"
+       ]
+      },
+      {
+       "name": "Dipstick",
+       "shape": "tube",
+       "material": "dipstick_yellow",
+       "radius": "$b*0.03",
+       "segments": 6,
+       "path": [
+        [
+         "$wb/2 + $b*0.05",
+         "$yc + $b*0.6",
+         "-$len*0.42"
+        ],
+        [
+         "$wb/2 + $b*0.2",
+         "$yd + $b*0.6",
+         "-$len*0.44"
+        ],
+        [
+         "$wb/2 + $b*0.2",
+         "$yd + $b*0.8",
+         "-$len*0.44"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Alternator",
+     "material": "cast_alu",
+     "at": [
+      "$b*1.25",
+      "$yd + $b*0.2",
+      "$len/2 - $b*0.1"
+     ],
+     "children": [
+      {
+       "name": "Body",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*0.55",
+       "height": "$b*1.1",
+       "segments": 20,
+       "bevel": "$b*0.08"
+      },
+      {
+       "name": "Pulley",
+       "shape": "cylinder",
+       "material": "machined",
+       "axis": "z",
+       "radius": "$b*0.3",
+       "height": "$b*0.18",
+       "segments": 16,
+       "at": [
+        0,
+        0,
+        "$b*0.72"
+       ]
+      },
+      {
+       "name": "Bracket",
+       "shape": "box",
+       "size": [
+        "$b*0.9",
+        "$b*0.18",
+        "$b*0.12"
+       ],
+       "at": [
+        "-$b*0.6",
+        "-$b*0.4",
+        0
+       ],
+       "rotate": [
+        0,
+        0,
+        35
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Belt",
+     "shape": "tube",
+     "material": "rubber",
+     "radius": "$b*0.04",
+     "segments": 6,
+     "path": [
+      [
+       "$b*0.7*0",
+       "$yc + $b*0.7*1",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.2588",
+       "$yc + $b*0.7*0.9659",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.5",
+       "$yc + $b*0.7*0.866",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.7071",
+       "$yc + $b*0.7*0.7071",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.866",
+       "$yc + $b*0.7*0.5",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.9659",
+       "$yc + $b*0.7*0.2588",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-1",
+       "$yc + $b*0.7*0",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.9659",
+       "$yc + $b*0.7*-0.2588",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.866",
+       "$yc + $b*0.7*-0.5",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.7071",
+       "$yc + $b*0.7*-0.7071",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.5",
+       "$yc + $b*0.7*-0.866",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*-0.2588",
+       "$yc + $b*0.7*-0.9659",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*0",
+       "$yc + $b*0.7*-1",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0",
+       "$yd + $b*0.2 + $b*0.32*-1",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.2588",
+       "$yd + $b*0.2 + $b*0.32*-0.9659",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.5",
+       "$yd + $b*0.2 + $b*0.32*-0.866",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.7071",
+       "$yd + $b*0.2 + $b*0.32*-0.7071",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.866",
+       "$yd + $b*0.2 + $b*0.32*-0.5",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.9659",
+       "$yd + $b*0.2 + $b*0.32*-0.2588",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*1",
+       "$yd + $b*0.2 + $b*0.32*0",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.9659",
+       "$yd + $b*0.2 + $b*0.32*0.2588",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.866",
+       "$yd + $b*0.2 + $b*0.32*0.5",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.7071",
+       "$yd + $b*0.2 + $b*0.32*0.7071",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.5",
+       "$yd + $b*0.2 + $b*0.32*0.866",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0.2588",
+       "$yd + $b*0.2 + $b*0.32*0.9659",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*1.25 + $b*0.32*0",
+       "$yd + $b*0.2 + $b*0.32*1",
+       "$len/2 + $b*0.62"
+      ],
+      [
+       "$b*0.7*0",
+       "$yc + $b*0.7*1",
+       "$len/2 + $b*0.62"
+      ]
+     ]
+    },
+    {
+     "name": "Starter",
+     "material": "cast_iron",
+     "at": [
+      "-$wb/2 - $b*0.4",
+      "$yc - $b*0.15",
+      "-$len/2 + $b*0.3"
+     ],
+     "children": [
+      {
+       "name": "Body",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*0.38",
+       "height": "$b*1.3",
+       "segments": 16,
+       "bevel": "$b*0.05"
+      },
+      {
+       "name": "Solenoid",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*0.17",
+       "height": "$b*0.8",
+       "segments": 12,
+       "at": [
+        0,
+        "$b*0.42",
+        "-$b*0.1"
+       ]
+      }
+     ]
     },
     {
      "name": "Piston_{i}",
-     "shape": "cylinder",
-     "material": "metal",
-     "radius": "$bore * 0.45",
-     "height": 0.07,
-     "segments": 16,
+     "shape": "lathe",
+     "material": "piston_alu",
+     "segments": 12,
+     "profile": [
+      [
+       "$b*0",
+       "$b*0.45"
+      ],
+      [
+       "$b*0.47",
+       "$b*0.45"
+      ],
+      [
+       "$b*0.495",
+       "$b*0.42"
+      ],
+      [
+       "$b*0.495",
+       "$b*0.33"
+      ],
+      [
+       "$b*0.47",
+       "$b*0.32"
+      ],
+      [
+       "$b*0.47",
+       "$b*0.29"
+      ],
+      [
+       "$b*0.495",
+       "$b*0.28"
+      ],
+      [
+       "$b*0.495",
+       "$b*0.21"
+      ],
+      [
+       "$b*0.47",
+       "$b*0.2"
+      ],
+      [
+       "$b*0.47",
+       "$b*0.17"
+      ],
+      [
+       "$b*0.495",
+       "$b*0.16"
+      ],
+      [
+       "$b*0.495",
+       "$b*-0.45"
+      ],
+      [
+       "$b*0.43",
+       "$b*-0.45"
+      ]
+     ],
      "at": [
       0,
-      "$yb + 0.06 + 0.12",
-      "$len / 2 - 0.05 - $pitch / 2"
+      "$yc + (1 - 2*((floor(($i + 1)/2)) - 2*floor(floor(($i + 1)/2)/2)))*$st/2 + $st*1.75 + $b*0.1",
+      "$z0 - $i*$p"
      ],
      "repeat": {
       "count": "$cylinders",
       "step": [
        0,
        0,
-       "-$pitch"
+       0
       ]
-     }
-    },
-    {
-     "name": "Head",
-     "shape": "box",
-     "material": "engine_head",
-     "size": [
-      "$bore * 1.5",
-      0.08,
-      "$len - 0.04"
-     ],
-     "at": [
-      0,
-      "$yb + 0.06 + 0.2",
-      0
+     },
+     "children": [
+      {
+       "name": "Pin",
+       "shape": "cylinder",
+       "material": "machined",
+       "axis": "x",
+       "radius": "$b*0.13",
+       "height": "$b*0.92",
+       "segments": 10,
+       "at": [
+        0,
+        "-$b*0.12",
+        0
+       ]
+      }
      ]
     },
     {
      "name": "Crankshaft",
-     "shape": "cylinder",
-     "material": "metal",
-     "rotate": [
-      90,
-      0,
-      0
-     ],
-     "radius": "$bore * 0.18",
-     "height": "$len + 0.2",
-     "segments": 14,
+     "material": "machined",
      "at": [
       0,
-      "$yb * 0.4 + 0.06",
+      "$yc",
       0
+     ],
+     "children": [
+      {
+       "name": "Journal",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*0.3",
+       "height": "$len + $b*1.5",
+       "segments": 14
+      },
+      {
+       "name": "Throw_{i}",
+       "at": [
+        0,
+        0,
+        "$z0 - $i*$p"
+       ],
+       "repeat": {
+        "count": "$cylinders",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       },
+       "children": [
+        {
+         "name": "WebF",
+         "shape": "box",
+         "size": [
+          "$b*0.9",
+          "$st/2 + $b*0.7",
+          "$b*0.16"
+         ],
+         "at": [
+          0,
+          "(1 - 2*((floor(($i + 1)/2)) - 2*floor(floor(($i + 1)/2)/2)))*($st/4 - $b*0.05)",
+          "$p*0.22"
+         ]
+        },
+        {
+         "name": "WebA",
+         "shape": "box",
+         "size": [
+          "$b*0.9",
+          "$st/2 + $b*0.7",
+          "$b*0.16"
+         ],
+         "at": [
+          0,
+          "(1 - 2*((floor(($i + 1)/2)) - 2*floor(floor(($i + 1)/2)/2)))*($st/4 - $b*0.05)",
+          "-$p*0.22"
+         ]
+        },
+        {
+         "name": "Pin",
+         "shape": "cylinder",
+         "axis": "z",
+         "radius": "$b*0.27",
+         "height": "$p*0.44",
+         "segments": 8,
+         "at": [
+          0,
+          "(1 - 2*((floor(($i + 1)/2)) - 2*floor(floor(($i + 1)/2)/2)))*$st/2",
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Pulley",
+       "shape": "lathe",
+       "segments": 24,
+       "rotate": [
+        90,
+        0,
+        0
+       ],
+       "at": [
+        0,
+        0,
+        "$len/2 + $b*0.62"
+       ],
+       "profile": [
+        [
+         "$b*0.3",
+         "-$b*0.12"
+        ],
+        [
+         "$b*0.78",
+         "-$b*0.12"
+        ],
+        [
+         "$b*0.66",
+         0
+        ],
+        [
+         "$b*0.78",
+         "$b*0.12"
+        ],
+        [
+         "$b*0.3",
+         "$b*0.12"
+        ]
+       ]
+      },
+      {
+       "name": "Flange",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*0.55",
+       "height": "$b*0.12",
+       "segments": 16,
+       "at": [
+        0,
+        0,
+        "-$len/2 - $b*0.62"
+       ]
+      }
      ]
     },
     {
      "name": "Flywheel",
-     "shape": "cylinder",
-     "material": "metal",
-     "rotate": [
-      90,
-      0,
-      0
-     ],
-     "radius": "$bore * 1.3",
-     "height": 0.05,
-     "segments": 28,
+     "material": "machined",
      "at": [
       0,
-      "$yb * 0.4 + 0.06",
-      "-$len / 2 - 0.12"
+      "$yc",
+      "-$len/2 - $b*0.75"
+     ],
+     "children": [
+      {
+       "name": "Disc",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*1.62",
+       "height": "$b*0.3",
+       "segments": 40,
+       "bevel": "$b*0.03"
+      },
+      {
+       "name": "Face",
+       "shape": "cylinder",
+       "material": "cast_iron",
+       "axis": "z",
+       "radius": "$b*1.2",
+       "height": "$b*0.33",
+       "segments": 32
+      },
+      {
+       "name": "Tooth_{i}",
+       "shape": "box",
+       "size": [
+        "$b*0.07",
+        "$b*0.12",
+        "$b*0.18"
+       ],
+       "at": [
+        0,
+        "$b*1.66",
+        "-$b*0.04"
+       ],
+       "repeat": {
+        "count": 48,
+        "around": "z"
+       }
+      },
+      {
+       "name": "Bolt_{i}",
+       "shape": "cylinder",
+       "axis": "z",
+       "radius": "$b*0.07",
+       "height": "$b*0.38",
+       "segments": 6,
+       "at": [
+        0,
+        "$b*0.42",
+        0
+       ],
+       "repeat": {
+        "count": 6,
+        "around": "z"
+       }
+      }
      ]
     }
    ]

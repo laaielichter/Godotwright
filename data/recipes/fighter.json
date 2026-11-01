@@ -10589,14 +10589,115 @@
        ]
       },
       {
-       "name": "Aileron",
+       "name": "Missile",
+       "material": "missile_white",
+       "at": [
+        "$h * 0.8391 + $s * -1.8875",
+        0,
+        "$h + $s * 0.12"
+       ],
+       "rotate": [
+        0,
+        -90,
+        0
+       ],
+       "children": [
+        {
+         "name": "Rail",
+         "shape": "box",
+         "material": "fighter_grey",
+         "size": [
+          "$s * 0.08",
+          "$s * 0.1",
+          "$s * 1.1875"
+         ],
+         "at": [
+          "$s * -0.06",
+          0,
+          0
+         ]
+        },
+        {
+         "name": "Body",
+         "shape": "cylinder",
+         "axis": "z",
+         "radius": "$s * 0.065",
+         "height": "$s * 2.6",
+         "segments": 12,
+         "at": [
+          "$s * -0.06",
+          "$s * -0.12",
+          "$s * 0.1"
+         ]
+        },
+        {
+         "name": "Seeker",
+         "shape": "ellipsoid",
+         "material": "fighter_dark",
+         "radii": [
+          "$s * 0.065",
+          "$s * 0.065",
+          "$s * 0.16"
+         ],
+         "segments": 10,
+         "at": [
+          "$s * -0.06",
+          "$s * -0.12",
+          "$s * 1.4"
+         ]
+        },
+        {
+         "name": "Fins",
+         "shape": "box",
+         "material": "fighter_grey",
+         "size": [
+          "$s * 0.36",
+          "$s * 0.02",
+          "$s * 0.24"
+         ],
+         "at": [
+          "$s * -0.06",
+          "$s * -0.12",
+          "$s * -1.1"
+         ]
+        },
+        {
+         "name": "Fins2",
+         "shape": "box",
+         "material": "fighter_grey",
+         "size": [
+          "$s * 0.02",
+          "$s * 0.36",
+          "$s * 0.24"
+         ],
+         "at": [
+          "$s * -0.06",
+          "$s * -0.12",
+          "$s * -1.1"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Aileron_L",
+     "at": [
+      "$h * 0.44973 + $s",
+      "$h * -0.0157 + $s * 1.86",
+      "$h * -0.37759 + $s * -1.1257"
+     ],
+     "rotate": [
+      0,
+      90,
+      -2
+     ],
+     "mirror": "Aileron_R",
+     "children": [
+      {
+       "name": "Flap",
        "shape": "loft",
        "material": "fighter_grey",
-       "at": [
-        "$h * 0.37759 + $s * 0.0257",
-        0,
-        "$h * 0.45"
-       ],
        "sections": [
         {
          "z": "$h * 0.009",
@@ -10702,96 +10803,6 @@
            "$h * 0.37004 + $s * -0.82785",
            "$s * -0.00087"
           ]
-         ]
-        }
-       ]
-      },
-      {
-       "name": "Missile",
-       "material": "missile_white",
-       "at": [
-        "$h * 0.8391 + $s * -1.8875",
-        0,
-        "$h + $s * 0.12"
-       ],
-       "rotate": [
-        0,
-        -90,
-        0
-       ],
-       "children": [
-        {
-         "name": "Rail",
-         "shape": "box",
-         "material": "fighter_grey",
-         "size": [
-          "$s * 0.08",
-          "$s * 0.1",
-          "$s * 1.1875"
-         ],
-         "at": [
-          "$s * -0.06",
-          0,
-          0
-         ]
-        },
-        {
-         "name": "Body",
-         "shape": "cylinder",
-         "axis": "z",
-         "radius": "$s * 0.065",
-         "height": "$s * 2.6",
-         "segments": 12,
-         "at": [
-          "$s * -0.06",
-          "$s * -0.12",
-          "$s * 0.1"
-         ]
-        },
-        {
-         "name": "Seeker",
-         "shape": "ellipsoid",
-         "material": "fighter_dark",
-         "radii": [
-          "$s * 0.065",
-          "$s * 0.065",
-          "$s * 0.16"
-         ],
-         "segments": 10,
-         "at": [
-          "$s * -0.06",
-          "$s * -0.12",
-          "$s * 1.4"
-         ]
-        },
-        {
-         "name": "Fins",
-         "shape": "box",
-         "material": "fighter_grey",
-         "size": [
-          "$s * 0.36",
-          "$s * 0.02",
-          "$s * 0.24"
-         ],
-         "at": [
-          "$s * -0.06",
-          "$s * -0.12",
-          "$s * -1.1"
-         ]
-        },
-        {
-         "name": "Fins2",
-         "shape": "box",
-         "material": "fighter_grey",
-         "size": [
-          "$s * 0.02",
-          "$s * 0.36",
-          "$s * 0.24"
-         ],
-         "at": [
-          "$s * -0.06",
-          "$s * -0.12",
-          "$s * -1.1"
          ]
         }
        ]
