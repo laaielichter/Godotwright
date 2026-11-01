@@ -12,6 +12,9 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   for Cursor and VS Code and setups for Codex, Windsurf and Zed on the new
   [install page](https://laaielichter.github.io/Godotwright/install.html).
 - `godotwright mcp` reads the default project from `GODOTWRIGHT_PROJECT` when `--project` is not given.
+- **Site and README:** the site lists all 22 MCP tools with a CLI example each; Lighthouse accessibility is 100 on every
+  page (darker green and amber in the light theme for contrast); the Godot 3 to 4 page has share previews and structured
+  data; the README starts with the quickstart and the one-line Claude Code install.
 - **Security:** CodeQL scans the code and the workflows on every change and weekly; Dependabot proposes npm and
   GitHub Actions updates weekly; every action in the workflows and in the receipt action is pinned to a commit, and
   checkouts no longer keep git credentials. `SECURITY.md` says how releases are made and checked.
