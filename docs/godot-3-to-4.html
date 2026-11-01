@@ -8,6 +8,13 @@
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/godot-3-to-4.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Port Godot 3 projects to Godot 4">
+<meta property="og:description" content="The GDScript syntax changes, renamed classes and moved APIs from Godot 3 to Godot 4.7, and a tool that rewrites the mechanical part and reviews the rest.">
+<meta property="og:url" content="https://laaielichter.github.io/Godotwright/godot-3-to-4.html">
+<meta property="og:image" content="https://laaielichter.github.io/Godotwright/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Port Godot 3 projects to Godot 4","description":"How to port Godot 3 GDScript to Godot 4.7: the syntax changes, renamed classes and moved APIs, and a review that finds what is left.","url":"https://laaielichter.github.io/Godotwright/godot-3-to-4.html","image":"https://laaielichter.github.io/Godotwright/og.png","about":[{"@type":"SoftwareApplication","name":"Godot Engine"},{"@type":"SoftwareApplication","name":"Godotwright","url":"https://laaielichter.github.io/Godotwright/"}],"proficiencyLevel":"Beginner","inLanguage":"en"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap"><style>
 /* Layout: a single column set like Godot's own editor docks: a top bar, panels with tab headers, the Output panel as the hero. */
 :root {
@@ -36,14 +43,14 @@
   :root:not([data-theme="dark"]) {
     --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
     --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
-    --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+    --n2d: #4560c4; --n3d: #c4403f; --nui: #1f7330; --nres: #7a5400;
     color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
   --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
-  --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+  --n2d: #4560c4; --n3d: #c4403f; --nui: #1f7330; --nres: #7a5400;
   color-scheme: light;
 }
 
@@ -125,7 +132,7 @@ section > .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5
 /* Before / after */
 .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
 .code { margin: 0; font: .85rem/1.65 var(--mono); white-space: pre; }
-.code .ln { color: var(--muted); opacity: .6; user-select: none; display: inline-block; width: 2.2ch; }
+.code .ln { color: var(--muted); user-select: none; display: inline-block; width: 2.2ch; }
 .code .bad { background: color-mix(in srgb, var(--n3d) 16%, transparent); display: inline-block; min-width: 100%; }
 .find { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font: .84rem/1.5 var(--mono); }
 .find li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; }
