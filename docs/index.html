@@ -154,6 +154,7 @@ p { margin: 0; }
 .dock .body { padding: 1rem; overflow-x: auto; }
 .demo .body { padding: 0; background: #1d2229; }
 .demo img { display: block; width: 100%; min-width: 760px; }
+.demo video { display: block; width: 100%; height: auto; }
 .caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
 
 section { padding-block: 3rem; border-top: 1px solid var(--line); }
@@ -250,10 +251,10 @@ footer a { color: var(--muted); }
     <div class="dock demo">
       <div class="tabs" aria-hidden="true"><span class="tab on">Output</span><span class="tab">Debugger</span><span class="tab">Audio</span><span class="tab">Animation</span></div>
       <div class="body">
-        <img src="demo.svg" width="1180" height="462" alt="Terminal: godotwright review scores a Godot project 50 out of 100 and lists errors such as Cannot extend KinematicBody2D, export var is @export var in Godot 4, and a signal connection to a missing signal.">
+        <video src="demo.mp4" poster="demo-poster.jpg" width="1920" height="1080" autoplay muted loop playsinline controls aria-label="Demo: godotwright review gives a Godot 3 player script 74 out of 100, godotwright migrate rewrites the Godot 3 parts, and after the last fix by hand the review gives 100 out of 100."></video>
       </div>
     </div>
-    <p class="caption">Real output of <code>godotwright review</code> on <code>test/fixtures/messy</code>, a sample project with a Godot 3 script left in. Long lines trimmed.</p>
+    <p class="caption">Real output of godotwright 0.1.0: <code>review</code> scores a Godot 3 script 74/100, <code>migrate</code> rewrites the mechanical parts, and after one fix by hand <code>review</code> gives 100/100.</p>
   </div>
 
   <section id="install">
