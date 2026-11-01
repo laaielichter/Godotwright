@@ -2,7 +2,7 @@
  "version": 1,
  "name": "street-lamp",
  "archetype": "infrastructure.street-lamp",
- "description": "A street lamp: a tapering steel pole on a base plate, an arm that reaches out towards +Z over the road, a housing and an emissive lamp underneath it.",
+ "description": "A street lamp: a conical galvanised steel pole on a flanged base with a bolt cover and a service door, a curved outreach arm that bends out towards +Z over the road and rises slightly, and a flat LED luminaire on its end with a glowing drop lens underneath and a photocell on top.",
  "params": [
   {
    "name": "height",
@@ -24,26 +24,54 @@
  "materials": {
   "lamp_steel": {
    "color": [
-    0.3,
-    0.32,
-    0.34
+    0.5,
+    0.52,
+    0.53
    ],
-   "metallic": 0.8,
+   "metallic": 0.85,
+   "roughness": 0.4
+  },
+  "housing": {
+   "color": [
+    0.06,
+    0.065,
+    0.07
+   ],
+   "metallic": 0.35,
    "roughness": 0.45
+  },
+  "base_dark": {
+   "color": [
+    0.1,
+    0.105,
+    0.11
+   ],
+   "metallic": 0.5,
+   "roughness": 0.55
   },
   "lamp_glow": {
    "color": [
     1,
-    0.95,
-    0.75
+    0.96,
+    0.85
    ],
    "metallic": 0,
-   "roughness": 0.4,
+   "roughness": 0.25,
    "emissive": [
     1,
-    0.85,
-    0.5
+    0.9,
+    0.7
    ]
+  },
+  "concrete_base": {
+   "color": [
+    0.32,
+    0.31,
+    0.29
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "texture": "concrete"
   }
  },
  "nodes": [
@@ -52,77 +80,323 @@
    "material": "lamp_steel",
    "vars": {
     "H": "$height",
-    "A": "$armLength"
+    "A": "$armLength",
+    "r": "min(0.35, ($armLength - 0.3) * 0.8)",
+    "top": "$height - min(0.35, ($armLength - 0.3) * 0.8) - 0.12",
+    "tp": "0.038 / ($height - min(0.35, ($armLength - 0.3) * 0.8) - 0.48)",
+    "ez": "$armLength - 0.27",
+    "ey": "$height + ($armLength - 0.3 - min(0.35, ($armLength - 0.3) * 0.8)) * 0.06",
+    "ly": "$height + ($armLength - 0.3 - min(0.35, ($armLength - 0.3) * 0.8)) * 0.06 - 0.06"
    },
    "children": [
     {
-     "name": "Base",
+     "name": "Footing",
      "shape": "cylinder",
-     "radius": 0.22,
-     "height": 0.12,
-     "segments": 16,
+     "material": "concrete_base",
+     "radius": 0.3,
+     "height": 0.04,
+     "segments": 24,
+     "bevel": 0.012,
      "at": [
       0,
-      0.06,
+      0.02,
       0
+     ]
+    },
+    {
+     "name": "Base",
+     "shape": "lathe",
+     "segments": 24,
+     "profile": [
+      [
+       0,
+       0.04
+      ],
+      [
+       0.17,
+       0.04
+      ],
+      [
+       0.17,
+       0.058
+      ],
+      [
+       0.138,
+       0.064
+      ],
+      [
+       0.128,
+       0.09
+      ],
+      [
+       0.104,
+       0.33
+      ],
+      [
+       0.098,
+       0.36
+      ],
+      [
+       0.088,
+       0.372
+      ],
+      [
+       0,
+       0.372
+      ]
      ]
     },
     {
      "name": "Pole",
      "shape": "lathe",
-     "segments": 16,
+     "segments": 24,
      "profile": [
       [
-       0.12,
-       0.12
+       0,
+       0.36
       ],
       [
-       0.06,
-       "$H"
+       0.082,
+       0.36
+      ],
+      [
+       0.044,
+       "$top"
+      ],
+      [
+       0.048,
+       "$top + 0.004"
+      ],
+      [
+       0.048,
+       "$top + 0.05"
+      ],
+      [
+       0.032,
+       "$top + 0.058"
+      ],
+      [
+       0,
+       "$top + 0.058"
       ]
+     ],
+     "children": [
+      {
+       "name": "Door",
+       "shape": "box",
+       "material": "lamp_steel",
+       "size": [
+        0.012,
+        0.32,
+        0.075
+       ],
+       "bevel": 0.004,
+       "at": [
+        "0.082 - 0.46 * $tp + 0.0",
+        0.82,
+        0
+       ],
+       "rotate": [
+        0,
+        0,
+        "deg(atan($tp))"
+       ]
+      },
+      {
+       "name": "Plate",
+       "shape": "box",
+       "material": "base_dark",
+       "size": [
+        0.006,
+        0.12,
+        0.05
+       ],
+       "at": [
+        "0.082 - 1.26 * $tp",
+        1.62,
+        0
+       ],
+       "rotate": [
+        0,
+        0,
+        "deg(atan($tp))"
+       ]
+      }
      ]
     },
     {
      "name": "Arm",
-     "shape": "box",
-     "size": [
-      0.08,
-      0.08,
-      "$A"
-     ],
-     "at": [
-      0,
-      "$H - 0.04",
-      "$A / 2"
+     "shape": "tube",
+     "radius": 0.03,
+     "segments": 14,
+     "path": [
+      [
+       0,
+       "$top - 0.1",
+       0
+      ],
+      [
+       0,
+       "$H - $r",
+       0
+      ],
+      [
+       0,
+       "$H - $r * 0.6",
+       "$r * 0.083"
+      ],
+      [
+       0,
+       "$H - $r * 0.29",
+       "$r * 0.29"
+      ],
+      [
+       0,
+       "$H - $r * 0.083",
+       "$r * 0.6"
+      ],
+      [
+       0,
+       "$H",
+       "$r"
+      ],
+      [
+       0,
+       "$ey",
+       "$ez"
+      ]
      ]
     },
     {
-     "name": "Housing",
-     "shape": "box",
-     "size": [
-      0.35,
-      0.1,
-      0.8
+     "name": "Luminaire",
+     "shape": "loft",
+     "material": "housing",
+     "sections": [
+      {
+       "z": "$A - 0.33",
+       "superellipse": {
+        "width": 0.11,
+        "height": 0.075,
+        "n": 2.6,
+        "count": 28,
+        "cy": "$ly + 0.01 + 0.0375"
+       }
+      },
+      {
+       "z": "$A - 0.29",
+       "superellipse": {
+        "width": 0.2,
+        "height": 0.1,
+        "n": 3.2,
+        "count": 28,
+        "cy": "$ly + 0.01 + 0.05"
+       }
+      },
+      {
+       "z": "$A - 0.2",
+       "superellipse": {
+        "width": 0.3,
+        "height": 0.115,
+        "n": 3.2,
+        "count": 28,
+        "cy": "$ly + 0.01 + 0.0575"
+       }
+      },
+      {
+       "z": "$A + 0.08",
+       "superellipse": {
+        "width": 0.32,
+        "height": 0.11,
+        "n": 3.2,
+        "count": 28,
+        "cy": "$ly + 0.01 + 0.055"
+       }
+      },
+      {
+       "z": "$A + 0.27",
+       "superellipse": {
+        "width": 0.28,
+        "height": 0.085,
+        "n": 3.2,
+        "count": 28,
+        "cy": "$ly + 0.01 + 0.0425"
+       }
+      },
+      {
+       "z": "$A + 0.35",
+       "superellipse": {
+        "width": 0.17,
+        "height": 0.05,
+        "n": 2.6,
+        "count": 28,
+        "cy": "$ly + 0.01 + 0.025"
+       }
+      }
      ],
-     "at": [
-      0,
-      "$H + 0.05",
-      "$A"
+     "children": [
+      {
+       "name": "Photocell",
+       "shape": "ellipsoid",
+       "material": "base_dark",
+       "radii": [
+        0.032,
+        0.026,
+        0.032
+       ],
+       "segments": 12,
+       "at": [
+        0,
+        "$ly + 0.13",
+        "$A - 0.18"
+       ]
+      }
      ]
     },
     {
      "name": "Lamp",
-     "shape": "box",
+     "shape": "loft",
      "material": "lamp_glow",
-     "size": [
-      0.28,
-      0.06,
-      0.65
-     ],
-     "at": [
-      0,
-      "$H - 0.03",
-      "$A"
+     "sections": [
+      {
+       "z": "$A - 0.21",
+       "superellipse": {
+        "width": 0.16,
+        "height": 0.03,
+        "n": 2.4,
+        "count": 24,
+        "cy": "$ly + 0.012"
+       }
+      },
+      {
+       "z": "$A - 0.17",
+       "superellipse": {
+        "width": 0.23,
+        "height": 0.05,
+        "n": 2.4,
+        "count": 24,
+        "cy": "$ly + 0.012"
+       }
+      },
+      {
+       "z": "$A + 0.17",
+       "superellipse": {
+        "width": 0.23,
+        "height": 0.05,
+        "n": 2.4,
+        "count": 24,
+        "cy": "$ly + 0.012"
+       }
+      },
+      {
+       "z": "$A + 0.23",
+       "superellipse": {
+        "width": 0.15,
+        "height": 0.03,
+        "n": 2.4,
+        "count": 24,
+        "cy": "$ly + 0.012"
+       }
+      }
      ]
     }
    ]

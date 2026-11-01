@@ -2,7 +2,7 @@
  "version": 1,
  "name": "bridge",
  "archetype": "infrastructure.bridge",
- "description": "A girder road bridge: a deck with a railing on each side, a row of piers under it and an abutment at each end. The deck is the walking and driving surface and the piers stand on the ground.",
+ "description": "A girder road bridge: a concrete deck slab on precast I-girders with an asphalt carriageway (centre and edge lines), a raised footway and an edge beam with a steel railing on each side, a row of piers under it (rounded columns on a pile cap with a hammerhead crosshead and bearings under every girder, and a diaphragm between the girders) and a stone-faced abutment with a backwall at each end. The deck is the walking and driving surface and the piers stand on the ground.",
  "params": [
   {
    "name": "length",
@@ -40,12 +40,99 @@
  "materials": {
   "bridge_concrete": {
    "color": [
-    0.62,
-    0.62,
-    0.6
+    0.38,
+    0.37,
+    0.355
    ],
-   "metallic": 0.05,
-   "roughness": 0.8
+   "metallic": 0,
+   "roughness": 0.85,
+   "texture": "concrete"
+  },
+  "girder_concrete": {
+   "color": [
+    0.44,
+    0.43,
+    0.41
+   ],
+   "metallic": 0,
+   "roughness": 0.82,
+   "texture": "concrete"
+  },
+  "edge_concrete": {
+   "color": [
+    0.44,
+    0.435,
+    0.415
+   ],
+   "metallic": 0,
+   "roughness": 0.8,
+   "texture": "concrete"
+  },
+  "abutment_stone": {
+   "color": [
+    0.36,
+    0.34,
+    0.31
+   ],
+   "metallic": 0,
+   "roughness": 0.88,
+   "texture": "stone"
+  },
+  "footway": {
+   "color": [
+    0.3,
+    0.295,
+    0.28
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "texture": "concrete"
+  },
+  "deck_asphalt": {
+   "color": [
+    0.055,
+    0.055,
+    0.06
+   ],
+   "metallic": 0,
+   "roughness": 0.9,
+   "texture": "asphalt"
+  },
+  "line_white": {
+   "color": [
+    0.82,
+    0.82,
+    0.78
+   ],
+   "metallic": 0,
+   "roughness": 0.6
+  },
+  "railing": {
+   "color": [
+    0.5,
+    0.52,
+    0.53
+   ],
+   "metallic": 0.85,
+   "roughness": 0.42
+  },
+  "bearing": {
+   "color": [
+    0.04,
+    0.04,
+    0.045
+   ],
+   "metallic": 0.2,
+   "roughness": 0.7
+  },
+  "joint_steel": {
+   "color": [
+    0.25,
+    0.26,
+    0.27
+   ],
+   "metallic": 0.9,
+   "roughness": 0.45
   }
  },
  "nodes": [
@@ -54,65 +141,774 @@
    "material": "bridge_concrete",
    "vars": {
     "L2": "$length / 2",
-    "gird": 1.2
+    "W2": "$width / 2",
+    "H": "$height",
+    "e": 0.45,
+    "fw": "min(1.8, max(0.6, ($width - 0.9) * 0.18))",
+    "cw": "$width - 0.9 - 2 * min(1.8, max(0.6, ($width - 0.9) * 0.18))",
+    "span": "$length / ($piers + 1)",
+    "ys": "$height - 0.35",
+    "gd": "min(clamp($length / ($piers + 1) / 18, 0.7, 2.4), ($height - 0.35) * 0.45)",
+    "yg": "$ys - $gd",
+    "yc": "$ys - $gd - 0.08",
+    "ch": "clamp(($ys - $gd - 0.43) * 0.3, 0.4, 1.5)",
+    "ng": "max(2, round($width / 2.4))",
+    "gs": "($width - 1.8) / (max(2, round($width / 2.4)) - 1)",
+    "tw": "$width - 1.2",
+    "cwx": "clamp(0.8 + $height * 0.04, 0.9, 2)",
+    "nc": "max(1, round($width / 9))",
+    "cs": "($width - 2.4 - clamp(0.8 + $height * 0.04, 0.9, 2)) / max(1, max(1, round($width / 9)) - 1)",
+    "bw": "min($width - 1.6, clamp(0.8 + $height * 0.04, 0.9, 2) + 0.6 + (max(1, round($width / 9)) - 1) * $cs)"
    },
    "children": [
     {
      "name": "Deck",
      "shape": "box",
      "size": [
-      "$width",
-      "$gird",
+      "$width - 0.2",
+      0.25,
       "$length"
      ],
      "at": [
       0,
-      "$height - $gird / 2",
+      "$H - 0.225",
       0
      ]
     },
     {
      "name": "Surface",
      "shape": "box",
-     "material": "asphalt",
+     "material": "deck_asphalt",
      "size": [
-      "$width - 1.4",
+      "$cw",
       0.1,
       "$length"
      ],
      "at": [
       0,
-      "$height + 0.05",
+      "$H - 0.05",
       0
      ]
     },
     {
-     "name": "Railing_L",
+     "name": "Marking_{i}",
      "shape": "box",
-     "material": "metal",
+     "material": "line_white",
+     "vars": {
+      "p": "$length / max(1, round($length / 9))"
+     },
      "size": [
       0.12,
-      1.0,
-      "$length"
-     ],
-     "at": [
-      "$width / 2 - 0.1",
-      "$height + 0.5",
-      0
-     ],
-     "mirror": "Railing_R"
-    },
-    {
-     "name": "Pier_{i}",
-     "shape": "box",
-     "size": [
-      "$width * 0.4",
-      "$height - $gird",
-      1.4
+      0.006,
+      "$p / 3"
      ],
      "at": [
       0,
-      "($height - $gird) / 2",
+      "$H + 0.002",
+      "-$L2 + $p * ($i + 0.5)"
+     ],
+     "repeat": {
+      "count": "max(1, round($length / 9))",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    {
+     "name": "EdgeLine_L",
+     "shape": "box",
+     "material": "line_white",
+     "size": [
+      0.15,
+      0.006,
+      "$length"
+     ],
+     "at": [
+      "$cw / 2 - 0.35",
+      "$H + 0.002",
+      0
+     ],
+     "mirror": "EdgeLine_R"
+    },
+    {
+     "name": "Footway_L",
+     "shape": "box",
+     "material": "footway",
+     "size": [
+      "$fw - 0.18",
+      0.28,
+      "$length"
+     ],
+     "at": [
+      "$W2 - $e - ($fw - 0.18) / 2",
+      "$H + 0.04",
+      0
+     ],
+     "mirror": "Footway_R"
+    },
+    {
+     "name": "Kerb_L",
+     "shape": "box",
+     "material": "edge_concrete",
+     "size": [
+      0.18,
+      0.3,
+      "$length"
+     ],
+     "bevel": 0.02,
+     "at": [
+      "$cw / 2 + 0.09",
+      "$H + 0.04",
+      0
+     ],
+     "mirror": "Kerb_R"
+    },
+    {
+     "name": "EdgeBeam_L",
+     "shape": "loft",
+     "material": "edge_concrete",
+     "sections": [
+      {
+       "z": "-$L2",
+       "points": [
+        [
+         "$W2 - $e",
+         "$ys - 0.32 + 0.015"
+        ],
+        [
+         "$W2 - $e",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - $e + 0.015",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - 0.03 - 0.015",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - 0.03",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - 0.03 + 0.0077",
+         "$ys - 0.32 + 0.0129"
+        ],
+        [
+         "$W2 - 0.0077",
+         "$ys - 0.27 - 0.0129"
+        ],
+        [
+         "$W2",
+         "$ys - 0.27"
+        ],
+        [
+         "$W2",
+         "$ys - 0.27 + 0.015"
+        ],
+        [
+         "$W2",
+         "$H + 0.31 - 0.015"
+        ],
+        [
+         "$W2",
+         "$H + 0.31"
+        ],
+        [
+         "$W2 - 0.0094",
+         "$H + 0.31 + 0.0117"
+        ],
+        [
+         "$W2 - 0.04",
+         "$H + 0.36"
+        ],
+        [
+         "$W2 - $e + 0.04",
+         "$H + 0.36"
+        ],
+        [
+         "$W2 - $e + 0.0106",
+         "$H + 0.32 + 0.0106"
+        ],
+        [
+         "$W2 - $e",
+         "$H + 0.32"
+        ],
+        [
+         "$W2 - $e",
+         "$H + 0.32 - 0.015"
+        ]
+       ]
+      },
+      {
+       "z": "$L2",
+       "points": [
+        [
+         "$W2 - $e",
+         "$ys - 0.32 + 0.015"
+        ],
+        [
+         "$W2 - $e",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - $e + 0.015",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - 0.03 - 0.015",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - 0.03",
+         "$ys - 0.32"
+        ],
+        [
+         "$W2 - 0.03 + 0.0077",
+         "$ys - 0.32 + 0.0129"
+        ],
+        [
+         "$W2 - 0.0077",
+         "$ys - 0.27 - 0.0129"
+        ],
+        [
+         "$W2",
+         "$ys - 0.27"
+        ],
+        [
+         "$W2",
+         "$ys - 0.27 + 0.015"
+        ],
+        [
+         "$W2",
+         "$H + 0.31 - 0.015"
+        ],
+        [
+         "$W2",
+         "$H + 0.31"
+        ],
+        [
+         "$W2 - 0.0094",
+         "$H + 0.31 + 0.0117"
+        ],
+        [
+         "$W2 - 0.04",
+         "$H + 0.36"
+        ],
+        [
+         "$W2 - $e + 0.04",
+         "$H + 0.36"
+        ],
+        [
+         "$W2 - $e + 0.0106",
+         "$H + 0.32 + 0.0106"
+        ],
+        [
+         "$W2 - $e",
+         "$H + 0.32"
+        ],
+        [
+         "$W2 - $e",
+         "$H + 0.32 - 0.015"
+        ]
+       ]
+      }
+     ],
+     "mirror": "EdgeBeam_R"
+    },
+    {
+     "name": "Railing_L",
+     "material": "railing",
+     "vars": {
+      "n": "max(2, round($length / 2) + 1)",
+      "rx": "$W2 - $e / 2"
+     },
+     "mirror": "Railing_R",
+     "children": [
+      {
+       "name": "Upright_{i}",
+       "shape": "box",
+       "size": [
+        0.05,
+        1.02,
+        0.09
+       ],
+       "at": [
+        "$rx",
+        "$H + 0.36 + 0.51",
+        "-$L2 + 0.2 + $i * ($length - 0.4) / ($n - 1)"
+       ],
+       "repeat": {
+        "count": "$n",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Handrail",
+       "shape": "tube",
+       "radius": 0.04,
+       "segments": 12,
+       "path": [
+        [
+         "$rx",
+         "$H + 1.4",
+         "-$L2"
+        ],
+        [
+         "$rx",
+         "$H + 1.4",
+         "$L2"
+        ]
+       ]
+      },
+      {
+       "name": "Bar_{i}",
+       "shape": "tube",
+       "radius": 0.016,
+       "segments": 8,
+       "path": [
+        [
+         "$rx",
+         "$H + 0.62 + $i * 0.3",
+         "-$L2"
+        ],
+        [
+         "$rx",
+         "$H + 0.62 + $i * 0.3",
+         "$L2"
+        ]
+       ],
+       "repeat": {
+        "count": 3,
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Girder_{i}",
+     "shape": "loft",
+     "material": "girder_concrete",
+     "at": [
+      "-($width - 1.8) / 2 + $i * $gs",
+      "$yg",
+      0
+     ],
+     "sections": [
+      {
+       "z": "-$L2 + 1.1",
+       "points": [
+        [
+         0.295,
+         0
+        ],
+        [
+         0.32,
+         0
+        ],
+        [
+         0.32,
+         0.025
+        ],
+        [
+         0.32,
+         0.135
+        ],
+        [
+         0.32,
+         0.16
+        ],
+        [
+         0.2992,
+         0.1739
+        ],
+        [
+         0.1308,
+         0.2861
+        ],
+        [
+         0.11,
+         0.3
+        ],
+        [
+         0.1094,
+         0.325
+        ],
+        [
+         0.1006,
+         "$gd - 0.2 - 0.025"
+        ],
+        [
+         0.1,
+         "$gd - 0.2"
+        ],
+        [
+         0.1244,
+         "$gd - 0.2 + 0.0056"
+        ],
+        [
+         0.4256,
+         "$gd - 0.12 - 0.0056"
+        ],
+        [
+         0.45,
+         "$gd - 0.12"
+        ],
+        [
+         0.45,
+         "$gd - 0.12 + 0.025"
+        ],
+        [
+         0.45,
+         "$gd - 0.025"
+        ],
+        [
+         0.45,
+         "$gd"
+        ],
+        [
+         0.425,
+         "$gd"
+        ],
+        [
+         -0.425,
+         "$gd"
+        ],
+        [
+         -0.45,
+         "$gd"
+        ],
+        [
+         -0.45,
+         "$gd - 0.025"
+        ],
+        [
+         -0.45,
+         "$gd - 0.12 + 0.025"
+        ],
+        [
+         -0.45,
+         "$gd - 0.12"
+        ],
+        [
+         -0.4256,
+         "$gd - 0.12 - 0.0056"
+        ],
+        [
+         -0.1244,
+         "$gd - 0.2 + 0.0056"
+        ],
+        [
+         -0.1,
+         "$gd - 0.2"
+        ],
+        [
+         -0.1006,
+         "$gd - 0.2 - 0.025"
+        ],
+        [
+         -0.1094,
+         0.325
+        ],
+        [
+         -0.11,
+         0.3
+        ],
+        [
+         -0.1308,
+         0.2861
+        ],
+        [
+         -0.2992,
+         0.1739
+        ],
+        [
+         -0.32,
+         0.16
+        ],
+        [
+         -0.32,
+         0.135
+        ],
+        [
+         -0.32,
+         0.025
+        ],
+        [
+         -0.32,
+         0
+        ],
+        [
+         -0.295,
+         0
+        ]
+       ]
+      },
+      {
+       "z": "$L2 - 1.1",
+       "points": [
+        [
+         0.295,
+         0
+        ],
+        [
+         0.32,
+         0
+        ],
+        [
+         0.32,
+         0.025
+        ],
+        [
+         0.32,
+         0.135
+        ],
+        [
+         0.32,
+         0.16
+        ],
+        [
+         0.2992,
+         0.1739
+        ],
+        [
+         0.1308,
+         0.2861
+        ],
+        [
+         0.11,
+         0.3
+        ],
+        [
+         0.1094,
+         0.325
+        ],
+        [
+         0.1006,
+         "$gd - 0.2 - 0.025"
+        ],
+        [
+         0.1,
+         "$gd - 0.2"
+        ],
+        [
+         0.1244,
+         "$gd - 0.2 + 0.0056"
+        ],
+        [
+         0.4256,
+         "$gd - 0.12 - 0.0056"
+        ],
+        [
+         0.45,
+         "$gd - 0.12"
+        ],
+        [
+         0.45,
+         "$gd - 0.12 + 0.025"
+        ],
+        [
+         0.45,
+         "$gd - 0.025"
+        ],
+        [
+         0.45,
+         "$gd"
+        ],
+        [
+         0.425,
+         "$gd"
+        ],
+        [
+         -0.425,
+         "$gd"
+        ],
+        [
+         -0.45,
+         "$gd"
+        ],
+        [
+         -0.45,
+         "$gd - 0.025"
+        ],
+        [
+         -0.45,
+         "$gd - 0.12 + 0.025"
+        ],
+        [
+         -0.45,
+         "$gd - 0.12"
+        ],
+        [
+         -0.4256,
+         "$gd - 0.12 - 0.0056"
+        ],
+        [
+         -0.1244,
+         "$gd - 0.2 + 0.0056"
+        ],
+        [
+         -0.1,
+         "$gd - 0.2"
+        ],
+        [
+         -0.1006,
+         "$gd - 0.2 - 0.025"
+        ],
+        [
+         -0.1094,
+         0.325
+        ],
+        [
+         -0.11,
+         0.3
+        ],
+        [
+         -0.1308,
+         0.2861
+        ],
+        [
+         -0.2992,
+         0.1739
+        ],
+        [
+         -0.32,
+         0.16
+        ],
+        [
+         -0.32,
+         0.135
+        ],
+        [
+         -0.32,
+         0.025
+        ],
+        [
+         -0.32,
+         0
+        ],
+        [
+         -0.295,
+         0
+        ]
+       ]
+      }
+     ],
+     "repeat": {
+      "count": "$ng",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    {
+     "name": "ExpansionJoint_F",
+     "shape": "box",
+     "material": "joint_steel",
+     "size": [
+      "$cw",
+      0.012,
+      0.08
+     ],
+     "at": [
+      0,
+      "$H + 0.002",
+      "$L2 - 1.1"
+     ]
+    },
+    {
+     "name": "ExpansionJoint_B",
+     "shape": "box",
+     "material": "joint_steel",
+     "size": [
+      "$cw",
+      0.012,
+      0.08
+     ],
+     "at": [
+      0,
+      "$H + 0.002",
+      "-$L2 + 1.1"
+     ]
+    },
+    {
+     "name": "Abutment_F",
+     "shape": "box",
+     "material": "abutment_stone",
+     "size": [
+      "$width",
+      "$yc",
+      3
+     ],
+     "bevel": 0.04,
+     "at": [
+      0,
+      "$yc / 2",
+      "$L2 - 1.5"
+     ]
+    },
+    {
+     "name": "Abutment_B",
+     "shape": "box",
+     "material": "abutment_stone",
+     "size": [
+      "$width",
+      "$yc",
+      3
+     ],
+     "bevel": 0.04,
+     "at": [
+      0,
+      "$yc / 2",
+      "-$L2 + 1.5"
+     ]
+    },
+    {
+     "name": "Backwall_F",
+     "shape": "box",
+     "size": [
+      "$width - 0.2",
+      "$ys - $yc + 0.02",
+      1
+     ],
+     "at": [
+      0,
+      "($ys + $yc) / 2",
+      "$L2 - 0.5"
+     ]
+    },
+    {
+     "name": "Backwall_B",
+     "shape": "box",
+     "size": [
+      "$width - 0.2",
+      "$ys - $yc + 0.02",
+      1
+     ],
+     "at": [
+      0,
+      "($ys + $yc) / 2",
+      "-$L2 + 0.5"
+     ]
+    },
+    {
+     "name": "Pier_{i}",
+     "at": [
+      0,
+      0,
       "-$L2 + ($i + 1) * $length / ($piers + 1)"
      ],
      "repeat": {
@@ -122,34 +918,204 @@
        0,
        0
       ]
-     }
-    },
-    {
-     "name": "Abutment_F",
-     "shape": "box",
-     "size": [
-      "$width",
-      "$height - $gird",
-      3
-     ],
-     "at": [
-      0,
-      "($height - $gird) / 2",
-      "$L2 - 1.5"
-     ]
-    },
-    {
-     "name": "Abutment_B",
-     "shape": "box",
-     "size": [
-      "$width",
-      "$height - $gird",
-      3
-     ],
-     "at": [
-      0,
-      "($height - $gird) / 2",
-      "-$L2 + 1.5"
+     },
+     "children": [
+      {
+       "name": "PileCap",
+       "shape": "box",
+       "size": [
+        "$bw + 1.4",
+        0.36,
+        2.8
+       ],
+       "bevel": 0.04,
+       "at": [
+        0,
+        0.18,
+        0
+       ]
+      },
+      {
+       "name": "Column_{i}",
+       "shape": "loft",
+       "rotate": [
+        -90,
+        0,
+        0
+       ],
+       "at": [
+        "($i - ($nc - 1) / 2) * $cs",
+        0.3,
+        0
+       ],
+       "sections": [
+        {
+         "z": 0,
+         "superellipse": {
+          "width": "$cwx",
+          "height": "$cwx * 0.68",
+          "n": 3.6,
+          "count": 28
+         }
+        },
+        {
+         "z": "$yc - $ch - 0.25",
+         "superellipse": {
+          "width": "$cwx",
+          "height": "$cwx * 0.68",
+          "n": 3.6,
+          "count": 28
+         }
+        }
+       ],
+       "repeat": {
+        "count": "$nc",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Crosshead",
+       "shape": "loft",
+       "at": [
+        0,
+        "$yc - $ch",
+        0
+       ],
+       "sections": [
+        {
+         "z": -0.9,
+         "points": [
+          [
+           "-$bw / 2 + 0.03",
+           0
+          ],
+          [
+           "$bw / 2 - 0.03",
+           0
+          ],
+          [
+           "$bw / 2",
+           0.02
+          ],
+          [
+           "$tw / 2",
+           "$ch - 0.5"
+          ],
+          [
+           "$tw / 2",
+           "$ch - 0.03"
+          ],
+          [
+           "$tw / 2 - 0.03",
+           "$ch"
+          ],
+          [
+           "-$tw / 2 + 0.03",
+           "$ch"
+          ],
+          [
+           "-$tw / 2",
+           "$ch - 0.03"
+          ],
+          [
+           "-$tw / 2",
+           "$ch - 0.5"
+          ],
+          [
+           "-$bw / 2",
+           0.02
+          ]
+         ]
+        },
+        {
+         "z": 0.9,
+         "points": [
+          [
+           "-$bw / 2 + 0.03",
+           0
+          ],
+          [
+           "$bw / 2 - 0.03",
+           0
+          ],
+          [
+           "$bw / 2",
+           0.02
+          ],
+          [
+           "$tw / 2",
+           "$ch - 0.5"
+          ],
+          [
+           "$tw / 2",
+           "$ch - 0.03"
+          ],
+          [
+           "$tw / 2 - 0.03",
+           "$ch"
+          ],
+          [
+           "-$tw / 2 + 0.03",
+           "$ch"
+          ],
+          [
+           "-$tw / 2",
+           "$ch - 0.03"
+          ],
+          [
+           "-$tw / 2",
+           "$ch - 0.5"
+          ],
+          [
+           "-$bw / 2",
+           0.02
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Bearing_{i}",
+       "shape": "box",
+       "material": "bearing",
+       "size": [
+        0.55,
+        0.1,
+        0.45
+       ],
+       "at": [
+        "-($width - 1.8) / 2 + $i * $gs",
+        "$yc + 0.03",
+        0
+       ],
+       "repeat": {
+        "count": "$ng",
+        "step": [
+         0,
+         0,
+         0
+        ]
+       }
+      },
+      {
+       "name": "Diaphragm",
+       "shape": "box",
+       "material": "girder_concrete",
+       "size": [
+        "$width - 2",
+        "$gd * 0.7",
+        0.35
+       ],
+       "at": [
+        0,
+        "$yg + $gd * 0.45",
+        0
+       ]
+      }
      ]
     }
    ]
