@@ -37,6 +37,28 @@ map of your project, real Godot checks and a fixed AAA review, as MCP tools and 
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
 
+## Quickstart
+
+Try it on your game, nothing to install:
+
+```sh
+npx -y godotwright review ~/games/my-game
+```
+
+You get a score from 0 to 100 for api, performance, quality and structure, and each
+finding as `res://file.gd:12: error [rule] message` with the Godot 4 fix.
+
+Then give it to your agent. In Claude Code:
+
+```text
+/plugin install godotwright --marketplace laaielichter/Godotwright
+```
+
+Claude Desktop, Cursor, VS Code, Codex, Gemini CLI, Windsurf and Zed: one step each, see
+[install in your coding agent](#install-in-your-coding-agent-mcp) or the [install page](https://laaielichter.github.io/Godotwright/install.html).
+
+## What it does
+
 ### A receipt on every pull request
 
 ```yaml
@@ -82,16 +104,6 @@ thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
 [53 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
 terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
 It is set up to work with small, cheap models too: what we tested and learned [with 3D models](docs/cheap-models.md) and [with everyday Godot tasks](docs/cheap-models-code.md).
-
-## Quickstart
-
-```sh
-npx -y godotwright review ~/games/my-game
-```
-
-You get a score from 0 to 100 for api, performance, quality and structure, and each
-finding as `res://file.gd:12: error [rule] message` with the Godot 4 fix.
-Then [connect it to your agent](#install-in-your-coding-agent-mcp).
 
 ## Why Godotwright?
 
