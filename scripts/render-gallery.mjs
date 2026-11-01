@@ -102,7 +102,8 @@ window.render = async (b64, family) => {
 
   // From the front left and above, as far away as the bounding box needs to fill about 85 % of the picture.
   const cam = new THREE.PerspectiveCamera(32, W / H, radius / 100, radius * 50);
-  const back = new THREE.Vector3(1, 0.55, 1.35).normalize();
+  // Terrain tiles are open at their border: from higher up the camera never looks under the edge of the sheet.
+  const back = new THREE.Vector3(1, family === "world" ? 1.7 : 0.55, 1.35).normalize();
   cam.position.copy(center).add(back); cam.lookAt(center); cam.updateMatrixWorld();
   const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
   const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2) * 0.85, tanH = tanV * cam.aspect;

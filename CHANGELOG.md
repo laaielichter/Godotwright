@@ -4,6 +4,10 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Fresh renders of every model in the gallery** (`docs/models.html`, the overview in the README and on the site): all
+  56 kinds and the terrain variants, rendered again from the current builder, so the pictures show the textures,
+  rounded edges and materials the models have now. Terrain tiles are pictured from a little higher, so the camera
+  does not look under the open border of a tile.
 - **Lessons from real projects, and Godotwright learns new ones.** `data/lessons.json` holds 77 lessons from large
   Godot 4 projects (helicopters and ships on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
   shaders, headless tests): symptom, cause in Godot terms, fix, how to test, and the rule that checks it. They are
