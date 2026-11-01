@@ -77,3 +77,66 @@ checks it.
 16. **Long background work can be lost.** A container restart stopped all
     running work; resuming from the recorded results saved most of it. This
     file itself was lost that way once, and recovered from the build's log.
+
+# Lessons from rebuilding a real race circuit and its town from open data
+
+A second anonymised reflection: a real coastal race circuit, its grandstands and
+the seaside town next to it, rebuilt at 1:1 in Godot 4.7 by a coding agent
+from national open elevation (a 0.5 m laser-scan terrain model) and topography
+data (building footprints, road and land-cover polygons). No code, names or
+paths; each lesson says whether Godotwright now checks it.
+
+## Data before modelling
+
+17. **Take the track from the asphalt, not from a race-line trace.** A public
+    centre line of the circuit was a few metres off in places and polygonal in
+    the corners. Cutting cross-sections every 2 m through the official asphalt
+    polygons and taking the middle gave a centre line and width per metre.
+    *Not checked.*
+18. **The terrain model already holds the banking.** Fitting a plane across
+    the asphalt in the elevation data gave 17-18° in the banked corners,
+    within a degree of the published values, so nothing had to be invented.
+    *Not checked.*
+19. **Rotate a real place by its coastline, not by north.** The real coast
+    runs about 22° off north. Turning the piece by 90° alone left the sea
+    diagonal across it; turning it by the fitted coast angle made the beach run
+    straight along the game's coast. *Not checked.*
+20. **Measure the target world at install time.** Where the game's coastline
+    lies was not known from old maps. The installer measures it in the live
+    height grid and moves the whole piece so both waterlines meet. *Not checked.*
+
+## Godot rendering
+
+21. **A plain `.gz` file does not open with `open_compressed()`.** That call
+    reads Godot's own compressed format; on a gzip file it returns null and
+    the terrain silently stayed empty. Read the bytes and use
+    `decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)`. *Checked:* `review`
+    reports it (`api/open-compressed-gzip`).
+22. **LOD margins without a fade mode leave holes.** With
+    `visibility_range_*_margin` and no `visibility_range_fade_mode`, the margin
+    is hysteresis: a terrain tile whose distance sat inside the margin showed
+    no level at all for a camera that started there. *Checked:* `review` warns
+    (`quality/visibility-margin-hysteresis`).
+23. **Colours typed into a shader are sRGB; `ALBEDO` is linear.** Every
+    hand-picked colour came out washed out until it was converted with
+    `pow(c, vec3(2.2))`, and vertex colours on a `StandardMaterial3D` needed
+    `vertex_color_is_srgb`. *Not checked.*
+24. **A height texture clamps at its edge.** Tiles of 256 m reached past the
+    end of the data and drew long streaks of the last row; discard fragments
+    outside the data rectangle. *Not checked.*
+25. **Carve the ground well under a road mesh.** Grass showed through the
+    asphalt where the 2 m terrain grid interpolated between a low node under
+    the track and a high one beside it. Lowering the ground to 0.12 m under the
+    surface across the full width plus 3 m, with an 8 m blend, fixed it; a
+    test now measures terrain against the asphalt at every 7 m. *Not checked.*
+26. **Build stands on the outside of tight corners.** Rows that follow a
+    hairpin on the inside converge and pile up. *Checked in part:* the
+    `grandstand` archetype says so, and the `grandstand` recipe builds a
+    straight stand.
+
+## Ready-made kinds added from this build
+
+`grandstand` (stepped rows, seats, walls, roof on columns), `crash-barrier`
+(double W-beam on posts with a catch fence) and `race-kerb` (red and white
+blocks with a raised outer lip), with the archetypes `building.grandstand`,
+`infrastructure.crash-barrier` and `infrastructure.kerb`.

@@ -43,6 +43,7 @@ const list: Rule[] = [
   { id: "performance/huge-scene", category: "performance", severity: "info", title: "Very large scene", fix: "Split the scene into sub-scenes, or use MultiMesh/GridMap for repeated objects." },
   // Code quality.
   { id: "api/physics-change-in-callback", category: "api", severity: "warning", title: "Physics change while Godot reports overlaps", fix: "In a body/area entered or exited handler, add physics nodes with add_child.call_deferred() and change monitoring or disabled with set_deferred()." },
+  { id: "api/open-compressed-gzip", category: "api", severity: "error", title: "Plain .gz file opened with open_compressed()", fix: "Read the bytes and unpack them: FileAccess.get_file_as_bytes(path).decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)." },
   { id: "api/bind-swaps-arguments", category: "api", severity: "error", title: "bind() puts the tweened value first", fix: "bind() adds its arguments after the caller's; use tween_property(object, \"shader_parameter/name\", ...) or a lambda." },
   { id: "quality/untyped", category: "quality", severity: "info", title: "Missing static types", fix: "Add types to variables, parameters and return values (or use :=)." },
   { id: "quality/long-function", category: "quality", severity: "info", title: "Long function", fix: "Split the function into smaller named steps." },
@@ -53,6 +54,7 @@ const list: Rule[] = [
   { id: "quality/fragile-path", category: "quality", severity: "info", title: "Fragile node path", fix: "Use an @export var, a %UniqueName or a signal instead of ../.. paths." },
   { id: "quality/naming", category: "quality", severity: "info", title: "Naming style", fix: "Follow the GDScript style guide: snake_case, PascalCase classes, CONSTANT_CASE constants." },
   { id: "quality/time-scale-not-restored", category: "quality", severity: "warning", title: "Slow motion never undone", fix: "Set Engine.time_scale back to 1.0 when the effect ends and in _exit_tree(), so the game does not stay slow." },
+  { id: "quality/visibility-margin-hysteresis", category: "quality", severity: "warning", title: "LOD margins without a fade mode", fix: "Set visibility_range_fade_mode, or leave the margins at 0 so neighbouring LOD ranges meet exactly." },
   { id: "quality/todo", category: "quality", severity: "info", title: "TODO left in code", fix: "Do the TODO, or track it outside the code." },
   // Project structure.
   { id: "structure/broken-reference", category: "structure", severity: "error", title: "Broken reference", fix: "Fix the path or uid, or restore the missing file." },
