@@ -202,8 +202,8 @@ export function modelCommand(): Command {
     .option("--spec <file>", "with a kind: parameters as JSON. Without a kind: a full model spec (see `model spec`)")
     .option("--set <name=value>", "set one parameter (repeatable)", collect, [])
     .option("--contract-out <file>", "also write a model.contract.json for the result")
-    .addOption(new Option("--collision <kind>", "name the meshes so Godot makes collision shapes on import: convex (a hull per mesh) or trimesh (exact, for static things)").choices(["convex", "trimesh"]))
-    .action((kind: string | undefined, options: { out?: string; spec?: string; set: string[]; contractOut?: string; collision?: "convex" | "trimesh" }, command: Command) => {
+    .addOption(new Option("--collision <kind>", "collision for Godot: convex (a hull per mesh, on import), trimesh (exact, on import, for static things) or heightmap (terrain: a HeightMapShape3D and a ready scene next to the .glb)").choices(["convex", "trimesh", "heightmap"]))
+    .action((kind: string | undefined, options: { out?: string; spec?: string; set: string[]; contractOut?: string; collision?: "convex" | "trimesh" | "heightmap" }, command: Command) => {
       guard(() => {
         const input: Record<string, unknown> = {};
         let spec: unknown;
