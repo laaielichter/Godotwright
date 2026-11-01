@@ -4824,14 +4824,10 @@
          "profile": [
           [
            "0.68 * $wheelRadius",
-           "-0.40 * $tyreWidth"
+           "-0.42 * $tyreWidth"
           ],
           [
-           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
-           "-0.47 * $tyreWidth"
-          ],
-          [
-           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.68 * $wheelRadius + 0.55 * ($wheelRadius - 0.68 * $wheelRadius)",
            "-0.512 * $tyreWidth"
           ],
           [
@@ -4851,20 +4847,16 @@
            "0.47 * $tyreWidth"
           ],
           [
-           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.68 * $wheelRadius + 0.55 * ($wheelRadius - 0.68 * $wheelRadius)",
            "0.512 * $tyreWidth"
           ],
           [
-           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
-           "0.47 * $tyreWidth"
+           "0.68 * $wheelRadius",
+           "0.42 * $tyreWidth"
           ],
           [
            "0.68 * $wheelRadius",
-           "0.40 * $tyreWidth"
-          ],
-          [
-           "0.68 * $wheelRadius",
-           "-0.40 * $tyreWidth"
+           "-0.42 * $tyreWidth"
           ]
          ]
         },
@@ -4937,9 +4929,9 @@
          "shape": "box",
          "material": "aluminium",
          "size": [
-          "0.10 * $tyreWidth",
+          "0.12 * $tyreWidth",
           "0.48000000000000004 * $wheelRadius",
-          "0.075 * $wheelRadius"
+          "0.13 * $wheelRadius"
          ],
          "at": [
           "0.34 * $tyreWidth",
@@ -4954,26 +4946,6 @@
          "repeat": {
           "count": 5,
           "around": "x"
-         }
-        },
-        {
-         "name": "Spoke{i}b",
-         "shape": "box",
-         "material": "aluminium",
-         "size": [
-          "0.10 * $tyreWidth",
-          "0.48000000000000004 * $wheelRadius",
-          "0.075 * $wheelRadius"
-         ],
-         "at": [
-          "0.34 * $tyreWidth",
-          "0.42000000000000004 * $wheelRadius",
-          0
-         ],
-         "repeat": {
-          "count": 5,
-          "around": "x",
-          "phase": 22
          }
         },
         {
@@ -5029,14 +5001,10 @@
          "profile": [
           [
            "0.68 * $wheelRadius",
-           "-0.40 * $tyreWidth"
+           "-0.42 * $tyreWidth"
           ],
           [
-           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
-           "-0.47 * $tyreWidth"
-          ],
-          [
-           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.68 * $wheelRadius + 0.55 * ($wheelRadius - 0.68 * $wheelRadius)",
            "-0.512 * $tyreWidth"
           ],
           [
@@ -5056,20 +5024,16 @@
            "0.47 * $tyreWidth"
           ],
           [
-           "0.68 * $wheelRadius + 0.62 * ($wheelRadius - 0.68 * $wheelRadius)",
+           "0.68 * $wheelRadius + 0.55 * ($wheelRadius - 0.68 * $wheelRadius)",
            "0.512 * $tyreWidth"
           ],
           [
-           "0.68 * $wheelRadius + 0.25 * ($wheelRadius - 0.68 * $wheelRadius)",
-           "0.47 * $tyreWidth"
+           "0.68 * $wheelRadius",
+           "0.42 * $tyreWidth"
           ],
           [
            "0.68 * $wheelRadius",
-           "0.40 * $tyreWidth"
-          ],
-          [
-           "0.68 * $wheelRadius",
-           "-0.40 * $tyreWidth"
+           "-0.42 * $tyreWidth"
           ]
          ]
         },
@@ -5142,9 +5106,9 @@
          "shape": "box",
          "material": "aluminium",
          "size": [
-          "0.10 * $tyreWidth",
+          "0.12 * $tyreWidth",
           "0.48000000000000004 * $wheelRadius",
-          "0.075 * $wheelRadius"
+          "0.13 * $wheelRadius"
          ],
          "at": [
           "0.34 * $tyreWidth",
@@ -5159,26 +5123,6 @@
          "repeat": {
           "count": 5,
           "around": "x"
-         }
-        },
-        {
-         "name": "Spoke{i}b",
-         "shape": "box",
-         "material": "aluminium",
-         "size": [
-          "0.10 * $tyreWidth",
-          "0.48000000000000004 * $wheelRadius",
-          "0.075 * $wheelRadius"
-         ],
-         "at": [
-          "0.34 * $tyreWidth",
-          "0.42000000000000004 * $wheelRadius",
-          0
-         ],
-         "repeat": {
-          "count": 5,
-          "around": "x",
-          "phase": 22
          }
         },
         {
@@ -7433,7 +7377,6 @@
         0.03,
         0.07
        ],
-       "bevel": 0.012,
        "at": [
         0.06,
         0.0,
@@ -7746,7 +7689,6 @@
         0.12,
         0.07
        ],
-       "bevel": 0.03,
        "at": [
         "$W2 * 0.42",
         "1.20 + $dy",
@@ -7778,7 +7720,7 @@
        "name": "Ring",
        "shape": "lathe",
        "material": "trim_black",
-       "segments": 24,
+       "segments": 18,
        "caps": false,
        "profile": [
         [

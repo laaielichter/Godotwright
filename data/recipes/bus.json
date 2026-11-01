@@ -2194,14 +2194,10 @@
          "profile": [
           [
            "0.6 * $wheelRadius",
-           "-0.40 * $tw"
+           "-0.42 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.25 * ($wheelRadius - 0.6 * $wheelRadius)",
-           "-0.47 * $tw"
-          ],
-          [
-           "0.6 * $wheelRadius + 0.62 * ($wheelRadius - 0.6 * $wheelRadius)",
+           "0.6 * $wheelRadius + 0.55 * ($wheelRadius - 0.6 * $wheelRadius)",
            "-0.512 * $tw"
           ],
           [
@@ -2221,20 +2217,16 @@
            "0.47 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.62 * ($wheelRadius - 0.6 * $wheelRadius)",
+           "0.6 * $wheelRadius + 0.55 * ($wheelRadius - 0.6 * $wheelRadius)",
            "0.512 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.25 * ($wheelRadius - 0.6 * $wheelRadius)",
-           "0.47 * $tw"
+           "0.6 * $wheelRadius",
+           "0.42 * $tw"
           ],
           [
            "0.6 * $wheelRadius",
-           "0.40 * $tw"
-          ],
-          [
-           "0.6 * $wheelRadius",
-           "-0.40 * $tw"
+           "-0.42 * $tw"
           ]
          ]
         },
@@ -2416,14 +2408,10 @@
          "profile": [
           [
            "0.6 * $wheelRadius",
-           "-0.40 * $tw"
+           "-0.42 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.25 * ($wheelRadius - 0.6 * $wheelRadius)",
-           "-0.47 * $tw"
-          ],
-          [
-           "0.6 * $wheelRadius + 0.62 * ($wheelRadius - 0.6 * $wheelRadius)",
+           "0.6 * $wheelRadius + 0.55 * ($wheelRadius - 0.6 * $wheelRadius)",
            "-0.512 * $tw"
           ],
           [
@@ -2443,20 +2431,16 @@
            "0.47 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.62 * ($wheelRadius - 0.6 * $wheelRadius)",
+           "0.6 * $wheelRadius + 0.55 * ($wheelRadius - 0.6 * $wheelRadius)",
            "0.512 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.25 * ($wheelRadius - 0.6 * $wheelRadius)",
-           "0.47 * $tw"
+           "0.6 * $wheelRadius",
+           "0.42 * $tw"
           ],
           [
            "0.6 * $wheelRadius",
-           "0.40 * $tw"
-          ],
-          [
-           "0.6 * $wheelRadius",
-           "-0.40 * $tw"
+           "-0.42 * $tw"
           ]
          ]
         },
@@ -2638,14 +2622,10 @@
          "profile": [
           [
            "0.6 * $wheelRadius",
-           "-0.40 * $tw"
+           "-0.42 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.25 * ($wheelRadius - 0.6 * $wheelRadius)",
-           "-0.47 * $tw"
-          ],
-          [
-           "0.6 * $wheelRadius + 0.62 * ($wheelRadius - 0.6 * $wheelRadius)",
+           "0.6 * $wheelRadius + 0.55 * ($wheelRadius - 0.6 * $wheelRadius)",
            "-0.512 * $tw"
           ],
           [
@@ -2665,20 +2645,16 @@
            "0.47 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.62 * ($wheelRadius - 0.6 * $wheelRadius)",
+           "0.6 * $wheelRadius + 0.55 * ($wheelRadius - 0.6 * $wheelRadius)",
            "0.512 * $tw"
           ],
           [
-           "0.6 * $wheelRadius + 0.25 * ($wheelRadius - 0.6 * $wheelRadius)",
-           "0.47 * $tw"
+           "0.6 * $wheelRadius",
+           "0.42 * $tw"
           ],
           [
            "0.6 * $wheelRadius",
-           "0.40 * $tw"
-          ],
-          [
-           "0.6 * $wheelRadius",
-           "-0.40 * $tw"
+           "-0.42 * $tw"
           ]
          ]
         },
