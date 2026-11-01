@@ -427,19 +427,16 @@
  {
   "id": "infrastructure.crash-barrier",
   "name": "crash barrier",
-  "description": "A steel guardrail (W-beam) on posts beside a road or race track, optionally with a catch fence behind it.",
+  "description": "A motorsport barrier beside a race track: stacked steel W-beams (Armco) on posts, often with a catch fence behind it. A guard rail along a public road is infrastructure.guard-rail.",
   "aliases": [
    "crash barrier",
-   "guardrail",
-   "guard rail",
    "armco",
-   "w-beam",
-   "vangrail",
-   "geleiderail",
+   "race barrier",
+   "track barrier",
+   "circuit barrier",
    "catch fence",
    "vangscherm",
-   "debris fence",
-   "safety barrier"
+   "debris fence"
   ],
   "extends": "infrastructure",
   "hints": [
@@ -661,6 +658,532 @@
      "strut"
     ]
    }
+  ]
+ },
+ {
+  "id": "infrastructure.traffic-sign",
+  "name": "traffic sign",
+  "description": "A road sign on a pole: a round, triangular or square plate with a reflective face.",
+  "aliases": [
+   "traffic sign",
+   "road sign",
+   "verkeersbord",
+   "bord",
+   "speed limit sign",
+   "snelheidsbord",
+   "maximumsnelheid",
+   "stop sign",
+   "stopbord",
+   "give way sign",
+   "voorrangsbord",
+   "street sign",
+   "straatnaambord",
+   "sign post",
+   "bordpaal"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Pole",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "pole",
+     "post",
+     "paal",
+     "bordpaal",
+     "mast"
+    ],
+    "note": "A round steel tube, about 76 mm across in many European countries."
+   },
+   {
+    "name": "Plate",
+    "role": "panel",
+    "required": true,
+    "aliases": [
+     "plate",
+     "sign",
+     "face",
+     "bord",
+     "plaat",
+     "panel"
+    ],
+    "note": "Front face reflective and facing the traffic; the back is plain metal with the mounting clamps."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.05,
+    1.5
+   ],
+   "width": [
+    0.4,
+    1.5
+   ],
+   "height": [
+    1.5,
+    4.0
+   ],
+   "source": "general knowledge: round signs of about 0.6, 0.7 or 0.9 m; the lower edge of the plate about 2.2 m above a footpath in built-up areas and lower (about 1.5-1.8 m) along rural roads; rules differ per country",
+   "confidence": "C"
+  },
+  "conventions": [
+   "The plate faces the traffic it is meant for, on the right of the carriageway in right-hand traffic, set back a little from the edge of the road."
+  ],
+  "pitfalls": [
+   "Text and symbols on many signs: use a texture, a decal or a distance-field shader, not one mesh per letter.",
+   "Hundreds of identical signs: one MultiMesh per kind of plate, not hundreds of MeshInstance3D nodes."
+  ]
+ },
+ {
+  "id": "infrastructure.guard-rail",
+  "name": "guard rail",
+  "description": "A steel road safety barrier: a corrugated beam on posts along the edge of a road. A motorsport barrier with a catch fence is infrastructure.crash-barrier.",
+  "aliases": [
+   "guard rail",
+   "guardrail",
+   "crash rail",
+   "safety barrier",
+   "w-beam",
+   "vangrail",
+   "geleiderail",
+   "geleiderails",
+   "vangrails",
+   "barrier rail"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Beam",
+    "role": "rail",
+    "required": true,
+    "aliases": [
+     "beam",
+     "rail",
+     "w-beam",
+     "ligger",
+     "plank",
+     "profiel"
+    ]
+   },
+   {
+    "name": "Post",
+    "role": "support",
+    "required": true,
+    "count": [
+     2,
+     400
+    ],
+    "aliases": [
+     "post",
+     "paal",
+     "steun",
+     "palen"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2,
+    200
+   ],
+   "width": [
+    0.2,
+    0.8
+   ],
+   "height": [
+    0.6,
+    1.1
+   ],
+   "source": "general knowledge: the beam about 0.3 m deep with its top near 0.75 m, posts every 2 to 4 m; national standards differ",
+   "confidence": "C"
+  },
+  "conventions": [
+   "Built as a repeatable segment along z whose length is a whole number of post spacings, so segments tile.",
+   "The ends are sloped or curved away from the traffic, never a blunt beam end facing it."
+  ],
+  "pitfalls": [
+   "A blunt end facing the traffic is the classic mistake; taper it down to the ground over several metres.",
+   "Collision: overlap the boxes of neighbouring segments a little, or a fast car slips through the seam."
+  ]
+ },
+ {
+  "id": "infrastructure.delineator",
+  "name": "delineator post",
+  "description": "A small white roadside post with a reflector that marks the edge of the road at night.",
+  "aliases": [
+   "delineator",
+   "delineator post",
+   "reflector post",
+   "marker post",
+   "edge marker",
+   "reflectorpaal",
+   "reflectorpaaltje",
+   "hectometerpaal",
+   "kilometerpaal",
+   "bermpaal",
+   "bermpaaltje"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Post",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "post",
+     "paal",
+     "body"
+    ]
+   },
+   {
+    "name": "Reflector",
+    "role": "light",
+    "required": true,
+    "aliases": [
+     "reflector",
+     "reflectors",
+     "reflectie",
+     "cat eye"
+    ],
+    "note": "Retroreflective; in a game an emissive or very bright material that only shows in headlight range."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.05,
+    0.3
+   ],
+   "width": [
+    0.05,
+    0.3
+   ],
+   "height": [
+    0.6,
+    1.5
+   ],
+   "source": "general knowledge: about 1 m above the verge, every 50 m or so on rural roads; rules differ per country",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Thousands of them along a road network: one MultiMesh per road tile, with a short visibility range."
+  ]
+ },
+ {
+  "id": "infrastructure.lock",
+  "name": "canal lock",
+  "description": "A navigation lock: a chamber between two gated heads that lifts or lowers boats between two water levels.",
+  "aliases": [
+   "lock",
+   "canal lock",
+   "navigation lock",
+   "sluis",
+   "schutsluis",
+   "kanaalsluis",
+   "zeesluis",
+   "sea lock",
+   "shipping lock"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Chamber",
+    "role": "water",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "chamber",
+     "kolk",
+     "lock chamber"
+    ],
+    "note": "Concrete or brick walls with the water inside; the water level inside moves between the two outside levels."
+   },
+   {
+    "name": "Gate",
+    "role": "movable",
+    "required": true,
+    "count": [
+     2,
+     8
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "gate",
+     "deur",
+     "puntdeur",
+     "mitre gate",
+     "sluisdeur"
+    ],
+    "note": "Mitre gates come in pairs per head and close in a V that points upstream (towards the higher water); lift gates rise in a tall frame instead."
+   },
+   {
+    "name": "Head",
+    "role": "structure",
+    "required": false,
+    "count": [
+     2,
+     3
+    ],
+    "aliases": [
+     "head",
+     "sluishoofd",
+     "lock head"
+    ]
+   },
+   {
+    "name": "Fender",
+    "role": "guard",
+    "required": false,
+    "aliases": [
+     "fender",
+     "remmingwerk",
+     "guide wall",
+     "dolphin",
+     "dukdalf"
+    ],
+    "note": "Guide walls and dolphins in front of each head, where boats wait."
+   },
+   {
+    "name": "ControlHouse",
+    "role": "building",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "control house",
+     "lock keeper's house",
+     "sluiswachtershuis",
+     "bedieningsgebouw"
+    ]
+   },
+   {
+    "name": "Signal",
+    "role": "light",
+    "required": false,
+    "aliases": [
+     "signal",
+     "seinlicht",
+     "traffic light",
+     "light"
+    ],
+    "note": "Red/green lights at each head: red = wait, green = enter."
+   }
+  ],
+  "scale": {
+   "length": [
+    30,
+    500
+   ],
+   "width": [
+    5,
+    70
+   ],
+   "height": [
+    4,
+    25
+   ],
+   "source": "general knowledge of European inland locks: small polder locks about 30-50 x 5-7.5 m, CEMT class Va canal locks about 200-280 x 12.5-16 m, large sea locks up to about 500 x 70 m; lift 0.3-3 m inland, up to about 5 m with tides",
+   "confidence": "B"
+  },
+  "variants": [
+   {
+    "axis": "gates",
+    "options": [
+     "mitre gates",
+     "lift gates",
+     "sector gates"
+    ]
+   },
+   {
+    "axis": "size",
+    "options": [
+     "recreational",
+     "canal (CEMT IV-Va)",
+     "sea lock"
+    ]
+   }
+  ],
+  "conventions": [
+   "The chamber's long axis is the direction of travel; build the gates as separate nodes with their pivot on the hinge so they can be animated.",
+   "Each side of the lock has its own water level; the chamber surface is a separate mesh so its height can move."
+  ],
+  "anticipate": [
+   "Gates that open when a boat approaches and close behind it, with the signal lights following the state.",
+   "A waiting area with dolphins on both sides, and a road or footpath over one head."
+  ],
+  "pitfalls": [
+   "A lock with the same water level on both sides is decoration: give the two reaches their own levels, or the chamber has nothing to do.",
+   "Boats that steer by an offset from the centreline must aim for the centre inside the chamber, or they clip the walls.",
+   "Mitre gates drawn pointing downstream would be pushed open by the water."
+  ]
+ },
+ {
+  "id": "infrastructure.harbour-basin",
+  "name": "harbour basin",
+  "description": "An inland harbour: a dug basin off a canal or river, with quay walls, bollards, cranes and sheds.",
+  "aliases": [
+   "harbour basin",
+   "harbor basin",
+   "havenbekken",
+   "binnenhaven",
+   "inland port",
+   "inland harbour",
+   "quay",
+   "kade",
+   "kademuur",
+   "quay wall",
+   "marina",
+   "jachthaven",
+   "wharf",
+   "dock",
+   "dok",
+   "jetty",
+   "steiger"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Basin",
+    "role": "water",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "basin",
+     "bekken",
+     "water"
+    ],
+    "note": "Deeper than the boats' draught; joined to the waterway by its open end."
+   },
+   {
+    "name": "Quay",
+    "role": "surface",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "quay",
+     "kade",
+     "quay wall",
+     "kademuur",
+     "apron"
+    ],
+    "note": "A flat apron about 1.5 m above the water with a vertical wall to the water and a fender beam."
+   },
+   {
+    "name": "Bollard",
+    "role": "detail",
+    "required": false,
+    "count": [
+     0,
+     200
+    ],
+    "aliases": [
+     "bollard",
+     "bolder",
+     "meerpaal"
+    ]
+   },
+   {
+    "name": "Crane",
+    "role": "movable",
+    "required": false,
+    "count": [
+     0,
+     10
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "base",
+    "aliases": [
+     "crane",
+     "kraan",
+     "havenkraan"
+    ]
+   },
+   {
+    "name": "Shed",
+    "role": "building",
+    "required": false,
+    "count": [
+     0,
+     20
+    ],
+    "aliases": [
+     "shed",
+     "loods",
+     "warehouse",
+     "pakhuis"
+    ]
+   },
+   {
+    "name": "AccessRoad",
+    "role": "road",
+    "required": false,
+    "aliases": [
+     "access road",
+     "havenweg",
+     "toegangsweg"
+    ],
+    "note": "Connected to the road graph, or traffic and emergency routes never reach it."
+   }
+  ],
+  "scale": {
+   "length": [
+    40,
+    2000
+   ],
+   "width": [
+    20,
+    400
+   ],
+   "height": [
+    3,
+    15
+   ],
+   "source": "general knowledge: marinas and small village harbours 40-200 m, inland cargo basins 150-1000 m long and 50-150 m wide, port basins larger; quay about 1.5-2 m above the water",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "use",
+    "options": [
+     "cargo",
+     "container",
+     "marina",
+     "fishing"
+    ]
+   },
+   {
+    "axis": "form",
+    "options": [
+     "basin off the waterway",
+     "quay along the waterway"
+    ]
+   }
+  ],
+  "conventions": [
+   "Place the basin so its open end joins the waterway's water surface; the quay height is one value shared by the walls, bollards and sheds."
+  ],
+  "anticipate": [
+   "Moored boats along the quay, lights on masts, and a road that joins the road network."
+  ],
+  "pitfalls": [
+   "A basin dug only in the visual mesh but not in the terrain heights (or in only one of several terrain grids) shows land through the water.",
+   "Buildings left standing where the basin was dug: remove them and rebuild any spatial index that pointed at them."
   ]
  }
 ]

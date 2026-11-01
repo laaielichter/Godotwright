@@ -146,3 +146,63 @@ paths; each lesson says whether Godotwright now checks it.
 (double W-beam on posts with a catch fence) and `race-kerb` (red and white
 blocks with a raised outer lip), with the archetypes `building.grandstand`,
 `infrastructure.crash-barrier` and `infrastructure.kerb`.
+
+# Lessons from building an inland waterway network on a heightmap terrain
+
+A third anonymised reflection: canals, harbour basins and
+locks added across a large open world that stores its ground in several
+heightmaps (fine grids near towns, one coarse grid for the rest). Built by a
+coding agent with Godotwright, partly without access to the live game data. No
+code, names or paths; each lesson says whether Godotwright now checks it.
+
+## Terrain and water
+
+27. **A narrow channel disappears in a coarse heightmap.** A 32 m wide canal on
+    a 32 m grid fell between the samples and came out as a shallow dip. Carving
+    the coarse grid 0.8 cell wider than the fine one fixed it.
+    *Not checked;* the river archetype now lists it as a pitfall.
+28. **Carve every grid that covers a place.** With fine and coarse grids over
+    the same ground, a channel carved in only one of them shows up or vanishes
+    with the level of detail. *Not checked;* listed as a pitfall.
+29. **Lower land needs embankments, higher land a cut.** A canal checked only by
+    its bed depth stood above the fields where the polder was lower than the
+    water. The profile needs a bank above water level on both sides and sloping
+    cuts where the ground is higher. *Not checked;* listed as a pitfall.
+30. **Hand-built water faces up only with the right winding.** Godot draws
+    clockwise faces as the front, so for a surface seen from above the cross
+    product (b - a) x (c - a) of each triangle must point down. A test that
+    builds one triangle and checks the sign caught it before any render.
+    *Not checked;* the water archetype lists it.
+
+## Networks
+
+31. **Test the network as a graph, twice.** "Every waterway reaches every other"
+    passed for water but failed for boats: low fixed bridges split routes, and
+    a lock joined a canal to a river 300 m away from where the centrelines met.
+    One graph for water and one for what a large boat can pass found both.
+    *Not checked;* the river archetype suggests the test.
+32. **A lock needs two water levels.** A lock between reaches at the same level
+    is decoration; boats that steer by an offset also need to aim for the
+    centre inside the chamber. *Partly checked:* `model identify` now knows the
+    canal lock and the harbour basin, with their parts and pitfalls.
+33. **Remove what the water covers, and rebuild the index.** Buildings, trees
+    and lamps left standing in a new basin, and a spatial index that still
+    pointed at removed records, were the first bugs. *Not checked.*
+
+## Code
+
+34. **`JSON.parse_string()` returns null on bad text.** Hundreds of scripts in
+    one project stored its result straight in a `Dictionary` or `Array`
+    variable, or called a method on it, so a damaged data file stops the
+    script with an error instead of a clear message; a null check on the next
+    line is too late. *Checked:* `review` warns (`api/parse-into-typed` for a
+    typed variable, `quality/json-parse-unchecked` for a result used before a
+    check).
+
+## Process
+
+35. **When the live data is out of reach, test the pipeline on a made-up
+    world.** A small synthetic world (a polder, a hill, one building, one road)
+    exercised every step and found three bugs that would otherwise have shown
+    up only on the real data. *Supported:* `scenario` and `play` do the same
+    for game logic.

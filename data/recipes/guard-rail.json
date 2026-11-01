@@ -1,0 +1,131 @@
+{
+ "version": 1,
+ "name": "guard-rail",
+ "archetype": "infrastructure.guard-rail",
+ "description": "A length of steel guard rail along z: posts every 2 m, a spacer block on each post and a corrugated beam that faces the traffic on +X. Segments whose length is a multiple of 2 m tile end to end.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 12,
+   "min": 4,
+   "max": 60,
+   "description": "Length of the segment in metres."
+  },
+  {
+   "name": "height",
+   "type": "number",
+   "default": 0.75,
+   "min": 0.65,
+   "max": 0.9,
+   "description": "Height of the top of the beam above the ground."
+  }
+ ],
+ "materials": {
+  "galvanised": {
+   "color": [
+    0.66,
+    0.68,
+    0.69
+   ],
+   "metallic": 0.85,
+   "roughness": 0.38
+  }
+ },
+ "nodes": [
+  {
+   "name": "GuardRail",
+   "material": "galvanised",
+   "vars": {
+    "L2": "$length / 2",
+    "H": "$height",
+    "Y": "$height - 0.155"
+   },
+   "children": [
+    {
+     "name": "Post_{i}",
+     "shape": "box",
+     "anchor": "bottom",
+     "size": [
+      0.1,
+      "$H - 0.04",
+      0.05
+     ],
+     "at": [
+      0,
+      0,
+      "-$L2 + 1"
+     ],
+     "repeat": {
+      "count": "floor($length / 2)",
+      "step": [
+       0,
+       0,
+       2
+      ]
+     }
+    },
+    {
+     "name": "Spacer_{i}",
+     "shape": "box",
+     "size": [
+      0.16,
+      0.2,
+      0.05
+     ],
+     "at": [
+      0.125,
+      "$Y",
+      "-$L2 + 1"
+     ],
+     "repeat": {
+      "count": "floor($length / 2)",
+      "step": [
+       0,
+       0,
+       2
+      ]
+     }
+    },
+    {
+     "name": "Beam",
+     "shape": "box",
+     "size": [
+      0.02,
+      0.31,
+      "$length"
+     ],
+     "at": [
+      0.21,
+      "$Y",
+      0
+     ],
+     "bevel": 0.006
+    },
+    {
+     "name": "Beam_Ridge_{i}",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.08,
+      "$length"
+     ],
+     "at": [
+      0.235,
+      "$Y - 0.075",
+      0
+     ],
+     "repeat": {
+      "count": 2,
+      "step": [
+       0,
+       0.15,
+       0
+      ]
+     },
+     "bevel": 0.006
+    }
+   ]
+  }
+ ]
+}

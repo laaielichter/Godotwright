@@ -630,6 +630,35 @@ describe("quality/time-scale-not-restored", () => {
   });
 });
 
+describe("quality/json-parse-unchecked", () => {
+  const scene = '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n';
+  const run = (body: string) =>
+    findings({ "main.tscn": scene, "main.gd": `extends Node\n\n\n${body}` }).filter((f) => f.includes("json-parse"));
+
+  it("warns when the parsed result is used without a check", () => {
+    expect(run('func load_it(text: String) -> int:\n\tvar data = JSON.parse_string(text)\n\treturn data.get("n", 0)\n')).toEqual([
+      'res://main.gd:5: warning [quality/json-parse-unchecked] "data" comes from JSON.parse_string() and is used on line 6 without a check; it is null when the text is not valid JSON, so check it with `is Dictionary` (or `is Array`) first.',
+    ]);
+    expect(run('func load_it(text: String) -> int:\n\treturn JSON.parse_string(text)["n"]\n')).toHaveLength(1);
+    expect(run('func load_it(text: String) -> int:\n\treturn JSON.parse_string(text.strip_edges()).get("n", 0)\n')).toHaveLength(1);
+    expect(run("func load_it(text: String) -> int:\n\tvar data: int = JSON.parse_string(text)\n\treturn data\n")[0]).toContain("null cannot be stored in a int");
+    // A typed Array or Dictionary is api/parse-into-typed's finding, so this rule stays quiet there: one report per line.
+    const typed = findings({ "main.tscn": scene, "main.gd": "extends Node\n\n\nfunc load_it(text: String) -> int:\n\tvar data: Dictionary = JSON.parse_string(text)\n\treturn data.size()\n" });
+    expect(typed.filter((f) => f.includes("json-parse") || f.includes("parse-into-typed"))).toEqual([expect.stringContaining("[api/parse-into-typed]")]);
+    expect(run("func load_it(text: String) -> int:\n\tvar rows := 0\n\tvar list = JSON.parse_string(text)\n\tfor r in list:\n\t\trows += 1\n\treturn rows\n")).toHaveLength(1);
+  });
+
+  it("is quiet when the result is checked, untouched, reassigned or only in a string", () => {
+    expect(run('func load_it(text: String) -> int:\n\tvar data = JSON.parse_string(text)\n\tif not data is Dictionary:\n\t\treturn 0\n\treturn data.get("n", 0)\n')).toEqual([]);
+    expect(run('func load_it(text: String) -> int:\n\tvar data: Variant = JSON.parse_string(text)\n\tif data == null:\n\t\treturn 0\n\treturn data.get("n", 0)\n')).toEqual([]);
+    expect(run("func load_it(text: String) -> Variant:\n\tvar data = JSON.parse_string(text)\n\treturn data\n")).toEqual([]);
+    expect(run("func load_it(text: String) -> int:\n\tvar data = JSON.parse_string(text)\n\tif data is Array:\n\t\treturn data.size()\n\treturn 0\n")).toEqual([]);
+    expect(run("func load_it(text: String) -> int:\n\tvar data = JSON.parse_string(text)\n\tdata = {}\n\treturn data.size()\n")).toEqual([]);
+    expect(run('func describe() -> String:\n\treturn "JSON.parse_string(text).get(1)"\n')).toEqual([]);
+    expect(run("func load_it(text: String) -> int:\n\tvar json := JSON.new()\n\tif json.parse(text) != OK:\n\t\treturn 0\n\treturn json.data.size()\n")).toEqual([]);
+  });
+});
+
 describe("api/physics-change-in-callback and api/bind-swaps-arguments", () => {
   const coin = '[gd_scene format=3]\n\n[sub_resource type="CircleShape2D" id="1"]\n\n[node name="Coin" type="Area2D"]\n\n[node name="Shape" type="CollisionShape2D" parent="."]\nshape = SubResource("1")\n';
   const label = '[gd_scene format=3]\n\n[node name="Label" type="Label"]\n';
