@@ -231,6 +231,19 @@ describe("identify", () => {
     expect(id("something with legs, a tail and claws").best.id.startsWith("creature")).toBe(true);
   });
 
+  it("knows canal locks and harbour basins, in English and Dutch", () => {
+    for (const [text, expected] of [
+      ["canal lock", "infrastructure.lock"], ["schutsluis", "infrastructure.lock"], ["een sluis met puntdeuren", "infrastructure.lock"],
+      ["harbour basin", "infrastructure.harbour-basin"], ["binnenhaven", "infrastructure.harbour-basin"], ["kade", "infrastructure.harbour-basin"],
+      ["jachthaven", "infrastructure.harbour-basin"],
+    ] as const) {
+      expect(identify(text, library).best.id, text).toBe(expected);
+    }
+    const lock = library.resolve("infrastructure.lock");
+    expect(lock.parts.find((p) => p.name === "Gate")?.pivot).toBe("hinge");
+    expect(library.resolve("world.water.river").pitfalls.some((p) => p.includes("coarse heightmap"))).toBe(true);
+  });
+
   it("gives the new families the general conventions and a size with its source", () => {
     for (const idText of ["building.fortification", "building.gatehouse", "creature.bird", "creature.fish", "creature.dragon", "creature.humanoid", "spacecraft.rocket", "spacecraft.spaceship", "vessel.boat.rowing-boat", "prop.campfire"]) {
       const a = library.resolve(idText);

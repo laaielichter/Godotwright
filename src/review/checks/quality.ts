@@ -117,6 +117,41 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
     );
   }
 
+  // JSON.parse_string() returns null for text that is not valid JSON (a damaged or half-written file); using the
+  // result as a Dictionary or Array without a check then stops the script with an error.
+  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+    for (const fn of model.outline.functions) {
+      const body = bodyOf(script.logicalLines, fn);
+      body.forEach((ll, i) => {
+        if (!/\bJSON\s*\.\s*parse_string\s*\(/.test(ll.code)) return;
+        if (/\bJSON\s*\.\s*parse_string\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*(?:\.|\[)/.test(ll.code)) {
+          out.push(finding("quality/json-parse-unchecked", path, ll.line, "The result of JSON.parse_string() is used directly, but it is null when the text is not valid JSON; store it, check it with `is Dictionary` (or `is Array`), then use it."));
+          return;
+        }
+        const decl = /^(?:var\s+)?([A-Za-z_]\w*)\s*(?::\s*([A-Za-z_][\w.]*)\s*)?:?=\s*JSON\s*\.\s*parse_string\s*\(/.exec(ll.code);
+        if (!decl) return;
+        const [, name, type] = decl;
+        // A typed Array or Dictionary declared here is api/parse-into-typed; report it once.
+        if (type && /^(?:Array|Dictionary)\b/.test(type) && /^var\b/.test(ll.code)) return;
+        if (type && type !== "Variant") {
+          out.push(finding("quality/json-parse-unchecked", path, ll.line, `JSON.parse_string() returns null when the text is not valid JSON, and null cannot be stored in a ${type}; keep "${name}" as Variant and check it with \`is ${type}\` first.`));
+          return;
+        }
+        const n = name!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const guard = new RegExp(`\\b${n}\\s+is\\b|\\b${n}\\s*[!=]=\\s*null\\b|\\bnull\\s*[!=]=\\s*${n}\\b|\\btypeof\\s*\\(\\s*${n}\\s*\\)|\\b(?:if|elif|while|and|or|not|assert\\s*\\()\\s*(?:not\\s+)?${n}\\b`);
+        const use = new RegExp(`\\b${n}\\s*(?:\\.|\\[)|\\bin\\s+${n}\\b`);
+        for (const later of body.slice(i + 1)) {
+          if (guard.test(later.code)) return;
+          if (new RegExp(`^(?:var\\s+)?${n}\\s*(?::[^=]*)?=(?!=)`).test(later.code)) return;
+          if (use.test(later.code)) {
+            out.push(finding("quality/json-parse-unchecked", path, ll.line, `"${name}" comes from JSON.parse_string() and is used on line ${later.line} without a check; it is null when the text is not valid JSON, so check it with \`is Dictionary\` (or \`is Array\`) first.`));
+            return;
+          }
+        }
+      });
+    }
+  }
+
   // FileAccess.open_compressed() reads Godot's own compressed format (with its own header), not a plain .gz file:
   // on a file made by gzip it returns null. Flag it when the path in the call is a ".gz" string.
   for (const ll of script.logicalLines) {
