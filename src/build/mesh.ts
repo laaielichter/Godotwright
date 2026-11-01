@@ -9,6 +9,8 @@ export interface Prim {
   normals: number[];
   uvs: number[];
   indices: number[];
+  /** Optional vertex colours, linear RGBA, four floats per vertex (written as COLOR_0; Godot multiplies the albedo by them). */
+  colors?: number[];
 }
 
 /** UV tiles per metre: a 4 m wall repeats the texture once. */
@@ -89,6 +91,11 @@ export class MeshBuilder {
     for (const o of other.prims.values()) {
       const p = this.prim(o.material);
       const base = p.positions.length / 3;
+      // Vertex colours survive a merge: the side without them counts as white.
+      if (p.colors || o.colors) {
+        p.colors ??= new Array<number>(base * 4).fill(1);
+        p.colors.push(...(o.colors ?? new Array<number>((o.positions.length / 3) * 4).fill(1)));
+      }
       p.positions.push(...o.positions);
       p.normals.push(...o.normals);
       p.uvs.push(...o.uvs);
@@ -142,6 +149,7 @@ export class MeshBuilder {
       p.positions = o.positions.map((v, i) => (i % 3 === 0 ? -v : v));
       p.normals = o.normals.map((v, i) => (i % 3 === 0 ? -v : v));
       p.uvs = [...o.uvs];
+      if (o.colors) p.colors = [...o.colors];
       p.indices = [];
       for (let i = 0; i < o.indices.length; i += 3) p.indices.push(at(o.indices, i), at(o.indices, i + 2), at(o.indices, i + 1));
     }

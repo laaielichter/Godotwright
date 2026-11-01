@@ -241,11 +241,45 @@ export function terrainHeight(p: Params, wx: number, wz: number): number {
   return ground;
 }
 
-const LAKE_WATER: Material = { name: "lake_water", color: [0.08, 0.3, 0.42, 0.7], metallic: 0, roughness: 0.08, alpha: "BLEND", doubleSided: true };
-
-const GROUND: Material = { name: "terrain_ground", color: [0.28, 0.4, 0.17, 1], metallic: 0, roughness: 0.95 };
-/** One texture repeat per this many metres, counted from the world origin so a texture runs on across tiles. */
+/** One UV unit per this many metres, counted from the world origin so a texture runs on across tiles. */
 const UV_METERS = 8;
+
+const LAKE_WATER: Material = { name: "lake_water", color: [0.04, 0.16, 0.22, 0.75], metallic: 0, roughness: 0.05, alpha: "BLEND", doubleSided: true, texture: "water", uvMeters: UV_METERS };
+
+/** Neutral ground detail; the vertex colours give the ground its colour (grass, sand, rock, snow). */
+const GROUND: Material = { name: "terrain_ground", color: [0.9, 0.9, 0.9, 1], metallic: 0, roughness: 0.95, texture: "ground", uvMeters: UV_METERS };
+
+type RGB = [number, number, number];
+const GRASS_LUSH: RGB = [0.07, 0.15, 0.03], GRASS_DRY: RGB = [0.2, 0.19, 0.075], SAND: RGB = [0.42, 0.34, 0.21];
+const DIRT: RGB = [0.17, 0.12, 0.075], ROCK: RGB = [0.12, 0.11, 0.1], SNOW: RGB = [0.78, 0.81, 0.86], BED: RGB = [0.13, 0.11, 0.075];
+const blendRgb = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+/**
+ * The colour of the ground at a world position, from what is there: grass that is lusher or drier in patches, sand on a
+ * shore, bare earth and rock on steep slopes, rock and snow high in mountains, a dark bed under water. It depends only on
+ * the world position, the height and the normal, so it runs on across tile borders like the ground does.
+ */
+export function groundColor(p: Params, wx: number, wz: number, h: number, up: number): RGB {
+  const seed = p["seed"] as number, amp = p["maxHeight"] as number, base = p["baseLevel"] as number;
+  let water = 0;
+  const lake = lakeOf(p);
+  if (lake && Math.hypot(wx - lake.x, wz - lake.z) < lake.radius * 1.5) water = Math.max(water, lake.level);
+  const river = riverOf(p);
+  if (river && wz > river.z0 && wz < river.z1 && Math.abs(wx - river.centre(wz)) < 1.6 * river.width) water = Math.max(water, river.level(wz));
+  const above = h - water;
+  const patch = fbm(wx / 70, wz / 70, seed + 501, 3);
+  let c = blendRgb(GRASS_LUSH, GRASS_DRY, smoothstep(-0.2, 0.7, patch));
+  c = blendRgb(c, DIRT, smoothstep(0.94, 0.86, up) * 0.8);
+  c = blendRgb(c, ROCK, smoothstep(0.86, 0.7, up));
+  if (p["relief"] === "mountains") {
+    c = blendRgb(c, ROCK, smoothstep(base + amp * 0.45, base + amp * 0.7, h) * 0.75);
+    const snowline = base + amp * (0.68 + 0.06 * fbm(wx / 90, wz / 90, seed + 502, 2));
+    c = blendRgb(c, SNOW, smoothstep(snowline, snowline + amp * 0.08, h) * smoothstep(0.6, 0.8, up));
+  }
+  c = blendRgb(c, SAND, 1 - smoothstep(0.4, 2.2, above));
+  if (above < 0) c = blendRgb(SAND, BED, smoothstep(0, 2.5, -above));
+  return c;
+}
 
 export const terrain: Generator = {
   kind: "terrain",
@@ -281,7 +315,11 @@ export const terrain: Generator = {
           const q = quadNormal(qi, qj);
           sx += q[0]; sy += q[1]; sz += q[2];
         }
-        mesh.vertex(prim, [-size / 2 + i * step, H(i, j), -size / 2 + j * step], normalize([sx, sy, sz]), [wx / UV_METERS, wz / UV_METERS]);
+        const normal = normalize([sx, sy, sz]);
+        mesh.vertex(prim, [-size / 2 + i * step, H(i, j), -size / 2 + j * step], normal, [wx / UV_METERS, wz / UV_METERS]);
+        const c = groundColor(p, wx, wz, H(i, j), normal[1]);
+        // The colour map is 0.9 grey, so the vertex colour is lifted by as much.
+        (prim.colors ??= []).push(Math.min(1, c[0] / 0.9), Math.min(1, c[1] / 0.9), Math.min(1, c[2] / 0.9), 1);
       }
     }
     const index = (i: number, j: number): number => j * n + i;
@@ -351,8 +389,8 @@ export const SEA_PARAMS: ParamDef[] = [
   { name: "depth", type: "number", default: 40, min: 5, max: 200, description: "How far the sea floor lies below the surface in metres." },
 ];
 
-const WATER: Material = { name: "sea_water", color: [0.05, 0.25, 0.4, 0.75], metallic: 0, roughness: 0.08, alpha: "BLEND" };
-const SEA_FLOOR: Material = { name: "sea_floor", color: [0.55, 0.5, 0.35, 1], metallic: 0, roughness: 1 };
+const WATER: Material = { name: "sea_water", color: [0.02, 0.12, 0.2, 0.8], metallic: 0, roughness: 0.04, alpha: "BLEND", texture: "water", uvMeters: UV_METERS };
+const SEA_FLOOR: Material = { name: "sea_floor", color: [0.5, 0.43, 0.29, 1], metallic: 0, roughness: 1, texture: "sand", uvMeters: UV_METERS };
 
 /** A flat grid of quads facing up at height y. */
 function plane(size: number, divisions: number, y: number, material: string): MeshBuilder {

@@ -147,8 +147,8 @@ function checkNode(info: ModelInfo, all: PrimitiveInfo[], add: Add, uvReported: 
     const mat = prim.material === undefined ? undefined : info.materials[prim.material];
     if (mat?.textured && !prim.hasUv) add("model/missing-uv", `Material "${mat.name}" uses a texture, but the mesh has no TEXCOORD_0.`, node);
     if (mat?.normalMapped && !prim.hasTangents) add("model/missing-tangents", `Material "${mat.name}" has a normal map, but the mesh has no TANGENT data.`, node);
-    // UVs outside 0..1 only matter when a texture is sampled with them.
-    if (prim.uvOutOfRange && mat?.textured && !uvReported.has(node)) {
+    // UVs outside 0..1 only matter when a texture is sampled with them and does not repeat.
+    if (prim.uvOutOfRange && mat?.textured && !mat.repeats && !uvReported.has(node)) {
       uvReported.add(node);
       add("model/uv-out-of-range", "Some UVs lie outside 0..1.", node);
     }
