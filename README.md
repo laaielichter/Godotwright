@@ -236,7 +236,7 @@ set them with `--set name=value` or `--spec file.json`. These are clean, paramet
 to be refined, not hand-sculpted art. Kinds today: `house`, the open-world kinds `terrain` (a heightmap tile from seeded
 noise whose neighbours continue it exactly, with an optional lake and an optional river carved into it) and `sea` (a subdivided water plane at y = 0 with a floor), plus recipes, which are ready-made specs in
 `data/recipes/`: `car`, `tractor`, `helicopter`, `airliner`, `ship`, `tree`, `conifer`,
-`wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
+`wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `traffic-sign`, `guard-rail`, `delineator`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
 it as it builds, and every recipe is tested to stay clean at the lowest and highest value of each parameter.
 
 Small, cheap models can work blind: see [docs/cheap-models.md](docs/cheap-models.md) for a test and what `model view` and the
@@ -504,7 +504,8 @@ headless test rigs): no code, no names, no paths, and a test runs every one thro
 lessons go through. The ones a review can catch are rules, such as `api/infer-variant` on loop variables over
 untyped arrays, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
 `performance/runtime-gltf-mipmaps`, `quality/platform-layers-not-restored` and `model/opaque-glass`.
-[LESSONS.md](LESSONS.md) tells the story behind them. Lessons you keep locally can be proposed for everyone:
+[LESSONS.md](LESSONS.md) tells the story behind them, and [LESSONS-ROADS.md](LESSONS-ROADS.md) does the same for
+a road network generator (links, bridges, viaducts over rail and motorways, roundabouts, guard rails). Lessons you keep locally can be proposed for everyone:
 `godotwright lessons export` prints them as entries for `data/lessons.json`; nothing is sent.
 
 For maintainers, `godotwright collector serve` accepts reports (checked again,

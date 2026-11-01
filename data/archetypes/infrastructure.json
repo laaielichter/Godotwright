@@ -427,19 +427,16 @@
  {
   "id": "infrastructure.crash-barrier",
   "name": "crash barrier",
-  "description": "A steel guardrail (W-beam) on posts beside a road or race track, optionally with a catch fence behind it.",
+  "description": "A motorsport barrier beside a race track: stacked steel W-beams (Armco) on posts, often with a catch fence behind it. A guard rail along a public road is infrastructure.guard-rail.",
   "aliases": [
    "crash barrier",
-   "guardrail",
-   "guard rail",
    "armco",
-   "w-beam",
-   "vangrail",
-   "geleiderail",
+   "race barrier",
+   "track barrier",
+   "circuit barrier",
    "catch fence",
    "vangscherm",
-   "debris fence",
-   "safety barrier"
+   "debris fence"
   ],
   "extends": "infrastructure",
   "hints": [
@@ -661,6 +658,215 @@
      "strut"
     ]
    }
+  ]
+ },
+ {
+  "id": "infrastructure.traffic-sign",
+  "name": "traffic sign",
+  "description": "A road sign on a pole: a round, triangular or square plate with a reflective face.",
+  "aliases": [
+   "traffic sign",
+   "road sign",
+   "verkeersbord",
+   "bord",
+   "speed limit sign",
+   "snelheidsbord",
+   "maximumsnelheid",
+   "stop sign",
+   "stopbord",
+   "give way sign",
+   "voorrangsbord",
+   "street sign",
+   "straatnaambord",
+   "sign post",
+   "bordpaal"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Pole",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "pole",
+     "post",
+     "paal",
+     "bordpaal",
+     "mast"
+    ],
+    "note": "A round steel tube, about 76 mm across in many European countries."
+   },
+   {
+    "name": "Plate",
+    "role": "panel",
+    "required": true,
+    "aliases": [
+     "plate",
+     "sign",
+     "face",
+     "bord",
+     "plaat",
+     "panel"
+    ],
+    "note": "Front face reflective and facing the traffic; the back is plain metal with the mounting clamps."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.05,
+    1.5
+   ],
+   "width": [
+    0.4,
+    1.5
+   ],
+   "height": [
+    1.5,
+    4.0
+   ],
+   "source": "general knowledge: round signs of about 0.6, 0.7 or 0.9 m; the lower edge of the plate about 2.2 m above a footpath in built-up areas and lower (about 1.5-1.8 m) along rural roads; rules differ per country",
+   "confidence": "C"
+  },
+  "conventions": [
+   "The plate faces the traffic it is meant for, on the right of the carriageway in right-hand traffic, set back a little from the edge of the road."
+  ],
+  "pitfalls": [
+   "Text and symbols on many signs: use a texture, a decal or a distance-field shader, not one mesh per letter.",
+   "Hundreds of identical signs: one MultiMesh per kind of plate, not hundreds of MeshInstance3D nodes."
+  ]
+ },
+ {
+  "id": "infrastructure.guard-rail",
+  "name": "guard rail",
+  "description": "A steel road safety barrier: a corrugated beam on posts along the edge of a road. A motorsport barrier with a catch fence is infrastructure.crash-barrier.",
+  "aliases": [
+   "guard rail",
+   "guardrail",
+   "crash rail",
+   "safety barrier",
+   "w-beam",
+   "vangrail",
+   "geleiderail",
+   "geleiderails",
+   "vangrails",
+   "barrier rail"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Beam",
+    "role": "rail",
+    "required": true,
+    "aliases": [
+     "beam",
+     "rail",
+     "w-beam",
+     "ligger",
+     "plank",
+     "profiel"
+    ]
+   },
+   {
+    "name": "Post",
+    "role": "support",
+    "required": true,
+    "count": [
+     2,
+     400
+    ],
+    "aliases": [
+     "post",
+     "paal",
+     "steun",
+     "palen"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2,
+    200
+   ],
+   "width": [
+    0.2,
+    0.8
+   ],
+   "height": [
+    0.6,
+    1.1
+   ],
+   "source": "general knowledge: the beam about 0.3 m deep with its top near 0.75 m, posts every 2 to 4 m; national standards differ",
+   "confidence": "C"
+  },
+  "conventions": [
+   "Built as a repeatable segment along z whose length is a whole number of post spacings, so segments tile.",
+   "The ends are sloped or curved away from the traffic, never a blunt beam end facing it."
+  ],
+  "pitfalls": [
+   "A blunt end facing the traffic is the classic mistake; taper it down to the ground over several metres.",
+   "Collision: overlap the boxes of neighbouring segments a little, or a fast car slips through the seam."
+  ]
+ },
+ {
+  "id": "infrastructure.delineator",
+  "name": "delineator post",
+  "description": "A small white roadside post with a reflector that marks the edge of the road at night.",
+  "aliases": [
+   "delineator",
+   "delineator post",
+   "reflector post",
+   "marker post",
+   "edge marker",
+   "reflectorpaal",
+   "reflectorpaaltje",
+   "hectometerpaal",
+   "kilometerpaal",
+   "bermpaal",
+   "bermpaaltje"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Post",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "post",
+     "paal",
+     "body"
+    ]
+   },
+   {
+    "name": "Reflector",
+    "role": "light",
+    "required": true,
+    "aliases": [
+     "reflector",
+     "reflectors",
+     "reflectie",
+     "cat eye"
+    ],
+    "note": "Retroreflective; in a game an emissive or very bright material that only shows in headlight range."
+   }
+  ],
+  "scale": {
+   "length": [
+    0.05,
+    0.3
+   ],
+   "width": [
+    0.05,
+    0.3
+   ],
+   "height": [
+    0.6,
+    1.5
+   ],
+   "source": "general knowledge: about 1 m above the verge, every 50 m or so on rural roads; rules differ per country",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Thousands of them along a road network: one MultiMesh per road tile, with a short visibility range."
   ]
  },
  {
