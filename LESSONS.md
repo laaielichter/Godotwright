@@ -1,5 +1,10 @@
 # Lessons from building a large vehicle asset with Godotwright
 
+> These lessons, and about sixty more from a second, much larger project (an open world with helicopters, ships,
+> trains and moving decks), are now data: `data/lessons.json`, searchable with `godotwright lessons` and the
+> `godot_lessons` MCP tool, and shown under the Godot errors they explain. Lessons you learn yourself can be kept
+> with `godot_lesson_add`; see [Learning](README.md#learning). The text below is the story behind the first ones.
+
 An anonymised reflection on one long build: a high-detail military truck with a
 working weapon system, built from scratch in Blender scripts and Godot 4.7 by a
 coding agent with Godotwright. It holds no code, no project names and no paths;
@@ -36,10 +41,11 @@ checks it.
    mipmaps and VRAM compression when it sees a texture used in a 3D material in
    the editor. Textures loaded at runtime by script keep the 2D defaults, so
    they shimmer at a distance and use far more video memory. Set mipmaps (and
-   compression) in their import settings. *Not checked yet.*
+   compression) in their import settings. *Checked* for glTF loaded at runtime
+   (`performance/runtime-gltf-mipmaps`) and for images read from `res://` source files (`api/image-load-res`).
 7. **Glass is opaque until you make it otherwise,** and an interior behind it
    stays black without its own light. Both are needed before a cockpit shows.
-   *Not checked.*
+   *Checked:* `model lint` reports glass, canopy and window materials that light cannot pass (`model/opaque-glass`).
 8. **The Compatibility renderer needs a fill light.** Ambient light alone left
    the shaded side of a vehicle almost black. *Not checked;* `screenshot` adds a
    directional and an ambient light to the models it frames.
@@ -48,7 +54,7 @@ checks it.
    *Handled:* `check`, `test`, `play` and `screenshot` import first.
 10. **Imported node names can change.** An object with the same name as its
     pivot node gets a numbered suffix; look nodes up by the pivot, not the mesh.
-    *Not checked.*
+    *Checked:* `model lint` reports names Godot changes on import (`model/renamed-on-import`).
 11. **Ship levels of detail with heavy models.** A model of well over a million
     triangles with no LOD is fine in a close-up and too heavy as traffic.
     *Checked:* `model lint` warns over the triangle budget (`model/triangle-budget`).

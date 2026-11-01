@@ -49,12 +49,18 @@ node dist/cli.js --help
 - `src/collector/`: the reference collector for shared reports and the
   aggregation into `data/learned.json` (k-anonymity: at least 3 installs).
   `src/learn/bundled.ts` loads that file at runtime.
+- `src/lessons/`: lessons from real projects. `data/lessons.json` holds the bundled ones (`library.ts` loads it),
+  `search.ts` finds them by words, Godot message, rule and archetype and ranks them by feedback, `local.ts` keeps the
+  lessons learned on this machine, `anonymize.ts` scrubs names, paths, codes and source code from them (bundled lessons
+  must pass it unchanged; `test/lessons.test.ts` checks this), `hints.ts` adds lessons to check and review output,
+  and `format.ts` prints lessons and gaps. A new rule that comes from a lesson names it in the lesson's `rules`.
 - `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles.
 - `src/learn/`: local learning. `store.ts` reads and writes the learning file,
   `learn.ts` turns reviews, checks, lookups and feedback into counters and applies
   them, `hooks.ts` is what the CLI and MCP server call, `share.ts` builds and
   sends the opt-in anonymous report (see `PRIVACY.md`; keep it in sync). Learning must never break a
-  tool, and must never store code, names or paths.
+  tool, and must never store code, names or paths. Local lessons are free text: they are scrubbed when kept and are
+  never part of a report (only counts per bundled lesson id are).
 - `src/version.ts`: package version and the Godot target version.
 - `server.json`: the MCP Registry entry. Its name and versions must match `package.json`
   (`mcpName`, `version`); a test checks this.
