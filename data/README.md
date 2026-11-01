@@ -11,6 +11,12 @@ Rebuild it from a Godot source checkout at a release tag:
 npm run build:api -- /path/to/godot 4.7.2-stable <commit>
 ```
 
+`lessons.json` holds the lessons from real Godot 4 projects that `godot_lessons` and `godotwright lessons` answer
+from: an id, a topic, the lesson, symptom, cause, fix, how to test, the rules that check it, Godot message fragments
+and archetypes. They are anonymous: no code, names, paths or numbers that point to a project or a person, and
+`test/lessons.test.ts` runs every one through the same scrubber that local lessons go through. Propose new ones from
+`godotwright lessons export`.
+
 `api-removed.json` lists what Godot 4.0 to 4.5 had and Godot 4.7 does not, with the last release that had it.
 It comes from the `extension_api.json` of each release (the `godot-4.x-stable` branches of
 [godot-cpp](https://github.com/godotengine/godot-cpp)), and every entry was then tried in a real Godot 4.7.2: names Godot

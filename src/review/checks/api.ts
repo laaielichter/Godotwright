@@ -124,6 +124,10 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
   // --- per statement ----------------------------------------------------
   let currentFn: FunctionInfo | undefined;
   let locals = new Map<string, GType | undefined>();
+  /** Locals whose static type is Variant: untyped parameters, `var x` without a value, loop variables over untyped collections. */
+  let variants = new Set<string>();
+  /** Locals that are an untyped Array or Dictionary: their elements are Variant. */
+  let containers = new Set<string>();
   let currentTokens: Token[] = [];
   let currentOpen = 0;
 
@@ -134,8 +138,13 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     if (fn !== currentFn) {
       currentFn = fn;
       locals = new Map();
+      variants = new Set();
+      containers = new Set();
       for (const p of fn?.params ?? []) {
         locals.set(p.name, p.type ? pm.typeFromAnnotation(p.type, model) : p.inferred && p.default ? pm.literalType(p.default, model) : undefined);
+        if (!p.type && !p.inferred) variants.add(p.name);
+        else if (p.type === "Variant") variants.add(p.name);
+        else if (p.type === "Array" || p.type === "Dictionary") containers.add(p.name);
       }
     }
 
@@ -178,7 +187,12 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     }
     if ((m = /^(static\s+)?var\s+([A-Za-z_]\w*)\s*(?::\s*([^=]*?))?\s*(:?=)\s*/.exec(rest))) {
       const body = rest.slice(m[0].length).replace(/:\s*$/, "");
-      if (/:\s*=\s*$/.test(m[0]) && !m[3]?.trim()) checkInferVariant(m[2]!, body, ll.line);
+      const inferred = /:\s*=\s*$/.test(m[0]) && !m[3]?.trim();
+      if (inferred) {
+        checkInferVariant(m[2]!, body, ll.line);
+        if (fn) checkInferFromVariant(m[2]!, body, ll.line);
+      }
+      if (fn) trackVariant(m[2]!, m[3]?.trim() || undefined, inferred ? body : undefined, true);
       const result = analyzeExpr(body, offset + m[0].length);
       if (fn && !annotations.length) {
         checkTypeName(m[3]?.trim() || undefined, ll.line, model);
@@ -188,6 +202,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       continue;
     }
     if ((m = /^(static\s+)?var\s+([A-Za-z_]\w*)\s*(?::\s*([^=:]*))?\s*:?\s*$/.exec(rest))) {
+      if (fn) trackVariant(m[2]!, m[3]?.trim(), undefined, false);
       if (fn) {
         checkTypeName(m[3]?.trim() || undefined, ll.line, model);
         locals.set(m[2]!, m[3]?.trim() ? pm.typeFromAnnotation(m[3].trim(), model) : undefined);
@@ -201,6 +216,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     }
     if ((m = /^for\s+([A-Za-z_]\w*)\s*(?::\s*([\w.[\], ]+?))?\s+in\s+/.exec(rest))) {
       checkTypeName(m[2]?.trim() || undefined, ll.line, model);
+      if (!m[2]?.trim() && variantElements(rest.slice(m[0].length))) variants.add(m[1]!);
+      else variants.delete(m[1]!);
+      containers.delete(m[1]!);
       locals.set(m[1]!, m[2]?.trim() ? pm.typeFromAnnotation(m[2].trim(), model) : undefined);
       analyze(m[0].length);
       continue;
@@ -215,6 +233,53 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
 
     function textOf(line: LogicalLine, from: number, length: number): string {
       return line.text.slice(from, from + length);
+    }
+
+    /** Remembers what a local's static type says about Variant: the type written, or the value of `:=`. */
+    function trackVariant(name: string, annotation: string | undefined, inferredFrom: string | undefined, hasValue: boolean): void {
+      variants.delete(name);
+      containers.delete(name);
+      if (annotation === "Variant" || (!annotation && !hasValue)) variants.add(name);
+      else if (annotation === "Array" || annotation === "Dictionary" || (!annotation && inferredFrom !== undefined && /^[[{]/.test(inferredFrom.trim()))) containers.add(name);
+      else if (!annotation && inferredFrom === undefined && hasValue) containers.add(name);
+    }
+
+    /** True when the elements of a `for` loop's collection have no static type: a literal array or an untyped Array or Dictionary. */
+    function variantElements(iterable: string): boolean {
+      const e = iterable.replace(/:\s*$/, "").trim();
+      if (e.startsWith("[")) return true;
+      const id = /^([A-Za-z_]\w*)(?:\s*\.\s*(?:keys|values)\s*\(\s*\))?$/.exec(e);
+      if (!id) return false;
+      const name = id[1]!;
+      if (variants.has(name) || containers.has(name)) return true;
+      if (locals.has(name)) return false;
+      const member = model.outline.variables.find((v) => v.name === name);
+      return Boolean(member && (member.type === "Array" || member.type === "Dictionary" || (!member.type && !member.inferred && member.hasDefault)));
+    }
+
+    /**
+     * `var x := site.x + 1.0` where `site` is a Variant: Godot cannot infer a type from a Variant and stops with
+     * "Cannot infer the type of "x" variable because the value doesn't have a set type". Found three times in one
+     * project: loop variables over literal arrays, and Dictionary access.
+     */
+    function checkInferFromVariant(name: string, code: string, line: number): void {
+      const expr = code.trim();
+      if (/\b(?:as|if|and|or|not|in|is)\b|==|!=|<|>/.test(expr.replace(/"[^"]*"/g, '""'))) return;
+      // `"name_%d" % v` formats a String: the result has a type whatever v is.
+      if (/^[&^]?(["'])(?:\\.|(?!\1).)*\1\s*%/.test(expr)) return;
+      for (const operand of topLevelOperands(expr)) {
+        const chain = /^([A-Za-z_]\w*)((?:\s*(?:\.\s*[A-Za-z_]\w*|\[[^\]]*\]))*)$/.exec(operand.replace(/^[-+]\s*/, ""));
+        if (!chain) continue;
+        const [, root, access] = chain as unknown as [string, string, string];
+        const member = locals.has(root) ? undefined : model.outline.variables.find((v) => v.name === root);
+        const memberContainer = Boolean(member && (member.type === "Array" || member.type === "Dictionary"));
+        let why: string | undefined;
+        if (variants.has(root)) why = `"${root}" has no static type (it is a Variant)`;
+        else if (access.trim().startsWith("[") && (containers.has(root) || memberContainer)) why = `an element of the untyped Array or Dictionary "${root}" is a Variant`;
+        if (!why) continue;
+        report("api/infer-variant", line, `Cannot infer the type of "${name}": ${why}, so "${operand.trim()}" has no type. Give "${name}" a type (var ${name}: float = ...) or type the collection (Array[Vector3], for p: Vector3 in ...).`);
+        return;
+      }
     }
 
     /** Walks one expression; returns its type when the whole expression is a single chain. */
@@ -594,6 +659,36 @@ const TYPED_VERSIONS: Record<string, string> = {
 };
 
 /** Index of the `)` closing the `(` at `open`, skipping strings; -1 when unclosed. */
+/** The operands of `a + b * c` at the top level (not inside brackets or strings). A leading sign stays with its operand. */
+function topLevelOperands(expr: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let quote = "";
+  let start = 0;
+  let lastSignificant = "";
+  for (let i = 0; i < expr.length; i++) {
+    const c = expr[i]!;
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = "";
+      lastSignificant = c;
+      continue;
+    }
+    if (c === '"' || c === "'") quote = c;
+    else if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+    else if (depth === 0 && "+-*/%".includes(c) && /[\w)\]"']/.test(lastSignificant)) {
+      out.push(expr.slice(start, i));
+      start = i + 1;
+      lastSignificant = c;
+      continue;
+    }
+    if (!/\s/.test(c)) lastSignificant = c;
+  }
+  out.push(expr.slice(start));
+  return out.map((o) => o.trim()).filter(Boolean);
+}
+
 function closeParenAt(text: string, open: number): number {
   let depth = 0;
   for (let i = open; i < text.length; i++) {

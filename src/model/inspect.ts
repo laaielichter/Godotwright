@@ -58,8 +58,23 @@ export interface ModelInfo {
   generator?: string;
   nodes: NodeInfo[];
   primitives: PrimitiveInfo[];
-  /** `repeats`: every texture of the material wraps around (glTF's default), so UVs outside 0..1 just tile it. */
-  materials: { index: number; name: string; doubleSided: boolean; textured: boolean; normalMapped: boolean; repeats: boolean }[];
+  materials: {
+    index: number;
+    name: string;
+    doubleSided: boolean;
+    textured: boolean;
+    normalMapped: boolean;
+    /** Every texture of the material wraps around (glTF's default), so UVs outside 0..1 just tile it. */
+    repeats: boolean;
+    /** OPAQUE, MASK or BLEND (glTF's default is OPAQUE). */
+    alphaMode: string;
+    /** Alpha of the base colour factor (1 when not set). */
+    alpha: number;
+    /** Relative luminance of the base colour factor (1 when not set). */
+    luminance: number;
+    /** KHR_materials_transmission: light passes through, as through glass. */
+    transmission: boolean;
+  }[];
   textures: TextureInfo[];
   triangles: number;
   animations: number;
@@ -141,7 +156,21 @@ function materialInfo(json: Gltf, m: GltfMaterial, index: number) {
     const sampler = json.samplers?.[json.textures?.[t.index]?.sampler ?? -1];
     return sampler?.wrapS !== CLAMP_TO_EDGE && sampler?.wrapT !== CLAMP_TO_EDGE;
   });
-  return { index, name: m.name ?? `material_${index}`, doubleSided: Boolean(m.doubleSided), textured: used.length > 0, normalMapped: Boolean(m.normalTexture), repeats };
+  const factor = m.pbrMetallicRoughness?.baseColorFactor;
+  const alpha = factor?.[3];
+  const channel = (i: number) => (typeof factor?.[i] === "number" && Number.isFinite(factor[i]) ? factor[i]! : 1);
+  return {
+    index,
+    name: m.name ?? `material_${index}`,
+    doubleSided: Boolean(m.doubleSided),
+    textured: used.length > 0,
+    normalMapped: Boolean(m.normalTexture),
+    repeats,
+    alphaMode: m.alphaMode ?? "OPAQUE",
+    alpha: typeof alpha === "number" && Number.isFinite(alpha) ? alpha : 1,
+    luminance: 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2),
+    transmission: Boolean(m.extensions?.["KHR_materials_transmission"]),
+  };
 }
 
 function textureRoles(json: Gltf): Map<number, string[]> {

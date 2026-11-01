@@ -48,7 +48,7 @@ describe("Claude Code plugin and marketplace", () => {
     expect(existsSync(path("plugins/godotwright/LICENSE"))).toBe(true);
     const readme = readFileSync(path("plugins/godotwright/README.md"), "utf8").replace(/```[\s\S]*?```/g, "");
     expect(readme.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(40);
-    for (const skill of ["godot", "review", "port"]) {
+    for (const skill of ["godot", "review", "port", "learn"]) {
       const text = readFileSync(path(`plugins/godotwright/skills/${skill}/SKILL.md`), "utf8");
       expect(text).toMatch(new RegExp(`^---\\nname: ${skill}\\ndescription: .+`, "m"));
     }

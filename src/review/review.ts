@@ -5,6 +5,7 @@ import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
 import { checkScriptPhysics } from "./checks/physics.js";
+import { checkScenePitfalls, checkScriptPitfalls } from "./checks/pitfalls.js";
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
 import { checkScriptQuality, checkUnusedSignals, type TypingStats } from "./checks/quality.js";
 import { checkStructure } from "./checks/structure.js";
@@ -44,7 +45,7 @@ export interface ReviewReport {
   scripts: number;
   scenes: number;
   /** Set when learning adjusted the findings. */
-  learning?: { downgraded: string[]; hidden: number };
+  learning?: { downgraded: string[]; softened?: string[]; hidden: number };
 }
 
 /** Points lost per finding, and the most one rule can take from a category. */
@@ -77,12 +78,14 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     findings.push(...checkScriptApi(pm, script, { foreignClasses, inputActions }));
     findings.push(...checkScriptPerformance(pm, script));
     findings.push(...checkScriptPhysics(pm, script));
+    findings.push(...checkScriptPitfalls(pm, script));
     const quality = checkScriptQuality(pm, script);
     findings.push(...quality.findings);
     typing.typed += quality.typing.typed;
     typing.total += quality.typing.total;
   }
   findings.push(...checkScenePerformance(pm).filter((f) => inScope(f.file)));
+  findings.push(...checkScenePitfalls(pm).filter((f) => inScope(f.file)));
   findings.push(...checkUnusedSignals(pm).filter((f) => inScope(f.file)));
   findings.push(...checkStructure(pm, { foreignClasses }).filter((f) => inScope(f.file)));
 
@@ -107,7 +110,9 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     typing: { ...typing, percent: typingPercent },
     scripts: [...data.scripts.keys()].filter(inScope).length,
     scenes: data.map.scenes.filter((sc) => !sc.external && inScope(sc.path)).length,
-    ...(adjusted && (adjusted.downgraded.length || adjusted.hidden) ? { learning: { downgraded: adjusted.downgraded, hidden: adjusted.hidden } } : {}),
+    ...(adjusted && (adjusted.downgraded.length || adjusted.hidden || adjusted.softened?.length)
+      ? { learning: { downgraded: adjusted.downgraded, ...(adjusted.softened?.length ? { softened: adjusted.softened } : {}), hidden: adjusted.hidden } }
+      : {}),
   };
 }
 

@@ -70,6 +70,14 @@ jobs:
         run: node dist/cli.js collector projects public/godot4/*/* public/godot3/*/* --out data/learned.json
       - name: Show the result
         run: cat data/learned.json
+      - name: What to teach next
+        # The Godot errors no review rule predicts and no lesson explains yet: the next rules and lessons to write.
+        run: |
+          {
+            echo '```text'
+            node dist/cli.js learn gaps
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - run: npm test
       - name: Commit when something changed
         run: |

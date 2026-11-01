@@ -17,7 +17,13 @@ The learning file (`godotwright learn` shows where it is) holds:
   replaced (`Identifier "<s>" not declared in the current scope.`). Every other
   word that is not Godot or engine wording becomes `<id>`, and a message that
   still holds a path or a name is not kept;
-- hashes of findings marked as wrong (so they stay hidden), local only.
+- hashes of findings marked as wrong (so they stay hidden), local only;
+- per lesson id: how often the lesson was shown, and how often it was marked as helpful or wrong;
+- lessons you keep with `godot_lesson_add` or `godotwright lessons add`, local only. Before one is stored, names of
+  the project (its title, classes, nodes, files, groups and input actions), paths, links, e-mail addresses, dates,
+  codes, keys, long numbers, source code and other capitalised names are replaced by placeholders such as `<name>`;
+  a lesson that is mostly placeholders is refused. The tool shows what was stored. Remove one with
+  `godotwright lessons remove <id>`.
 
 It is built not to hold code, paths or project names. A method of your own on
 a Godot class can still look like a Godot name, so keep the file local.
@@ -40,7 +46,10 @@ A report holds only:
   it is a typo of that name. Bare names and your own names are never sent;
 - Godot error templates, after a second pass that replaces every word that is
   not a Godot class name or engine wording with `<id>`. A template that still
-  holds a path is never sent.
+  holds a path is never sent;
+- for lessons that ship with Godotwright only: the lesson id with how often it was shown, helped and was marked
+  wrong. The text of a lesson is never sent, and lessons you kept yourself are never sent at all; to propose one for
+  everyone, `godotwright lessons export` prints them for you to review and send yourself.
 
 Each report holds only what is new since the last one. Nothing is sent when
 sharing is off, when `GODOTWRIGHT_LEARN=0` or `DO_NOT_TRACK` is set, or when no

@@ -1,4 +1,5 @@
 import { allKinds } from "../build/generators/index.js";
+import { lessonsForArchetype } from "../lessons/search.js";
 import { SPEC_CHEAT } from "../build/spec-help.js";
 import { formatPart, range } from "./format.js";
 import { identify, stem, type IdentifyResult } from "./identify.js";
@@ -134,6 +135,9 @@ export function briefFor(what: string, library: ArchetypeLibrary = loadLibrary()
   out.push("  Always: metres, +Y up, front faces +Z, origin on the ground, every moving part its own node with its pivot at the origin, scale 1, left and right exact mirrors.");
   const mistakes = a.pitfalls.filter((c) => !shared.has(c));
   out.push("", "4. USUAL MISTAKES", ...(mistakes.length ? cap(mistakes.map((c) => `  - ${c}`), 6) : ["  (none known for this thing; a unit mistake and a part baked into the body are the usual ones)"]));
+  // Lessons from real builds of this kind of thing (the most specific first), from data/lessons.json.
+  const lessons = lessonsForArchetype(a.chain, { limit: 4 });
+  if (lessons.length) out.push("  From real builds (godotwright lessons <id> for the whole lesson):", ...lessons.map((h) => `  - ${h.lesson.title}. [${h.lesson.id}]`));
 
   out.push(
     "",

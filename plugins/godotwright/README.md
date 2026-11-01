@@ -14,11 +14,13 @@ In Claude Code:
 
 ## What you get
 
-- **The MCP server** with 22 tools (`godot_scan`, `godot_api`, `godot_review`, `godot_check`, `godot_scene_edit`,
-  `godot_model_build` and more). See the [full list](https://github.com/laaielichter/Godotwright#the-22-tools).
-- **Three skills:**
+- **The MCP server** with all its tools (`godot_scan`, `godot_api`, `godot_review`, `godot_check`, `godot_scene_edit`,
+  `godot_model_build`, `godot_lessons` and more). See the [full list](https://github.com/laaielichter/Godotwright#the-24-tools).
+- **Four skills:**
   - `/godotwright:review` reviews the project and fixes what it finds, errors first.
   - `/godotwright:port` ports Godot 3 code to Godot 4.
+  - `/godotwright:learn` teaches Godotwright what this session learned: it checks the gaps (Godot errors no rule or
+    lesson explains yet), keeps the lessons in general words, and rates the lessons that helped. Nothing is sent.
   - `godot` is a Godot workflow Claude follows on its own: map the project, look up the API, review before and after
     each edit, check with Godot before finishing.
 

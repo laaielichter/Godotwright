@@ -36,6 +36,31 @@ import {
   parseFindingLine,
   recordFeedback,
 } from "../learn/learn.js";
+import { bundledLearning } from "../learn/bundled.js";
+import { readLearning } from "../learn/store.js";
+import {
+  findGaps,
+  formatGaps,
+  formatLesson,
+  formatLessons,
+} from "../lessons/format.js";
+import { lessonHintsForMessages, lessonHintsForRules } from "../lessons/hints.js";
+import { isTopic } from "../lessons/library.js";
+import {
+  addLocalLesson,
+  LessonError,
+  recordLessonFeedback,
+  recordShown,
+} from "../lessons/local.js";
+import { projectNames } from "../lessons/names.js";
+import {
+  findLesson,
+  lessonsForError,
+  lessonsForRule,
+  searchLessons,
+  type LessonHit,
+} from "../lessons/search.js";
+import { LESSON_TOPICS } from "../lessons/types.js";
 import { allKinds } from "../build/generators/index.js";
 import { buildModel } from "../build/run.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
@@ -120,6 +145,7 @@ const PROFILES: Record<Tier, Profile> = {
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it.",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
+      "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
       'To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put "archetype" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.',
     ].join("\n"),
@@ -143,14 +169,16 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
-      "- godot_feedback marks a review finding as wrong (a verified false alarm) or right; Godotwright learns from it on this machine.",
+      "- godot_feedback marks a review finding as wrong (a verified false alarm) or right, or says whether a lesson helped; Godotwright learns from it on this machine.",
+      "- godot_lessons answers from lessons learned in real Godot projects (symptom, cause, fix, how to test): by words, by a Godot error message, by a rule, or `gaps: true` for the errors Godotwright cannot predict yet. Use it when Godot shows an error you do not understand and before you build moving platforms, vehicles, large worlds, runtime-loaded models or shaders.",
+      "- godot_lesson_add keeps a lesson you learned here (title, symptom, cause, fix, the Godot message), scrubbed of names, paths and code, on this machine only. The next godot_check or godot_lessons shows it when the same problem comes back. Add one whenever a fix took more than one try.",
       "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
       "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
       "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, tube, with expressions, mirror, repeat, bevels and textured materials) and lists the ready-made kinds.",
       "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
       "- godot_model_view draws a .glb as text: front, side and top views made of letters (one letter per part), a table of the parts with sizes, and the parts that do not touch the rest (a ladder away from its tree, a wheel without an axle). You cannot see a picture, so use it after every build to check shape, proportions and that everything is attached.",
       "- godot_model_lint scores a .glb (geometry, materials, performance, rig), and with `archetype` also checks it is what it should be: parts, pivots, wheel axes, size, direction. godot_model_inspect shows what is in a .glb.",
-      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, view, lint with the archetype, fix, repeat.",
+      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, view, lint with the archetype, fix, repeat. When a fix was hard, keep the lesson (godot_lesson_add) so the next session starts smarter.",
     ].join("\n"),
   },
 };
@@ -785,6 +813,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         lines.push(
           `${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
         );
+        lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
         if (result.output !== undefined)
           lines.push(
             `output of the run (${result.ran ? `${result.ran.frames} frames = ${result.ran.seconds} s of game time, ` : ""}what the game printed):\n${result.output || "(nothing)"}`,
@@ -1037,13 +1066,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Feedback on a review finding",
       description:
-        "Tell Godotwright that a godot_review finding was wrong (a false alarm you verified) or right. `finding` is the line exactly as godot_review printed it; `verdict` wrong hides that finding in later reviews on this machine, right counts it as confirmed. Both teach Godotwright which rules to trust. Only use it after checking the code (godot_api, godot_check); fix real findings instead of marking them. It writes to the local learning file only (`godotwright learn reset` forgets everything). Returns a one-line confirmation; an error when the line is not a finding or learning is off.",
+        "Tell Godotwright that a godot_review finding was wrong (a false alarm you verified) or right, or whether a lesson from godot_lessons helped. Pass `finding` (the line exactly as godot_review printed it) or `lesson` (its id), not both. For a finding, `verdict` wrong hides it in later reviews on this machine and right counts it as confirmed; a rule marked wrong far more often than right is then reported one level lower. For a lesson, right means it helped and ranks it higher; wrong makes it show up less. Only use it after checking the code (godot_api, godot_check); fix real findings instead of marking them. It writes to the local learning file only (`godotwright learn reset` forgets everything). Returns a one-line confirmation; an error when the line is not a finding, the lesson does not exist, or learning is off.",
       inputSchema: {
         finding: z
           .string()
+          .optional()
           .describe(
             "the finding line, e.g. res://player.gd:12: error [api/unknown-member] ...",
           ),
+        lesson: z
+          .string()
+          .optional()
+          .describe("a lesson id from godot_lessons, e.g. physics/moving-platform-velocity"),
         verdict: z.enum(["wrong", "right"]),
       },
       annotations: {
@@ -1053,8 +1087,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ finding, verdict }) => {
-      const parsed = parseFindingLine(finding);
+    async ({ finding, lesson, verdict }) => {
+      if ((finding === undefined) === (lesson === undefined))
+        return failure("Pass either `finding` or `lesson`.");
+      if (lesson !== undefined) {
+        try {
+          recordLessonFeedback(lesson.trim(), verdict === "right" ? "helped" : "wrong");
+        } catch (error) {
+          return failure(error instanceof Error ? error.message : String(error));
+        }
+        return text(
+          verdict === "right"
+            ? `Noted: ${lesson} helped; it ranks higher from now on.`
+            : `Noted: ${lesson} did not fit; it is offered less from now on.`,
+        );
+      }
+      const parsed = parseFindingLine(finding!);
       if (!parsed)
         return failure(
           "Pass the finding line exactly as godot_review printed it.",
@@ -1069,6 +1117,75 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ? `Noted: ${parsed.rule} at ${parsed.file} is hidden from now on.`
           : `Noted: ${parsed.rule} was right.`,
       );
+    },
+  );
+
+  server.registerTool(
+    "godot_lessons",
+    {
+      title: "Lessons from real Godot projects",
+      description:
+        `Answer from lessons learned in real Godot 4 projects and on this machine: what went wrong, why in Godot terms, the fix, and how to test it. Find them by \`query\` (words such as 'helicopter slides off moving ship', or a lesson id), by \`error\` (a Godot message exactly as printed: the lessons that explain it), by \`rule\` (the lessons behind a review or model rule), or narrow by \`topic\` (${LESSON_TOPICS.join(", ")}). Without any of them it lists the lessons. \`gaps: true\` instead lists the Godot errors seen on this machine (and by other installs) that no review rule predicted and no lesson explains yet: what to teach Godotwright next. Use it when Godot shows an error you do not understand, and before you build moving platforms, vehicles, ships, large worlds, runtime-loaded models, shaders or headless tests. \`detail\` brief gives the title and fix; full adds symptom, cause, test, rules and the Godot message. Returns plain text; lessons learned here are marked. It counts which lessons were shown in the local learning file (GODOTWRIGHT_LEARN=0 turns that off). Say whether one helped with godot_feedback (\`lesson\`).`,
+      inputSchema: {
+        query: z.string().optional().describe("words, or a lesson id"),
+        error: z.string().optional().describe("a Godot error or warning message, as printed"),
+        rule: z.string().optional().describe("a rule id from godot_review or godot_model_lint, e.g. api/infer-variant"),
+        topic: z.enum(LESSON_TOPICS).optional().describe("only lessons of this topic"),
+        gaps: z.boolean().optional().describe("list what Godotwright cannot predict yet instead of lessons"),
+        limit: z.number().int().min(1).max(50).optional().describe("max lessons (default 5; 20 when listing)"),
+        detail: detailParam,
+      },
+      annotations: writesLearning,
+    },
+    async ({ query, error, rule, topic, gaps, limit, detail }) =>
+      guard(() => {
+        const learning = currentLearning();
+        const shared = bundledLearning();
+        if (gaps) return text(formatGaps(findGaps(learning ?? readLearning(), shared, limit ?? 20)));
+        const listing = !query?.trim() && !error && !rule;
+        const common = { learning, shared, limit: limit ?? (listing ? 20 : 5) };
+        let hits: LessonHit[];
+        const byId = query ? findLesson(query.trim(), learning) : undefined;
+        if (byId) hits = [{ ...byId, score: 1, helped: 0, wrong: 0 }];
+        else if (error) hits = lessonsForError(error, common);
+        else if (rule) hits = lessonsForRule(rule, common);
+        else hits = searchLessons(query ?? "", { ...common, topic: isTopic(topic) ? topic : undefined });
+        if (learning) recordShown(hits.map((h) => h.lesson.id));
+        const out = formatLessons(hits, byId ? "full" : (detail ?? profile.detail), query ?? error ?? rule ?? "");
+        return hits.length ? text(out) : failure(out);
+      }),
+  );
+
+  server.registerTool(
+    "godot_lesson_add",
+    {
+      title: "Keep a lesson learned here",
+      description:
+        "Keep a lesson you learned in this project, so Godotwright (and the next session) knows it: when the same Godot message or question comes back, godot_check and godot_lessons show your fix. Write it in general words: `title` is the lesson in one line, `fix` what to do; add `symptom`, `cause`, `error` (the Godot message as printed, kept as a template), `topic`, `tags`, `rules` and `test` when you can. Names of this project (classes, nodes, files, its title), paths, links, e-mail addresses, codes, keys and source code are replaced before anything is stored; a lesson that is mostly names is refused with what to change. The same title again updates that lesson. It writes only to the local learning file and is never sent; `godotwright lessons export` prints these lessons for a person to propose for everyone. Add one whenever a fix took more than one try, and not for what a review rule already reports. Returns the stored lesson and what was replaced; an error when it is refused or learning is off.",
+      inputSchema: {
+        title: z.string().describe("the lesson in one line, e.g. 'A body placed on a moving deck must start at the deck speed'"),
+        fix: z.string().describe("what to do instead"),
+        symptom: z.string().optional().describe("what went wrong, as it showed"),
+        cause: z.string().optional().describe("why, in Godot terms"),
+        error: z.string().optional().describe("the Godot message it explains, as printed"),
+        topic: z.enum(LESSON_TOPICS).optional().describe("default gdscript"),
+        tags: z.array(z.string()).max(12).optional().describe("words to find it by"),
+        rules: z.array(z.string()).max(5).optional().describe("review or model rule ids it belongs to"),
+        test: z.string().optional().describe("how to test it"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async (input) => {
+      try {
+        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base) });
+        const removed = Object.entries(replaced).map(([k, n]) => `${n} ${k}`).join(", ");
+        return text(
+          `${updated ? "Updated" : "Kept"} ${lesson.id} on this machine${removed ? ` (replaced: ${removed})` : ""}.\n` +
+            `${formatLesson({ lesson, local: true, helped: 0, wrong: 0 }, "full")}\n`,
+        );
+      } catch (error) {
+        return failure(error instanceof LessonError || error instanceof Error ? error.message : String(error));
+      }
     },
   );
 
@@ -1484,6 +1601,11 @@ function formatReviewFor(
     out.push(
       `Learned: ${report.learning.downgraded.join(", ")} shown as warnings; Godot did not confirm them.`,
     );
+  if (report.learning?.softened?.length)
+    out.push(
+      `Learned: ${report.learning.softened.join(", ")} shown one level lower; marked as false alarms far more often than right.`,
+    );
+  out.push(...lessonHintsForRules(shown.map((f) => f.rule)));
   return `${out.join("\n")}\n`;
 }
 

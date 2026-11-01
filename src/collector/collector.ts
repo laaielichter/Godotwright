@@ -2,6 +2,8 @@ import { appendFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { join } from "node:path";
 import { GodotApi } from "../api/api.js";
+import { bundledLessons } from "../lessons/library.js";
+import type { LessonStats } from "../lessons/types.js";
 import { RULES } from "../review/rules.js";
 import { scrubTemplate, shareableQuery, typoOf, type ShareReport } from "../learn/share.js";
 import type { RuleStats } from "../learn/store.js";
@@ -23,7 +25,7 @@ const COUNT = (n: unknown): n is number => Number.isInteger(n) && (n as number) 
 /** A report that passed all checks, or undefined. */
 export function validateReport(value: unknown): ShareReport | undefined {
   if (!isObject(value)) return undefined;
-  const keys = ["schema", "godotwright", "godot", "platform", "install", "rules", "apiMisses", "missedByReview", "unparsed"];
+  const keys = ["schema", "godotwright", "godot", "platform", "install", "rules", "apiMisses", "missedByReview", "unparsed", "lessons"];
   if (Object.keys(value).some((k) => !keys.includes(k))) return undefined;
   const r = value as Record<string, unknown>;
   if (r["schema"] !== 1) return undefined;
@@ -49,6 +51,12 @@ export function validateReport(value: unknown): ShareReport | undefined {
   for (const part of ["missedByReview", "unparsed"]) {
     const list = entries(r[part]);
     if (!list || !list.every(([t, n]) => safeTemplate(t, api) && COUNT(n))) return undefined;
+  }
+  if (r["lessons"] !== undefined) {
+    // Only lessons that ship with Godotwright, by id, with three counts each: never text.
+    const known = new Set(bundledLessons().map((l) => l.id));
+    const lessons = entries(r["lessons"]);
+    if (!lessons || !lessons.every(([k, s]) => known.has(k) && isObject(s) && Object.keys(s).length === 3 && ["shown", "helped", "wrong"].every((f) => COUNT(s[f])))) return undefined;
   }
   return value as unknown as ShareReport;
 }
@@ -111,6 +119,8 @@ export interface LearnedData {
   rules: Record<string, RuleStats & { installs: number }>;
   /** Godot errors the review missed, by number of installs. */
   missedByReview: Record<string, number>;
+  /** Lesson counts summed over installs, for lessons at least K installs reported. */
+  lessons?: Record<string, LessonStats & { installs: number }>;
 }
 
 /** Reads every stored report in a directory. Broken lines are skipped. */
@@ -137,8 +147,17 @@ export function aggregate(reports: ShareReport[], k = K_ANONYMITY): LearnedData 
   const ruleSum = new Map<string, RuleStats & { ids: Set<string> }>();
   const hints = new Map<string, Map<string, Set<string>>>();
   const missed = new Map<string, Set<string>>();
+  const lessonSum = new Map<string, LessonStats & { ids: Set<string> }>();
 
   for (const r of reports) {
+    for (const [lesson, s] of Object.entries(r.lessons ?? {})) {
+      const sum = lessonSum.get(lesson) ?? { shown: 0, helped: 0, wrong: 0, ids: new Set<string>() };
+      sum.shown += s.shown;
+      sum.helped += s.helped;
+      sum.wrong += s.wrong;
+      sum.ids.add(r.install);
+      lessonSum.set(lesson, sum);
+    }
     for (const [rule, s] of Object.entries(r.rules)) {
       const sum = ruleSum.get(rule) ?? { reported: 0, confirmed: 0, contradicted: 0, dismissed: 0, ids: new Set<string>() };
       sum.reported += s.reported;
@@ -172,7 +191,9 @@ export function aggregate(reports: ShareReport[], k = K_ANONYMITY): LearnedData 
       .slice(0, MAX_ENTRIES)
       .map(([t, ids]) => [t, ids.size]),
   );
-  return { version: 1, installs: installs.size, apiHints, rules, missedByReview };
+  const lessons: NonNullable<LearnedData["lessons"]> = {};
+  for (const [lesson, { ids, ...s }] of [...lessonSum].sort(([a], [b]) => a.localeCompare(b))) if (ids.size >= k) lessons[lesson] = { ...s, installs: ids.size };
+  return { version: 1, installs: installs.size, apiHints, rules, missedByReview, ...(Object.keys(lessons).length ? { lessons } : {}) };
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {
