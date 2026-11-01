@@ -28,6 +28,18 @@ jobs:
       - run: npm test
       - name: Smoke test CLI
         run: node dist/cli.js --help
+      - name: Build the Claude Desktop bundle and start its server
+        if: matrix.node == 24
+        run: |
+          npm run build:mcpb
+          mkdir -p build/unpacked && unzip -q build/godotwright.mcpb -d build/unpacked
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
+            | timeout 20 node build/unpacked/dist/cli.js mcp | grep -q '"serverInfo"'
+      - name: Validate the Claude Code plugin and marketplace
+        if: matrix.node == 24
+        run: |
+          npx -y @anthropic-ai/claude-code plugin validate ./plugins/godotwright
+          npx -y @anthropic-ai/claude-code plugin validate .
 
   action:
     name: Receipt action

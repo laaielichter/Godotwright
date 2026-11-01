@@ -10,12 +10,18 @@ Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript
   <img src="https://img.shields.io/badge/Godot-4.7-478cbf?logo=godotengine&logoColor=white" alt="Godot 4.7">
   <img src="https://img.shields.io/badge/MCP-server-6e56cf" alt="MCP server">
   <a href="https://www.npmjs.com/package/godotwright"><img src="https://img.shields.io/npm/v/godotwright" alt="npm version"></a>
+  <br>
+  <a href="https://laaielichter.github.io/Godotwright/install.html#claude-code"><img src="https://img.shields.io/badge/Claude_Code-plugin-d97757" alt="Install the Claude Code plugin"></a>
+  <a href="https://laaielichter.github.io/Godotwright/install.html#claude-desktop"><img src="https://img.shields.io/badge/Claude_Desktop-one_file-d97757" alt="Install in Claude Desktop"></a>
+  <a href="https://laaielichter.github.io/Godotwright/install.html#cursor"><img src="https://img.shields.io/badge/Cursor-one_click-000000" alt="Add to Cursor"></a>
+  <a href="https://laaielichter.github.io/Godotwright/install.html#vscode"><img src="https://img.shields.io/badge/VS_Code-one_click-0078d4" alt="Install in VS Code"></a>
+  <a href="https://laaielichter.github.io/Godotwright/install.html#gemini"><img src="https://img.shields.io/badge/Gemini_CLI-extension-4285f4" alt="Install the Gemini CLI extension"></a>
 </p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
   <a href="https://laaielichter.github.io/Godotwright/models.html">3D model gallery</a> ·
   <a href="#quickstart">Quickstart</a> ·
-  <a href="#use-with-claude-code-codex-and-other-coding-agents-mcp">MCP setup</a> ·
+  <a href="https://laaielichter.github.io/Godotwright/install.html">Install in your agent</a> ·
   <a href="bench/RESULTS.md">Benchmark</a> ·
   <a href="ROADMAP.md">Roadmap</a>
 </p>
@@ -85,7 +91,7 @@ npx -y godotwright review ~/games/my-game
 
 You get a score from 0 to 100 for api, performance, quality and structure, and each
 finding as `res://file.gd:12: error [rule] message` with the Godot 4 fix.
-Then [connect it to your agent](#use-with-claude-code-codex-and-other-coding-agents-mcp).
+Then [connect it to your agent](#install-in-your-coding-agent-mcp).
 
 ## Why Godotwright?
 
@@ -349,46 +355,30 @@ A file list is text with one path per line, or JSON (strings, or objects with a
 `path`, `resource` or `file` key); exported names such as `x.glb.import` and
 `x.gdc` map back to their source.
 
-## Use with Claude Code, Codex and other coding agents (MCP)
+## Install in your coding agent (MCP)
 
-`godotwright mcp` runs an MCP server over stdio with twelve tools:
+One step for each client. Every setup and one-click button is on the [install page](https://laaielichter.github.io/Godotwright/install.html).
 
-| Tool | What it does |
+| Client | How |
 | --- | --- |
-| `godot_scan` | Map the project: scenes and node trees, scripts, signals, autoloads, input map |
-| `godot_api` | Exact Godot 4.7 lookup: signatures, inheritance, Godot 3 names |
-| `godot_api_search` | Search the Godot 4.7 class reference |
-| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`) |
-| `godot_check` | Run Godot headless and report errors as file:line |
-| `godot_checklist` | Every AAA rule with its fix |
-| `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
-| `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules, the order of tools and a short spec cheat sheet |
-| `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants, what to anticipate (English or Dutch) |
-| `godot_model_spec` | The model spec format, an example and the ready-made kinds |
-| `godot_model_build` | Build a clean `.glb` from a kind or a spec (written inside the project), and lint it |
-| `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
-| `godot_model_view` | See a `.glb` as text: front, side and top views, the parts with sizes, and parts that do not touch the rest |
-| `godot_model_inspect` | What is in a `.glb`: nodes, triangles, textures, size |
+| **Claude Code** | Plugin with the MCP server and three skills: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
+| **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it (from release 0.2.0) |
+| **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
+| **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
+| **Codex** | `codex mcp add godotwright -- npx -y godotwright mcp --tier premium` |
+| **Gemini CLI** | `gemini extensions install https://github.com/laaielichter/Godotwright` |
+| **Windsurf, Zed, others** | [JSON for your client](https://laaielichter.github.io/Godotwright/install.html#other) |
 
-Pick a profile with `--tier`:
-
-- `cheap` (default): short output, and server instructions that walk the model
-  through small checked steps (scan, look up, review before saving, review after each edit).
-- `premium`: full detail, all findings with fixes.
-
-**Claude Code**
+The Claude Code plugin adds `/godotwright:review` (review the project and fix what it finds),
+`/godotwright:port` (port Godot 3 code to Godot 4) and a Godot workflow Claude follows on its own.
+On Claude Code older than 2.1.275, run `/plugin marketplace add laaielichter/Godotwright` and then
+`/plugin install godotwright@godotwright`. Only the MCP server, without the skills:
 
 ```sh
 claude mcp add godotwright -- npx -y godotwright mcp --tier premium
 ```
 
-**Codex**
-
-```sh
-codex mcp add godotwright -- npx -y godotwright mcp --tier premium
-```
-
-or in `~/.codex/config.toml`:
+Codex can also read it from `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.godotwright]
@@ -397,8 +387,41 @@ args = ["-y", "godotwright", "mcp", "--tier", "premium"]
 startup_timeout_sec = 30 # the first npx run downloads the package
 ```
 
-Run the agent from the Godot project folder (or pass `--project <path>`).
+Run the agent from the Godot project folder, or pass `--project <path>` (or set `GODOTWRIGHT_PROJECT`).
+Pick a profile with `--tier`:
+
+- `premium`: full detail, all findings with fixes. Use it with large models.
+- `cheap` (the default): short output, and server instructions that walk a small model
+  through checked steps (scan, look up, review before saving, review after each edit).
+
 CI connects both Claude Code and Codex to the server on every push.
+
+### The 22 tools
+
+| Tool | What it does |
+| --- | --- |
+| `godot_scan` | Map the project: scenes and node trees, scripts, signals, autoloads, input map |
+| `godot_api` | Exact Godot 4.7 lookup: signatures, inheritance, Godot 3 names |
+| `godot_api_search` | Search the Godot 4.7 class reference |
+| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`), or only what changed (`only_new`) |
+| `godot_checklist` | Every AAA rule with its fix |
+| `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
+| `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
+| `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
+| `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
+| `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
+| `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
+| `godot_check` | Run Godot headless and report errors as `file:line` |
+| `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
+| `godot_play` | Run a scene with an input timeline and return the values you watch per frame |
+| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn |
+| `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
+| `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
+| `godot_model_spec` | The model spec format, an example and the ready-made kinds |
+| `godot_model_build` | Build a clean `.glb` from a kind or a spec (inside the project), and lint it |
+| `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
+| `godot_model_view` | See a `.glb` as text: front, side and top views, parts with sizes, parts that do not touch |
+| `godot_model_inspect` | What is in a `.glb`: nodes, triangles, textures, size |
 
 ## Learning
 

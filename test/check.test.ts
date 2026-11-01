@@ -202,6 +202,12 @@ describe("findGodot", () => {
     expect(() => findGodot("/no/such/godot", {})).toThrow(/not found or not executable/);
   });
 
+  it("treats an unexpanded ${...} placeholder in $GODOT as unset (an empty setting in an MCP bundle)", () => {
+    const godot = fakeGodot({});
+    expect(findGodot(undefined, { GODOT: "${user_config.godot}", PATH: join(godot, "..") })).toBe(godot);
+    expect(() => findGodot(undefined, { GODOT: "${user_config.godot}", PATH: "" })).toThrow(GodotNotFoundError);
+  });
+
   it("returns an absolute path, so a relative --godot still works when Godot runs from the project", () => {
     const godot = fakeGodot({});
     // Godot is spawned from the project folder, so a path relative to the shell's folder would not resolve there.

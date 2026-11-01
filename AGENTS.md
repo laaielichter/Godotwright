@@ -58,6 +58,14 @@ node dist/cli.js --help
 - `src/version.ts`: package version and the Godot target version.
 - `server.json`: the MCP Registry entry. Its name and versions must match `package.json`
   (`mcpName`, `version`); a test checks this.
+- Install packages, kept in step with `package.json` by `scripts/sync-version.mjs` (which `npm version` runs)
+  and checked by `test/install.test.ts`:
+  - `.claude-plugin/marketplace.json` and `plugins/godotwright/`: the Claude Code marketplace and plugin
+    (MCP server in `.mcp.json`, skills in `skills/`).
+  - `gemini-extension.json`: the Gemini CLI extension.
+  - `mcpb/`: the Claude Desktop bundle manifest and icon; `npm run build:mcpb` builds `build/godotwright.mcpb`,
+    and the Release workflow attaches it to every release.
+  - `docs/install.html`: every client, with the Cursor and VS Code one-click links.
 - `src/index.ts`: public library exports.
 - `bench/`: the benchmark (tasks with Godot behavior tests, runner, grader).
   See `bench/README.md`. Task tests run in CI by the Bench workflow.
@@ -88,5 +96,8 @@ node dist/cli.js --help
 - Small commits with a short imperative subject (`Add project scan`).
 - No trailers, chat or session links, or personal information in commits or files.
 - Update the status list in `ROADMAP.md` when a step is done.
-- Releases: bump the version in `package.json` and `server.json`, then push a tag
-  `vX.Y.Z`. The Publish workflow publishes to npm and the MCP Registry.
+- Releases: add the version's section to `CHANGELOG.md`, run `npm version X.Y.Z` (it also writes the
+  version into `server.json`, the Claude Code plugin and the Gemini CLI extension), then push the commit
+  and the tag `vX.Y.Z`. The Publish workflow publishes to npm and the MCP Registry; the Release workflow
+  writes the notes and attaches the Claude Desktop bundle. Bump the version only in the release commit:
+  the plugin and the extension start that exact npm version.

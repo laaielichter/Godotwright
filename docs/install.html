@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Install Godotwright in Claude Code, Cursor, VS Code, Codex and Gemini CLI</title>
+<meta name="description" content="Install the Godotwright MCP server for Godot 4 in one step: a Claude Code plugin, a Claude Desktop bundle, one-click buttons for Cursor and VS Code, and setups for Codex, Gemini CLI, Windsurf and Zed.">
+<link rel="canonical" href="https://laaielichter.github.io/Godotwright/install.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1d2229">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Install Godotwright in your coding agent">
+<meta property="og:description" content="One step for Claude Code, Claude Desktop, Cursor, VS Code, Codex, Gemini CLI, Windsurf and Zed.">
+<meta property="og:url" content="https://laaielichter.github.io/Godotwright/install.html">
+<meta property="og:image" content="https://laaielichter.github.io/Godotwright/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap"><style>
+/* Layout: a single column set like Godot's own editor docks: a top bar, panels with tab headers, the Output panel as the hero. */
+:root {
+  --bg: #1d2229;
+  --panel: #262c35;
+  --panel-2: #2e3540;
+  --line: #3a4250;
+  --fg: #e3e8ef;
+  --muted: #9aa6b6;
+  --accent: #478cbf;
+  --accent-ink: #7fb6e0;
+  --n2d: #8da5f3;   /* Godot editor: 2D node icons */
+  --n3d: #fc7f7f;   /* 3D node icons */
+  --nui: #8eef97;   /* Control node icons */
+  --nres: #f5c66b;  /* warnings, resources */
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(2.2rem, 5.5vw, 3.6rem);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+    --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+    --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+  --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+  --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 var(--step-0)/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; }
+a { color: var(--accent-ink); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
+code, pre, kbd { font-family: var(--mono); font-size: .88em; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: var(--step-2); font-weight: 700; letter-spacing: -.01em; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Top bar */
+.bar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.bar .wrap { display: flex; align-items: center; gap: 1.25rem; padding-block: .7rem; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: .55rem; text-decoration: none; color: var(--fg); font: 800 1.15rem var(--display); }
+.brand img { width: 28px; height: 28px; }
+.bar nav { display: flex; gap: 1.1rem; margin-left: auto; flex-wrap: wrap; }
+.bar nav a { color: var(--muted); text-decoration: none; font-size: .95rem; }
+.bar nav a:hover { color: var(--fg); }
+
+/* Hero */
+.hero { padding-block: clamp(2.5rem, 7vw, 4.5rem) 2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.eyebrow { font: 600 .78rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-size: var(--step-3); font-weight: 800; letter-spacing: -.025em; max-width: 18ch; }
+.hero h1 em { font-style: normal; color: var(--accent-ink); }
+.lede { font-size: var(--step-1); color: var(--muted); max-width: 60ch; line-height: 1.5; }
+.cta { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .7rem 1.1rem;
+  border-radius: 8px; font: 700 1rem var(--body); text-decoration: none; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:hover { filter: brightness(1.08); }
+
+/* Dock panels, like Godot's Output / Scene docks */
+.dock { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.tabs { display: flex; gap: .25rem; background: var(--panel-2); border-bottom: 1px solid var(--line); padding: .35rem .5rem 0; overflow-x: auto; }
+.tab { font: 600 .8rem var(--mono); color: var(--muted); padding: .35rem .75rem; border-radius: 6px 6px 0 0; white-space: nowrap; }
+.tab.on { background: var(--panel); color: var(--fg); }
+.dock .body { padding: 1rem; overflow-x: auto; }
+.demo .body { padding: 0; background: #1d2229; }
+.demo img { display: block; width: 100%; min-width: 760px; }
+.caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
+
+section { padding-block: 3rem; border-top: 1px solid var(--line); }
+section > .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.sub { color: var(--muted); max-width: 65ch; }
+
+/* Install */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 1rem; }
+.cmd { position: relative; }
+.cmd pre { margin: 0; padding: 2.4rem 1rem .9rem 1rem; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+.cmd .copy {
+  position: absolute; top: .5rem; right: .5rem; font: 600 .75rem var(--mono); padding: .3rem .55rem;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer;
+}
+.cmd .copy:hover { color: var(--fg); }
+.step-h { font: 600 .85rem var(--mono); color: var(--muted); margin-bottom: .5rem; }
+
+/* Before / after */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
+.code { margin: 0; font: .85rem/1.65 var(--mono); white-space: pre; }
+.code .ln { color: var(--muted); opacity: .6; user-select: none; display: inline-block; width: 2.2ch; }
+.code .bad { background: color-mix(in srgb, var(--n3d) 16%, transparent); display: inline-block; min-width: 100%; }
+.find { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font: .84rem/1.5 var(--mono); }
+.find li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; }
+.find .at { color: var(--muted); }
+.find .e { color: var(--n3d); }
+.find .w { color: var(--nres); }
+.find b { color: var(--fg); font-weight: 600; }
+
+/* Tools: tree like the Scene dock */
+.tree { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tree li { background: var(--panel); padding: 1.1rem 1.1rem 1.2rem; display: grid; gap: .4rem; align-content: start; }
+.node { display: flex; align-items: center; gap: .5rem; font: 600 .95rem var(--mono); }
+.dot { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.tree p { color: var(--muted); font-size: .95rem; }
+.tree code { color: var(--muted); font-size: .78rem; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+.stat { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1rem; display: grid; gap: .2rem; }
+.stat .n { font: 800 2.2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: .92rem; }
+.stat.good { border-color: var(--nui); }
+.stat.good .n { color: var(--nui); }
+
+/* Table */
+.table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .95rem; }
+th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { background: var(--panel-2); font: 600 .8rem var(--mono); color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--muted); }
+.yes { color: var(--nui); font-weight: 700; }
+.no { color: var(--muted); }
+
+/* FAQ */
+.faq { display: grid; gap: .5rem; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; }
+summary { cursor: pointer; font-weight: 700; }
+details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
+
+footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: .9rem; }
+footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
+footer a { color: var(--muted); }
+
+
+.clients { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 1rem; }
+.client { scroll-margin-top: 1.5rem; display: grid; gap: .8rem; align-content: start; }
+.client .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: .8rem; overflow: visible; }
+.client .body > * { min-width: 0; }
+.client h2 { font-size: var(--step-1); display: flex; align-items: center; gap: .6rem; }
+.client .tag { font: 600 .7rem var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--nui); border: 1px solid currentColor; border-radius: 999px; padding: .1rem .5rem; }
+.client p { color: var(--muted); }
+.client .cta .btn { font-size: .95rem; padding: .55rem .9rem; }
+.client:target { outline: 2px solid var(--accent-ink); outline-offset: 4px; }
+.jump { display: flex; flex-wrap: wrap; gap: .5rem; }
+.jump a { font: 600 .85rem var(--mono); text-decoration: none; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: .35rem .8rem; }
+.jump a:hover { border-color: var(--accent-ink); }
+main > section:first-of-type { border-top: 0; padding-top: 0; }
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+<a class="brand" href="./"><img src="logo.svg" alt="" width="28" height="28">Godotwright</a>
+<nav aria-label="Main"><a href="./">Home</a><a href="./#tools">Tools</a><a href="godot-3-to-4.html">Godot 3 to 4</a><a href="https://github.com/laaielichter/Godotwright">GitHub</a></nav>
+</div></header>
+<main>
+<div class="wrap hero">
+<p class="eyebrow">Install</p>
+<h1>Add Godotwright to <em>your agent.</em></h1>
+<p class="lede">One step for each client. Everything runs on your machine; the first start downloads the package from npm. Needs Node.js 22.12 or newer.</p>
+<nav class="jump" aria-label="Clients"><a href="#claude-code">Claude Code</a><a href="#claude-desktop">Claude Desktop</a><a href="#cursor">Cursor</a><a href="#vscode">VS Code</a><a href="#codex">Codex</a><a href="#gemini">Gemini CLI</a><a href="#windsurf">Windsurf</a><a href="#zed">Zed</a><a href="#other">Any other MCP client</a></nav>
+</div>
+<section><div class="wrap">
+<div class="clients">
+<article class="dock client" id="claude-code">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Claude Code</span></div>
+  <div class="body">
+    <h2>Claude Code <span class="tag">plugin</span></h2>
+    <p>The plugin adds the MCP server and three skills: <code>/godotwright:review</code> (review and fix), <code>/godotwright:port</code> (Godot 3 to 4) and a Godot workflow Claude follows on its own. Type this in Claude Code:</p>
+<div class="cmd"><pre><code>/plugin install godotwright --marketplace laaielichter/Godotwright</code></pre><button class="copy" type="button">Copy</button></div>
+<p>On a Claude Code older than 2.1.275, add the marketplace first:</p>
+<div class="cmd"><pre><code>/plugin marketplace add laaielichter/Godotwright
+/plugin install godotwright@godotwright</code></pre><button class="copy" type="button">Copy</button></div>
+<p>Only the MCP server, without the skills:</p>
+<div class="cmd"><pre><code>claude mcp add godotwright -- npx -y godotwright mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="claude-desktop">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Claude Desktop</span></div>
+  <div class="body">
+    <h2>Claude Desktop <span class="tag">one file</span></h2>
+    <p>No terminal needed: download the bundle, open it, and Claude Desktop installs it. Choose your Godot project folder in the settings it shows.</p>
+<div class="cta"><a class="btn primary" href="https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb">Download godotwright.mcpb</a></div>
+<p>In Claude Desktop you can also drag the file onto Settings &gt; Extensions. The bundle comes with every release from 0.2.0.</p>
+  </div>
+</article>
+<article class="dock client" id="cursor">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Cursor</span></div>
+  <div class="body">
+    <h2>Cursor <span class="tag">one click</span></h2>
+    <p>Click the button with Cursor installed and confirm the install in Cursor.</p>
+<div class="cta"><a class="btn primary" href="cursor://anysphere.cursor-deeplink/mcp/install?name=godotwright&amp;config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImdvZG90d3JpZ2h0IiwibWNwIiwiLS10aWVyIiwicHJlbWl1bSJdfQ==">Add to Cursor</a></div>
+<p>Or add it to <code>~/.cursor/mcp.json</code> (all projects) or <code>.cursor/mcp.json</code> (this project):</p>
+<div class="cmd"><pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;godotwright&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+    }
+  }
+}</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="vscode">
+  <div class="tabs" aria-hidden="true"><span class="tab on">VS Code</span></div>
+  <div class="body">
+    <h2>VS Code <span class="tag">one click</span></h2>
+    <p>For GitHub Copilot agent mode. Click a button with VS Code installed and confirm the install.</p>
+<div class="cta"><a class="btn primary" href="vscode:mcp/install?%7B%22name%22%3A%22godotwright%22%2C%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22godotwright%22%2C%22mcp%22%2C%22--tier%22%2C%22premium%22%5D%7D">Install in VS Code</a><a class="btn" href="vscode-insiders:mcp/install?%7B%22name%22%3A%22godotwright%22%2C%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22godotwright%22%2C%22mcp%22%2C%22--tier%22%2C%22premium%22%5D%7D">VS Code Insiders</a></div>
+<p>Or from a terminal:</p>
+<div class="cmd"><pre><code>code --add-mcp &#x27;{&quot;name&quot;:&quot;godotwright&quot;,&quot;type&quot;:&quot;stdio&quot;,&quot;command&quot;:&quot;npx&quot;,&quot;args&quot;:[&quot;-y&quot;,&quot;godotwright&quot;,&quot;mcp&quot;,&quot;--tier&quot;,&quot;premium&quot;]}&#x27;</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="codex">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Codex</span></div>
+  <div class="body">
+    <h2>Codex</h2>
+    <div class="cmd"><pre><code>codex mcp add godotwright -- npx -y godotwright mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
+<p>Or in <code>~/.codex/config.toml</code>:</p>
+<div class="cmd"><pre><code>[mcp_servers.godotwright]
+command = &quot;npx&quot;
+args = [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+startup_timeout_sec = 30 # the first npx run downloads the package</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="gemini">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Gemini CLI</span></div>
+  <div class="body">
+    <h2>Gemini CLI <span class="tag">extension</span></h2>
+    <p>The extension installs the MCP server; update it later with <code>gemini extensions update godotwright</code>.</p>
+<div class="cmd"><pre><code>gemini extensions install https://github.com/laaielichter/Godotwright</code></pre><button class="copy" type="button">Copy</button></div>
+<p>Or add the server to <code>~/.gemini/settings.json</code>:</p>
+<div class="cmd"><pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;godotwright&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+    }
+  }
+}</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="windsurf">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Windsurf</span></div>
+  <div class="body">
+    <h2>Windsurf</h2>
+    <p>Add it to <code>~/.codeium/windsurf/mcp_config.json</code>, then refresh the MCP servers in Cascade:</p>
+<div class="cmd"><pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;godotwright&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+    }
+  }
+}</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="zed">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Zed</span></div>
+  <div class="body">
+    <h2>Zed</h2>
+    <p>Add it to your Zed <code>settings.json</code>:</p>
+<div class="cmd"><pre><code>{
+  &quot;context_servers&quot;: {
+    &quot;godotwright&quot;: {
+      &quot;source&quot;: &quot;custom&quot;,
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;],
+      &quot;env&quot;: {}
+    }
+  }
+}</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="other">
+  <div class="tabs" aria-hidden="true"><span class="tab on">Any other MCP client</span></div>
+  <div class="body">
+    <h2>Any other MCP client</h2>
+    <p>Godotwright is a standard MCP server over stdio. Most clients take this:</p>
+<div class="cmd"><pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;godotwright&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+    }
+  }
+}</code></pre><button class="copy" type="button">Copy</button></div>
+<p>It is also listed in the official <a href="https://registry.modelcontextprotocol.io/">MCP Registry</a> as <code>io.github.laaielichter/godotwright</code>.</p>
+  </div>
+</article>
+</div>
+<p class="sub">Start your agent in the Godot project folder, or pass <code>--project &lt;path&gt;</code>. These setups use <code>--tier premium</code> (full detail). For small, cheap models use <code>--tier cheap</code>: shorter output and step-by-step instructions. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> need Godot 4.7; set <code>GODOT</code> to its path if it is not found.</p>
+</div></section>
+</main>
+<footer class="wrap"><p><a href="./">Godotwright home</a> · <a href="https://github.com/laaielichter/Godotwright">Source on GitHub</a> · <a href="https://www.npmjs.com/package/godotwright">npm</a></p></footer>
+<script>
+document.querySelectorAll(".cmd .copy").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var code = btn.parentElement.querySelector("code");
+    var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code.innerText).then(done, function () { window.getSelection().selectAllChildren(code); });
+    } else {
+      window.getSelection().selectAllChildren(code);
+    }
+  });
+});
+</script>
+</body>
+</html>

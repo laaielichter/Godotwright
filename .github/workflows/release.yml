@@ -3,7 +3,8 @@ name: Release
 # When a version tag like v0.1.0 is pushed, create the GitHub release with the notes
 # for that version from CHANGELOG.md. The Publish workflow (npm and the MCP Registry)
 # runs on the same tag. A release made on the website (which also makes the tag) gets
-# its notes filled in the same way.
+# its notes filled in the same way. The Claude Desktop bundle (godotwright.mcpb) is built and
+# attached to every release, so releases/latest/download/godotwright.mcpb always works.
 on:
   push:
     tags:
@@ -35,3 +36,16 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
           fi
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Build the Claude Desktop bundle
+        run: |
+          npm ci
+          npm run build
+          npm run build:mcpb
+      - name: Attach the bundle to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" build/godotwright.mcpb --clobber
