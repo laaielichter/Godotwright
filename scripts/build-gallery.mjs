@@ -3,8 +3,8 @@
 //   npm run build && node scripts/build-gallery.mjs
 //
 // The kinds, their descriptions and parameters come from the code, so the page cannot drift from what the tool does.
-// The pictures in docs/gallery/<kind>.jpg are renders of the default model of each kind (400 x 300 JPEG); a kind
-// without a picture is listed without one. Styles are taken from docs/index.html so the pages look the same.
+// The pictures in docs/gallery/<kind>.jpg are renders of the default model of each kind (400 x 300 JPEG) made by
+// scripts/render-gallery.mjs; a kind without a picture is listed without one. Styles are taken from docs/index.html so the pages look the same.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { allKinds } from "../dist/build/generators/index.js";
@@ -138,13 +138,13 @@ ${style.replace("</style>", `
   <div class="wrap hero">
     <p class="eyebrow">3D models from code</p>
     <h1>${count} ready-made models for <em>Godot&nbsp;4</em>.</h1>
-    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with UVs, tangents, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
+    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with textures and normal maps for brick, tiles, wood, bark, leaves and more, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/laaielichter/Godotwright#readme">Install in 1 minute</a>
       <a class="btn" href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">Works with small, cheap models too</a>
     </div>
     <img src="gallery/overview.jpg" width="1200" height="600" alt="A sheet of models built by Godotwright: cars, aircraft, boats, buildings, trees and terrain" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)">
-    <p class="caption">Real renders of the default model of each kind, with a simple three.js viewer. They are clean base models, meant to be refined, not hand-sculpted art.</p>
+    <p class="caption">Real renders of the default model of each kind in three.js, with the textures and materials in the <code>.glb</code> and nothing added. They are game-ready base models, meant to be refined, not hand-sculpted art.</p>
   </div>
 
   <section id="how">
@@ -168,7 +168,7 @@ ${body}
         <details><summary>Do I need Blender or Godot installed?</summary><p>No. Models are built and checked by Godotwright itself. Godot only loads the result when you open the <code>.glb</code> in your project.</p></details>
         <details><summary>Can I change the models?</summary><p>Yes. Every kind has parameters with ranges (<code>godotwright model kinds</code> lists them), and every recipe is a JSON spec you can copy and edit.</p></details>
         <details><summary>Can a cheap model like Haiku or a Flash model do this?</summary><p>Yes, with limits. In a small test, six Haiku agents each built a recognisable model, but they worked blind; that is why <code>model view</code> and a check for loose parts exist. See <a href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">the write-up</a>.</p></details>
-        <details><summary>How good are they?</summary><p>They are clean, correctly scaled base models with the right parts and pivots, not sculpted art. The point is a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
+        <details><summary>How good are they?</summary><p>They are correctly scaled, textured low-poly models with the right parts and pivots: real windows and frames, bevelled edges, glowing lamps, brick, tiles, wood and foliage with normal maps. Not sculpted art, but a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
       </div>
     </div>
   </section>

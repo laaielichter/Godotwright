@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { briefFor } from "../../src/archetype/brief.js";
 import { allKinds } from "../../src/build/generators/index.js";
+import { MATERIALS } from "../../src/build/materials.js";
 import { SPEC_CHEAT, SPEC_HELP } from "../../src/build/spec-help.js";
 import { loadLibrary } from "../../src/archetype/library.js";
 
@@ -73,9 +74,10 @@ describe("model brief", () => {
   });
 
   it("the cheat sheet names every shape and preset of the full help", () => {
-    for (const shape of ["box", "cylinder", "ellipsoid", "lathe", "loft", "extrude", "roof"]) expect(SPEC_CHEAT).toContain(shape);
+    for (const shape of ["box", "cylinder", "ellipsoid", "lathe", "loft", "extrude", "roof", "tube"]) expect(SPEC_CHEAT).toContain(shape);
     const presets = /Presets: ([a-z_ ]+)\./.exec(SPEC_HELP)?.[1]?.split(" ") ?? [];
     expect(presets.length).toBeGreaterThan(5);
+    expect([...presets].sort()).toEqual(Object.keys(MATERIALS).sort());
     for (const p of presets) expect(SPEC_CHEAT).toContain(p);
     for (const key of ["at", "rotate", "mirror", "repeat", "vars", "children", "offset"]) expect(SPEC_CHEAT).toContain(`"${key}"`);
   });

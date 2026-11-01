@@ -29,6 +29,8 @@ export interface BuildRequest {
    * Godot project, a scene with the tile and its StaticBody3D (`<name>.tscn`): faster than a trimesh, and the same ground.
    */
   collision?: "convex" | "trimesh" | "heightmap";
+  /** False writes plain colours instead of texture maps (smaller files, or for materials of your own). Default true. */
+  textures?: boolean;
 }
 
 type ImportHint = "convex" | "trimesh";
@@ -65,7 +67,7 @@ export function buildModel(request: BuildRequest): BuildOutcome {
   }
   const scene = request.collision && request.collision !== "heightmap" ? withCollisionHints(built, request.collision) : built;
   mkdirSync(dirname(request.out), { recursive: true });
-  writeFileSync(request.out, buildGlb(scene));
+  writeFileSync(request.out, buildGlb(scene, { textures: request.textures !== false }));
   const extra: string[] = [];
   const NOFOLLOW = constants.O_NOFOLLOW ?? 0;
   /** Opens a file next to the model, never through a link: O_NOFOLLOW makes the open itself refuse one (not on Windows). */
