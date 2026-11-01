@@ -89,8 +89,13 @@ function floats(values: number[]): Buffer {
   return data;
 }
 
+export interface GlbOptions {
+  /** Write texture maps for materials that have a pattern (default true); false keeps plain colours and smaller files. */
+  textures?: boolean;
+}
+
 /** Builds a binary glTF. The same scene always gives the same bytes. */
-export function buildGlb(scene: BuildScene): Buffer {
+export function buildGlb(scene: BuildScene, options: GlbOptions = {}): Buffer {
   const chunks: Chunk[] = [];
   const views: object[] = [];
   const accessors: object[] = [];
@@ -143,7 +148,7 @@ export function buildGlb(scene: BuildScene): Buffer {
     if (!m) throw new Error(`unknown material "${name}"`);
     let pbr: Record<string, unknown> = { baseColorFactor: m.color, metallicFactor: m.metallic, roughnessFactor: m.roughness };
     let normalTexture: Record<string, unknown> | undefined;
-    if (m.texture) {
+    if (m.texture && options.textures !== false) {
       const maps = texturesFor(m.texture, [m.color[0], m.color[1], m.color[2]]);
       const repeat = (m.uvMeters ?? 1 / UV_PER_METER) / maps.tile;
       const transform = repeat === 1 ? {} : { extensions: { KHR_texture_transform: { scale: [repeat, repeat] } } };

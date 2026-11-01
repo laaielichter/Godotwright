@@ -9,6 +9,7 @@ import { loadGltf } from "../../src/model/gltf.js";
 import { imageSize } from "../../src/model/images.js";
 import { inspectModel } from "../../src/model/inspect.js";
 import { lintModelFile } from "../../src/model/lint.js";
+import { runCli } from "../helpers.js";
 import { sha, single, writeScene } from "./helpers.js";
 
 /** Decodes the 8-bit RGB PNGs encodePng writes (all five row filters). */
@@ -108,6 +109,17 @@ describe("textured materials in the .glb", () => {
     const scene = { nodes: [{ name: "A", mesh: box([0, 0, 0], [1, 1, 1], "brick") }, { name: "B", mesh: box([2, 0, 0], [3, 1, 1], "brick").merge(box([4, 0, 0], [5, 1, 1], "wood")) }] };
     const json = loadGltf(writeScene(scene)).json;
     expect(json.images?.length).toBe(4);
+  });
+
+  it("writes plain colours instead when textures are turned off, from the CLI too", async () => {
+    const glb = buildGlb(single(box([0, 0, 0], [1, 1, 1], "brick")), { textures: false });
+    const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString()) as Record<string, unknown> & { materials: { pbrMetallicRoughness: { baseColorFactor: number[] } }[] };
+    expect(json["images"]).toBeUndefined();
+    expect(json.materials[0]!.pbrMetallicRoughness.baseColorFactor).toEqual(MATERIALS["brick"]!.color);
+    const out = writeScene(single(box([0, 0, 0], [1, 1, 1], "brick"))).replace("model.glb", "plain.glb");
+    const run = await runCli(["model", "build", "barn", "--no-textures", "-o", out]);
+    expect(run.exitCode).toBe(0);
+    expect(loadGltf(out).json.images).toBeUndefined();
   });
 
   it("leaves untextured presets as plain colours, with no extension", () => {
