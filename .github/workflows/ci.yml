@@ -17,8 +17,10 @@ jobs:
       matrix:
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -28,13 +30,27 @@ jobs:
       - run: npm test
       - name: Smoke test CLI
         run: node dist/cli.js --help
+      - name: Build the Claude Desktop bundle and start its server
+        if: matrix.node == 24
+        run: |
+          npm run build:mcpb
+          mkdir -p build/unpacked && unzip -q build/godotwright.mcpb -d build/unpacked
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
+            | timeout 20 node build/unpacked/dist/cli.js mcp | grep -q '"serverInfo"'
+      - name: Validate the Claude Code plugin and marketplace
+        if: matrix.node == 24
+        run: |
+          npx -y @anthropic-ai/claude-code plugin validate ./plugins/godotwright
+          npx -y @anthropic-ai/claude-code plugin validate .
 
   action:
     name: Receipt action
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -56,8 +72,10 @@ jobs:
       matrix:
         godot: ["4.7.2"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -66,8 +84,9 @@ jobs:
         with:
           version: ${{ matrix.godot }}
       - name: Check out official demo projects
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           repository: godotengine/godot-demo-projects
           ref: b761b4cd5718a7118f2c95eb55f181d0a5f004f1
           path: demos
@@ -81,15 +100,17 @@ jobs:
       - name: Virtual screen and software OpenGL, for the render test
         run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends xvfb xauth libgl1-mesa-dri
       - name: Check out GUT
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           repository: bitwes/Gut
           ref: v9.7.1
           path: frameworks/gut
           sparse-checkout: addons/gut
       - name: Check out GdUnit4
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           repository: MikeSchulze/gdUnit4
           ref: v6.2.2
           path: frameworks/gdunit4
@@ -106,8 +127,10 @@ jobs:
     name: Claude Code and Codex
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm

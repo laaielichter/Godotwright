@@ -1,6 +1,6 @@
 {
   "name": "godotwright",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "mcpName": "io.github.laaielichter/godotwright",
   "description": "MCP server and CLI that makes Claude Code, Codex and any coding agent better at Godot 4: offline Godot 4.7 API, project map, headless checks, an AAA GDScript review, safe edits and renames, GUT/GdUnit4 tests, play-testing with input, screenshots, and 3D models built and checked from code.",
   "license": "MIT",
@@ -28,7 +28,9 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build",
     "build:api": "node scripts/build-api.ts",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "version": "node scripts/sync-version.mjs && git add server.json plugins/godotwright gemini-extension.json",
+    "build:mcpb": "node scripts/build-mcpb.mjs"
   },
   "keywords": [
     "godot",

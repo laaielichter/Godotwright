@@ -4,6 +4,55 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Prettier, better 3D models.** Every ready-made kind was rebuilt with more detail, truer proportions and real
+  materials, and the gallery was rendered again (`scripts/render-gallery.mjs`):
+  - **Textures.** Brick, roof tiles, slate, wood, bark, leaves, grass, stone, concrete, asphalt, plaster, sand and water
+    get a seamless colour map and normal map at their real size, made by Godotwright (no files, no network) and stored
+    in the `.glb` as PNG, repeated per metre with `KHR_texture_transform`. A custom material can use any pattern in its
+    own colour: `"texture": "wood"`.
+  - **More presets:** `stone`, `glass_tinted`, `steel`, `chrome`, `aluminium`, `brass`, `plastic`, `plastic_white`,
+    `canvas`, `light`, `light_red`, `light_amber` (lamps that glow), `grass`, `soil`, `sand`, `water`.
+  - **New in the spec:** `bevel` on boxes and cylinders (rounded edges that catch the light), `lumps` and `seed` on
+    ellipsoids (tree crowns, bushes, rocks), and the `tube` shape along a path (frames, rails, pipes, branches).
+  - **Terrain** is coloured per vertex: grass in lusher and drier patches, sand at the water, bare earth and rock on
+    steep slopes, snow on high mountains. Lakes, rivers and the sea get rippling water.
+  - **House:** brick or rendered walls, windows with frames, glazing bars and sills, slate or tile roofs, gutters and
+    downpipes, a panelled door with a knob.
+  - Roof tiles and other patterns on a sloping face run along the slope.
+  - `model build --no-textures` (MCP `textures: false`) keeps plain colours and small files.
+  - Tangents follow glTF's normal-map convention (+Y towards the top of the image), so normal maps light the same
+    in Godot and other viewers.
+- `model lint` reports UVs outside 0..1 only on a texture that does not repeat.
+- **Clearer MCP tool descriptions.** Each of the 22 tools now says when to use it and which tool to use instead,
+  what its parameters change, what it returns, when it returns an error, and what it writes. The tool list costs
+  about 2,500 more tokens.
+- `godot_api_search` is marked read-only: it records nothing.
+- `godot_feedback` returns an error when local learning is off, instead of saying the finding is hidden.
+
+## 0.2.0 (install in one step everywhere, collision for terrain)
+
+- **Install in one step everywhere.** A Claude Code plugin (`/plugin install godotwright --marketplace
+  laaielichter/Godotwright`) with the MCP server and three skills: `/godotwright:review` reviews the project and
+  fixes what it finds, `/godotwright:port` ports Godot 3 code to Godot 4, and a Godot workflow Claude follows on its
+  own. A Claude Desktop bundle (`godotwright.mcpb`, attached to every release) with a setting for the project folder.
+  A Gemini CLI extension (`gemini extensions install https://github.com/laaielichter/Godotwright`). One-click buttons
+  for Cursor and VS Code and setups for Codex, Windsurf and Zed on the new
+  [install page](https://laaielichter.github.io/Godotwright/install.html).
+- `godotwright mcp` reads the default project from `GODOTWRIGHT_PROJECT` when `--project` is not given.
+- **Collision for terrain tiles:** `model build terrain --collision heightmap` (and `collision: "heightmap"` in
+  `godot_model_build`) writes `<name>.heightmap.tres`, a `HeightMapShape3D` of the tile's own grid, and inside a Godot
+  project `<name>.tscn`: the tile with a `StaticBody3D`, ready to place. Faster than a trimesh and the same ground: tested
+  in Godot 4.7.2 with GodotPhysics3D and Jolt, rays land within half a millimetre of the mesh. A scene you changed is kept.
+- **A real demo** in the README and on the site: 35 seconds of real output, a Godot 3 script reviewed at 74/100,
+  migrated, and at 100/100 after the one fix left by hand.
+- `funcref()` is reported once (as Godot 3 syntax), not also as an unknown function.
+- **Site and README:** the site lists all 22 MCP tools with a CLI example each; Lighthouse accessibility is 100 on every
+  page (darker green and amber in the light theme for contrast); the Godot 3 to 4 page has share previews and structured
+  data; the README starts with the quickstart and the one-line Claude Code install.
+- **Security:** CodeQL scans the code and the workflows on every change and weekly; Dependabot proposes npm and
+  GitHub Actions updates weekly; every action in the workflows and in the receipt action is pinned to a commit, and
+  checkouts no longer keep git credentials. `SECURITY.md` says how releases are made and checked.
+
 - **Review rule `api/physics-change-in-callback`** (warning): in a `body_entered`/`area_entered` (or exited) handler,
   adding a physics object with `add_child()`, or setting `monitoring`, `monitorable` or `disabled` directly, makes Godot
   print "Can't change this state while flushing queries" and the change is wrong; use `add_child.call_deferred()` and

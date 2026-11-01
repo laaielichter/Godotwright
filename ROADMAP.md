@@ -105,8 +105,11 @@ Godotwright gets better with every use, without collecting anything personal.
     Step 4 (done): a river that winds towards +z, with a bed that follows the lowest ground across it and never rises, so
     the water always runs downhill and lies below the ground beside it (tested over many seeds), and a water surface that
     falls smoothly row by row.
-    Next: collision data (`HeightMapShape3D` heights) written
-    next to the tile, scatter points for plants and settlements, and checks for streaming budgets.
+    Step 5 (done): collision. `model build terrain --collision heightmap` writes a `HeightMapShape3D` next to the tile and a
+    scene with the tile and its `StaticBody3D`; the heights are divided by the grid step and the shape is scaled by it, as
+    Godot needs. Tested in Godot 4.7.2 with GodotPhysics3D and Jolt: rays land within half a millimetre of the mesh, on grid
+    points and inside cells (both split each cell along the same diagonal as the mesh).
+    Next: scatter points for plants and settlements, and checks for streaming budgets.
     Same method as models: archetypes first, then recipes.
 
 21. **Support for small, cheap models.** Step 1 (done): `model view` (three letter views, a parts table) and the

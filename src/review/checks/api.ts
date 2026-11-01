@@ -287,6 +287,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
           k = j;
           continue;
         }
+        // funcref() is already reported as Godot 3 syntax above. Treat its name as a
+        // legacy construct rather than also reporting it as an unknown function.
+        if (tok.t === "funcref" && tokens[k + 1]?.t === "(") continue;
         const startsChain =
           (isIdent(tok.t) && (!KEYWORDS.has(tok.t) || tok.t === "self" || tok.t === "super")) ||
           tok.t.startsWith("$") ||
@@ -422,7 +425,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const ctor = pm.resolveTypeName(name, model);
       if (ctor && ctor.kind !== "enum") return { type: { ...ctor, meta: false }, exact: false };
       if (model.dynamic || (options.foreignClasses && /^[A-Z]/.test(name))) return undefined;
-      const hint = renameHint(name, "function");
+      const hint = renameHint(name, "function") || (/^[A-Z]/.test(name) ? renameHint(name, "type") : "");
       // An unresolved parent class is already reported; only Godot 3 names are certain then.
       const unresolved = pm.chain(model).some((c) => c.extendsRaw && !c.parent && !c.renamedBase && !pm.resolveClassRef(c.extendsRaw, c));
       if (unresolved && !hint) return undefined;

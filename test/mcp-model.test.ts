@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { EXAMPLE_SPEC } from "../src/build/spec-help.js";
 import { createServer, type Tier } from "../src/mcp/server.js";
-import { makeProject } from "./helpers.js";
+import { CAN_SYMLINK, makeProject } from "./helpers.js";
 
 type Result = { content: { type: string; text: string }[]; isError?: boolean };
 const textOf = (r: unknown) => (r as Result).content.map((c) => c.text).join("\n");
@@ -166,6 +166,14 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
     expect(readFileSync(`${root}/models/crate.glb`).includes("Lid-convcol")).toBe(true);
   });
 
+  it("builds a terrain tile with heightmap collision and a ready scene, inside the project", async () => {
+    const res = await call("godot_model_build", { kind: "terrain", params: { resolution: "33" }, out: "world/tile.glb", collision: "heightmap" });
+    expect(failed(res)).toBe(false);
+    expect(textOf(res)).toContain("ready to place");
+    expect(readFileSync(`${root}/world/tile.tscn`, "utf8")).toContain('path="res://world/tile.heightmap.tres"');
+    expect(failed(await call("godot_model_build", { kind: "crate", out: "models/c2.glb", collision: "heightmap" }))).toBe(true);
+  });
+
   it("shows a model as text, with views, parts and what does not touch", async () => {
     const out = textOf(await call("godot_model_view", { file: "models/ok.glb", width: 40 }));
     expect(out).toContain("FRONT");
@@ -183,7 +191,7 @@ describe.each<Tier>(["cheap", "premium"])("model tools (%s profile)", (tier) => 
   });
 });
 
-describe("model tools and symbolic links", () => {
+describe.skipIf(!CAN_SYMLINK)("model tools and symbolic links", () => {
   const root = makeProject({ "project.godot": 'config_version=5\n[application]\nconfig/name="M"\n' });
   const outside = makeProject({ "target.glb": "keep me", "target.json": "keep me", "dir/keep.txt": "keep me" });
   let client: Client;

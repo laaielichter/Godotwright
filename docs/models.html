@@ -59,14 +59,14 @@
   :root:not([data-theme="dark"]) {
     --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
     --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
-    --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+    --n2d: #4560c4; --n3d: #c4403f; --nui: #1f7330; --nres: #7a5400;
     color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
   --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
-  --n2d: #4560c4; --n3d: #c4403f; --nui: #2a8a3a; --nres: #9a6a00;
+  --n2d: #4560c4; --n3d: #c4403f; --nui: #1f7330; --nres: #7a5400;
   color-scheme: light;
 }
 
@@ -128,6 +128,7 @@ p { margin: 0; }
 .dock .body { padding: 1rem; overflow-x: auto; }
 .demo .body { padding: 0; background: #1d2229; }
 .demo img { display: block; width: 100%; min-width: 760px; }
+.demo video { display: block; width: 100%; height: auto; }
 .caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
 
 section { padding-block: 3rem; border-top: 1px solid var(--line); }
@@ -148,7 +149,7 @@ section > .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5
 /* Before / after */
 .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
 .code { margin: 0; font: .85rem/1.65 var(--mono); white-space: pre; }
-.code .ln { color: var(--muted); opacity: .6; user-select: none; display: inline-block; width: 2.2ch; }
+.code .ln { color: var(--muted); user-select: none; display: inline-block; width: 2.2ch; }
 .code .bad { background: color-mix(in srgb, var(--n3d) 16%, transparent); display: inline-block; min-width: 100%; }
 .find { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font: .84rem/1.5 var(--mono); }
 .find li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; }
@@ -230,13 +231,13 @@ footer a { color: var(--muted); }
   <div class="wrap hero">
     <p class="eyebrow">3D models from code</p>
     <h1>56 ready-made models for <em>Godot&nbsp;4</em>.</h1>
-    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with UVs, tangents, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
+    <p class="lede">A coding agent can build every model on this page with one command, change its size and parts, look at it as text, and check it: clean <code>.glb</code> files with textures and normal maps for brick, tiles, wood, bark, leaves and more, a node per moving part and the pivots Godot scripts expect. No Blender, no art tool, the same bytes every time.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/laaielichter/Godotwright#readme">Install in 1 minute</a>
       <a class="btn" href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">Works with small, cheap models too</a>
     </div>
     <img src="gallery/overview.jpg" width="1200" height="600" alt="A sheet of models built by Godotwright: cars, aircraft, boats, buildings, trees and terrain" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)">
-    <p class="caption">Real renders of the default model of each kind, with a simple three.js viewer. They are clean base models, meant to be refined, not hand-sculpted art.</p>
+    <p class="caption">Real renders of the default model of each kind in three.js, with the textures and materials in the <code>.glb</code> and nothing added. They are game-ready base models, meant to be refined, not hand-sculpted art.</p>
   </div>
 
   <section id="how">
@@ -818,7 +819,7 @@ footer a { color: var(--muted); }
         <details><summary>Do I need Blender or Godot installed?</summary><p>No. Models are built and checked by Godotwright itself. Godot only loads the result when you open the <code>.glb</code> in your project.</p></details>
         <details><summary>Can I change the models?</summary><p>Yes. Every kind has parameters with ranges (<code>godotwright model kinds</code> lists them), and every recipe is a JSON spec you can copy and edit.</p></details>
         <details><summary>Can a cheap model like Haiku or a Flash model do this?</summary><p>Yes, with limits. In a small test, six Haiku agents each built a recognisable model, but they worked blind; that is why <code>model view</code> and a check for loose parts exist. See <a href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">the write-up</a>.</p></details>
-        <details><summary>How good are they?</summary><p>They are clean, correctly scaled base models with the right parts and pivots, not sculpted art. The point is a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
+        <details><summary>How good are they?</summary><p>They are correctly scaled, textured low-poly models with the right parts and pivots: real windows and frames, bevelled edges, glowing lamps, brick, tiles, wood and foliage with normal maps. Not sculpted art, but a solid start that an agent can refine, and models that load and animate in Godot without fixing.</p></details>
       </div>
     </div>
   </section>
