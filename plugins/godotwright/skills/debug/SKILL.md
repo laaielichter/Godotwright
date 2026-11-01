@@ -1,6 +1,6 @@
 ---
 name: debug
-description: Use when Godot prints an error or warning (SCRIPT ERROR, Parse Error, "Invalid access", "Cannot infer the type", a crash or a black screen), or when a Godot game behaves wrong (falls through a floor, jitters, slides off a moving platform, a node is null, a signal never fires). Finds the cause with Godotwright's lessons from real projects, the 4.7 API and the project map, fixes it, and proves the fix with Godot.
+description: Use when Godot prints an error or warning (SCRIPT ERROR, Parse Error, "Invalid access", "Cannot infer the type", a crash or a black screen), or when a Godot game behaves wrong (falls through a floor, jitters, slides off a moving platform, a node is null, a signal never fires). Finds the cause with Godotwright's lessons from real projects, the 4.7 API and the project map, fixes it, and proves the fix with Godot. Also in Dutch: "Godot geeft een fout", "het script laadt niet", "valt door de vloer", "stuitert op het dek", "zwart scherm", "crasht", "waarom werkt dit niet".
 argument-hint: "[error message, log file or symptom, optional]"
 ---
 

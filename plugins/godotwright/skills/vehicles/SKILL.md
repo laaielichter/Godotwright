@@ -1,6 +1,6 @@
 ---
 name: vehicles
-description: Use before building or fixing anything that moves under physics in Godot 4 — helicopters, aircraft, cars, trains, ships, moving platforms and decks, elevators, carried passengers, landing and docking, cameras that follow them. Pulls the lessons real projects learned the hard way (moving decks, physics interpolation, floor detection, far-from-origin precision) and tests the behaviour headless with Godot.
+description: Use before building or fixing anything that moves under physics in Godot 4 — helicopters, aircraft, cars, trains, ships, moving platforms and decks, elevators, carried passengers, landing and docking, cameras that follow them. Pulls the lessons real projects learned the hard way (moving decks, physics interpolation, floor detection, far-from-origin precision) and tests the behaviour headless with Godot. Also in Dutch: "helikopter", "vliegtuig", "schip", "trein", "landen op een bewegend dek", "rijdend platform", "camera trilt".
 argument-hint: "[the vehicle or platform, optional]"
 ---
 

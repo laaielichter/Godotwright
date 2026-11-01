@@ -1,6 +1,6 @@
 ---
 name: godot
-description: Use for any work on a Godot 4 project (project.godot, .gd, .tscn, .tres, GDScript, shaders, 3D models for Godot, or porting Godot 3 code). Maps the project, looks up the exact Godot 4.7 API instead of guessing, reviews code before and after each edit, and checks with Godot before finishing.
+description: Use for any work on a Godot 4 project (project.godot, .gd, .tscn, .tres, GDScript, shaders, 3D models for Godot, or porting Godot 3 code). Maps the project, looks up the exact Godot 4.7 API instead of guessing, reviews code before and after each edit, and checks with Godot before finishing. Also in Dutch: "werk aan mijn Godot-project", "schrijf een GDScript", "maak een scene", "werkt dit in Godot 4".
 ---
 
 # Working on a Godot project with Godotwright

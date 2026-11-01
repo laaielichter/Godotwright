@@ -155,7 +155,7 @@ export function postEdit(input: HookInput, context: HookContext = {}): HookOutpu
         `Godotwright reviewed ${res}: ${errors.length} error${errors.length === 1 ? "" : "s"}${warnings.length ? `, ${warnings.length} warning${warnings.length === 1 ? "" : "s"}` : ""}. Godot will report these too:`,
         ...listFindings([...errors, ...warnings]),
         ...lessons,
-        "Fix the errors now (look up the API with godot_api). If the missing piece comes with your next edit, go on and fix the rest before you finish. If you verified a finding is a false alarm, report it with godot_feedback (verdict wrong).",
+        "Next: fix the errors now (look up the API with godot_api). If the missing piece comes with your next edit, go on and fix the rest before you finish. If you verified a finding is a false alarm, report it with godot_feedback (verdict wrong).",
       ].join("\n"),
     };
   }
@@ -164,6 +164,7 @@ export function postEdit(input: HookInput, context: HookContext = {}): HookOutpu
       `Godotwright reviewed ${res}: no errors, ${warnings.length} warning${warnings.length === 1 ? "" : "s"}:`,
       ...listFindings(warnings),
       ...lessons,
+      "Next: fix the warnings that touch what you are building now; mention the others to the user when you finish.",
     ]);
   }
   if (before > 0) return context_("PostToolUse", [`Godotwright reviewed ${res}: the errors are fixed, no warnings.`]);
@@ -229,7 +230,7 @@ export function stop(input: HookInput, context: HookContext = {}): HookOutput | 
     reason: [
       `Godotwright: ${still.length} review error${still.length === 1 ? " is" : "s are"} still open in Godot files you changed:`,
       ...listFindings(still),
-      "Fix them before you finish, or tell the user why they stay (report a verified false alarm with godot_feedback, verdict wrong).",
+      "Next: fix them before you finish, or tell the user why they stay (report a verified false alarm with godot_feedback, verdict wrong).",
     ].join("\n"),
   };
 }
@@ -255,7 +256,7 @@ export function sessionStart(input: HookInput, context: HookContext = {}): HookO
   return context_("SessionStart", [
     `Godotwright: Godot project "${settings.name ?? "(unnamed)"}"${version ? ` (Godot ${version}${settings.renderer ? `, ${settings.renderer}` : ""})` : ""}: ${plural(scripts, "script")}, ${plural(scenes, "scene")}${settings.mainScene ? `, main scene ${settings.mainScene}` : ""}${settings.autoloads.length ? `, autoloads ${settings.autoloads.map((a) => a.name).slice(0, 8).join(", ")}` : ""}.`,
     godot,
-    "Every Godot file you edit is reviewed right after the edit; errors come back to you. Look up engine API with godot_api (never guess Godot 3 names), map the project with godot_scan.",
+    "Every Godot file you edit is reviewed right after the edit; errors come back to you. Next: map the project once with godot_scan, and look up engine API with godot_api (never guess Godot 3 names).",
     `godot_lessons holds ${bundledLessons().length} lessons from real Godot projects: ask it before you build vehicles, moving platforms, large worlds, shaders or runtime-loaded models, and with any Godot error you do not understand.`,
   ]);
 }

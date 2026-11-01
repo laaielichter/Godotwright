@@ -1,6 +1,6 @@
 ---
 name: world
-description: Use when building or fixing a large Godot world — terrain and heightmaps, streaming and chunks, levels of detail and visibility ranges, roads, railways, waterways and their networks, towns, vegetation, water, sky and weather — or when a big world stutters while moving, shows holes or pop-in, or loses precision far from the origin. Brings in the lessons real open-world projects learned and checks them with tests.
+description: Use when building or fixing a large Godot world — terrain and heightmaps, streaming and chunks, levels of detail and visibility ranges, roads, railways, waterways and their networks, towns, vegetation, water, sky and weather — or when a big world stutters while moving, shows holes or pop-in, or loses precision far from the origin. Brings in the lessons real open-world projects learned and checks them with tests. Also in Dutch: "open wereld", "terrein", "hoogtekaart", "wegennet", "spoor", "kanalen", "streaming", "pop-in", "gaten in het terrein".
 argument-hint: "[what part of the world, optional]"
 ---
 

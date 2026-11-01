@@ -1,6 +1,6 @@
 ---
 name: patch
-description: Use when changing a Godot game that is already shipped or installed — a mod or overlay over a game, a patch to a .pck, an installer or update script, a hotfix to live files — or when a Godot project is laid over a base project. Makes the change safe with Godotwright: review against the shipped game, preflight checks, exact anchors, idempotent installs, receipts and byte-identical rollback.
+description: Use when changing a Godot game that is already shipped or installed — a mod or overlay over a game, a patch to a .pck, an installer or update script, a hotfix to live files — or when a Godot project is laid over a base project. Makes the change safe with Godotwright: review against the shipped game, preflight checks, exact anchors, idempotent installs, receipts and byte-identical rollback. Also in Dutch: "installeer in de live game", "patch de pck", "maak een installer", "terugdraaien", "mod op een bestaande game".
 argument-hint: "[what to change, optional]"
 ---
 

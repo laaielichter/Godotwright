@@ -1,6 +1,6 @@
 ---
 name: model
-description: Use when making, improving or checking a 3D model for Godot (.glb or .gltf) — a vehicle, aircraft, ship, building, prop, plant, creature, terrain or road piece — or when a model looks wrong in Godot (wrong size, faces missing, parts floating, a rotor turning about the wrong point, black glass). Builds it from code with Godotwright, looks at it as text and pictures, and lints it against what the thing really is.
+description: Use when making, improving or checking a 3D model for Godot (.glb or .gltf) — a vehicle, aircraft, ship, building, prop, plant, creature, terrain or road piece — or when a model looks wrong in Godot (wrong size, faces missing, parts floating, a rotor turning about the wrong point, black glass). Builds it from code with Godotwright, looks at it as text and pictures, and lints it against what the thing really is. Also in Dutch: "maak een 3D-model", "bouw een helikopter / schip / gebouw", "het model klopt niet", "verkeerde maat", "zwevende onderdelen".
 argument-hint: "[what to build or check, optional]"
 ---
 

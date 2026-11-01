@@ -1,6 +1,6 @@
 ---
 name: perf
-description: Use when a Godot game stutters, hitches, loads slowly, has low or uneven fps, uses too much memory or video memory, or when asked to optimise a Godot project. Measures first, finds the cause with Godotwright's performance review and lessons from real projects, fixes one thing at a time and measures again.
+description: Use when a Godot game stutters, hitches, loads slowly, has low or uneven fps, uses too much memory or video memory, or when asked to optimise a Godot project. Measures first, finds the cause with Godotwright's performance review and lessons from real projects, fixes one thing at a time and measures again. Also in Dutch: "het hapert", "haperingen", "laadtijd te lang", "lage fps", "sneller maken", "te veel videogeheugen", "optimaliseren".
 argument-hint: "[what is slow, optional]"
 ---
 
