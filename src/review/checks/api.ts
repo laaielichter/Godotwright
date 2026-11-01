@@ -425,7 +425,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const ctor = pm.resolveTypeName(name, model);
       if (ctor && ctor.kind !== "enum") return { type: { ...ctor, meta: false }, exact: false };
       if (model.dynamic || (options.foreignClasses && /^[A-Z]/.test(name))) return undefined;
-      const hint = renameHint(name, "function");
+      const hint = renameHint(name, "function") || (/^[A-Z]/.test(name) ? renameHint(name, "type") : "");
       // An unresolved parent class is already reported; only Godot 3 names are certain then.
       const unresolved = pm.chain(model).some((c) => c.extendsRaw && !c.parent && !c.renamedBase && !pm.resolveClassRef(c.extendsRaw, c));
       if (unresolved && !hint) return undefined;
