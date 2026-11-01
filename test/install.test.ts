@@ -1,6 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { projectFromEnv } from "../src/commands/mcp.js";
+import { HOOK_EVENTS } from "../src/hooks/agent-hooks.js";
+
+const SKILLS = ["godot", "review", "port", "learn", "debug", "perf", "patch", "model", "vehicles", "world"];
 
 // The ways people install Godotwright: the Claude Code plugin and marketplace, the Gemini CLI extension,
 // the Claude Desktop bundle and the one-click links on the install page. They name the package and its
@@ -48,10 +51,48 @@ describe("Claude Code plugin and marketplace", () => {
     expect(existsSync(path("plugins/godotwright/LICENSE"))).toBe(true);
     const readme = readFileSync(path("plugins/godotwright/README.md"), "utf8").replace(/```[\s\S]*?```/g, "");
     expect(readme.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(40);
-    for (const skill of ["godot", "review", "port", "learn"]) {
+    for (const skill of SKILLS) {
       const text = readFileSync(path(`plugins/godotwright/skills/${skill}/SKILL.md`), "utf8");
       expect(text).toMatch(new RegExp(`^---\\nname: ${skill}\\ndescription: .+`, "m"));
     }
+    expect(readdirSync(path("plugins/godotwright/skills")).sort()).toEqual([...SKILLS].sort());
+  });
+
+  it("names only MCP tools the server has, in every skill and agent", () => {
+    const tools = new Set([...readFileSync(path("src/mcp/server.ts"), "utf8").matchAll(/registerTool\(\s*"(godot_\w+)"/g)].map((m) => m[1]));
+    expect(tools.size).toBeGreaterThan(20);
+    const files = [
+      ...SKILLS.map((s) => `plugins/godotwright/skills/${s}/SKILL.md`),
+      ...readdirSync(path("plugins/godotwright/agents")).map((a) => `plugins/godotwright/agents/${a}`),
+    ];
+    for (const file of files) {
+      for (const [name] of readFileSync(path(file), "utf8").matchAll(/\bgodot_[a-z_]+\b/g)) expect(tools.has(name), `${file}: ${name}`).toBe(true);
+    }
+  });
+
+  it("ships subagents with a name and a description", () => {
+    for (const agent of ["godot-reviewer", "godot-debugger"]) {
+      const text = readFileSync(path(`plugins/godotwright/agents/${agent}.md`), "utf8");
+      expect(text).toMatch(new RegExp(`^---\\nname: ${agent}\\ndescription: .{80,}`, "m"));
+    }
+  });
+
+  it("runs its hooks through the shim, for events and scripts that exist", () => {
+    const hooks = read("plugins/godotwright/hooks/hooks.json") as { hooks: Record<string, { matcher?: string; hooks: { type: string; command: string }[] }[]> };
+    expect(Object.keys(hooks.hooks).sort()).toEqual(["PostToolUse", "SessionStart", "Stop"]);
+    const events = new Set<string>();
+    for (const groups of Object.values(hooks.hooks)) {
+      for (const group of groups) {
+        for (const hook of group.hooks) {
+          expect(hook.type).toBe("command");
+          const m = /^node "\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/run\.mjs" ([a-z-]+)$/.exec(hook.command);
+          expect(m, hook.command).not.toBeNull();
+          events.add(m![1]!);
+        }
+      }
+    }
+    expect([...events].sort()).toEqual([...HOOK_EVENTS].sort());
+    expect(existsSync(path("plugins/godotwright/hooks/run.mjs"))).toBe(true);
   });
 });
 

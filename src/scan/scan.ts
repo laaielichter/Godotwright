@@ -38,6 +38,8 @@ export interface ProjectData {
   uids: Map<string, string>;
   /** Files that come only from a base project (see LoadOptions.base). */
   external: Set<string>;
+  /** Files only the shipped game holds (from LoadOptions.baseFiles): present, but their contents are unknown. */
+  shipped: Set<string>;
 }
 
 export interface LoadOptions {
@@ -454,7 +456,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     // A base project's own problems are not this project's.
     warnings: warnings.filter((w) => !external.has(w.file.replace(/::.*$/, ""))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
-  return { root, files, map, scripts, sources, resources, uids, external };
+  return { root, files, map, scripts, sources, resources, uids, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
 }
 
 /** Settings of a base project with the project's own on top; autoloads and input actions add up. */

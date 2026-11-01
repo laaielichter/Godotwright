@@ -307,6 +307,11 @@ export class ProjectModel {
       return undefined;
     }
     if ((m = /\bas\s+([A-Za-z_][\w.]*)\s*$/.exec(e))) return this.resolveTypeName(m[1]!, from);
+    // `const B = Kit.Box`: an alias of an inner class or enum of another script (or a class name).
+    if (/^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+$/.test(e)) {
+      const t = this.resolveTypeName(e, from, true);
+      if (t && t.kind !== "native") return t;
+    }
     // `X.new(...)` only when the call is the whole expression, not `X.new().f()`.
     if ((m = /^([A-Za-z_][\w.]*)\.new\(.*\)$/.exec(e)) && closingParen(e, m[1]!.length + 4) === e.length - 1) {
       const t = this.resolveTypeName(m[1]!, from);

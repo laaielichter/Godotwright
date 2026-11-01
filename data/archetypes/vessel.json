@@ -45,20 +45,7 @@
    "vrachtschip",
    "container ship",
    "containerschip",
-   "tanker",
-   "frigate",
-   "fregat",
-   "destroyer",
-   "cruiser",
-   "battleship",
-   "slagschip",
-   "ferry",
-   "veerboot",
-   "warship",
-   "oorlogsschip",
-   "liner",
-   "cruise ship",
-   "cruiseschip"
+   "tanker"
   ],
   "extends": "vessel",
   "parts": [
@@ -503,6 +490,713 @@
   "anticipate": [
    "The oars as separate nodes with their pivot at the oarlock, so a script can row.",
    "Wake and splash points at the oar blades."
+  ]
+ },
+ {
+  "id": "vessel.ship.cruise-ship",
+  "name": "cruise ship",
+  "description": "A large passenger ship with many decks of cabins, pools and restaurants.",
+  "aliases": [
+   "cruise ship",
+   "cruise liner",
+   "liner",
+   "passenger liner",
+   "cruiseschip",
+   "cruiseboot",
+   "passagiersschip"
+  ],
+  "extends": "vessel.ship",
+  "parts": [
+   {
+    "name": "Lifeboat",
+    "role": "boat",
+    "required": false,
+    "count": [
+     4,
+     30
+    ],
+    "aliases": [
+     "lifeboat",
+     "tender",
+     "reddingssloep",
+     "sloep"
+    ],
+    "note": "On davits along both sides, under an overhanging deck."
+   },
+   {
+    "name": "Balcony",
+    "role": "deck",
+    "required": false,
+    "aliases": [
+     "balcony",
+     "balcony deck",
+     "balkon"
+    ],
+    "note": "Rows of cabin balconies with glass balustrades; repeat them as one mesh or MultiMesh."
+   },
+   {
+    "name": "PoolDeck",
+    "role": "deck",
+    "required": false,
+    "aliases": [
+     "pool deck",
+     "pool",
+     "zwembaddek",
+     "zwembad"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    150,
+    365
+   ],
+   "width": [
+    25,
+    50
+   ],
+   "height": [
+    40,
+    75
+   ],
+   "source": "general knowledge: large cruise ships are 250-365 m long, 30-50 m wide, with 15-20 decks rising 60-75 m above the waterline; draught about 8-9 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Every deck the player may land or walk on needs a collider at its visible height; funnels, masts and slides need obstacles too.",
+   "Hundreds of repeated balconies, windows and loungers belong in MultiMesh or merged meshes, not one node each."
+  ]
+ },
+ {
+  "id": "vessel.ship.warship",
+  "name": "warship",
+  "description": "A naval combatant: corvette, frigate, destroyer, cruiser or battleship.",
+  "aliases": [
+   "warship",
+   "warships",
+   "oorlogsschip",
+   "marineschip",
+   "frigate",
+   "fregat",
+   "destroyer",
+   "torpedobootjager",
+   "cruiser",
+   "kruiser",
+   "corvette",
+   "korvet",
+   "battleship",
+   "slagschip",
+   "patrol vessel",
+   "patrouilleschip"
+  ],
+  "extends": "vessel.ship",
+  "parts": [
+   {
+    "name": "Turret",
+    "role": "weapon",
+    "required": false,
+    "count": [
+     0,
+     6
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "mount",
+    "aliases": [
+     "turret",
+     "gun turret",
+     "gun",
+     "geschutskoepel",
+     "kanon"
+    ],
+    "note": "Turns about a vertical axis on its ring; the barrels elevate about x on their own pivot."
+   },
+   {
+    "name": "Barrel",
+    "role": "weapon",
+    "required": false,
+    "moves": [
+     {
+      "kind": "pitch",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "barrel",
+     "gun barrel",
+     "loop"
+    ]
+   },
+   {
+    "name": "LaunchCell",
+    "role": "weapon",
+    "required": false,
+    "aliases": [
+     "launch cell",
+     "vertical launch cell",
+     "vls",
+     "lanceercel"
+    ],
+    "note": "Flush with the deck; hatches hinge open."
+   },
+   {
+    "name": "FlightDeck",
+    "role": "deck",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "flight deck",
+     "helideck",
+     "helidek",
+     "vliegdek"
+    ],
+    "note": "Aft, with a landing circle, lights and tie-downs; nothing may stand above it."
+   },
+   {
+    "name": "Hangar",
+    "role": "building",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "hangar",
+     "hangaar"
+    ]
+   },
+   {
+    "name": "Radar",
+    "role": "sensor",
+    "required": false,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "y"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "radar",
+     "radar antenna",
+     "radarantenne"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    60,
+    270
+   ],
+   "width": [
+    8,
+    33
+   ],
+   "height": [
+    20,
+    50
+   ],
+   "source": "general knowledge: corvettes are about 60-90 m, frigates 110-160 m, destroyers 140-175 m and the last battleships about 270 m long",
+   "confidence": "C"
+  },
+  "variants": [
+   {
+    "axis": "kind",
+    "options": [
+     "corvette",
+     "frigate",
+     "destroyer",
+     "cruiser",
+     "battleship"
+    ]
+   },
+   {
+    "axis": "hull",
+    "options": [
+     "monohull",
+     "trimaran"
+    ]
+   }
+  ],
+  "pitfalls": [
+   "Turrets and launchers need the right axes and finite slew rates; test the direction of fire, not only the pivot point.",
+   "The visible hangar floor, the flight deck and the spawn or trolley height must match.",
+   "A helicopter on the flight deck must be carried at the deck's velocity, in one way only."
+  ]
+ },
+ {
+  "id": "vessel.ship.superyacht",
+  "name": "superyacht",
+  "description": "A large private motor yacht with several decks, often with a helideck and a tender garage.",
+  "aliases": [
+   "superyacht",
+   "superyachts",
+   "megayacht",
+   "motor yacht",
+   "motorjacht",
+   "superjacht",
+   "luxe jacht"
+  ],
+  "extends": "vessel.ship",
+  "parts": [
+   {
+    "name": "Helideck",
+    "role": "deck",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "helideck",
+     "helipad",
+     "helidek"
+    ]
+   },
+   {
+    "name": "SwimPlatform",
+    "role": "deck",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "swim platform",
+     "beach club",
+     "zwemplatform"
+    ]
+   },
+   {
+    "name": "TenderGarage",
+    "role": "door",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "tender garage",
+     "garage door",
+     "tendergarage"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    24,
+    180
+   ],
+   "width": [
+    6,
+    22
+   ],
+   "height": [
+    8,
+    30
+   ],
+   "source": "general knowledge: superyachts are 24 m and longer; the largest are about 140-180 m long and 20-22 m wide, decks about 3 m apart",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "The hull collider must stop at the main deck, with thin boxes for the bulwarks; a hull box up to the bulwark top swallows a helideck above it.",
+   "Stairs between decks must cut through bulwarks and glass railings, or walkers dead-end.",
+   "Generated hull surfaces turn inside out easily; test the winding against the outward direction per surface and per level of detail."
+  ]
+ },
+ {
+  "id": "vessel.ship.ferry",
+  "name": "ro-ro ferry",
+  "description": "A roll-on/roll-off ferry: cars and trucks drive on and off over ramps at the bow and stern.",
+  "aliases": [
+   "ferry",
+   "ferries",
+   "ro-ro ferry",
+   "roro ferry",
+   "roll-on roll-off",
+   "car ferry",
+   "veerboot",
+   "veerboten",
+   "autoveer",
+   "veerpont"
+  ],
+  "extends": "vessel.ship",
+  "parts": [
+   {
+    "name": "BowVisor",
+    "role": "door",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "bow visor",
+     "bow door",
+     "boegklep",
+     "boegdeur"
+    ],
+    "note": "Hinges up at its top; a separate mesh from the hull."
+   },
+   {
+    "name": "Ramp",
+    "role": "door",
+    "required": true,
+    "count": [
+     1,
+     3
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "ramp",
+     "car ramp",
+     "stern ramp",
+     "bow ramp",
+     "oprit",
+     "klep"
+    ]
+   },
+   {
+    "name": "CarDeck",
+    "role": "deck",
+    "required": true,
+    "count": [
+     1,
+     3
+    ],
+    "aliases": [
+     "car deck",
+     "vehicle deck",
+     "autodek"
+    ]
+   },
+   {
+    "name": "Thruster",
+    "role": "propeller",
+    "required": false,
+    "count": [
+     0,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "bow thruster",
+     "stern thruster",
+     "boegschroef",
+     "hekschroef"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    40,
+    240
+   ],
+   "width": [
+    10,
+    35
+   ],
+   "height": [
+    15,
+    50
+   ],
+   "source": "general knowledge: short-route ferries are about 40-120 m, large ro-pax ferries up to about 240 m long and 35 m wide; draught 2.5-7 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Ramps, visor and the quay's linkspan move in a fixed order with interlocks: never lower a ramp while the visor is closed.",
+   "The linkspan on the quay must follow the car deck height as the ship moves with tide and load.",
+   "Check every route and harbour against the draught at low tide."
+  ]
+ },
+ {
+  "id": "vessel.ship.aircraft-carrier",
+  "name": "aircraft carrier",
+  "description": "A warship with a full-length flight deck for aircraft, and an island to one side.",
+  "aliases": [
+   "aircraft carrier",
+   "carrier",
+   "flat-top",
+   "helicopter carrier",
+   "amphibious assault ship",
+   "vliegdekschip",
+   "vliegkampschip",
+   "helikopterdrager"
+  ],
+  "extends": "vessel.ship",
+  "parts": [
+   {
+    "name": "FlightDeck",
+    "role": "deck",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "flight deck",
+     "vliegdek",
+     "dek"
+    ]
+   },
+   {
+    "name": "Island",
+    "role": "superstructure",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "island",
+     "eiland",
+     "toren"
+    ],
+    "note": "On the starboard side, with the bridge, flight control and mast.",
+    "replaces": [
+     "Superstructure"
+    ]
+   },
+   {
+    "name": "DeckLift",
+    "role": "lift",
+    "required": false,
+    "count": [
+     0,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "y"
+     }
+    ],
+    "pivot": "center",
+    "aliases": [
+     "deck lift",
+     "elevator",
+     "aircraft lift",
+     "dekliftt",
+     "lift"
+    ]
+   },
+   {
+    "name": "SkiJump",
+    "role": "deck",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "ski jump",
+     "ski-jump",
+     "skischans"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    180,
+    340
+   ],
+   "width": [
+    30,
+    78
+   ],
+   "height": [
+    40,
+    76
+   ],
+   "source": "general knowledge: helicopter and short take-off carriers are about 180-260 m long; the largest carriers about 330-340 m long with a flight deck about 78 m wide",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Build deck collision from the deck outline with nothing above it except declared obstacles; aircraft roll and land everywhere on it.",
+   "Build the flight deck as an even grid, not a fan of long thin triangles, so lighting and collision follow the island and the deck edge.",
+   "Give the whole ship one simple closed shadow proxy and turn shadows off on the detailed meshes."
+  ]
+ },
+ {
+  "id": "vessel.submarine",
+  "name": "submarine",
+  "description": "A vessel that dives: a pressure hull with a sail, diving planes and a single propeller or pump-jet.",
+  "aliases": [
+   "submarine",
+   "submarines",
+   "sub",
+   "onderzeeboot",
+   "onderzeeër",
+   "onderzeeer",
+   "duikboot"
+  ],
+  "extends": "vessel",
+  "parts": [
+   {
+    "name": "Hull",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "hull",
+     "pressure hull",
+     "romp",
+     "drukromp"
+    ]
+   },
+   {
+    "name": "Sail",
+    "role": "superstructure",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "sail",
+     "fin",
+     "tower",
+     "conning tower",
+     "toren"
+    ]
+   },
+   {
+    "name": "Mast",
+    "role": "mast",
+    "required": false,
+    "count": [
+     0,
+     8
+    ],
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "y"
+     }
+    ],
+    "pivot": "base",
+    "aliases": [
+     "periscope",
+     "mast",
+     "snorkel",
+     "periscoop"
+    ],
+    "note": "Retract into the sail."
+   },
+   {
+    "name": "DivePlane",
+    "role": "control surface",
+    "required": false,
+    "count": [
+     2,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "dive plane",
+     "bow plane",
+     "hydroplane",
+     "duikroer"
+    ]
+   },
+   {
+    "name": "Rudder",
+    "role": "control surface",
+    "required": true,
+    "count": [
+     2,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "rudder",
+     "stern plane",
+     "roer"
+    ],
+    "note": "In a cross or X layout at the stern."
+   },
+   {
+    "name": "Propeller",
+    "role": "propeller",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "propeller",
+     "pump-jet",
+     "pumpjet",
+     "schroef"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    50,
+    175
+   ],
+   "width": [
+    6,
+    23
+   ],
+   "height": [
+    8,
+    16
+   ],
+   "source": "general knowledge: diesel-electric boats are about 50-90 m long, large ballistic-missile boats about 170 m long and 13 m in diameter",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Wake, spray and wet hull only when surfaced; keep enough water under the keel along the whole route at the chosen depth.",
+   "An underwater launch has no flame or smoke until the missile breaks the surface."
   ]
  }
 ]

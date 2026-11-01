@@ -128,7 +128,6 @@
    "suspension bridge",
    "hangbrug",
    "draaibrug",
-   "ophaalbrug",
    "arch bridge",
    "boogbrug",
    "footbridge",
@@ -1184,6 +1183,761 @@
   "pitfalls": [
    "A basin dug only in the visual mesh but not in the terrain heights (or in only one of several terrain grids) shows land through the water.",
    "Buildings left standing where the basin was dug: remove them and rebuild any spatial index that pointed at them."
+  ]
+ },
+ {
+  "id": "infrastructure.helideck",
+  "name": "helideck",
+  "description": "A landing platform for helicopters on a building, ship, platform or the ground.",
+  "aliases": [
+   "helideck",
+   "helipad",
+   "heliport",
+   "helideks",
+   "helidek",
+   "helikopterplatform",
+   "helikopterlandingsplaats",
+   "landingsplatform"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Deck",
+    "role": "surface",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "deck",
+     "pad",
+     "platform",
+     "dek"
+    ]
+   },
+   {
+    "name": "Marking",
+    "role": "marking",
+    "required": false,
+    "aliases": [
+     "marking",
+     "h marking",
+     "touchdown circle",
+     "markering"
+    ],
+    "note": "The H and the touchdown and positioning circle, painted on the deck."
+   },
+   {
+    "name": "PerimeterLight",
+    "role": "light",
+    "required": false,
+    "aliases": [
+     "perimeter light",
+     "edge light",
+     "randverlichting"
+    ]
+   },
+   {
+    "name": "SafetyNet",
+    "role": "guard",
+    "required": false,
+    "aliases": [
+     "safety net",
+     "net",
+     "vangnet"
+    ],
+    "note": "Around the edge, below deck level."
+   },
+   {
+    "name": "Windsock",
+    "role": "sign",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "aliases": [
+     "windsock",
+     "wind sock",
+     "windzak"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    12,
+    30
+   ],
+   "width": [
+    12,
+    30
+   ],
+   "height": [
+    0.2,
+    3
+   ],
+   "source": "general knowledge: a helideck is sized to the largest helicopter's overall length (the D-value), so about 12-26 m across; the deck structure is 0.2-3 m thick",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Nothing may stand above deck level inside the obstacle-free sector: railings, poles and nets of every level of detail included.",
+   "Landing needs a real collider at the deck top, bound to this deck; a marker alone cannot be landed on.",
+   "On a moving ship the deck moves on every physics tick and gives its velocity to what stands on it."
+  ]
+ },
+ {
+  "id": "infrastructure.offshore-platform",
+  "name": "offshore platform",
+  "description": "A fixed oil, gas or wind-substation platform at sea: a steel jacket with decks, modules and a helideck.",
+  "aliases": [
+   "offshore platform",
+   "oil platform",
+   "oil rig",
+   "gas platform",
+   "production platform",
+   "booreiland",
+   "olieplatform",
+   "gasplatform",
+   "productieplatform"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Jacket",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "jacket",
+     "legs",
+     "steel jacket",
+     "onderstel",
+     "poten"
+    ]
+   },
+   {
+    "name": "Deck",
+    "role": "surface",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "deck",
+     "topside",
+     "dek"
+    ]
+   },
+   {
+    "name": "Module",
+    "role": "building",
+    "required": false,
+    "aliases": [
+     "module",
+     "process module",
+     "living quarters",
+     "accommodatie"
+    ]
+   },
+   {
+    "name": "Helideck",
+    "role": "deck",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "helideck",
+     "helidek"
+    ]
+   },
+   {
+    "name": "Crane",
+    "role": "machine",
+    "required": false,
+    "count": [
+     0,
+     3
+    ],
+    "moves": [
+     {
+      "kind": "yaw",
+      "axis": "y"
+     }
+    ],
+    "pivot": "base",
+    "aliases": [
+     "crane",
+     "kraan"
+    ]
+   },
+   {
+    "name": "FlareBoom",
+    "role": "structure",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "flare boom",
+     "flare",
+     "fakkel"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    30,
+    120
+   ],
+   "width": [
+    30,
+    100
+   ],
+   "height": [
+    40,
+    150
+   ],
+   "source": "general knowledge: topsides are about 40-100 m across and stand 20-40 m above the sea; the helideck is often 30-60 m above the water",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Check the clearance above the helideck on the triangles of every level of detail, not on bounding boxes.",
+   "Use one collider definition for render, collision and landing data."
+  ]
+ },
+ {
+  "id": "infrastructure.underground-station",
+  "name": "underground station",
+  "description": "A station hall below ground: platforms beside the tracks, columns, stairs and escalators to the surface.",
+  "aliases": [
+   "underground station",
+   "metro station",
+   "subway station",
+   "station hall",
+   "ondergronds station",
+   "metrostation",
+   "tunnelstation",
+   "perronhal"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Platform",
+    "role": "surface",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "platform",
+     "perron",
+     "island platform",
+     "eilandperron"
+    ]
+   },
+   {
+    "name": "Column",
+    "role": "support",
+    "required": false,
+    "aliases": [
+     "column",
+     "pillar",
+     "kolom",
+     "pilaar"
+    ]
+   },
+   {
+    "name": "Escalator",
+    "role": "machine",
+    "required": false,
+    "count": [
+     0,
+     12
+    ],
+    "aliases": [
+     "escalator",
+     "roltrap",
+     "stairs",
+     "trap"
+    ]
+   },
+   {
+    "name": "Portal",
+    "role": "structure",
+    "required": false,
+    "count": [
+     0,
+     4
+    ],
+    "aliases": [
+     "tunnel portal",
+     "portal",
+     "tunnelmond"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    60,
+    460
+   ],
+   "width": [
+    10,
+    40
+   ],
+   "height": [
+    4,
+    12
+   ],
+   "source": "general knowledge: island platforms are about 10-15 m wide; metro platforms about 60-150 m and main-line platforms up to about 460 m long",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Place columns from the merged island platform, not per half, and keep them at least about 2.5 m from the platform edge.",
+   "Cut terrain, sea and water out of the hall in every terrain and water material, or they show inside it.",
+   "Thousands of tactile ribs and tiles belong in one MultiMesh."
+  ]
+ },
+ {
+  "id": "infrastructure.bascule-bridge",
+  "name": "bascule bridge",
+  "description": "A movable bridge whose deck leaves swing up about a horizontal hinge to let ships pass.",
+  "aliases": [
+   "bascule bridge",
+   "drawbridge",
+   "double bascule bridge",
+   "ophaalbrug",
+   "dubbele ophaalbrug",
+   "basculebrug"
+  ],
+  "extends": "infrastructure.bridge",
+  "parts": [
+   {
+    "name": "Leaf",
+    "role": "movable",
+    "required": true,
+    "count": [
+     1,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "leaf",
+     "deck leaf",
+     "span",
+     "klep",
+     "val"
+    ],
+    "note": "Turns about the hinge line at its land end."
+   },
+   {
+    "name": "Counterweight",
+    "role": "structure",
+    "required": false,
+    "count": [
+     0,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "counterweight",
+     "balance beam",
+     "gallows",
+     "contragewicht",
+     "balans",
+     "hameipoort"
+    ]
+   },
+   {
+    "name": "Barrier",
+    "role": "guard",
+    "required": false,
+    "count": [
+     0,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "z"
+     }
+    ],
+    "pivot": "hinge",
+    "aliases": [
+     "barrier",
+     "boom gate",
+     "slagboom"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    6,
+    80
+   ],
+   "width": [
+    4,
+    35
+   ],
+   "height": [
+    4,
+    30
+   ],
+   "source": "general knowledge: small canal drawbridges span about 6-20 m; large city bascule bridges about 30-80 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Leaves and balance beams pivot about the real hinge line; check the opening direction, not only the point.",
+   "When open, keep the waterway clear of collision; when closed, the deck collision is part of the road."
+  ]
+ },
+ {
+  "id": "infrastructure.power-line",
+  "name": "overhead power line",
+  "description": "Conductors hanging between pylons in a sagging curve, with insulators and an earth wire.",
+  "aliases": [
+   "power line",
+   "power lines",
+   "overhead line",
+   "overhead power line",
+   "transmission line",
+   "high-voltage line",
+   "hoogspanningslijn",
+   "hoogspanningsleiding",
+   "bovenleiding"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Conductor",
+    "role": "cable",
+    "required": true,
+    "aliases": [
+     "conductor",
+     "wire",
+     "cable",
+     "draad",
+     "geleider"
+    ],
+    "note": "Hangs as a catenary between attachment points; often in bundles per phase."
+   },
+   {
+    "name": "EarthWire",
+    "role": "cable",
+    "required": false,
+    "aliases": [
+     "earth wire",
+     "ground wire",
+     "bliksemdraad"
+    ]
+   },
+   {
+    "name": "Insulator",
+    "role": "insulator",
+    "required": false,
+    "aliases": [
+     "insulator",
+     "insulator string",
+     "isolator"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    150,
+    500
+   ],
+   "width": [
+    10,
+    40
+   ],
+   "height": [
+    15,
+    70
+   ],
+   "source": "general knowledge: high-voltage spans are about 300-450 m between pylons 40-60 m high, with 10-15 m of sag; length here is one span",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Aircraft must be able to hit the wires: a few capsule shapes per conductor that follow the sag, under one static body per tile.",
+   "Attach conductors to the pylon's real attachment points, and keep the line clear of buildings, roads and trees."
+  ]
+ },
+ {
+  "id": "infrastructure.tunnel",
+  "name": "tunnel",
+  "description": "A rail or road tunnel: portals, a lined tube or box, walkways, lighting and emergency exits.",
+  "aliases": [
+   "tunnel",
+   "tunnels",
+   "rail tunnel",
+   "railway tunnel",
+   "road tunnel",
+   "spoortunnel",
+   "autotunnel",
+   "verkeerstunnel"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Portal",
+    "role": "structure",
+    "required": true,
+    "count": [
+     1,
+     2
+    ],
+    "aliases": [
+     "portal",
+     "tunnel portal",
+     "tunnelmond",
+     "portaal"
+    ]
+   },
+   {
+    "name": "Tube",
+    "role": "structure",
+    "required": true,
+    "count": [
+     1,
+     3
+    ],
+    "aliases": [
+     "tube",
+     "bore",
+     "lining",
+     "tunnelbuis",
+     "buis"
+    ]
+   },
+   {
+    "name": "Walkway",
+    "role": "surface",
+    "required": false,
+    "aliases": [
+     "walkway",
+     "emergency walkway",
+     "vluchtpad"
+    ]
+   },
+   {
+    "name": "EmergencyExit",
+    "role": "door",
+    "required": false,
+    "aliases": [
+     "emergency exit",
+     "escape door",
+     "nooduitgang",
+     "vluchtdeur"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    50,
+    60000
+   ],
+   "width": [
+    7,
+    15
+   ],
+   "height": [
+    6,
+    12
+   ],
+   "source": "general knowledge: a single-track high-speed tube is about 8-10 m inside diameter; road tunnel tubes about 10-15 m wide; emergency exits every few hundred metres",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Terrain, sea and water above or around the tunnel must be cut out in every material and level of detail, or they show inside.",
+   "Underground parts need no sun shadows and need not be built while the camera is far above."
+  ]
+ },
+ {
+  "id": "infrastructure.runway",
+  "name": "runway",
+  "description": "A paved strip for aircraft to take off and land, with markings, lights, taxiways and an apron.",
+  "aliases": [
+   "runway",
+   "runways",
+   "airstrip",
+   "airfield",
+   "landing strip",
+   "landingsbaan",
+   "startbaan",
+   "vliegveld",
+   "vliegbasis"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Runway",
+    "role": "surface",
+    "required": true,
+    "count": [
+     1,
+     4
+    ],
+    "aliases": [
+     "runway",
+     "strip",
+     "baan"
+    ]
+   },
+   {
+    "name": "Taxiway",
+    "role": "surface",
+    "required": false,
+    "aliases": [
+     "taxiway",
+     "taxibaan"
+    ]
+   },
+   {
+    "name": "Apron",
+    "role": "surface",
+    "required": false,
+    "aliases": [
+     "apron",
+     "platform",
+     "stand"
+    ]
+   },
+   {
+    "name": "RunwayLight",
+    "role": "light",
+    "required": false,
+    "aliases": [
+     "runway light",
+     "edge light",
+     "baanverlichting",
+     "approach light"
+    ]
+   },
+   {
+    "name": "Windsock",
+    "role": "sign",
+    "required": false,
+    "count": [
+     0,
+     4
+    ],
+    "aliases": [
+     "windsock",
+     "windzak"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    800,
+    4500
+   ],
+   "width": [
+    18,
+    60
+   ],
+   "height": [
+    0,
+    0.5
+   ],
+   "source": "general knowledge: ICAO code 4 runways are 45-60 m wide and 2-4 km long; small airfields have 18-30 m wide strips under 1.5 km",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "The runway surface must be flat in the collision, and collision must match what is drawn.",
+   "A runway follows its magnetic heading: the number at each end is the heading divided by ten."
+  ]
+ },
+ {
+  "id": "infrastructure.buoy",
+  "name": "navigation buoy",
+  "description": "A floating channel marker: a can, cone, pillar or spar buoy with a top mark and often a light.",
+  "aliases": [
+   "buoy",
+   "buoys",
+   "navigation buoy",
+   "channel marker",
+   "cardinal buoy",
+   "boei",
+   "boeien",
+   "betonning",
+   "vaargeulmarkering"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Float",
+    "role": "body",
+    "required": true,
+    "count": 1,
+    "aliases": [
+     "float",
+     "body",
+     "drijflichaam"
+    ]
+   },
+   {
+    "name": "TopMark",
+    "role": "sign",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "top mark",
+     "topteken"
+    ]
+   },
+   {
+    "name": "Light",
+    "role": "light",
+    "required": false,
+    "count": [
+     0,
+     1
+    ],
+    "aliases": [
+     "light",
+     "lamp",
+     "licht"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.8,
+    4
+   ],
+   "width": [
+    0.8,
+    4
+   ],
+   "height": [
+    1,
+    8
+   ],
+   "source": "general knowledge: lateral and cardinal buoys stand about 1.5-6 m above the water; IALA system A (Europe) uses red to port and green to starboard when entering",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Lights flash in their real pattern and only at night; a small lamp is smaller than a pixel at a few kilometres, so add a sprite that keeps its size.",
+   "Buoys follow the same water height function as everything else on the water."
   ]
  }
 ]

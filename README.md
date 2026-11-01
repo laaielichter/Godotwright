@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: laaielichter/godotwright@v0.2.0
+      - uses: laaielichter/godotwright@v0.3.0
         with: { comment: "true" }
 ```
 
@@ -383,7 +383,7 @@ One step for each client. Every setup and one-click button is on the [install pa
 
 | Client | How |
 | --- | --- |
-| **Claude Code** | Plugin with the MCP server and four skills: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
+| **Claude Code** | Plugin with the MCP server, hooks, ten skills and two subagents: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
 | **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it (from release 0.2.0) |
 | **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
@@ -391,8 +391,19 @@ One step for each client. Every setup and one-click button is on the [install pa
 | **Gemini CLI** | `gemini extensions install https://github.com/laaielichter/Godotwright` |
 | **Windsurf, Zed, others** | [JSON for your client](https://laaielichter.github.io/Godotwright/install.html#other) |
 
-The Claude Code plugin adds `/godotwright:review` (review the project and fix what it finds),
-`/godotwright:port` (port Godot 3 code to Godot 4) and a Godot workflow Claude follows on its own.
+The Claude Code plugin puts Godotwright in Claude's loop, so it does not depend on Claude remembering a tool:
+
+- **Hooks:** every Godot file Claude edits is reviewed right after the edit and its errors go straight back to
+  Claude; Godot errors in a command's output come with the lessons that explain them; before Claude stops, review
+  errors left in files it changed are named once; and a session in a Godot project starts with a few lines about it.
+  `GODOTWRIGHT_HOOKS=0` turns them off. Any agent can use them: `godotwright hook <event>` reads Claude Code's hook
+  JSON on stdin (`post-edit`, `post-bash`, `stop`, `session-start`).
+- **Skills Claude uses on its own:** the Godot workflow, and `debug`, `perf`, `vehicles`, `world`, `model` and `patch`
+  (changes to a shipped game with preflight, receipts and rollback).
+- **Skills you start:** `/godotwright:review` (review the project and fix what it finds), `/godotwright:port` (port
+  Godot 3 code to Godot 4) and `/godotwright:learn` (teach Godotwright what the session learned).
+- **Subagents:** `godot-reviewer` (a verified review of a change) and `godot-debugger` (the root cause of an error or
+  wrong behaviour, proven with a headless run).
 On Claude Code older than 2.1.275, run `/plugin marketplace add laaielichter/Godotwright` and then
 `/plugin install godotwright@godotwright`. Only the MCP server, without the skills:
 
@@ -498,12 +509,15 @@ contradicted. That, plus what opted-in installs share, ships in `data/learned.js
 API hints for common typos, and rules Godot keeps contradicting.
 What your own machine saw wins: one confirmation by Godot keeps a rule an error.
 
-Lessons from real builds also become rules. `data/lessons.json` holds 77 anonymised lessons from large Godot 4
-projects (helicopters and ships landing on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
-headless test rigs): no code, no names, no paths, and a test runs every one through the same scrubber that local
-lessons go through. The ones a review can catch are rules, such as `api/infer-variant` on loop variables over
-untyped arrays, `api/override-signature`, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
-`performance/runtime-gltf-mipmaps`, `quality/shader-reads-own-depth`, `quality/platform-layers-not-restored` and
+Lessons from real builds also become rules. `data/lessons.json` holds 272 anonymised lessons from large Godot 4
+projects (helicopters and ships landing on moving decks, open worlds tens of kilometres wide, cockpits and head-up
+displays, streaming and levels of detail, VFX and shaders, runtime-loaded models, audio, UI, installers for shipped
+games, headless test rigs and frame-time measurement): no code, no names, no paths, and a test runs every one through
+the same scrubber that local lessons go through. The ones a review can catch are rules, such as `api/infer-variant`
+on loop variables over untyped arrays, `api/override-signature`, `api/freed-check-order`, `api/parse-into-typed`,
+`api/duplicate-declaration`, `api/coroutine-without-await`, `api/timer-start-outside-tree`,
+`api/multimesh-format-after-count`, `performance/runtime-gltf-mipmaps`, `performance/subviewport-always`,
+`quality/shader-reads-own-depth`, `quality/time-modulo-window`, `quality/worker-task-not-waited` and
 `model/opaque-glass`.
 [LESSONS.md](LESSONS.md) tells the story behind them, and [LESSONS-ROADS.md](LESSONS-ROADS.md) does the same for
 a road network generator (links, bridges, viaducts over rail and motorways, roundabouts, guard rails). Lessons you keep locally can be proposed for everyone:

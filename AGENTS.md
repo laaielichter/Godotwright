@@ -32,7 +32,8 @@ node dist/cli.js --help
   turns its output into diagnostics.
 - `src/api/`: lookup and search over the bundled Godot 4.7 class reference.
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
-  scene nodes; `checks/` holds one file per category; `rules.ts` lists every rule.
+  scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from
+  lessons); `rules.ts` lists every rule.
   New rules need a test in `test/review.test.ts`, and must stay quiet on the
   official demo projects (`test/integration/review-demos.test.ts`).
 - `src/model/`: checks `.glb` and `.gltf` files without Godot. `inspect.ts` reads what
@@ -55,6 +56,10 @@ node dist/cli.js --help
   must pass it unchanged; `test/lessons.test.ts` checks this), `hints.ts` adds lessons to check and review output,
   and `format.ts` prints lessons and gaps. A new rule that comes from a lesson names it in the lesson's `rules`.
 - `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles.
+- `src/hooks/agent-hooks.ts`: hooks for coding agents (`godotwright hook <event>`, Claude Code hook JSON on stdin):
+  review after an edit, lessons under Godot errors in command output, open errors before the agent stops, a project
+  brief at the start. A hook must never fail the agent: on any problem it prints nothing. The plugin calls it through
+  `plugins/godotwright/hooks/run.mjs`, which starts the same godotwright version as the plugin's MCP server.
 - `src/learn/`: local learning. `store.ts` reads and writes the learning file,
   `learn.ts` turns reviews, checks, lookups and feedback into counters and applies
   them, `hooks.ts` is what the CLI and MCP server call, `share.ts` builds and
@@ -67,7 +72,8 @@ node dist/cli.js --help
 - Install packages, kept in step with `package.json` by `scripts/sync-version.mjs` (which `npm version` runs)
   and checked by `test/install.test.ts`:
   - `.claude-plugin/marketplace.json` and `plugins/godotwright/`: the Claude Code marketplace and plugin
-    (MCP server in `.mcp.json`, skills in `skills/`).
+    (MCP server in `.mcp.json`, skills in `skills/`, subagents in `agents/`, hooks in `hooks/`). Skills and agents
+    may only name MCP tools the server has; `test/install.test.ts` checks it.
   - `gemini-extension.json`: the Gemini CLI extension.
   - `mcpb/`: the Claude Desktop bundle manifest and icon; `npm run build:mcpb` builds `build/godotwright.mcpb`,
     and the Release workflow attaches it to every release.
