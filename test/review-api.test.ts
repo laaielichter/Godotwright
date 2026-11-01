@@ -92,6 +92,16 @@ describe("Godot 3 syntax", () => {
     ]);
   });
 
+  it("does not report funcref() as an unknown function as well", () => {
+    expect(
+      findings(
+        ["extends Node", "", "func _ready() -> void:", '\tvar f = funcref(self, "go")'].join("\n"),
+      ).filter((l) => l.includes("[api/")),
+    ).toEqual([
+      'res://main.gd:4: error [api/godot3-syntax] Godot 3 syntax: `funcref()` is a Callable in Godot 4: `object.method` or `Callable(object, "method")`.',
+    ]);
+  });
+
   it("still reports Godot 3 syntax in code", () => {
     expect(
       findings(

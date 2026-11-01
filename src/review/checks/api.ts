@@ -287,6 +287,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
           k = j;
           continue;
         }
+        // funcref() is already reported as Godot 3 syntax above. Treat its name as a
+        // legacy construct rather than also reporting it as an unknown function.
+        if (tok.t === "funcref" && tokens[k + 1]?.t === "(") continue;
         const startsChain =
           (isIdent(tok.t) && (!KEYWORDS.has(tok.t) || tok.t === "self" || tok.t === "super")) ||
           tok.t.startsWith("$") ||
