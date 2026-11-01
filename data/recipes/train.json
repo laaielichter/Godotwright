@@ -1981,7 +1981,7 @@
        ]
       },
       {
-       "name": "Wiper",
+       "name": "Wiper_L",
        "shape": "box",
        "material": "trim_black",
        "size": [
@@ -1990,7 +1990,7 @@
         0.025
        ],
        "at": [
-        0.25,
+        0.42,
         "$yb + 1.22",
         "$L2 - 0.36"
        ],
@@ -1998,7 +1998,8 @@
         -40,
         0,
         10
-       ]
+       ],
+       "mirror": "Wiper_R"
       }
      ]
     },
@@ -2872,7 +2873,7 @@
        ]
       },
       {
-       "name": "Wiper",
+       "name": "Wiper_L",
        "shape": "box",
        "material": "trim_black",
        "size": [
@@ -2881,7 +2882,7 @@
         0.025
        ],
        "at": [
-        0.25,
+        0.42,
         "$yb + 1.22",
         "-($L2 - 0.36)"
        ],
@@ -2889,7 +2890,8 @@
         40,
         0,
         10
-       ]
+       ],
+       "mirror": "Wiper_R"
       }
      ]
     },
@@ -3382,6 +3384,20 @@
        "mirror": "Damper_R"
       },
       {
+       "name": "AirSpring_L",
+       "shape": "cylinder",
+       "material": "rubber",
+       "radius": 0.2,
+       "height": "$yb - $wheelRadius - 0.27",
+       "segments": 16,
+       "at": [
+        0.95,
+        "($yb - $wheelRadius + 0.27) / 2",
+        0
+       ],
+       "mirror": "AirSpring_R"
+      },
+      {
        "name": "Axle{i}",
        "shape": "cylinder",
        "material": "wheel_steel",
@@ -3748,6 +3764,20 @@
         0
        ],
        "mirror": "Damper_R"
+      },
+      {
+       "name": "AirSpring_L",
+       "shape": "cylinder",
+       "material": "rubber",
+       "radius": 0.2,
+       "height": "$yb - $wheelRadius - 0.27",
+       "segments": 16,
+       "at": [
+        0.95,
+        "($yb - $wheelRadius + 0.27) / 2",
+        0
+       ],
+       "mirror": "AirSpring_R"
       },
       {
        "name": "Axle{i}",
