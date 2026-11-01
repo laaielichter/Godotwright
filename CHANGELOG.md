@@ -120,6 +120,17 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 Both rules were found by the benchmark's harder tasks: a small model made each mistake once, and the review did not see it.
 
+- **Review rule `api/open-compressed-gzip`** (error): `FileAccess.open_compressed()` on a plain `.gz` file returns null,
+  because it only reads Godot's own compressed format. The fix is `get_file_as_bytes(path).decompress_dynamic(-1,
+  FileAccess.COMPRESSION_GZIP)`.
+- **Review rule `quality/visibility-margin-hysteresis`** (warning): `visibility_range_*_margin` without
+  `visibility_range_fade_mode` is hysteresis, so at a LOD boundary both levels can stay hidden (holes in terrain).
+- **Three ready-made kinds:** `grandstand`, `crash-barrier` and `race-kerb`, with the archetypes `building.grandstand`,
+  `infrastructure.crash-barrier` and `infrastructure.kerb` (56 kinds now). All three lint 100/100.
+- **LESSONS.md:** ten lessons from rebuilding a real race circuit and its town from open elevation and topography data.
+
+The two rules and three kinds come from that build, where each mistake happened once.
+
 - **Review knows what older Godot 4 releases had.** For a member Godot 4.7 removed, the finding now says when ("It was
   removed after Godot 4.0"), so an agent upgrading a project sees it is an upgrade, not a typo. Eight old names Godot 4.7
   still accepts for old projects (such as `NavigationAgent2D.time_horizon` and `TileMap.cell_quadrant_size`) are now an

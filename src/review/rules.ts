@@ -53,6 +53,7 @@ const list: Rule[] = [
   { id: "performance/small-light-cube-shadow", category: "performance", severity: "info", title: "Small omni light with a cube shadow", fix: "Turn the shadow off on small fill lights, or use omni_shadow_mode dual paraboloid: a cube shadow costs six passes." },
   // Code quality.
   { id: "api/physics-change-in-callback", category: "api", severity: "warning", title: "Physics change while Godot reports overlaps", fix: "In a body/area entered or exited handler, add physics nodes with add_child.call_deferred() and change monitoring or disabled with set_deferred()." },
+  { id: "api/open-compressed-gzip", category: "api", severity: "error", title: "Plain .gz file opened with open_compressed()", fix: "Read the bytes and unpack them: FileAccess.get_file_as_bytes(path).decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)." },
   { id: "api/bind-swaps-arguments", category: "api", severity: "error", title: "bind() puts the tweened value first", fix: "bind() adds its arguments after the caller's; use tween_property(object, \"shader_parameter/name\", ...) or a lambda." },
   { id: "quality/untyped", category: "quality", severity: "info", title: "Missing static types", fix: "Add types to variables, parameters and return values (or use :=)." },
   { id: "quality/long-function", category: "quality", severity: "info", title: "Long function", fix: "Split the function into smaller named steps." },
@@ -63,6 +64,7 @@ const list: Rule[] = [
   { id: "quality/fragile-path", category: "quality", severity: "info", title: "Fragile node path", fix: "Use an @export var, a %UniqueName or a signal instead of ../.. paths." },
   { id: "quality/naming", category: "quality", severity: "info", title: "Naming style", fix: "Follow the GDScript style guide: snake_case, PascalCase classes, CONSTANT_CASE constants." },
   { id: "quality/time-scale-not-restored", category: "quality", severity: "warning", title: "Slow motion never undone", fix: "Set Engine.time_scale back to 1.0 when the effect ends and in _exit_tree(), so the game does not stay slow." },
+  { id: "quality/visibility-margin-hysteresis", category: "quality", severity: "warning", title: "LOD margins without a fade mode", fix: "Set visibility_range_fade_mode, or leave the margins at 0 so neighbouring LOD ranges meet exactly." },
   { id: "quality/todo", category: "quality", severity: "info", title: "TODO left in code", fix: "Do the TODO, or track it outside the code." },
   { id: "quality/mojibake", category: "quality", severity: "warning", title: "Text encoded twice", fix: "Retype the characters (\"Ã©\" is \"é\" read with the wrong encoding) and save the file as UTF-8." },
   { id: "quality/interpolation-reset-every-tick", category: "quality", severity: "warning", title: "Physics interpolation reset every tick", fix: "Call reset_physics_interpolation() only after a teleport; on every tick the node draws at its raw pose and jitters." },
