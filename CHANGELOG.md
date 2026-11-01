@@ -4,6 +4,50 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Lessons from real projects, and Godotwright learns new ones.** `data/lessons.json` holds 77 lessons from large
+  Godot 4 projects (helicopters and ships on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
+  shaders, headless tests): symptom, cause in Godot terms, fix, how to test, and the rule that checks it. They are
+  anonymous: no code, names or paths, and a test runs every lesson through the scrubber that local lessons go through.
+  - New MCP tool `godot_lessons` (and `godotwright lessons`): find lessons by words, by a Godot message, by a rule or
+    a topic; `gaps: true` (and `godotwright learn gaps`) lists the Godot errors seen here that no rule predicted and no
+    lesson explains yet, most frequent first: what to teach Godotwright next.
+  - New MCP tool `godot_lesson_add` (and `godotwright lessons add`): keep a lesson learned in this project, with the
+    Godot message it explains. Names of the project (its title, classes, nodes, files, groups, actions), paths, links,
+    e-mail addresses, dates, codes, keys and source code are replaced first; a lesson that is mostly names is refused.
+    Local lessons never leave the machine; `godotwright lessons export` prints them as entries to propose.
+  - `godot_check` (and `godotwright check`) prints the lesson under a Godot error it explains; `godot_review` names the
+    lesson behind its findings; `godot_model_brief` lists lessons from real builds of that kind of thing.
+  - `godot_feedback` takes a `lesson` id: lessons that helped rank higher, and one marked wrong more often than it
+    helped (at least 3 times) is no longer offered unasked.
+- **Rules learn from false alarms.** A rule whose findings were marked wrong 5 times on this machine, and wrong at least
+  three times as often as right, is reported one level lower. Over all installs that share, the same happens after 30
+  false alarms from at least 3 installs, unless this machine said the rule was right.
+- **Sharing (opt-in) also counts which built-in lessons helped**: lesson ids with three counts, never the text of a
+  lesson and never a local lesson. The collector checks the ids and aggregates them like rules (at least 3 installs).
+- **New review rules from those lessons.** On the 139 official demo projects they report no errors; the three
+  warnings there are real cases (JSON parsed straight into a typed Dictionary, a glTF loaded at runtime without
+  mipmaps).
+  - `api/infer-variant` now also catches `:=` from a Variant: a loop variable over a literal or untyped array, an
+    untyped parameter, or an element of an untyped Array or Dictionary. Godot 4.7 stops with "Cannot infer the type";
+    a real project hit it three times.
+  - `api/duplicate-declaration` (error): the same function, variable, constant or signal twice in a class, as a merge
+    or a patch leaves it.
+  - `api/freed-check-order` (warning): `x is T and is_instance_valid(x)`; the type test on a freed object is the error.
+  - `api/get-meta-null-default` (warning): `get_meta(name, null)` prints an error when the entry is missing.
+  - `api/parse-into-typed` (warning): `JSON.parse_string()` or `str_to_var()` straight into a typed Array or
+    Dictionary stops the function on a missing or broken input.
+  - `api/image-load-res` (warning): `Image.load_from_file("res://...png")` fails in an exported game.
+  - `performance/runtime-gltf-mipmaps` (warning): a glTF turned into a scene at runtime without
+    `generate_mipmaps()`: textures shimmer and take several times the video memory.
+  - `performance/small-light-cube-shadow` (info): a small omni light with a cube shadow costs six shadow passes.
+  - `quality/mojibake` (warning): text encoded twice ("CafÃ©").
+  - `quality/interpolation-reset-every-tick` (warning): `reset_physics_interpolation()` on every tick makes a node jitter.
+  - `quality/platform-layers-not-restored` (warning): `platform_floor_layers = 0` that is never set back.
+- **New model rules:** `model/opaque-glass` (a light-coloured glass, canopy or window material that light cannot pass;
+  dark solid glass, as on a house without rooms, is left alone) and
+  `model/renamed-on-import` (a node name with `. : @ / " %` or a `.001` suffix, which Godot changes).
+- **Claude Code plugin:** a fourth skill, `/godotwright:learn`, teaches Godotwright what the session learned; the
+  `godot` skill uses the lessons when the server has them.
 - **Prettier, better 3D models.** Every ready-made kind was rebuilt with more detail, truer proportions and real
   materials, and the gallery was rendered again (`scripts/render-gallery.mjs`):
   - **Textures.** Brick, roof tiles, slate, wood, bark, leaves, grass, stone, concrete, asphalt, plaster, sand and water
@@ -27,6 +71,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   `guard-rail` (posts every 2 m, spacers and a corrugated beam, segments that tile) and `delineator` (a roadside post
   with a reflector), each with its archetype (`infrastructure.traffic-sign`, `infrastructure.guard-rail`,
   `infrastructure.delineator`) and English and Dutch names (verkeersbord, vangrail, reflectorpaal).
+  A road guard rail (vangrail, geleiderail, w-beam) is `infrastructure.guard-rail`; a motorsport barrier (crash barrier,
+  Armco, catch fence) stays `infrastructure.crash-barrier`.
 - **[LESSONS-ROADS.md](LESSONS-ROADS.md):** lessons from building a road network with Godotwright: connectivity per pair
   of places, repairs that pass the final check, clearances over roads, water and electrified rail, terrain under the
   road, and MultiMesh for roadside objects.
@@ -69,6 +115,17 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   `set_deferred`, `set_indexed`, `set_meta` and `set_instance_shader_parameter`.
 
 Both rules were found by the benchmark's harder tasks: a small model made each mistake once, and the review did not see it.
+
+- **Review rule `api/open-compressed-gzip`** (error): `FileAccess.open_compressed()` on a plain `.gz` file returns null,
+  because it only reads Godot's own compressed format. The fix is `get_file_as_bytes(path).decompress_dynamic(-1,
+  FileAccess.COMPRESSION_GZIP)`.
+- **Review rule `quality/visibility-margin-hysteresis`** (warning): `visibility_range_*_margin` without
+  `visibility_range_fade_mode` is hysteresis, so at a LOD boundary both levels can stay hidden (holes in terrain).
+- **Three ready-made kinds:** `grandstand`, `crash-barrier` and `race-kerb`, with the archetypes `building.grandstand`,
+  `infrastructure.crash-barrier` and `infrastructure.kerb` (56 kinds now). All three lint 100/100.
+- **LESSONS.md:** ten lessons from rebuilding a real race circuit and its town from open elevation and topography data.
+
+The two rules and three kinds come from that build, where each mistake happened once.
 
 - **Review knows what older Godot 4 releases had.** For a member Godot 4.7 removed, the finding now says when ("It was
   removed after Godot 4.0"), so an agent upgrading a project sees it is an upgrade, not a typo. Eight old names Godot 4.7

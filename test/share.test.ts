@@ -128,7 +128,7 @@ describe("the report", () => {
     learnFromSecretProject();
     const { report } = buildReport(readLearning(), api, "install-id")!;
     expect(report).toMatchObject({ schema: 1, godot: "4.7", install: "install-id" });
-    expect(Object.keys(report)).toEqual(["schema", "godotwright", "godot", "platform", "install", "rules", "apiMisses", "missedByReview", "unparsed"]);
+    expect(Object.keys(report)).toEqual(["schema", "godotwright", "godot", "platform", "install", "rules", "apiMisses", "missedByReview", "unparsed", "lessons"]);
     expect(report.rules["api/unknown-member"]).toMatchObject({ reported: 1, contradicted: 1 });
     expect(report.apiMisses).toEqual({ "Node2D.lookat": { count: 1, resolved: { "Node2D.look_at": 1 } } });
     expect(report.missedByReview).toEqual({ 'Identifier "<s>" not declared. In <path>': 1, "Function <id> not found in base <id>": 1 });

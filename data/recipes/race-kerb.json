@@ -1,0 +1,114 @@
+{
+ "version": 1,
+ "name": "race-kerb",
+ "archetype": "infrastructure.kerb",
+ "description": "A red-and-white race kerb along z, 1.2 m wide: blocks 1.5 m long that rise from flush at the track edge (x = 0) to about 6 cm at the outer edge. Lay it on the track surface at the apex or the exit of a corner.",
+ "params": [
+  {
+   "name": "length",
+   "type": "number",
+   "default": 12,
+   "min": 3,
+   "max": 30,
+   "description": "Length of the kerb along z in metres."
+  },
+  {
+   "name": "width",
+   "type": "number",
+   "default": 1.2,
+   "min": 0.6,
+   "max": 2,
+   "description": "Width across the kerb in metres."
+  }
+ ],
+ "materials": {
+  "kerb_red": {
+   "color": [
+    0.6,
+    0.02,
+    0.02
+   ],
+   "roughness": 0.55
+  },
+  "kerb_white": {
+   "color": [
+    0.85,
+    0.85,
+    0.83
+   ],
+   "roughness": 0.55
+  }
+ },
+ "nodes": [
+  {
+   "name": "Kerb",
+   "material": "asphalt",
+   "vars": {
+    "N": "floor($length / 3)"
+   },
+   "children": [
+    {
+     "name": "Block_Red_{i}",
+     "shape": "box",
+     "material": "kerb_red",
+     "size": [
+      "$width",
+      0.05,
+      1.5
+     ],
+     "at": [
+      "$width / 2",
+      0.025,
+      "-$N * 1.5 + 0.75 + $i * 3"
+     ],
+     "repeat": {
+      "count": "$N",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    {
+     "name": "Block_White_{i}",
+     "shape": "box",
+     "material": "kerb_white",
+     "size": [
+      "$width",
+      0.05,
+      1.5
+     ],
+     "at": [
+      "$width / 2",
+      0.025,
+      "-$N * 1.5 + 2.25 + $i * 3"
+     ],
+     "repeat": {
+      "count": "$N",
+      "step": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    {
+     "name": "Block_Lip",
+     "shape": "box",
+     "material": "kerb_white",
+     "size": [
+      0.25,
+      0.07,
+      "$N * 3"
+     ],
+     "at": [
+      "$width - 0.125",
+      0.035,
+      0
+     ]
+    }
+   ]
+  }
+ ]
+}

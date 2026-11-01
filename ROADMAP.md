@@ -121,6 +121,21 @@ Godotwright gets better with every use, without collecting anything personal.
     Next: recipes placeable inside a spec, recipes for the new archetypes, then the same six tasks again to measure the
     difference.
 
+## Learning from real projects
+
+22. **Lessons.** Anonymous lessons from real Godot projects in `data/lessons.json` (symptom, cause, fix, test, the rule
+    that checks it), searchable by words, Godot message, rule, topic and archetype (`godot_lessons`,
+    `godotwright lessons`), shown under `check` errors, behind `review` findings and in the model brief.
+    *Done when:* a Godot message from a real project finds its lesson, and every bundled lesson passes the scrubber
+    unchanged.
+23. **Self-learning.** Lessons kept on this machine (`godot_lesson_add`), scrubbed of names, paths and code; feedback on
+    lessons ranks them; rules marked as false alarms far more often than right drop a level; `learn gaps` lists what
+    Godotwright cannot predict yet; opted-in installs share lesson counts (ids only), aggregated with k-anonymity.
+    *Done when:* tests show a lesson kept here comes back for the same Godot error, a local lesson never reaches a
+    report, and a gap shared by many installs can be read as the next rule.
+24. **From gaps to rules.** Turn the gaps many installs share into review rules, and proposed lessons
+    (`godotwright lessons export`) into bundled ones, each release.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -152,6 +167,9 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 16b: Checks against an archetype (`model lint --archetype`)
 - [x] Step 17: MCP tools for models (`godot_model_identify`, `_spec`, `_build`, `_lint`, `_inspect`)
 - [x] Step 18: Recipes (41 so far, in `data/recipes/`)
+- [x] Step 22: Lessons from real projects (`data/lessons.json`, `godot_lessons`)
+- [x] Step 23: Self-learning (local lessons, lesson feedback, rules that learn from false alarms, `learn gaps`)
+- [ ] Step 24: From gaps to rules, every release
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

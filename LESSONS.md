@@ -1,5 +1,10 @@
 # Lessons from building a large vehicle asset with Godotwright
 
+> These lessons, and about sixty more from a second, much larger project (an open world with helicopters, ships,
+> trains and moving decks), are now data: `data/lessons.json`, searchable with `godotwright lessons` and the
+> `godot_lessons` MCP tool, and shown under the Godot errors they explain. Lessons you learn yourself can be kept
+> with `godot_lesson_add`; see [Learning](README.md#learning). The text below is the story behind the first ones.
+
 An anonymised reflection on one long build: a high-detail military truck with a
 working weapon system, built from scratch in Blender scripts and Godot 4.7 by a
 coding agent with Godotwright. It holds no code, no project names and no paths;
@@ -36,10 +41,11 @@ checks it.
    mipmaps and VRAM compression when it sees a texture used in a 3D material in
    the editor. Textures loaded at runtime by script keep the 2D defaults, so
    they shimmer at a distance and use far more video memory. Set mipmaps (and
-   compression) in their import settings. *Not checked yet.*
+   compression) in their import settings. *Checked* for glTF loaded at runtime
+   (`performance/runtime-gltf-mipmaps`) and for images read from `res://` source files (`api/image-load-res`).
 7. **Glass is opaque until you make it otherwise,** and an interior behind it
    stays black without its own light. Both are needed before a cockpit shows.
-   *Not checked.*
+   *Checked:* `model lint` reports glass, canopy and window materials that light cannot pass (`model/opaque-glass`).
 8. **The Compatibility renderer needs a fill light.** Ambient light alone left
    the shaded side of a vehicle almost black. *Not checked;* `screenshot` adds a
    directional and an ambient light to the models it frames.
@@ -48,7 +54,7 @@ checks it.
    *Handled:* `check`, `test`, `play` and `screenshot` import first.
 10. **Imported node names can change.** An object with the same name as its
     pivot node gets a numbered suffix; look nodes up by the pivot, not the mesh.
-    *Not checked.*
+    *Checked:* `model lint` reports names Godot changes on import (`model/renamed-on-import`).
 11. **Ship levels of detail with heavy models.** A model of well over a million
     triangles with no LOD is fine in a close-up and too heavy as traffic.
     *Checked:* `model lint` warns over the triangle budget (`model/triangle-budget`).
@@ -77,3 +83,66 @@ checks it.
 16. **Long background work can be lost.** A container restart stopped all
     running work; resuming from the recorded results saved most of it. This
     file itself was lost that way once, and recovered from the build's log.
+
+# Lessons from rebuilding a real race circuit and its town from open data
+
+A second anonymised reflection: a real coastal race circuit, its grandstands and
+the seaside town next to it, rebuilt at 1:1 in Godot 4.7 by a coding agent
+from national open elevation (a 0.5 m laser-scan terrain model) and topography
+data (building footprints, road and land-cover polygons). No code, names or
+paths; each lesson says whether Godotwright now checks it.
+
+## Data before modelling
+
+17. **Take the track from the asphalt, not from a race-line trace.** A public
+    centre line of the circuit was a few metres off in places and polygonal in
+    the corners. Cutting cross-sections every 2 m through the official asphalt
+    polygons and taking the middle gave a centre line and width per metre.
+    *Not checked.*
+18. **The terrain model already holds the banking.** Fitting a plane across
+    the asphalt in the elevation data gave 17-18° in the banked corners,
+    within a degree of the published values, so nothing had to be invented.
+    *Not checked.*
+19. **Rotate a real place by its coastline, not by north.** The real coast
+    runs about 22° off north. Turning the piece by 90° alone left the sea
+    diagonal across it; turning it by the fitted coast angle made the beach run
+    straight along the game's coast. *Not checked.*
+20. **Measure the target world at install time.** Where the game's coastline
+    lies was not known from old maps. The installer measures it in the live
+    height grid and moves the whole piece so both waterlines meet. *Not checked.*
+
+## Godot rendering
+
+21. **A plain `.gz` file does not open with `open_compressed()`.** That call
+    reads Godot's own compressed format; on a gzip file it returns null and
+    the terrain silently stayed empty. Read the bytes and use
+    `decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)`. *Checked:* `review`
+    reports it (`api/open-compressed-gzip`).
+22. **LOD margins without a fade mode leave holes.** With
+    `visibility_range_*_margin` and no `visibility_range_fade_mode`, the margin
+    is hysteresis: a terrain tile whose distance sat inside the margin showed
+    no level at all for a camera that started there. *Checked:* `review` warns
+    (`quality/visibility-margin-hysteresis`).
+23. **Colours typed into a shader are sRGB; `ALBEDO` is linear.** Every
+    hand-picked colour came out washed out until it was converted with
+    `pow(c, vec3(2.2))`, and vertex colours on a `StandardMaterial3D` needed
+    `vertex_color_is_srgb`. *Not checked.*
+24. **A height texture clamps at its edge.** Tiles of 256 m reached past the
+    end of the data and drew long streaks of the last row; discard fragments
+    outside the data rectangle. *Not checked.*
+25. **Carve the ground well under a road mesh.** Grass showed through the
+    asphalt where the 2 m terrain grid interpolated between a low node under
+    the track and a high one beside it. Lowering the ground to 0.12 m under the
+    surface across the full width plus 3 m, with an 8 m blend, fixed it; a
+    test now measures terrain against the asphalt at every 7 m. *Not checked.*
+26. **Build stands on the outside of tight corners.** Rows that follow a
+    hairpin on the inside converge and pile up. *Checked in part:* the
+    `grandstand` archetype says so, and the `grandstand` recipe builds a
+    straight stand.
+
+## Ready-made kinds added from this build
+
+`grandstand` (stepped rows, seats, walls, roof on columns), `crash-barrier`
+(double W-beam on posts with a catch fence) and `race-kerb` (red and white
+blocks with a raised outer lip), with the archetypes `building.grandstand`,
+`infrastructure.crash-barrier` and `infrastructure.kerb`.

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { distance, GodotApi } from "../api/api.js";
+import { bundledLessons } from "../lessons/library.js";
+import type { LessonStats } from "../lessons/types.js";
 import { RULES } from "../review/rules.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
 import { learningFile, readLearning, saveLearning, updateLearning, type ApiMiss, type LearningData, type RuleStats, type Snapshot } from "./store.js";
@@ -29,6 +31,8 @@ export interface ShareReport {
   apiMisses: Record<string, ApiMiss>;
   missedByReview: Record<string, number>;
   unparsed: Record<string, number>;
+  /** Counts per lesson that ships with Godotwright: shown, helped, wrong. Never a lesson learned here. Older versions leave it out. */
+  lessons?: Record<string, LessonStats>;
 }
 
 /** Where reports go: $GODOTWRIGHT_SHARE_URL, the configured endpoint, or the built-in one. */
@@ -128,7 +132,12 @@ export function shareableSnapshot(data: LearningData, api: GodotApi): Snapshot {
     return Object.fromEntries(top(Object.entries(out), ([, n]) => n));
   };
 
-  return { rules, apiMisses, missedByReview: templates(data.missedByReview), unparsed: templates(data.unparsed) };
+  // Only lessons that ship with Godotwright, by id: a lesson learned here is free text and stays on this machine.
+  const known = new Set(bundledLessons().map((l) => l.id));
+  const lessons: Record<string, LessonStats> = {};
+  for (const [id, s] of Object.entries(data.lessons)) if (known.has(id)) lessons[id] = { shown: s.shown, helped: s.helped, wrong: s.wrong };
+
+  return { rules, apiMisses, missedByReview: templates(data.missedByReview), unparsed: templates(data.unparsed), lessons };
 }
 
 /** What is new since the last report; empty parts are left out. */
@@ -151,11 +160,18 @@ export function snapshotDelta(current: Snapshot, sent: Snapshot | undefined): Sn
     const resolved = counterDelta(m.resolved, before?.resolved);
     if (count > 0 || Object.keys(resolved).length) apiMisses[query] = { count, resolved };
   }
+  const lessons: Record<string, LessonStats> = {};
+  for (const [id, s] of Object.entries(current.lessons)) {
+    const before = sent?.lessons?.[id];
+    const d = { shown: Math.max(0, s.shown - (before?.shown ?? 0)), helped: Math.max(0, s.helped - (before?.helped ?? 0)), wrong: Math.max(0, s.wrong - (before?.wrong ?? 0)) };
+    if (d.shown + d.helped + d.wrong > 0) lessons[id] = d;
+  }
   return {
     rules,
     apiMisses,
     missedByReview: counterDelta(current.missedByReview, sent?.missedByReview),
     unparsed: counterDelta(current.unparsed, sent?.unparsed),
+    lessons,
   };
 }
 
@@ -216,7 +232,7 @@ export async function maybeShare(options: ShareOptions = {}): Promise<"sent" | "
 export const SHARE_NOTICE = [
   "Godotwright learns from your use on this machine, to make reviews better.",
   "You can help every user: `godotwright learn share on` sends anonymous counts once a day",
-  "(which rules Godot confirmed, API names that were mistyped; no code, names or paths).",
+  "(which rules Godot confirmed, API names that were mistyped, which built-in lessons helped; no code, names or paths).",
   "`godotwright learn preview` shows exactly what would be sent. This note is shown once.",
 ].join("\n");
 

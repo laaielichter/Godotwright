@@ -101,7 +101,7 @@ Twelve small-model agents did six everyday tasks like this: [what we measured](d
 
 A coding agent can also **make, look at and check 3D models** for Godot with no Blender: `model identify` says what a
 thing is (parts, sizes, pivots), `model build` makes a clean `.glb` from one of
-[53 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
+[56 ready-made kinds](https://laaielichter.github.io/Godotwright/models.html) (vehicles, aircraft, ships, buildings, plants,
 terrain with lakes and rivers) or from your own JSON spec, `model view` shows it as text, and `model lint` scores it.
 It is set up to work with small, cheap models too: what we tested and learned [with 3D models](docs/cheap-models.md) and [with everyday Godot tasks](docs/cheap-models-code.md).
 
@@ -167,6 +167,10 @@ godotwright model build house -o house.glb --collision trimesh   # Godot adds co
 godotwright model build tree -o tree.glb --no-textures   # plain colours instead of texture maps: smaller, or for your own materials
 godotwright model build terrain -o world/tile.glb --collision heightmap   # terrain: a HeightMapShape3D and a ready tile scene
 godotwright learn                     # what Godotwright learned on this machine
+godotwright learn gaps                # Godot errors it cannot predict yet: what to teach it next
+godotwright lessons moving ship deck  # lessons from real projects: symptom, cause, fix, how to test
+godotwright lessons --error "<Godot message>"   # the lessons that explain an error
+godotwright lessons add --title "..." --fix "..."  # keep a lesson learned here (scrubbed, never sent)
 ```
 
 `scan` reads `project.godot`, scenes, resources and scripts without starting Godot.
@@ -379,7 +383,7 @@ One step for each client. Every setup and one-click button is on the [install pa
 
 | Client | How |
 | --- | --- |
-| **Claude Code** | Plugin with the MCP server and three skills: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
+| **Claude Code** | Plugin with the MCP server and four skills: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
 | **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it (from release 0.2.0) |
 | **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
@@ -414,7 +418,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 22 tools
+### The 24 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -423,7 +427,9 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_api_search` | Search the Godot 4.7 class reference |
 | `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`), or only what changed (`only_new`) |
 | `godot_checklist` | Every AAA rule with its fix |
-| `godot_feedback` | Mark a review finding as wrong or right, so later reviews learn from it |
+| `godot_feedback` | Mark a review finding as wrong or right, or say whether a lesson helped, so Godotwright learns from it |
+| `godot_lessons` | Lessons from real Godot projects (symptom, cause, fix, test) by words, Godot error, rule or topic; `gaps` lists what it cannot predict yet |
+| `godot_lesson_add` | Keep a lesson learned here, scrubbed of names, paths and code; it comes back when the same error does |
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
@@ -452,10 +458,24 @@ Godotwright learns from every use, on your machine:
   `godot_feedback` MCP tool) hides that finding in later reviews.
 - **API lookups.** When a lookup finds nothing and the next one does, the next failed
   lookup of the same name says what it usually means.
+- **Rules that cry wolf.** A rule whose findings were marked wrong 5 times here, and wrong at least three times as
+  often as right, is reported one level lower (an error becomes a warning, a warning an info). One local "right"
+  keeps it where it was, whatever other installs said.
+- **Lessons.** `godot_lessons` (or `godotwright lessons`) answers from lessons learned in real projects: what went
+  wrong, why in Godot terms, the fix and how to test it. `godot_check` prints the lesson under a Godot error it
+  explains, and `godot_review` names the lesson behind a finding. Say whether a lesson helped (`godot_feedback` with
+  `lesson`): lessons that help rank higher, ones marked wrong more often than right stop showing up unasked.
+- **Lessons you teach it.** When a fix took more than one try, keep it with `godot_lesson_add` (or
+  `godotwright lessons add`), with the Godot message it explains. Names of the project, paths, links, e-mail
+  addresses, codes, keys and source code are replaced before it is stored; a lesson that is mostly names is refused.
+  The next time Godot prints that message, the check shows your fix.
+- **What to teach next.** `godotwright learn gaps` (or `godot_lessons` with `gaps: true`) lists the Godot errors the
+  review did not predict and no lesson explains yet, most frequent first. A gap that many installs share is the next
+  review rule.
 
 Nothing leaves your machine unless you say yes. The learning file (`godotwright learn` shows where) holds
 counters, rule names, API names and message templates without names or paths; findings
-marked as wrong are stored as hashes.
+marked as wrong are stored as hashes; lessons you add are stored scrubbed and are never sent.
 
 ```sh
 godotwright learn          # status: what was learned, where the file is
@@ -478,10 +498,15 @@ contradicted. That, plus what opted-in installs share, ships in `data/learned.js
 API hints for common typos, and rules Godot keeps contradicting.
 What your own machine saw wins: one confirmation by Godot keeps a rule an error.
 
-Lessons from real builds also become rules. [LESSONS.md](LESSONS.md) is an anonymised reflection on one large
-build (no code, no project names); each lesson says whether Godotwright checks it, and the ones that can be checked,
-like slow motion that is never undone, are review rules. [LESSONS-ROADS.md](LESSONS-ROADS.md) does the same for
-a road network generator (links, bridges, viaducts over rail and motorways, roundabouts, guard rails).
+Lessons from real builds also become rules. `data/lessons.json` holds 77 anonymised lessons from large Godot 4
+projects (helicopters and ships landing on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
+headless test rigs): no code, no names, no paths, and a test runs every one through the same scrubber that local
+lessons go through. The ones a review can catch are rules, such as `api/infer-variant` on loop variables over
+untyped arrays, `api/freed-check-order`, `api/parse-into-typed`, `api/duplicate-declaration`,
+`performance/runtime-gltf-mipmaps`, `quality/platform-layers-not-restored` and `model/opaque-glass`.
+[LESSONS.md](LESSONS.md) tells the story behind them, and [LESSONS-ROADS.md](LESSONS-ROADS.md) does the same for
+a road network generator (links, bridges, viaducts over rail and motorways, roundabouts, guard rails). Lessons you keep locally can be proposed for everyone:
+`godotwright lessons export` prints them as entries for `data/lessons.json`; nothing is sent.
 
 For maintainers, `godotwright collector serve` accepts reports (checked again,
 stored without IP addresses), and `godotwright collector aggregate <dir> --out

@@ -570,6 +570,123 @@
   }
  },
  {
+  "id": "building.grandstand",
+  "name": "grandstand",
+  "description": "Stepped seating along a race track, pitch or arena, often with a roof.",
+  "aliases": [
+   "grandstand",
+   "tribune",
+   "tribunes",
+   "stand",
+   "bleachers",
+   "seating",
+   "zitplaatsen",
+   "hoofdtribune",
+   "stadium stand"
+  ],
+  "extends": "building",
+  "hints": [
+   "race track",
+   "circuit",
+   "stadium",
+   "spectators",
+   "publiek"
+  ],
+  "parts": [
+   {
+    "name": "Row",
+    "role": "row",
+    "required": true,
+    "aliases": [
+     "row",
+     "rows",
+     "tier",
+     "tiers",
+     "step",
+     "steps",
+     "rij",
+     "rijen",
+     "trede"
+    ],
+    "note": "About 0.8-0.9 m deep and 0.4-0.45 m higher per row, so everyone sees over the row in front."
+   },
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": false,
+    "aliases": [
+     "seat",
+     "seats",
+     "stoel",
+     "stoelen",
+     "bench",
+     "bank"
+    ]
+   },
+   {
+    "name": "Wall",
+    "role": "wall",
+    "required": false,
+    "aliases": [
+     "wall",
+     "walls",
+     "wand",
+     "muur",
+     "back wall",
+     "front wall"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": false,
+    "count": 1,
+    "aliases": [
+     "roof",
+     "dak",
+     "canopy",
+     "overkapping"
+    ]
+   },
+   {
+    "name": "Column",
+    "role": "column",
+    "required": false,
+    "aliases": [
+     "column",
+     "columns",
+     "kolom",
+     "kolommen",
+     "pillar",
+     "post"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    20,
+    300
+   ],
+   "width": [
+    6,
+    45
+   ],
+   "height": [
+    3,
+    35
+   ],
+   "source": "general knowledge: temporary and permanent motorsport and stadium stands; not a standard",
+   "confidence": "C"
+  },
+  "anticipate": [
+   "Rows rise in a straight line; the front row sits about 1-1.5 m above the ground so people see over the fence.",
+   "Along a curve, build the stand on the outside of the corner: on the inside the rows converge and overlap."
+  ],
+  "pitfalls": [
+   "A stand on the inside of a hairpin cannot keep a constant depth; straighten it or move it outside."
+  ]
+ },
+ {
   "id": "building.windmill",
   "name": "windmill",
   "description": "A traditional windmill that grinds grain or pumps water.",

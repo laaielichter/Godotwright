@@ -31,6 +31,8 @@ describe("MCP server (cheap profile)", () => {
       "godot_check",
       "godot_checklist",
       "godot_feedback",
+      "godot_lesson_add",
+      "godot_lessons",
       "godot_migrate",
       "godot_model_brief",
       "godot_model_build",
@@ -279,6 +281,72 @@ describe("MCP server (premium profile)", () => {
     } finally {
       delete process.env["GODOTWRIGHT_LEARN"];
     }
+  });
+});
+
+describe("MCP lessons", () => {
+  let client: Client;
+  let close: () => Promise<unknown>;
+  beforeAll(async () => ({ client, close } = await connect("premium", `${FIXTURES}/messy`)));
+  afterAll(() => close());
+
+  it("finds lessons by words, by a Godot message and by id, and lists gaps", async () => {
+    const byWords = textOf(
+      await client.callTool({ name: "godot_lessons", arguments: { query: "helicopter slides off a moving ship deck" } }),
+    );
+    expect(byWords.split("\n")[0]).toContain("physics/moving-platform-velocity");
+    const byError = textOf(
+      await client.callTool({
+        name: "godot_lessons",
+        arguments: { error: 'Parse Error: Cannot infer the type of "ox" variable because the value doesn\'t have a set type.' },
+      }),
+    );
+    expect(byError).toContain("gdscript/variant-loop-inference");
+    const byId = textOf(await client.callTool({ name: "godot_lessons", arguments: { query: "gameplay/time-scale" } }));
+    expect(byId).toContain("symptom:");
+    const none = (await client.callTool({ name: "godot_lessons", arguments: { query: "zzzz qqqq" } })) as Result;
+    expect(none.isError).toBe(true);
+    expect(textOf(await client.callTool({ name: "godot_lessons", arguments: { gaps: true } }))).toMatch(/no gaps yet|did not predict/);
+  });
+
+  it("keeps a lesson learned here, scrubbed, and takes feedback on lessons", async () => {
+    const kept = textOf(
+      await client.callTool({
+        name: "godot_lesson_add",
+        arguments: {
+          title: "Wheels sink when a vehicle spawns before the terrain collider exists",
+          fix: "Wait one physics frame after adding the terrain, then place the vehicle.",
+          symptom: "The truck in res://levels/farm.tscn sank into the hill.",
+          topic: "physics",
+          error: 'Node not found: "Wheels/FrontLeft" (relative to "/root/Main/Truck").',
+        },
+      }),
+    );
+    expect(kept).toContain("local/wheels-sink-when-a-vehicle-spawns");
+    expect(kept).not.toContain("farm.tscn");
+    const found = textOf(await client.callTool({ name: "godot_lessons", arguments: { query: "vehicle sinks into terrain at spawn" } }));
+    expect(found).toContain("[learned here]");
+    const helped = textOf(
+      await client.callTool({ name: "godot_feedback", arguments: { lesson: "gameplay/time-scale", verdict: "right" } }),
+    );
+    expect(helped).toContain("helped");
+    const both = (await client.callTool({
+      name: "godot_feedback",
+      arguments: { lesson: "gameplay/time-scale", finding: "x", verdict: "right" },
+    })) as Result;
+    expect(both.isError).toBe(true);
+    const unknown = (await client.callTool({ name: "godot_feedback", arguments: { lesson: "no/such-lesson", verdict: "wrong" } })) as Result;
+    expect(unknown.isError).toBe(true);
+    const refused = (await client.callTool({
+      name: "godot_lesson_add",
+      arguments: { title: "OldPlayer fix", fix: "Set jump_hieght in OldPlayer.apply()" },
+    })) as Result;
+    expect(refused.isError).toBe(true);
+  });
+
+  it("names the lessons behind review findings", async () => {
+    const out = textOf(await client.callTool({ name: "godot_review", arguments: {} }));
+    expect(out).toMatch(/lessons behind these findings \(godot_lessons <id>\): .*->/);
   });
 });
 
