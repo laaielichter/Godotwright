@@ -10,7 +10,7 @@ No bought stars, no upvote requests, no alt accounts, and "I built this" in ever
 - **One-step installs:** Claude Code plugin, Claude Desktop bundle (`godotwright.mcpb` on every release), Gemini CLI
   extension, one-click links for Cursor and VS Code, setups for Codex, Windsurf and Zed on the
   [install page](https://laaielichter.github.io/Godotwright/install.html).
-- **Page:** demo video in the README and on the site, all 22 MCP tools listed, Lighthouse accessibility 100 on every
+- **Page:** demo video in the README and on the site, all 24 MCP tools listed, Lighthouse accessibility 100 on every
   page, quickstart at the top, Support section.
 - **Security:** CodeQL, Dependabot, actions pinned to commits, `main` protected, npm publishes only from GitHub.
 - **Community:** good first issues #81, #93, #94 (and #80, being fixed in #91 by the first outside contributor).
@@ -79,7 +79,7 @@ What it is:
 - Safe edits to scenes, project settings and input maps (dry run first, only the changed lines).
 - `migrate` rewrites the mechanical part of a Godot 3 to 4 port.
 - A GitHub Action that posts a "receipt" (review, check, tests) on pull requests.
-- Builds, views and checks 3D models (.glb) from code: 53 ready-made kinds, heightmap terrain with collision.
+- Builds, views and checks 3D models (.glb) from code: 59 ready-made kinds, heightmap terrain with collision.
 - MIT, local, no telemetry. Install: `npx -y godotwright review .` or one command per agent.
 
 Proof, stated honestly:

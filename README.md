@@ -36,6 +36,7 @@ are not in the scene. Godotwright gives the agent the real Godot 4.7 API, a comp
 map of your project, real Godot checks and a fixed AAA review, as MCP tools and as a CLI.
 
 > Status: layer 1 (toolkit and MCP server) is done; see [ROADMAP.md](ROADMAP.md).
+> Limits: API lookups answer for Godot 4.7 only, it does not review C#, and `check`, `test`, `play` and `screenshot` need Godot installed.
 
 ## Quickstart
 
@@ -235,8 +236,7 @@ itself and stored in the `.glb`; glass, chrome, steel, paint, plastic and lamps 
 set them with `--set name=value` or `--spec file.json`. These are clean, parametric base models, built
 to be refined, not hand-sculpted art. Kinds today: `house`, the open-world kinds `terrain` (a heightmap tile from seeded
 noise whose neighbours continue it exactly, with an optional lake and an optional river carved into it) and `sea` (a subdivided water plane at y = 0 with a floor), plus recipes, which are ready-made specs in
-`data/recipes/`: `car`, `tractor`, `helicopter`, `airliner`, `ship`, `tree`, `conifer`,
-`wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `traffic-sign`, `guard-rail`, `delineator`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
+`data/recipes/`: `car`, `tractor`, `helicopter`, `airliner`, `ship`, `tree`, `conifer`, `wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `traffic-sign`, `guard-rail`, `delineator`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair`, `table`, `campfire`, `castle`, `crash-barrier`, `dragon`, `grandstand`, `horse`, `humanoid`, `race-kerb`, `rocket`, `rowing-boat`, `satellite` and `spaceship`. Every recipe names its archetype, so `model build` checks
 it as it builds, and every recipe is tested to stay clean at the lowest and highest value of each parameter.
 
 Small, cheap models can work blind: see [docs/cheap-models.md](docs/cheap-models.md) for a test and what `model view` and the
