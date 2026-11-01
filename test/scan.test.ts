@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { reviewProject } from "../src/review/review.js";
 import { formatProjectMap } from "../src/scan/format.js";
 import { scanProject } from "../src/scan/scan.js";
-import { DEMO, makeProject, runCli } from "./helpers.js";
+import { CAN_SYMLINK, DEMO, makeProject, runCli } from "./helpers.js";
 
 /** Paths (substrings) whose reads fail with EACCES: a test run as root can read anything, so the failure is simulated. */
 const denied = vi.hoisted(() => [] as string[]);
@@ -152,7 +152,7 @@ describe("scanProject warnings", () => {
 });
 
 describe("project files", () => {
-  it("lists a folder linked into the project once, under its real path", () => {
+  it.skipIf(!CAN_SYMLINK)("lists a folder linked into the project once, under its real path", () => {
     const root = makeProject({
       "project.godot": '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n',
       "z_shared/enemy.gd": "class_name Enemy\nextends Node\n",
@@ -231,7 +231,7 @@ describe("references that leave the project", () => {
     expect(scanProject(root).warnings).toEqual([{ file: "res://main.tscn", line: 2, message: `missing Script: res://../${basename(outside)}/secret.gd` }]);
   });
 
-  it("does not look through a folder link out of the project, even in an ignored folder", () => {
+  it.skipIf(!CAN_SYMLINK)("does not look through a folder link out of the project, even in an ignored folder", () => {
     const outside = makeProject({ "secret.gd": "extends Node\n" });
     const root = makeProject({ "project.godot": PROJECT, "docs/.gdignore": "", "main.tscn": sceneWith("res://docs/out/secret.gd") });
     symlinkSync(outside, join(root, "docs", "out"), "dir");

@@ -48,6 +48,10 @@ npm run check
 Tests need no Godot install. Integration tests in `test/integration/` need Godot 4.7
 in `$GODOT`; CI runs them.
 
+On Windows, the tests about symbolic links are skipped unless Developer Mode is on (Windows only lets
+administrators make links otherwise); CI runs them on Linux. Files are stored with LF line endings
+(`.gitattributes`), so your editor's line endings do not matter.
+
 ## Pull requests
 
 1. Open an issue first for anything bigger than a small fix, so we can agree on the approach.

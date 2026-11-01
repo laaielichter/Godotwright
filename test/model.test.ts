@@ -8,7 +8,7 @@ import { inspectModel } from "../src/model/inspect.js";
 import { ModelError, loadGltf } from "../src/model/gltf.js";
 import { lintModelFile } from "../src/model/lint.js";
 import { box, writeGlb, type TestMesh } from "./model-helpers.js";
-import { makeProject, runCli } from "./helpers.js";
+import { CAN_SYMLINK, makeProject, runCli } from "./helpers.js";
 
 const ids = (path: string, options = {}) => lintModelFile(path, options).findings.map((f) => f.rule);
 
@@ -493,7 +493,7 @@ describe("model files outside the model's folder", () => {
       buffers: [{ uri, byteLength: 36 }],
     });
 
-  it("reads buffers next to the model, and refuses files outside its folder", () => {
+  it.skipIf(!CAN_SYMLINK)("reads buffers next to the model, and refuses files outside its folder", () => {
     const root = makeProject({
       "outside.bin": "\0".repeat(36),
       "models/inside.bin": "\0".repeat(36),
