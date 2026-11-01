@@ -5,7 +5,7 @@ No bought stars, no upvote requests, no alt accounts, and "I built this" in ever
 
 ## Status (1 Nov 2026)
 
-- **Released:** 0.2.0 on npm (trusted publishing, provenance), the official MCP Registry, and the GitHub Marketplace
+- **Released:** 0.3.0 on npm (trusted publishing, provenance), the official MCP Registry, and the GitHub Marketplace
   ("Godotwright receipt", category Game CI).
 - **One-step installs:** Claude Code plugin, Claude Desktop bundle (`godotwright.mcpb` on every release), Gemini CLI
   extension, one-click links for Cursor and VS Code, setups for Codex, Windsurf and Zed on the
@@ -19,7 +19,7 @@ No bought stars, no upvote requests, no alt accounts, and "I built this" in ever
 ## Readiness gate
 
 - [x] One-command install works everywhere
-- [x] Release with notes (0.2.0)
+- [x] Release with notes (0.2.0, 0.3.0)
 - [x] Real demo (terminal recording of real output)
 - [x] Social preview, site live, 3-5 good first issues
 - [ ] Optional: a screen recording of Claude Code using Godotwright on a Godot 3 script
@@ -43,7 +43,7 @@ In this order. Each takes 10 to 30 minutes.
    sign in with GitHub, *Claim*, then *Admin* > *Dockerfile* with these values, *Deploy*, wait for the build test,
    *Make Release*:
    - Node.js version: 22
-   - Build steps: `npm install -g godotwright@0.2.0`
+   - Build steps: `npm install -g godotwright@0.3.0`
    - CMD: `godotwright mcp --tier premium`
    - Environment variables: none needed
 3. **Write the Show HN text** in your own words from the facts below (Hacker News asks for no AI-written posts).

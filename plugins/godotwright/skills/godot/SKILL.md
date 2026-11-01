@@ -60,7 +60,7 @@ Before you stop, review errors still open in files you changed are named once. F
 - When a fix took more than one try, keep the lesson with `godot_lesson_add` (general words, the Godot message as
   `error`, no names or code). The next check shows it when the same error comes back.
 - Say whether a lesson helped with `godot_feedback` (`lesson`, verdict `right` or `wrong`).
-- These tools come with Godotwright releases after 0.2.0; skip this part on an older server.
+- These tools come with Godotwright 0.3.0 and later; skip this part on an older server.
 - For deeper work, hand off to the `godot-reviewer` agent (verified review of a change) or the `godot-debugger` agent
   (root cause of an error or wrong behaviour) so their logs stay out of the main conversation.
 

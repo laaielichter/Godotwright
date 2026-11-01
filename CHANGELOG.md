@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+## 0.3.0 (agents in the loop, lessons from a large open world, prettier models)
+
 - **Godotwright in the agent's loop: hooks.** New command `godotwright hook <event>` reads a Claude Code hook's JSON on
   stdin and prints hook JSON; it prints nothing when it has nothing to add, never fails the agent, and
   `GODOTWRIGHT_HOOKS=0` turns it off.
