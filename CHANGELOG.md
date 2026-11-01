@@ -4,10 +4,30 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Every ready-made model rebuilt, better and prettier.** All 53 recipes got truer proportions, far more detail where
+  the eye looks, real materials and textures (wood grain along each board, brick, slate, stone, gravel), bevelled edges
+  and see-through glass with interiors behind it. Every recipe keeps its parameters, the parts its archetype needs and
+  their pivots, and stays 100/100 in `model lint` at every parameter extreme. Most now have 3,000 to 19,000 triangles
+  (from a few hundred), for example:
+  - **Vehicles:** a car with doors, hood and trunk on hinges, an interior and alloy wheels; a cab-over truck; a city bus
+    with seats behind its windows; a tractor with lugged tyres; a motorcycle, a bicycle with laced spokes, a tank with
+    track belts and a two-cab railcar with bogies.
+  - **Aircraft and space:** a helicopter with a glass cockpit and seats, an airliner with turbofans and winglets, a light
+    aircraft, a fighter with a bubble canopy, a drone, a rocket, a satellite, a spaceship and a jet engine on its stand.
+  - **Boats and machines:** a container ship, a centre-console boat, a sailboat with a cabin and rigging, a clinker
+    rowing boat, an inline piston engine whose pistons, crankshaft and flywheel still move, and a wind turbine.
+  - **Buildings:** a barn, a glass office tower, a stone church with a spire, a brick windmill with a stage, an apartment
+    block, a castle with a moat and drawbridge, and a grandstand.
+  - **Roads and props:** a bridge with girders and piers, a road with kerbs, gutters and pavements (new parameter
+    `sidewalk`, so the default road is now 11 m wide), railway track with real rail profiles, a street lamp, fences,
+    a power pylon, a crash barrier, a race kerb, a crate, a drum, a chair, a table, a campfire and a shipping container.
+  - **Plants and creatures:** trees with branching limbs and lumpy crowns, a conifer, a palm, a bush, grass, a flower, a
+    humanoid with a face, hands and clothes, a horse and a dragon with wings and claws.
 - **Fresh renders of every model in the gallery** (`docs/models.html`, the overview in the README and on the site): all
-  56 kinds and the terrain variants, rendered again from the current builder, so the pictures show the textures,
-  rounded edges and materials the models have now. Terrain tiles are pictured from a little higher, so the camera
-  does not look under the open border of a tile.
+  59 kinds and the terrain variants. Terrain tiles are pictured from a little higher, so the camera does not look under
+  the open border of a tile. `scripts/render-gallery.mjs` takes `--out`, `--view` (front, back, side, top) and `--set`
+  for previews.
+- Tests get 15 s each instead of 5 s: one build and lint of the detailed models takes up to about 3 s.
 - **Lessons from real projects, and Godotwright learns new ones.** `data/lessons.json` holds 77 lessons from large
   Godot 4 projects (helicopters and ships on moving decks, open worlds tens of kilometres wide, runtime-loaded models,
   shaders, headless tests): symptom, cause in Godot terms, fix, how to test, and the rule that checks it. They are
