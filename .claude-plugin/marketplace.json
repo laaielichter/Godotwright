@@ -1,0 +1,15 @@
+{
+  "name": "godotwright",
+  "description": "Godotwright: Godot 4 tools for Claude Code.",
+  "owner": {
+    "name": "laaielichter",
+    "url": "https://github.com/laaielichter"
+  },
+  "plugins": [
+    {
+      "name": "godotwright",
+      "source": "./plugins/godotwright",
+      "description": "Offline Godot 4.7 API, project map, headless checks, safe edits, tests, play-testing, 3D models and an AAA GDScript review."
+    }
+  ]
+}

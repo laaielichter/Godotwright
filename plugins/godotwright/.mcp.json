@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "godotwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "godotwright@0.1.0",
+        "mcp",
+        "--tier",
+        "premium",
+        "--project",
+        "${CLAUDE_PROJECT_DIR}"
+      ]
+    }
+  }
+}
