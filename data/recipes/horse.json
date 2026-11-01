@@ -44,13 +44,13 @@
   },
   "hair": {
    "color": [
-    0.02,
+    0.045,
+    0.028,
     0.017,
-    0.015,
     1
    ],
    "metallic": 0,
-   "roughness": 0.7,
+   "roughness": 0.65,
    "texture": "bark"
   },
   "hoof": {
@@ -179,30 +179,40 @@
        }
       },
       {
-       "z": "$s * 0.76",
+       "z": "$s * 0.74",
        "superellipse": {
-        "width": "$s * 0.37",
-        "height": "$s * 0.45",
-        "n": 2.3,
+        "width": "$s * 0.38",
+        "height": "$s * 0.5",
+        "n": 2.5,
         "count": 32,
-        "cy": "$s * 1.245 + $lift"
+        "cy": "$s * 1.25 + $lift"
        }
       },
       {
-       "z": "$s * 0.84",
+       "z": "$s * 0.82",
        "superellipse": {
-        "width": "$s * 0.24",
-        "height": "$s * 0.28",
-        "n": 2.2,
+        "width": "$s * 0.32",
+        "height": "$s * 0.37",
+        "n": 2.6,
         "count": 32,
-        "cy": "$s * 1.23 + $lift"
+        "cy": "$s * 1.235 + $lift"
        }
       },
       {
-       "z": "$s * 0.875",
+       "z": "$s * 0.86",
        "superellipse": {
-        "width": "$s * 0.08",
-        "height": "$s * 0.12",
+        "width": "$s * 0.2",
+        "height": "$s * 0.25",
+        "n": 2.4,
+        "count": 32,
+        "cy": "$s * 1.225 + $lift"
+       }
+      },
+      {
+       "z": "$s * 0.88",
+       "superellipse": {
+        "width": "$s * 0.07",
+        "height": "$s * 0.14",
         "n": 2.0,
         "count": 32,
         "cy": "$s * 1.23 + $lift"

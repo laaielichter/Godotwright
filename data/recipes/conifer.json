@@ -30,27 +30,15 @@
   }
  ],
  "materials": {
-  "conifer_bark": {
-   "color": [
-    0.17,
-    0.12,
-    0.09,
-    1
-   ],
-   "metallic": 0,
-   "roughness": 0.95,
-   "texture": "bark"
-  },
   "needles": {
    "color": [
-    0.022,
-    0.065,
-    0.04,
+    0.018,
+    0.05,
+    0.03,
     1
    ],
    "metallic": 0,
-   "roughness": 0.85,
-   "texture": "leaf"
+   "roughness": 0.9
   },
   "needles_tip": {
    "color": [
@@ -67,7 +55,7 @@
  "nodes": [
   {
    "name": "Conifer",
-   "material": "conifer_bark",
+   "material": "bark",
    "vars": {
     "H": "$height",
     "R": "$crownRadius",
