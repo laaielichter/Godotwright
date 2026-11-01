@@ -4,6 +4,12 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Clearer MCP tool descriptions.** Each of the 22 tools now says when to use it and which tool to use instead,
+  what its parameters change, what it returns, when it returns an error, and what it writes. The tool list costs
+  about 2,500 more tokens.
+- `godot_api_search` is marked read-only: it records nothing.
+- `godot_feedback` returns an error when local learning is off, instead of saying the finding is hidden.
+
 ## 0.2.0 (install in one step everywhere, collision for terrain)
 
 - **Install in one step everywhere.** A Claude Code plugin (`/plugin install godotwright --marketplace
