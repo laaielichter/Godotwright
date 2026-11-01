@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+## 0.2.0 (install in one step everywhere, collision for terrain)
+
 - **Install in one step everywhere.** A Claude Code plugin (`/plugin install godotwright --marketplace
   laaielichter/Godotwright`) with the MCP server and three skills: `/godotwright:review` reviews the project and
   fixes what it finds, `/godotwright:port` ports Godot 3 code to Godot 4, and a Godot workflow Claude follows on its
@@ -16,6 +18,9 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   `godot_model_build`) writes `<name>.heightmap.tres`, a `HeightMapShape3D` of the tile's own grid, and inside a Godot
   project `<name>.tscn`: the tile with a `StaticBody3D`, ready to place. Faster than a trimesh and the same ground: tested
   in Godot 4.7.2 with GodotPhysics3D and Jolt, rays land within half a millimetre of the mesh. A scene you changed is kept.
+- **A real demo** in the README and on the site: 35 seconds of real output, a Godot 3 script reviewed at 74/100,
+  migrated, and at 100/100 after the one fix left by hand.
+- `funcref()` is reported once (as Godot 3 syntax), not also as an unknown function.
 - **Site and README:** the site lists all 22 MCP tools with a CLI example each; Lighthouse accessibility is 100 on every
   page (darker green and amber in the light theme for contrast); the Godot 3 to 4 page has share previews and structured
   data; the README starts with the quickstart and the one-line Claude Code install.
