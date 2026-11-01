@@ -1,0 +1,135 @@
+{
+ "version": 1,
+ "name": "traffic-sign",
+ "archetype": "infrastructure.traffic-sign",
+ "description": "A round road sign on a steel pole: a red-rimmed white plate that faces +Z, two clamps that hold it, and a cap on the pole. Put the symbol or speed on the face with a texture or a shader.",
+ "params": [
+  {
+   "name": "plateDiameter",
+   "type": "number",
+   "default": 0.7,
+   "min": 0.4,
+   "max": 1.2,
+   "description": "Diameter of the plate in metres (often 0.6, 0.7 or 0.9)."
+  },
+  {
+   "name": "bottom",
+   "type": "number",
+   "default": 2.2,
+   "min": 1.2,
+   "max": 3.0,
+   "description": "Height of the lower edge of the plate above the ground."
+  }
+ ],
+ "materials": {
+  "pole_steel": {
+   "color": [
+    0.62,
+    0.64,
+    0.66
+   ],
+   "metallic": 0.7,
+   "roughness": 0.45
+  },
+  "sign_red": {
+   "color": [
+    0.75,
+    0.06,
+    0.06
+   ],
+   "metallic": 0,
+   "roughness": 0.4
+  },
+  "sign_white": {
+   "color": [
+    0.94,
+    0.94,
+    0.92
+   ],
+   "metallic": 0,
+   "roughness": 0.35
+  }
+ },
+ "nodes": [
+  {
+   "name": "TrafficSign",
+   "material": "pole_steel",
+   "vars": {
+    "R": "$plateDiameter / 2",
+    "B": "$bottom"
+   },
+   "children": [
+    {
+     "name": "Pole",
+     "shape": "cylinder",
+     "radius": 0.038,
+     "height": "$B + $plateDiameter + 0.05",
+     "segments": 16,
+     "anchor": "base"
+    },
+    {
+     "name": "Cap",
+     "shape": "cylinder",
+     "radius": 0.042,
+     "height": 0.03,
+     "segments": 16,
+     "at": [
+      0,
+      "$B + $plateDiameter + 0.065",
+      0
+     ]
+    },
+    {
+     "name": "Clamp_{i}",
+     "shape": "box",
+     "size": [
+      0.12,
+      0.05,
+      0.07
+     ],
+     "at": [
+      0,
+      "$B + $R * 0.5",
+      0.025
+     ],
+     "repeat": {
+      "count": 2,
+      "step": [
+       0,
+       "$R",
+       0
+      ]
+     }
+    },
+    {
+     "name": "Plate",
+     "shape": "cylinder",
+     "material": "sign_red",
+     "axis": "z",
+     "radius": "$R",
+     "height": 0.012,
+     "segments": 40,
+     "at": [
+      0,
+      "$B + $R",
+      0.066
+     ]
+    },
+    {
+     "name": "Plate_Face",
+     "shape": "cylinder",
+     "material": "sign_white",
+     "axis": "z",
+     "radius": "$R * 0.78",
+     "height": 0.004,
+     "segments": 40,
+     "at": [
+      0,
+      "$B + $R",
+      0.074
+     ]
+    }
+   ]
+  }
+ ]
+}

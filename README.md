@@ -229,7 +229,7 @@ set them with `--set name=value` or `--spec file.json`. These are clean, paramet
 to be refined, not hand-sculpted art. Kinds today: `house`, the open-world kinds `terrain` (a heightmap tile from seeded
 noise whose neighbours continue it exactly, with an optional lake and an optional river carved into it) and `sea` (a subdivided water plane at y = 0 with a floor), plus recipes, which are ready-made specs in
 `data/recipes/`: `car`, `tractor`, `helicopter`, `airliner`, `ship`, `tree`, `conifer`,
-`wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
+`wind-turbine`, `shipping-container`, `truck`, `bus`, `motorcycle`, `bicycle`, `train`, `tank`, `light-aircraft`, `fighter`, `drone`, `boat`, `sailboat`, `piston-engine`, `jet-engine`, `barn`, `tower`, `church`, `windmill`, `apartment`, `bridge`, `road`, `railway-track`, `street-lamp`, `traffic-sign`, `guard-rail`, `delineator`, `fence`, `power-pylon`, `palm`, `bush`, `grass`, `flower`, `crate`, `barrel`, `chair` and `table`. Every recipe names its archetype, so `model build` checks
 it as it builds, and every recipe is tested to stay clean at the lowest and highest value of each parameter.
 
 Small, cheap models can work blind: see [docs/cheap-models.md](docs/cheap-models.md) for a test and what `model view` and the
@@ -475,7 +475,8 @@ What your own machine saw wins: one confirmation by Godot keeps a rule an error.
 
 Lessons from real builds also become rules. [LESSONS.md](LESSONS.md) is an anonymised reflection on one large
 build (no code, no project names); each lesson says whether Godotwright checks it, and the ones that can be checked,
-like slow motion that is never undone, are review rules.
+like slow motion that is never undone, are review rules. [LESSONS-ROADS.md](LESSONS-ROADS.md) does the same for
+a road network generator (links, bridges, viaducts over rail and motorways, roundabouts, guard rails).
 
 For maintainers, `godotwright collector serve` accepts reports (checked again,
 stored without IP addresses), and `godotwright collector aggregate <dir> --out

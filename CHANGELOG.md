@@ -4,6 +4,14 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Road furniture recipes:** `traffic-sign` (a round sign on a 76 mm pole, plate size and height as parameters),
+  `guard-rail` (posts every 2 m, spacers and a corrugated beam, segments that tile) and `delineator` (a roadside post
+  with a reflector), each with its archetype (`infrastructure.traffic-sign`, `infrastructure.guard-rail`,
+  `infrastructure.delineator`) and English and Dutch names (verkeersbord, vangrail, reflectorpaal).
+- **[LESSONS-ROADS.md](LESSONS-ROADS.md):** lessons from building a road network with Godotwright: connectivity per pair
+  of places, repairs that pass the final check, clearances over roads, water and electrified rail, terrain under the
+  road, and MultiMesh for roadside objects.
+
 - **Clearer MCP tool descriptions.** Each of the 22 tools now says when to use it and which tool to use instead,
   what its parameters change, what it returns, when it returns an error, and what it writes. The tool list costs
   about 2,500 more tokens.
