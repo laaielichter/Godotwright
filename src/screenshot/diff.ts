@@ -253,12 +253,23 @@ export function diffImages(base: RgbaImage, actual: RgbaImage, options: DiffOpti
     const moved = findShift(base, actual, pixels, tolerance);
     return moved ? { ...box, moved } : box;
   });
-  const merged: ChangeBox[] = [];
-  for (const b of tried) {
-    const near = (m: ChangeBox) => m.moved && b.moved && m.moved.dx === b.moved.dx && m.moved.dy === b.moved.dy && b.x0 - m.x1 <= MERGE && m.x0 - b.x1 <= MERGE && b.y0 - m.y1 <= MERGE && m.y0 - b.y1 <= MERGE;
-    const into = merged.find(near);
-    if (!into) merged.push({ ...b });
-    else Object.assign(into, { x0: Math.min(into.x0, b.x0), y0: Math.min(into.y0, b.y0), x1: Math.max(into.x1, b.x1), y1: Math.max(into.y1, b.y1), pixels: into.pixels + b.pixels });
+  const merged: ChangeBox[] = tried.map((b) => ({ ...b }));
+  const near = (a: ChangeBox, b: ChangeBox) =>
+    a.moved && b.moved && a.moved.dx === b.moved.dx && a.moved.dy === b.moved.dy && b.x0 - a.x1 <= MERGE && a.x0 - b.x1 <= MERGE && b.y0 - a.y1 <= MERGE && a.y0 - b.y1 <= MERGE;
+  // Join until nothing joins any more: a joined box can reach one it did not reach before.
+  for (let joined = true; joined; ) {
+    joined = false;
+    for (let i = 0; i < merged.length && !joined; i++) {
+      for (let j = i + 1; j < merged.length; j++) {
+        const a = merged[i]!;
+        const b = merged[j]!;
+        if (!near(a, b)) continue;
+        Object.assign(a, { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1), pixels: a.pixels + b.pixels });
+        merged.splice(j, 1);
+        joined = true;
+        break;
+      }
+    }
   }
   merged.sort((a, b) => b.pixels - a.pixels);
   const top = merged.slice(0, 5);
