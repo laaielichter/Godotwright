@@ -43,7 +43,10 @@ export function planUids(data: ProjectData, options: UidPlanOptions): UidPlan {
   const edits: UidEdit[] = [];
   const uidAfter = new Map<string, string | undefined>();
   for (const c of data.uidClaims) if (isUidText(c.uid) && !uidAfter.has(c.file)) uidAfter.set(c.file, c.uid);
-  const claimsOf = (file: string) => data.uidClaims.filter((c) => c.file === file);
+  const byFile = new Map<string, UidClaim[]>();
+  for (const c of data.uidClaims) byFile.set(c.file, [...(byFile.get(c.file) ?? []), c]);
+  const claimsOf = (file: string) => byFile.get(file) ?? [];
+  const fileSet = new Set(data.files);
 
   /** Writes `uid` wherever the file's uid lives (or would live), as edits. */
   const setUid = (file: string, uid: string, rule: string, note: string, claims: UidClaim[]) => {
@@ -118,7 +121,7 @@ export function planUids(data: ProjectData, options: UidPlanOptions): UidPlan {
       if (!own(file)) continue;
       for (const e of parsed.extResources) {
         if (!e.uid || !e.path || !isUidText(e.uid) || data.uids.has(e.uid) || uidAfter.get(e.path) !== undefined) continue;
-        if (!inFocus(e.path) || !restorable(data, e.path)) continue;
+        if (!inFocus(e.path) || !restorable(data, fileSet, e.path)) continue;
         const counts = wantedBy.get(e.path) ?? new Map<string, number>();
         counts.set(e.uid, (counts.get(e.uid) ?? 0) + 1);
         wantedBy.set(e.path, counts);
@@ -134,7 +137,7 @@ export function planUids(data: ProjectData, options: UidPlanOptions): UidPlan {
   // Stamping: every own scene, resource, script and shader without a uid gets one (not addons, unless focused).
   if (options.stamp) {
     for (const file of data.files) {
-      if (!own(file) || uidAfter.get(file) !== undefined || !restorable(data, file)) continue;
+      if (!own(file) || uidAfter.get(file) !== undefined || !restorable(data, fileSet, file)) continue;
       if (options.focus ? !options.focus.has(file) : file.startsWith("res://addons/")) continue;
       setUid(file, generateUid(taken), "stamp-uid", /\.(tscn|tres)$/.test(file) ? "uid added to the header" : "new .uid file", claimsOf(file).filter((c) => !isUidText(c.uid)));
     }
@@ -143,10 +146,10 @@ export function planUids(data: ProjectData, options: UidPlanOptions): UidPlan {
 }
 
 /** A file whose uid lives in its own header or in a .uid file, so it can be given one: text scenes, resources, scripts, shaders. */
-function restorable(data: ProjectData, file: string): boolean {
+function restorable(data: ProjectData, files: Set<string>, file: string): boolean {
   const ext = extension(file);
   if (ext === "tscn" || ext === "tres") return data.resources.has(file);
-  return SIDECAR_EXTENSIONS.includes(ext) && data.files.includes(file);
+  return SIDECAR_EXTENSIONS.includes(ext) && files.has(file);
 }
 
 function mtime(data: ProjectData, file: string): number {
