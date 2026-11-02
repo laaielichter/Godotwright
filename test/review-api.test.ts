@@ -100,6 +100,20 @@ describe("Godot 3 syntax", () => {
     expect(finding).not.toContain("Did you mean");
   });
 
+  it("gives the Godot 4 form of Godot 3 functions that have no one-to-one rename", () => {
+    const unknown = (line: string, base = "Node") =>
+      findings([`extends ${base}`, "", "func _ready() -> void:", `\t${line}`].join("\n")).filter((l) =>
+        l.includes("[api/unknown-function]"),
+      );
+    expect(unknown("var s = to_json({})")[0]).toContain("In Godot 4 use `JSON.stringify(v)`.");
+    expect(unknown('var d = parse_json("{}")')[0]).toContain("In Godot 4 use `JSON.parse_string(s)`.");
+    expect(unknown("var p = polar2cartesian(1.0, 0.5)")[0]).toContain("`Vector2.from_angle(a) * r`");
+    expect(unknown('var c = ColorN("red")')[0]).toContain("`Color(\"red\") or Color.RED`");
+    expect(unknown("update()", "Node2D")[0]).toContain("In Godot 4 use `queue_redraw()`.");
+    expect(unknown("update()", "Node")[0]).not.toContain("queue_redraw");
+    expect(unknown("var s = to_json({})")[0]).not.toContain("Did you mean");
+  });
+
   it("does not report funcref() as an unknown function as well", () => {
     expect(
       findings(
