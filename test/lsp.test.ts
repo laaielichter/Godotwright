@@ -3,7 +3,10 @@ import { createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
+import { createServer as createMcpServer } from "../src/mcp/server.js";
 import { codeIntel, completionPrefix, engineLookup, formatCode, parseHover, toCodeDiagnostic } from "../src/lsp/code.js";
 import { MessageReader, RpcConnection, RpcError, RpcTimeoutError, encodeMessage, type RpcMessage } from "../src/lsp/jsonrpc.js";
 import { GodotLanguageServer, LanguageServerError, LanguageServerPool, freePort, killGodots } from "../src/lsp/server.js";
@@ -498,5 +501,20 @@ describe("godot_code against a fake language server", () => {
     const fakeGodot = join(root, "fake-godot.sh");
     writeFileSync(fakeGodot, "#!/bin/sh\necho 'ERROR: something broke' >&2\nexit 3\n", { mode: 0o755 });
     await expect(GodotLanguageServer.start({ root, godot: fakeGodot, startTimeoutMs: 5000 })).rejects.toThrow(/Godot exited \(code 3\) before its language server answered\nlast output:\nERROR: something broke/);
+  });
+});
+
+describe("godot_code as an MCP tool", () => {
+  it("is not marked read-only: Godot imports the project and adds .import and .uid files, like godot_check", async () => {
+    const server = createMcpServer({ root: project({ "main.gd": MAIN }), godot: "/no/such/godot" });
+    const client = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), client.connect(b)]);
+    cleanups.push(() => client.close(), () => server.close());
+    const { tools } = await client.listTools();
+    const code = tools.find((t) => t.name === "godot_code");
+    expect(code?.annotations).toEqual(tools.find((t) => t.name === "godot_check")?.annotations);
+    expect(code?.annotations?.readOnlyHint).toBe(false);
+    expect(code?.description).toContain("a missing .import file next to each asset");
   });
 });

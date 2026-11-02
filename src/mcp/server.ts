@@ -1154,7 +1154,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Ask Godot's GDScript language server",
       description:
-        "Engine-exact code intelligence from Godot 4.7's own GDScript language server (Godot started headless as an editor, kept warm for 10 minutes so later calls answer in milliseconds; the first call takes a few seconds). op `diagnostics`: Godot's errors and warnings with the project's warning levels (debug/gdscript/warnings/...), as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or, without it, every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column), e.g. `var t: SceneTree`. op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow at that place (members after a dot, node paths after $), up to `limit` labels with kind and signature, filtered by the word being typed. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot on this machine. It does not change your scripts or scenes; like opening the editor, Godot may update .godot/ and add missing .uid files. Changes to existing scripts on disk are seen at once; a new class_name or a changed project.godot restarts the server. For a check without Godot use godot_review; to load scenes too use godot_check.",
+        "Engine-exact code intelligence from Godot 4.7's own GDScript language server (Godot started headless as an editor, kept warm for 10 minutes so later calls answer in milliseconds; the first call takes a few seconds). op `diagnostics`: Godot's errors and warnings with the project's warning levels (debug/gdscript/warnings/...), as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or, without it, every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column), e.g. `var t: SceneTree`. op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow at that place (members after a dot, node paths after $), up to `limit` labels with kind and signature, filtered by the word being typed. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot on this machine. It does not change your scripts or scenes, but like opening the editor Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset (png, ogg, ttf...) and a missing .uid file next to each script; the result says so when the project had never been imported. Changes to existing scripts on disk are seen at once; a new class_name, a changed project.godot or a new file that needs an import (png, ogg, glb...) restarts the server, after the calls already running on it. For a check without Godot use godot_review; to load scenes too use godot_check.",
       inputSchema: {
         path: pathParam,
         op: z.enum(CODE_OPS).describe("diagnostics, hover, definition or completion"),
@@ -1164,7 +1164,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
         code: z.string().optional().describe("unsaved GDScript to analyse as `file` instead of the file on disk; nothing is written"),
         limit: z.number().int().min(1).max(200).optional().describe("completion: most items shown (default 40)"),
       },
-      annotations: readOnly,
+      // Not read-only: the headless editor imports the project and adds .import and .uid files next to its files, as
+      // godot_check does.
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ path, op, file, line, column, code, limit }) => {
       try {
