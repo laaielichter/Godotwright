@@ -208,7 +208,9 @@ The verdict is `LEAKING` (exit code 1, an error result over MCP) when objects or
 per cycle (`--budget-objects`, `--budget-orphans`, default 0). With `--keep`, nodes that pile up in the tree are shown
 but not counted, since spawning can be the design. Each kind of leak names its lesson. Not visible to it: objects
 GDScript cannot list one by one (they show only as counts and at exit by class), and the call stack that made a node
-(Godot does not record it; the creation sites come from the project's code).
+(Godot does not record it; the creation sites come from the project's code). A site proven by its `remove_child()`
+or found in the scene's own scripts is shown as `made at`; a class matched elsewhere in the project, or one of several
+`remove_child()` calls, is shown as `maybe made at` / `maybe removed at`.
 
 `check` names leaks too: when the run step ends with `ObjectDB instances were leaked at exit` or `resources still in use`,
 it runs once more with `--verbose` and lists the classes (`MeshInstance3D x1, Object x1`) or resource paths.
