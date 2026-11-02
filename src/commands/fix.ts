@@ -12,14 +12,16 @@ export function fixCommand(): Command {
     .option("--file <res-path>", "only this res:// file (repeatable)", collect, [])
     .option("--rule <id>", "only this rule (repeatable)", collect, [])
     .option("--check", "also apply the fixes marked check")
+    .option("--from <version>", "release the project comes from, for the upgrade fixes (default: the saved version)")
     .option("--write", "write the fixes (default: only show them)")
     .addOption(new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief"))
     .option("--json", "print the result as JSON")
-    .action((path: string, options: { file: string[]; rule: string[]; check?: boolean; write?: boolean; detail: "brief" | "full"; json?: boolean }, command: Command) => {
+    .action((path: string, options: { file: string[]; rule: string[]; check?: boolean; from?: string; write?: boolean; detail: "brief" | "full"; json?: boolean }, command: Command) => {
       try {
         const result = fixProject(path, {
           ...(options.file.length ? { files: options.file } : {}),
           ...(options.rule.length ? { rules: options.rule } : {}),
+          ...(options.from ? { from: options.from } : {}),
           includeCheck: options.check,
           write: options.write,
         });

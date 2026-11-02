@@ -239,6 +239,11 @@ After the project is saved in 4.7 its version reads 4.7, so pass `--from` to kee
 leaves the 4.7 rules out. Gone members say since when (`removed after Godot 4.6`), from `data/api-removed.json`, which now
 also covers the 4.6 to 4.7 removals.
 
+`godotwright fix` (MCP: `godot_fix`) does the mechanical part, with `--from` as above: a packed element write becomes
+copy, write, assign back (`safe` on an engine property, `check` on a script setter, which now runs again), a bool image
+unit becomes `IMAGE_UNIT_PERCENT`/`IMAGE_UNIT_PIXEL`, and `area_mask = 1` or `skeleton = NodePath("..")` is added to the
+node (the value before the upgrade). The Jolt plane is left to you: flipping `d` twice would undo it.
+
 For a release review has no rules for yet (a 4.8 beta), `--compare-godot <binary>` (MCP: `godot_check` with
 `compare_godot`, or `next` for `$GODOT_NEXT`) runs the same check with both binaries and prints only what differs:
 `new in 4.8.beta2` and `gone in 4.8.beta2`, matched by file, line and message (numbers left out). The second binary runs
