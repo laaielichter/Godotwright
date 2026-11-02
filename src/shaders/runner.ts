@@ -20,6 +20,8 @@ export interface RunnerOptions {
   files: string[];
   /** res:// folders whose shaders are skipped. */
   exclude: string[];
+  /** res:// files whose own shaders are checked even inside a skipped folder: the ones asked for by name. */
+  allow?: string[];
   /** Draw the shaders (false: only parse them). */
   render: boolean;
   /** Compile fog shaders (headless run) instead of the others. */
@@ -33,6 +35,7 @@ const SCRIPT = `extends SceneTree
 const MARK: String = "GODOTWRIGHT_SHADERS"
 const FILES: Array[String] = []
 const EXCLUDE: Array[String] = []
+const ALLOW: Array[String] = []
 const RENDER: bool = true
 const FOG: bool = false
 const FRAMES: int = 2
@@ -149,7 +152,7 @@ func _found(shader: Shader, file: String) -> void:
 		return
 	_seen[key] = true
 	var name: String = _name(shader)
-	if _excluded(name):
+	if _excluded(name) and not ALLOW.has(name.get_slice("::", 0)):
 		return
 	var mode: int = shader.get_mode()
 	printerr(MARK + "_SHADER\\t" + str(mode) + "\\t" + shader.get_class() + "\\t" + name + "\\t" + file)
@@ -203,6 +206,7 @@ export function shaderRunnerSource(options: RunnerOptions): string {
   // Replacer functions, so "$" sequences in file names are inserted as written.
   return SCRIPT.replace("const FILES: Array[String] = []", () => `const FILES: Array[String] = [${list(options.files)}]`)
     .replace("const EXCLUDE: Array[String] = []", () => `const EXCLUDE: Array[String] = [${list(options.exclude)}]`)
+    .replace("const ALLOW: Array[String] = []", () => `const ALLOW: Array[String] = [${list(options.allow ?? [])}]`)
     .replace("const RENDER: bool = true", () => `const RENDER: bool = ${options.render}`)
     .replace("const FOG: bool = false", () => `const FOG: bool = ${options.fog}`)
     .replace("const FRAMES: int = 2", () => `const FRAMES: int = ${Math.max(1, Math.round(options.frames))}`);

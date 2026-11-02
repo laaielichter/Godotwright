@@ -54,6 +54,8 @@ export interface ShaderLog {
   /** Milliseconds of the first frame each shader was drawn in (its program is compiled there). */
   firstDrawMs: Map<string, number>;
   unloadable: string[];
+  /** How many shaders the runner kept once it had loaded every file; missing when it stopped before that. */
+  parsed?: number;
   /** Set when the runner finished. */
   done?: { count: number; driver: string; method: string; adapter: string };
   entries: ShaderLogEntry[];
@@ -108,6 +110,7 @@ export function parseShaderLog(text: string): ShaderLog {
       } else if (tag === "UNLOADABLE" && rest[0]) {
         log.unloadable.push(rest[0]);
       } else if (tag === "PARSED") {
+        log.parsed = Number(rest[0]);
         shader = undefined;
         loading = undefined;
       } else if (tag === "DRAW") {

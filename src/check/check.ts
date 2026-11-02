@@ -54,8 +54,8 @@ export interface CheckResult {
   output?: string;
   /** How long the run was in game time: frames at the project's physics rate. */
   ran?: { frames: number; fps: number; seconds: number };
-  /** With `shaders`: how many were compiled, and on which renderer. */
-  shaders?: { compiled: number; parsed: number; errors: number; renderer: string };
+  /** With `shaders`: how many were compiled, parsed only (fog) or not reached (the check stopped early), and on which renderer. */
+  shaders?: { compiled: number; parsed: number; notReached: number; errors: number; renderer: string };
 }
 
 /** How much of a run's output is kept: the last lines, so a loop that prints every frame does not drown the rest. */
@@ -172,12 +172,15 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   if (options.shaders) {
     const started = Date.now();
     try {
-      const r = await checkShaders(root, { godot: bin, import: false, exclude, timeoutMs, ...(options.keepLogs ? { keepLogs: true } : {}) });
+      // `exclude` already holds addons unless they are wanted.
+      const r = await checkShaders(root, { godot: bin, import: false, exclude, includeAddons: Boolean(options.includeAddons), timeoutMs, ...(options.keepLogs ? { keepLogs: true } : {}) });
       diagnostics.push(...r.diagnostics.map(asCheckDiagnostic));
-      const compiled = r.shaders.filter((s) => s.compiled === "gpu").length;
-      shaders = { compiled, parsed: r.shaders.length - compiled, errors: r.errors, renderer: r.renderer };
+      const count = (how: string) => r.shaders.filter((s) => s.compiled === how).length;
+      shaders = { compiled: count("gpu"), parsed: count("parsed"), notReached: count("none"), errors: r.errors, renderer: r.renderer };
       for (const [name, log] of Object.entries(r.logs ?? {})) logs[`shaders ${name}`] = log;
-      steps.push({ name: "shaders", ms: Date.now() - started, exitCode: 0, timedOut: false });
+      // The run that failed, else the last one.
+      const run = r.runs.find((s) => s.timedOut || s.exitCode !== 0) ?? r.runs.at(-1);
+      steps.push({ name: "shaders", ms: Date.now() - started, exitCode: run ? run.exitCode : 0, timedOut: r.runs.some((s) => s.timedOut) });
     } catch (error) {
       if (!(error instanceof ShaderCheckError)) throw error;
       diagnostics.push({ severity: "error", message: error.message, source: "shader" });

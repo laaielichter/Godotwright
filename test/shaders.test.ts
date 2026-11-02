@@ -8,11 +8,15 @@ import {
   asCheckDiagnostic,
   checkShaders,
   codeStartLine,
+  drawnShaders,
   findShaderFiles,
   formatShaderCheck,
   includedFiles,
+  mergeDiagnostics,
+  parsedFogShaders,
   shaderDiagnostics,
   ShaderCheckError,
+  shaderSummary,
   type ShaderCheckResult,
 } from "../src/shaders/shaders.js";
 import { FIXTURES, makeProject, runCli } from "./helpers.js";
@@ -139,7 +143,7 @@ describe("shader diagnostics", () => {
       "res://fx/big_array.gdshader: SceneShaderGLES3: Program linking failed: error: Uniform block MaterialUniforms too big (320000/65536) (the uniforms take more memory than the GPU's uniform block allows; use smaller arrays or put the data in a texture)",
       "res://fx/bad_fog.gdshader:4: Invalid arguments to operator '=': 'float, vec2'.",
     ]);
-    expect(ds.find((d) => d.file === "res://inc/common.gdshaderinc")?.includedFrom).toBe("res://fx/uses_bad_inc.gdshader:3");
+    expect(ds.find((d) => d.file === "res://inc/common.gdshaderinc")?.includedFrom).toEqual(["res://fx/uses_bad_inc.gdshader:3"]);
     expect(ds.find((d) => d.file === "res://mat.tres")?.code).toBe("EMISSION = foo;");
     expect(asCheckDiagnostic(ds.find((d) => d.file === "res://inc/common.gdshaderinc")!)).toEqual({
       severity: "error",
@@ -148,6 +152,29 @@ describe("shader diagnostics", () => {
       message: "Unknown identifier in expression: 'missing_tint'. (included from res://fx/uses_bad_inc.gdshader:3)",
       source: "shader",
     });
+  });
+
+  it("name every shader that includes a broken file, also the fog shader of the headless run", () => {
+    const root = makeProject({
+      "project.godot": "config_version=5\n",
+      "inc/common.gdshaderinc": "// common\nfloat helper(float x) {\n\treturn x * 2.0;\n}\nfloat broken() { return vec3(1.0); }\n",
+      "fx/uses.gdshader": 'shader_type canvas_item;\n#include "res://inc/common.gdshaderinc"\nvoid fragment() {\n\tCOLOR = vec4(helper(0.2));\n}\n',
+      "fx/uses2.gdshader": 'shader_type spatial;\n\n#include "res://inc/common.gdshaderinc"\nvoid fragment() {\n\tALBEDO = vec3(helper(0.2));\n}\n',
+      "fx/fogbad.gdshader": 'shader_type fog;\n#include "res://inc/common.gdshaderinc"\nvoid fog() {\n\tDENSITY = helper(0.2);\n}\n',
+    });
+    const render = shaderDiagnostics(root, parseShaderLog(fixture("shared-include-xvfb.log")));
+    expect(render).toEqual([
+      expect.objectContaining({ file: "res://inc/common.gdshaderinc", line: 5, includedFrom: ["res://fx/uses.gdshader:2", "res://fx/uses2.gdshader:3"] }),
+    ]);
+    const fog = shaderDiagnostics(root, parseShaderLog(fixture("shared-include-fog.stderr.log")));
+    const all = mergeDiagnostics([...render, ...fog]);
+    expect(all).toHaveLength(1);
+    expect(all[0]?.includedFrom).toEqual(["res://fx/uses.gdshader:2", "res://fx/uses2.gdshader:3", "res://fx/fogbad.gdshader:2"]);
+    expect(asCheckDiagnostic(all[0]!).message).toBe(
+      "Expected return with an expression of type 'float'. (included from res://fx/uses.gdshader:2, res://fx/uses2.gdshader:3, res://fx/fogbad.gdshader:2)",
+    );
+    // Merging does not change the lists it was given.
+    expect(render[0]?.includedFrom).toHaveLength(2);
   });
 
   it("explain Godot's vague messages: a missing include, a missing ';', an unknown shader_type", () => {
@@ -161,6 +188,40 @@ describe("shader diagnostics", () => {
       "res://e_nested.gdshader:4: Unknown identifier in expression: 'bad_e'.",
       "res://f_next.gdshader:3: Unknown identifier in expression: 'bad_f'.",
     ]);
+  });
+});
+
+describe("shader results", () => {
+  it("count a shader as compiled only once it was drawn when the run timed out", () => {
+    // Real output of a run stopped by its timeout while it drew 20 shaders for 60 frames each.
+    const log = parseShaderLog(fixture("timeout-xvfb.log"));
+    expect(log.done).toBeUndefined();
+    expect(log.parsed).toBe(20);
+    const shaders = drawnShaders(log);
+    const drawn = shaders.filter((s) => s.compiled === "gpu");
+    expect(shaders).toHaveLength(20);
+    expect(drawn.length).toBe(log.firstDrawMs.size);
+    expect(drawn.every((s) => s.ok && s.firstDrawMs !== undefined)).toBe(true);
+    expect(shaders.filter((s) => s.compiled === "none").map((s) => `${s.path} ${s.ok}`)).toEqual([
+      "res://s5.gdshader false",
+      "res://s6.gdshader false",
+      "res://s7.gdshader false",
+      "res://s8.gdshader false",
+      "res://s9.gdshader false",
+    ]);
+    // A finished run counts every shader it found.
+    expect(drawnShaders(parseShaderLog(fixture("render-xvfb.log"))).every((s) => s.compiled === "gpu")).toBe(true);
+  });
+
+  it("keep the fog shaders the render run found when the headless run did not finish", () => {
+    const found = parseShaderLog(fixture("shared-include-xvfb.log")).shaders.filter((s) => s.mode === 4);
+    expect(found.map((s) => s.path)).toEqual(["res://fx/fogbad.gdshader"]);
+    const finished = parseShaderLog(fixture("shared-include-fog.stderr.log"));
+    expect(parsedFogShaders(found, finished)).toEqual([{ path: "res://fx/fogbad.gdshader", type: "fog", visual: false, compiled: "parsed", ok: true }]);
+    // Cut off before the runner's last line, as after a timeout.
+    const cut = parseShaderLog(fixture("shared-include-fog.stderr.log").replace(/GODOTWRIGHT_SHADERS_DONE.*/, ""));
+    expect(parsedFogShaders(found, cut)).toEqual([{ path: "res://fx/fogbad.gdshader", type: "fog", visual: false, compiled: "none", ok: false }]);
+    expect(parsedFogShaders(found, parseShaderLog(""))[0]?.compiled).toBe("none");
   });
 });
 
@@ -216,9 +277,10 @@ describe("shader files", () => {
 
 describe("shader runner", () => {
   it("fills in its settings", () => {
-    const source = shaderRunnerSource({ files: ["res://a$1.gdshader"], exclude: ["res://addons"], render: false, fog: true, frames: 3 });
+    const source = shaderRunnerSource({ files: ["res://a$1.gdshader"], exclude: ["res://addons"], allow: ["res://addons/x/a.gdshader"], render: false, fog: true, frames: 3 });
     expect(source).toContain('const FILES: Array[String] = ["res://a$1.gdshader"]');
     expect(source).toContain('const EXCLUDE: Array[String] = ["res://addons"]');
+    expect(source).toContain('const ALLOW: Array[String] = ["res://addons/x/a.gdshader"]');
     expect(source).toContain("const RENDER: bool = false");
     expect(source).toContain("const FOG: bool = true");
     expect(source).toContain("const FRAMES: int = 3");
@@ -242,6 +304,8 @@ describe("shader check output", () => {
     errors: 1,
     warnings: 0,
     notes: ["1 fog shader only parsed: fog shaders need Forward+ (Vulkan or Direct3D 12), which this check does not use"],
+    complete: true,
+    runs: [],
   };
 
   it("is one line per error with its code, a summary and a Next line", () => {
@@ -255,5 +319,35 @@ describe("shader check output", () => {
         "",
       ].join("\n"),
     );
+  });
+
+  it("says the check stopped early, and how many shaders it did not reach", () => {
+    const stopped: ShaderCheckResult = {
+      ...result,
+      renderer: "",
+      shaders: [
+        { path: "res://a.gdshader", type: "spatial", visual: false, compiled: "gpu", ok: true, firstDrawMs: 80 },
+        { path: "res://b.gdshader", type: "spatial", visual: false, compiled: "none", ok: false },
+        { path: "res://fog.gdshader", type: "fog", visual: false, compiled: "none", ok: false },
+      ],
+      includes: [],
+      diagnostics: [{ severity: "error", message: "the shader check timed out after 1.5s", source: "shader" }],
+      notes: [],
+      complete: false,
+    };
+    const text = formatShaderCheck(stopped).split("\n");
+    expect(text.slice(0, 3)).toEqual([
+      "error: the shader check timed out after 1.5s",
+      "1 shader compiled, 2 not reached, 1 error; renderer unknown; Godot 4.7.2.stable.official",
+      "Next: the check stopped before it compiled every shader; run it again with a longer --timeout, or on fewer shaders with --file.",
+    ]);
+    expect(shaderSummary({ compiled: 1, parsed: 0, notReached: 2, errors: 1, renderer: "" })).toBe("shaders: 1 compiled, 2 not reached (the check stopped early), 1 error (renderer unknown)");
+  });
+
+  it("points at --include-addons when there was nothing to compile", () => {
+    const empty: ShaderCheckResult = { ...result, shaders: [], includes: [], diagnostics: [], errors: 0, notes: [] };
+    expect(formatShaderCheck(empty)).toMatch(/^Next: nothing to compile; shaders in res:\/\/addons are compiled only with --include-addons/m);
+    const given: ShaderCheckResult = { ...empty, diagnostics: [{ severity: "warning", file: "res://empty.tscn", message: "no shader to compile in this file (shaders it uses from a skipped folder are left out)", source: "shader" }], warnings: 1 };
+    expect(formatShaderCheck(given)).toMatch(/^Next: nothing to compile; pass a \.gdshader, a \.gdshaderinc, or a \.tres\/\.tscn that holds a Shader\.$/m);
   });
 });

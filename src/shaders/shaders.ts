@@ -40,8 +40,8 @@ export interface ShaderCheckOptions {
 export interface ShaderDiagnostic extends Diagnostic {
   /** What to write instead, for Godot 3 code and other known causes. */
   hint?: string;
-  /** For an error in a .gdshaderinc: the shader that included it, with the line of its #include. */
-  includedFrom?: string;
+  /** For an error in a .gdshaderinc: every shader that included it, with the line of its #include. */
+  includedFrom?: string[];
   /** The line of code Godot points to. */
   code?: string;
 }
@@ -53,14 +53,26 @@ export interface CompiledShader {
   path: string;
   type: string;
   visual: boolean;
-  /** "gpu": compiled and drawn by the OpenGL driver; "parsed": only Godot's shader compiler ran (fog shaders). */
-  compiled: "gpu" | "parsed";
+  /**
+   * "gpu": compiled and drawn by the OpenGL driver; "parsed": only Godot's shader compiler ran (fog shaders); "none": the
+   * check stopped (timed out or crashed) before it got to this shader.
+   */
+  compiled: "gpu" | "parsed" | "none";
+  /** Compiled, and no error points at it or at an include it uses. */
   ok: boolean;
   /**
    * Time of the frame it was first drawn in, compile included. Only to compare shaders within one run: software OpenGL
    * is slow, and Godot's shader cache (user://shader_cache) makes a second run much faster.
    */
   firstDrawMs?: number;
+}
+
+/** One Godot run of the check. */
+export interface ShaderRun {
+  name: "import" | "render" | "fog";
+  ms: number;
+  exitCode: number | null;
+  timedOut: boolean;
 }
 
 export interface ShaderCheckResult {
@@ -75,6 +87,9 @@ export interface ShaderCheckResult {
   errors: number;
   warnings: number;
   notes: string[];
+  /** False when a Godot run timed out or stopped before the end: the shaders it did not get to are `compiled: "none"`. */
+  complete: boolean;
+  runs: ShaderRun[];
   logs?: Record<string, string>;
 }
 
@@ -82,6 +97,7 @@ const RUNNER_DIR = ".godot/godotwright";
 const RUNNER_RES = `res://${RUNNER_DIR}/shaders.gd`;
 /** A .tres/.tscn that is a shader or holds one; a scene that only refers to a .gdshader is covered by that file. */
 const EMBEDS = /^\[(?:sub_resource|gd_resource) type="(?:Shader|VisualShader)"/m;
+const NO_SHADER = "no shader to compile in this file";
 const INCLUDE = /#include\s+\\?"([^"\\]+)\\?"/g;
 
 function toRes(root: string, file: string): string {
@@ -130,7 +146,9 @@ function selectFiles(root: string, files: string[], all: { sources: string[]; in
     const res = toRes(root, given);
     if (!existsSync(fromResPath(root, res))) throw new ShaderCheckError(`${res} does not exist`);
     if (res.endsWith(".gdshaderinc")) {
-      const users = all.sources.filter((s) => includedFiles(root, s).has(res));
+      // An include asked for by name: its users outside the skipped folders, else wherever they are.
+      let users = all.sources.filter((s) => includedFiles(root, s).has(res));
+      if (!users.length) users = findShaderFiles(root, []).sources.filter((s) => includedFiles(root, s).has(res));
       if (!users.length) throw new ShaderCheckError(`no shader includes ${res}, so it cannot be compiled on its own`);
       for (const u of users) out.add(u);
     } else if (/\.(gdshader|tres|tscn|res|scn)$/.test(res)) {
@@ -211,19 +229,27 @@ function includeLine(root: string, top: string, target: string): number | undefi
 /** Diagnostics from what Godot printed, placed in the user's files. */
 export function shaderDiagnostics(root: string, log: ShaderLog, seen: ShaderSeen[] = log.shaders): ShaderDiagnostic[] {
   const byPath = new Map(seen.map((s) => [s.path, s]));
-  const out: ShaderDiagnostic[] = [];
-  const keys = new Set<string>();
-  const add = (d: ShaderDiagnostic) => {
-    const key = `${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
-    if (keys.has(key)) return;
-    keys.add(key);
-    out.push(d);
-  };
-  for (const e of log.entries) {
-    const d = entryDiagnostic(root, e, byPath);
-    if (d) add(d);
+  return mergeDiagnostics(log.entries.map((e) => entryDiagnostic(root, e, byPath)).filter((d): d is ShaderDiagnostic => d !== undefined));
+}
+
+/**
+ * Each error once, even when several shaders include the same broken file: Godot reports it for every one of them, and
+ * the kept diagnostic lists them all in `includedFrom`.
+ */
+export function mergeDiagnostics(list: ShaderDiagnostic[]): ShaderDiagnostic[] {
+  const byKey = new Map<string, ShaderDiagnostic>();
+  for (const d of list) {
+    const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
+    const kept = byKey.get(key);
+    if (!kept) {
+      byKey.set(key, d.includedFrom ? { ...d, includedFrom: [...d.includedFrom] } : { ...d });
+      continue;
+    }
+    for (const from of d.includedFrom ?? []) {
+      if (!kept.includedFrom?.includes(from)) kept.includedFrom = [...(kept.includedFrom ?? []), from];
+    }
   }
-  return out;
+  return [...byKey.values()];
 }
 
 function entryDiagnostic(root: string, e: ShaderLogEntry, byPath: Map<string, ShaderSeen>): ShaderDiagnostic | undefined {
@@ -284,10 +310,10 @@ function entryDiagnostic(root: string, e: ShaderLogEntry, byPath: Map<string, Sh
   }
   if (!hint && e.more.length) hint = e.more.join(" ");
   const top = shader && shader !== path ? shader : e.context.length > 1 ? e.context[0]?.file : undefined;
-  let includedFrom: string | undefined;
+  let includedFrom: string[] | undefined;
   if (top && top !== path && path.endsWith(".gdshaderinc")) {
     const at = includeLine(root, top, path);
-    includedFrom = `${top.replace(/::.*$/, "")}${at ? `:${at}` : ""}`;
+    includedFrom = [`${top.replace(/::.*$/, "")}${at ? `:${at}` : ""}`];
   }
   return {
     severity: e.severity,
@@ -312,15 +338,39 @@ function tail(text: string): string {
   return text.trim().split(/\r?\n/).slice(-3).join(" | ").slice(0, 400) || "(none)";
 }
 
+/** The shaders the render run found (fog aside): compiled once drawn, so after a timeout the rest were not reached. */
+export function drawnShaders(log: ShaderLog): CompiledShader[] {
+  return log.shaders
+    .filter((s) => s.mode !== 4)
+    .map((s) => {
+      // The runner prints the time after a shader's first frame, the one its program is compiled in.
+      const ms = log.firstDrawMs.get(s.path);
+      const drawn = log.done !== undefined || ms !== undefined;
+      return { path: s.path, type: typeName(s.mode), visual: s.kind === "VisualShader", compiled: drawn ? "gpu" : "none", ok: drawn, ...(ms !== undefined ? { firstDrawMs: ms } : {}) };
+    });
+}
+
+/** The fog shaders the render run found, parsed only when the headless run got to its end. */
+export function parsedFogShaders(found: ShaderSeen[], fogLog: ShaderLog): CompiledShader[] {
+  const parsed = new Set(fogLog.done ? fogLog.shaders.map((s) => s.path) : []);
+  return found.map((s) => ({ path: s.path, type: "fog", visual: s.kind === "VisualShader", compiled: parsed.has(s.path) ? "parsed" : "none", ok: parsed.has(s.path) }));
+}
+
+function seconds(ms: number): string {
+  return `${Math.round(ms / 100) / 10}s`;
+}
+
 export async function checkShaders(path: string, options: ShaderCheckOptions = {}): Promise<ShaderCheckResult> {
   const root = findProjectRoot(path);
   if (!root) throw new ProjectNotFoundError(path);
   const exclude = [...new Set([...(options.exclude ?? []), ...(options.includeAddons ? [] : ["addons"])])];
   const all = findShaderFiles(root, exclude);
-  const files = options.files?.length ? selectFiles(root, options.files, all) : all.sources;
+  // Files asked for by name are checked even inside a skipped folder; the shaders they only refer to are not.
+  const explicit = options.files?.length ? selectFiles(root, options.files, all) : undefined;
+  const files = explicit ?? all.sources;
   const usedIncludes = new Set<string>();
   for (const f of files) for (const inc of includedFiles(root, f)) usedIncludes.add(inc);
-  const includes = options.files?.length ? [...usedIncludes].sort() : all.includes;
+  const includes = explicit ? [...usedIncludes].sort() : all.includes;
   // Fail early when there is no screen, before Godot is looked for or anything is imported.
   const how = screen();
   if ("error" in how) throw new ShaderCheckError(`cannot compile shaders, they are compiled by drawing them: ${how.error.replace(/^no screen/, "there is no screen")}`);
@@ -328,90 +378,94 @@ export async function checkShaders(path: string, options: ShaderCheckOptions = {
   const version = await godotVersion(bin);
   const timeoutMs = options.timeoutMs ?? 10 * 60_000;
   const frames = options.frames ?? 2;
-  const result: ShaderCheckResult = { godot: bin, godotVersion: version, renderer: "", shaders: [], includes, diagnostics: [], errors: 0, warnings: 0, notes: [] };
+  const result: ShaderCheckResult = { godot: bin, godotVersion: version, renderer: "", shaders: [], includes, diagnostics: [], errors: 0, warnings: 0, notes: [], complete: true, runs: [] };
   const logs: Record<string, string> = {};
   if (!files.length) {
     result.notes.push("no shaders found (.gdshader files, or Shader/VisualShader resources in .tres/.tscn)");
     return result;
   }
-  if (options.import !== false) {
-    const imported = await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs });
-    if (options.keepLogs) logs["import"] = `${imported.stdout}\n--- stderr ---\n${imported.stderr}`;
-  }
+  const ran = (name: ShaderRun["name"], run: RunResult) => {
+    result.runs.push({ name, ms: run.ms, exitCode: run.code, timedOut: run.timedOut });
+    if (options.keepLogs) logs[name] = `${run.stdout}\n--- stderr ---\n${run.stderr}`;
+  };
+  /** The error for a run that stopped before the runner's last line. */
+  const stopped = (what: string, run: RunResult, output: string): ShaderDiagnostic => {
+    result.complete = false;
+    return {
+      severity: "error",
+      message: run.timedOut ? `${what} timed out after ${seconds(timeoutMs)}` : `${what} did not finish (exit code ${run.code}); last output: ${tail(output)}`,
+      source: "shader",
+    };
+  };
+  if (options.import !== false) ran("import", await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs }));
 
   const dir = join(root, ...RUNNER_DIR.split("/"));
   const script = join(dir, "shaders.gd");
   mkdirSync(dir, { recursive: true });
   const runnerExclude = exclude.map(excludePath);
+  const allow = explicit ?? [];
   const diagnostics: ShaderDiagnostic[] = [];
   try {
-    writeFileSync(script, shaderRunnerSource({ files, exclude: runnerExclude, render: true, fog: false, frames }));
+    writeFileSync(script, shaderRunnerSource({ files, exclude: runnerExclude, allow, render: true, fog: false, frames }));
     const run = await runWithScreen(bin, root, ["-s", RUNNER_RES], timeoutMs);
-    if (options.keepLogs) logs["render"] = `${run.stdout}\n--- stderr ---\n${run.stderr}`;
+    ran("render", run);
     // xvfb-run sends Godot's stderr to stdout; with a real display it stays on stderr.
     const output = `${run.stderr}\n${run.stdout}`;
     const log = parseShaderLog(output);
-    if (!log.done) {
-      diagnostics.push({
-        severity: "error",
-        message: run.timedOut
-          ? `the shader check timed out after ${Math.round(timeoutMs / 1000)}s`
-          : `the shader check did not finish (exit code ${run.code}); last output: ${tail(output)}`,
-        source: "shader",
-      });
-    }
-    const drawn = log.shaders.filter((s) => s.mode !== 4);
+    if (!log.done) diagnostics.push(stopped("the shader check", run, output));
     diagnostics.push(...shaderDiagnostics(root, log, log.shaders));
     if (log.done) result.renderer = `${log.done.driver} ${log.done.method}${log.done.adapter ? `, ${log.done.adapter}` : ""}`;
-    for (const s of drawn) {
-      const ms = log.firstDrawMs.get(s.path);
-      result.shaders.push({ path: s.path, type: typeName(s.mode), visual: s.kind === "VisualShader", compiled: "gpu", ok: true, ...(ms !== undefined ? { firstDrawMs: ms } : {}) });
-    }
+    result.shaders.push(...drawnShaders(log));
     for (const f of log.unloadable) diagnostics.push({ severity: "warning", file: f, message: "Godot could not load this file, so its shaders were not compiled (godot_check says why)", source: "shader" });
+    if (explicit && log.parsed !== undefined) {
+      for (const f of explicit) {
+        if (log.unloadable.includes(f) || log.shaders.some((s) => s.file === f)) continue;
+        diagnostics.push({ severity: "warning", file: f, message: `${NO_SHADER} (shaders it uses from a skipped folder are left out)`, source: "shader" });
+      }
+    }
 
     // Fog shaders need Forward+; the dummy renderer of a headless run still parses them.
-    const fogFiles = [...new Set(log.shaders.filter((s) => s.mode === 4).map((s) => s.file))];
+    const fogShaders = log.shaders.filter((s) => s.mode === 4);
+    const fogFiles = [...new Set(fogShaders.map((s) => s.file))];
     if (fogFiles.length) {
-      writeFileSync(script, shaderRunnerSource({ files: fogFiles, exclude: runnerExclude, render: false, fog: true, frames }));
+      writeFileSync(script, shaderRunnerSource({ files: fogFiles, exclude: runnerExclude, allow, render: false, fog: true, frames }));
       const fogRun = await runGodot(bin, ["--headless", "--path", root, "-s", RUNNER_RES], { cwd: root, timeoutMs });
-      if (options.keepLogs) logs["fog"] = `${fogRun.stdout}\n--- stderr ---\n${fogRun.stderr}`;
+      ran("fog", fogRun);
       const fogLog = parseShaderLog(fogRun.stderr);
+      if (!fogLog.done) diagnostics.push(stopped("parsing the fog shaders", fogRun, `${fogRun.stderr}\n${fogRun.stdout}`));
       const fog = fogLog.shaders.filter((s) => s.mode === 4);
       // Only the fog shaders' errors: the others were compiled in the first run.
       const fogPaths = new Set(fog.map((s) => s.path));
       fogLog.entries = fogLog.entries.filter((e) => e.shader !== undefined && fogPaths.has(e.shader));
       diagnostics.push(...shaderDiagnostics(root, fogLog, fog));
-      for (const s of fog) result.shaders.push({ path: s.path, type: "fog", visual: s.kind === "VisualShader", compiled: "parsed", ok: true });
-      result.notes.push(`${fog.length} fog shader${fog.length === 1 ? "" : "s"} only parsed: fog shaders need Forward+ (Vulkan or Direct3D 12), which this check does not use`);
+      const fogResult = parsedFogShaders(fogShaders, fogLog);
+      result.shaders.push(...fogResult);
+      const parsed = fogResult.filter((s) => s.compiled === "parsed").length;
+      if (parsed) result.notes.push(`${parsed} fog shader${parsed === 1 ? "" : "s"} only parsed: fog shaders need Forward+ (Vulkan or Direct3D 12), which this check does not use`);
     }
   } finally {
+    // After a timeout runGodot returns only once the processes it stopped are gone, so nothing runs the script now.
     rmSync(script, { force: true });
   }
 
-  // Each error once, even when several shaders include the same broken file.
-  const seen = new Set<string>();
-  result.diagnostics = diagnostics.filter((d) => {
-    const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  const failed = new Set(result.diagnostics.filter((d) => d.severity === "error").flatMap((d) => [d.file, d.includedFrom?.replace(/:\d+$/, "")]));
-  for (const s of result.shaders) s.ok = !failed.has(s.path) && !failed.has(s.path.replace(/::.*$/, ""));
-  result.errors = result.diagnostics.filter((d) => d.severity === "error").length;
+  result.diagnostics = mergeDiagnostics(diagnostics);
+  const errors = result.diagnostics.filter((d) => d.severity === "error");
+  const failed = new Set(errors.flatMap((d) => [d.file, ...(d.includedFrom ?? []).map((f) => f.replace(/:\d+$/, ""))]));
+  for (const s of result.shaders) s.ok = s.compiled !== "none" && !failed.has(s.path) && !failed.has(s.path.replace(/::.*$/, ""));
+  result.errors = errors.length;
   result.warnings = result.diagnostics.filter((d) => d.severity === "warning").length;
   if (options.keepLogs) result.logs = logs;
   return result;
 }
 
 /** The line godot_check adds with `shaders`. */
-export function shaderSummary(s: { compiled: number; parsed: number; errors: number; renderer: string }): string {
-  return `shaders: ${s.compiled} compiled${s.parsed ? `, ${s.parsed} parsed only (fog needs Forward+)` : ""}, ${s.errors} error${s.errors === 1 ? "" : "s"} (${s.renderer || "renderer unknown"})`;
+export function shaderSummary(s: { compiled: number; parsed: number; notReached?: number; errors: number; renderer: string }): string {
+  return `shaders: ${s.compiled} compiled${s.parsed ? `, ${s.parsed} parsed only (fog needs Forward+)` : ""}${s.notReached ? `, ${s.notReached} not reached (the check stopped early)` : ""}, ${s.errors} error${s.errors === 1 ? "" : "s"} (${s.renderer || "renderer unknown"})`;
 }
 
 /** A shader diagnostic as a check diagnostic: the hint and the including shader go into the message. */
 export function asCheckDiagnostic(d: ShaderDiagnostic): Diagnostic {
-  const extra = [d.hint, d.includedFrom ? `included from ${d.includedFrom}` : undefined].filter(Boolean).join("; ");
+  const extra = [d.hint, d.includedFrom?.length ? `included from ${d.includedFrom.join(", ")}` : undefined].filter(Boolean).join("; ");
   return { severity: d.severity, ...(d.file ? { file: d.file } : {}), ...(d.line ? { line: d.line } : {}), message: extra ? `${d.message} (${extra})` : d.message, source: "shader" };
 }
 
@@ -422,22 +476,27 @@ export function formatShaderCheck(r: ShaderCheckResult): string {
     const where = d.file ? `${d.file}${d.line ? `:${d.line}` : ""}: ` : "";
     out.push(`${where}${d.severity}: ${d.message}${d.hint ? ` (${d.hint})` : ""}`);
     if (d.code) out.push(`    | ${d.code}`);
-    if (d.includedFrom) out.push(`    included from ${d.includedFrom}`);
+    if (d.includedFrom?.length) out.push(`    included from ${d.includedFrom.join(", ")}`);
   }
   const gpu = r.shaders.filter((s) => s.compiled === "gpu").length;
-  const parsed = r.shaders.length - gpu;
+  const parsed = r.shaders.filter((s) => s.compiled === "parsed").length;
+  const none = r.shaders.length - gpu - parsed;
   const visual = r.shaders.filter((s) => s.visual).length;
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   const counts = [
-    `${plural(gpu, "shader")} compiled${visual ? ` (${visual} visual)` : ""}${parsed ? `, ${parsed} parsed only` : ""}`,
+    `${plural(gpu, "shader")} compiled${visual ? ` (${visual} visual)` : ""}${parsed ? `, ${parsed} parsed only` : ""}${none ? `, ${none} not reached` : ""}`,
     plural(r.errors, "error"),
     ...(r.warnings ? [plural(r.warnings, "warning")] : []),
     ...(r.includes.length ? [plural(r.includes.length, "include")] : []),
   ];
   out.push(`${counts.join(", ")}; renderer ${r.renderer || "unknown"}; Godot ${r.godotVersion}`);
   out.push(...r.notes);
-  if (r.errors) out.push("Next: fix each error at the line given (godot_api has the Godot 4 built-ins), then run this again; a shader with an error draws nothing in the game.");
+  if (!r.complete) {
+    const others = r.diagnostics.some((d) => d.severity === "error" && d.file);
+    out.push(`Next: the check stopped before it compiled every shader; ${others ? "fix the errors at the lines given, then " : ""}run it again with a longer --timeout, or on fewer shaders with --file.`);
+  } else if (r.errors) out.push("Next: fix each error at the line given (godot_api has the Godot 4 built-ins), then run this again; a shader with an error draws nothing in the game.");
   else if (r.shaders.length) out.push("Next: the shaders compile in the Compatibility renderer; render the scenes that use them with godot_screenshot to see them.");
-  else out.push("Next: nothing to compile; pass files to check shaders in a skipped folder.");
+  else if (r.diagnostics.some((d) => d.message.startsWith(NO_SHADER))) out.push("Next: nothing to compile; pass a .gdshader, a .gdshaderinc, or a .tres/.tscn that holds a Shader.");
+  else out.push("Next: nothing to compile; shaders in res://addons are compiled only with --include-addons, and --exclude skips the folders it names.");
   return `${out.join("\n")}\n`;
 }
