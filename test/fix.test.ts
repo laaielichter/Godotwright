@@ -227,3 +227,70 @@ describe("godotwright fix: uids and resource sections", () => {
     expect(readFileSync(join(root, "main.tscn"), "utf8")).toBe('[gd_scene format=3]\n\n[sub_resource type="Gradient" id="used"]\n\n[node name="Main" type="Node"]\nmetadata/g = SubResource("used")\n');
   });
 });
+
+describe("godotwright fix: Godot 4.7 upgrade fixes", () => {
+  it("copies a packed array, writes the copy and assigns it back", () => {
+    const { root, read } = project(
+      "extends Node\n\nvar pts: PackedInt32Array = [1, 2]:\n\tset(v):\n\t\tpts = v\n\n\nfunc f(line: Line2D) -> void:\n\tline.points[0] = Vector2(5, 5)\n\tpts[0] = 9\n",
+    );
+    const dry = fixProject(root);
+    expect(dry.changes.map((c) => [c.rule, c.safety])).toEqual([["api/packed-element-write", "safe"]]);
+    expect(dry.needsCheck).toBe(1);
+    fixProject(root, { write: true, includeCheck: true });
+    expect(read()).toContain("\tvar points_copy := line.points\n\tpoints_copy[0] = Vector2(5, 5)\n\tline.points = points_copy\n");
+    expect(read()).toContain("\tvar pts_copy := pts\n\tpts_copy[0] = 9\n\tpts = pts_copy\n");
+  });
+
+  it("gives each copy in a function its own name, untyped after $", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "a.gd": 'extends Node2D\n\n\nfunc _ready() -> void:\n\tvar line: Line2D = $Line\n\tline.points[0] = Vector2(5, 5)\n\t$Line.points[1] = Vector2(6, 6)\n',
+      "main.tscn": '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://a.gd" id="1"]\n\n[node name="Main" type="Node2D"]\nscript = ExtResource("1")\n\n[node name="Line" type="Line2D" parent="."]\n',
+    });
+    fixProject(root, { write: true });
+    const fixed = readFileSync(join(root, "a.gd"), "utf8");
+    expect(fixed).toContain("\tvar points_copy_6 := line.points\n");
+    expect(fixed).toContain("\tvar points_copy_7 = $Line.points\n\tpoints_copy_7[1] = Vector2(6, 6)\n\t$Line.points = points_copy_7\n");
+  });
+
+  it("leaves a packed write alone when the statement goes on past the line", () => {
+    const source = "extends Line2D\n\n\nfunc _ready() -> void:\n\tpoints[0] = Vector2(1,\n\t\t2)\n\tpoints[1] = \\\n\t\tVector2.ONE\n";
+    const { root, read } = project(source);
+    const result = fixProject(root, { write: true, includeCheck: true });
+    expect(result.changes.filter((c) => c.rule === "api/packed-element-write")).toEqual([]);
+    expect(read()).toBe(source);
+  });
+
+  it("replaces a bool image unit with the matching ImageUnit", () => {
+    const { root, read } = project(
+      'extends RichTextLabel\n\n\nfunc _ready() -> void:\n\tadd_image(null, 8, 8, Color.WHITE, INLINE_ALIGNMENT_CENTER, Rect2(), null, false, "", true, false)\n',
+    );
+    fixProject(root, { write: true });
+    expect(read()).toContain('Rect2(), null, false, "", RichTextLabel.IMAGE_UNIT_PERCENT, RichTextLabel.IMAGE_UNIT_PIXEL)');
+  });
+
+  it("restores the old area_mask and skeleton defaults in a scene from 4.6", () => {
+    const scene = [
+      "[gd_scene format=3]",
+      "",
+      '[node name="Main" type="Node3D"]',
+      "",
+      '[node name="Water" type="Area3D" parent="."]',
+      "audio_bus_override = true",
+      "",
+      '[node name="Splash" type="AudioStreamPlayer3D" parent="."]',
+      "",
+      '[node name="Skel" type="Skeleton3D" parent="."]',
+      "",
+      '[node name="Body" type="MeshInstance3D" parent="Skel"]',
+      "",
+    ].join("\n");
+    const root = makeProject({ "project.godot": PROJECT.replace('"4.7"', '"4.5"'), "main.tscn": scene });
+    const result = fixProject(root, { write: true });
+    expect(result.changes.map((c) => c.rule)).toEqual(["api/upgrade-area-mask", "api/upgrade-mesh-skeleton"]);
+    const fixed = readFileSync(join(root, "main.tscn"), "utf8");
+    expect(fixed).toContain('[node name="Splash" type="AudioStreamPlayer3D" parent="."]\narea_mask = 1\n');
+    expect(fixed).toContain('[node name="Body" type="MeshInstance3D" parent="Skel"]\nskeleton = NodePath("..")\n');
+    expect(fixProject(root).changes).toEqual([]);
+  });
+});

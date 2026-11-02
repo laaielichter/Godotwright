@@ -1,6 +1,6 @@
 import { closest } from "../../api/api.js";
 import { resolveResPath } from "../../project/files.js";
-import { removedClass, removedMember, removedNote } from "../../api/removed.js";
+import { removedClass, removedMember, removedNote, renamedMember } from "../../api/removed.js";
 import { matchingParen, splitAnnotations, type FunctionInfo, type LogicalLine } from "../../godot/gdscript.js";
 import { finding, type Finding } from "../rules.js";
 import { native, VALUE_TYPES, type ClassModel, type GType, type ProjectModel } from "../model.js";
@@ -72,6 +72,8 @@ export interface ApiCheckOptions {
   /** Project uses C# or GDExtension, so unknown class names may be real. */
   foreignClasses: boolean;
   inputActions: Set<string>;
+  /** The project moves to Godot 4.7 from an older release: also report what only may break (see checks/version.ts). */
+  migrating?: boolean;
 }
 
 /**
@@ -205,6 +207,8 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
   let containers = new Set<string>();
   let currentTokens: Token[] = [];
   let currentOpen = 0;
+  /** True while the whole statement is analysed, so a chain at its start can be an assignment target. */
+  let statementLevel = false;
 
   for (const ll of splitStatements(script.logicalLines)) {
     const scope = pm.scopeAt(path, ll.line);
@@ -304,7 +308,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       analyze(m[0].length);
       continue;
     }
+    statementLevel = true;
     analyze(0);
+    statementLevel = false;
 
     function textOf(line: LogicalLine, from: number, length: number): string {
       return line.text.slice(from, from + length);
@@ -474,6 +480,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         j = close;
       } else {
         value = resolveName(t0, tokens[k + 1]?.t === ".");
+        if (!locals.has(t0) && !KEYWORDS.has(t0)) afterProperty({ type: selfType, exact: false }, t0, tokens, k, k);
       }
 
       while (tokens[j + 1]?.t === "." && isIdent(tokens[j + 2]?.t)) {
@@ -481,7 +488,10 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         const isCall = tokens[j + 3]?.t === "(";
         currentTokens = tokens;
         currentOpen = j + 3;
+        const receiver = value;
         value = member(value, name, isCall);
+        if (isCall) imageUnitArgs(receiver, name, tokens, j + 3);
+        else afterProperty(receiver, name, tokens, k, j + 2);
         j = isCall ? closeIndex(tokens, j + 3) : j + 2;
         while (tokens[j + 1]?.t === "[") {
           j = closeIndex(tokens, j + 1);
@@ -489,6 +499,92 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         }
       }
       return { value, end: j };
+    }
+
+    /**
+     * Godot 4.7 changes for a property read at tokens[at] (verified in 4.6.2 against 4.7.2):
+     * - `obj.packed[i] = v` no longer calls the setter: on an engine property the write is lost, and a script
+     *   variable's set() block does not run (GH-113228).
+     * - keyboard and mouse events have device 16 and 32, so `event.device == 0` is never true for them (GH-116274).
+     */
+    function afterProperty(receiver: Value | undefined, name: string, tokens: Token[], start: number, at: number): void {
+      const type = receiver?.type;
+      if (!type || type.kind === "enum" || type.meta) return;
+      const found = pm.memberOf(type, name);
+      if (found?.kind !== "property") return;
+      const engine = api.getClass(found.owner) !== undefined;
+      if (statementLevel && start === 0 && tokens[at + 1]?.t === "[") {
+        let e = closeIndex(tokens, at + 1);
+        // `points[0].x = 1` writes into the element too.
+        while (tokens[e + 1]?.t === "[" || (tokens[e + 1]?.t === "." && isIdent(tokens[e + 2]?.t) && tokens[e + 3]?.t !== "(")) {
+          e = tokens[e + 1]!.t === "[" ? closeIndex(tokens, e + 1) : e + 2;
+        }
+        const packed = found.type?.kind === "native" && /^Packed\w+Array$/.test(found.type.name);
+        if (packed && assignsAt(tokens, e + 1)) {
+          const target = tokens.slice(start, at + 1).map((t) => t.t).join("");
+          const owner = engine ? found.owner : undefined;
+          if (owner) {
+            report(
+              "api/packed-element-write",
+              ll.line,
+              `In Godot 4.7 writing one element of ${owner}.${name} changes a copy: the ${owner} keeps the old array and nothing warns. Copy it, change the copy, assign it back: var p := ${target}; p[...] = ...; ${target} = p.`,
+            );
+          } else if (type.kind === "script" && hasSetter(pm, type.model, found.owner, name)) {
+            report(
+              "quality/packed-setter-skipped",
+              ll.line,
+              `In Godot 4.7 writing one element of "${name}" no longer runs its set() block (it did in 4.6): the array changes, but the setter's work (signals, redraws, saving) does not happen. Assign the whole array: var p := ${target}; p[...] = ...; ${target} = p.`,
+            );
+          }
+        }
+      }
+      if (name === "device" && engine && (found.owner === "InputEvent" || api.inheritsFrom(found.owner, "InputEvent"))) deviceZero(type, tokens, start, at);
+    }
+
+    function deviceZero(type: GType, tokens: Token[], start: number, at: number): void {
+      const after = (tokens[at + 1]?.t === "==" || tokens[at + 1]?.t === "!=") && tokens[at + 2]?.t === "0" && !/^[.[(]$/.test(tokens[at + 3]?.t ?? "");
+      const before = (tokens[start - 1]?.t === "==" || tokens[start - 1]?.t === "!=") && tokens[start - 2]?.t === "0" && !/^[-+*/%.]$/.test(tokens[start - 3]?.t ?? "");
+      if (!after && !before) return;
+      if (/\bInputEventJoypad/.test(ll.code)) return;
+      if (type.kind === "enum") return;
+      const cls = type.kind === "native" ? type.name : pm.nativeOf(type.model);
+      const keyOrMouse = (c: string) => c === "InputEventKey" || c === "InputEventMouse" || api.inheritsFrom(c, "InputEventMouse");
+      const tested = /\bis\s+(InputEventKey|InputEventMouse\w*)\b/.exec(ll.code)?.[1];
+      if (keyOrMouse(cls) || tested) {
+        const which = keyOrMouse(cls) ? cls : tested!;
+        const id = which === "InputEventKey" ? "DEVICE_ID_KEYBOARD (16)" : "DEVICE_ID_MOUSE (32)";
+        report(
+          "api/input-device-zero",
+          ll.line,
+          `In Godot 4.7 an ${which} has device InputEvent.${id}, not 0, so this comparison with 0 never matches a real ${which === "InputEventKey" ? "keyboard" : "mouse"} event. Compare with InputEvent.${id.split(" ")[0]} or test the event type.`,
+        );
+      } else if (options.migrating && (cls === "InputEvent" || cls === "InputEventWithModifiers" || cls === "InputEventFromWindow")) {
+        report(
+          "api/input-device-zero",
+          ll.line,
+          "Before Godot 4.7, device 0 meant keyboard, mouse or the first joypad; in 4.7 keyboard and mouse events have device InputEvent.DEVICE_ID_KEYBOARD (16) and DEVICE_ID_MOUSE (32). If this test means keyboard or mouse, test the event type or compare with those constants.",
+          "info",
+        );
+      }
+    }
+
+    /** RichTextLabel.add_image()/update_image(): Godot 4.7 made width_unit and height_unit an ImageUnit enum, and a bool there is a parse error. */
+    function imageUnitArgs(receiver: Value | undefined, name: string, tokens: Token[], open: number): void {
+      const type = receiver?.type;
+      if (type?.kind !== "native" || type.meta || (name !== "add_image" && name !== "update_image")) return;
+      if (type.name !== "RichTextLabel" && !api.inheritsFrom(type.name, "RichTextLabel")) return;
+      const args = splitArgs(tokens, open);
+      const first = name === "add_image" ? 9 : 10;
+      for (const i of [first, first + 1]) {
+        const arg = args[i];
+        if (arg?.length !== 1 || (arg[0]!.t !== "true" && arg[0]!.t !== "false")) continue;
+        const param = i === first ? "width_unit" : "height_unit";
+        report(
+          "api/image-unit-bool",
+          ll.line,
+          `${name}() argument ${i + 1} is ${param}, a RichTextLabel.ImageUnit in Godot 4.7 (it was the bool ${param.replace("_unit", "_in_percent")}): ${arg[0]!.t} stops the script with "Cannot pass a value of type bool". Pass RichTextLabel.${arg[0]!.t === "true" ? "IMAGE_UNIT_PERCENT" : "IMAGE_UNIT_PIXEL"}.`,
+        );
+      }
     }
 
     function checkArgs(name: string, args: { min: number; max: number } | undefined, tokens: Token[], open: number): void {
@@ -552,6 +648,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       if (found) {
         if (found.kind !== "method") return undefined;
         checkArgs(name, found.args, tokens, k + 1);
+        if (name === "add_image" || name === "update_image") imageUnitArgs({ type: native(pm.nativeOf(model)), exact: false }, name, tokens, k + 1);
         return { type: found.type, exact: false };
       }
       const global = api.globalFunction(name);
@@ -651,7 +748,8 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         if (below.has(name)) return undefined;
       }
       const moved = MOVED[`${label}.${name}`];
-      const hint = moved ? ` In Godot 4 use ${moved}.` : renameHint(name, "member");
+      const renamed = type.kind === "native" ? renamedMember(api, type.name, name) : undefined;
+      const hint = moved ? ` In Godot 4 use ${moved}.` : renamed ? ` Godot ${renamed.to} renamed it to ${renamed.replacement}.` : renameHint(name, "member");
       const names =
         type.kind === "native"
           ? api.ancestors(type.name).flatMap((c) => [...(c.methods ?? []), ...(c.members ?? []), ...(c.signals ?? []), ...(c.constants ?? [])].map((x) => x.name))
@@ -682,6 +780,45 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     }
   }
   return out;
+}
+
+/** The tokens of each argument of a call whose `(` is at `open`. */
+function splitArgs(tokens: Token[], open: number): Token[][] {
+  const close = closeIndex(tokens, open);
+  const out: Token[][] = [];
+  let current: Token[] = [];
+  let depth = 0;
+  for (let j = open + 1; j < close; j++) {
+    const t = tokens[j]!.t;
+    if (t === "(" || t === "[" || t === "{") depth++;
+    else if (t === ")" || t === "]" || t === "}") depth--;
+    if (t === "," && depth === 0) {
+      out.push(current);
+      current = [];
+    } else current.push(tokens[j]!);
+  }
+  if (current.length) out.push(current);
+  return out;
+}
+
+/** True when tokens[i] starts an assignment operator: `=`, `+=`, `<<=`, ... (`==` is one token). */
+function assignsAt(tokens: Token[], i: number): boolean {
+  const t = tokens[i]?.t;
+  if (t === "=") return true;
+  return t !== undefined && /^(?:[-+*/%&|^]|\*\*|<<|>>)$/.test(t) && tokens[i + 1]?.t === "=";
+}
+
+/** True when the script variable `name` of class `ownerId` (in the chain of `model`) has a setter: a set() block or `set = fn`. */
+function hasSetter(pm: ProjectModel, model: ClassModel, ownerId: string, name: string): boolean {
+  const owner = pm.chain(model).find((m) => m.id === ownerId);
+  const variable = owner?.outline.variables.find((v) => v.name === name);
+  if (!owner || !variable) return false;
+  const lines = owner.script.logicalLines;
+  const i = lines.findIndex((l) => l.line === variable.line);
+  if (i < 0) return false;
+  if (/\bset\s*=\s*[A-Za-z_]/.test(lines[i]!.code)) return true;
+  for (let k = i + 1; k < lines.length && lines[k]!.indent > lines[i]!.indent; k++) if (/^\s*set\s*[(:]/.test(lines[k]!.code)) return true;
+  return false;
 }
 
 /** Number of arguments in a call whose `(` is at `open`. */
