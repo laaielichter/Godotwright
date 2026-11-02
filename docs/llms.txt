@@ -18,6 +18,23 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 - [Roadmap](https://github.com/laaielichter/Godotwright/blob/main/ROADMAP.md)
 - [Privacy](https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md): nothing leaves the machine unless you opt in; no code, file names or paths are ever sent
 
+## Start here when something is broken
+
+`godotwright doctor [path] [--symptom "what you see"]` (godot_doctor): the review and, when Godot is installed, a headless load of every script and scene, grouped by cause and sorted most urgent first; each problem with its place, the lesson that explains it, the fix, and whether `godotwright fix` (godot_fix) or `godotwright migrate` can do it; then numbered next steps.
+`godotwright fix [path] [--write] [--check]` (godot_fix): mechanical fixes for review findings, each labelled safe (only removes the problem) or check (changes more); shows them first, then reviews the changed files again.
+
+## A game session that stays up
+
+`godotwright session start [path] [--scene res://x.tscn]` (godot_session op start): loads the scene once, headless and paused at frame 0, and keeps it running between commands (it quits after 15 idle minutes; `session stop` ends it). `godotwright game tree|get|set|call|eval|step|signals|layout|ray|ui|reload|errors` (godot_game): the live node tree, values read and set, methods called, Godot Expressions evaluated, `layout` (where 3D objects are and whether they rest on, float above or sink into what is below), `ray` (what a physics ray hits), `ui --size 1280x720 --size 720x1280` (clipped labels, off-screen panels, overlapping buttons), and `step <frames> --input "..." --watch Node.prop --until "condition"` with the same frame-exact input as play, and `reload [files...]` (the scripts you edited go into the running game; every node keeps its values; a script that does not compile is left as it was). Every answer lists the errors the game printed since the last one, with their call chain. Loopback only, with a token; the project is not changed.
+
+## Before an export
+
+`godotwright export [path] [--preset name]` (godot_export): compares export_presets.cfg with what the scripts and scenes load. Godot leaves excluded files out even when something preloads them, and exports plain data files (text, binary, GeoJSON, cfg, XML, YAML) only when include_filter names them (JSON and imported CSV are resources); both work in the editor and break in the build. Also: paths built at run time under an excluded folder, and whether export templates are installed.
+
+## Measuring performance
+
+`godotwright perf [path] --scene res://x.tscn [--input "..."] [--budget 16.6]` (godot_perf): runs the scene headless and reports frame-time p50/p95/p99/max against a budget, the physics step apart, the slowest frames with what changed on them, node and orphan counts, and the change since the last run of the same scene.
+
 ## Seeing the game run
 
 `godotwright check --scene res://x.tscn` (godot_check with scene or run_frames) runs a scene headless and returns what it printed: put print() calls in the code under test and read them back.
@@ -34,6 +51,14 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright usages <name>` (godot_usages): every place a function, signal, node, group, input action, autoload or res:// path is used, offline. Call it before renaming, moving or deleting.
 
+## Unused files and what loads what
+
+`godotwright deps unused|why <file>|of <file>|cycles [--path dir]` (godot_deps): follows what loads what from where the game starts (main scene, autoloads, every res:// path in project.godot, export include filters, the shipped file list in godotwright.json, add-ons, tests, editor scripts) through ext_resource, preload, load, class_name, folders and file names the code builds paths from, textures next to models and import settings. `unused` lists files nothing reaches, biggest first; `why` gives the chain from the game to a file; `of` lists what a scene loads with it and what it can load later; `cycles` finds scenes that load each other through ext_resource, which Godot cannot load (it says "[ext_resource] referenced non-existent resource" about a file that is there).
+
+## Undo
+
+`godotwright undo [path] [--steps n] [--list] [--force]` (godot_undo): every Godotwright write (scene and project edits, renames with their file moves, migrations, fixes, model builds inside the project) keeps the files as they were in .godot/godotwright/journal/ (the last 40). Undo puts back the newest writes first; a file changed after the write stops the undo, so later edits are not lost unless `--force`.
+
 ## Rename and move
 
 `godotwright rename <from> <to> [--write]` (godot_rename): renames a name or moves a res:// file everywhere at once, with a dry run first, and checks the review before and after.
@@ -48,7 +73,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 ## Play input and watch values
 
-`godotwright play [path] --scene res://x.tscn --input "10 tap jump; 20 hold right 30" --watch Player.position --watch Player.is_on_floor()` (godot_play): runs the scene headless, gives each input on exactly that physics frame, and returns the watched values per frame. Deterministic. Use it to see that the game does what the code says.
+`godotwright play [path] --scene res://x.tscn --input "10 tap jump; 20 hold right 30" --watch Player.position --watch Player.is_on_floor()` (godot_play): runs the scene headless, gives each input on exactly that physics frame, and returns the watched values per frame. Deterministic. Use it to see that the game does what the code says. `--until "Player.is_on_floor() == true"` stops at the first frame a condition holds, `--signal Player.landed` records when a signal fires with its arguments, `--summary` gives one line per watched value, and `--expect "Player.health > 0"` checks a claim (exit 1 when one fails). Runtime errors come with their GDScript call chain and a repeat count.
 
 `godotwright ci [path]` and `godotwright scenario [path]`: `ci` runs the review, `check`, the tests (when GUT or GdUnit4 is installed) and the scenarios, and prints one markdown table, exit code 1 when a step fails. A scenario is a JSON file in `.godotwright/scenarios/`: `{"scene": "res://main.tscn", "input": "10 tap jump", "frames": 70, "expect": ["Hero.velocity.y == -400 @ 10", "Hero.is_on_floor() == true"]}`. An expectation is `<Node.property> <==|!=|>=|<=|>|<> <value> [@ frame]`, checked on the last frame when none is given. Write one when you finish a change, so the proof stays in the project.
 

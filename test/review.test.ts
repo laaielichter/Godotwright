@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { join } from "node:path";
 import { GodotApi } from "../src/api/api.js";
 import { formatFinding, formatReview } from "../src/review/format.js";
 import { reviewProject } from "../src/review/review.js";
@@ -828,5 +829,55 @@ describe("coroutines in lambdas over several lines", () => {
       "a.gd": 'extends SceneTree\n\n\nfunc finish() -> void:\n\tawait process_frame\n\tquit()\n\n\nfunc _initialize() -> void:\n\tcreate_timer(5.0).timeout.connect(func() -> void:\n\t\tprint("late")\n\t\tfinish()\n\t)\n',
     });
     expect(reviewProject(root).findings.filter((f) => f.rule === "api/coroutine-without-await")).toEqual([]);
+  });
+});
+
+describe("runtime pitfalls stay quiet on idioms from a real project", () => {
+  const run = (code: string, rule: string) => {
+    const root = makeProject({ "project.godot": PROJECT, "a.gd": code });
+    return reviewProject(root).findings.filter((f) => f.rule === rule && f.file === "res://a.gd").map((f) => f.line);
+  };
+
+  it("a match branch that returns a ternary is not a lone ternary, but one that only calls is", () => {
+    const code = 'extends Node\n\n\nfunc a() -> void:\n\tpass\n\n\nfunc b() -> void:\n\tpass\n\n\nfunc value(key: String, on: bool) -> float:\n\tmatch key:\n\t\t"rpm": return 100.0 if on else 0.0\n\t\t"draw": a() if on else b()\n\treturn 0.0\n';
+    expect(run(code, "quality/standalone-ternary")).toEqual([15]);
+  });
+
+  it("a blink value is not a periodic trigger", () => {
+    const code = "extends Node\n\nvar t: float = 0.0\n\n\nfunc _process(delta: float) -> void:\n\tt += delta\n\tvar flash := int(t * 6.0) % 2 == 0\n\tif int(t * 6.0) % 2 == 0:\n\t\tprint(flash)\n";
+    expect(run(code, "quality/time-modulo-window")).toEqual([]);
+  });
+
+  it("a MultiMesh made anew in each pass of a loop starts at instance_count 0", () => {
+    const code = "extends Node\n\n\nfunc build() -> void:\n\tfor k in 3:\n\t\tvar mm := MultiMesh.new()\n\t\tmm.transform_format = MultiMesh.TRANSFORM_3D\n\t\tmm.use_colors = true\n\t\tmm.instance_count = 10\n";
+    expect(run(code, "api/multimesh-format-after-count")).toEqual([]);
+  });
+});
+
+describe("a focused review", () => {
+  it("gives exactly the findings of the full review for the focused files", () => {
+    const full = reviewProject(join(FIXTURES, "messy"));
+    const files = [...new Set(full.findings.map((f) => f.file.replace(/::.*$/, "")))];
+    expect(files.length).toBeGreaterThan(1);
+    for (const file of files) {
+      const part = reviewProject(join(FIXTURES, "messy"), { focus: [file] });
+      const key = (f: { rule: string; file: string; line?: number; message: string }) => `${f.rule}|${f.file}|${f.line}|${f.message}`;
+      expect(part.findings.map(key).sort()).toEqual(full.findings.filter((f) => f.file.replace(/::.*$/, "") === file).map(key).sort());
+    }
+  });
+});
+
+describe("signal connections saved in scenes", () => {
+  it("structure/connection-arguments: a method that cannot take what the signal passes", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn":
+        '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n\n[node name="Timer" type="Timer" parent="."]\n\n[node name="Button" type="Button" parent="."]\n\n[connection signal="timeout" from="Timer" to="." method="_on_timeout"]\n[connection signal="toggled" from="Button" to="." method="_on_toggled" binds=[7]]\n[connection signal="pressed" from="Button" to="." method="_on_pressed" flags=16]\n[connection signal="toggled" from="Button" to="." method="_on_any" unbinds=1]\n',
+      "main.gd":
+        "extends Node\n\n\nfunc _on_timeout(which: int) -> void:\n\tprint(which)\n\n\nfunc _on_toggled(on: bool, extra: int) -> void:\n\tprint(on, extra)\n\n\nfunc _on_pressed(source: Node) -> void:\n\tprint(source)\n\n\nfunc _on_any() -> void:\n\tpass\n",
+    });
+    const found = reviewProject(root).findings.filter((f) => f.rule === "structure/connection-arguments");
+    expect(found.map((f) => f.line)).toEqual([12]);
+    expect(found[0]!.message).toContain('"Method expected 1 argument(s), but called with 0"');
   });
 });

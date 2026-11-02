@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { JournalWriter } from "../journal/journal.js";
 import { join } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
 import { describeInputEvent, parseProjectSettings } from "../godot/project-settings.js";
@@ -33,6 +34,8 @@ export interface SettingsPlan {
   hunks: SettingsHunk[];
   warnings: string[];
   written: boolean;
+  /** The journal entry of the write (godot_undo). */
+  journal?: number;
   /** Review errors before and after, when written. */
   review?: { before: number; after: number };
 }
@@ -405,8 +408,10 @@ export function editProjectSettings(path: string, edit: SettingsEdit, options: {
   if (!options.write) return plan;
   const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
   const before = errors();
-  writeFileSync(file, text);
-  return { ...plan, written: true, review: { before, after: errors() } };
+  const journal = new JournalWriter(root, "project edit", plan.summary);
+  journal.write(file, text);
+  const id = journal.commit();
+  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
 }
 
 /** Long Object(InputEvent...) texts shown as their label, so a diff of the input map stays short. */
@@ -421,7 +426,7 @@ const shorten = (line: string): string =>
 
 /** The plan as a compact diff, with the warnings and, when written, the review errors before and after. */
 export function formatSettingsPlan(plan: SettingsPlan): string {
-  const out = [`project ${plan.summary}${plan.written ? " (written)" : " (dry run: add --write to apply)"}`, plan.file];
+  const out = [`project ${plan.summary}${plan.written ? ` (written${plan.journal ? `, journal #${plan.journal}: godot_undo reverts it` : ""})` : " (dry run: add --write to apply)"}`, plan.file];
   for (const h of plan.hunks) {
     h.removed.forEach((l, i) => out.push(`  ${i === 0 ? String(h.line).padStart(4) : "    "}  - ${shorten(l)}`));
     h.added.forEach((l, i) => out.push(`  ${i === 0 && !h.removed.length ? String(h.line).padStart(4) : "    "}  + ${shorten(l)}`));

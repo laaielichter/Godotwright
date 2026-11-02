@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Tier } from "../src/mcp/server.js";
-import { DEMO, FIXTURES } from "./helpers.js";
+import { DEMO, FIXTURES, makeProject } from "./helpers.js";
 
 async function connect(tier: Tier, root = DEMO) {
   const server = createServer({ tier, root, godot: "/no/such/godot" });
@@ -30,7 +30,12 @@ describe("MCP server (cheap profile)", () => {
       "godot_api_search",
       "godot_check",
       "godot_checklist",
+      "godot_deps",
+      "godot_doctor",
+      "godot_export",
       "godot_feedback",
+      "godot_fix",
+      "godot_game",
       "godot_lesson_add",
       "godot_lessons",
       "godot_migrate",
@@ -41,6 +46,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_model_lint",
       "godot_model_spec",
       "godot_model_view",
+      "godot_perf",
       "godot_play",
       "godot_project_edit",
       "godot_rename",
@@ -48,7 +54,9 @@ describe("MCP server (cheap profile)", () => {
       "godot_scan",
       "godot_scene_edit",
       "godot_screenshot",
+      "godot_session",
       "godot_test",
+      "godot_undo",
       "godot_usages",
     ]);
     expect(
@@ -228,6 +236,22 @@ describe("MCP server (premium profile)", () => {
     expect(textOf(escape)).toContain(
       "no such file in the project: res://../scripts/enemy.gd",
     );
+  });
+
+  it("finds what is wrong, in order, and fixes what is mechanical", async () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="Doc"\nconfig/features=PackedStringArray("4.7")\n',
+      "a.gd": 'extends Node\n\n\nfunc f(x: Node) -> void:\n\tif x is Node3D and is_instance_valid(x):\n\t\tprint("CafÃ©")\n\tlook_at_smooth()\n',
+    });
+    const doc = ((await client.callTool({ name: "godot_doctor", arguments: { path: root, godot: false, symptom: "helicopter slides off moving ship" } })) as { content: { text: string }[] }).content[0]!.text;
+    expect(doc).toMatch(/^doctor: Doc: 2 problems to fix, 2 to look at/);
+    expect(doc).toMatch(/1\. error \[api\/unknown-function\]/);
+    expect(doc).toMatch(/godot_fix can do this/);
+    expect(doc).toMatch(/physics\/moving-platform-velocity/);
+    expect(doc).toMatch(/Next:\n  1\) apply the 2 mechanical fixes with godot_fix/);
+    const fix = ((await client.callTool({ name: "godot_fix", arguments: { path: root, write: true } })) as { content: { text: string }[] }).content[0]!.text;
+    expect(fix).toMatch(/^fix: 2 fixes in 1 file \(written, journal #1: godot_undo reverts it\)/);
+    expect(fix).toMatch(/after the fixes: 1 error and 0 warnings left/);
   });
 
   it("describes all tools in its instructions", () => {

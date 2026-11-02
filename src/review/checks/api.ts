@@ -170,8 +170,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     return pm.data.shipped.has(resolveResPath(model.path, raw.split(/(?<=\.gd)\./)[0]!));
   };
 
-  for (const model of pm.allModels()) {
-    if (model.path !== path) continue;
+  for (const model of pm.modelsOf(path)) {
     if (model.extendsRaw && !pm.resolveClassRef(model.extendsRaw, model) && !options.foreignClasses && !shippedScript(model)) {
       const line = model.owner ? model.firstLine : (script.logicalLines.find((l) => /^(@\w+\s+)*(class_name\b.*\b)?extends\b/.test(l.text))?.line ?? 1);
       const name = model.extendsRaw.replace(/^"|"$/g, "");

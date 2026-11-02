@@ -19,7 +19,7 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
   const script = pm.data.scripts.get(path);
   if (!script) return [];
   const out: Finding[] = [];
-  const models = [...pm.allModels()].filter((m) => m.path === path);
+  const models = pm.modelsOf(path);
   for (const model of models) {
     for (const fn of model.outline.functions) {
       if (!PER_FRAME.has(fn.name)) continue;
@@ -66,8 +66,23 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
 
 /** Statements in a function body, including one written on the `func` line: `func _process(d): print(d)`. */
 export function bodyOf(lines: LogicalLine[], fn: FunctionInfo): LogicalLine[] {
-  const body = lines.filter((l) => l.line > fn.line && l.line <= fn.endLine && l.indent > fn.indent);
-  const inline = inlineBody(lines.find((l) => l.line === fn.line), fn);
+  // Logical lines are in line order: find the function's first line by bisection instead of scanning the whole script.
+  let lo = 0;
+  let hi = lines.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (lines[mid]!.line < fn.line) lo = mid + 1;
+    else hi = mid;
+  }
+  const body: LogicalLine[] = [];
+  let head: LogicalLine | undefined;
+  for (let i = lo; i < lines.length; i++) {
+    const l = lines[i]!;
+    if (l.line > fn.endLine) break;
+    if (l.line === fn.line) head ??= l;
+    else if (l.line > fn.line && l.indent > fn.indent) body.push(l);
+  }
+  const inline = inlineBody(head, fn);
   return inline ? [inline, ...body] : body;
 }
 

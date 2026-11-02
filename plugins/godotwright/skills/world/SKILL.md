@@ -21,6 +21,9 @@ Work on $ARGUMENTS (or what the user named).
    with margins; MultiMesh for many repeated objects.
 5. **Precision.** Past a few kilometres from the origin, float32 rounding shows in physics and in velocities computed
    from positions. Keep the active area near the origin or derive motion from physics.
-6. **Test with numbers.** A headless script that walks the network graph, measures terrain against roads every few
+6. **Look at the placement the engine computed.** With a `godot_session` running, `godot_game` `layout` lists every
+   3D object's position, size and lowest point and says what floats, what is buried and which scale looks like a unit
+   mistake; `ray` shows what a ray hits.
+7. **Test with numbers.** A headless script that walks the network graph, measures terrain against roads every few
    metres, and counts frame times on a fixed flight path. When the live data is out of reach, run the pipeline on a
    small synthetic world first.

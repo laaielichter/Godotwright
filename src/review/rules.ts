@@ -42,7 +42,7 @@ const list: Rule[] = [
   { id: "api/coroutine-without-await", category: "api", severity: "error", title: "Coroutine result used without await", fix: "Call the function with `await` where its result is used; a function that awaits is a coroutine." },
   { id: "api/timer-start-outside-tree", category: "api", severity: "warning", title: "Timer started before it is in the tree", fix: "Call add_child(timer) before timer.start(), or set autostart = true before adding it." },
   { id: "api/multimesh-format-after-count", category: "api", severity: "warning", title: "MultiMesh format set after instance_count", fix: "Set use_custom_data, use_colors and transform_format while instance_count is 0, then set instance_count." },
-  { id: "api/viewport-world-borrowed", category: "api", severity: "warning", title: "world_3d read from another viewport", fix: "Use find_world_3d() (or find_world_2d()): world_3d is null on a viewport that shows its parent's world." },
+  { id: "api/viewport-world-borrowed", category: "api", severity: "info", title: "world_3d read from another viewport", fix: "Use find_world_3d() (or find_world_2d()): world_3d is null on a viewport that shows its parent's world." },
   { id: "api/debug-only-monitor", category: "api", severity: "info", title: "Debug-only monitor read in every build", fix: "Read orphan-node and static-memory monitors only when OS.is_debug_build() is true; they are 0 in release exports." },
   // Performance.
   { id: "performance/node-lookup-per-frame", category: "performance", severity: "warning", title: "Node lookup every frame", fix: "Look the node up once in an @onready var and reuse it." },
@@ -87,6 +87,7 @@ const list: Rule[] = [
   { id: "structure/parse-error", category: "structure", severity: "error", title: "File does not parse", fix: "Fix the syntax error at the line shown, or re-save the file from the Godot editor." },
   { id: "structure/missing-node", category: "structure", severity: "warning", title: "Node path not in scene", fix: "Fix the node path, or add the node to the scene." },
   { id: "structure/bad-connection", category: "structure", severity: "error", title: "Broken signal connection", fix: "Fix the connection in the scene, or add the missing method or signal." },
+  { id: "structure/connection-arguments", category: "structure", severity: "error", title: "Connected method takes the wrong number of arguments", fix: "Give the method the signal's parameters (defaults for the ones it may skip), or use binds/unbinds in the connection." },
   { id: "structure/unknown-group", category: "structure", severity: "warning", title: "Group never assigned", fix: "Add nodes to the group (in the scene or with add_to_group()), or fix the name." },
   { id: "structure/file-naming", category: "structure", severity: "info", title: "File naming", fix: "Use snake_case for files and folders, as the Godot docs recommend." },
   { id: "structure/root-clutter", category: "structure", severity: "info", title: "Cluttered project root", fix: "Move scenes, scripts and assets into folders." },

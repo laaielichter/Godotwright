@@ -3,6 +3,13 @@ import { apiCommand } from "./commands/api.js";
 import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
+import { doctorCommand } from "./commands/doctor.js";
+import { exportCommand } from "./commands/export.js";
+import { undoCommand } from "./commands/undo.js";
+import { depsCommand } from "./commands/deps.js";
+import { perfCommand } from "./commands/perf.js";
+import { gameCommand, sessionCommand } from "./commands/session.js";
+import { fixCommand } from "./commands/fix.js";
 import { hookCommand } from "./commands/hook.js";
 import { learnCommand } from "./commands/learn.js";
 import { lessonsCommand } from "./commands/lessons.js";
@@ -34,12 +41,20 @@ export function createProgram(): Command {
     .addCommand(checkCommand())
     .addCommand(testCommand())
     .addCommand(playCommand())
+    .addCommand(perfCommand())
+    .addCommand(sessionCommand())
+    .addCommand(gameCommand())
     .addCommand(scenarioCommand())
     .addCommand(ciCommand())
     .addCommand(screenshotCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
     .addCommand(migrateCommand())
+    .addCommand(fixCommand())
+    .addCommand(doctorCommand())
+    .addCommand(exportCommand())
+    .addCommand(undoCommand())
+    .addCommand(depsCommand())
     .addCommand(usagesCommand())
     .addCommand(renameCommand())
     .addCommand(projectCommand())

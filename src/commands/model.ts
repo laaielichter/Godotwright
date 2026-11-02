@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { Command, Option } from "commander";
 import { briefFor } from "../archetype/brief.js";
 import { chooseArchetype } from "../archetype/check.js";
@@ -6,10 +6,9 @@ import { formatArchetype, formatChecked, formatIdentify, formatTree } from "../a
 import { identify } from "../archetype/identify.js";
 import { ArchetypeError, loadLibrary } from "../archetype/library.js";
 import { BuildError } from "../build/params.js";
-import { allKinds, buildKind } from "../build/generators/index.js";
+import { allKinds } from "../build/generators/index.js";
 import { loadRecipes } from "../build/recipes.js";
 import { buildModel } from "../build/run.js";
-import { buildSpec } from "../build/spec.js";
 import { EXAMPLE_SPEC, SPEC_CHEAT, SPEC_HELP } from "../build/spec-help.js";
 import { contractFromArchetype, contractFromModel, loadContract } from "../model/contract.js";
 import { formatModelInfo, formatModelReport } from "../model/format.js";

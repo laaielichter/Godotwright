@@ -7,6 +7,7 @@ import { lintModelFile, type ModelReport } from "../model/lint.js";
 import { buildGlb, type BuildNode, type BuildScene } from "./glb.js";
 import { buildKind } from "./generators/index.js";
 import { heightmapSceneText, heightmapShapeText } from "./heightmap.js";
+import { JournalWriter } from "../journal/journal.js";
 import { findProjectRoot } from "../project/files.js";
 import { BuildError } from "./params.js";
 import { buildSpec } from "./spec.js";
@@ -67,6 +68,10 @@ export function buildModel(request: BuildRequest): BuildOutcome {
   }
   const scene = request.collision && request.collision !== "heightmap" ? withCollisionHints(built, request.collision) : built;
   mkdirSync(dirname(request.out), { recursive: true });
+  // A model written inside a project goes in its journal, with the files written next to it (godot_undo).
+  const projectRoot = findProjectRoot(dirname(request.out));
+  const journal = projectRoot ? new JournalWriter(projectRoot, "model build", `${request.kind ?? "spec"} -> ${request.out.slice(request.out.lastIndexOf(sep) + 1)}`) : undefined;
+  journal?.remember(request.out);
   writeFileSync(request.out, buildGlb(scene, { textures: request.textures !== false }));
   const extra: string[] = [];
   const NOFOLLOW = constants.O_NOFOLLOW ?? 0;
@@ -88,11 +93,13 @@ export function buildModel(request: BuildRequest): BuildOutcome {
   };
   /** Writes (or replaces) a file next to the model. */
   const writeBeside = (file: string, text: string): void => {
+    journal?.remember(file);
     write(open(file, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC), text);
     extra.push(file);
   };
   /** Writes a new file next to the model; an existing one is left as it is. Says whether it now holds `text`. */
   const writeNew = (file: string, text: string): "written" | "same" | "kept" => {
+    journal?.remember(file);
     try {
       write(open(file, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL), text);
     } catch (error) {
@@ -143,8 +150,10 @@ export function buildModel(request: BuildRequest): BuildOutcome {
         : "";
   const summary = `built ${request.out}: ${info.triangles.toLocaleString("en-US")} triangles, ${info.nodes.length} nodes, ${size} m (x y z), lint ${report.overall}/100${report.archetype ? ` (checked as ${report.archetype})` : ""}${hint}`;
   if (request.contractOut) {
+    journal?.remember(request.contractOut);
     mkdirSync(dirname(request.contractOut), { recursive: true });
     writeFileSync(request.contractOut, `${JSON.stringify(contractFromModel(info), null, 2)}\n`);
   }
-  return { file: request.out, extra, summary, report };
+  const id = journal?.commit();
+  return { file: request.out, extra, summary: id ? `${summary} (journal #${id}: godot_undo reverts it)` : summary, report };
 }
