@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { pluginOptions } from "../src/commands/hook.js";
@@ -9,6 +9,8 @@ import { preEdit, runHook } from "../src/hooks/agent-hooks.js";
 import { JournalWriter, undoJournal } from "../src/journal/journal.js";
 import { createServer } from "../src/mcp/server.js";
 import { ProtectedPathError, assertWritable, protectionOf } from "../src/project/protect.js";
+import { BaselineError, compareBaseline } from "../src/screenshot/baseline.js";
+import { encodePng } from "../src/screenshot/png.js";
 import { runCli, tempFolder } from "./helpers.js";
 
 const SCENE = '[gd_scene format=3]\n\n[node name="Main" type="Node2D"]\n';
@@ -51,6 +53,29 @@ describe("protected paths", () => {
     const env = { GODOTWRIGHT_PROTECT: `${join(top, "baseline-authoring")},${join(top, "nothing")}` };
     expect(protectionOf(join(top, "baseline-authoring", "a.gd"), env)?.source).toBe("$GODOTWRIGHT_PROTECT");
     expect(protectionOf(join(top, "development", "a.gd"), { GODOTWRIGHT_PROTECT: "${user_config.protect}" })).toBeUndefined();
+  });
+
+  it.skipIf(process.platform === "win32")("follows a dangling symlink to the target a write would create", () => {
+    const top = workspace();
+    symlinkSync(join("..", "..", "installed-code", "new_file.gd"), join(top, "development", "candidate", "dangling.gd"));
+    expect(protectionOf("development/candidate/dangling.gd", {}, top)?.path).toBe(join(top, "installed-code"));
+    // A link to a link that does not exist yet either.
+    symlinkSync("dangling.gd", join(top, "development", "candidate", "twice.gd"));
+    expect(protectionOf(join(top, "development", "candidate", "twice.gd"), {}, top)).toBeDefined();
+    // A link loop is not protected, and does not hang.
+    symlinkSync("loop.gd", join(top, "development", "candidate", "loop.gd"));
+    expect(protectionOf(join(top, "development", "candidate", "loop.gd"), {}, top)).toBeUndefined();
+  });
+
+  it("guards the godotwright.json that holds a protect list, so it cannot be edited away", () => {
+    const top = workspace();
+    const p = protectionOf("godotwright.json", {}, top);
+    expect(p?.list).toBe(true);
+    expect(() => assertWritable(join(top, "godotwright.json"), {}, top)).toThrow(/holds a "protect" list and is guarded/);
+    // A godotwright.json without a list is free to change.
+    writeFileSync(join(top, "development", "candidate", "godotwright.json"), "{}");
+    expect(protectionOf(join(top, "development", "candidate", "godotwright.json"), {}, top)).toBeUndefined();
+    expect(deny(preEdit({ cwd: top, tool_name: "Write", tool_input: { file_path: "godotwright.json" } }, { env: {} }))).toBe("deny");
   });
 
   it("refuses journaled writes, keeping what was written before in the journal", () => {
@@ -164,6 +189,33 @@ describe("Godotwright's write tools in a protected project", () => {
     expect(readFileSync(join(root, "project.godot"), "utf8")).toBe(PROJECT);
     expect(existsSync(join(root, "models"))).toBe(false);
     expect(existsSync(join(root, "moved.tscn"))).toBe(false);
+  });
+
+  it("refuses screenshots of a model and baselines that would be written into a protected project", async () => {
+    const top = workspace(["installed-code"]);
+    const root = join(top, "installed-code");
+    writeFileSync(join(root, "house.glb"), "glTF");
+    const { client, close } = await connect(root);
+    const call = async (args: Record<string, unknown>) => (await client.callTool({ name: "godot_screenshot", arguments: args })) as Result;
+    for (const r of [await call({ model: "res://house.glb" }), await call({ model: "house.glb" }), await call({ baseline: "b1", frames: 3 })]) {
+      expect(r.isError, r.content[0]?.text).toBe(true);
+      expect(r.content[0]?.text).toMatch(/is protected/);
+    }
+    await close();
+    expect(existsSync(join(root, "house.png"))).toBe(false);
+    expect(existsSync(join(root, ".godotwright"))).toBe(false);
+  });
+
+  it("refuses to make or update a baseline in a protected project, but still compares one", () => {
+    const top = workspace(["installed-code"]);
+    const root = join(top, "installed-code");
+    const shot = join(top, "shot.png");
+    writeFileSync(shot, encodePng(2, 2, new Uint8Array(12).fill(200)));
+    const meta = { width: 2, height: 2, frames: 3 };
+    expect(() => compareBaseline(root, "b1", shot, { meta })).toThrow(BaselineError);
+    expect(() => compareBaseline(root, "b1", shot, { meta })).toThrow(/is protected/);
+    expect(existsSync(join(root, ".godotwright"))).toBe(false);
+    expect(compareBaseline(root, "b1", shot, { meta, createMissing: false }).status).toBe("missing");
   });
 
   it("refuses an undo that would write into a protected path", async () => {
