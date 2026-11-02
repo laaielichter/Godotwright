@@ -5,6 +5,7 @@ installs, the [install page](https://laaielichter.github.io/Godotwright/install.
 
 - [Commands](#commands)
 - [Port Godot 3 scripts to Godot 4](#port-godot-3-scripts-to-godot-4)
+- [Shaders](#shaders)
 - [Review in GitHub Actions](#review-in-github-actions)
 - [Mods and patches over a game](#mods-and-patches-over-a-game)
 - [Install in your coding agent (MCP)](#install-in-your-coding-agent-mcp)
@@ -45,7 +46,9 @@ godotwright project autoload add Game res://game.gd --write   # checks the file 
 godotwright scene add main.tscn . Music AudioStreamPlayer --write   # add a node (or an instance: res://enemy.tscn); only that line changes
 godotwright scene set main.tscn Timer wait_time 0.5 --write   # property name and type checked; enums by name, resources as res:// files
 godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns when the method is missing or takes other arguments
-godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
+godotwright migrate --write         # port Godot 3 scripts and shaders to Godot 4 where that is mechanical; lists what is left
+godotwright shader                  # review every shader against Godot 4.7's shader tables and compile it headless; file:line
+godotwright api shader:spatial.fragment   # the built-ins of a shader type and function; `api ALBEDO` says where one exists
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
 godotwright review [path] --detail full --min-score 90
@@ -194,6 +197,16 @@ it lists with the line: `setget`, `move_and_slide(velocity)`, `remote func`, exp
 project settings are not touched; Godot's own `--convert-3to4` does those. Commit first; a second run makes no further
 changes.
 
+`migrate` also ports `.gdshader` and `.gdshaderinc` files: the names in Godot's own shader rename table (`hint_albedo` and
+`hint_color` to `source_color`, `hint_black_albedo` to `source_color, hint_default_black`, `WORLD_MATRIX` to
+`MODEL_MATRIX`, `CAMERA_MATRIX` to `INV_VIEW_MATRIX`, `INV_CAMERA_MATRIX` to `VIEW_MATRIX`, `NORMALMAP` to `NORMAL_MAP`,
+`TRANSMISSION` to `BACKLIGHT`, `ALPHA_SCISSOR` to `ALPHA_SCISSOR_THRESHOLD`, `hint_aniso` to `hint_anisotropy`,
+`depth_draw_alpha_prepass` to `depth_prepass_alpha`, ...), also inside `#define` lines, and `SCREEN_TEXTURE`,
+`DEPTH_TEXTURE` and `NORMAL_ROUGHNESS_TEXTURE` get the sampler uniform Godot's own error suggests
+(`uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;`). It lists `CLEARCOAT_GLOSS` (now
+`CLEARCOAT_ROUGHNESS`, which is 1.0 - gloss), a particle shader's `vertex()` (now `start()` and `process()`) and `COLOR`
+written in a spatial `fragment()` as work by hand. Shaders stored inside scenes are not rewritten.
+
 ### Cheaper fix loops: only what changed
 
 ```sh
@@ -204,6 +217,57 @@ Every review remembers its findings in `.godot/godotwright/review-last.json` (Go
 `--only-new` (MCP: `only_new: true`) the next review prints the findings that are new since then in full, the ones you
 already saw as one short line each (`file:line [rule]`), and how many are fixed. A finding keeps its identity when its
 line moves. An agent fixing a long list reads the list once instead of after every edit.
+
+## Shaders
+
+```sh
+godotwright shader                          # every shader: static review, then a headless compile when Godot is found
+godotwright shader --file res://fx/water.gdshader   # one shader (an include also compiles the shaders that use it)
+godotwright shader --no-compile             # static review only, no Godot needed
+godotwright shader --compile --json         # CI: fail when Godot is missing, JSON out, exit 1 on an error
+```
+
+`shader` (MCP: `godot_shader`) checks every `.gdshader`, every `.gdshaderinc` and every Shader resource stored in a scene
+or resource (reported as `res://level.tscn::Shader_id:line`, with the line in the scene file) in two ways:
+
+1. **A static review against Godot 4.7's own tables.** The built-ins of each shader type and processor function, which
+   of them are read-only, the stage functions and the render modes come from `servers/rendering/shader_types.cpp` of the
+   4.7.2 source, bundled in the API data; an integration test compiles every entry with Godot 4.7.2. The findings are
+   ordinary review rules, so `godot_review`, its score, SARIF, the CI receipt, the post-edit hook and `godot_feedback`
+   see them too:
+
+   | Rule | What it finds |
+   | --- | --- |
+   | `api/shader-renamed` | Godot 3 names from Godot's rename table (`hint_color`, `WORLD_MATRIX`, `NORMALMAP`, `depth_draw_alpha_prepass`, ...), `CLEARCOAT_GLOSS`, `EXTRA_MATRIX`, and a particle shader's `vertex()` |
+   | `api/shader-removed-builtin` | `SCREEN_TEXTURE`, `DEPTH_TEXTURE` and `NORMAL_ROUGHNESS_TEXTURE`, which are sampler uniforms with a hint now |
+   | `api/shader-builtin-misplaced` | A built-in of another shader type (`ALBEDO` in a `canvas_item` shader), another processor function (`COLOR` in a spatial `light()`), or a processor built-in used in your own function (`UV` in a helper); `discard` in `vertex()`; stage functions such as `texture_sdf()` where Godot does not offer them |
+   | `api/shader-read-only-builtin` | A read-only built-in written, such as `COLOR` in a spatial `fragment()` (write `ALBEDO`) or `VERTEX` in `fragment()`; `COLOR` in `vertex()` is fine |
+   | `api/shader-render-mode` | A render or stencil mode the shader type does not have, with the nearest names |
+   | `api/shader-type` | A missing or misspelled `shader_type` |
+   | `structure/shader-missing-include` | An `#include` whose file does not exist (Godot only says `Unknown character #35: '#'`) |
+   | `quality/shader-color-no-source-color` | A colour uniform (`vec3`/`vec4` named like a colour, or written straight into `ALBEDO`, `EMISSION`, `COLOR` or `FOG`) or albedo texture without `source_color` in a 3D, sky, fog or particle shader; Forward+ and Mobile then use the sRGB value as linear. Quiet on the Compatibility renderer, which does not convert |
+   | `performance/shader-discard` | `discard` in an opaque spatial shader: Godot can no longer use its shared depth-only material for the mesh's depth prepass and shadows (info) |
+   | `performance/shader-screen-read` | A spatial shader that reads the screen, depth or normal-roughness texture: it draws in the transparent pass, without a depth prepass, and casts no shadow (info) |
+   | `performance/shader-texture-in-loop` | Texture reads in a loop with more than 16 reads per pixel, or an open-ended count (info) |
+   | `quality/shader-reads-own-depth` | A shader that reads the depth texture while it writes depth in the alpha prepass |
+
+   Names a shader declares itself (uniforms, locals, structs, `#define`s, and those of the files it includes) are never
+   taken for built-ins, and when an include is missing the built-in rules stay quiet rather than guess.
+
+2. **A headless compile by real Godot.** Under `--headless` Godot's dummy renderer still runs the full shader compiler,
+   but only when a shader is used: `load()` alone does not compile it, `get_rid()` does. So no display, GPU, `xvfb` or
+   rendered frame is needed, and it runs in CI. Unsaved code (`code` + `file`) and Shaders stored in scenes are compiled
+   from their code with their own path, so relative `#include`s resolve as in the game. Godot's errors come back as
+   `res://file:line: error [godot] message`: the line Godot names (`at: (null) (:4)`), or the line in the include. Godot's
+   code echo and the follow-up `Shader compilation failed.` are left out, a two-line message is kept whole, and a Godot
+   error on a line the review already reports is shown once. `compile: false` (CLI `--no-compile`) skips this step; without
+   Godot it is skipped with a note unless `--compile` requires it.
+
+`godot_check` compiles every `.gdshader` too, also those no scene uses, and reports them as `res://file.gdshader:line`.
+`godot_fix` renames the Godot 3 names and adds the missing texture uniforms (both `safe`). `godot_api` answers shader
+questions: `ALBEDO` gives every shader type and function that has it and whether it can be written there,
+`shader:canvas_item.fragment` lists a function's built-ins (`shader:spatial` adds the render modes), and `hint_albedo`
+gives its Godot 4 name.
 
 ## Review in GitHub Actions
 
@@ -328,7 +392,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 32 tools
+### The 33 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -345,11 +409,12 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
-| `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
+| `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
+| `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; errors as `file:line` |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
-| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
+| `godot_check` | Run Godot headless (load every script and scene, compile every shader) and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
