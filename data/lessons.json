@@ -5535,6 +5535,113 @@
         "geheugen",
         "lek"
       ]
+    },
+    {
+      "id": "gdscript/packed-element-write-lost",
+      "topic": "gdscript",
+      "title": "In Godot 4.7 writing one element of a packed array property changes a copy",
+      "symptom": "After the move to Godot 4.7 a line, polygon or gradient stopped updating: code that wrote one point of it ran without an error, but the node kept the old points. A script variable with a setter changed, but the work in its setter (a redraw, a signal) no longer happened.",
+      "cause": "Since Godot 4.7, writing one element of a packed array no longer calls the setter of the whole property. An engine property hands out a copy of its array, so the write lands in the copy and is lost; a script variable is changed in place, without its setter.",
+      "fix": "Copy the array into a local variable, change the copy, and assign the whole array back to the property. Do the same for a script variable whose setter must run.",
+      "test": "Print the element after the write: in Godot 4.7 a point of a Line2D written through its points property stays at its old value until the whole array is assigned.",
+      "rules": [
+        "api/packed-element-write",
+        "quality/packed-setter-skipped"
+      ],
+      "tags": [
+        "packed array",
+        "setter",
+        "line",
+        "polygon",
+        "godot 4.7",
+        "upgrade",
+        "lost write"
+      ]
+    },
+    {
+      "id": "gdscript/override-inherits-return-type",
+      "topic": "gdscript",
+      "title": "An override without a return type inherits the parent's in Godot 4.7",
+      "symptom": "Scripts that loaded in Godot 4.6 stopped with a parse error in 4.7 on overrides such as _get(), _set() or _get_configuration_warnings() that only did some work and returned nothing.",
+      "cause": "Since Godot 4.7 an override without a return type takes the return type of the method it overrides, also of engine virtual methods. A body that does not return a value on every path is then an error, and a bare return in a method that returns bool is one too.",
+      "fix": "Return a value of the parent's type on every path: false for bool, an empty array for an array, null only where the parent returns Variant or an object.",
+      "test": "Run the Godot check after the upgrade: every override it reports with this message needs a return value.",
+      "rules": [
+        "api/override-missing-return"
+      ],
+      "tags": [
+        "override",
+        "return type",
+        "virtual",
+        "parse error",
+        "godot 4.7",
+        "upgrade"
+      ],
+      "errors": [
+        "Not all code paths return a value"
+      ]
+    },
+    {
+      "id": "ui/rich-text-image-unit",
+      "topic": "ui",
+      "title": "RichTextLabel image size flags became an enum in Godot 4.7",
+      "symptom": "A script that passed true or false for the percent flags of add_image() or update_image() stopped loading in Godot 4.7, although the upgrade guide lists the change as compatible.",
+      "cause": "The two percent flags became unit parameters of type RichTextLabel.ImageUnit, and typed GDScript does not turn a bool into that enum.",
+      "fix": "Pass RichTextLabel.IMAGE_UNIT_PIXEL for false and IMAGE_UNIT_PERCENT for true.",
+      "rules": [
+        "api/image-unit-bool"
+      ],
+      "tags": [
+        "richtextlabel",
+        "add_image",
+        "update_image",
+        "enum",
+        "godot 4.7",
+        "upgrade"
+      ],
+      "errors": [
+        "as \"RichTextLabel.ImageUnit\""
+      ]
+    },
+    {
+      "id": "gameplay/input-device-keyboard-mouse",
+      "topic": "gameplay",
+      "title": "Keyboard and mouse events are no longer device 0 in Godot 4.7",
+      "symptom": "After the move to Godot 4.7 keyboard and mouse input for the first local player stopped working, while the first gamepad still worked.",
+      "cause": "Godot 4.7 gives keyboard events the device InputEvent.DEVICE_ID_KEYBOARD and mouse events DEVICE_ID_MOUSE, because a gamepad can be device 0 too. Code that took device 0 to mean keyboard and mouse no longer matches them.",
+      "fix": "Test the event type, or compare the device with InputEvent.DEVICE_ID_KEYBOARD and DEVICE_ID_MOUSE; keep device numbers for gamepads.",
+      "rules": [
+        "api/input-device-zero"
+      ],
+      "tags": [
+        "input",
+        "device",
+        "keyboard",
+        "mouse",
+        "local multiplayer",
+        "godot 4.7",
+        "upgrade"
+      ]
+    },
+    {
+      "id": "physics/jolt-world-boundary-sign",
+      "topic": "physics",
+      "title": "Under Jolt the distance of a world boundary plane flipped in Godot 4.7",
+      "symptom": "After the move to Godot 4.7 with the Jolt engine, bodies fell through the floor or rested above it where a world boundary shape used a plane distance other than zero.",
+      "cause": "Godot 4.7 makes Jolt read the plane distance of a world boundary shape the way the built-in engine does, which is the opposite sign of what Jolt used in 4.6.",
+      "fix": "Flip the sign of the plane distance on every world boundary shape, or move the static body instead and keep the distance at zero.",
+      "test": "Drop a ball onto the boundary and print where it rests: it must rest on the side and at the height you meant.",
+      "rules": [
+        "api/upgrade-world-boundary-jolt"
+      ],
+      "tags": [
+        "jolt",
+        "world boundary",
+        "plane",
+        "floor",
+        "godot 4.7",
+        "upgrade"
+      ]
     }
   ]
 }

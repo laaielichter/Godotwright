@@ -13,14 +13,16 @@ export function fixCommand(): Command {
     .option("--rule <id>", "only this rule (repeatable)", collect, [])
     .option("--check", "also apply the fixes marked check")
     .option("--stamp-uids", "also give every scene, resource, script and shader without a uid a new one")
+    .option("--from <version>", "release the project comes from, for the upgrade fixes (default: the saved version)")
     .option("--write", "write the fixes (default: only show them)")
     .addOption(new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief"))
     .option("--json", "print the result as JSON")
-    .action((path: string, options: { file: string[]; rule: string[]; check?: boolean; stampUids?: boolean; write?: boolean; detail: "brief" | "full"; json?: boolean }, command: Command) => {
+    .action((path: string, options: { file: string[]; rule: string[]; check?: boolean; stampUids?: boolean; from?: string; write?: boolean; detail: "brief" | "full"; json?: boolean }, command: Command) => {
       try {
         const result = fixProject(path, {
           ...(options.file.length ? { files: options.file } : {}),
           ...(options.rule.length ? { rules: options.rule } : {}),
+          ...(options.from ? { from: options.from } : {}),
           includeCheck: options.check,
           stampUids: options.stampUids,
           write: options.write,

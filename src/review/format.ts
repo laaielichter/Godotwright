@@ -13,6 +13,7 @@ export function formatFinding(f: Finding): string {
 export function formatReviewSummary(report: ReviewReport): string {
   const out: string[] = [];
   out.push(`AAA review: ${report.project} (Godot ${report.godot}, ${report.scripts} scripts, ${report.scenes} scenes)`);
+  if (report.upgrade?.from) out.push(`upgrade: Godot ${report.upgrade.from} -> ${report.upgrade.target} (changes in between are reported)`);
   out.push(`overall: ${report.overall}/100`);
   for (const c of report.categories) {
     const counts = [c.errors && `${c.errors} errors`, c.warnings && `${c.warnings} warnings`, c.infos && `${c.infos} infos`].filter(Boolean).join(", ");

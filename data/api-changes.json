@@ -1,0 +1,287 @@
+{
+ "source": "upgrading_to_godot_4.6.rst and upgrading_to_godot_4.7.rst (godot-docs master), checked against Godot 4.6.2 and 4.7.2",
+ "changes": [
+  {
+   "id": "packed-element-write",
+   "to": "4.7",
+   "kind": "behaviour",
+   "class": "GDScript",
+   "message": "Writing one element of a packed array no longer calls the property's setter. On an engine property (Line2D.points[0] = v, Polygon2D.polygon[i] += v, points[0].x = v) the write is lost: the node keeps the old array. A script variable with a set() block changes, but its setter does not run.",
+   "fix": "Copy, change, assign back: var p := line.points; p[0] = v; line.points = p.",
+   "gh": "GH-113228",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/packed-element-write",
+    "quality/packed-setter-skipped"
+   ]
+  },
+  {
+   "id": "typed-return-inherited",
+   "to": "4.7",
+   "kind": "behaviour",
+   "class": "GDScript",
+   "message": "An override without a return type now inherits the parent's (also of engine virtuals such as _get, _set, _get_configuration_warnings): a body without a return value stops the script with \"Not all code paths return a value\".",
+   "fix": "Return a value of the parent's type on every path (return false for bool; return null only for Variant or Object).",
+   "gh": "GH-115763",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/override-missing-return"
+   ]
+  },
+  {
+   "id": "input-device-ids",
+   "to": "4.7",
+   "kind": "default",
+   "class": "InputEvent",
+   "member": "device",
+   "message": "Keyboard events now have device InputEvent.DEVICE_ID_KEYBOARD (16) and mouse events DEVICE_ID_MOUSE (32), not 0; joypad 0 keeps 0. `event.device == 0` no longer means keyboard or mouse.",
+   "fix": "Test the event type (event is InputEventKey), or compare with InputEvent.DEVICE_ID_KEYBOARD / DEVICE_ID_MOUSE.",
+   "gh": "GH-116274",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/input-device-zero"
+   ]
+  },
+  {
+   "id": "audio-area-mask",
+   "to": "4.7",
+   "kind": "default",
+   "class": "AudioStreamPlayer2D",
+   "member": "area_mask",
+   "message": "Default changed from 1 to 0 (no area): an Area2D with audio_bus_override no longer reroutes players left at the default.",
+   "fix": "Set area_mask = 1 on the players that an audio_bus_override area should affect.",
+   "gh": "GH-107679",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/upgrade-area-mask"
+   ]
+  },
+  {
+   "id": "audio-area-mask-3d",
+   "to": "4.7",
+   "kind": "default",
+   "class": "AudioStreamPlayer3D",
+   "member": "area_mask",
+   "message": "Default changed from 1 to 0 (no area): an Area3D with audio_bus_override no longer reroutes players left at the default.",
+   "fix": "Set area_mask = 1 on the players that an audio_bus_override area should affect.",
+   "gh": "GH-107679",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/upgrade-area-mask"
+   ]
+  },
+  {
+   "id": "jolt-world-boundary",
+   "to": "4.7",
+   "kind": "behaviour",
+   "class": "WorldBoundaryShape3D",
+   "member": "plane",
+   "message": "Under Jolt Physics the sign of plane.d now follows Godot's convention: Plane(0, 1, 0, 2) is a floor at y = +2, where Godot 4.6 put it at y = -2.",
+   "fix": "Flip the sign of d to keep the 4.6 position.",
+   "gh": "GH-118948",
+   "verified": "4.6.2 vs 4.7.2 (a ball rests at y -1.5 in 4.6.2, 2.5 in 4.7.2)",
+   "rules": [
+    "api/upgrade-world-boundary-jolt"
+   ]
+  },
+  {
+   "id": "jolt-soft-body",
+   "to": "4.7",
+   "kind": "behaviour",
+   "class": "SoftBody3D",
+   "member": "total_mass",
+   "message": "Under Jolt Physics a SoftBody3D now weighs total_mass (1 kg by default) in all, not 1 kg per point, and linear_stiffness and damping act like Godot Physics. Area3D now reports overlaps with soft bodies.",
+   "fix": "Re-tune total_mass, linear_stiffness and damping_coefficient; use collision layers to keep areas from seeing soft bodies.",
+   "gh": "GH-116041",
+   "verified": "4.7.2 class reference (the change is inside Jolt; the property values are the same in 4.6.2)",
+   "rules": [
+    "quality/upgrade-note"
+   ]
+  },
+  {
+   "id": "rtl-image-unit",
+   "to": "4.7",
+   "kind": "signature",
+   "class": "RichTextLabel",
+   "member": "add_image",
+   "message": "width_in_percent and height_in_percent became width_unit and height_unit (RichTextLabel.ImageUnit); width and height are float. Passing true or false there is a parse error (\"Cannot pass a value of type bool\"), although the guide calls it compatible.",
+   "fix": "Pass RichTextLabel.IMAGE_UNIT_PIXEL or IMAGE_UNIT_PERCENT.",
+   "gh": "GH-112617",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/image-unit-bool"
+   ]
+  },
+  {
+   "id": "rtl-image-unit-update",
+   "to": "4.7",
+   "kind": "signature",
+   "class": "RichTextLabel",
+   "member": "update_image",
+   "message": "width_in_percent and height_in_percent became width_unit and height_unit (RichTextLabel.ImageUnit); passing true or false there is a parse error.",
+   "fix": "Pass RichTextLabel.IMAGE_UNIT_PIXEL or IMAGE_UNIT_PERCENT.",
+   "gh": "GH-112617",
+   "verified": "4.6.2 vs 4.7.2",
+   "rules": [
+    "api/image-unit-bool"
+   ]
+  },
+  {
+   "id": "rtl-update-width-unit",
+   "to": "4.7",
+   "kind": "renamed",
+   "class": "RichTextLabel",
+   "member": "UPDATE_WIDTH_IN_PERCENT",
+   "replacement": "UPDATE_WIDTH_UNIT",
+   "message": "Renamed to UPDATE_WIDTH_UNIT.",
+   "gh": "GH-112617",
+   "verified": "4.6.2 vs 4.7.2 (extension_api dumps)"
+  },
+  {
+   "id": "blend-space-sync-1d",
+   "to": "4.7",
+   "kind": "renamed",
+   "class": "AnimationNodeBlendSpace1D",
+   "member": "sync",
+   "replacement": "sync_mode",
+   "message": "The bool sync became the SyncMode enum sync_mode; a saved sync = true loads as sync_mode 1.",
+   "verified": "4.7.2 (a .tscn with sync = true loads with sync_mode 1)"
+  },
+  {
+   "id": "blend-space-sync-2d",
+   "to": "4.7",
+   "kind": "renamed",
+   "class": "AnimationNodeBlendSpace2D",
+   "member": "sync",
+   "replacement": "sync_mode",
+   "message": "The bool sync became the SyncMode enum sync_mode.",
+   "verified": "4.7.2 class reference"
+  },
+  {
+   "id": "spectrum-tap-back-pos",
+   "to": "4.7",
+   "kind": "removed",
+   "class": "AudioEffectSpectrumAnalyzer",
+   "member": "tap_back_pos",
+   "message": "Removed.",
+   "gh": "GH-114355",
+   "verified": "4.6.2 vs 4.7.2 (extension_api dumps)"
+  },
+  {
+   "id": "linear-to-srgb-clamp",
+   "to": "4.7",
+   "kind": "behaviour",
+   "class": "VisualShaderNodeColorFunc",
+   "member": "FUNC_LINEAR_TO_SRGB",
+   "message": "No longer clamps to [0, 1] in the Mobile and Forward+ renderers.",
+   "fix": "Add a clamp node after it where the old range mattered.",
+   "gh": "GH-113956",
+   "verified": "guide only (rendering)"
+  },
+  {
+   "id": "line-feather",
+   "to": "4.7",
+   "kind": "behaviour",
+   "class": "CanvasItem",
+   "member": "draw_line",
+   "message": "Antialiased lines no longer get an extra feather, so they look thinner.",
+   "fix": "Draw a slightly wider line where the old look mattered.",
+   "gh": "GH-105122",
+   "verified": "guide only (rendering)"
+  },
+  {
+   "id": "mesh-skeleton-default",
+   "to": "4.6",
+   "kind": "default",
+   "class": "MeshInstance3D",
+   "member": "skeleton",
+   "message": "Default changed from NodePath(\"..\") to NodePath(\"\"): a skinned mesh saved before 4.6 directly under its Skeleton3D, without a skeleton line, is no longer bound to it.",
+   "fix": "Set skeleton = NodePath(\"..\") on those meshes, or enable animation/compatibility/default_parent_skeleton_in_mesh_instance_3d.",
+   "gh": "GH-112267",
+   "verified": "4.6.2 and 4.7.2 (such a scene loads with skeleton \"\"; the compatibility setting exists)",
+   "rules": [
+    "api/upgrade-mesh-skeleton"
+   ]
+  },
+  {
+   "id": "glow-defaults",
+   "to": "4.6",
+   "kind": "default",
+   "class": "Environment",
+   "member": "glow_blend_mode",
+   "message": "Glow now blends with Screen (was Soft Light) and glow_intensity is 0.3 (was 0.8), with new glow_levels: glow looks different, often brighter.",
+   "fix": "Re-tune the glow settings, or set the old values (glow_blend_mode 2, glow_intensity 0.8).",
+   "gh": "GH-110671",
+   "verified": "4.6.2 and 4.7.2 defaults (1, 0.3)",
+   "rules": [
+    "quality/upgrade-note"
+   ]
+  },
+  {
+   "id": "volumetric-fog-blend",
+   "to": "4.6",
+   "kind": "behaviour",
+   "class": "Environment",
+   "member": "volumetric_fog_enabled",
+   "message": "Volumetric fog blends more physically, so it usually looks brighter.",
+   "fix": "Lower volumetric_fog_density, or the lights' volumetric fog energy.",
+   "gh": "GH-112494",
+   "verified": "guide only (rendering)",
+   "rules": [
+    "quality/upgrade-note"
+   ]
+  },
+  {
+   "id": "ssr-depth-tolerance",
+   "to": "4.6",
+   "kind": "default",
+   "class": "Environment",
+   "member": "ssr_depth_tolerance",
+   "message": "Default changed from 0.2 to 0.5.",
+   "gh": "GH-111210",
+   "verified": "4.6.2 and 4.7.2 default 0.5"
+  },
+  {
+   "id": "astar-disabled-start",
+   "to": "4.6",
+   "kind": "behaviour",
+   "class": "AStar2D",
+   "member": "get_point_path",
+   "message": "Returns an empty path when the start point is disabled (also get_id_path, AStar3D and AStarGrid2D with a solid start).",
+   "fix": "Enable the start point, or start from a neighbour.",
+   "gh": "GH-113988",
+   "verified": "4.6.2 and 4.7.2 (empty path)"
+  },
+  {
+   "id": "file-get-as-text-skip-cr",
+   "to": "4.6",
+   "kind": "signature",
+   "class": "FileAccess",
+   "member": "get_as_text",
+   "message": "The skip_cr parameter is gone: get_as_text(true) is a parse error (\"Too many arguments\").",
+   "fix": "Call get_as_text() and remove \\r yourself if needed.",
+   "gh": "GH-110867",
+   "verified": "4.6.2 and 4.7.2 (parse error)"
+  },
+  {
+   "id": "popup-submenu-delay",
+   "to": "4.6",
+   "kind": "default",
+   "class": "PopupMenu",
+   "member": "submenu_popup_delay",
+   "message": "Default changed from 0.3 to 0.2 seconds.",
+   "gh": "GH-110256",
+   "verified": "4.6.2 and 4.7.2 default 0.2"
+  },
+  {
+   "id": "file-dialog-side-menu",
+   "to": "4.6",
+   "kind": "removed",
+   "class": "EditorFileDialog",
+   "member": "add_side_menu",
+   "message": "Kept as a stub that does nothing.",
+   "gh": "GH-111162",
+   "verified": "4.7.2 class reference (deprecated, does nothing)"
+  }
+ ]
+}

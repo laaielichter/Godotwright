@@ -73,6 +73,7 @@ import { ModelError } from "../model/gltf.js";
 import { inspectModel } from "../model/inspect.js";
 import { lintModelFile } from "../model/lint.js";
 import { viewModel } from "../model/view.js";
+import { compareGodot, formatCompare } from "../check/compare.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { findProjectRoot, listProjectFiles } from "../project/files.js";
@@ -159,7 +160,7 @@ const PROFILES: Record<Tier, Profile> = {
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "After you write or change a shader (.gdshader, or a Shader in a scene), call godot_shader and fix every error.",
-      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order, uids, unused resources), call godot_fix (report, then write: true) instead of editing them by hand.",
+      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order, uids, unused resources, Godot 4.7 packed-array writes and upgrade defaults), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
       "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
@@ -346,7 +347,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "AAA review",
       description:
-        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure. Returns a 0-100 score per category, then one line per finding: `res://file.gd:12: error [rule] message`; `detail` full adds the fix under each finding. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk. Pass `only_new: true` while you are fixing: new findings in full, the ones you already saw as one short line each, and how many are fixed. It never changes your code; it keeps the last review in .godot/godotwright/ for `only_new` and counts rule hits in the local learning file. For errors only the engine finds, run godot_check after it; godot_checklist lists every rule.",
+        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure. Returns a 0-100 score per category, then one line per finding: `res://file.gd:12: error [rule] message`; `detail` full adds the fix under each finding. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk. Pass `only_new: true` while you are fixing: new findings in full, the ones you already saw as one short line each, and how many are fixed. Upgrades: a project saved by an older 4.x also gets what changes on the way to 4.7; `from`/`target` (e.g. 4.5/4.6) set that range. It never changes your code; it keeps the last review in .godot/godotwright/ for `only_new` and counts rule hits in the local learning file. For errors only the engine finds, run godot_check after it; godot_checklist lists every rule.",
       inputSchema: {
         path: pathParam,
         files: z
@@ -367,11 +368,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe(
             "show only what changed since the last review of this project (saves tokens in a fix loop)",
           ),
+        target: z
+          .string()
+          .optional()
+          .describe('Godot release the project moves to, "4.1" to "4.7" (default 4.7)'),
+        from: z
+          .string()
+          .optional()
+          .describe("release it comes from (default: the version saved in project.godot)"),
         detail: detailParam,
       },
       annotations: writesLearning,
     },
-    async ({ path, files, code, file, only_new, detail }) =>
+    async ({ path, files, code, file, only_new, target: targetVersion, from, detail }) =>
       guard(() => {
         if (code !== undefined && !file)
           return failure("Pass `file` (a res:// path) together with `code`.");
@@ -383,6 +392,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           base: options.base,
           baseFiles: options.baseFiles,
           overrides,
+          ...(targetVersion ? { target: targetVersion } : {}),
+          ...(from ? { from } : {}),
         });
         const focus = [...(files ?? []), ...(target ? [target] : [])].map(
           resPath,
@@ -395,7 +406,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           remember: code === undefined,
         });
         const body = only_new
-          ? `AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100\n${report.categories.map((c) => `${c.category} ${c.score}`).join(", ")}; static typing ${report.typing.percent}%\n` +
+          ? `AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100${upgradeNote(report)}\n${report.categories.map((c) => `${c.category} ${c.score}`).join(", ")}; static typing ${report.typing.percent}%\n` +
             formatDelta(delta, {
               cap: profile.findings,
               focus,
@@ -1203,13 +1214,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Fix review findings mechanically",
       description:
-        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, Godot 3 shader names renamed, a hint_screen_texture uniform for SCREEN_TEXTURE, a stale ext_resource uid set from its path, a copied file's duplicate uid renewed with its references, a lost .uid file restored, an unused resource section removed) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type; a uid that named another file than its path; [editable] added for edits inside an instance). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, a packed-array element write as copy-write-assign, a bool image unit as ImageUnit, area_mask/skeleton set to their pre-upgrade value, Godot 3 shader names renamed, a hint_screen_texture uniform for SCREEN_TEXTURE, a stale ext_resource uid set from its path, a copied file's duplicate uid renewed with its references, a lost .uid file restored, an unused resource section removed) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type; a uid that named another file than its path; [editable] added for edits inside an instance; a script setter that runs again). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only these res:// files"),
         rules: z.array(z.string()).optional().describe(`only these rules (fixable: ${FIXABLE_RULES.join(", ")})`),
         include_check: z.boolean().optional().describe("also apply fixes labelled check (default false)"),
         stamp_uids: z.boolean().optional().describe("also give scenes, resources, scripts and shaders without a uid a new one (header or .uid file)"),
+        from: z.string().optional().describe("release the project comes from, as in godot_review"),
         write: z.boolean().optional().describe("write the fixes (default false: show them only)"),
         detail: detailParam,
       },
@@ -1220,11 +1232,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, files, rules, include_check, stamp_uids, write, detail }) =>
+    async ({ path, files, rules, include_check, stamp_uids, from, write, detail }) =>
       guard(() => {
         const result = fixProject(where(path), {
           ...(files?.length ? { files: files.map(resPath) } : {}),
           ...(rules?.length ? { rules } : {}),
+          ...(from ? { from } : {}),
           includeCheck: include_check === true,
           stampUids: stamp_uids === true,
           write: write === true,
@@ -1238,7 +1251,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. `compare_godot` (a second binary, or `next` for $GODOT_NEXT) runs the same check with it on a temporary copy and returns only the errors and warnings that differ, e.g. what breaks in a 4.8 beta. To drive input and watch values use godot_play; for unit tests use godot_test.",
       inputSchema: {
         path: pathParam,
         run_frames: z
@@ -1261,6 +1274,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(3600)
           .optional()
           .describe("timeout per Godot run (default 600)"),
+        compare_godot: z
+          .string()
+          .optional()
+          .describe('second Godot binary to diff against, or "next" for $GODOT_NEXT'),
       },
       annotations: {
         readOnlyHint: false,
@@ -1269,8 +1286,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, run_frames, scene, timeout_seconds }) => {
+    async ({ path, run_frames, scene, timeout_seconds, compare_godot }) => {
       try {
+        if (compare_godot) {
+          const compared = await compareGodot(where(path), {
+            godot: options.godot,
+            compareGodot: compare_godot === "next" ? undefined : compare_godot,
+            runFrames: run_frames ?? (scene ? 120 : 0),
+            ...(scene ? { scene } : {}),
+            timeoutMs: (timeout_seconds ?? 600) * 1000,
+          });
+          const hints = lessonHintsForMessages(compared.onlyOther.map((d) => d.message));
+          const body = formatCompare(compared, profile.findings) + hints.join("\n");
+          return compared.onlyOther.some((d) => d.severity === "error") ? failure(body) : text(body);
+        }
         const result = await checkLearning(where(path), {
           godot: options.godot,
           runFrames: run_frames ?? (scene ? 120 : 0),
@@ -2084,6 +2113,11 @@ function unknownFiles(
   return focus.filter((f) => !known.has(f));
 }
 
+/** "; upgrade 4.5 -> 4.7" when the review looked at an upgrade. */
+function upgradeNote(report: ReviewReport): string {
+  return report.upgrade?.from ? `; upgrade ${report.upgrade.from} -> ${report.upgrade.target}` : "";
+}
+
 function formatReviewFor(
   report: ReviewReport,
   detail: Detail,
@@ -2093,7 +2127,7 @@ function formatReviewFor(
 ): string {
   const out: string[] = [];
   out.push(
-    `AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100`,
+    `AAA review: ${report.project} (Godot ${report.godot}) overall ${report.overall}/100${upgradeNote(report)}`,
   );
   out.push(
     report.categories.map((c) => `${c.category} ${c.score}`).join(", ") +
