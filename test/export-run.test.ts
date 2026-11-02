@@ -1,5 +1,5 @@
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { RunResult } from "../src/check/godot.js";
 import { checkContents } from "../src/export/contents.js";
@@ -232,6 +232,31 @@ describe("export patch (Godot faked)", () => {
     const none = await patchExport(root, { preset: "Linux" }, deps);
     expect(none.diagnostics[0]!.message).toMatch(/^a patch needs a base/);
   });
+
+  it("refuses an out that is one of the bases, before anything is deleted", async () => {
+    const root = makeProject(FILES);
+    const out = join(root, ".godot", "godotwright", "export", "linux", "linux-patch.pck");
+    mkdirSync(dirname(out), { recursive: true });
+    copyFileSync(join(PCK, "patch.pck"), out);
+    const { deps, calls } = fakeGodot(() => ({}));
+    const r = await patchExport(root, { preset: "Linux", against: [join(PCK, "game.pck"), out] }, deps);
+    expect(r.diagnostics.map((d) => d.message)).toEqual([`out is the base ${out}: the export would delete it before Godot reads it; write the patch somewhere else (out)`]);
+    expect(calls).toEqual([]);
+    expect(readFileSync(out)).toEqual(readFileSync(join(PCK, "patch.pck")));
+  });
+
+  it("removes an old patch at out when a file list shows nothing changed", async () => {
+    const dir = tempFolder("gw-patch-");
+    const root = makeProject(FILES);
+    const manifest = join(dir, "manifest.json");
+    writeFileSync(manifest, JSON.stringify({ resources: readPck(join(PCK, "game.pck")).entries.map((e) => ({ resource: e.path, bytes: e.size, md5: e.md5, flags: e.flags })) }));
+    const out = join(dir, "mod.pck");
+    copyFileSync(join(PCK, "patch.pck"), out);
+    const { deps } = fakeGodot((flag) => (flag === "--export-pack" ? { write: join(PCK, "game.pck") } : {}));
+    const r = await patchExport(root, { preset: "Linux", manifest: [manifest], out, frames: 0 }, deps);
+    expect(r.patch?.by).toBe("none");
+    expect(existsSync(out)).toBe(false);
+  });
 });
 
 describe("reading a pack against the project (no Godot)", () => {
@@ -264,6 +289,19 @@ describe("reading a pack against the project (no Godot)", () => {
       'res://addons/x/: 2 editor-only scripts shipped in the pack (20 B); they extend EditorImportPlugin, EditorPlugin, classes only the editor has: add "addons/x/import.gd,addons/x/plugin.gd" to the preset\'s exclude_filter',
       'res://tests/: 3 test files shipped in the pack (30 B): add "tests/*" to the preset\'s exclude_filter',
     ]);
+  });
+
+  it("finds the project from the pack's place, and says when nothing was compared", () => {
+    const root = makeProject(FILES);
+    const pack = join(root, ".godot", "godotwright", "export", "linux", "linux.pck");
+    mkdirSync(dirname(pack), { recursive: true });
+    copyFileSync(join(PCK, "game.pck"), pack);
+    expect(inspectPack(pack).contents).toMatchObject({ files: 11, missing: 0 });
+    const alone = join(tempFolder("gw-pck-"), "game.pck");
+    copyFileSync(join(PCK, "game.pck"), alone);
+    const text = formatExportRun(inspectPack(alone));
+    expect(text).toContain("no project found");
+    expect(text).not.toContain("nothing to fix");
   });
 
   it("needs project.binary in a main pack", () => {
