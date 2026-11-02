@@ -268,6 +268,14 @@ class Migrator {
     if ((renamed === "int" || renamed === "float") && rest.length >= 2 && rest.every((a) => /^-?[\d.]+$/.test(a))) return `${indent}@export_range(${rest.join(", ")}) var ${name}${suffix}`;
     if (renamed === "int" && rest.every((a) => quoted(a) !== undefined)) return `${indent}@export_enum(${rest.join(", ")}) var ${name}${suffix}`;
     if (renamed === "int" && rest[0] === "FLAGS" && rest.slice(1).every((a) => quoted(a) !== undefined)) return `${indent}@export_flags(${rest.slice(1).join(", ")}) var ${name}${suffix}`;
+    if (renamed === "Color" && rest.length === 1 && rest[0] === "RGB") return `${indent}@export_color_no_alpha var ${name}${suffix}`;
+    if (renamed === "Color" && rest.length === 1 && rest[0] === "RGBA") return `${indent}@export var ${name}${suffix}`;
+    const layers = renamed === "int" && rest.length === 1 ? /^LAYERS_(2D|3D)_(PHYSICS|RENDER|NAVIGATION)$/.exec(rest[0] as string) : null;
+    if (layers) return `${indent}@export_flags_${layers[1]!.toLowerCase()}_${layers[2]!.toLowerCase()} var ${name}${suffix}`;
+    if (renamed === "float" && rest[0] === "EXP" && rest.length >= 3 && rest.slice(1).every((a) => /^-?[\d.]+$/.test(a))) {
+      return `${indent}@export_range(${rest.slice(1).join(", ")}, "exp") var ${name}${suffix}`;
+    }
+    if (renamed === "float" && rest.length === 1 && rest[0] === "EASE") return `${indent}@export_exp_easing var ${name}${suffix}`;
     if (renamed === "String" && rest[0] === "FILE") return `${indent}@export_file${rest[1] ? `(${rest[1]})` : ""} var ${name}${suffix}`;
     if (renamed === "String" && rest[0] === "DIR") return `${indent}@export_dir var ${name}${suffix}`;
     if (renamed === "String" && rest[0] === "MULTILINE") return `${indent}@export_multiline var ${name}${suffix}`;
