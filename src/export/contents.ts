@@ -3,7 +3,7 @@ import type { Diagnostic } from "../check/log.js";
 import { buildGraph, type DepsGraph } from "../deps/deps.js";
 import { fromResPath } from "../project/files.js";
 import { exportedToSource } from "../scan/scan.js";
-import { checkExport, matchesFilter, RESOURCE_EXT, type ExportPreset } from "./export.js";
+import { checkExport, exportedAsResource, matchesFilter, type ExportPreset } from "./export.js";
 import { PACK_FILE_REMOVAL, type Pck } from "./pck.js";
 
 /**
@@ -114,8 +114,7 @@ function cause(file: string, preset: ExportPreset | undefined, root: string): st
   if (!preset) return "";
   const rel = file.slice(6);
   if (preset.exclude.some((f) => matchesFilter(rel, f))) return "exclude_filter leaves it out";
-  const imported = existsSync(fromResPath(root, `${file}.import`));
-  if ((!RESOURCE_EXT.test(rel) || (/\.csv$/i.test(rel) && !imported)) && !preset.include.some((f) => matchesFilter(rel, f))) {
+  if (!exportedAsResource(root, rel) && !preset.include.some((f) => matchesFilter(rel, f))) {
     return `a plain file, which Godot exports only when include_filter names it: add "*.${rel.slice(rel.lastIndexOf(".") + 1)}"`;
   }
   if (preset.exportFilter === "resources" || preset.exportFilter === "scenes") return `the preset exports only the ${preset.exportFilter} it lists and what they load`;
