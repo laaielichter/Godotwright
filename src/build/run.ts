@@ -10,6 +10,7 @@ import { heightmapSceneText, heightmapShapeText } from "./heightmap.js";
 import { JournalWriter } from "../journal/journal.js";
 import { findProjectRoot } from "../project/files.js";
 import { BuildError } from "./params.js";
+import { assertWritable } from "../project/protect.js";
 import { buildSpec } from "./spec.js";
 
 export interface BuildRequest {
@@ -67,6 +68,8 @@ export function buildModel(request: BuildRequest): BuildOutcome {
     throw new BuildError("heightmap collision is for terrain tiles (kind terrain); use trimesh for other static models");
   }
   const scene = request.collision && request.collision !== "heightmap" ? withCollisionHints(built, request.collision) : built;
+  assertWritable(request.out);
+  if (request.contractOut) assertWritable(request.contractOut);
   mkdirSync(dirname(request.out), { recursive: true });
   // A model written inside a project goes in its journal, with the files written next to it (godot_undo).
   const projectRoot = findProjectRoot(dirname(request.out));

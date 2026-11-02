@@ -13,6 +13,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import { withRun, type RunContext } from "../check/progress.js";
+import { protectFrom } from "../project/protect.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
 import { briefFor } from "../archetype/brief.js";
@@ -216,6 +217,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     throw new Error(`tier must be cheap or premium, got "${tier}"`);
   const profile = PROFILES[tier];
   const base = resolve(options.root ?? process.cwd());
+  // The "protect" lists of the default project's godotwright.json count for every write the tools make.
+  protectFrom(base);
 
   /** Resolves a tool path: absolute, `res://...` (inside the project) or relative to the root. */
   const where = (path?: string): string => {

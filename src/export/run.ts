@@ -12,6 +12,7 @@ import { ProjectNotFoundError } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { checkContents, kb, type ContentsReport } from "./contents.js";
 import { BOM_MESSAGE, hasBom, parsePresets, templateBases, type ExportPreset } from "./export.js";
+import { assertWritable } from "../project/protect.js";
 import { PckError, readPck, type Pck } from "./pck.js";
 
 /**
@@ -283,6 +284,7 @@ export async function importStep(p: Prepared, deps: ExportDeps, timeoutMs: numbe
  * --export-debug or --export-patch; `extra` are more arguments (--patches). Returns whether the export succeeded.
  */
 export async function exportStep(p: Prepared, deps: ExportDeps, flag: string, out: string, timeoutMs: number, extra: string[] = [], name = "export"): Promise<"ok" | "failed" | "nothing"> {
+  assertWritable(out);
   mkdirSync(dirname(out), { recursive: true });
   // A file left from an earlier run must not pass for this run's output.
   rmSync(out, { force: true });

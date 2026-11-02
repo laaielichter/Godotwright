@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { Diagnostic } from "../check/log.js";
 import { configPaths, exportedToSource } from "../scan/scan.js";
 import { defaultOut, exportStep, finish, importStep, journalFor, prepare, readPack, REAL_DEPS, smokeStep, absolute, type ExportDeps, type ExportRun, type PatchReport } from "./run.js";
+import { assertWritable } from "../project/protect.js";
 import { overlay, PACK_FILE_DELTA, PACK_FILE_REMOVAL, PckError, readPck, sourcesOf, writePck, type Pck, type PckEntry } from "./pck.js";
 
 /**
@@ -253,6 +254,7 @@ export async function patchExport(path: string, options: PatchOptions, deps: Exp
     } else {
       const keep = live(full).filter((e) => againstList(e, list!) !== "same");
       // As in the Godot branch: a patch from an earlier run must not stay at out when nothing changed.
+      assertWritable(out);
       rmSync(out, { force: true });
       if (keep.length) {
         const sources = new Map(sourcesOf(full).map((s) => [s.path, s]));

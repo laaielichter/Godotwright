@@ -4,6 +4,7 @@ import { GodotApi } from "../api/api.js";
 import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
+import { assertWritable } from "../project/protect.js";
 import { migrateShader } from "./shader.js";
 
 /** One mechanical rewrite in a script. */
@@ -428,7 +429,10 @@ export function migrateProject(path: string, options: MigrateOptions = {}): Proj
     const written = options.write === true && result.changes.length > 0;
     if (written) {
       if (journal) journal.write(t.full, result.code);
-      else writeFileSync(t.full, result.code);
+      else {
+        assertWritable(t.full);
+        writeFileSync(t.full, result.code);
+      }
     }
     files.push({ file: t.res, ...result, written });
   }
