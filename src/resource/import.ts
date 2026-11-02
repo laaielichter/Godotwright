@@ -5,7 +5,7 @@ import { applySplices, blocksOf, contentEnd, propSpan, type Block, type Splice }
 import { parseResourceFile, type Section } from "../godot/resource-file.js";
 import { tryParse, typedValue } from "../godot/typed-value.js";
 import { asString, formatVariant, parseValue, Reader, type Variant } from "../godot/variant.js";
-import { loadGltf } from "../model/gltf.js";
+import { loadGltf, type Gltf } from "../model/gltf.js";
 import { fromResPath } from "../project/files.js";
 import { findUsages } from "../usages/usages.js";
 import { IMPORTER_CLASS, IMPORTER_SWITCH, PARAM_ENUMS, SUB_KINDS, SUB_OPTIONS, enumIndex, subOption, type SubKind } from "./import-options.js";
@@ -120,13 +120,19 @@ function checkedValue(label: string, raw: string, type: string | undefined, enum
 
 const choice = (names: string[] | undefined, value: string) => (names && /^\d+$/.test(value) && names[Number(value)] ? ` (${names[Number(value)]})` : "");
 
+/** A name the way Godot makes it a valid node name: . : @ / " and % become _. */
+const nodeName = (name: string) => name.replace(/[.:@/"%]/g, "_");
+
 /**
- * The scene importer names a glTF mesh <file name>_<mesh name>, or <file name>_mesh when it has none (seen with Godot
- * 4.7.2: body in car.glb is car_body). Names that would clash get suffixes Godotwright does not predict.
+ * The scene importer names a glTF mesh <scene name>_<mesh name> (or _mesh when it has none), made a valid node name.
+ * The scene name is the glTF scene's own name, unless it has none or it starts with "Scene"; then it is the file name
+ * (seen with Godot 4.7.2: body in car.glb is car_body, body under the scene "Vehicle" is Vehicle_body, my.body in
+ * dotted.gltf is dotted_my_body). Names that would clash get suffixes Godotwright does not predict.
  */
-function meshNames(full: string, meshes: { name?: string }[]): string[] | undefined {
-  const base = basename(full).replace(/\.[^.]+$/, "");
-  const names = meshes.map((m) => `${base}_${m.name || "mesh"}`);
+function meshNames(full: string, json: Gltf): string[] | undefined {
+  const own = json.scenes?.[json.scene ?? 0]?.name;
+  const scene = own && !own.startsWith("Scene") ? own : basename(full).replace(/\.[^.]+$/, "");
+  const names = (json.meshes ?? []).map((m) => nodeName(`${scene}_${m.name || "mesh"}`));
   return new Set(names).size === names.length ? names : undefined;
 }
 
@@ -139,21 +145,23 @@ function assetNames(full: string): Record<SubKind, string[] | undefined> | undef
     const walk = (index: number, prefix: string, depth: number) => {
       const node = json.nodes?.[index];
       if (!node || depth > 64) return;
-      const name = `${prefix}${node.name ?? `Node${index}`}`;
+      const name = `${prefix}${nodeName(node.name ?? `Node${index}`)}`;
       nodes.push(`PATH:${name}`);
       for (const child of node.children ?? []) walk(child, `${name}/`, depth + 1);
     };
-    // One root node becomes the scene root on import, so node paths start below it.
+    // The scene root is a new node, with the glTF root nodes under it. Only a file written with the
+    // GODOT_single_root extension has its one root node become the scene root, so its paths start below it.
     const roots = json.scenes?.[json.scene ?? 0]?.nodes ?? [];
-    if (roots.length === 1) for (const child of json.nodes?.[roots[0] as number]?.children ?? []) walk(child, "", 0);
+    if (roots.length === 1 && json.extensionsUsed?.includes("GODOT_single_root")) for (const child of json.nodes?.[roots[0] as number]?.children ?? []) walk(child, "", 0);
     else for (const root of roots) walk(root, "", 0);
     // Godot makes up names for unnamed items; a list with a gap is not used to refuse a name.
     const named = (list: { name?: string }[] | undefined) => ((list ?? []).every((x) => x.name) ? (list ?? []).map((x) => x.name as string) : undefined);
     return {
       animations: named(json.animations),
-      meshes: meshNames(full, json.meshes ?? []),
+      meshes: meshNames(full, json),
       materials: named(json.materials),
-      nodes: (json.nodes ?? []).every((n) => n.name) ? nodes : undefined,
+      // Godot makes node names unique across the whole file (a second Wheel becomes Wheel2), which is not predicted here.
+      nodes: (json.nodes ?? []).every((n) => n.name) && new Set((json.nodes ?? []).map((n) => nodeName(n.name ?? ""))).size === (json.nodes ?? []).length ? nodes : undefined,
     };
   } catch {
     return undefined;
@@ -299,7 +307,8 @@ export function planImport(root: string, resPath: string, assetFull: string, ori
           if (names && !names.includes(name) && !known) {
             const near = closest(name, names, 3);
             const msg = `${asset} has no ${ONE[kind]} "${name}"; it has ${(near.length ? near : names).slice(0, 8).join(", ") || "none"}`;
-            if (kind === "nodes") warnings.push(`${msg} (node names can differ after import; check with godot_scene_edit or the scan)`);
+            // Godot's own naming has cases Godotwright does not predict (clashes, extensions), so mesh and node names warn.
+            if (kind === "nodes" || kind === "meshes") warnings.push(`${msg} (names can differ after import; Godot keeps options for a name it does not have, and ignores them)`);
             else throw new ResourceEditError(msg);
           } else if (!names && !known) warnings.push(`Godotwright cannot list every ${ONE[kind]} name of ${asset}; "${name}" is not checked (Godot keeps options for a name it does not have, and ignores them)`);
           const value = checkedValue(`${kind}/${name} ${key}`, edit.value, opt.type, opt.enum);

@@ -52,7 +52,7 @@ godotwright resource diff car.glb      # import options changed from the importe
 godotwright resource set music.ogg loop true --write   # import option checked against the importer; reimported headless and verified
 godotwright resource set beep.wav edit/loop_mode Forward --write   # enum options by name
 godotwright resource set car.glb settings/loop_mode Linear --sub animations/drive --write   # per-animation loop
-godotwright resource set car.glb generate/shadow_meshes Disable --sub meshes/car_body --write   # per-mesh (named <file>_<mesh>)
+godotwright resource set car.glb generate/shadow_meshes Disable --sub meshes/car_body --write   # per-mesh (named <scene>_<mesh>)
 godotwright resource importer anims.glb animation_library --write   # import a .glb as an AnimationLibrary, uid kept
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
@@ -202,12 +202,16 @@ call with `resource apply <file> '<JSON list>'` (MCP: the `ops` list), so there 
   `diff` (what differs from the defaults), `set`, `unset` (back to the default). Option names are checked against
   what Godot already wrote for the asset and the importer's class reference, because Godot drops unknown options
   without a word. Per-sub-resource options of the scene importer go through `--sub` (`sub`): `animations/<name>`
-  (`settings/loop_mode`, `save_to_file/*`, slices), `meshes/<file>_<mesh>` (`generate/shadow_meshes`,
+  (`settings/loop_mode`, `save_to_file/*`, slices), `meshes/<scene>_<mesh>` (`generate/shadow_meshes`,
   `generate/lightmap_uv`, `generate/lods`), `materials/<name>` (`use_external/enabled`, `use_external/path`) and
-  `nodes/PATH:<node>` (`mesh_instance/cast_shadow`, `generate/physics`, ...); names are checked against the glTF.
+  `nodes/PATH:<node>` (`mesh_instance/cast_shadow`, `generate/physics`, ...). `<scene>` is the glTF scene's name, or the
+  file name when the scene has none or its name starts with "Scene"; `.`, `:`, `@`, `/`, `"` and `%` become `_`. Node
+  paths start at the glTF root nodes (below the single root only for a file written with `GODOT_single_root`).
+  Animation and material names are checked against the glTF; a mesh or node name that is not found only warns.
   `importer` switches between `scene` and `animation_library`, `texture` and `image`, or to `keep`, keeping the uid.
 - **Verified reimport**: after a `.import` write Godotwright runs `godot --headless --import` and reads the result
-  back: `changed` (Godot kept every value and the imported output changed, by its `dest_md5`), `same` (kept, but the
+  back: `changed` (Godot kept every value and the imported output changed, by its `dest_md5`; it also changes for a
+  per-item option Godot ignores, so it does not prove the option took effect), `same` (kept, but the
   output is identical), `dropped` (Godot did not keep a value) or `failed`, with the import errors for that asset.
   `--no-reimport` skips it; without Godot the file is written and the result says it was not reimported.
   `resource reimport <asset>` only runs the import. The journal entry is stored after the import, so `godotwright
