@@ -251,6 +251,9 @@ const MENTIONED_PATH = /res:\/\/[^\s'"()]+[^\s'"().,:;]/g;
  */
 export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
   const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message))).map(shaderTypeError);
+  // A shader error seen while a scene (or the import) compiled the shader names only the shader's line; the shader pass
+  // reports the same error with its file, so the vaguer copy goes.
+  const shaderErrors = new Set(kept.filter((d) => d.source === "shader" && d.file && d.line).map((d) => `${d.message} (shader line ${d.line})`));
   const scriptErrors = new Set(kept.filter((d) => d.source === "script" && d.line).map((d) => d.file));
   const located = new Set<string>();
   for (const d of kept) {
@@ -261,6 +264,7 @@ export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
   }
   const seen = new Set<string>();
   return kept.filter((d) => {
+    if (d.source === "shader" && shaderErrors.has(d.message)) return false;
     const restated = /^Failed to load script "(.+?)" with error/.exec(d.message);
     if (restated && scriptErrors.has(restated[1])) return false;
     const paths = d.message.match(MENTIONED_PATH) ?? [];
