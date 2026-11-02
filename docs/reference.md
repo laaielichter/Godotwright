@@ -902,13 +902,17 @@ What is refused:
 
 - **Godotwright's own writes**, in every client (the CLI too): `godot_scene_edit`, `godot_project_edit`,
   `godot_resource_edit`, `godot_fix`, `godot_migrate`, `godot_rename` (both ends of a move), `godot_model_build`
-  (`out` and `contract_out`), `godot_export_run` (`out`), `godot_scenario` op `save` and `godot_undo` (checked for every
-  file before any is put back). The tool returns an error that names the path and the `godotwright.json` that protects
+  (`out` and `contract_out`), `godot_export_run` (`out`), `godot_screenshot` (a model's picture, `out`, and a baseline
+  it would make or update; comparing one still works), `godot_scenario` op `save` and new baselines of its screenshot
+  steps, and `godot_undo` (checked for every file before any is put back). The tool returns an error that names the path and the `godotwright.json` that protects
   it; dry runs still work. A call that touches several files stops at the first protected one; what it wrote before
   stays in the journal, so `godot_undo` can revert it.
 - **Claude Code's own edits**, with the plugin: a `PreToolUse` hook on `Write`, `Edit`, `MultiEdit` and
   `NotebookEdit` denies the call with the reason (`permissionDecision: "deny"`). It looks only when a `protect` list
   or setting is in reach, so other edits cost nothing extra.
+- **The list itself**: a `godotwright.json` that holds a non-empty `protect` list is guarded the same way, so an agent
+  cannot edit the list away before its next write; change it by hand. A symlink is followed to its target, also when
+  the target does not exist yet.
 
 Not covered: **Bash commands are not parsed** (`cp`, `sed -i`, `>` or `git checkout` into a protected folder go
 through), and neither are other MCP servers. Claude Code's own permission rules (`"deny": ["Edit(./installed-code/**)"]`
