@@ -1,9 +1,12 @@
-import { readFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FIXABLE_RULES, fixProject, formatFix } from "../src/fix/fix.js";
 import { RULES } from "../src/review/rules.js";
-import { makeProject, runCli } from "./helpers.js";
+import { undoJournal } from "../src/journal/journal.js";
+import { reviewProject } from "../src/review/review.js";
+import { isUidText } from "../src/scene/uid.js";
+import { FIXTURES, makeProject, runCli, tempFolder } from "./helpers.js";
 
 const PROJECT = '[application]\nconfig/name="Fix"\nconfig/features=PackedStringArray("4.7")\n';
 
@@ -83,5 +86,106 @@ describe("godotwright fix", () => {
     expect(JSON.parse(only.output).changes.map((c: { rule: string }) => c.rule)).toEqual(["quality/mojibake"]);
     const none = await runCli(["fix", root, "--file", "res://missing.gd"]);
     expect(none.output).toMatch(/Nothing to fix/);
+  });
+});
+
+describe("godotwright fix: uids and resource sections", () => {
+  const copy = () => {
+    const root = tempFolder("godotwright-uid-");
+    cpSync(join(FIXTURES, "uid-integrity"), root, { recursive: true });
+    return { root, read: (f: string) => readFileSync(join(root, f), "utf8") };
+  };
+  const integrity = (root: string) => reviewProject(root).findings.filter((f) => /uid|unused-resource|locked-instance/.test(f.rule));
+
+  it("repairs uids across files, journaled, and says what it changed", () => {
+    const { root, read } = copy();
+    const dry = fixProject(root);
+    expect(dry.needsCheck).toBe(3);
+    expect(dry.changes.map((c) => `${c.file}:${c.line} ${c.rule}`)).toEqual([
+      "res://bad.tres:1 structure/invalid-uid",
+      "res://broken.tscn:20 structure/unused-resource",
+      "res://dup.tscn:1 structure/duplicate-uid",
+      "res://lost.gd.uid:1 structure/unknown-uid",
+      "res://main.tscn:3 structure/unknown-uid",
+      "res://main.tscn:6 structure/duplicate-uid",
+      "res://main.tscn:8 structure/unused-resource",
+    ]);
+    const result = fixProject(root, { includeCheck: true, write: true });
+    expect(result.written).toBe(true);
+    // child.tscn is named by two references with its uid, so it keeps it; the copy gets a new one and main.tscn follows.
+    const dupUid = /uid="([^"]+)"/.exec(read("dup.tscn"))![1]!;
+    expect(isUidText(dupUid) && dupUid !== "uid://bkq3oe5w8x1y2").toBe(true);
+    expect(read("child.tscn")).toContain('uid="uid://bkq3oe5w8x1y2"');
+    expect(read("main.tscn")).toContain(`[ext_resource type="PackedScene" uid="${dupUid}" path="res://dup.tscn" id="4_dup"]`);
+    // The lost .uid file comes back with the uid the scene uses; stale and mismatched uids follow their path.
+    expect(read("lost.gd.uid")).toBe("uid://blost0000001\n");
+    expect(read("main.tscn")).toContain('uid="uid://cn4bl1ld7y0ek" path="res://s.gd"');
+    expect(read("main.tscn")).toContain('uid="uid://c5t7wm2ds0yb4" path="res://other.tscn"');
+    expect(read("main.tscn")).not.toContain("6_unused");
+    expect(read("main.tscn")).toMatch(/\n\[editable path="Inst"\]\n\n\[editable path="Inst\/Sub"\]\n$/);
+    expect(isUidText(/uid="([^"]+)"/.exec(read("bad.tres"))![1]!)).toBe(true);
+    expect(integrity(root).map((f) => f.rule)).toEqual([]);
+    // Run again: nothing left, and it says so.
+    const again = fixProject(root, { includeCheck: true });
+    expect(again.changes).toEqual([]);
+    expect(formatFix(again)).toMatch(/^fix: 0 fixes in 0 files\n/);
+    // godot_undo puts every file back and removes the .uid file it made.
+    undoJournal(root);
+    expect(existsSync(join(root, "lost.gd.uid"))).toBe(false);
+    expect(read("dup.tscn")).toBe(read("child.tscn"));
+    expect(integrity(root).length).toBeGreaterThan(5);
+  });
+
+  it("gives a copied script or asset a new uid in its .uid or .import file, and keeps the original's", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "a.gd": "extends Node\n",
+      "a.gd.uid": "uid://cn4bl1ld7y0ek\n",
+      "b.gd": "extends Node\n",
+      "b.gd.uid": "uid://cn4bl1ld7y0ek\n",
+      "i.svg": "<svg/>",
+      "i.svg.import": '[remap]\n\nimporter="texture"\ntype="CompressedTexture2D"\nuid="uid://be8plvbljqn73"\n',
+      "j.svg": "<svg/>",
+      "j.svg.import": '[remap]\n\nimporter="texture"\ntype="CompressedTexture2D"\nuid="uid://be8plvbljqn73"\n',
+      "main.tscn": '[gd_scene format=3]\n\n[ext_resource type="Script" uid="uid://cn4bl1ld7y0ek" path="res://b.gd" id="1_b"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1_b")\n',
+    });
+    // Same number of references: the older file keeps the uid.
+    utimesSync(join(root, "i.svg"), new Date(2020, 1, 1), new Date(2020, 1, 1));
+    const result = fixProject(root, { write: true });
+    const read = (f: string) => readFileSync(join(root, f), "utf8");
+    expect(result.changes.map((c) => `${c.file} ${c.rule}`)).toEqual(["res://a.gd.uid structure/duplicate-uid", "res://j.svg.import structure/duplicate-uid"]);
+    expect(read("b.gd.uid")).toBe("uid://cn4bl1ld7y0ek\n");
+    expect(read("a.gd.uid")).toMatch(/^uid:\/\/[a-y0-8]+\n$/);
+    expect(read("i.svg.import")).toContain('uid="uid://be8plvbljqn73"');
+    expect(read("j.svg.import")).toMatch(/\nuid="uid:\/\/[a-y0-8]+"\n/);
+    expect(read("j.svg.import")).not.toContain("be8plvbljqn73");
+  });
+
+  it("stamps uids on files without one when asked, not in addons", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "a.gd": "extends Node\n",
+      "s.gdshader": "shader_type spatial;\n",
+      "addons/x/p.gd": "extends Node\n",
+      "g.tres": '[gd_resource type="Gradient" format=3]\n\n[resource]\n',
+      "main.tscn": '[gd_scene load_steps=2 format=3]\n\n[node name="Main" type="Node"]\n',
+    });
+    expect(fixProject(root, { write: true }).changes).toEqual([]);
+    const result = fixProject(root, { write: true, stampUids: true });
+    const read = (f: string) => readFileSync(join(root, f), "utf8");
+    expect(result.changes.map((c) => c.file)).toEqual(["res://a.gd.uid", "res://g.tres", "res://main.tscn", "res://s.gdshader.uid"]);
+    expect(read("a.gd.uid")).toMatch(/^uid:\/\/[a-y0-8]+\n$/);
+    expect(read("main.tscn")).toMatch(/^\[gd_scene load_steps=2 format=3 uid="uid:\/\/[a-y0-8]+"\]\n/);
+    expect(existsSync(join(root, "addons/x/p.gd.uid"))).toBe(false);
+    expect(fixProject(root, { stampUids: true }).changes).toEqual([]);
+  });
+
+  it("removes an unused sub_resource block and keeps the blank lines tidy", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene format=3]\n\n[sub_resource type="Gradient" id="used"]\n\n[sub_resource type="Gradient" id="unused"]\noffsets = PackedFloat32Array(0, 1)\n\n[node name="Main" type="Node"]\nmetadata/g = SubResource("used")\n',
+    });
+    fixProject(root, { write: true });
+    expect(readFileSync(join(root, "main.tscn"), "utf8")).toBe('[gd_scene format=3]\n\n[sub_resource type="Gradient" id="used"]\n\n[node name="Main" type="Node"]\nmetadata/g = SubResource("used")\n');
   });
 });

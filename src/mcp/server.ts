@@ -154,7 +154,7 @@ const PROFILES: Record<Tier, Profile> = {
       "5. If Godot is installed, call godot_check before you finish.",
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
-      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
+      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order, uids, unused resources), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
       "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
@@ -1050,12 +1050,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Fix review findings mechanically",
       description:
-        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, a stale ext_resource uid set from its path, a copied file's duplicate uid renewed with its references, a lost .uid file restored, an unused resource section removed) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type; a uid that named another file than its path; [editable] added for edits inside an instance). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only these res:// files"),
         rules: z.array(z.string()).optional().describe(`only these rules (fixable: ${FIXABLE_RULES.join(", ")})`),
         include_check: z.boolean().optional().describe("also apply fixes labelled check (default false)"),
+        stamp_uids: z.boolean().optional().describe("also give scenes, resources, scripts and shaders without a uid a new one (header or .uid file)"),
         write: z.boolean().optional().describe("write the fixes (default false: show them only)"),
         detail: detailParam,
       },
@@ -1066,12 +1067,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, files, rules, include_check, write, detail }) =>
+    async ({ path, files, rules, include_check, stamp_uids, write, detail }) =>
       guard(() => {
         const result = fixProject(where(path), {
           ...(files?.length ? { files: files.map(resPath) } : {}),
           ...(rules?.length ? { rules } : {}),
           includeCheck: include_check === true,
+          stampUids: stamp_uids === true,
           write: write === true,
         });
         return text(formatFix(result, detail ?? profile.detail));
