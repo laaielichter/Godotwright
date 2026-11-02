@@ -95,7 +95,7 @@ function errorCode(error: unknown): string | undefined {
 }
 
 /** Reads a list of paths from godotwright.json, resolved against the project root. */
-function configPaths(root: string, key: "base" | "baseFiles"): string[] {
+export function configPaths(root: string, key: "base" | "baseFiles"): string[] {
   const config = resolvePath(root, CONFIG_FILE);
   if (!existsSync(config)) return [];
   let parsed: Record<string, unknown>;
@@ -123,6 +123,20 @@ export function baseRoots(root: string, base: string[] = []): string[] {
 }
 
 /**
+ * The source file an exported file stands for, as a res:// path: `x.glb.import` and `x.tscn.remap` are `x.glb` and
+ * `x.tscn`, `x.gdc` is `x.gd`, `project.binary` is `project.godot`. Godot's own `.godot/` files (exported scenes,
+ * import results, caches) stand for no source file: undefined, as for an empty name or a URL.
+ */
+export function exportedToSource(name: string): string | undefined {
+  const trimmed = name.trim().replace(/\\/g, "/").replace(/^res:\/\//, "");
+  if (/^[a-z]+:\/\//i.test(trimmed)) return undefined;
+  const path = trimmed.replace(/\/{2,}/g, "/").replace(/^\/+/, "");
+  if (!path || path.startsWith(".godot/")) return undefined;
+  if (path === "project.binary") return "res://project.godot";
+  return `res://${path.replace(/\.(import|remap)$/, "").replace(/\.gdc$/, ".gd")}`;
+}
+
+/**
  * `res://` paths listed in file lists such as a .pck manifest. Exported forms
  * map back to their source: `x.glb.import` and `x.gd.remap` to `x.glb` and `x.gd`,
  * `x.gdc` to `x.gd`; Godot's own `.godot/` cache is left out.
@@ -130,10 +144,8 @@ export function baseRoots(root: string, base: string[] = []): string[] {
 export function listedFiles(root: string, lists: string[] = []): Set<string> {
   const out = new Set<string>();
   const add = (raw: string) => {
-    const path = raw.trim().replace(/\\/g, "/").replace(/^res:\/\//, "").replace(/\/{2,}/g, "/").replace(/^\/+/, "");
-    if (!path || path.startsWith(".godot/") || /^[a-z]+:\/\//i.test(path)) return;
-    const source = path.replace(/\.(import|remap)$/, "").replace(/\.gdc$/, ".gd");
-    out.add(`res://${source}`);
+    const source = exportedToSource(raw);
+    if (source && source !== "res://project.godot") out.add(source);
   };
   const walk = (value: unknown) => {
     if (typeof value === "string") add(value);
