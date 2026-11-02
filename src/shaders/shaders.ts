@@ -3,7 +3,7 @@ import { isAbsolute, join } from "node:path";
 import { findGodot, godotVersion, runGodot, type RunResult } from "../check/godot.js";
 import type { Diagnostic } from "../check/log.js";
 import { excludePath } from "../check/checker-script.js";
-import { findProjectRoot, fromResPath, listProjectFiles, resolveResPath, toResPath } from "../project/files.js";
+import { findProjectRoot, fromResPath, listProjectFiles, resolveResPath, toResPath, withoutSubResource } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { screen } from "../screenshot/screenshot.js";
 import { godot3Hint } from "./hints.js";
@@ -108,7 +108,7 @@ function toRes(root: string, file: string): string {
 
 function read(root: string, res: string): string | undefined {
   try {
-    return readFileSync(fromResPath(root, res.replace(/::.*$/, "")), "utf8");
+    return readFileSync(fromResPath(root, withoutSubResource(res)), "utf8");
   } catch {
     return undefined;
   }
@@ -131,7 +131,7 @@ export function findShaderFiles(root: string, exclude: string[]): { sources: str
 /** The files a shader source pulls in with #include, also through other includes. */
 export function includedFiles(root: string, file: string, text = read(root, file) ?? "", seen = new Set<string>()): Set<string> {
   for (const m of text.matchAll(INCLUDE)) {
-    const target = resolveResPath(file.replace(/::.*$/, ""), m[1]!);
+    const target = resolveResPath(withoutSubResource(file), m[1]!);
     if (seen.has(target)) continue;
     seen.add(target);
     includedFiles(root, target, read(root, target) ?? "", seen);
@@ -262,7 +262,7 @@ function entryDiagnostic(root: string, e: ShaderLogEntry, byPath: Map<string, Sh
     const line = text.split(/\r?\n/).findIndex((l) => /\bshader_type\b/.test(l));
     return {
       severity: "error",
-      file: shader.replace(/::.*$/, ""),
+      file: withoutSubResource(shader),
       ...(line >= 0 && !shader.includes("::") ? { line: line + 1 } : {}),
       message: `Unknown shader_type '${type}'.`,
       hint: `use ${SHADER_TYPES.join(", ")}`,
@@ -275,7 +275,7 @@ function entryDiagnostic(root: string, e: ShaderLogEntry, byPath: Map<string, Sh
     const big = /Uniform block \w+ too big/i.test(detail);
     return {
       severity: "error",
-      file: shader.replace(/::.*$/, ""),
+      file: withoutSubResource(shader),
       message: `${e.message}${detail ? `: ${detail}` : ""}`,
       ...(big ? { hint: "the uniforms take more memory than the GPU's uniform block allows; use smaller arrays or put the data in a texture" } : {}),
       source: "shader",
@@ -294,7 +294,7 @@ function entryDiagnostic(root: string, e: ShaderLogEntry, byPath: Map<string, Sh
   if (!hint && /^Tokenizer: Unknown character #35/.test(e.message) && lineText?.startsWith("#include")) {
     const target = /#include\s+"([^"]+)"/.exec(lineText)?.[1];
     if (target) {
-      const res = resolveResPath(path.replace(/::.*$/, ""), target);
+      const res = resolveResPath(withoutSubResource(path), target);
       hint = existsSync(fromResPath(root, res)) ? `Godot could not read the included file ${res}` : `the included file ${res} does not exist`;
     }
   }
@@ -313,7 +313,7 @@ function entryDiagnostic(root: string, e: ShaderLogEntry, byPath: Map<string, Sh
   let includedFrom: string[] | undefined;
   if (top && top !== path && path.endsWith(".gdshaderinc")) {
     const at = includeLine(root, top, path);
-    includedFrom = [`${top.replace(/::.*$/, "")}${at ? `:${at}` : ""}`];
+    includedFrom = [`${withoutSubResource(top)}${at ? `:${at}` : ""}`];
   }
   return {
     severity: e.severity,
@@ -451,7 +451,7 @@ export async function checkShaders(path: string, options: ShaderCheckOptions = {
   result.diagnostics = mergeDiagnostics(diagnostics);
   const errors = result.diagnostics.filter((d) => d.severity === "error");
   const failed = new Set(errors.flatMap((d) => [d.file, ...(d.includedFrom ?? []).map((f) => f.replace(/:\d+$/, ""))]));
-  for (const s of result.shaders) s.ok = s.compiled !== "none" && !failed.has(s.path) && !failed.has(s.path.replace(/::.*$/, ""));
+  for (const s of result.shaders) s.ok = s.compiled !== "none" && !failed.has(s.path) && !failed.has(withoutSubResource(s.path));
   result.errors = errors.length;
   result.warnings = result.diagnostics.filter((d) => d.severity === "warning").length;
   if (options.keepLogs) result.logs = logs;
