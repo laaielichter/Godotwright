@@ -14,6 +14,9 @@ inputs:
   review-only:
     description: Run only the review, which needs no Godot (skips the check, the tests, the scenarios and the screenshot baselines).
     default: "false"
+  baseline-dir:
+    description: Folder of the screenshot baselines, when they are not in .godotwright/baselines.
+    default: ""
   comment:
     description: "Post the receipt as a comment on the pull request (needs the permission pull-requests: write)."
     default: "false"
@@ -66,8 +69,10 @@ runs:
         GODOTWRIGHT: ${{ inputs.command }}
         PROJECT: ${{ inputs.path }}
         REVIEW_ONLY: ${{ inputs.review-only }}
+        BASELINE_DIR: ${{ inputs.baseline-dir }}
       run: |
         flags=()
+        if [ -n "$BASELINE_DIR" ]; then flags+=(--baseline-dir "$BASELINE_DIR"); fi
         if [ "$REVIEW_ONLY" = "true" ]; then flags+=(--no-godot-checks); else export GODOT="$HOME/godot/godot"; fi
         receipt="$RUNNER_TEMP/godotwright-receipt.md"
         set +e
