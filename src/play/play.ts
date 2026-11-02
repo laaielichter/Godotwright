@@ -248,7 +248,7 @@ func _snapshot() -> void:
 		"cycle": _cycle,
 		"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
 		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
-		"orphanNodes": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+		"orphanNodes": maxi(0, int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)) - 1),
 		"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
 		"memory": OS.get_static_memory_usage(),
 		"orphans": orphans,
@@ -369,7 +369,8 @@ func _on_physics_start() -> void:
 		_perf.frame.append(now - _t_frame)
 		_perf.process.append(now - _t_process)
 		_perf.nodes.append(int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)))
-		_perf.orphans.append(int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)))
+		# In -s mode the root Window counts as an orphan itself.
+		_perf.orphans.append(maxi(0, int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)) - 1))
 	_t_frame = now
 	_t_physics = now
 
