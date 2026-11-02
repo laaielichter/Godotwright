@@ -31,6 +31,8 @@ export interface CiOptions {
   noGodot?: boolean;
   /** Also review scripts under res://addons/. */
   includeAddons?: boolean;
+  /** Folder of the screenshot baselines (default .godotwright/baselines). */
+  baselineDir?: string;
   /** Most lines of detail per step (default 10). */
   maxDetails?: number;
   /** The real steps, replaceable in tests. */
@@ -140,16 +142,18 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
       steps.push(scenarioStep(results, max));
       for (const r of results) for (const shot of r.screenshots ?? []) visuals.push({ result: shot, lines: [`${r.file}:`, ...formatShot(shot, "godotwright scenario --update")] });
     }
-    for (const { name } of loadBaselines(root).filter((b) => !b.meta.scenario)) {
+    const dir = options.baselineDir;
+    const dirFlag = dir ? ` --baseline-dir ${dir}` : "";
+    for (const { name } of loadBaselines(root, dir).filter((b) => !b.meta.scenario)) {
       try {
-        const report = await deps.screenshot(root, { godot: options.godot, baseline: name, createMissing: false });
-        if (report.baseline) visuals.push({ result: report.baseline, lines: formatBaseline(report.baseline, `godotwright screenshot --baseline ${name} --update`) });
+        const report = await deps.screenshot(root, { godot: options.godot, baseline: name, createMissing: false, ...(dir ? { baselineDir: dir } : {}) });
+        if (report.baseline) visuals.push({ result: report.baseline, lines: formatBaseline(report.baseline, `godotwright screenshot --baseline ${name}${dirFlag} --update`) });
       } catch (error) {
         if (!(error instanceof ScreenshotError)) throw error;
         visuals.push({ lines: [`baseline ${name}: NOT COMPARED: ${error.message}`] });
       }
     }
-    steps.push(visuals.length ? visualStep(visuals, max) : skip("visual", "no baselines in .godotwright/baselines"));
+    steps.push(visuals.length ? visualStep(visuals, max) : skip("visual", `no baselines in ${dir ?? ".godotwright/baselines"}`));
   }
   return { project: root, ok: steps.every((s) => s.status !== "fail"), steps };
 }

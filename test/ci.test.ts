@@ -229,4 +229,28 @@ describe("screenshots in scenarios and the visual step", () => {
     expect(text).toContain("diff pictures (changed pixels magenta) and new captures are in .godot/godotwright/diff/");
     expect(formatCi(ci)).toContain("| visual | ❌ 1 of 2 baselines unchanged, 1 changed |");
   });
+
+  it("compares the baselines of another folder when it is given", async () => {
+    const root = files();
+    mkdirSync(join(root, "vis"), { recursive: true });
+    writeFileSync(join(root, "vis/g.png"), png(64, 32));
+    writeFileSync(join(root, "vis/g.json"), JSON.stringify({ scene: "res://main.tscn", width: 64, height: 32, frames: 10 }));
+    const shots: ScreenshotOptions[] = [];
+    const deps = {
+      check: async () => ({ godot: "g", godotVersion: "4.7.2", scripts: 1, scenes: 0, diagnostics: [], steps: [], errors: 0, warnings: 0 }),
+      screenshot: (async (p: string, o: ScreenshotOptions) => {
+        shots.push(o);
+        const file = join(p, ".godot/godotwright/diff/g.actual.png");
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, png(64, 32, { x: 2, y: 2 }));
+        return { file, width: 64, height: 32, subject: "scene", views: [], coverage: [], autoCamera: false, renderer: "gl_compatibility", diagnostics: [], baseline: compareBaseline(p, "g", file, { meta: { width: 64, height: 32, frames: 10 }, dir: o.baselineDir, createMissing: false }) };
+      }) as typeof takeScreenshot,
+    };
+    expect((await runCi(root, { deps })).steps.at(-1)).toMatchObject({ name: "visual", status: "skip", summary: "no baselines in .godotwright/baselines" });
+    const ci = await runCi(root, { deps, baselineDir: "vis" });
+    expect(shots).toEqual([expect.objectContaining({ baseline: "g", baselineDir: "vis", createMissing: false })]);
+    const visual = ci.steps.at(-1)!;
+    expect(visual).toMatchObject({ status: "fail", summary: "0 of 1 baselines unchanged, 1 changed" });
+    expect(visual.details.join("\n")).toContain("godotwright screenshot --baseline g --baseline-dir vis --update");
+  });
 });

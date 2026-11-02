@@ -10,6 +10,7 @@ interface CiOptions {
   godot?: string;
   godotChecks: boolean;
   includeAddons?: boolean;
+  baselineDir?: string;
   json?: boolean;
 }
 
@@ -49,11 +50,12 @@ export function ciCommand(): Command {
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--no-godot-checks", "only the review, which needs no Godot (skips check, test, scenarios and visual)")
     .option("--include-addons", "also review and load res://addons/")
+    .option("--baseline-dir <dir>", "folder of the screenshot baselines (default .godotwright/baselines)")
     .option("--json", "print the result as JSON")
     .addHelpText("after", SCENARIO_HELP)
     .action(async (path: string, options: CiOptions, command: Command) => {
       try {
-        const report = await runCi(path, { godot: options.godot, noGodot: !options.godotChecks, includeAddons: options.includeAddons });
+        const report = await runCi(path, { godot: options.godot, noGodot: !options.godotChecks, includeAddons: options.includeAddons, ...(options.baselineDir ? { baselineDir: options.baselineDir } : {}) });
         writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatCi(report));
         if (!report.ok) process.exitCode = 1;
       } catch (error) {

@@ -229,7 +229,8 @@ baseline hud: CHANGED
   both ways (something moved, not removed). A brightness shift of 3 levels or more is named (`darker`, `brighter`).
 - A blank picture is named on every screenshot, baseline or not: black, white, fully transparent, the background colour
   only, or one colour over at least 99.9% of the picture.
-- `--update` (MCP: `update: true`) replaces the baseline; `--baseline-dir` keeps baselines elsewhere. A change is a
+- `--update` (MCP: `update: true`) replaces the baseline; `--baseline-dir` keeps baselines elsewhere (over MCP
+  `baseline_dir` must be inside the project). A change is a
   normal result with exit code 1, not an error. Over MCP a changed compare returns the diff picture, a same one no picture.
 - Runs are deterministic: a fixed frame rate (`--fixed-fps 60`), the Compatibility renderer and a fixed window size.
   Two runs on one machine give the same bytes. Another GPU driver or Mesa version can shade edges a few levels
@@ -256,7 +257,8 @@ with screenshots draws with the Compatibility renderer (xvfb-run on Linux withou
 
 ### In the CI receipt
 
-`godotwright ci` adds a `visual` step: every baseline made with `godotwright screenshot` is rendered again and compared,
+`godotwright ci` adds a `visual` step: every baseline made with `godotwright screenshot` is rendered again and compared
+(baselines kept elsewhere with `--baseline-dir` need the same `--baseline-dir` on `ci`, or the Action's `baseline-dir` input),
 and the screenshot steps of the scenarios are listed with it (the `scenarios` step judges only what the game did). In CI
 a missing baseline fails instead of being made, since a baseline made on the runner would be thrown away. The GitHub
 Action installs xvfb when it is missing and uploads `.godot/godotwright/diff/*.png` (diffs and new captures) as the
