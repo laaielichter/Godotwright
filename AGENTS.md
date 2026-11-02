@@ -78,6 +78,9 @@ node dist/cli.js --help
   - `mcpb/`: the Claude Desktop bundle manifest and icon; `npm run build:mcpb` builds `build/godotwright.mcpb`,
     and the Release workflow attaches it to every release.
   - `docs/install.html`: every client, with the Cursor and VS Code one-click links.
+  - `Dockerfile`: builds the MCP server from this repository, for directories such as Glama that build and test
+    servers in a container.
+  - `llms-install.md`: install steps written for agents such as Cline.
 - `src/index.ts`: public library exports.
 - `bench/`: the benchmark (tasks with Godot behavior tests, runner, grader).
   See `bench/README.md`. Task tests run in CI by the Bench workflow.

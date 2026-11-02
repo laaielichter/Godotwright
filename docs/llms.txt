@@ -9,6 +9,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 - [README](https://github.com/laaielichter/Godotwright#readme): what it does, install, MCP tools, FAQ
 - [Reference](https://github.com/laaielichter/Godotwright/blob/main/docs/reference.md): every command, option, rule and tool
 - [Claude Code plugin](https://laaielichter.github.io/Godotwright/claude-code.html): hooks, ten skills and two subagents
+- [GDScript review in CI](https://laaielichter.github.io/Godotwright/ci.html): the GitHub Action that posts a review, check and test receipt on pull requests, SARIF and plain CI
 - [Godot workflow skill](https://github.com/laaielichter/Godotwright/blob/main/plugins/godotwright/skills/godot/SKILL.md): how an agent should work in a Godot project with Godotwright
 - [AGENTS.md](https://github.com/laaielichter/Godotwright/blob/main/AGENTS.md): how to work on the Godotwright code itself
 - [3D model gallery](https://laaielichter.github.io/Godotwright/models.html): 59 ready-made parametric models and the commands that build them
