@@ -46,6 +46,8 @@ export interface ShaderReport {
   findings: Finding[];
   /** Godot's compile result, when it ran. */
   compile?: ShaderCompileResult;
+  /** Requested files that are no shader, include or scene with a shader in this project (each counts as an error). */
+  unknownFiles?: string[];
   /** Why Godot did not compile them, when it did not. */
   compileSkipped?: string;
   errors: number;
@@ -79,6 +81,8 @@ export async function shaderReport(path: string, options: ShaderOptions = {}): P
   const findings = review.findings.filter((f) => SHADER_RULES.includes(f.rule) && wanted(f.file));
 
   const report: ShaderReport = { project: data.map.project.name ?? "(unnamed)", shaders, findings, errors: 0, warnings: 0 };
+  const unknown = (options.files ?? []).filter((f) => !selected.some(([p]) => p === f || p.startsWith(`${f}::`)));
+  if (unknown.length) report.unknownFiles = unknown;
   const targets = compileTargets(all, new Set(selected.map(([p]) => p)), options.overrides ?? {});
   if (options.compile !== false && targets.length > 0) {
     try {
@@ -143,6 +147,9 @@ function shown(report: ShaderReport): Line[] {
     if (d.file && missingInclude.has(d.file) && d.message.startsWith("Tokenizer: Unknown character #35")) continue;
     if (d.file && badType.has(d.file) && /^(No|Unknown) shader_type/.test(d.message)) continue;
     out.push({ file: d.file, line: d.line, severity: d.severity, text: formatGodot(d) });
+  }
+  for (const f of report.unknownFiles ?? []) {
+    out.push({ file: f, severity: "error", text: `${f}: error no shader, shader include or scene holding a shader at this path in the project` });
   }
   const order: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
   return out.sort((a, b) => order[a.severity] - order[b.severity] || (a.file ?? "").localeCompare(b.file ?? "") || (a.line ?? 0) - (b.line ?? 0));

@@ -251,6 +251,17 @@ describe("godot_shader without Godot", () => {
     await expect(shaderReport(root, { compile: true, godot: "/no/such/godot" })).rejects.toThrow(/Godot binary not found/);
   });
 
+  it("reports a requested file that is no shader in the project as an error", async () => {
+    const root = makeProject(files);
+    const report = await shaderReport(root, { files: ["res://nope.gdshader", "res://fx/ok.gdshader"], compile: false });
+    expect(report.unknownFiles).toEqual(["res://nope.gdshader"]);
+    expect(report.errors).toBe(1);
+    expect(formatShaderReport(report)).toContain("res://nope.gdshader: error no shader, shader include or scene holding a shader at this path in the project");
+    const cli = await runCli(["shader", root, "--file", "res://../outside.gdshader", "--no-compile"]);
+    expect(cli.exitCode).toBe(1);
+    expect(cli.output).toContain("res://../outside.gdshader: error no shader");
+  });
+
   it("runs from the CLI with exit code 1 on errors, and as JSON", async () => {
     const root = makeProject(files);
     const ok = await runCli(["shader", root, "--file", "fx/ok.gdshader", "--no-compile"]);
