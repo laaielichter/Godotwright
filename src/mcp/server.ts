@@ -94,7 +94,20 @@ import { checkExport, formatExportCheck } from "../export/export.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
-import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
+import {
+  ScenarioError,
+  formatClaims,
+  formatScenarioList,
+  formatScenarios,
+  judgeClaims,
+  loadScenarios,
+  parseExpectation,
+  pickScenarios,
+  runScenario,
+  sampledWatches,
+  saveScenario,
+  scenarioData,
+} from "../ci/scenario.js";
 import {
   TestRunError,
   formatTests,
@@ -151,7 +164,7 @@ const PROFILES: Record<Tier, Profile> = {
       "2. Before you use an engine class, method, property or signal you are not sure about, call godot_api. Never guess API names; Godot 3 names do not work in Godot 4.",
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
-      "5. If Godot is installed, call godot_check before you finish.",
+      "5. If Godot is installed, call godot_check before you finish. When godot_play with expect proved a fix, keep it: godot_scenario op save with the same arguments.",
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
@@ -186,6 +199,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
+      "- godot_scenario keeps a passing godot_play run (same arguments, op save) as a regression test in the project that ci runs, and runs the kept ones (op run). Save one after every fix you proved with expect.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
       "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right, or says whether a lesson helped; Godotwright learns from it on this machine.",
@@ -1234,7 +1248,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Play a scene with input",
       description:
-        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. `until` stops the run at the first frame a condition holds (\"Heli.is_on_floor() == true\"); `signals` records when signals fire, with their arguments; `summary: true` gives one line per watched value (start, end, min, max, first change) instead of a table, which saves tokens on long runs; `expect` checks claims such as \"Heli.health > 0\" or \"Heli.position.y < 1 @ 90\" and makes the result an error when one fails, so a play run doubles as a test. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
+        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. `until` stops the run at the first frame a condition holds (\"Heli.is_on_floor() == true\"); `signals` records when signals fire, with their arguments; `summary: true` gives one line per watched value (start, end, min, max, first change) instead of a table, which saves tokens on long runs; `expect` checks claims such as \"Heli.health > 0\" or \"Heli.position.y < 1 @ 90\" (a claim on a recorded signal counts how often it fired) and makes the result an error when one fails, so a play run doubles as a test; to keep a passing run as a regression test, pass the same arguments to godot_scenario op save. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1274,7 +1288,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         expect: z
           .array(z.string())
           .optional()
-          .describe('claims to check: "Heli.health > 0" (last frame) or "Heli.position.y < 1 @ 90"; their values are watched'),
+          .describe('claims to check: "Heli.health > 0" (last frame) or "Heli.position.y < 1 @ 90"; their values are watched; on a recorded signal, "Heli.landed >= 1" counts how often it fired'),
         timeout_seconds: z
           .number()
           .int()
@@ -1293,7 +1307,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     async ({ path, scene, input, watch, frames, every, until, signals, summary, expect, timeout_seconds }) => {
       try {
         const claims = (expect ?? []).map(parseExpectation);
-        const watched = [...new Set([...(watch ?? []), ...claims.map((c) => c.watch)])];
+        const watched = [...new Set([...(watch ?? []), ...sampledWatches(claims, signals)])];
         const report = await playScene(where(path), {
           godot: options.godot,
           ...(scene ? { scene } : {}),
@@ -1305,7 +1319,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(signals?.length ? { signals } : {}),
           timeoutMs: (timeout_seconds ?? 300) * 1000,
         });
-        const results = judgeClaims(claims, report);
+        const results = judgeClaims(claims, report, undefined, signals);
         const body = formatPlay(report, { summary: summary === true }) + formatClaims(results);
         return !report.finished ||
           report.diagnostics.some((d) => d.severity === "error") ||
@@ -1319,6 +1333,53 @@ export function createServer(options: ServerOptions = {}): McpServer {
           );
         if (error instanceof PlayError || error instanceof ProjectNotFoundError || error instanceof ScenarioError)
           return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_scenario",
+    {
+      title: "Keep and run scenario tests",
+      description:
+        "Scenarios are regression tests kept in the project (.godotwright/scenarios/<name>.json) that godotwright ci runs: a scene, an input timeline and claims about what the game did, run headless in Godot 4.7 and deterministic. op `save` takes the arguments of a godot_play run (scene, input, watch, frames, until, signals, expect: at least one claim), runs it once more and writes it only when every claim holds (undo with godot_undo); `overwrite` replaces one. op `list` shows each scenario and its claims; op `run` runs all, or the one called `name` (else those whose name contains it), and returns PASS per scenario and every failing claim with the value the game had and the frame. An error result when a run fails or Godot is missing. After godot_play with `expect` proves a fix, save it so the next change cannot break it unnoticed.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["list", "run", "save"]).describe("list, run or save"),
+        name: z.string().optional().describe("save: the new scenario's name (letters, digits, _ or -); run and list: which ones (default all)"),
+        scene: z.string().optional().describe("save: the res:// scene (default: the main scene)"),
+        input: z.string().optional().describe('save: timeline, "10 tap jump; 40 hold right 20"'),
+        watch: z.array(z.string()).optional().describe("save: extra values to sample"),
+        frames: z.number().int().min(1).max(100_000).optional().describe("save: physics frames to run"),
+        until: z.string().optional().describe("save: stop when this holds; the scenario fails when it never does"),
+        signals: z.array(z.string()).optional().describe('save: signals to record, "Hero.landed"'),
+        expect: z.array(z.string()).optional().describe('save: claims, "Hero.velocity.y == -400 @ 10", "Hero.landed >= 1"'),
+        overwrite: z.boolean().optional().describe("save: replace a scenario with that name"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout of each run (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, op, name, scene, input, watch, frames, until, signals, expect, overwrite, timeout_seconds }) => {
+      const run = { godot: options.godot, timeoutMs: (timeout_seconds ?? 300) * 1000 };
+      try {
+        if (op === "save") {
+          if (!name) return failure("save needs name");
+          const { result, file } = await saveScenario(where(path), scenarioData(name, { scene, input, watch, frames, until, signals, expect }), { ...run, overwrite });
+          const body = formatScenarios([result]);
+          return file ? text(`${body}saved ${file}\n`) : failure(`${body}not saved: fix the claims or the game, then save again\n`);
+        }
+        const { root, scenarios } = loadScenarios(where(path));
+        const chosen = pickScenarios(scenarios, name);
+        if (op === "list") return text(formatScenarioList(chosen));
+        if (!chosen.length) return failure(`no scenarios${name ? ` matching "${name}"` : ""} in .godotwright/scenarios; make one with op save`);
+        const results = [];
+        for (const { file, scenario } of chosen) results.push(await runScenario(root, file, scenario, run));
+        const body = formatScenarios(results, { brief: true });
+        return results.every((r) => r.ok) ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError || error instanceof ScenarioError) return failure(error.message);
         throw error;
       }
     },
