@@ -25,6 +25,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright session start [path] [--scene res://x.tscn]` (godot_session op start): loads the scene once, headless and paused at frame 0, and keeps it running between commands (it quits after 15 idle minutes; `session stop` ends it). `godotwright game tree|get|set|call|eval|step|signals|layout|ray|ui|errors` (godot_game): the live node tree, values read and set, methods called, Godot Expressions evaluated, `layout` (where 3D objects are and whether they rest on, float above or sink into what is below), `ray` (what a physics ray hits), `ui --size 1280x720 --size 720x1280` (clipped labels, off-screen panels, overlapping buttons), and `step <frames> --input "..." --watch Node.prop --until "condition"` with the same frame-exact input as play. Every answer lists the errors the game printed since the last one, with their call chain. Loopback only, with a token; the project is not changed.
 
+## Before an export
+
+`godotwright export [path] [--preset name]` (godot_export): compares export_presets.cfg with what the scripts and scenes load. Godot leaves excluded files out even when something preloads them, and exports plain data files (text, binary, GeoJSON, cfg, XML, YAML) only when include_filter names them (JSON and imported CSV are resources); both work in the editor and break in the build. Also: paths built at run time under an excluded folder, and whether export templates are installed.
+
 ## Measuring performance
 
 `godotwright perf [path] --scene res://x.tscn [--input "..."] [--budget 16.6]` (godot_perf): runs the scene headless and reports frame-time p50/p95/p99/max against a budget, the physics step apart, the slowest frames with what changed on them, node and orphan counts, and the change since the last run of the same scene.

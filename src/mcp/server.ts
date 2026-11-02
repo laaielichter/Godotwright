@@ -90,6 +90,7 @@ import {
 import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
+import { checkExport, formatExportCheck } from "../export/export.js";
 import { gameRequest, newDiagnostics, readSession, startSession, stepPayload, stopSession } from "../session/session.js";
 import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
@@ -176,6 +177,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
+      "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
@@ -774,6 +776,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
             : {}),
         });
         return text(formatMigration(result, detail ?? profile.detail));
+      }),
+  );
+
+  server.registerTool(
+    "godot_export",
+    {
+      title: "Check what the exported game will hold",
+      description:
+        "Compare the export presets (export_presets.cfg) with what the scripts and scenes load, without exporting: files that exclude_filter leaves out although they are preloaded or loaded (Godot leaves them out even when something needs them, so the build fails there), plain data files (text, binary, GeoJSON, cfg, XML, YAML; JSON and imported CSV are fine) that Godot only exports when include_filter names them, and paths built at run time under an excluded folder; plus whether export templates are installed. `preset` limits it to one preset (name or number). Read-only. Run it before an export and after changing what the game loads.",
+      inputSchema: {
+        path: pathParam,
+        preset: z.string().optional().describe("only this preset (its name or number)"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, preset }) =>
+      guard(() => {
+        const result = checkExport(where(path), preset ? { preset } : {});
+        const body = formatExportCheck(result);
+        return result.problems.some((p) => p.severity === "error") ? failure(body) : text(body);
       }),
   );
 

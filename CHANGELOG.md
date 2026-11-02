@@ -31,6 +31,12 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - `ray`: what a physics ray hits, where, with which normal (3D or 2D);
   - `ui`: the visible controls at one or more window sizes, with clipped labels, panels off-screen, overlapping buttons
     and tiny targets.
+- **`godot_export` (and `godotwright export`): "works in the editor, broken in the build", found before anyone exports.**
+  It compares the export presets with what the scripts and scenes load: files that `exclude_filter` leaves out
+  although they are preloaded (Godot leaves them out even when something needs them), plain data files that Godot
+  exports only when `include_filter` names them, and paths built at run time under an excluded folder; plus whether
+  export templates are installed. Checked against what a real Godot 4.7.2 export puts in the pack: JSON and imported
+  CSV go in by themselves; text, binary, GeoJSON, cfg, XML and YAML do not.
 - **`godot_perf` (and `godotwright perf`): measure a scene the way a player feels it.** Headless frame-time p50, p95,
   p99 and max against a budget, the physics step apart from the rest, the slowest frames with what changed on them
   (thousands of nodes made in one frame, a heavy physics step, script work), node and orphan counts, the change since
