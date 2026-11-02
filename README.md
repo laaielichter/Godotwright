@@ -23,6 +23,10 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <img src="docs/demo.gif" alt="Demo: godotwright review gives a Godot 3 player script 74/100, godotwright migrate rewrites KinematicBody2D, export var, onready var and yield, and after the last fix by hand the review gives 100/100" width="860"><br>
   <sub>Real output (godotwright 0.1.0). <a href="https://laaielichter.github.io/Godotwright/demo.mp4">Watch as video</a></sub>
 </p>
+<p align="center">
+  <a href="https://laaielichter.github.io/Godotwright/models.html"><img src="docs/gallery/overview.jpg" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" width="860"></a><br>
+  <sub>And 3D models from code, no Blender: 59 ready-made kinds. <a href="https://laaielichter.github.io/Godotwright/models.html">See the gallery</a></sub>
+</p>
 
 Coding agents learned Godot from years of Godot 3 tutorials. They write `yield`, `export var` and `KinematicBody2D`,
 invent methods, and wire signals to nodes that are not in the scene. Godotwright is the check between the agent and your
@@ -107,10 +111,6 @@ you give on the frames you give, and prints the values you watch; `screenshot` r
 ships, buildings, plants, terrain with lakes and rivers) or your own JSON spec. `model identify` says what a thing is
 (parts, sizes, pivots), `model view` draws it as text for agents that cannot see pictures, and `model lint` scores it.
 
-<p align="center">
-  <a href="https://laaielichter.github.io/Godotwright/models.html"><img src="docs/gallery/overview.jpg" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" width="720"></a>
-</p>
-
 **Review every pull request.** Add this to your game's repository:
 
 ```yaml
@@ -127,7 +127,8 @@ jobs:
 ```
 
 It downloads a checksum-verified Godot, runs the review, the check and your tests, and posts the result as a comment.
-No editor, no GPU. `review-only: "true"` skips Godot.
+No editor, no GPU. `review-only: "true"` skips Godot. Inputs, SARIF and plain CI:
+[GDScript review in CI](https://laaielichter.github.io/Godotwright/ci.html).
 
 **Learn.** Rules that real Godot keeps contradicting turn into hints, findings you mark as wrong stay hidden, and
 lessons you add come back when the same error does. All of it stays on your machine; sharing anonymous counts is
@@ -196,10 +197,14 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Scored review (api, performance, quality, structure) | yes | no | style, naming, complexity | no |
 | Godot 3 code | flagged with the Godot 4 fix; `migrate` rewrites scripts | no | no | rewrites scripts, scenes and settings |
 | Live control of the open editor | no | yes | no | no |
+| A running game to inspect and drive | yes, headless (`godot_session`) | some do, through the editor | no | no |
 | C# | no | some do | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 
-They work well together: an editor server to drive the editor, Godotwright to check what the agent wrote.
+Editor servers such as [godot-ai](https://github.com/hi-godot/godot-ai) and [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro)
+control the open editor and have more tools; paid in-editor assistants such as [Ziva](https://ziva.sh) write inside the
+editor. Godotwright works from files and checks what the agent writes, so they work well together: an editor server to
+drive the editor, Godotwright to check the code.
 
 ## FAQ
 

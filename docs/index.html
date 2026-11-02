@@ -218,6 +218,11 @@ details { background: var(--panel); border: 1px solid var(--line); border-radius
 summary { cursor: pointer; font-weight: 700; }
 details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
 
+/* Model strip under the hero demo */
+.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin-top: .4rem; }
+.strip a { display: block; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.strip img { display: block; width: 100%; height: auto; }
+@media (max-width: 560px) { .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* New in a release */
 .new { display: inline-flex; align-items: center; gap: .5rem; width: fit-content; padding: .3rem .8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); text-decoration: none; font-size: .9rem; }
 .new b { font: 700 .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--nui); }
@@ -245,6 +250,7 @@ footer a { color: var(--muted); }
       <a href="#benchmark">Benchmark</a>
       <a href="#faq">FAQ</a>
       <a href="godot-3-to-4.html">Godot 3 to 4</a>
+      <a href="ci.html">CI</a>
       <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
     </nav>
   </div>
@@ -268,6 +274,8 @@ footer a { color: var(--muted); }
       </div>
     </div>
     <p class="caption">Real output of godotwright 0.1.0: <code>review</code> scores a Godot 3 script 74/100, <code>migrate</code> rewrites the mechanical parts, and after one fix by hand <code>review</code> gives 100/100.</p>
+    <div class="strip"><a href="models.html"><img src="gallery/car.jpg" width="400" height="300" alt="A car with doors, hood and trunk on hinges, built by godotwright model build"></a><a href="models.html"><img src="gallery/helicopter.jpg" width="400" height="300" alt="A helicopter with a glass cockpit, built by godotwright model build"></a><a href="models.html"><img src="gallery/windmill.jpg" width="400" height="300" alt="A brick windmill with a stage, built by godotwright model build"></a><a href="models.html"><img src="gallery/castle.jpg" width="400" height="300" alt="A castle with a moat and drawbridge, built by godotwright model build"></a></div>
+    <p class="caption">And 3D models from code: <code>godotwright model build car</code> and 58 more kinds, no Blender. <a href="models.html">See all 59</a>.</p>
   </div>
 
   <section id="with">
@@ -282,7 +290,7 @@ footer a { color: var(--muted); }
             <tr><td>renames a signal or moves a file</td><td class="no">Breaks scene connections and <code>.uid</code> files</td><td><code>rename</code> changes code, scenes, connections and <code>.uid</code> files together, dry run first</td></tr>
             <tr><td>says “it works”</td><td class="no">Without running anything</td><td><code>check</code>, <code>test</code> and <code>play</code> run it headless and report <code>file:line</code></td></tr>
             <tr><td>needs a 3D model</td><td class="no">Needs Blender</td><td><code>model build</code> makes a clean <code>.glb</code> from one of 59 kinds, then lints it</td></tr>
-            <tr><td>opens a pull request</td><td class="no">Nobody checks the Godot side</td><td>A GitHub Action posts a receipt: review, check and tests</td></tr>
+            <tr><td>opens a pull request</td><td class="no">Nobody checks the Godot side</td><td>A GitHub Action posts a receipt: review, check and tests (<a href="ci.html">set it up</a>)</td></tr>
           </tbody>
         </table>
       </div>
@@ -454,12 +462,13 @@ footer a { color: var(--muted); }
             <tr><td>Scored review: api, performance, quality, structure</td><td class="yes">Yes</td><td class="no">No</td><td class="no">Style, naming, complexity</td><td class="no">No</td></tr>
             <tr><td>Godot 3 code</td><td class="yes">Flagged with the Godot 4 fix; <code>migrate</code> rewrites scripts</td><td class="no">No</td><td class="no">No</td><td>Rewrites scripts, scenes and settings</td></tr>
             <tr><td>Live control of the open editor</td><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>A running game to inspect and drive</td><td class="yes">Yes, headless (<code>godot_session</code>)</td><td>Some do, through the editor</td><td class="no">No</td><td class="no">No</td></tr>
             <tr><td>C#</td><td class="no">No</td><td>Some do</td><td class="no">No</td><td class="no">Not yet</td></tr>
             <tr><td>Best for</td><td>Checking and fixing what an agent writes, in the loop and in CI</td><td>Working in the open editor with an agent</td><td>Code style</td><td>A one-time port</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="sub">They work well together: an editor server to drive the editor, Godotwright to check what the agent wrote.</p>
+      <p class="sub">Editor servers such as <a href="https://github.com/hi-godot/godot-ai">godot-ai</a> and <a href="https://github.com/youichi-uda/godot-mcp-pro">Godot MCP Pro</a> control the open editor and have more tools; paid in-editor assistants such as <a href="https://ziva.sh">Ziva</a> write inside the editor. Godotwright works from files and checks what the agent writes, so they work well together: an editor server to drive the editor, Godotwright to check the code.</p>
     </div>
   </section>
 
