@@ -4,6 +4,7 @@ import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { codeCommand } from "./commands/code.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
 import { depsCommand } from "./commands/deps.js";
@@ -53,6 +54,7 @@ export function createProgram(): Command {
     .addCommand(fixCommand())
     .addCommand(doctorCommand())
     .addCommand(exportCommand())
+    .addCommand(codeCommand())
     .addCommand(undoCommand())
     .addCommand(depsCommand())
     .addCommand(usagesCommand())

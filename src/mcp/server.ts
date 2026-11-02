@@ -91,6 +91,8 @@ import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
+import { CODE_OPS, CodeError, codeIntel, formatCode } from "../lsp/code.js";
+import { LanguageServerError } from "../lsp/server.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
@@ -152,6 +154,7 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
+      "When Godot is installed and you need the engine's exact view of a script (its warnings at the project's levels, the inferred type of a variable, where a name is defined, what can follow a dot), call godot_code; it also takes unsaved code.",
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
@@ -172,6 +175,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_api and godot_api_search answer from the official Godot 4.7 class reference, offline. Use them instead of memory for exact signatures, and to translate Godot 3 names.",
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
+      "- godot_code asks Godot's own GDScript language server (kept warm): diagnostics with the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code. Use it for engine-exact answers about a script.",
       "- godot_doctor answers \"what is wrong here, and in which order do I fix it\": the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and whether godot_fix or godot_migrate can do it, then numbered next steps. Start here in a project you do not know or when something is broken.",
       "- godot_fix applies the mechanical fixes for review findings (each labelled safe or check), shows them first, writes with write: true and reviews the changed files again.",
       "- godot_checklist lists every AAA rule with its fix.",
@@ -1140,6 +1144,54 @@ export function createServer(options: ServerOptions = {}): McpServer {
             `${error.message}\nUse godot_review for checks without Godot.`,
           );
         }
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_code",
+    {
+      title: "Ask Godot's GDScript language server",
+      description:
+        "Engine-exact code intelligence from Godot 4.7's own GDScript language server (Godot started headless as an editor, kept warm for 10 minutes so later calls answer in milliseconds; the first call takes a few seconds). op `diagnostics`: Godot's errors and warnings with the project's warning levels (debug/gdscript/warnings/...), as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or, without it, every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column), e.g. `var t: SceneTree`. op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow at that place (members after a dot, node paths after $), up to `limit` labels with kind and signature, filtered by the word being typed. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot on this machine. It does not change your scripts or scenes, but like opening the editor Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset (png, ogg, ttf...) and a missing .uid file next to each script; the result says so when the project had never been imported. Changes to existing scripts on disk are seen at once; a new class_name, a changed project.godot or a new file that needs an import (png, ogg, glb...) restarts the server, after the calls already running on it. For a check without Godot use godot_review; to load scenes too use godot_check.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition or completion"),
+        file: z.string().optional().describe("the .gd file: res:// path or a path (diagnostics without it: every script)"),
+        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, completion)"),
+        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, completion)"),
+        code: z.string().optional().describe("unsaved GDScript to analyse as `file` instead of the file on disk; nothing is written"),
+        limit: z.number().int().min(1).max(200).optional().describe("completion: most items shown (default 40)"),
+      },
+      // Not read-only: the headless editor imports the project and adds .import and .uid files next to its files, as
+      // godot_check does.
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ path, op, file, line, column, code, limit }) => {
+      try {
+        // res:// names a file in the project of `path`; a plain path starts at the server's folder like `path` does.
+        const target = file === undefined || file.startsWith("res://") || isAbsolute(file) ? file : resolve(base, file);
+        const dir = path === undefined && target && !target.startsWith("res://") ? target : where(path);
+        const result = await codeIntel(dir, {
+          op,
+          ...(target ? { file: target } : {}),
+          ...(line !== undefined ? { line } : {}),
+          ...(column !== undefined ? { column } : {}),
+          ...(code !== undefined ? { code } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(options.godot ? { godot: options.godot } : {}),
+        });
+        const body = formatCode(result);
+        return result.diagnostics?.some((d) => d.severity === "error") ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof CodeError || error instanceof LanguageServerError || error instanceof ProjectNotFoundError) return failure(error.message);
         return failure(error instanceof Error ? error.message : String(error));
       }
     },
