@@ -881,3 +881,97 @@ describe("signal connections saved in scenes", () => {
     expect(found[0]!.message).toContain('"Method expected 1 argument(s), but called with 0"');
   });
 });
+
+describe("scene and resource integrity", () => {
+  const report = reviewProject(`${FIXTURES}/uid-integrity`);
+  const lines = report.findings.map(formatFinding);
+  const rule = (id: string) => lines.filter((l) => l.includes(`[${id}]`));
+
+  it("structure/duplicate-uid: a copied scene keeps the uid of its original", () => {
+    expect(rule("structure/duplicate-uid")).toEqual([
+      expect.stringMatching(/^res:\/\/child\.tscn:1: error .* uid:\/\/bkq3oe5w8x1y2 \(header\) is also the uid of res:\/\/dup\.tscn/),
+      expect.stringMatching(/^res:\/\/dup\.tscn:1: error .* is also the uid of res:\/\/child\.tscn/),
+    ]);
+  });
+
+  it("structure/invalid-uid, unknown-uid and uid-path-mismatch", () => {
+    expect(rule("structure/invalid-uid")).toEqual([expect.stringMatching(/^res:\/\/bad\.tres:1: warning .*"uid:\/\/Not-A-Uid" \(header\) is not a uid Godot can read/)]);
+    expect(rule("structure/unknown-uid")).toEqual([
+      expect.stringMatching(/^res:\/\/main\.tscn:3: warning .*no file has uid:\/\/bstale0000001, so Godot warns on every load/),
+      expect.stringMatching(/^res:\/\/main\.tscn:7: warning .*uid:\/\/blost0000001/),
+    ]);
+    expect(rule("structure/uid-path-mismatch")).toEqual([
+      expect.stringMatching(/^res:\/\/main\.tscn:4: error .*uid:\/\/d1fq0i6v1abqx is the uid of res:\/\/leaf\.tscn, but the path says res:\/\/other\.tscn\. Godot loads res:\/\/leaf\.tscn/),
+    ]);
+  });
+
+  it("resource ids: missing, used before defined, duplicated, out of order, unused", () => {
+    expect(rule("structure/missing-resource-id")).toEqual([
+      expect.stringMatching(/^res:\/\/broken\.tscn:6: error .*SubResource\("b"\) is used before its \[sub_resource\] on line 8/),
+      expect.stringMatching(/^res:\/\/broken\.tscn:17: error .*ExtResource\("9_missing"\) has no \[ext_resource\]/),
+    ]);
+    expect(rule("structure/duplicate-resource-id")).toEqual([expect.stringMatching(/^res:\/\/broken\.tscn:12: error .*sub_resource id "g" is already used on line 10/)]);
+    expect(rule("structure/section-order")).toEqual([expect.stringMatching(/^res:\/\/broken\.tscn:20: error .*\[ext_resource\] comes after/)]);
+    expect(rule("structure/unused-resource")).toEqual([
+      expect.stringMatching(/^res:\/\/broken\.tscn:20: info .*ext_resource "2_late"/),
+      expect.stringMatching(/^res:\/\/main\.tscn:8: info .*ext_resource "6_unused"/),
+    ]);
+  });
+
+  it("structure/locked-instance-edit: once per instance, nested instances too; [editable] makes it quiet", () => {
+    expect(rule("structure/locked-instance-edit")).toEqual([
+      'res://main.tscn:16: warning [structure/locked-instance-edit] 3 edits inside the instanced scene at "Inst", which has no [editable path="Inst"]: Godot applies them when loading, but drops them on the next save from the editor.',
+      'res://main.tscn:19: warning [structure/locked-instance-edit] 1 edit inside the instanced scene at "Inst/Sub", which has no [editable path="Inst/Sub"]: Godot applies it when loading, but drops it on the next save from the editor.',
+    ]);
+    expect(lines.some((l) => l.startsWith("res://second.tscn"))).toBe(false);
+  });
+
+  const quiet = (files: Record<string, string>) =>
+    reviewProject(makeProject({ "project.godot": PROJECT, ...files })).findings.filter((f) => /uid|resource-id|section-order|unused-resource|locked-instance/.test(f.rule)).map(formatFinding);
+  const child = '[gd_scene format=3 uid="uid://bchild1"]\n\n[node name="Child" type="Node2D"]\n\n[node name="Inner" type="Node2D" parent="."]\n';
+
+  it("stays quiet on what Godot handles", () => {
+    expect(
+      quiet({
+        "child.tscn": child,
+        "a.gd": "extends Node\n",
+        // New nodes under an instance, nodes below them, overrides of the instance node itself and of an inherited scene.
+        "main.tscn":
+          '[gd_scene format=3]\n\n[ext_resource type="PackedScene" uid="uid://bchild1" path="res://child.tscn" id="1_c"]\n[ext_resource type="Script" path="res://a.gd" id="2_a"]\n\n[sub_resource type="GDScript" id="s"]\nscript/source = "extends Node\\nvar x = ExtResource(\\"nope\\")\\n"\n\n[node name="Main" type="Node2D"]\nmetadata/list = Array[ExtResource("2_a")]([])\n\n[node name="Inst" parent="." instance=ExtResource("1_c")]\nposition = Vector2(1, 1)\n\n[node name="New" type="Node2D" parent="Inst"]\n\n[node name="Deeper" type="Node2D" parent="Inst/New"]\n\n[connection signal="visibility_changed" from="Inst" to="." method="queue_free"]\n',
+        "inherited.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://child.tscn" id="1_c"]\n\n[node name="Child" instance=ExtResource("1_c")]\n\n[node name="Inner" parent="."]\nposition = Vector2(2, 2)\n',
+      }),
+    ).toEqual([]);
+  });
+
+  // Godot 4.7.2 keeps these after an editor save: the instanced scene marks its own instance editable.
+  const editableInside = {
+    "leaf.tscn": '[gd_scene format=3]\n\n[node name="Leaf" type="Node2D"]\n\n[node name="Sprite" type="Node2D" parent="."]\n',
+    "mid.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://leaf.tscn" id="1_l"]\n\n[node name="Mid" type="Node2D"]\n\n[node name="L" parent="." instance=ExtResource("1_l")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(1, 1)\n\n[editable path="L"]\n',
+    "inh.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Mid" instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(9, 9)\n',
+    "top.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Top" type="Node2D"]\n\n[node name="M" parent="." instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="M/L"]\nposition = Vector2(3, 3)\n\n[editable path="M"]\n',
+  };
+
+  it("structure/locked-instance-edit: counts the [editable] entries of the instanced or inherited scene itself", () => {
+    expect(quiet(editableInside)).toEqual([]);
+    // Without mid.tscn's own [editable], its edit and both others are inside a locked instance again.
+    const locked = quiet({ ...editableInside, "mid.tscn": editableInside["mid.tscn"].replace('\n[editable path="L"]\n', "") });
+    expect(locked.filter((l) => l.includes("locked-instance")).map((l) => l.replace(/ warning .* at "/, ' at "').replace(/",.*$/, ""))).toEqual(['res://inh.tscn:7: at "L', 'res://mid.tscn:9: at "L', 'res://top.tscn:9: at "M/L']);
+  });
+
+  it("ignores a .uid file left behind by a moved script (Godot 4.7.2 does too)", () => {
+    expect(quiet({ "new.gd": "extends Node\n", "new.gd.uid": "uid://cwx83o7xktq7h\n", "old.gd.uid": "uid://cwx83o7xktq7h\n" })).toEqual([]);
+  });
+
+  it("checks against the base project, but not a base's own problems or files only a .pck has", () => {
+    const base = makeProject({ "project.godot": PROJECT, "child.tscn": child, "dup_in_base.tscn": child });
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "godotwright.json": JSON.stringify({ base: [base], baseFiles: ["pck.txt"] }),
+      "pck.txt": "res://shipped.tscn\n",
+      "copy.tscn": child,
+      "main.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" uid="uid://bshipped1" path="res://shipped.tscn" id="1_s"]\n\n[node name="Main" type="Node2D"]\n\n[node name="S" parent="." instance=ExtResource("1_s")]\n',
+    });
+    const found = reviewProject(root).findings.filter((f) => f.rule.includes("uid")).map(formatFinding);
+    expect(found).toEqual([expect.stringMatching(/^res:\/\/copy\.tscn:1: error \[structure\/duplicate-uid\] .*res:\/\/child\.tscn \(base\), res:\/\/dup_in_base\.tscn \(base\)/)]);
+  });
+});

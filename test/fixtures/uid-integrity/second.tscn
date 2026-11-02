@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://cx2second5aa1"]
+
+[ext_resource type="PackedScene" uid="uid://bkq3oe5w8x1y2" path="res://child.tscn" id="1_child"]
+
+[node name="Second" type="Node2D"]
+
+[node name="Inst" parent="." instance=ExtResource("1_child")]
+
+[node name="Inner" parent="Inst"]
+position = Vector2(2, 2)
+
+[node name="X" parent="Inst/Sub"]
+position = Vector2(3, 3)
+
+[editable path="Inst"]
+[editable path="Inst/Sub"]

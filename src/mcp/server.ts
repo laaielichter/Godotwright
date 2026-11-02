@@ -158,7 +158,7 @@ const PROFILES: Record<Tier, Profile> = {
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "After you write or change a shader (.gdshader, or a Shader in a scene), call godot_shader and fix every error.",
-      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
+      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order, uids, unused resources), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
       "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
@@ -616,7 +616,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Change a scene",
       description:
-        'Change a .tscn safely, without the editor: add a node (a Godot class or an instanced scene), remove a node (with its children, connections and the resources only it used), set a property (name and type checked against Godot 4.7; enums by name, resources as res:// files), connect or disconnect a signal (checks the signal exists, and warns when the method is missing or takes the wrong number of arguments, with the func line to add), or attach a script (refuses one that extends another node type). Node paths are relative to the scene root, which is ".". `op` picks the change and which fields it needs: add_node (parent, name, and type or instance), remove_node (node), set (node, property, value), connect and disconnect (from, signal, to, method), attach_script (node, script). Only the lines of that change are touched. Without `write` it changes nothing and returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a change it refuses returns an error and writes nothing. Use it instead of editing .tscn files by hand. For project.godot use godot_project_edit; to rename a node everywhere, use godot_rename.',
+        'Change a .tscn safely, without the editor: add a node (a Godot class or an instanced scene), remove a node (with its children, connections and the resources only it used), set a property (name and type checked against Godot 4.7; enums by name, resources as res:// files), connect or disconnect a signal (checks the signal exists, and warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach a script (refuses one that extends another node type), or make the children of an instanced scene editable (set_editable). A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; pass make_editable to add [editable] with it. Node paths are relative to the scene root, which is ".". `op` picks the change and which fields it needs: add_node (parent, name, and type or instance), remove_node (node), set (node, property, value), connect and disconnect (from, signal, to, method), attach_script (node, script), set_editable (node, editable). Only the lines of that change are touched. Without `write` it changes nothing and returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a change it refuses returns an error and writes nothing. Use it instead of editing .tscn files by hand. For project.godot use godot_project_edit; to rename a node everywhere, use godot_rename.',
       inputSchema: {
         scene: z.string().describe("the scene: res://main.tscn, or a path"),
         op: z
@@ -627,13 +627,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
             "connect",
             "disconnect",
             "attach_script",
+            "set_editable",
           ])
           .describe("what to change"),
         node: z
           .string()
           .optional()
           .describe(
-            'remove_node/set/attach_script: path of the node ("." is the root)',
+            'remove_node/set/attach_script/set_editable: path of the node ("." is the root)',
           ),
         parent: z
           .string()
@@ -678,6 +679,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe("attach_script: res:// path of the script"),
+        editable: z.boolean().optional().describe("set_editable: false to make it not editable (default true)"),
+        make_editable: z.boolean().optional().describe("add_node/set/connect: also make the instance editable when the change is inside one"),
         write: z
           .boolean()
           .optional()
@@ -699,6 +702,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       };
       try {
         const { op } = args;
+        const make = args.make_editable ? { makeEditable: true } : {};
         const edit: SceneEdit =
           op === "add_node"
             ? {
@@ -708,6 +712,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
                 ...(args.instance
                   ? { instance: args.instance }
                   : { type: need("type") }),
+                ...make,
               }
             : op === "remove_node"
               ? { op, node: need("node") }
@@ -717,16 +722,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
                     node: need("node"),
                     property: need("property"),
                     value: need("value"),
+                    ...make,
                   }
                 : op === "attach_script"
                   ? { op, node: need("node"), script: need("script") }
-                  : {
-                      op,
-                      from: need("from"),
-                      signal: need("signal"),
-                      to: need("to"),
-                      method: need("method"),
-                    };
+                  : op === "set_editable"
+                    ? { op, node: need("node"), editable: args.editable !== false }
+                    : op === "connect"
+                      ? { op, from: need("from"), signal: need("signal"), to: need("to"), method: need("method"), ...make }
+                      : {
+                          op,
+                          from: need("from"),
+                          signal: need("signal"),
+                          to: need("to"),
+                          method: need("method"),
+                        };
         const scene = args.scene.startsWith("res://")
           ? args.scene
           : where(args.scene);
@@ -1148,12 +1158,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Fix review findings mechanically",
       description:
-        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, Godot 3 shader names renamed, a hint_screen_texture uniform for SCREEN_TEXTURE) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, Godot 3 shader names renamed, a hint_screen_texture uniform for SCREEN_TEXTURE, a stale ext_resource uid set from its path, a copied file's duplicate uid renewed with its references, a lost .uid file restored, an unused resource section removed) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type; a uid that named another file than its path; [editable] added for edits inside an instance). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only these res:// files"),
         rules: z.array(z.string()).optional().describe(`only these rules (fixable: ${FIXABLE_RULES.join(", ")})`),
         include_check: z.boolean().optional().describe("also apply fixes labelled check (default false)"),
+        stamp_uids: z.boolean().optional().describe("also give scenes, resources, scripts and shaders without a uid a new one (header or .uid file)"),
         write: z.boolean().optional().describe("write the fixes (default false: show them only)"),
         detail: detailParam,
       },
@@ -1164,12 +1175,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, files, rules, include_check, write, detail }) =>
+    async ({ path, files, rules, include_check, stamp_uids, write, detail }) =>
       guard(() => {
         const result = fixProject(where(path), {
           ...(files?.length ? { files: files.map(resPath) } : {}),
           ...(rules?.length ? { rules } : {}),
           includeCheck: include_check === true,
+          stampUids: stamp_uids === true,
           write: write === true,
         });
         return text(formatFix(result, detail ?? profile.detail));
