@@ -173,4 +173,42 @@ describe.skipIf(!GODOT)("resource and import edits checked by Godot", () => {
       "RESULT theme=GradientTexture2D Gradient",
     ]);
   });
+
+  it("names meshes after a named glTF scene and keeps a plain single root in node paths", { timeout: 300_000 }, async () => {
+    const tri = { accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3", min: [0, 0, 0], max: [1, 1, 0] }], bufferViews: [{ buffer: 0, byteLength: 36 }], buffers: [{ byteLength: 36, uri: "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA" }] };
+    const gltf = (scene: string, mesh: string) => JSON.stringify({ asset: { version: "2.0" }, scene: 0, scenes: [{ name: scene, nodes: [0] }], nodes: [{ name: "Root", children: [1] }, { name: "Body", mesh: 0 }], meshes: [{ name: mesh, primitives: [{ attributes: { POSITION: 0 } }] }], ...tri });
+    const root = makeProject({
+      "project.godot": 'config_version=5\n\n[application]\n\nconfig/name="Names"\nconfig/features=PackedStringArray("4.7")\n',
+      "named.gltf": gltf("Vehicle", "body"),
+      "dotted.gltf": gltf("Scene", "my.body"),
+      "check.gd": `extends SceneTree
+func _init() -> void:
+	for f in ["named", "dotted"]:
+		var scene: Node = (load("res://%s.gltf" % f) as PackedScene).instantiate()
+		var body := scene.get_node("Root/Body") as MeshInstance3D
+		print("RESULT %s mesh=%s cast=%d shadow_mesh=%s" % [f, body.mesh.resource_name, body.cast_shadow, body.mesh.shadow_mesh != null])
+		scene.free()
+	quit()
+`,
+    });
+    expect((await editResource(join(root, "named.gltf"), [{ op: "reimport" }], { godot: GODOT })).reimport?.status).toMatch(/changed|same/);
+    for (const [f, mesh] of [["named", "Vehicle_body"], ["dotted", "dotted_my_body"]] as const) {
+      const plan = await editResource(
+        join(root, `${f}.gltf`),
+        [
+          { op: "set", sub: `meshes/${mesh}`, key: "generate/shadow_meshes", value: "Disable" },
+          { op: "set", sub: "nodes/PATH:Root/Body", key: "mesh_instance/cast_shadow", value: "Off" },
+        ],
+        { write: true, godot: GODOT },
+      );
+      console.log(formatResourcePlan(plan));
+      expect(plan.warnings.join("\n")).not.toMatch(/has no/);
+      expect(plan.reimport?.status).toBe("changed");
+    }
+    const run = await runGodot(GODOT as string, ["--headless", "--path", root, "--script", "res://check.gd"], { timeoutMs: 120_000 });
+    expect(run.stdout.split("\n").filter((l) => l.startsWith("RESULT"))).toEqual([
+      "RESULT named mesh=Vehicle_body cast=0 shadow_mesh=false",
+      "RESULT dotted mesh=dotted_my_body cast=0 shadow_mesh=false",
+    ]);
+  });
 });

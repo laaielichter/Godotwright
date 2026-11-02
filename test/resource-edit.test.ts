@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { typedValue } from "../src/godot/typed-value.js";
@@ -128,6 +128,37 @@ describe("resource edits (.tres)", () => {
     await expect(editResource(file, [{ op: "set", key: "roughness", value: "0.5" }])).rejects.toThrow(/nothing to change/);
   });
 
+  it("checks a raw ExtResource id and its type", async () => {
+    const root = project();
+    const file = join(root, "mat.tres");
+    await expect(editResource(file, [{ op: "set", key: "normal_texture", value: 'ExtResource("9_nope")' }])).rejects.toThrow(/has no ext_resource "9_nope"; it has 1_icon/);
+    await expect(editResource(file, [{ op: "set", key: "next_pass", value: 'ExtResource("1_icon")' }])).rejects.toThrow(/next_pass takes a Material; ext_resource 1_icon is a Texture2D/);
+    const ok = await editResource(file, [{ op: "set", key: "normal_texture", value: 'ExtResource("1_icon")' }]);
+    expect(ok.summary).toEqual(['set normal_texture = ExtResource("1_icon")']);
+  });
+
+  it("checks a sub_resource against its own script's exports", async () => {
+    const root = project();
+    writeFileSync(join(root, "item.gd"), "extends Resource\n\n@export var power: int = 0\n");
+    writeFileSync(join(root, "inv.tres"), '[gd_resource type="Resource" format=3]\n\n[ext_resource type="Script" path="res://item.gd" id="1_item"]\n\n[sub_resource type="Resource" id="Resource_a"]\nscript = ExtResource("1_item")\n\n[resource]\nmetadata/item = SubResource("Resource_a")\n');
+    const plan = await editResource(join(root, "inv.tres"), [{ op: "set", sub: "Resource_a", key: "power", value: "5" }], { write: true });
+    expect(plan.summary).toEqual(["set Resource_a.power = 5"]);
+    expect(read(root, "inv.tres")).toContain('script = ExtResource("1_item")\npower = 5\n');
+    await expect(editResource(join(root, "inv.tres"), [{ op: "set", sub: "Resource_a", key: "power", value: "lots" }])).rejects.toThrow(/is an int/);
+  });
+
+  it("refuses files and res:// paths outside the project", async () => {
+    const root = project();
+    const outside = join(root, "..", `outside-${Date.now()}`);
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(join(outside, "x.tres"), '[gd_resource type="StyleBoxFlat" format=3]\n\n[resource]\n');
+    await expect(editResource(join(outside, "x.tres"), [{ op: "set", key: "border_width_left", value: "3" }], { project: root, write: true })).rejects.toThrow(/outside the project/);
+    const rel = `res://../${outside.split(/[\\/]/).pop()}/x.tres`;
+    await expect(editResource(rel, [{ op: "set", key: "border_width_left", value: "3" }], { project: root, write: true })).rejects.toThrow(/outside the project/);
+    await expect(editResource(join(root, "mat.tres"), [{ op: "set", key: "normal_texture", value: rel }])).rejects.toThrow(/outside the project/);
+    expect(read(outside, "x.tres")).not.toContain("border_width_left");
+  });
+
   it("drops an ext_resource the edit left unused, and adds one with its uid", async () => {
     const root = project();
     await editResource(join(root, "mat.tres"), [{ op: "set", key: "albedo_texture", value: "null" }], { write: true });
@@ -229,7 +260,7 @@ describe("import settings (.import)", () => {
       [
         { op: "set", sub: "animations/drive", key: "settings/loop_mode", value: "linear" },
         { op: "set", sub: "meshes/car_wheel_mesh", key: "generate/shadow_meshes", value: "Disable" },
-        { op: "set", sub: "nodes/PATH:Car/Wheel", key: "mesh_instance/cast_shadow", value: "off" },
+        { op: "set", sub: "nodes/PATH:Root/Car/Wheel", key: "mesh_instance/cast_shadow", value: "off" },
         { op: "set", sub: "materials/Paint", key: "use_external/enabled", value: "true" },
       ],
       { write: true, reimport: false },
@@ -237,11 +268,14 @@ describe("import settings (.import)", () => {
     const text = read(root, "car.gltf.import");
     expect(text).toContain('"car_wheel_mesh": {\n"lods/normal_merge_angle": 20.0,\n"generate/shadow_meshes": 2\n}');
     expect(text).toContain('"animations": {\n"drive": {\n"settings/loop_mode": 1\n}\n}');
-    expect(text).toContain('"PATH:Car/Wheel": {\n"mesh_instance/cast_shadow": 0\n}');
+    expect(text).toContain('"PATH:Root/Car/Wheel": {\n"mesh_instance/cast_shadow": 0\n}');
     expect(text).toContain("gltf/naming_version=2\n");
     expect(plan.summary).toContain("set meshes/car_wheel_mesh generate/shadow_meshes=2 (Disable)");
     await expect(editResource(join(root, "car.gltf"), [{ op: "set", sub: "animations/drvie", key: "settings/loop_mode", value: "1" }])).rejects.toThrow(/has no animation "drvie"; it has drive/);
-    await expect(editResource(join(root, "car.gltf"), [{ op: "set", sub: "meshes/wheel_mesh", key: "generate/lods", value: "1" }])).rejects.toThrow(/has no mesh "wheel_mesh"; it has car_wheel_mesh/);
+    const wrongMesh = await editResource(join(root, "car.gltf"), [{ op: "set", sub: "meshes/wheel_mesh", key: "generate/lods", value: "1" }]);
+    expect(wrongMesh.warnings.join("\n")).toMatch(/has no mesh "wheel_mesh"; it has car_wheel_mesh/);
+    const wrongNode = await editResource(join(root, "car.gltf"), [{ op: "set", sub: "nodes/PATH:Car/Wheel", key: "mesh_instance/cast_shadow", value: "off" }]);
+    expect(wrongNode.warnings.join("\n")).toMatch(/has no node "PATH:Car\/Wheel"; it has .*PATH:Root\/Car\/Wheel/);
     await expect(editResource(join(root, "car.gltf"), [{ op: "set", sub: "meshes/car_wheel_mesh", key: "generate/shadowmeshes", value: "1" }])).rejects.toThrow(/did you mean generate\/shadow_meshes/);
     await expect(editResource(join(root, "car.gltf"), [{ op: "set", sub: "wheel_mesh", key: "generate/lods", value: "1" }])).rejects.toThrow(/sub is kind\/name/);
     await expect(editResource(join(root, "beep.wav"), [{ op: "set", sub: "meshes/x", key: "generate/lods", value: "1" }])).rejects.toThrow(/only scene imports/);
@@ -251,6 +285,25 @@ describe("import settings (.import)", () => {
     const undo = await editResource(join(root, "car.gltf"), [{ op: "unset", sub: "animations/drive", key: "settings/loop_mode" }], { write: true, reimport: false });
     expect(undo.written).toBe(true);
     expect(read(root, "car.gltf.import")).not.toContain('"animations"');
+  });
+
+  it("names glTF meshes and nodes the way Godot 4.7.2 imports them", async () => {
+    const root = project();
+    const mesh = (name: string) => ({ name, primitives: [] });
+    writeFileSync(join(root, "named.gltf"), JSON.stringify({ asset: { version: "2.0" }, scenes: [{ name: "Vehicle", nodes: [0] }], nodes: [{ name: "Root", children: [1] }, { name: "Body", mesh: 0 }], meshes: [mesh("body")] }));
+    writeFileSync(join(root, "dotted.gltf"), JSON.stringify({ asset: { version: "2.0" }, scenes: [{ name: "Scene", nodes: [0] }], nodes: [{ name: "Root", children: [1] }, { name: "Bo.dy", mesh: 0 }], meshes: [mesh("my.body")] }));
+    writeFileSync(join(root, "single.gltf"), JSON.stringify({ asset: { version: "2.0" }, extensionsUsed: ["GODOT_single_root"], scenes: [{ nodes: [0] }], nodes: [{ name: "R", children: [1] }, { name: "Box", mesh: 0 }], meshes: [mesh("")] }));
+    const importOf = (f: string) => GLB_IMPORT.replaceAll("car.gltf", f).replace(/"car_wheel_mesh": \{\n"lods\/normal_merge_angle": 20.0\n\}/, "");
+    for (const f of ["named.gltf", "dotted.gltf", "single.gltf"]) writeFileSync(join(root, `${f}.import`), importOf(f));
+    const listed = async (f: string, kind: string) => formatResourcePlan(await editResource(join(root, f), [{ op: "get", sub: `${kind}/x` }]));
+    expect(await listed("named.gltf", "meshes")).toContain("meshes in the asset: Vehicle_body");
+    expect(await listed("dotted.gltf", "meshes")).toContain("meshes in the asset: dotted_my_body");
+    expect(await listed("single.gltf", "meshes")).toContain("meshes in the asset: single_mesh");
+    expect(await listed("named.gltf", "nodes")).toContain("nodes in the asset: PATH:Root, PATH:Root/Body");
+    expect(await listed("dotted.gltf", "nodes")).toContain("PATH:Root/Bo_dy");
+    expect(await listed("single.gltf", "nodes")).toContain("nodes in the asset: PATH:Box");
+    const right = await editResource(join(root, "named.gltf"), [{ op: "set", sub: "meshes/Vehicle_body", key: "generate/shadow_meshes", value: "Disable" }]);
+    expect(right.warnings.join("\n")).not.toMatch(/has no mesh/);
   });
 
   it("switches the importer and keeps the uid", async () => {
