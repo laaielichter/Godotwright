@@ -822,7 +822,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         path: pathParam,
         preset: z.string().optional().describe("the preset (name or number); not needed for smoke"),
         mode: z.enum(["pack", "release", "debug", "patch", "smoke"]).optional().describe("default pack"),
-        out: z.string().optional().describe("output file (.pck for pack and patch)"),
+        out: z.string().optional().describe("output file inside the project (.pck for pack and patch)"),
         frames: z.number().int().min(0).max(100_000).optional().describe("frames to run the exported game (default 120, 0 = no run)"),
         against: z.array(z.string()).optional().describe("patch: base .pck files in load order"),
         manifest: z.array(z.string()).optional().describe("patch: lists of the base game's files (JSON with md5, or paths)"),
@@ -843,8 +843,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           if (!preset) return failure(`${mode ?? "pack"} needs preset (its name or number)`);
           r =
             mode === "patch"
-              ? await patchExport(dir, { preset, ...common, ...(out ? { out: where(out) } : {}), ...(against ? { against: against.map(where) } : {}), ...(manifest ? { manifest: manifest.map(where) } : {}) })
-              : await runExport(dir, { preset, mode: mode ?? "pack", ...common, ...(out ? { out: where(out) } : {}) });
+              ? await patchExport(dir, { preset, ...common, ...(out ? { out: output(out) } : {}), ...(against ? { against: against.map(where) } : {}), ...(manifest ? { manifest: manifest.map(where) } : {}) })
+              : await runExport(dir, { preset, mode: mode ?? "pack", ...common, ...(out ? { out: output(out) } : {}) });
         }
         const body = formatExportRun(r, { files: profile.detail === "full" || mode === "patch" });
         return r.errors ? failure(body) : text(body);
