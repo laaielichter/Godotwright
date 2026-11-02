@@ -75,6 +75,9 @@ var _auto := false
 
 func _initialize() -> void:
 	RenderingServer.set_default_clear_color(BACKGROUND)
+	# The same picture every run: a fixed seed for the global random numbers and for every particle system.
+	seed(1)
+	node_added.connect(_fix_seed)
 	${o.model ? `_content = _load_model(${JSON.stringify(o.model)})` : `var packed := load(${JSON.stringify(o.scene ?? "")}) as PackedScene
 	_content = packed.instantiate() if packed != null else null`}
 	if _content == null:
@@ -83,6 +86,13 @@ func _initialize() -> void:
 		return
 	root.add_child(_content)
 	process_frame.connect(_tick)
+
+
+func _fix_seed(node: Node) -> void:
+	if node is GPUParticles2D or node is GPUParticles3D or node is CPUParticles2D or node is CPUParticles3D:
+		if not node.use_fixed_seed:
+			node.use_fixed_seed = true
+			node.seed = 1
 
 
 func _load_model(path: String) -> Node:
@@ -267,7 +277,7 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
   const timeoutMs = options.timeoutMs ?? 3 * 60_000;
   try {
     if (!model) await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs });
-    const godotArgs = ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--audio-driver", "Dummy", "-s", "res://.godot/godotwright/screenshot.gd"];
+    const godotArgs = ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--fixed-fps", "60", "--audio-driver", "Dummy", "-s", "res://.godot/godotwright/screenshot.gd"];
     const result = how.command ? await runGodot(how.command, [...how.prefix, bin, ...godotArgs], { cwd: root, timeoutMs }) : await runGodot(bin, godotArgs, { cwd: root, timeoutMs });
     const done = new RegExp(`^${MARK}_DONE (\\d+) (\\d+) (true|false) (\\S+)`, "m").exec(result.stdout);
     const diagnostics = parseGodotLog(result.stderr, "screenshot").filter((d) => d.severity === "error" && !/V-Sync|ALSA|audio/i.test(d.message));
