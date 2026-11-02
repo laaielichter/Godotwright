@@ -220,6 +220,14 @@ describe("leakScene", () => {
     expect(within.verdict).toBe("ok");
     expect(within.baseline).toMatchObject({ objects: 7, orphanNodes: 4, nonNode: 2 });
     expect(formatLeaks(within)).toContain("vs last run");
+
+    // Another mode or cycle length measures something else: no comparison, and the reload run stays saved.
+    const kept = await leakScene(root, { godot: bin, cycleFrames: 10, reload: false });
+    expect(kept.baseline).toBeUndefined();
+    expect(formatLeaks(kept)).not.toContain("vs last run");
+    expect(existsSync(join(root, ".godot", "godotwright", "leaks", "chunk.tscn.keep.json"))).toBe(true);
+    expect((await leakScene(root, { godot: bin, cycleFrames: 20 })).baseline).toBeUndefined();
+    expect((await leakScene(root, { godot: bin, cycleFrames: 20 })).baseline).toMatchObject({ objects: 7, setup: "reload, 20 frames" });
   });
 
   it("is quiet when nothing grows, and counts only objects outside the tree with the scene kept running", async () => {

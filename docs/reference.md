@@ -202,7 +202,7 @@ least half of the cycles and never drops):
 - **objects that are not nodes** (objects minus nodes): Godot is run with `--verbose`, so at exit it names the classes
   still alive (`Object x5`) and the resources still in use, with the code that makes them; growth that is not on that
   list was freed only at exit, so a static var, autoload or cache holds it, and the growing containers are named;
-- loaded resources, static memory, and the change since the last run of the same scene (`.godot/godotwright/leaks/`).
+- loaded resources, static memory, and the change since the last run of the same scene with the same mode, cycle length and input (`.godot/godotwright/leaks/`).
 
 The verdict is `LEAKING` (exit code 1, an error result over MCP) when objects or orphan nodes grow more than the budget
 per cycle (`--budget-objects`, `--budget-orphans`, default 0). With `--keep`, nodes that pile up in the tree are shown

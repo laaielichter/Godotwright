@@ -91,7 +91,7 @@ export interface LeakReport {
   /** Static or autoload containers that grow: candidates for heldPerCycle. */
   holders: string[];
   atExit: ExitLeaks;
-  baseline?: { objects: number; orphanNodes: number; nonNode: number; date: string };
+  baseline?: { objects: number; orphanNodes: number; nonNode: number; date: string; setup: string };
   /** This run was saved as the baseline for the next. */
   saved: boolean;
   verdict: "ok" | "leaking";
@@ -124,8 +124,9 @@ export function trend(values: number[]): Trend {
   return { first, last, perCycle: round(num / den), growing: last > first && downs === 0 && ups * 2 >= n - 1 };
 }
 
-function baselinePath(root: string, scene: string): string {
-  return join(root, ".godot", "godotwright", "leaks", `${scene.replace(/^res:\/\//, "").replace(/[^\w.-]+/g, "_")}.json`);
+/** One saved run per scene and mode: a kept-running run counts other things than a reloaded one. */
+function baselinePath(root: string, scene: string, reload: boolean): string {
+  return join(root, ".godot", "godotwright", "leaks", `${scene.replace(/^res:\/\//, "").replace(/[^\w.-]+/g, "_")}${reload ? "" : ".keep"}.json`);
 }
 
 const isExtResource = (v: unknown, id: string): boolean => {
@@ -375,17 +376,20 @@ export async function leakScene(path: string, options: LeakOptions = {}): Promis
 
   let baseline: LeakReport["baseline"];
   let saved = false;
-  const file = baselinePath(root, run.scene);
+  const file = baselinePath(root, run.scene, reload);
+  // Runs compare only with the same mode, cycle length and input: other settings measure something else.
+  const setup = `${reload ? "reload" : "keep"}, ${cycleFrames} frames${options.input ? `, input ${options.input}` : ""}`;
   if (options.baseline !== false) {
     try {
       baseline = JSON.parse(readFileSync(file, "utf8")) as LeakReport["baseline"];
+      if (baseline?.setup !== setup) baseline = undefined;
     } catch {
       // No earlier run of this scene.
       baseline = undefined;
     }
     if (run.finished && counted.length >= 2) {
       mkdirSync(join(root, ".godot", "godotwright", "leaks"), { recursive: true });
-      writeFileSync(file, JSON.stringify({ objects: objects.perCycle, orphanNodes: orphanNodes.perCycle, nonNode: nonNode.perCycle, date: new Date().toISOString() }, null, 2));
+      writeFileSync(file, JSON.stringify({ objects: objects.perCycle, orphanNodes: orphanNodes.perCycle, nonNode: nonNode.perCycle, date: new Date().toISOString(), setup }, null, 2));
       saved = true;
     }
   }
@@ -494,7 +498,7 @@ export function formatLeaks(r: LeakReport): string {
   if (r.atExit.resources.length) out.push(`resources still in use at exit: ${r.atExit.resources.slice(0, 8).map((x) => `${x.path} (${x.type})`).join(", ")}`);
   if (r.baseline) {
     out.push(`vs last run (${r.baseline.date.slice(0, 16).replace("T", " ")}): objects ${signed(r.baseline.objects)} -> ${signed(r.objects.perCycle)}, orphan nodes ${signed(r.baseline.orphanNodes)} -> ${signed(r.orphanNodes.perCycle)}, non-node ${signed(r.baseline.nonNode)} -> ${signed(r.nonNode.perCycle)} per cycle`);
-  } else if (r.saved) out.push("no earlier run of this scene: this one is the baseline for the next");
+  } else if (r.saved) out.push("no earlier run of this scene with these settings: this one is the baseline for the next");
   for (const d of r.run.diagnostics.filter((x) => x.severity === "error").slice(0, 5)) out.push(`error: ${d.file ? `${d.file}${d.line ? `:${d.line}` : ""}  ` : ""}${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}`);
   if (r.hints.length) {
     out.push("lessons (godot_lessons <id>):");
