@@ -18,13 +18,15 @@ export function reviewCommand(): Command {
     .option("--base <dir>", BASE_HELP, collect, [])
     .option("--base-files <file>", BASE_FILES_HELP, collect, [])
     .option("--only-new", "show only findings that are new since the last review of this project, the rest as one line each (the memory is in .godot/godotwright/)")
+    .option("--target <version>", "Godot release the project moves to, 4.1 to 4.7 (default 4.7): only changes up to it count")
+    .option("--from <version>", "release the project comes from (default: the version saved in project.godot)")
     .option("--min-score <score>", "exit with code 1 when the overall score is lower", parseNumber)
     .option("--json", "print the report as JSON")
     .option("--sarif", "print the report as SARIF 2.1.0, for GitHub code scanning (findings inline on pull requests)")
-    .action((paths: string[], options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; minScore?: number; json?: boolean; sarif?: boolean }, command: Command) => {
+    .action((paths: string[], options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; target?: string; from?: string; minScore?: number; json?: boolean; sarif?: boolean }, command: Command) => {
       const files = paths.filter((p) => existsSync(p) && statSync(p).isFile());
       const path = paths.find((p) => !files.includes(p)) ?? (files[0] ? dirname(resolve(files[0])) : ".");
-      const full = reviewLearning(path, { includeAddons: options.includeAddons, base: options.base, baseFiles: options.baseFiles });
+      const full = reviewLearning(path, { includeAddons: options.includeAddons, base: options.base, baseFiles: options.baseFiles, target: options.target, from: options.from });
       // Named files narrow the findings shown, not the review: scores and counts stay for the whole project.
       const root = findProjectRoot(path) ?? path;
       const focus = files.map((f) => toResPath(root, resolve(f)));
