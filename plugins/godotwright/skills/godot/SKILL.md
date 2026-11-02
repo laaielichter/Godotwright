@@ -29,7 +29,10 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 - Renaming or moving anything: `godot_usages` first, then `godot_rename` (dry run, then `write: true`).
 - Scenes: `godot_scene_edit`. Project settings, input actions, autoloads: `godot_project_edit`.
   These keep `.tscn`, `.uid` and `project.godot` valid and touch only the lines of the change.
-- Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs.
+- Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs. It ports shaders too.
+- Shaders: after writing or changing a `.gdshader` (or a Shader in a scene), run `godot_shader`; it checks the code
+  against Godot 4.7's shader tables and compiles it with Godot headless. `godot_api` with `shader:spatial.fragment`
+  lists the built-ins of a shader type and function.
 - Mechanical findings (a freed check in the wrong order, `get_meta()` with a null default, a lone ternary, garbled
   text, `emit_signal()`, MultiMesh or Timer order): `godot_fix` (report, then `write: true`), not by hand.
 - Before deleting or moving a file: `godot_deps` op `why` (also paths the code builds); `op unused` lists what can go.
