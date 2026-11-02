@@ -256,6 +256,19 @@ describe("baselines", () => {
     expect(formatBaseline(r)[0]).toBe("baseline a: same (64 px changed, 25%, within 50%)");
   });
 
+  it("will not write over a JSON file that is not a baseline", () => {
+    const root = tempFolder("gw-baseline-");
+    writeFileSync(join(root, "keep.json"), '{"keep":1}\n');
+    expect(() => compareBaseline(root, "keep", capture(root, picture(16, 16, [])), { meta, dir: "." })).toThrow(/keep\.json exists and is not a baseline settings file/);
+    expect(readFileSync(join(root, "keep.json"), "utf8")).toBe('{"keep":1}\n');
+    expect(existsSync(join(root, "keep.png"))).toBe(false);
+    // A baseline whose settings file is damaged can still be replaced: its picture shows it is a baseline.
+    compareBaseline(root, "hud", capture(root, picture(16, 16, [])), { meta });
+    writeFileSync(join(root, ".godotwright/baselines/hud.json"), "not json");
+    expect(compareBaseline(root, "hud", capture(root, picture(16, 16, [])), { meta, update: true }).status).toBe("updated");
+    expect(readBaselineMeta(root, "hud")?.width).toBe(64);
+  });
+
   it("keeps names safe as file names", () => {
     expect(baselineName("HUD / main menu.png")).toBe("HUD_main_menu");
     expect(() => baselineName("..")).toThrow(BaselineError);
