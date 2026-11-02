@@ -8,6 +8,7 @@ installs, the [install page](https://laaielichter.github.io/Godotwright/install.
 - [Shaders](#shaders)
 - [Review in GitHub Actions](#review-in-github-actions)
 - [Export, check and run a build](#export-check-and-run-a-build)
+- [Scenarios and JUnit reports](#scenarios-and-junit-reports)
 - [Mods and patches over a game](#mods-and-patches-over-a-game)
 - [Install in your coding agent (MCP)](#install-in-your-coding-agent-mcp)
 - [Learning](#learning)
@@ -24,6 +25,9 @@ godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put 
 godotwright test [path]               # run the GUT or GdUnit4 tests headless; prints only what failed, with file:line
 godotwright play --input "10 tap jump; 20 hold right 30" --watch Player.position   # play input into a scene, see the values per frame
 godotwright ci                                     # one receipt: review, check, tests, scenarios and screenshot baselines (markdown, exit 1 on a failure)
+godotwright ci --junit godotwright.xml             # the same, plus JUnit XML for a CI test tab (tests, scenarios, review, check)
+godotwright scenario --save jump --input "10 tap jump" --expect "Hero.velocity.y == -400 @ 10"   # run once, keep it as a test when it passes
+godotwright scenario --list                        # the kept scenarios and their claims; `scenario` alone runs them all
 godotwright doctor --symptom "falls through the floor"   # what is wrong and in which order to fix it: review and Godot grouped by cause, with lessons
 godotwright fix --write               # apply the mechanical fixes for review findings (--check for the ones that need a look)
 godotwright fix --stamp-uids --write  # also give scenes, resources, scripts and shaders without a uid one, as Godot makes them
@@ -607,6 +611,62 @@ godotwright export patch --preset Linux --manifest pck-manifest.json  # no base 
   removal takes it out, as Godot loads them) and runs that with `--main-pack`. With only a list, it runs the project's
   full export and says so; a patch with delta-encoded files (`patch_delta_encoding`) is not run.
 
+## Scenarios and JUnit reports
+
+A scenario is a regression test kept in the project, in `.godotwright/scenarios/<name>.json`. It is a `godot_play`
+run written down: a scene, an input timeline and claims about what the game did. `godotwright ci` runs every
+scenario headless and deterministically, with no editor.
+
+```json
+{
+  "name": "jump",
+  "input": "10 tap jump",
+  "frames": 90,
+  "signals": ["Hero.jumped", "Hero.landed"],
+  "expect": ["Hero.velocity.y == -400 @ 10", "Hero.jumped == 1 @ 10", "Hero.landed == 1", "Hero.is_on_floor() == true"]
+}
+```
+
+- `expect`: at least one claim, `<Node.property> <==|!=|>=|<=|>|<> <value> [@ frame]`. Without a frame, the claim
+  is checked on the last frame. A claim on a recorded signal (`"Hero.landed >= 1 @ 60"`) counts how often the signal
+  fired up to that frame.
+- Optional: `scene` (default: the main scene), `watch` (more values to sample), `frames` (default 120, or one past
+  the last frame a claim names), `until` (stop at the first frame a condition holds; the scenario fails when it never
+  does), and `signals` (the signals to record). Files written before `until` and `signals` existed still work.
+
+To keep a proof, an agent calls `godot_scenario` with op `save` and the same arguments as the `godot_play` run.
+On the command line, use `godotwright scenario --save <name>` with `--scene`, `--input`, `--watch`, `--frames`,
+`--until`, `--signal` and `--expect`. Godotwright runs the scenario once more and writes the file only when every
+claim holds, so a scenario that never passed cannot get into the project. An existing file is only replaced with
+`overwrite` (`--overwrite`), and `godot_undo` takes a save back. op `list` (`--list`) shows the scenarios and their
+claims. op `run` (no flag) runs all of them, or the one you name (else every name that contains it). A passing
+scenario takes one line. A failing one shows every failing claim with the value the game had and the frame.
+
+**JUnit XML.** `godotwright ci --junit <file>`, `godotwright test --junit <file>` and
+`godotwright scenario --junit <file>` also write the results as JUnit XML, the test report format of GitLab
+(`artifacts:reports:junit`), Jenkins, Azure DevOps and the JUnit report actions on GitHub. The printed output does
+not change. In the file:
+
+- Each scenario is a suite with one test case per claim. A game error or a run that stopped early is an `<error>`
+  case named `run`.
+- GUT and GdUnit4 suites are kept exactly as the framework wrote them. A test run that left no report (a crash or a
+  timeout) is an `<error>` case, so it cannot pass silently.
+- `ci` adds `review` and `check` as test cases of the suite `godotwright`.
+
+The GitHub Action takes `junit: godotwright.xml` and passes the path on as the output `junit`:
+
+```yaml
+      - uses: laaielichter/godotwright@<version>
+        id: godotwright
+        with:
+          junit: godotwright.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: godot-tests
+          path: ${{ steps.godotwright.outputs.junit }}
+```
+
 ## Mods and patches over a game
 
 A mod or patch often uses scripts, scenes and models that live in the game, not in
@@ -709,6 +769,8 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders; with `pck`, what an exported pack holds |
 | `godot_export_run` | Export headless (pack, release, debug or patch), check the file and the pack's contents against what the game loads, then run the build for some frames with runtime errors and call chains |
+| `godot_scenario` | Keep a passing `godot_play` run as a regression test in the project (`save` runs it once more first), `list` them, `run` one or all with every failing claim, its value and frame |
+| `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |

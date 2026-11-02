@@ -24,6 +24,8 @@ export interface TestOptions {
   timeoutMs?: number;
   /** Run `--import` first so class names are known (default true). */
   import?: boolean;
+  /** Keep the framework's JUnit XML in the report (`xml`), e.g. to write it for a CI test tab. */
+  keepXml?: boolean;
 }
 
 export interface TestFailure {
@@ -52,6 +54,8 @@ export interface TestReport {
   timedOut: boolean;
   /** The tail of what the run printed, when no report came out of it. */
   output?: string;
+  /** The framework's JUnit XML as it wrote it (only with keepXml). */
+  xml?: string;
 }
 
 const decode = (s: string): string =>
@@ -195,9 +199,8 @@ export async function runTests(path: string, options: TestOptions = {}): Promise
     const result = await runGodot(bin, [...base, ...args], { cwd: root, timeoutMs });
     const diagnostics = parseGodotLog(`${result.stderr}\n${result.stdout}`, "test").filter((d) => d.severity === "error" && !/addons\/(gut|gdUnit4)\//.test(d.file ?? ""));
     const file = reportFile();
-    const counts = file
-      ? parseJUnit(readFileSync(file, "utf8"))
-      : { tests: 0, passed: 0, failed: 0, errors: 0, skipped: 0, seconds: 0, failures: [] };
+    const reportXml = file ? readFileSync(file, "utf8") : undefined;
+    const counts = reportXml !== undefined ? parseJUnit(reportXml) : { tests: 0, passed: 0, failed: 0, errors: 0, skipped: 0, seconds: 0, failures: [] };
     return {
       framework,
       ...counts,
@@ -205,6 +208,7 @@ export async function runTests(path: string, options: TestOptions = {}): Promise
       exitCode: result.code,
       timedOut: result.timedOut,
       ...(file ? {} : { output: runOutput(`${result.stdout}\n${result.stderr}`) }),
+      ...(reportXml !== undefined && options.keepXml ? { xml: reportXml } : {}),
     };
   } finally {
     rmSync(out, { recursive: true, force: true });

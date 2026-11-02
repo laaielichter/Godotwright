@@ -56,6 +56,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_resource_edit",
       "godot_review",
       "godot_scan",
+      "godot_scenario",
       "godot_scene_edit",
       "godot_screenshot",
       "godot_session",
@@ -105,6 +106,25 @@ describe("MCP server (cheap profile)", () => {
       tools.find((t) => t.name === "godot_api_search")?.annotations
         ?.readOnlyHint,
     ).toBe(true);
+  });
+
+  it("lists and checks scenarios, and needs Godot to run or save one", async () => {
+    const root = makeProject({
+      "project.godot": "[application]\n",
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node"]\n',
+      ".godotwright/scenarios/jump.json": '{"input": "10 tap jump", "frames": 70, "expect": ["Hero.velocity.y == -400 @ 10"]}',
+    });
+    const call = (args: Record<string, unknown>) => client.callTool({ name: "godot_scenario", arguments: { path: root, ...args } }) as Promise<Result>;
+    expect(textOf(await call({ op: "list" }))).toBe('jump: main scene; 70 frames; input "10 tap jump"\n  Hero.velocity.y == -400 @ 10\n');
+    const none = await call({ op: "run", name: "swim" });
+    expect(none.isError).toBe(true);
+    expect(textOf(none)).toContain('no scenarios matching "swim"');
+    expect((await call({ op: "save" })).isError).toBe(true);
+    const noGodot = await call({ op: "save", name: "jump2", scene: "res://main.tscn", input: "10 tap jump", expect: ["Hero.velocity.y == -400 @ 10"] });
+    expect(noGodot.isError).toBe(true);
+    expect(textOf(noGodot)).toMatch(/Godot/);
+    const exists = await call({ op: "save", name: "jump", expect: ["Hero.velocity.y == -400 @ 10"] });
+    expect(textOf(exists)).toContain("exists; pass overwrite");
   });
 
   it("sends step-by-step instructions", () => {

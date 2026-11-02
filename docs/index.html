@@ -387,8 +387,8 @@ footer a { color: var(--muted); }
 
   <section id="tools">
     <div class="wrap">
-      <h2>32 MCP tools, one CLI</h2>
-      <p class="sub">31 of the 32 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
+      <h2>33 MCP tools, one CLI</h2>
+      <p class="sub">32 of the 33 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
       <ul class="tree">
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scan</span><p>Map the project without starting Godot: scenes and node trees, scripts with signals and exports, autoloads, input map, broken references.</p><code>godotwright scan</code></li>
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>godot_api</span><p>Exact Godot 4.7 lookup from the bundled class reference (1078 classes): signatures, inheritance, Godot 3 names.</p><code>godotwright api Node2D.look_at</code></li>
@@ -402,6 +402,7 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_migrate</span><p>Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left to do by hand.</p><code>godotwright migrate --write</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_test</span><p>Run GUT or GdUnit4 tests headless and show only what failed, with <code>file:line</code>.</p><code>godotwright test</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_play</span><p>Run a scene with an input timeline and print the values you watch per frame: the agent sees the game do something.</p><code>godotwright play --input "10 tap jump" --watch Player.position</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scenario</span><p>Keep a passing play run as a regression test in the project, and run them all with every failing claim, its value and frame.</p><code>godotwright scenario --save jump --input "10 tap jump" --expect "Player.velocity.y &lt; 0 @ 10"</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_screenshot</span><p>Render a scene or a model to a PNG and say how much of the picture is drawn.</p><code>godotwright screenshot --scene res://main.tscn -o shot.png</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_doctor</span><p>Start here when something is broken: the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and the fix, then numbered next steps.</p><code>godotwright doctor --symptom "falls through the floor"</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_fix</span><p>Apply the mechanical fixes for review findings, each labelled safe or check. Shows them first, then reviews the changed files again.</p><code>godotwright fix --write</code></li>

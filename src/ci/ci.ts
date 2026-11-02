@@ -25,6 +25,8 @@ export interface CiReport {
   project: string;
   ok: boolean;
   steps: CiStep[];
+  /** The full results behind the test and scenario steps (only with keepResults), e.g. for JUnit XML. */
+  results?: { tests?: TestReport; scenarios?: ScenarioResult[] };
 }
 
 export interface CiOptions {
@@ -39,6 +41,8 @@ export interface CiOptions {
   baselineDir?: string;
   /** Most lines of detail per step (default 10). */
   maxDetails?: number;
+  /** Keep the full test and scenario results in the report (`results`), with the framework's JUnit XML. */
+  keepResults?: boolean;
   /** The real steps, replaceable in tests. */
   deps?: Partial<CiDeps>;
 }
@@ -143,6 +147,7 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
   const deps = { ...REAL, ...options.deps };
   const max = options.maxDetails ?? 10;
   const steps: CiStep[] = [];
+  const kept: NonNullable<CiReport["results"]> = {};
 
   steps.push(reviewStep(deps.review(root, { includeAddons: options.includeAddons }), max));
 
@@ -152,7 +157,11 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
     if (options.exportPreset) steps.push(skip("export", "skipped (--no-godot-checks)"));
   } else {
     steps.push(checkStep(await deps.check(root, { godot: options.godot, includeAddons: options.includeAddons }), max));
-    steps.push(detectFramework(root) ? testStep(await deps.test(root, { godot: options.godot, import: false }), max) : skip("test", "no GUT or GdUnit4 in res://addons"));
+    if (detectFramework(root)) {
+      const tests = await deps.test(root, { godot: options.godot, import: false, ...(options.keepResults ? { keepXml: true } : {}) });
+      kept.tests = tests;
+      steps.push(testStep(tests, max));
+    } else steps.push(skip("test", "no GUT or GdUnit4 in res://addons"));
     const { scenarios } = loadScenarios(root);
     const visuals: Visual[] = [];
     if (!scenarios.length) steps.push(skip("scenarios", "no files in .godotwright/scenarios"));
@@ -160,6 +169,7 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
       const results: ScenarioResult[] = [];
       // A missing baseline fails in CI: a baseline made on the runner would be thrown away with it.
       for (const { file, scenario } of scenarios) results.push(await deps.scenario(root, file, scenario, { godot: options.godot, import: false, createMissing: false }));
+      kept.scenarios = results;
       steps.push(scenarioStep(results, max));
       for (const r of results) for (const shot of r.screenshots ?? []) visuals.push({ result: shot, lines: [`${r.file}:`, ...formatShot(shot, "godotwright scenario --update")] });
     }
@@ -177,7 +187,7 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
     steps.push(visuals.length ? visualStep(visuals, max) : skip("visual", `no baselines in ${dir ?? ".godotwright/baselines"}`));
     if (options.exportPreset) steps.push(exportStep(await deps.export(root, { preset: options.exportPreset, mode: "pack", import: false, ...(options.godot ? { godot: options.godot } : {}) }), max));
   }
-  return { project: root, ok: steps.every((s) => s.status !== "fail"), steps };
+  return { project: root, ok: steps.every((s) => s.status !== "fail"), steps, ...(options.keepResults ? { results: kept } : {}) };
 }
 
 const MARK: Record<StepStatus, string> = { pass: "✅", fail: "❌", skip: "➖" };
