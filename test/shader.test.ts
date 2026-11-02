@@ -208,7 +208,7 @@ describe("fix shaders", () => {
   });
 
   it("leaves names without a one-to-one rename, and Shaders stored in scenes, alone", () => {
-    const scene = '[gd_scene format=3]\n\n[sub_resource type="Shader" id="S1"]\ncode = "shader_type spatial;\nuniform vec4 c : hint_color;\nvoid fragment() {}\n"\n\n[node name="N" type="Node3D"]\n';
+    const scene = '[gd_scene format=3]\n\n[sub_resource type="Shader" id="S1"]\ncode = "shader_type spatial;\nuniform vec4 c : hint_color;\nvoid fragment() {}\n"\n\n[node name="N" type="Node3D"]\nmetadata/s = SubResource("S1")\n';
     const root = makeProject({ "project.godot": PROJECT, "s.gdshader": "shader_type spatial;\nvoid fragment() {\n\tCLEARCOAT_GLOSS = 1.0;\n}\n", "n.tscn": scene });
     const result = fixProject(root);
     expect(result.changes).toEqual([]);
