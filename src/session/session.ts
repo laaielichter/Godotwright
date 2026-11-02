@@ -160,7 +160,8 @@ export async function startSession(path: string, options: SessionOptions = {}): 
   writeFileSync(p.script, sessionScript());
   const port = await freePort();
   const token = randomBytes(16).toString("hex");
-  const log = openSync(p.log, "w");
+  // The game writes its output here; this side reads it back through the same open file while it waits.
+  const log = openSync(p.log, "w+");
   const started = Date.now();
   const child = spawn(
     bin,
@@ -168,31 +169,34 @@ export async function startSession(path: string, options: SessionOptions = {}): 
     { cwd: root, detached: true, stdio: ["ignore", log, log] },
   );
   child.unref();
-  closeSync(log);
   const info: SessionInfo = { pid: child.pid ?? 0, port, token, scene, started: new Date(started).toISOString(), logOffset: 0, fps };
+  const readLog = () => {
+    const buffer = Buffer.alloc(fstatSync(log).size);
+    readSync(log, buffer, 0, buffer.length, 0);
+    return buffer.toString("utf8");
+  };
   // Wait until the scene has loaded and the port answers, or the game says why it cannot.
   let text = "";
-  for (;;) {
-    text = "";
-    try {
-      text = readFileSync(p.log, "utf8");
-    } catch {
-      // Not written yet.
-    }
-    if (text.includes(`${SESSION_MARK}_FAILED`) || !alive(info.pid)) {
-      const diagnostics = parseGodotLog(text, "session").filter((d) => d.severity === "error");
-      throw new PlayError(`the game did not start: ${(/GODOTWRIGHT_SESSION_FAILED (.*)/.exec(text)?.[1] ?? diagnostics[0]?.message ?? "Godot quit").trim()}`);
-    }
-    if (text.includes(`${SESSION_MARK}_READY`)) break;
-    if (Date.now() - started > timeoutMs) {
-      try {
-        process.kill(info.pid);
-      } catch {
-        // Already gone.
+  try {
+    for (;;) {
+      text = readLog();
+      if (text.includes(`${SESSION_MARK}_FAILED`) || !alive(info.pid)) {
+        const diagnostics = parseGodotLog(text, "session").filter((d) => d.severity === "error");
+        throw new PlayError(`the game did not start: ${(/GODOTWRIGHT_SESSION_FAILED (.*)/.exec(text)?.[1] ?? diagnostics[0]?.message ?? "Godot quit").trim()}`);
       }
-      throw new PlayError(`the scene did not load within ${Math.round(timeoutMs / 1000)} s`);
+      if (text.includes(`${SESSION_MARK}_READY`)) break;
+      if (Date.now() - started > timeoutMs) {
+        try {
+          process.kill(info.pid);
+        } catch {
+          // Already gone.
+        }
+        throw new PlayError(`the scene did not load within ${Math.round(timeoutMs / 1000)} s`);
+      }
+      await sleep(100);
     }
-    await sleep(100);
+  } finally {
+    closeSync(log);
   }
   // The log as read when the game said it was ready: what it printed while loading.
   info.logOffset = Buffer.byteLength(text);
