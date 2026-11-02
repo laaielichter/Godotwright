@@ -178,7 +178,6 @@ function mtime(file: string): number {
 export class GodotLanguageServer {
   private queue: Promise<unknown> = Promise.resolve();
   private waiting = 0;
-  readonly stamp: ProjectStamp;
   lastUsed = Date.now();
   /** How long the start took, in ms. */
   startMs = 0;
@@ -188,12 +187,15 @@ export class GodotLanguageServer {
     readonly rpc: RpcConnection,
     readonly child: ChildProcess | undefined,
     private readonly log: () => string,
-  ) {
-    this.stamp = new ProjectStamp(root);
-  }
+    /** The project as it was when Godot started (and scanned it). */
+    readonly stamp: ProjectStamp,
+  ) {}
 
   static async start(options: StartOptions): Promise<GodotLanguageServer> {
     const started = Date.now();
+    // Taken before Godot scans the project: a file added during the start counts as new.
+    const stamp = new ProjectStamp(options.root);
+    stamp.refresh();
     const port = options.port ?? (await freePort());
     let child: ChildProcess | undefined;
     let output = "";
@@ -244,7 +246,7 @@ export class GodotLanguageServer {
     }
     socket.unref();
     const rpc = new RpcConnection(socket, options.requestTimeoutMs ?? 30_000);
-    const server = new GodotLanguageServer(options.root, rpc, child, log);
+    const server = new GodotLanguageServer(options.root, rpc, child, log, stamp);
     try {
       await rpc.request("initialize", { processId: process.pid, rootUri: uriOf(options.root), rootPath: options.root, capabilities: {} }, Math.max(10_000, deadline - Date.now()));
       rpc.notify("initialized", {});
@@ -252,7 +254,6 @@ export class GodotLanguageServer {
       server.stop();
       throw new LanguageServerError(`the language server on port ${port} did not initialize: ${error instanceof Error ? error.message : String(error)}${tail()}`);
     }
-    server.stamp.refresh();
     server.startMs = Date.now() - started;
     return server;
   }
