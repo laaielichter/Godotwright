@@ -1020,7 +1020,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Find what leaks per scene reload",
       description:
-        "Run a scene in Godot 4.7 headless in cycles (load, run cycle_frames frames, free; or keep: true to keep it running), snapshot the live objects after each cycle and report what grows per cycle after the warm-up: orphan nodes by class, script and scene with the parent they were removed from, the code that makes them and the remove_child() that dropped them; nodes left in the tree; objects that are not nodes, with the classes Godot still held at exit (--verbose) and the static or autoload containers that grow. `input` replays a timeline in every cycle. An error result when objects or orphan nodes grow more than the budget per cycle (default 0). Compares with the last run (.godot/godotwright/leaks/).",
+        "Run a scene in Godot 4.7 headless in cycles (load, run cycle_frames frames, free; or keep: true to keep it running), snapshot the live objects after each cycle and report what grows per cycle after the warm-up: orphan nodes by class, script and scene with the parent they were removed from, the code that makes them and the remove_child() that dropped them; nodes left in the tree; objects that are not nodes, with the classes Godot still held at exit (--verbose) and the static or autoload containers that grow. `input` replays a timeline in every cycle. An error result when objects or orphan nodes grow more than the budget per cycle (default 0). Compares with the last run with the same mode, cycle_frames and input (.godot/godotwright/leaks/).",
       inputSchema: {
         path: pathParam,
         scene: z.string().optional().describe("the res:// scene to cycle (default: the main scene)"),
