@@ -80,7 +80,7 @@ const NOISE = [
 ];
 
 /** Leak reports Godot prints when it exits. */
-const EXIT_LEAK =
+export const EXIT_LEAK =
   /(ObjectDB instances? (were|was) leaked at exit|resources? still in use at exit|RIDs? of type .* (were|was) leaked|Pages in use exist at exit)/;
 
 const CHECKER_DIR = ".godot/godotwright";
@@ -202,7 +202,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
 }
 
 /** The project's physics ticks per second (default 60). */
-function physicsRate(root: string): number {
+export function physicsRate(root: string): number {
   try {
     const value = parseProjectSettings(readFileSync(join(root, "project.godot"), "utf8")).values["physics/common/physics_ticks_per_second"];
     return typeof value === "number" && value > 0 ? value : 60;
@@ -212,7 +212,7 @@ function physicsRate(root: string): number {
 }
 
 /** A step that exits badly must not pass as clean just because Godot printed no error for it. */
-function unexplainedExit(name: string, result: RunResult, found: Diagnostic[]): Diagnostic | undefined {
+export function unexplainedExit(name: string, result: RunResult, found: Diagnostic[]): Diagnostic | undefined {
   if (result.timedOut || result.code === 0 || cleanup(found).some((d) => d.severity === "error")) return undefined;
   const how = result.code === null ? "was killed by a signal" : `exited with code ${result.code}`;
   return { severity: "error", message: `${name} ${how}`, source: name };
