@@ -32,6 +32,11 @@ const LOADS = new Set(["ext_resource", "preload", "load"]);
 const EDITOR_SETTING = /^project\.godot: (editor|editor_plugins|dotnet|filesystem)\//;
 /** Source files Godot does not ship as such: C# is compiled into the assembly. */
 const NOT_SHIPPED = /\.(cs|gdshaderinc)$/i;
+/**
+ * Classes only the editor has (extension_api.json of Godot 4.7.2 marks them api_type "editor"; every Editor* class is
+ * one): a script that extends one cannot even load in an export template.
+ */
+const EDITOR_CLASS = /^(Editor[A-Z]\w*|GridMapEditorPlugin|OpenXR(BindingModifier|InteractionProfile)Editor(Base)?|ScriptEditorBase|ResourceImporter\w*)$/;
 const TEST_ADDON = /^res:\/\/addons\/(gut|gdUnit4|gdunit4|WAT)\//;
 const TEST_FILE = /\/tests?\/(.*\/)?(test_[^/]*|[^/]*_test)\.gd$/;
 
@@ -152,7 +157,7 @@ export function checkContents(root: string, pck: Pck, options: { preset?: Export
   const own = new Set(g.assets);
   for (const [file, bytes] of sources) {
     const ext = extendsOf(root, file);
-    const kind = ext && /^Editor[A-Z]\w*$/.test(ext) ? `editor-only script|; it extends ${ext}, a class only the editor has` : TEST_ADDON.test(file) || TEST_FILE.test(file) || ext === "GutTest" || ext === "GdUnitTestSuite" ? "test file|" : undefined;
+    const kind = ext && EDITOR_CLASS.test(ext) ? `editor-only script|; it extends ${ext}, a class only the editor has` : TEST_ADDON.test(file) || TEST_FILE.test(file) || ext === "GutTest" || ext === "GdUnitTestSuite" ? "test file|" : undefined;
     if (kind) {
       const folder = TEST_ADDON.exec(file)?.[0] ?? file.slice(0, file.lastIndexOf("/") + 1);
       const key = `${kind}|${folder}`;

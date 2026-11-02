@@ -6,6 +6,7 @@ installs, the [install page](https://laaielichter.github.io/Godotwright/install.
 - [Commands](#commands)
 - [Port Godot 3 scripts to Godot 4](#port-godot-3-scripts-to-godot-4)
 - [Review in GitHub Actions](#review-in-github-actions)
+- [Export, check and run a build](#export-check-and-run-a-build)
 - [Mods and patches over a game](#mods-and-patches-over-a-game)
 - [Install in your coding agent (MCP)](#install-in-your-coding-agent-mcp)
 - [Learning](#learning)
@@ -30,6 +31,9 @@ godotwright game step 120 --input "10 tap jump" --watch Hero.position --until "H
 godotwright game reload               # put the scripts you edited into the running game; every node keeps its values
 godotwright game ui --size 1280x720 --size 720x1280   # clipped labels, off-screen panels, overlapping buttons per window size
 godotwright export                    # what the build will miss: excluded preloads, data files missing from include_filter
+godotwright export run --preset Linux # export headless, check the pack against what the game loads, run it for 120 frames
+godotwright export patch --preset Linux --against base.pck   # a patch with only what changed, checked and run over the base
+godotwright export pck game.pck       # what a .pck (or a game .exe) holds, against the project; no Godot needed
 godotwright deps unused               # files nothing the game starts with reaches, biggest first; `deps why <file>` before deleting one
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
 godotwright screenshot --model car.glb --view front,side,top,iso   # a PNG of a model from four sides (or of a scene); says how much is drawn
@@ -254,6 +258,65 @@ jobs:
           sarif_file: godotwright.sarif
 ```
 
+## Export, check and run a build
+
+"Works in the editor, broken in the build" is found before anyone ships. `godotwright export` (MCP `godot_export`)
+checks the presets without exporting. `godotwright export run` (MCP `godot_export_run`) exports for real, headless,
+and checks the result instead of trusting it:
+
+```sh
+godotwright export run --preset Linux                    # --export-pack: needs no export templates
+godotwright export run --preset Linux --mode release     # --export-release: needs the templates of this exact Godot version
+godotwright export run --preset 0 --frames 0 --json      # by number, no smoke run, JSON for scripts
+```
+
+1. **Before Godot runs:** the preset must exist (a missing one lists the presets there are), `export_presets.cfg` must
+   not start with a byte order mark (Godot 4.7.2 then reads no presets at all and says "Invalid export preset name"),
+   and a release or debug build needs export templates for the exact version (`4.7.2.stable`); a pack needs none.
+2. **The export:** `--import`, then `--export-pack`, `--export-release` or `--export-debug` into
+   `.godot/godotwright/export/<preset>/` (the preset's own `export_path` is left alone; `--out` picks another file and
+   its folder is made). Godot's exit code is used, and its multi-line errors are kept whole. The file must also be there
+   and big enough: Godot can fail and still leave a file behind, which is reported as not to ship.
+3. **The contents:** the pack is read without Godot (PCK format 2 to 4; format 4 is what 4.7.2 writes; a pack inside
+   an executable is found from its end; an encrypted directory is detected and its file count shown). Every file the
+   game loads from where it starts (main scene, autoloads, settings, then `ext_resource`, `preload` and `load` with a
+   literal path) must be in it, after mapping exported names back (`x.gdc` and `x.gd.remap` to `x.gd`,
+   `x.png.import` to `x.png`); a missing one is an error with the chain that loads it and the preset's reason (an
+   `exclude_filter`, or a plain file that `include_filter` does not name). Editor-only scripts (extending an `Editor*`
+   class, which export templates do not have) and test code shipped are warnings, one per folder, with the
+   `exclude_filter` to add. The static audit's predictions for the preset are checked against the real pack.
+4. **The smoke run:** the exported game runs headless for `--frames` (default 120) at the project's physics rate, in an
+   empty folder so no project files mix in: the exported binary itself when it runs on this machine, else Godot with
+   `--main-pack` (which also opens an executable with the pack inside). Runtime errors come with their call chain, as in
+   `godotwright check`, and what the game printed is shown.
+
+The exit code is 1 on any error, so it works as a CI step. In CI, the pack mode needs only the Godot binary.
+
+`godotwright export pck game.pck` (MCP: `godot_export` with `pck`) reads a pack you already have and compares it with
+the project, and `godotwright export smoke game.pck` runs one.
+
+### Patches
+
+`godotwright export patch` (MCP: `godot_export_run` with mode `patch`) makes a patch .pck with only what changed, and
+lists every file it carries (`~` changed, `+` new, `-` removed):
+
+```sh
+godotwright export patch --preset Linux --against base.pck            # Godot's --export-patch, checked
+godotwright export patch --preset Linux --manifest pck-manifest.json  # no base .pck here: cut from a full export
+```
+
+- **Against base packs** (`--against`, in load order, or the preset's `patches`): Godot's own `--export-patch`. The
+  patch is then checked against a fresh full export of the project: no file in it may be the same as in the base, and
+  every file that changed (or is new) must be in it; a file the base has and the project lost should be removed.
+  Nothing changed is not an error: no patch is written.
+- **Against a list of the base game's files** (`--manifest`, or `baseFiles` in `godotwright.json`), for a mod over a
+  shipped game whose multi-gigabyte .pck is not here: JSON with `resource`, `md5` and `bytes` per file (a .pck
+  manifest), a list of paths, or one path per line. Godotwright exports the full pack and keeps the files whose md5
+  differs from the list or that are new. With paths only, a listed file cannot be told apart from an unchanged copy, and
+  the report says so.
+- **The smoke run** loads the base with the patch over it (a removal takes a file out, as Godot does) and runs that.
+  With only a list, it runs the project's full export and says so.
+
 ## Mods and patches over a game
 
 A mod or patch often uses scripts, scenes and models that live in the game, not in
@@ -328,7 +391,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 32 tools
+### The 33 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -352,7 +415,8 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
-| `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
+| `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders; with `pck`, what an exported pack holds |
+| `godot_export_run` | Export headless (pack, release, debug or patch), check the file and the pack's contents against what the game loads, then run the build for some frames with runtime errors and call chains |
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
