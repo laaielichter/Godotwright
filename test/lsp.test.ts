@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { codeIntel, completionPrefix, engineLookup, formatCode, parseHover, toCodeDiagnostic } from "../src/lsp/code.js";
 import { MessageReader, RpcConnection, RpcError, RpcTimeoutError, encodeMessage, type RpcMessage } from "../src/lsp/jsonrpc.js";
-import { GodotLanguageServer, LanguageServerError, LanguageServerPool, freePort } from "../src/lsp/server.js";
+import { GodotLanguageServer, LanguageServerError, LanguageServerPool, freePort, killGodots } from "../src/lsp/server.js";
 
 /** A small language server speaking the protocol like Godot 4.7.2 does (shapes copied from real Godot output). */
 interface Fake {
@@ -451,6 +451,30 @@ describe("godot_code against a fake language server", () => {
     const port = await freePort();
     await expect(GodotLanguageServer.start({ root, port, startTimeoutMs: 400 })).rejects.toThrow(LanguageServerError);
     await expect(GodotLanguageServer.start({ root, port, startTimeoutMs: 400 })).rejects.toThrow(`did not answer on port ${port} within 0.4 s`);
+  });
+
+  it.skipIf(process.platform === "win32")("can kill a Godot that is still starting (for the exit and signal handlers)", async () => {
+    const root = project({});
+    const fakeGodot = join(root, "slow-godot.sh");
+    writeFileSync(fakeGodot, "#!/bin/sh\nexec sleep 30\n", { mode: 0o755 });
+    const starting = GodotLanguageServer.start({ root, godot: fakeGodot, startTimeoutMs: 20_000 });
+    await new Promise((r) => setTimeout(r, 300));
+    killGodots();
+    await expect(starting).rejects.toThrow("Godot exited (SIGKILL) before its language server answered");
+  });
+
+  it.skipIf(process.platform === "win32")("gives Godot its own debug adapter port, so 6006 stays free for the user's editor", async () => {
+    const root = project({});
+    const fakeGodot = join(root, "args-godot.sh");
+    writeFileSync(fakeGodot, `#!/bin/sh\necho "$@" > "${join(root, "args.txt")}"\nexit 3\n`, { mode: 0o755 });
+    await expect(GodotLanguageServer.start({ root, godot: fakeGodot, startTimeoutMs: 5000 })).rejects.toThrow(LanguageServerError);
+    const args = readFileSync(join(root, "args.txt"), "utf8").trim().split(" ");
+    const lsp = Number(args[args.indexOf("--lsp-port") + 1]);
+    const dap = Number(args[args.indexOf("--dap-port") + 1]);
+    expect(args.slice(0, 2)).toEqual(["--editor", "--headless"]);
+    expect(dap).toBeGreaterThan(0);
+    expect(dap).not.toBe(6006);
+    expect(dap).not.toBe(lsp);
   });
 
   it.skipIf(process.platform === "win32")("reports a Godot that exits before it answers, with its last output", async () => {

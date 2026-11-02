@@ -199,10 +199,20 @@ export class GodotLanguageServer {
     let output = "";
     let exited: string | undefined;
     if (options.godot) {
-      child = spawn(options.godot, ["--editor", "--headless", "--path", options.root, "--lsp-port", String(port)], {
+      // The editor also serves the GDScript debug adapter, on 6006 unless told otherwise: a free port keeps 6006 for
+      // the editor the user opens (and for their debugger to attach to it, not to this hidden one).
+      let dap = await freePort();
+      while (dap === port) dap = await freePort();
+      // Before the spawn: a signal during the start (seconds, on a first import minutes) must stop this Godot too.
+      hookProcess();
+      child = spawn(options.godot, ["--editor", "--headless", "--path", options.root, "--lsp-port", String(port), "--dap-port", String(dap)], {
         cwd: options.root,
         stdio: ["ignore", "pipe", "pipe"],
       });
+      const spawned = child;
+      godots.add(spawned);
+      spawned.on("exit", () => godots.delete(spawned));
+      spawned.on("error", () => godots.delete(spawned));
       const keep = (chunk: Buffer) => {
         output = (output + chunk.toString("utf8")).slice(-8000);
       };
@@ -211,7 +221,7 @@ export class GodotLanguageServer {
       child.on("error", (error) => (exited = `could not start Godot: ${error.message}`));
       child.on("exit", (code, signal) => (exited ??= `Godot exited (${signal ?? `code ${code}`})`));
       // A warm server must not keep this process alive (an MCP server ends when its client goes): the exit handler
-      // of the pool stops it.
+      // stops it.
       child.unref();
       for (const pipe of [child.stdout, child.stderr]) (pipe as unknown as { unref?: () => void } | null)?.unref?.();
     }
@@ -326,14 +336,22 @@ export interface PoolOptions {
 }
 
 const pools = new Set<LanguageServerPool>();
+/** Every Godot this process started that has not exited, also those still starting. */
+const godots = new Set<ChildProcess>();
 let hooked = false;
 
-/** Never leave a Godot editor running after this process: stop every pool's servers on exit and on the usual signals. */
+/** Kills every Godot language server this process started (synchronous, for exit handlers). */
+export function killGodots(): void {
+  for (const child of godots) if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+}
+
+/** Never leave a Godot editor running after this process: stop every server on exit and on the usual signals. */
 function hookProcess(): void {
   if (hooked) return;
   hooked = true;
   const stopAll = () => {
     for (const pool of pools) pool.stopLive();
+    killGodots();
   };
   process.once("exit", stopAll);
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
