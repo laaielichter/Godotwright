@@ -35,6 +35,11 @@ A scenario is a JSON file in .godotwright/scenarios/. It runs a scene, plays inp
 
 An expectation is <Node.property> <==|!=|>=|<=|>|<> <value> [@ frame]; without a frame it is checked on the last one.
 The input timeline is the one of "godotwright play".
+
+"screenshots": ["hud @ 60"] takes a picture of frame 60 and compares it with .godotwright/baselines/hud.png
+(made on the first run; "godotwright scenario --update" replaces it). An entry can also be
+{"name": "hud", "frame": 60, "tolerance": 16, "maxChanged": 0.1}; "size": "640x360" sets the window.
+Screenshots render with the Compatibility renderer (xvfb-run on Linux without a display); "ci" reports them as visual.
 `;
 
 export function ciCommand(): Command {
@@ -64,16 +69,17 @@ export function scenarioCommand(): Command {
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--name <text>", "run only the scenarios whose name contains this text")
     .option("--no-import", "skip the import step (faster when .godot/ is up to date)")
+    .option("--update", "replace the baselines of the screenshot steps with this run's pictures")
     .option("--json", "print the result as JSON")
     .addHelpText("after", SCENARIO_HELP)
-    .action(async (path: string, options: { godot?: string; name?: string; import: boolean; json?: boolean }, command: Command) => {
+    .action(async (path: string, options: { godot?: string; name?: string; import: boolean; update?: boolean; json?: boolean }, command: Command) => {
       try {
         const { root, scenarios } = loadScenarios(path);
         const chosen = scenarios.filter((s) => !options.name || s.scenario.name.includes(options.name));
         if (!chosen.length) throw new ScenarioError(`no scenarios found in ${root}/.godotwright/scenarios${options.name ? ` matching "${options.name}"` : ""}`);
         const results = [];
-        for (const { file, scenario } of chosen) results.push(await runScenario(root, file, scenario, { godot: options.godot, import: options.import }));
-        writeOut(command, options.json ? `${JSON.stringify(results, null, 2)}\n` : `${results.map(formatScenario).join("\n")}\n`);
+        for (const { file, scenario } of chosen) results.push(await runScenario(root, file, scenario, { godot: options.godot, import: options.import, ...(options.update ? { update: true } : {}) }));
+        writeOut(command, options.json ? `${JSON.stringify(results, null, 2)}\n` : `${results.map((r) => formatScenario(r)).join("\n")}\n`);
         if (results.some((r) => !r.ok)) process.exitCode = 1;
       } catch (error) {
         fail(error);
