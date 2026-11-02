@@ -178,6 +178,13 @@ export function joinContinuations(text: string): string {
 export function exportDiagnostics(text: string): Diagnostic[] {
   const found = parseGodotLog(joinContinuations(text), "export").filter((d) => !/^Project export for preset ".*" (failed|completed with warnings)\.$/.test(d.message));
   for (const d of found) {
+    // An empty [preset.N.options] section: Godot 4.7.2 complains, uses the defaults and exports fine.
+    const empty = /^Cannot get keys from nonexistent section "(preset\.\d+\.options)"\.$/.exec(d.message);
+    if (empty) {
+      d.severity = "warning";
+      d.file = "res://export_presets.cfg";
+      d.message = `[${empty[1]}] is empty, so Godot prints an error and uses the default options (save the preset once in Project > Export to write them)`;
+    }
     if (/No export template found at the expected path/.test(d.message)) {
       d.message = `${d.message.replace(/^Cannot export project with preset "(.*?)" due to configuration errors:\s*/, "")} (install the export templates for this Godot version: Editor > Manage Export Templates, or unpack the .tpz there; mode pack needs no templates)`;
     }
@@ -530,7 +537,7 @@ export function formatExportRun(r: ExportRun, options: { files?: boolean } = {})
 function nextStep(r: ExportRun): string {
   if (r.diagnostics.some((d) => d.source === "export" && d.severity === "error")) return "Next: fix the export error above and run it again.";
   if (r.contents?.missing) return "Next: get the missing files into the export (include_filter for plain files, or out of exclude_filter), then export again.";
-  if (r.errors && r.smoke) return "Next: fix the runtime errors above (they happen in the exported game), then export and run again.";
+  if (r.smoke?.errors) return "Next: fix the runtime errors above (they happen in the exported game), then export and run again.";
   if (r.errors) return "Next: fix the errors above, then export again.";
   if (r.warnings) return r.diagnostics.every((d) => d.severity !== "warning" || d.source === "contents") ? "Next: keep editor and test files out (exclude_filter), or ship as it is." : "Next: look at the warnings above, or ship as it is.";
   return r.mode === "pck" ? "Next: nothing to fix in the pack." : "Next: ship it, or keep this run as a CI step (godotwright export run exits 1 on any error).";
