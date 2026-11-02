@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://c0broken0scn1"]
+
+[ext_resource type="Script" uid="uid://cn4bl1ld7y0ek" path="res://s.gd" id="1_s"]
+
+[sub_resource type="StyleBoxTexture" id="a"]
+texture = SubResource("b")
+
+[sub_resource type="GradientTexture1D" id="b"]
+
+[sub_resource type="Gradient" id="g"]
+
+[sub_resource type="Gradient" id="g"]
+
+[node name="Broken" type="Panel"]
+script = ExtResource("1_s")
+theme_override_styles/panel = SubResource("a")
+metadata/missing = ExtResource("9_missing")
+metadata/g = SubResource("g")
+
+[ext_resource type="Script" path="res://s.gd" id="2_late"]

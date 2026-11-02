@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://bkq3oe5w8x1y2"]
+
+[ext_resource type="PackedScene" uid="uid://d1fq0i6v1abqx" path="res://leaf.tscn" id="1_leaf"]
+
+[node name="Child" type="Node2D"]
+
+[node name="Inner" type="Node2D" parent="."]
+
+[node name="Sub" parent="." instance=ExtResource("1_leaf")]
