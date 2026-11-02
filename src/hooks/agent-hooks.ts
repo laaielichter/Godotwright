@@ -259,7 +259,7 @@ export function sessionStart(input: HookInput, context: HookContext = {}): HookO
   return context_("SessionStart", [
     `Godotwright: Godot project "${settings.name ?? "(unnamed)"}"${version ? ` (Godot ${version}${settings.renderer ? `, ${settings.renderer}` : ""})` : ""}: ${plural(scripts, "script")}, ${plural(scenes, "scene")}${settings.mainScene ? `, main scene ${settings.mainScene}` : ""}${settings.autoloads.length ? `, autoloads ${settings.autoloads.map((a) => a.name).slice(0, 8).join(", ")}` : ""}.`,
     godot,
-    "Every Godot file you edit is reviewed right after the edit; errors come back to you. Next: map the project once with godot_scan, and look up engine API with godot_api (never guess Godot 3 names).",
+    "Every Godot file you edit is reviewed right after the edit; errors come back to you. Next: godot_doctor when something is broken (what is wrong, in which order, why), godot_scan once to map the project, godot_api for engine names (never guess Godot 3 names).",
     `godot_lessons holds ${bundledLessons().length} lessons from real Godot projects: ask it before you build vehicles, moving platforms, large worlds, shaders or runtime-loaded models, and with any Godot error you do not understand.`,
   ]);
 }

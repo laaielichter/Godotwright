@@ -146,6 +146,15 @@ Godotwright gets better with every use, without collecting anything personal.
     *Done when:* an agent that edits a broken script gets the errors back without calling a tool, every hook stays
     silent when it has nothing to add, and no hook can block the agent by failing.
 
+26. **What competitors have, headless.** From a survey of about forty Godot AI tools: runtime errors with their call
+    chain, play runs that stop on a condition, record signals, sum values up and check claims, a frame-time profile with
+    a baseline, a one-call triage (`godot_doctor`) and mechanical fixes (`godot_fix`), signal connections checked for
+    their argument count, and reviews fast enough for every edit on a game with 800 scripts.
+    *Done when:* each runs against real Godot 4.7.2 in CI, and the review stays quiet on the official demos.
+27. **A game session that stays up** (next): start the game once, then query the tree, read and set values, step,
+    wait until a condition holds and read new errors across calls, through a temporary autoload added with
+    `override.cfg`, so `project.godot` is not touched. Most competitors have this through an editor add-on.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -181,6 +190,8 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 23: Self-learning (local lessons, lesson feedback, rules that learn from false alarms, `learn gaps`)
 - [ ] Step 24: From gaps to rules, every release (two rounds done)
 - [x] Step 25: Agents in the loop (hooks, task skills and subagents in the Claude Code plugin)
+- [x] Step 26: What competitors have, headless (doctor, fix, perf, richer play, call chains, connection arguments)
+- [ ] Step 27: A game session that stays up across calls
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

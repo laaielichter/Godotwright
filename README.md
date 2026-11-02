@@ -429,10 +429,11 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 24 tools
+### The 27 tools
 
 | Tool | What it does |
 | --- | --- |
+| `godot_doctor` | Start here when something is broken: the review and Godot grouped by cause, most urgent first, each with its lesson and fix, then numbered next steps |
 | `godot_scan` | Map the project: scenes and node trees, scripts, signals, autoloads, input map |
 | `godot_api` | Exact Godot 4.7 lookup: signatures, inheritance, Godot 3 names |
 | `godot_api_search` | Search the Godot 4.7 class reference |
@@ -446,9 +447,11 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
 | `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
-| `godot_check` | Run Godot headless and report errors as `file:line` |
+| `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
+| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
-| `godot_play` | Run a scene with an input timeline and return the values you watch per frame |
+| `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
+| `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
 | `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
