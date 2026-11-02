@@ -290,7 +290,9 @@ godotwright export run --preset 0 --frames 0 --json      # by number, no smoke r
    `--main-pack` (which also opens an executable with the pack inside). Runtime errors come with their call chain, as in
    `godotwright check`, and what the game printed is shown.
 
-The exit code is 1 on any error, so it works as a CI step. In CI, the pack mode needs only the Godot binary.
+The exit code is 1 on any error, so it works as a CI step. In CI, the pack mode needs only the Godot binary:
+`godotwright ci --export-preset Linux` adds an export row to the receipt (pack, contents, smoke run), and the GitHub
+Action takes it as the input `export-preset`.
 
 `godotwright export pck game.pck` (MCP: `godot_export` with `pck`) reads a pack you already have and compares it with
 the project, and `godotwright export smoke game.pck` runs one.
