@@ -13,7 +13,20 @@ export interface Diagnostic {
   message: string;
   /** Which check produced it: "script", "scene", "import", "run" or "engine". */
   source: string;
+  /** The GDScript call chain Godot printed with a runtime error, most recent call first (project frames only). */
+  stack?: StackFrame[];
+  /** How many times the same error was printed (a runtime error in _process repeats every frame). */
+  count?: number;
 }
+
+export interface StackFrame {
+  function: string;
+  file: string;
+  line: number;
+}
+
+/** Frames shown under an error: the place itself and the callers above it. */
+const STACK_SHOWN = 4;
 
 /** Marker lines printed by the checker script around each file it loads. */
 export const MARKER = "GODOTWRIGHT";
@@ -90,7 +103,15 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
     }
 
     if (!pending) continue;
-    const location = AT.exec(line) ?? FRAME.exec(line);
+    const frame = FRAME.exec(line);
+    if (frame) {
+      const file = frame[2]!;
+      // Frames in res://.godot/ belong to Godotwright's own runners, not the project.
+      if (file.startsWith("res://") && !file.startsWith("res://.godot/")) {
+        (pending.diag.stack ??= []).push({ function: frame[1]!, file, line: Number(frame[3]) });
+      }
+    }
+    const location = AT.exec(line) ?? frame;
     if (location) {
       const file = location[2]!;
       // Frames in res://.godot/ belong to Godotwright's own checker, not the project.
@@ -109,17 +130,30 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
   return dedupe(out);
 }
 
+/** One entry per error: a repeat (the same error from the same call chain) is counted, not listed again. */
 function dedupe(diags: Diagnostic[]): Diagnostic[] {
-  const seen = new Set<string>();
-  return diags.filter((d) => {
-    const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const seen = new Map<string, Diagnostic>();
+  const out: Diagnostic[] = [];
+  for (const d of diags) {
+    const chain = (d.stack ?? []).map((f) => `${f.file}:${f.line}`).join(">");
+    const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}|${chain}`;
+    const first = seen.get(key);
+    if (first) {
+      first.count = (first.count ?? 1) + 1;
+      continue;
+    }
+    seen.set(key, d);
+    out.push(d);
+  }
+  return out;
 }
 
 export function formatDiagnostic(d: Diagnostic): string {
   const where = d.file ? `${d.file}${d.line ? `:${d.line}` : ""}: ` : "";
-  return `${where}${d.severity}: ${d.message}`;
+  const lines = [`${where}${d.severity}: ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}`];
+  // The call chain says how the code got there: the frames after the place of the error, the callers.
+  const callers = (d.stack ?? []).filter((f, i) => i > 0 || f.file !== d.file || f.line !== d.line);
+  for (const f of callers.slice(0, STACK_SHOWN)) lines.push(`    called from ${f.file}:${f.line} ${f.function}()`);
+  if (callers.length > STACK_SHOWN) lines.push(`    ... ${callers.length - STACK_SHOWN} more frames`);
+  return lines.join("\n");
 }

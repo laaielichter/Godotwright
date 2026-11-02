@@ -4,6 +4,23 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **`godot_doctor` (and `godotwright doctor`): what is wrong, in which order to fix it, and why.** One call runs the
+  review and, when Godot is installed, loads every script and scene with Godot; it groups the findings by cause
+  (twenty findings from one missing file are one problem), puts the most urgent first, and gives each its place, the
+  lesson that explains it, the fix, and whether `godot_fix` or `godot_migrate` can do it. `symptom` adds the lessons
+  for what you see going wrong. It ends with numbered next steps.
+- **`godot_fix` (and `godotwright fix`): mechanical fixes for review findings**, each labelled `safe` (only removes the
+  problem) or `check` (read it): a freed check put first, `get_meta()` with `has_meta()`, a lone ternary as if/else,
+  text encoded twice decoded, `emit_signal()` as `signal.emit()`, a MultiMesh format moved before `instance_count`,
+  `Timer.start()` moved after `add_child()`, `weakref()` typed `WeakRef`, Variant inference typed, and (check) an
+  `await` added to a coroutine call. It shows the changes first, writes with `write`, and reviews the changed files
+  again so the result says what is left.
+- **Runtime errors come with their GDScript call chain.** `godot_check`, `godot_play`, `godot_test` and screenshots
+  keep the backtrace Godot prints with a runtime error and show the callers under it; an error that repeats every
+  frame is one line with its count (`(x120)`).
+- **`godot_play` answers "did it happen, and when" in one call:** `until` stops at the first frame a condition holds,
+  `signals` records when signals fire with their arguments, `summary` gives one line per watched value (start, end,
+  min, max, first change) instead of a table, and `expect` checks claims and makes the run fail when one does not hold.
 - **Reviews are 3.5 times faster on large projects, and the edit hook about 20 times faster.** On a game with 800
   scripts a full review took 12.6 s and now takes 3.6 s; the findings are byte for byte the same on 163 projects (the
   139 official demos and every project of a large open world).

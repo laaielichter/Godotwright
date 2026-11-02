@@ -1,7 +1,8 @@
 import { chmodSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PlayError, formatPlay, parseTimeline, playScene, playScript } from "../src/play/play.js";
+import { formatClaims, judgeClaims, parseExpectation } from "../src/ci/scenario.js";
+import { PlayError, formatPlay, parseCondition, parseTimeline, playScene, playScript, summarizePlay } from "../src/play/play.js";
 import { makeProject, runCli } from "./helpers.js";
 
 /** A stand-in for Godot that prints two samples the way the play script does. */
@@ -75,7 +76,7 @@ describe("play", () => {
     });
     const report = await playScene(root, { godot: fakeGodot(root), watch: ["Score.points", "/root/Score.points"] });
     expect(report.warnings).toEqual([]);
-    expect(playScript("res://main.tscn", [], ["Score.points"], 10, 1)).toContain("node = root.get_node_or_null(NodePath(w[0]))");
+    expect(playScript("res://main.tscn", [], ["Score.points"], 10, 1)).toContain("node = root.get_node_or_null(NodePath(path))");
   });
 
   it("says when the run did not reach the last frame, with the error", async () => {
@@ -101,5 +102,52 @@ describe("play", () => {
     const bad = await runCli(["play", root, "--godot", fakeGodot(root, false)]);
     expect(bad.exitCode).toBe(1);
     process.exitCode = undefined;
+  });
+});
+
+describe("play summaries and conditions", () => {
+  const report = {
+    scene: "res://main.tscn",
+    frames: 4,
+    fps: 60,
+    steps: [],
+    watch: ["Hero.position.y", "Hero.is_on_floor()", "Hero.position"],
+    samples: [
+      { frame: 0, values: { "Hero.position.y": "5.0", "Hero.is_on_floor()": "false", "Hero.position": "Vector2(0, 5)" } },
+      { frame: 1, values: { "Hero.position.y": "3.0", "Hero.is_on_floor()": "false", "Hero.position": "Vector2(0, 3)" } },
+      { frame: 2, values: { "Hero.position.y": "1.0", "Hero.is_on_floor()": "true", "Hero.position": "Vector2(0, 1)" } },
+      { frame: 3, values: { "Hero.position.y": "1.0", "Hero.is_on_floor()": "true", "Hero.position": "Vector2(0, 1)" } },
+    ],
+    diagnostics: [],
+    output: "",
+    warnings: [],
+    finished: true,
+  };
+
+  it("gives one line per watched value", () => {
+    expect(summarizePlay(report)).toEqual([
+      "Hero.position.y: start 5.0, end 1.0, min 1 (frame 2), max 5 (frame 0), first change at frame 1, 2 changes in 4 samples",
+      "Hero.is_on_floor(): start false, end true, first change at frame 2, 1 change in 4 samples",
+      "Hero.position: start Vector2(0, 5), end Vector2(0, 1), first change at frame 1, 2 changes in 4 samples",
+    ]);
+  });
+
+  it("reads conditions and refuses what it cannot read", () => {
+    expect(parseCondition("Hero.is_on_floor() == true")).toEqual({ node: "Hero", prop: "is_on_floor()", op: "==", value: "true" });
+    expect(parseCondition('Hud/Label.text != "Ready"')).toEqual({ node: "Hud/Label", prop: "text", op: "!=", value: "Ready" });
+    expect(() => parseCondition("Hero landed")).toThrow(/cannot read the condition/);
+  });
+
+  it("puts the condition and the signals into the script it runs", () => {
+    const script = playScript("res://main.tscn", [], [], 60, 10, { until: "Hero.velocity.y > 0", signals: ["Hero.landed"] });
+    expect(script).toContain('var UNTIL: Array = ["Hero", "velocity:y", ">", "0"]');
+    expect(script).toContain('const SIGNALS: Array = [["Hero", "landed", "Hero.landed"]]');
+    expect(script).toContain("func _on_signal(...args: Array) -> void:");
+  });
+
+  it("formats claims about a run", () => {
+    expect(formatClaims(judgeClaims([parseExpectation("Hero.position.y < 2"), parseExpectation("Hero.is_on_floor() == true @ 1")], report))).toBe(
+      "expect: 1 of 2 FAILED\n  ok: Hero.position.y < 2 (1.0)\n  FAILED: Hero.is_on_floor() == true @ 1 (Hero.is_on_floor() was false at frame 1)\n",
+    );
   });
 });

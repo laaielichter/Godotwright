@@ -5429,6 +5429,27 @@
         "broncode",
         "bytecode"
       ]
+    },
+    {
+      "id": "gdscript/index-into-empty-const-array",
+      "topic": "gdscript",
+      "title": "An index into a constant empty array stops the whole script from loading",
+      "symptom": "A generated script that worked with data failed to load once its constant list was empty, with a parse error on every line that read an element, even lines that never run.",
+      "cause": "Godot folds constants while it parses: reading an element of a constant array that is empty is checked then, not at run time, so it is a parse error for the whole script.",
+      "fix": "Use a var for a list that can be empty, or guard the read so it only exists when the list has elements (generate the code only when there is data).",
+      "test": "Load the script with the list empty and with one element, headless, and check that both load.",
+      "tags": [
+        "const",
+        "array",
+        "empty",
+        "parse error",
+        "generated code",
+        "constant folding",
+        "lege lijst"
+      ],
+      "errors": [
+        "Cannot get index"
+      ]
     }
   ]
 }

@@ -129,7 +129,7 @@ describe("parseGodotLog", () => {
     ].join("\n");
     expect(parseGodotLog(log, "run").map(formatDiagnostic)).toEqual([
       "res://scripts/main.gd:7: error: Out of bounds get index '3' (on base: 'Array[int]')",
-      "res://scripts/util.gd:12: error: something bad",
+      "res://scripts/util.gd:12: error: something bad\n    called from res://scripts/main.gd:4 _ready()",
     ]);
   });
 
@@ -145,5 +145,31 @@ describe("parseGodotLog", () => {
       "res://scenes/level.tscn: error: Cannot get class 'MissingNode'.",
       "error: Outside of any file.",
     ]);
+  });
+});
+
+describe("runtime errors with their call chain (Godot 4.7.2 output)", () => {
+  const out = [
+    "SCRIPT ERROR: Invalid access to property or key 'basis' on a base object of type 'Nil'.",
+    "          at: _downwash (res://main.gd:16)",
+    "          GDScript backtrace (most recent call first):",
+    "              [0] _downwash (res://main.gd:16)",
+    "              [1] _apply (res://main.gd:12)",
+    "              [2] _process (res://main.gd:7)",
+  ].join("\n");
+
+  it("keep the frames and count the repeats of one error", () => {
+    const diags = parseGodotLog(`${out}\n${out}\n${out}\n`);
+    expect(diags).toHaveLength(1);
+    expect(diags[0]).toMatchObject({ file: "res://main.gd", line: 16, count: 3 });
+    expect(diags[0]!.stack?.map((f) => `${f.function}@${f.line}`)).toEqual(["_downwash@16", "_apply@12", "_process@7"]);
+    expect(formatDiagnostic(diags[0]!)).toBe(
+      "res://main.gd:16: error: Invalid access to property or key 'basis' on a base object of type 'Nil'. (x3)\n    called from res://main.gd:12 _apply()\n    called from res://main.gd:7 _process()",
+    );
+  });
+
+  it("keep the same error reached from two places apart", () => {
+    const other = out.replace("[1] _apply (res://main.gd:12)", "[1] _land (res://main.gd:30)");
+    expect(parseGodotLog(`${out}\n${other}\n`)).toHaveLength(2);
   });
 });

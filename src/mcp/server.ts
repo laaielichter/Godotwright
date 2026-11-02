@@ -88,6 +88,7 @@ import {
   type View,
 } from "../screenshot/screenshot.js";
 import { PlayError, formatPlay, playScene } from "../play/play.js";
+import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
   TestRunError,
   formatTests,
@@ -992,7 +993,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Play a scene with input",
       description:
-        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
+        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. `until` stops the run at the first frame a condition holds (\"Heli.is_on_floor() == true\"); `signals` records when signals fire, with their arguments; `summary: true` gives one line per watched value (start, end, min, max, first change) instead of a table, which saves tokens on long runs; `expect` checks claims such as \"Heli.health > 0\" or \"Heli.position.y < 1 @ 90\" and makes the result an error when one fails, so a play run doubles as a test. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1026,6 +1027,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe(
             "sample every n frames (default 10); frames with input and the last frame are always sampled",
           ),
+        until: z.string().optional().describe('stop at the first frame where this holds: "Heli.is_on_floor() == true"'),
+        signals: z.array(z.string()).optional().describe('signals to record: "Heli.landed", "Deck.body_entered"'),
+        summary: z.boolean().optional().describe("one line per watched value instead of a table (samples every frame)"),
+        expect: z
+          .array(z.string())
+          .optional()
+          .describe('claims to check: "Heli.health > 0" (last frame) or "Heli.position.y < 1 @ 90"; their values are watched'),
         timeout_seconds: z
           .number()
           .int()
@@ -1041,20 +1049,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, scene, input, watch, frames, every, timeout_seconds }) => {
+    async ({ path, scene, input, watch, frames, every, until, signals, summary, expect, timeout_seconds }) => {
       try {
+        const claims = (expect ?? []).map(parseExpectation);
+        const watched = [...new Set([...(watch ?? []), ...claims.map((c) => c.watch)])];
         const report = await playScene(where(path), {
           godot: options.godot,
           ...(scene ? { scene } : {}),
           ...(input ? { input } : {}),
-          ...(watch ? { watch } : {}),
+          ...(watched.length ? { watch: watched } : {}),
           ...(frames ? { frames } : {}),
-          ...(every ? { every } : {}),
+          ...(summary ? { every: 1 } : every ? { every } : {}),
+          ...(until ? { until } : {}),
+          ...(signals?.length ? { signals } : {}),
           timeoutMs: (timeout_seconds ?? 300) * 1000,
         });
-        const body = formatPlay(report);
+        const results = judgeClaims(claims, report);
+        const body = formatPlay(report, { summary: summary === true }) + formatClaims(results);
         return !report.finished ||
-          report.diagnostics.some((d) => d.severity === "error")
+          report.diagnostics.some((d) => d.severity === "error") ||
+          results.some((r) => !r.ok)
           ? failure(body)
           : text(body);
       } catch (error) {
@@ -1062,7 +1076,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return failure(
             `${error.message}\nUse godot_review for checks without Godot.`,
           );
-        if (error instanceof PlayError || error instanceof ProjectNotFoundError)
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError || error instanceof ScenarioError)
           return failure(error.message);
         throw error;
       }
