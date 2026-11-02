@@ -55,7 +55,14 @@ node dist/cli.js --help
   lessons learned on this machine, `anonymize.ts` scrubs names, paths, codes and source code from them (bundled lessons
   must pass it unchanged; `test/lessons.test.ts` checks this), `hints.ts` adds lessons to check and review output,
   and `format.ts` prints lessons and gaps. A new rule that comes from a lesson names it in the lesson's `rules`.
-- `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles.
+- `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles. Register tools with `tool(...)`, never
+  `server.registerTool`: every tool must be in one set in `src/mcp/toolsets.ts` (`--tools`, `--read-only` and the
+  read-only refusals), `src/mcp/instructions.ts` holds the server instructions (filtered by the enabled tools), and
+  `src/mcp/structured.ts` the `outputSchema`s and `structuredContent` of review, check, doctor and test.
+- `src/check/progress.ts`: the run context of a tool call: progress messages from Godot's output and cancellation;
+  `runGodot` uses it, so code that starts Godot needs nothing extra.
+- `src/project/protect.ts`: protected paths (godotwright.json `"protect"`, `$GODOTWRIGHT_PROTECT`). Every write
+  Godotwright makes to a project goes through `JournalWriter` or calls `assertWritable` itself.
 - `src/hooks/agent-hooks.ts`: hooks for coding agents (`godotwright hook <event>`, Claude Code hook JSON on stdin):
   review after an edit, lessons under Godot errors in command output, open errors before the agent stops, a project
   brief at the start. A hook must never fail the agent: on any problem it prints nothing. The plugin calls it through
