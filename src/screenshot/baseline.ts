@@ -27,7 +27,8 @@ export interface BaselineMeta {
   adapter?: string;
 }
 
-export type BaselineStatus = "created" | "updated" | "same" | "changed" | "missing";
+/** "failed": there was no picture to compare (the run ended early, or the file could not be read). */
+export type BaselineStatus = "created" | "updated" | "same" | "changed" | "missing" | "failed";
 
 export interface BaselineResult {
   name: string;
@@ -170,6 +171,9 @@ export function formatBaseline(r: BaselineResult, accept = "run again with updat
       break;
     case "same":
       out.push(`baseline ${r.name}: same${r.diff?.changed ? ` (${r.diff.changed} px changed, ${r.diff.changedPercent}%, within ${r.diff.maxChanged}%)` : ""}`);
+      break;
+    case "failed":
+      out.push(`baseline ${r.name}: NOT COMPARED`);
       break;
     case "changed":
       out.push(`baseline ${r.name}: CHANGED`);
