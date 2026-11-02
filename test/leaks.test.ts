@@ -167,9 +167,35 @@ describe("creation sites", () => {
     expect(sites.sites("Node", "res://leaky.gd")).toEqual(["res://maker.gd:7  var a := Leaky.new()"]);
     expect(sites.sites("Node2D", "res://bullet.gd")).toEqual(["res://maker.gd:8  var b = Bullet.new()"]);
     expect(sites.sites("Node2D", undefined, "res://mob.tscn")).toEqual(["res://spawner.gd:7  var mob = mob_scene.instantiate()", 'res://main.tscn:10  node "Mob" instances it']);
-    expect(sites.removals(["res://chunk.gd"], ["res://chunk.gd:7  var m := MeshInstance3D.new()"])).toEqual(["res://chunk.gd:9  remove_child(m)"]);
-    expect(sites.removals(["res://chunk.gd"], [])).toEqual(["res://chunk.gd:9  remove_child(m)", "res://chunk.gd:14  remove_child(holder)"]);
+    expect(sites.removals(["res://chunk.gd"], ["res://chunk.gd:7  var m := MeshInstance3D.new()"])).toEqual({ lines: ["res://chunk.gd:9  remove_child(m)"], guess: false, vars: ["m"] });
+    // With no known variable and more than one remove_child(), they are only likely.
+    expect(sites.removals(["res://chunk.gd"], [])).toEqual({ lines: ["res://chunk.gd:9  remove_child(m)", "res://chunk.gd:14  remove_child(holder)"], guess: true, vars: [] });
+    expect(sites.removals(["res://spawner.gd"], [])).toEqual({ lines: [], guess: false, vars: [] });
     expect(sites.holders("res://main.tscn")).toEqual(["res://cache.gd:7  items.append(x)"]);
+  });
+
+  it("ranks sites in the scene's own code first, ties orphans to their exact removal, and finds autoload appends", () => {
+    const root = makeProject({
+      "project.godot": '[application]\n[autoload]\nReg="*res://reg.gd"\n',
+      "reg.gd": "extends Node\n\nvar seen: Array = []\n",
+      "helper.gd": "extends Node2D\n\n\nfunc ok() -> void:\n\tvar n := Node2D.new()\n\tadd_child(n)\n\tn.queue_free()\n",
+      "main.gd":
+        "extends Node2D\n\n@export var panel: Node2D\n\n\nfunc _ready() -> void:\n\tReg.seen.append(Resource.new())\n\tvar keep := Node2D.new()\n\tadd_child(keep)\n\tremove_child(keep)\n\tremove_child(panel)\n\tremove_child($Other)\n",
+      "panel.tscn": '[gd_scene format=3]\n\n[node name="Panel" type="Node2D"]\n',
+      "main.tscn":
+        '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n[ext_resource type="PackedScene" path="res://panel.tscn" id="2"]\n\n[node name="Main" type="Node2D" node_paths=PackedStringArray("panel")]\nscript = ExtResource("1")\npanel = NodePath("Panel")\n\n[node name="Panel" parent="." instance=ExtResource("2")]\n',
+    });
+    const sites = SiteFinder.load(root);
+    expect(sites.classSites("Node2D", ["res://main.gd"])).toEqual({ lines: ["res://main.gd:8  var keep := Node2D.new()"], guess: false });
+    expect(sites.classSites("Node2D", [])).toEqual({ lines: ["res://helper.gd:5  var n := Node2D.new()", "res://main.gd:8  var keep := Node2D.new()"], guess: true });
+    expect(sites.removals(["res://main.gd"], ["res://helper.gd:5  var n := Node2D.new()", "res://main.gd:8  var keep := Node2D.new()"])).toEqual({
+      lines: ["res://main.gd:10  remove_child(keep)"],
+      guess: false,
+      vars: ["keep"],
+    });
+    // An instanced node reached through an exported NodePath var.
+    expect(sites.removals(["res://main.gd"], ['res://main.tscn:10  node "Panel" instances it']).lines).toEqual(["res://main.gd:11  remove_child(panel)"]);
+    expect(sites.holders("res://main.tscn")).toEqual(["res://main.gd:7  Reg.seen.append(Resource.new())"]);
   });
 });
 

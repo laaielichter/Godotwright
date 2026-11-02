@@ -64,6 +64,10 @@ export interface LeakGroup {
   sites: string[];
   /** remove_child() calls in the parent's script or the creation files. */
   removedAt: string[];
+  /** The sites are likely, not proven: only the class matched, in code outside the scene and the parent. */
+  sitesGuess?: boolean;
+  /** The removals are likely, not proven: none removes a variable known to hold these nodes. */
+  removedGuess?: boolean;
 }
 
 export interface LeakReport {
@@ -230,12 +234,51 @@ export class SiteFinder {
     return this.news([cls]);
   }
 
-  /** remove_child() calls in these files; those that remove a variable named at a creation site first. */
-  removals(files: string[], made: string[]): string[] {
-    const all = this.grep((l) => /(?<![\w])remove_child\s*\(/.test(l.code), files.filter((f) => this.lines.has(f)), 20);
-    const vars = made.map((s) => /\bvar\s+(\w+)/.exec(s)?.[1] ?? /^\S+\s+(\w+)\s*=/.exec(s)?.[1]).filter((v): v is string => !!v);
-    const exact = all.filter((s) => vars.some((v) => new RegExp(`remove_child\\s*\\(\\s*${escape(v)}\\s*\\)`).test(s)));
-    return (exact.length ? exact : all).slice(0, 2);
+  /**
+   * `<Class>.new(` anywhere, the files in `prefer` (the parent's script, the scene's scripts) first. Sites in those
+   * files are the ones kept when there are any; otherwise the matches are only likely.
+   */
+  classSites(cls: string, prefer: string[]): { lines: string[]; guess: boolean } {
+    const all = this.news([cls], undefined, 50);
+    const fileOf = (s: string) => s.slice(0, s.search(/:\d+ /));
+    const own = all.filter((s) => prefer.includes(fileOf(s)));
+    return own.length ? { lines: own, guess: false } : { lines: all.slice(0, 3), guess: all.length > 0 };
+  }
+
+  /** The variable a creation site stores into, or the names a scene's instanced node is reached by. */
+  private varsOf(made: string): string[] {
+    const v = /\bvar\s+(\w+)/.exec(made)?.[1] ?? /^\S+\s+(?:self\.)?(\w+)\s*=(?!=)/.exec(made)?.[1];
+    if (v) return [v];
+    // `res://game.tscn:44  node "Combat" instances it`: $Combat, and exported vars set to NodePath("Combat").
+    const m = /^(\S+):\d+\s+node "([^"]+)" instances it$/.exec(made);
+    if (!m) return [];
+    const [, file, path] = m;
+    const out = [`$${path}`, `$"${path}"`, `get_node("${path}")`, `get_node(^"${path}")`];
+    for (const n of this.data.resources.get(file!)?.nodes ?? []) {
+      for (const [prop, value] of Object.entries(n.props)) {
+        const o = value as { $type?: unknown; args?: unknown[] } | null;
+        if (typeof o === "object" && o !== null && o.$type === "NodePath" && o.args?.[0] === path) out.push(prop);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * remove_child() calls in these files that remove a variable a creation site names; with none of those, the only
+   * remove_child() there (proven enough), or up to three as a guess.
+   */
+  removals(files: string[], made: string[]): { lines: string[]; guess: boolean; vars: string[] } {
+    const all = this.grep((l) => /(?<![\w])remove_child\s*\(/.test(l.code), files.filter((f) => this.lines.has(f)), 50);
+    const removes = (line: string, v: string) => new RegExp(`remove_child\\s*\\(\\s*${escape(v)}\\s*\\)`).test(line);
+    const vars = [...new Set(made.flatMap((s) => this.varsOf(s)))];
+    const hit = vars.filter((v) => all.some((s) => removes(s, v)));
+    if (hit.length) return { lines: all.filter((s) => hit.some((v) => removes(s, v))).slice(0, 3), guess: false, vars: hit };
+    return { lines: all.slice(0, 3), guess: all.length > 1, vars: [] };
+  }
+
+  /** The scripts a scene's nodes use. */
+  sceneScripts(scene: string): string[] {
+    return (this.data.resources.get(scene)?.extResources ?? []).filter((e) => e.type === "Script" && e.path).map((e) => e.path!);
   }
 
   /**
@@ -257,7 +300,16 @@ export class SiteFinder {
       out.push(...this.grep((l) => re.test(l.code), [file], 3 - out.length));
       if (out.length >= 3) break;
     }
-    return out;
+    // `Registry.seen.append(x)` from the scene's own scripts, into an autoload's var.
+    const named = this.data.map.autoloads.filter((a) => a.path.endsWith(".gd") && this.lines.has(a.path));
+    for (const a of named) {
+      if (out.length >= 3) break;
+      const vars = (this.lines.get(a.path) ?? []).map((l) => /^(?:static\s+)?var\s+(\w+)/.exec(l.text)?.[1]).filter((n): n is string => !!n);
+      if (!vars.length) continue;
+      const re = new RegExp(`(?<![\\w.])${escape(a.name)}\\s*\\.\\s*(?:${vars.map(escape).join("|")})\\s*(?:\\.\\s*(?:append|push_back|push_front|append_array|insert|merge)\\s*\\(|\\[[^\\]]+\\]\\s*=(?!=))`);
+      out.push(...this.grep((l) => re.test(l.code), [...own].filter((f) => !autoloads.has(f)), 3 - out.length));
+    }
+    return [...new Set(out)];
   }
 
   /** The script of a scene's root node, for a parent that came from a scene. */
@@ -268,7 +320,8 @@ export class SiteFinder {
   }
 }
 
-function groupsOf(kind: "orphan" | "tree", counted: LeakSnapshot[], sites: SiteFinder | undefined): LeakGroup[] {
+function groupsOf(kind: "orphan" | "tree", counted: LeakSnapshot[], sites: SiteFinder | undefined, scene: string): LeakGroup[] {
+  const sceneScripts = sites?.sceneScripts(scene) ?? [];
   const keys = new Set(counted.flatMap((s) => Object.keys(kind === "orphan" ? s.orphans : s.tree)));
   const out: LeakGroup[] = [];
   for (const key of keys) {
@@ -276,24 +329,43 @@ function groupsOf(kind: "orphan" | "tree", counted: LeakSnapshot[], sites: SiteF
     const roots = trend(series.map((g) => g?.[0] ?? 0));
     const nodes = trend(series.map((g) => g?.[1] ?? 0));
     if (!roots.growing && !nodes.growing) continue;
-    const [cls = "", script = "", scene = "", inScene = ""] = key.split("|");
+    const [cls = "", script = "", nodeScene = "", inScene = ""] = key.split("|");
     const seen: SnapshotGroup | undefined = series.findLast((g) => g !== undefined);
     const where = seen?.[2] ?? "";
     const whereScript = seen?.[3] || undefined;
-    const made = sites?.sites(cls, script || undefined, scene || undefined) ?? [];
+    const parentScript = whereScript?.endsWith(".tscn") || whereScript?.endsWith(".scn") ? sites?.rootScript(whereScript) : whereScript;
+    let made: string[] = [];
+    let sitesGuess = false;
+    if (sites && (script || nodeScene)) made = sites.sites(cls, script || undefined, nodeScene || undefined);
     // A plain node inside an instanced scene is made by instancing that scene.
-    if (!made.length && inScene && sites) made.push(...sites.sites(cls, undefined, inScene));
-    let removedAt: string[] = [];
-    if (kind === "orphan" && where && sites) {
-      const parentScript = whereScript?.endsWith(".tscn") || whereScript?.endsWith(".scn") ? sites.rootScript(whereScript) : whereScript;
-      const files = [...new Set([...(parentScript ? [parentScript] : []), ...made.map((s) => s.slice(0, s.search(/:\d+ /)))])];
-      removedAt = sites.removals(files, made);
+    if (sites && !made.length && inScene) made = sites.sites(cls, undefined, inScene);
+    if (sites && !made.length && !script && !nodeScene) {
+      const found = sites.classSites(cls, [...(parentScript ? [parentScript] : []), ...sceneScripts]);
+      made = found.lines;
+      sitesGuess = found.guess;
     }
+    let removedAt: string[] = [];
+    let removedGuess = false;
+    if (kind === "orphan" && where && sites) {
+      const files = [...new Set([...(parentScript ? [parentScript] : []), ...made.map((s) => s.slice(0, s.search(/:\d+ /)))])];
+      const removed = sites.removals(files, made);
+      removedAt = removed.lines;
+      removedGuess = removed.guess;
+      // A removal of a known variable proves which creation sites these are: keep only those.
+      if (removed.vars.length) {
+        const proven = made.filter((m) => removed.vars.some((v) => new RegExp(`(?<![\\w$])${escape(v)}(?!\\w)`).test(m)));
+        if (proven.length) {
+          made = proven;
+          sitesGuess = false;
+        }
+      }
+    }
+    made = made.slice(0, 3);
     out.push({
       kind,
       class: cls,
       ...(script ? { script } : {}),
-      ...(scene ? { scene } : {}),
+      ...(nodeScene ? { scene: nodeScene } : {}),
       ...(inScene ? { inScene } : {}),
       roots,
       nodes,
@@ -301,6 +373,8 @@ function groupsOf(kind: "orphan" | "tree", counted: LeakSnapshot[], sites: SiteF
       ...(whereScript ? { whereScript } : {}),
       sites: made,
       removedAt,
+      ...(sitesGuess ? { sitesGuess } : {}),
+      ...(removedGuess ? { removedGuess } : {}),
     });
   }
   return out.sort((a, b) => b.nodes.perCycle - a.nodes.perCycle || a.class.localeCompare(b.class));
@@ -347,7 +421,7 @@ export async function leakScene(path: string, options: LeakOptions = {}): Promis
   } catch {
     sites = undefined;
   }
-  const groups = [...groupsOf("orphan", counted, sites), ...groupsOf("tree", counted, sites)];
+  const groups = [...groupsOf("orphan", counted, sites, run.scene), ...groupsOf("tree", counted, sites, run.scene)];
 
   // At exit Godot names the classes of everything still alive; the non-node ones are what the snapshots cannot see.
   const atExit = run.atExit ?? { instances: {}, resources: [], rids: {} };
@@ -458,8 +532,8 @@ export function formatLeaks(r: LeakReport): string {
       const subtree = g.nodes.perCycle !== g.roots.perCycle ? ` (${signed(g.nodes.perCycle)} nodes with children)` : "";
       const from = g.where ? `removed from ${g.where}${g.whereScript ? ` (${g.whereScript})` : ""}` : "never added to the tree";
       out.push(`  ${signed(g.roots.perCycle)}/cycle ${label(g)}${subtree}, ${g.roots.last} now; ${from}`);
-      for (const s of g.sites) out.push(`    made at ${s}`);
-      for (const s of g.removedAt) out.push(`    removed at ${s}`);
+      for (const s of g.sites) out.push(`    ${g.sitesGuess ? "maybe made" : "made"} at ${s}`);
+      for (const s of g.removedAt) out.push(`    ${g.removedGuess ? "maybe removed" : "removed"} at ${s}`);
     }
     if (orphans.length > 10) out.push(`  +${orphans.length - 10} more groups (use --json)`);
   }
@@ -468,7 +542,7 @@ export function formatLeaks(r: LeakReport): string {
     out.push(r.reload ? "nodes left in the tree after the scene was freed:" : "nodes that keep piling up in the tree (not counted as a leak with the scene kept running: spawning can be the design):");
     for (const g of tree.slice(0, 10)) {
       out.push(`  ${signed(g.roots.perCycle)}/cycle ${label(g)} under ${g.where || "?"}, ${g.roots.last} now`);
-      for (const s of g.sites) out.push(`    made at ${s}`);
+      for (const s of g.sites) out.push(`    ${g.sitesGuess ? "maybe made" : "made"} at ${s}`);
     }
     if (tree.length > 10) out.push(`  +${tree.length - 10} more groups (use --json)`);
   }
