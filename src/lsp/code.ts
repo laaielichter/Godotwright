@@ -189,18 +189,19 @@ export async function codeIntel(path: string, options: CodeOptions): Promise<Cod
   const text = file ? (options.code ?? readFileSync(file, "utf8")) : "";
   const pos = file && options.op !== "diagnostics" ? position(text, options.line, options.column, options.op) : undefined;
   const pool = options.pool ?? sharedPool();
-  const { server, fresh, restarted } = await pool.get(root, options.godot);
-  const result: CodeResult = {
-    project: root,
-    op: options.op,
-    ...(file ? { file: display(root, file) } : {}),
-    ...(pos ? { line: pos.line + 1, column: pos.character + 1 } : {}),
-    unsaved: options.code !== undefined,
-    server: { fresh, startMs: fresh ? server.startMs : 0, ...(restarted ? { restarted } : {}) },
-    notes: [],
-  };
-  await server.exclusive(() => run(server, root, file, text, pos, options, result));
-  return result;
+  return pool.run(root, options.godot, async (server, { fresh, restarted }) => {
+    const result: CodeResult = {
+      project: root,
+      op: options.op,
+      ...(file ? { file: display(root, file) } : {}),
+      ...(pos ? { line: pos.line + 1, column: pos.character + 1 } : {}),
+      unsaved: options.code !== undefined,
+      server: { fresh, startMs: fresh ? server.startMs : 0, ...(restarted ? { restarted } : {}) },
+      notes: [],
+    };
+    await run(server, root, file, text, pos, options, result);
+    return result;
+  });
 }
 
 async function run(

@@ -348,6 +348,56 @@ describe("godot_code against a fake language server", () => {
     expect(starts).toHaveLength(2);
   });
 
+  it("lets the calls running on a stale server finish before it restarts", async () => {
+    const { pool, root, starts, fake } = await setup({ "main.gd": MAIN, "b.gd": "extends Node\n", "c.gd": "extends Node\n" });
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    fake.delayMs = 100;
+    // A long call (every script), then a class_name appears and another call notices it.
+    const all = codeIntel(root, { op: "diagnostics", pool });
+    await new Promise((r) => setTimeout(r, 30));
+    writeFileSync(join(root, "helper.gd"), "class_name Helper\nextends RefCounted\n");
+    const hover = codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 6, pool });
+    const [a, h] = await Promise.all([all, hover]);
+    expect(a.scripts).toBe(3);
+    expect(a.server.fresh).toBe(false);
+    expect(h.server).toMatchObject({ fresh: true, restarted: "a class_name or project.godot changed since it started" });
+    expect(h.hover?.signature).toBe("var speed: float = 3.0");
+    expect(starts).toHaveLength(2);
+    // The old connection was closed once it had finished; one is left.
+    expect(fake.connections.filter((s) => !s.destroyed)).toHaveLength(1);
+  });
+
+  it("starts one server for parallel calls on a stale one, and none is left behind", async () => {
+    const { pool, root, starts, fake } = await setup();
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    writeFileSync(join(root, "other.gd"), "class_name Other\nextends RefCounted\n");
+    const [a, b] = await Promise.all([
+      codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool }),
+      codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 6, pool }),
+    ]);
+    expect(a.server).toMatchObject({ fresh: true, restarted: "a class_name or project.godot changed since it started" });
+    expect(b.server.fresh).toBe(false);
+    expect(starts).toHaveLength(2);
+    expect(pool.size).toBe(1);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fake.connections.filter((s) => !s.destroyed)).toHaveLength(1);
+    await pool.sweep(Date.now() + 11 * 60_000);
+    expect(pool.size).toBe(0);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fake.connections.filter((s) => !s.destroyed)).toHaveLength(0);
+  });
+
+  it("does not stop a server for idleness while a call is running on it", async () => {
+    const { pool, root, fake } = await setup();
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    fake.delayMs = 200;
+    const call = codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    await new Promise((r) => setTimeout(r, 50));
+    await pool.sweep(Date.now() + 11 * 60_000);
+    expect(pool.size).toBe(1);
+    expect((await call).diagnostics).toHaveLength(2);
+  });
+
   it("rejects open() on a closed connection without leaving a rejected promise behind", async () => {
     const unhandled: unknown[] = [];
     const onUnhandled = (reason: unknown) => unhandled.push(reason);

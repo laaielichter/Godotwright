@@ -158,6 +158,7 @@ function mtime(file: string): number {
 /** One running language server for one project, with a single connection. Calls are run one at a time. */
 export class GodotLanguageServer {
   private queue: Promise<unknown> = Promise.resolve();
+  private waiting = 0;
   readonly stamp: ProjectStamp;
   lastUsed = Date.now();
   /** How long the start took, in ms. */
@@ -238,9 +239,23 @@ export class GodotLanguageServer {
 
   /** Runs `fn` after every earlier call has finished. */
   exclusive<T>(fn: () => Promise<T>): Promise<T> {
-    const run = this.queue.then(fn, fn);
+    this.waiting++;
+    const call = async () => {
+      try {
+        return await fn();
+      } finally {
+        this.waiting--;
+        this.lastUsed = Date.now();
+      }
+    };
+    const run = this.queue.then(call, call);
     this.queue = run.catch(() => undefined);
     return run;
+  }
+
+  /** Whether a call is running or waiting its turn. */
+  get busy(): boolean {
+    return this.waiting > 0;
   }
 
   /**
@@ -313,9 +328,22 @@ function hookProcess(): void {
   }
 }
 
-/** Warm language servers per project, for the lifetime of this process. */
+/** What `LanguageServerPool.run` tells the call about the server it got. */
+export interface ServerInfo {
+  /** Started for this call (else it was warm). */
+  fresh: boolean;
+  /** Why it was started again: the old one stopped, or the project changed in a way a running server cannot see. */
+  restarted?: string;
+}
+
+/**
+ * Warm language servers per project, for the lifetime of this process. Every decision about a project's server
+ * (reuse, restart, idle stop) is made in one queue per project, so parallel calls never start two editors for one
+ * project, and a restart lets the calls already queued on the old server finish first.
+ */
 export class LanguageServerPool {
   private readonly servers = new Map<string, Promise<GodotLanguageServer>>();
+  private readonly locks = new Map<string, Promise<unknown>>();
   private timer: NodeJS.Timeout | undefined;
   private readonly idleMs: number;
   private readonly startServer: (root: string, godot: string | undefined) => Promise<GodotLanguageServer>;
@@ -327,44 +355,26 @@ export class LanguageServerPool {
   }
 
   /**
-   * The warm server for the project, started on first use (`godot` is the binary, or undefined to find it).
-   * `restarted` says why a server was started again: it died, or a class_name or project.godot changed, which a
-   * running server does not see.
+   * Runs `fn` on the project's warm server, after the calls queued on it before; the server is started on first use
+   * (`godot` is the binary, or undefined to find it), and started again when it died or the project changed in a way
+   * a running server does not see.
    */
-  async get(root: string, godot?: string): Promise<{ server: GodotLanguageServer; fresh: boolean; restarted?: string }> {
-    const existing = this.servers.get(root);
-    let restarted: string | undefined;
-    if (existing) {
-      let server: GodotLanguageServer | undefined;
-      try {
-        server = await existing;
-      } catch {
-        server = undefined;
-      }
-      if (server && server.alive) {
-        if (!server.stamp.refresh()) {
-          server.lastUsed = Date.now();
-          return { server, fresh: false };
-        }
-        restarted = "a class_name or project.godot changed since it started";
-      } else if (server) restarted = "the previous language server had stopped";
-      if (server) this.drop(server);
-      this.servers.delete(root);
-    }
-    const starting = this.startServer(root, godot);
-    this.servers.set(root, starting);
-    starting.catch(() => this.servers.delete(root));
-    const server = await starting;
-    this.live.add(server);
-    this.watch();
-    return { server, fresh: true, ...(restarted ? { restarted } : {}) };
+  async run<T>(root: string, godot: string | undefined, fn: (server: GodotLanguageServer, info: ServerInfo) => Promise<T>): Promise<T> {
+    let job: Promise<T> | undefined;
+    await this.locked(root, async () => {
+      const { server, info } = await this.acquire(root, godot);
+      // Queued while the project's lock is held: a restart decided after this waits for it.
+      job = server.exclusive(() => fn(server, info));
+      job.catch(() => undefined);
+    });
+    return job!;
   }
 
   get size(): number {
     return this.servers.size;
   }
 
-  /** Stops every server. */
+  /** Stops every server at once, also those still working (the CLI at its end, the exit handler). */
   stopAll(): void {
     for (const p of this.servers.values()) p.then((s) => s.stop(), () => undefined);
     this.servers.clear();
@@ -374,29 +384,85 @@ export class LanguageServerPool {
     this.timer = undefined;
   }
 
-  private drop(server: GodotLanguageServer): void {
-    server.stop();
-    this.live.delete(server);
-  }
-
-  /** Stops servers unused for longer than the idle time; called by a timer, exposed for tests. */
+  /** Stops servers unused for longer than the idle time, and dead ones; called by a timer, exposed for tests. */
   async sweep(now = Date.now()): Promise<void> {
-    for (const [root, p] of [...this.servers]) {
-      let server: GodotLanguageServer;
-      try {
-        server = await p;
-      } catch {
-        continue;
-      }
-      if (!server.alive || now - server.lastUsed >= this.idleMs) {
+    for (const root of [...this.servers.keys()]) {
+      await this.locked(root, async () => {
+        const p = this.servers.get(root);
+        if (!p) return;
+        const server = await p.catch(() => undefined);
+        if (!server) {
+          this.servers.delete(root);
+          return;
+        }
+        if (server.alive && (server.busy || now - server.lastUsed < this.idleMs)) return;
         this.drop(server);
-        if (this.servers.get(root) === p) this.servers.delete(root);
-      }
+        this.servers.delete(root);
+      });
     }
     if (!this.servers.size && this.timer) {
       clearInterval(this.timer);
       this.timer = undefined;
     }
+  }
+
+  /** Synchronous, for the exit handler: stops every server that has started. */
+  stopLive(): void {
+    for (const s of this.live) s.stop();
+    this.live.clear();
+  }
+
+  /** Runs `fn` after the earlier decisions about this project's server. */
+  private locked<T>(root: string, fn: () => Promise<T>): Promise<T> {
+    const run = (this.locks.get(root) ?? Promise.resolve()).then(fn);
+    const tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.locks.set(root, tail);
+    void tail.then(() => {
+      if (this.locks.get(root) === tail) this.locks.delete(root);
+    });
+    return run;
+  }
+
+  /** Only inside `locked(root)`. */
+  private async acquire(root: string, godot: string | undefined): Promise<{ server: GodotLanguageServer; info: ServerInfo }> {
+    const existing = this.servers.get(root);
+    let restarted: string | undefined;
+    if (existing) {
+      const old = await existing.catch(() => undefined);
+      if (old && old.alive) {
+        if (!old.stamp.refresh()) {
+          old.lastUsed = Date.now();
+          return { server: old, info: { fresh: false } };
+        }
+        restarted = "a class_name or project.godot changed since it started";
+        // Let the calls already queued on it finish (they were asked before the change), then stop it.
+        await old.exclusive(async () => this.drop(old));
+      } else if (old) {
+        restarted = "the previous language server had stopped";
+        this.drop(old);
+      }
+      this.servers.delete(root);
+    }
+    const starting = this.startServer(root, godot);
+    this.servers.set(root, starting);
+    let server: GodotLanguageServer;
+    try {
+      server = await starting;
+    } catch (error) {
+      if (this.servers.get(root) === starting) this.servers.delete(root);
+      throw error;
+    }
+    this.live.add(server);
+    this.watch();
+    return { server, info: { fresh: true, ...(restarted ? { restarted } : {}) } };
+  }
+
+  private drop(server: GodotLanguageServer): void {
+    server.stop();
+    this.live.delete(server);
   }
 
   private watch(): void {
@@ -406,11 +472,5 @@ export class LanguageServerPool {
     }
     hookProcess();
     pools.add(this);
-  }
-
-  /** Synchronous, for the exit handler: stops every server that has started. */
-  stopLive(): void {
-    for (const s of this.live) s.stop();
-    this.live.clear();
   }
 }
