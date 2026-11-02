@@ -16,8 +16,10 @@ import { RpcConnection } from "./jsonrpc.js";
  * - didOpen and didChange of text that is not on disk are analysed; publishDiagnostics follows for every one, also
  *   when it is empty. The project's warning levels apply (debug/gdscript/warnings/...).
  * - It has no `shutdown` method ("Method not found"), so it is stopped by ending the process.
- * - Files changed on disk are seen at the next analysis, but a new class_name (or a changed project.godot) is not:
- *   the headless editor does not rescan. So the server is restarted when those change.
+ * - Files changed on disk are seen at the next analysis, and so are new and removed scenes and deleted files, but a new
+ *   class_name, a changed project.godot and a new file that needs an import (png, ogg, glb...) are not: the headless
+ *   editor does not rescan, so `preload` of a new png stays "has no resource loaders". So the server is restarted when
+ *   those change.
  */
 
 export class LanguageServerError extends Error {
@@ -105,25 +107,41 @@ export function samePath(a: string | undefined, b: string): boolean {
   return a === b || norm(a) === norm(b);
 }
 
-/** What makes a warm server stale: the project settings and the global class names. */
+/**
+ * Files the language server takes as they are on disk (scripts, text scenes and resources), text nobody preloads, and
+ * the files Godot writes itself next to others (.uid, .import). Every other new file needs an import first.
+ */
+const NOT_IMPORTED = /(?:^|\/)\.[^/]*$|\.(?:gd|tscn|tres|uid|import|godot|md|txt|cs)$/i;
+
+/**
+ * What makes a warm server stale: the project settings, the global class names, and new files that need an import
+ * (a png, ogg or glb added after the start is never imported by the running editor, so preloading it is an error).
+ */
 export class ProjectStamp {
   private readonly classes = new Map<string, { mtime: number; name: string }>();
+  private assets = new Set<string>();
   private settings = 0;
   private initialized = false;
 
   constructor(private readonly root: string) {}
 
-  /** Reads the project again; true when something the server cannot see changed since the last call. */
-  refresh(): boolean {
+  /** Reads the project again; says what the server cannot see that changed since the last call, if anything. */
+  refresh(): string | undefined {
     const first = !this.initialized;
     this.initialized = true;
-    let changed = false;
+    let reason: string | undefined;
     const settings = mtime(join(this.root, "project.godot"));
-    if (!first && settings !== this.settings) changed = true;
+    if (!first && settings !== this.settings) reason ??= "project.godot changed";
     this.settings = settings;
     const seen = new Set<string>();
+    const assets = new Set<string>();
     for (const res of listProjectFiles(this.root)) {
-      if (!res.endsWith(".gd")) continue;
+      if (!res.endsWith(".gd")) {
+        if (NOT_IMPORTED.test(res)) continue;
+        assets.add(res);
+        if (!first && !this.assets.has(res)) reason ??= `${res} was added, which the running editor does not import`;
+        continue;
+      }
       seen.add(res);
       const file = fromResPath(this.root, res);
       const time = mtime(file);
@@ -135,15 +153,16 @@ export class ProjectStamp {
       } catch {
         // Unreadable: no class name.
       }
-      if (known ? known.name !== name : !first && name !== "") changed = true;
+      if (known ? known.name !== name : !first && name !== "") reason ??= `the class_name in ${res} changed`;
       this.classes.set(res, { mtime: time, name });
     }
     for (const [res, known] of this.classes) {
       if (seen.has(res)) continue;
       this.classes.delete(res);
-      if (known.name) changed = true;
+      if (known.name) reason ??= `${res} with class_name ${known.name} was removed`;
     }
-    return changed;
+    this.assets = assets;
+    return reason;
   }
 }
 
@@ -433,11 +452,11 @@ export class LanguageServerPool {
     if (existing) {
       const old = await existing.catch(() => undefined);
       if (old && old.alive) {
-        if (!old.stamp.refresh()) {
+        restarted = old.stamp.refresh();
+        if (!restarted) {
           old.lastUsed = Date.now();
           return { server: old, info: { fresh: false } };
         }
-        restarted = "a class_name or project.godot changed since it started";
         // Let the calls already queued on it finish (they were asked before the change), then stop it.
         await old.exclusive(async () => this.drop(old));
       } else if (old) {

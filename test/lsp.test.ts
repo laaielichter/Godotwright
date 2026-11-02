@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -318,8 +318,31 @@ describe("godot_code against a fake language server", () => {
     expect((await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool })).server.fresh).toBe(false);
     writeFileSync(join(root, "helper.gd"), "class_name Helper\nextends RefCounted\n");
     const third = await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
-    expect(third.server).toMatchObject({ fresh: true, restarted: "a class_name or project.godot changed since it started" });
+    expect(third.server).toMatchObject({ fresh: true, restarted: "the class_name in res://helper.gd changed" });
     expect(starts).toHaveLength(2);
+  });
+
+  it("restarts when a file that needs an import appears, not for files Godot writes or reads as they are", async () => {
+    const { pool, root, starts } = await setup({ "main.gd": MAIN, "icon.png": "png" });
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    // Godot's own sidecar files, scenes, resources, notes and dot files: no restart.
+    mkdirSync(join(root, "art"));
+    for (const name of ["icon.png.import", "main.gd.uid", "level.tscn", "theme.tres", "NOTES.md", ".gitignore", "art/a.txt"]) writeFileSync(join(root, name), "x");
+    // Removing an asset is seen by the running editor.
+    rmSync(join(root, "icon.png"));
+    expect((await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool })).server.fresh).toBe(false);
+    writeFileSync(join(root, "art", "ship.png"), "png");
+    const r = await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    expect(r.server).toMatchObject({ fresh: true, restarted: "res://art/ship.png was added, which the running editor does not import" });
+    expect(formatCode(r)).toContain("(again: res://art/ship.png was added, which the running editor does not import)");
+    expect((await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool })).server.fresh).toBe(false);
+    writeFileSync(join(root, "project.godot"), 'config_version=5\n[application]\nconfig/name="L2"\n');
+    expect((await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool })).server.restarted).toBe("project.godot changed");
+    writeFileSync(join(root, "helper.gd"), "class_name Helper\nextends RefCounted\n");
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    rmSync(join(root, "helper.gd"));
+    expect((await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool })).server.restarted).toBe("res://helper.gd with class_name Helper was removed");
+    expect(starts).toHaveLength(5);
   });
 
   it("fails calls queued on a server that dies without an unhandled rejection, and starts it again after", async () => {
@@ -360,7 +383,7 @@ describe("godot_code against a fake language server", () => {
     const [a, h] = await Promise.all([all, hover]);
     expect(a.scripts).toBe(3);
     expect(a.server.fresh).toBe(false);
-    expect(h.server).toMatchObject({ fresh: true, restarted: "a class_name or project.godot changed since it started" });
+    expect(h.server).toMatchObject({ fresh: true, restarted: "the class_name in res://helper.gd changed" });
     expect(h.hover?.signature).toBe("var speed: float = 3.0");
     expect(starts).toHaveLength(2);
     // The old connection was closed once it had finished; one is left.
@@ -375,7 +398,7 @@ describe("godot_code against a fake language server", () => {
       codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool }),
       codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 6, pool }),
     ]);
-    expect(a.server).toMatchObject({ fresh: true, restarted: "a class_name or project.godot changed since it started" });
+    expect(a.server).toMatchObject({ fresh: true, restarted: "the class_name in res://other.gd changed" });
     expect(b.server.fresh).toBe(false);
     expect(starts).toHaveLength(2);
     expect(pool.size).toBe(1);

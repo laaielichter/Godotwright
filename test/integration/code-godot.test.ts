@@ -26,6 +26,9 @@ const MAIN = [
   "",
 ].join("\n");
 
+/** A 1x1 PNG. */
+const PNG_1X1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+
 describe.skipIf(!GODOT)("godot_code with Godot's language server", () => {
   const root = mkdtempSync(join(tmpdir(), "godotwright-code-"));
   writeFileSync(
@@ -82,6 +85,22 @@ describe.skipIf(!GODOT)("godot_code with Godot's language server", () => {
     // The saved file is what Godot knows again.
     const again = await codeIntel(root, { op: "diagnostics", file: "res://main.gd", godot: GODOT!, pool });
     expect(again.diagnostics?.filter((d) => d.warning).map((d) => `${d.line} ${d.warning}`)).toEqual(["7 UNUSED_VARIABLE", "11 UNSAFE_METHOD_ACCESS"]);
+  });
+
+  it("restarts for a png added after the start, which the running editor would never import", { timeout: 180_000 }, async () => {
+    const dir = mkdtempSync(join(tmpdir(), "godotwright-code-asset-"));
+    writeFileSync(join(dir, "project.godot"), 'config_version=5\n[application]\nconfig/name="A"\nconfig/features=PackedStringArray("4.7")\n');
+    writeFileSync(join(dir, "main.gd"), 'extends Node\n\nconst TEX = preload("res://new.png")\n\n\nfunc _ready() -> void:\n\tprint(TEX)\n');
+    const before = await codeIntel(dir, { op: "diagnostics", file: "res://main.gd", godot: GODOT!, pool });
+    expect(before.diagnostics?.map((d) => d.message)).toEqual(['Preload file "res://new.png" does not exist.']);
+    writeFileSync(join(dir, "new.png"), PNG_1X1);
+    // Without the restart Godot says: Preload file "res://new.png" has no resource loaders (unrecognized file extension).
+    const after = await codeIntel(dir, { op: "diagnostics", file: "res://main.gd", godot: GODOT!, pool });
+    expect(after.server).toMatchObject({ fresh: true, restarted: "res://new.png was added, which the running editor does not import" });
+    expect(after.diagnostics).toEqual([]);
+    // Godot imported it (new.png.import) and that does not restart the server again.
+    const again = await codeIntel(dir, { op: "diagnostics", file: "res://main.gd", godot: GODOT!, pool });
+    expect(again.server.fresh).toBe(false);
   });
 
   it("answers through the MCP tool", { timeout: 180_000 }, async () => {
