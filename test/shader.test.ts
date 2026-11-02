@@ -123,8 +123,8 @@ describe("migrate shaders", () => {
     const m = migrateShader(GODOT3);
     expect(m.code.split("\n")).toEqual([
       "shader_type spatial;",
-      "uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;",
       "render_mode depth_prepass_alpha, cull_disabled;",
+      "uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;",
       "// hint_color and SCREEN_TEXTURE stay in comments",
       "uniform vec4 tint : source_color = vec4(1.0);",
       "uniform sampler2D tex : source_color;",
@@ -140,8 +140,8 @@ describe("migrate shaders", () => {
       "",
     ]);
     expect(m.changes.map((c) => `${c.line} ${c.rule}`)).toEqual([
-      "2 api/shader-removed-builtin",
-      "3 api/shader-renamed",
+      "2 api/shader-renamed",
+      "3 api/shader-removed-builtin",
       "5 api/shader-renamed",
       "6 api/shader-renamed",
       "7 api/shader-renamed",
@@ -149,6 +149,22 @@ describe("migrate shaders", () => {
       "13 api/shader-renamed",
     ]);
     expect(m.left).toEqual([{ line: 14, message: "CLEARCOAT_GLOSS: Godot 4 has CLEARCOAT_ROUGHNESS instead, which is 1.0 - gloss" }]);
+    expect(migrateShader(m.code).changes).toEqual([]);
+  });
+
+  it("adds the texture uniform after a render_mode that shares the shader_type line and spans lines, keeping CRLF", () => {
+    const code = "shader_type spatial; render_mode unshaded,\r\n\tcull_disabled;\r\nvoid fragment() { ALBEDO = texture(SCREEN_TEXTURE, SCREEN_UV).rgb + vec3(texture(DEPTH_TEXTURE, SCREEN_UV).r); }\r\n";
+    const m = migrateShader(code);
+    expect(m.code).toBe(
+      "shader_type spatial; render_mode unshaded,\r\n\tcull_disabled;\r\n" +
+        "uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;\r\n" +
+        "uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;\r\n" +
+        "void fragment() { ALBEDO = texture(SCREEN_TEXTURE, SCREEN_UV).rgb + vec3(texture(DEPTH_TEXTURE, SCREEN_UV).r); }\r\n",
+    );
+    expect(m.changes.map((c) => `${c.line} ${c.rule} ${c.to}`)).toEqual([
+      "3 api/shader-removed-builtin uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;",
+      "4 api/shader-removed-builtin uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;",
+    ]);
     expect(migrateShader(m.code).changes).toEqual([]);
   });
 
@@ -177,6 +193,16 @@ describe("fix shaders", () => {
     expect(result.skipped).toEqual([]);
     expect(readFileSync(join(root, "s.gdshader"), "utf8")).toBe(
       "shader_type spatial;\nuniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;\nuniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvoid fragment() {\n\tALBEDO = tint.rgb * texture(SCREEN_TEXTURE, SCREEN_UV).rgb * texture(DEPTH_TEXTURE, SCREEN_UV).r;\n\tNORMAL_MAP = vec3(0.5);\n}\n",
+    );
+    expect(result.remaining?.filter((f) => f.severity === "error")).toEqual([]);
+  });
+
+  it("adds the texture uniform after a render_mode that shares the shader_type line and spans lines", () => {
+    const code = "shader_type spatial; render_mode unshaded,\n\tcull_disabled;\nvoid fragment() { ALBEDO = texture(SCREEN_TEXTURE, SCREEN_UV).rgb; }\n";
+    const root = makeProject({ "project.godot": PROJECT, "r.gdshader": code });
+    const result = fixProject(root, { write: true });
+    expect(readFileSync(join(root, "r.gdshader"), "utf8")).toBe(
+      "shader_type spatial; render_mode unshaded,\n\tcull_disabled;\nuniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;\nvoid fragment() { ALBEDO = texture(SCREEN_TEXTURE, SCREEN_UV).rgb; }\n",
     );
     expect(result.remaining?.filter((f) => f.severity === "error")).toEqual([]);
   });

@@ -200,6 +200,7 @@ describe.skipIf(!GODOT)("shader review findings against Godot 4.7", () => {
     const godot3 = [
       "shader_type spatial;\nrender_mode depth_draw_alpha_prepass, cull_disabled;\nuniform vec4 tint : hint_color = vec4(1.0);\nuniform sampler2D tex : hint_albedo;\nuniform sampler2D dark : hint_black_albedo;\nuniform sampler2D aniso : hint_aniso;\n#define WORLD_POS (WORLD_MATRIX * vec4(VERTEX, 1.0)).xyz\nvoid vertex() {\n\tvec3 p = WORLD_POS;\n\tVERTEX = (inverse(WORLD_MATRIX) * vec4(p, 1.0)).xyz;\n}\nvoid fragment() {\n\tALBEDO = tint.rgb * texture(tex, UV).rgb + texture(SCREEN_TEXTURE, SCREEN_UV).rgb * texture(DEPTH_TEXTURE, SCREEN_UV).r + texture(dark, UV).rgb;\n\tNORMALMAP = vec3(0.5);\n\tNORMALMAP_DEPTH = 1.0;\n\tTRANSMISSION = vec3(0.1);\n\tALPHA_SCISSOR = 0.5;\n\tALBEDO += (CAMERA_MATRIX * INV_CAMERA_MATRIX)[0].xyz;\n}\n",
       "shader_type canvas_item;\nvoid fragment() {\n\tCOLOR = texture(SCREEN_TEXTURE, SCREEN_UV);\n}\n",
+      "shader_type spatial; render_mode unshaded,\r\n\tcull_disabled;\r\nvoid fragment() { ALBEDO = texture(SCREEN_TEXTURE, SCREEN_UV).rgb; }\r\n",
     ];
     const before = await compileAll(godot3);
     expect(before.every((r) => r !== "ok")).toBe(true);
