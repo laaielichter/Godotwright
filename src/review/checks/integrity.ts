@@ -41,6 +41,7 @@ export function checkIntegrity(data: ProjectData): Finding[] {
   }
 
   // Per file: references by uid, resource ids, section order.
+  const claimed = new Set(data.uidClaims.map((c) => c.file));
   for (const [file, parsed] of data.resources) {
     if (!own(file)) continue;
     for (const ext of parsed.extResources) {
@@ -58,7 +59,7 @@ export function checkIntegrity(data: ProjectData): Finding[] {
             `ext_resource "${ext.id}": ${ext.uid} is the uid of ${byUid}, but the path says ${target}. Godot loads ${byUid} (the uid wins) and says nothing.`,
           ),
         );
-      } else if (uidKnowable(data, target)) {
+      } else if (uidKnowable(data, target, claimed)) {
         out.push(
           finding(
             "structure/unknown-uid",
@@ -106,10 +107,10 @@ function where(c: UidClaim): string {
  * .import file, or a script or shader (Godot gives it a new random uid on import when the .uid file is missing). Other
  * files (binary .scn/.res, assets whose .import file is not here) may have a uid the scan cannot see.
  */
-function uidKnowable(data: ProjectData, target: string): boolean {
+function uidKnowable(data: ProjectData, target: string, claimed: Set<string>): boolean {
   const ext = extension(target);
   if (ext === "tscn" || ext === "tres") return data.resources.has(target);
-  return SIDECAR_EXTENSIONS.includes(ext) || data.uidClaims.some((c) => c.file === target);
+  return SIDECAR_EXTENSIONS.includes(ext) || claimed.has(target);
 }
 
 function resourceIds(file: string, parsed: ResourceFile): Finding[] {

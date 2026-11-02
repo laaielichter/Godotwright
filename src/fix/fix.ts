@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, utimesSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
@@ -397,7 +397,15 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
       });
       lines = [...lines.slice(0, edit.index), ...edit.lines, ...lines.slice(edit.index + edit.count)];
     }
-    if (options.write && edits.length) journal.write(full, lines.join(eol));
+    if (options.write && edits.length) {
+      journal.write(full, lines.join(eol));
+      // Godot's file cache only rereads a uid in a .uid or .import file when the file it belongs to changed.
+      const owner = /\.(uid|import)$/.test(full) ? full.replace(/\.(uid|import)$/, "") : undefined;
+      if (owner && existsSync(owner)) {
+        const now = new Date();
+        utimesSync(owner, now, now);
+      }
+    }
   }
   changes.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 

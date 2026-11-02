@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readFileSync, utimesSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, statSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FIXABLE_RULES, fixProject, formatFix } from "../src/fix/fix.js";
@@ -151,7 +151,10 @@ describe("godotwright fix: uids and resource sections", () => {
     });
     // Same number of references: the older file keeps the uid.
     utimesSync(join(root, "i.svg"), new Date(2020, 1, 1), new Date(2020, 1, 1));
+    utimesSync(join(root, "a.gd"), new Date(2020, 1, 1), new Date(2020, 1, 1));
     const result = fixProject(root, { write: true });
+    // Godot rereads a .uid file only when its script changed, so the script is touched.
+    expect(statSync(join(root, "a.gd")).mtimeMs).toBeGreaterThan(new Date(2021, 1, 1).getTime());
     const read = (f: string) => readFileSync(join(root, f), "utf8");
     expect(result.changes.map((c) => `${c.file} ${c.rule}`)).toEqual(["res://a.gd.uid structure/duplicate-uid", "res://j.svg.import structure/duplicate-uid"]);
     expect(read("b.gd.uid")).toBe("uid://cn4bl1ld7y0ek\n");
