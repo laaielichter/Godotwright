@@ -54,6 +54,15 @@ godotwright scene add main.tscn . Music AudioStreamPlayer --write   # add a node
 godotwright scene set main.tscn Timer wait_time 0.5 --write   # property name and type checked; enums by name, resources as res:// files
 godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns when the method is missing or takes other arguments
 godotwright scene editable main.tscn Enemy --write   # [editable path="Enemy"]: this scene may change the instance's children (--off removes it)
+godotwright resource set mat.tres roughness 0.8 --write   # .tres: property name and type checked, uids kept, only that line changes
+godotwright resource set level.tres data "[0, 1, 255]"   # byte arrays as a plain list or base64:..., written as PackedByteArray
+godotwright resource add-sub theme.tres StyleBoxFlat --id hover   # then: resource set theme.tres bg_color "Color(0, 1, 0, 1)" --sub hover
+godotwright resource diff car.glb      # import options changed from the importer's defaults, and per-animation/mesh/node options
+godotwright resource set music.ogg loop true --write   # import option checked against the importer; reimported headless and verified
+godotwright resource set beep.wav edit/loop_mode Forward --write   # enum options by name
+godotwright resource set car.glb settings/loop_mode Linear --sub animations/drive --write   # per-animation loop
+godotwright resource set car.glb generate/shadow_meshes Disable --sub meshes/car_body --write   # per-mesh (named <scene>_<mesh>)
+godotwright resource importer anims.glb animation_library --write   # import a .glb as an AnimationLibrary, uid kept
 godotwright migrate --write         # port Godot 3 scripts and shaders to Godot 4 where that is mechanical; lists what is left
 godotwright shader                  # review every shader against Godot 4.7's shader tables and compile it headless; file:line
 godotwright api shader:spatial.fragment   # the built-ins of a shader type and function; `api ALBEDO` says where one exists
@@ -226,6 +235,39 @@ or found in the scene's own scripts is shown as `made at`; a class matched elsew
 
 `check` names leaks too: when the run step ends with `ObjectDB instances were leaked at exit` or `resources still in use`,
 it runs once more with `--verbose` and lists the classes (`MeshInstance3D x1, Object x1`) or resource paths.
+
+## Edit resources and import settings
+
+`godotwright resource` (MCP: `godot_resource_edit`) edits text resources and import settings without the editor.
+Nothing is written without `--write` (`write: true`); the dry run shows the changed lines. Several changes go in one
+call with `resource apply <file> '<JSON list>'` (MCP: the `ops` list), so there is one write and one reimport.
+
+- **`.tres`** (and the sub_resources of a `.tscn`): `set`, `unset`, `add-sub`, `remove-sub`, `get`. Property names
+  and types come from the Godot 4.7 reference and the script's exports; enums by name, resources as `res://` files
+  (an `ext_resource` with its uid is added) or `SubResource("id")`, packed arrays as a plain list (`[0, 1, 255]`) or,
+  for bytes, `base64:...`. Only the changed lines are touched: the uid lines are never rewritten. A sub_resource is
+  moved before the first one that uses it (Godot cannot load a forward reference), an `ext_resource` the edit left
+  unused is removed, and a sub_resource still in use cannot be removed. Writes report the review errors before and
+  after. An open editor keeps its cached copy, so reload the resource there.
+- **Import settings**: give the asset (`beep.wav`) or its `.import`. `get` (one option: type, default and choices),
+  `diff` (what differs from the defaults), `set`, `unset` (back to the default). Option names are checked against
+  what Godot already wrote for the asset and the importer's class reference, because Godot drops unknown options
+  without a word. Per-sub-resource options of the scene importer go through `--sub` (`sub`): `animations/<name>`
+  (`settings/loop_mode`, `save_to_file/*`, slices), `meshes/<scene>_<mesh>` (`generate/shadow_meshes`,
+  `generate/lightmap_uv`, `generate/lods`), `materials/<name>` (`use_external/enabled`, `use_external/path`) and
+  `nodes/PATH:<node>` (`mesh_instance/cast_shadow`, `generate/physics`, ...). `<scene>` is the glTF scene's name, or the
+  file name when the scene has none or its name starts with "Scene"; `.`, `:`, `@`, `/`, `"` and `%` become `_`. Node
+  paths start at the glTF root nodes (below the single root only for a file written with `GODOT_single_root`).
+  Animation and material names are checked against the glTF; a mesh or node name that is not found only warns.
+  `importer` switches between `scene` and `animation_library`, `texture` and `image`, or to `keep`, keeping the uid.
+- **Verified reimport**: after a `.import` write Godotwright runs `godot --headless --import` and reads the result
+  back: `changed` (Godot kept every value and the imported output changed, by its `dest_md5`; it also changes for a
+  per-item option Godot ignores, so it does not prove the option took effect), `same` (kept, but the
+  output is identical), `dropped` (Godot did not keep a value) or `failed`, with the import errors for that asset.
+  `--no-reimport` skips it; without Godot the file is written and the result says it was not reimported.
+  `resource reimport <asset>` only runs the import. The journal entry is stored after the import, so `godotwright
+  undo` still works after Godot rewrote the `.import`; undo restores the settings, and the next import rebuilds the
+  output.
 
 ## Port Godot 3 scripts to Godot 4
 
@@ -656,6 +698,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
+| `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; errors as `file:line` |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |

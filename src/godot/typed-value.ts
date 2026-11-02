@@ -24,7 +24,7 @@ export function typedValue(
   enumValues: Record<string, number> = {},
 ): string {
   const value = input.trim();
-  const fail = (what: string) => makeError(`${label} is ${type === "int" || type === "float" ? "an" : "a"} ${type}; "${input}" is not ${what}`);
+  const fail = (what: string) => makeError(`${label} is ${type === "int" ? "an" : "a"} ${type}; "${input}" is not ${what}`);
   if (type === "bool") {
     if (!/^(true|false)$/i.test(value)) throw fail("true or false");
     return value.toLowerCase();
@@ -48,6 +48,8 @@ export function typedValue(
     if (typeof tryParse(value) !== "string") throw fail("a quoted string");
     return value;
   }
+  const packed = type ? packedValue(type, value, fail) : undefined;
+  if (packed !== undefined) return packed;
   // A node path may be given bare: Player/Sprite2D.
   if (type === "NodePath" && !value.startsWith("NodePath(")) return `NodePath(${JSON.stringify(value.replace(/^"|"$/g, ""))})`;
   const parsed = tryParse(value);
@@ -58,4 +60,33 @@ export function typedValue(
   }
   if (type && CALL_TYPES.test(type) && !(isCall(parsed) && parsed.$type === type)) throw fail(`a ${type}(...) value`);
   return value;
+}
+
+const PACKED_ITEMS: Record<string, (v: Variant) => boolean> = {
+  PackedByteArray: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 255,
+  PackedInt32Array: (v) => Number.isInteger(v) && Math.abs(v as number) <= 2 ** 31,
+  PackedInt64Array: (v) => Number.isInteger(v),
+  PackedFloat32Array: (v) => typeof v === "number",
+  PackedFloat64Array: (v) => typeof v === "number",
+  PackedStringArray: (v) => typeof v === "string",
+};
+
+/**
+ * A packed array given as a plain list ([0, 255, 3], ["a", "b"]) or, for bytes, as base64:<data>, written the way
+ * Godot reads it: PackedByteArray(0, 255, 3) or PackedByteArray("base64"). Undefined when the input is neither.
+ */
+function packedValue(type: string, value: string, fail: (what: string) => Error): string | undefined {
+  const ok = PACKED_ITEMS[type];
+  if (!ok) return undefined;
+  if (type === "PackedByteArray" && value.startsWith("base64:")) {
+    const data = value.slice(7).trim();
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data) || data.length % 4 !== 0 || Buffer.from(data, "base64").toString("base64") !== data) throw fail("valid base64 after base64:");
+    return `PackedByteArray(${JSON.stringify(data)})`;
+  }
+  if (!value.startsWith("[")) return undefined;
+  const list = tryParse(value);
+  if (!Array.isArray(list)) throw fail(`a list such as [1, 2, 3]`);
+  const bad = list.find((v) => !ok(v));
+  if (bad !== undefined) throw fail(`a list of ${type === "PackedByteArray" ? "bytes (0 to 255)" : type === "PackedStringArray" ? "strings" : type.includes("Int") ? "whole numbers" : "numbers"}; ${JSON.stringify(bad)} is not one`);
+  return `${type}(${list.map((v) => (typeof v === "string" ? JSON.stringify(v) : String(v))).join(", ")})`;
 }
