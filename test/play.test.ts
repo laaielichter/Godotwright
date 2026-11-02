@@ -94,6 +94,20 @@ describe("play", () => {
     await expect(playScene(root, { frames: 0 })).rejects.toThrow(/frames must be/);
   });
 
+  it("refuses captures outside the run and bad window sizes", async () => {
+    const root = project();
+    await expect(playScene(root, { frames: 30, captures: [{ frame: 30, out: "/tmp/x.png" }] })).rejects.toThrow("a capture at frame 30 is outside the run (frames 0 to 29)");
+    await expect(playScene(root, { frames: 30, captures: [{ frame: 3, out: "/tmp/x.png" }], size: { width: 8, height: 8 } })).rejects.toThrow(/size must be/);
+  });
+
+  it("saves the picture of a capture frame after it is drawn", () => {
+    const script = playScript("res://main.tscn", [], [], 60, 10, { captures: [{ frame: 40, out: "/p/.godot/godotwright/diff/hud.actual.png" }] });
+    expect(script).toContain('var CAPTURES: Dictionary = {40: "/p/.godot/godotwright/diff/hud.actual.png"}');
+    expect(script).toContain("RenderingServer.frame_post_draw.connect(_on_post_draw)");
+    expect(script).toContain("root.get_texture().get_image().save_png(out)");
+    expect(playScript("res://main.tscn", [], [], 60, 10)).toContain("var CAPTURES: Dictionary = {}");
+  });
+
   it("runs from the CLI", async () => {
     const root = project();
     const run = await runCli(["play", root, "--godot", fakeGodot(root), "--watch", "Hero.position", "--input", "10 tap jump"]);

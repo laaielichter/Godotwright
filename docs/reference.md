@@ -23,7 +23,7 @@ godotwright check [path] --run        # also run the main scene for 120 frames a
 godotwright check --scene res://scenes/Test.tscn   # run one scene instead: put print() in the code and read it back here
 godotwright test [path]               # run the GUT or GdUnit4 tests headless; prints only what failed, with file:line
 godotwright play --input "10 tap jump; 20 hold right 30" --watch Player.position   # play input into a scene, see the values per frame
-godotwright ci                                     # one receipt: review, check, tests and scenarios (markdown, exit 1 on a failure)
+godotwright ci                                     # one receipt: review, check, tests, scenarios and screenshot baselines (markdown, exit 1 on a failure)
 godotwright doctor --symptom "falls through the floor"   # what is wrong and in which order to fix it: review and Godot grouped by cause, with lessons
 godotwright fix --write               # apply the mechanical fixes for review findings (--check for the ones that need a look)
 godotwright fix --stamp-uids --write  # also give scenes, resources, scripts and shaders without a uid one, as Godot makes them
@@ -39,6 +39,7 @@ godotwright export pck game.pck       # what a .pck (or a game .exe) holds, agai
 godotwright deps unused               # files nothing the game starts with reaches, biggest first; `deps why <file>` before deleting one
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
 godotwright screenshot --model car.glb --view front,side,top,iso   # a PNG of a model from four sides (or of a scene); says how much is drawn
+godotwright screenshot --scene res://hud.tscn --baseline hud   # compare with .godotwright/baselines/hud.png: changed pixels, boxes, moves (exit 1 on a change)
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
@@ -310,6 +311,64 @@ instance that is not editable, unless you pass `--make-editable` (MCP: `make_edi
 `set_editable`) adds or removes the entry by itself. Files in a base project or only in a `.pck` list are context: their
 uids count, their own problems are not reported.
 
+## Visual regression: screenshot baselines
+
+`godotwright screenshot --baseline <name>` (MCP: `godot_screenshot` with `baseline`) renders the scene or model and
+compares it with `.godotwright/baselines/<name>.png`. The first run makes that file and a `<name>.json` next to it with
+how it was taken (scene or model, views, size, frames, tolerances, Godot version, graphics driver); commit both. Later runs
+reuse those settings, so a compare is always like for like, and say what changed in text:
+
+```text
+baseline hud: CHANGED
+  544 px changed (0.944%, allowed 0.1% at tolerance 16/255)
+  boxes: (117,70)-(170,95) 544 px moved (12,0)
+  where: centre 8.5%
+  diff: .godot/godotwright/diff/hud.diff.png (changed pixels magenta)  new: .godot/godotwright/diff/hud.actual.png  baseline: .godotwright/baselines/hud.png
+  intended? run again with --update to accept it
+```
+
+- A pixel counts as changed when a channel differs by more than `--tolerance` (0 to 255, default 16). A pixel on an
+  anti-aliased edge (its colour is found within 1 px in the other picture) does not count. The compare fails when more
+  than `--max-changed` percent of the pixels changed (default 0.1). Both are kept per baseline.
+- Areas of change are listed as boxes, biggest first, with `moved (dx,dy)` when a shift of up to 16 px explains one
+  both ways (something moved, not removed). A brightness shift of 3 levels or more is named (`darker`, `brighter`).
+- A blank picture is named on every screenshot, baseline or not: black, white, fully transparent, the background colour
+  only, or one colour over at least 99.9% of the picture.
+- `--update` (MCP: `update: true`) replaces the baseline; `--baseline-dir` keeps baselines elsewhere (over MCP
+  `baseline_dir` must be inside the project). A change is a
+  normal result with exit code 1, not an error. Over MCP a changed compare returns the diff picture, a same one no picture.
+- Runs are deterministic: a fixed frame rate (`--fixed-fps 60`), the Compatibility renderer and a fixed window size.
+  Two runs on one machine give the same bytes. Another GPU driver or Mesa version can shade edges a few levels
+  differently, so make baselines on the machine (or CI image) that compares them; a changed compare says when the
+  driver differs. Compatibility does not draw Forward+-only effects (SDFGI, volumetric fog), so those are not covered.
+
+### Screenshots in scenarios
+
+A scenario can take pictures during its input run and compare each with its baseline:
+
+```json
+{
+  "input": "0 hold right 20",
+  "frames": 40,
+  "expect": ["Hero.position.x >= 60 @ 30"],
+  "screenshots": ["walk-start @ 0", { "name": "walk-end", "frame": 30, "tolerance": 24, "maxChanged": 0.5 }],
+  "size": "640x360"
+}
+```
+
+The picture of frame N is taken after that frame's physics and process step has been drawn, the same frame the
+expectations read. Missing baselines are made on the first run; `godotwright scenario --update` replaces them. A run
+with screenshots draws with the Compatibility renderer (xvfb-run on Linux without a display) instead of `--headless`.
+
+### In the CI receipt
+
+`godotwright ci` adds a `visual` step: every baseline made with `godotwright screenshot` is rendered again and compared
+(baselines kept elsewhere with `--baseline-dir` need the same `--baseline-dir` on `ci`, or the Action's `baseline-dir` input),
+and the screenshot steps of the scenarios are listed with it (the `scenarios` step judges only what the game did). In CI
+a missing baseline fails instead of being made, since a baseline made on the runner would be thrown away. The GitHub
+Action installs xvfb when it is missing and uploads `.godot/godotwright/diff/*.png` (diffs and new captures) as the
+`godotwright-visual-diff` artifact.
+
 ## Review in GitHub Actions
 
 Save this as `.github/workflows/godot-review.yml` in your game repository. It
@@ -525,7 +584,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
-| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn |
+| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn and whether it is blank; with `baseline`, compare with the stored picture (changed pixels, boxes, moves) |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |

@@ -18,12 +18,12 @@ describe.skipIf(!GODOT)("godotwright ci in Godot", () => {
     write("jump.json", ["Hero.velocity.y == -400 @ 10", "Hero.is_on_floor() == false @ 12", "Hero.is_on_floor() == true"]);
     const ok = await runCi(root, { godot: GODOT });
     console.log(formatCi(ok));
-    expect(ok.steps.map((s) => `${s.name}:${s.status}`)).toEqual(["review:pass", "check:pass", "test:skip", "scenarios:pass"]);
+    expect(ok.steps.map((s) => `${s.name}:${s.status}`)).toEqual(["review:pass", "check:pass", "test:skip", "scenarios:pass", "visual:skip"]);
 
     write("jump.json", ["Hero.velocity.y == -999 @ 10"]);
     const bad = await runCi(root, { godot: GODOT });
     expect(bad.ok).toBe(false);
-    expect(bad.steps.at(-1)?.details.join("\n")).toContain("Hero.velocity.y was -400.0 at frame 10");
+    expect(bad.steps.find((s) => s.name === "scenarios")?.details.join("\n")).toContain("Hero.velocity.y was -400.0 at frame 10");
   });
 
   it("the export step exports a pack, checks it and runs it", { timeout: 300_000 }, async () => {

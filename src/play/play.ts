@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { runOutput } from "../check/check.js";
 import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
@@ -8,6 +8,7 @@ import { parseResourceText } from "../godot/scene.js";
 import { isObject, parseVariant } from "../godot/variant.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { screen } from "../screenshot/screenshot.js";
 import { inputEventText } from "../settings/edit.js";
 
 export class PlayError extends Error {}
@@ -41,6 +42,13 @@ export interface PlayOptions {
   signals?: string[];
   /** Also time every frame (physics step, the rest of the frame) and count nodes, from this frame on (godot_perf). */
   perfFrom?: number;
+  /**
+   * Save the picture of these frames (after their physics and process step) as PNG. This renders the run with a
+   * screen instead of headless: the Compatibility renderer, and xvfb-run on Linux without a display.
+   */
+  captures?: { frame: number; out: string }[];
+  /** Window size for captures (default 640x360). */
+  size?: { width: number; height: number };
 }
 
 /** Per-frame timings of a run, in microseconds, and node counts: what godot_perf summarises. */
@@ -82,6 +90,11 @@ export interface PlayReport {
   /** The until condition, and the frame it first held (undefined: it never did). */
   until?: { condition: string; frame?: number };
   timings?: PlayTimings;
+  /** The pictures that were saved, per frame. */
+  captures?: { frame: number; file: string }[];
+  /** Godot version and graphics driver of a rendered run. */
+  godot?: string;
+  adapter?: string;
 }
 
 const UNTIL = /^\s*(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+?)\s*$/;
@@ -142,7 +155,7 @@ function eventCode(input: string): string {
 const gdString = (s: string): string => JSON.stringify(s);
 
 /** The SceneTree script that runs the scene, plays the timeline and prints the samples. */
-export function playScript(scene: string, steps: InputStep[], watch: string[], frames: number, every: number, extra: { until?: string; signals?: string[]; perfFrom?: number } = {}): string {
+export function playScript(scene: string, steps: InputStep[], watch: string[], frames: number, every: number, extra: { until?: string; signals?: string[]; perfFrom?: number; captures?: { frame: number; out: string }[] } = {}): string {
   const byFrame = new Map<number, string[]>();
   for (const s of steps) {
     const call = /^[A-Za-z]+:/.test(s.input)
@@ -175,8 +188,10 @@ const EVERY := ${every}
 var UNTIL: Array = ${untilList}
 const SIGNALS: Array = [${signalList.join(", ")}]
 const PERF_FROM := ${extra.perfFrom ?? -1}
+var CAPTURES: Dictionary = {${(extra.captures ?? []).map((c) => `${c.frame}: ${gdString(c.out)}`).join(", ")}}
 
 var _frame := 0
+var _drawn := -1
 var _scene: Node
 var _t_physics := 0
 var _t_process := 0
@@ -203,6 +218,10 @@ func _initialize() -> void:
 	# _physics_process sees it on that very frame, is_action_just_pressed() included.
 	_apply(0)
 	process_frame.connect(_on_frame_done)
+	if not CAPTURES.is_empty():
+		RenderingServer.frame_post_draw.connect(_on_post_draw)
+		var version: Dictionary = Engine.get_version_info()
+		print("${MARK}_ENV ", JSON.stringify({"godot": version.get("string", ""), "adapter": RenderingServer.get_video_adapter_name()}))
 	if PERF_FROM >= 0:
 		physics_frame.connect(_on_physics_start)
 
@@ -221,6 +240,7 @@ func _on_physics_start() -> void:
 
 ## Runs once per frame, after the physics step: sample frame _frame, then give the input for the next one.
 func _on_frame_done() -> void:
+	_drawn = _frame
 	if PERF_FROM >= 0:
 		_t_process = Time.get_ticks_usec()
 		if _frame >= PERF_FROM:
@@ -241,6 +261,15 @@ func _on_frame_done() -> void:
 		return
 	_frame += 1
 	_apply(_frame)
+
+
+## The frame drawn last is the one _on_frame_done just handled (this runs after drawing, even on the last frame).
+func _on_post_draw() -> void:
+	if CAPTURES.has(_drawn):
+		var out: String = CAPTURES[_drawn]
+		CAPTURES.erase(_drawn)
+		if root.get_texture().get_image().save_png(out) == OK:
+			print("${MARK}_CAPTURE ", _drawn)
 
 
 func _apply(frame: int) -> void:
@@ -368,6 +397,13 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
     }
   }
   const fps = Number(settings.values["physics/common/physics_ticks_per_second"] ?? 60) || 60;
+  const captures = options.captures ?? [];
+  for (const c of captures) if (!(Number.isInteger(c.frame) && c.frame >= 0 && c.frame < frames)) throw new PlayError(`a capture at frame ${c.frame} is outside the run (frames 0 to ${frames - 1})`);
+  const width = options.size?.width ?? 640;
+  const height = options.size?.height ?? 360;
+  if (!(width >= 16 && width <= 3840 && height >= 16 && height <= 2160)) throw new PlayError("size must be from 16x16 to 3840x2160");
+  const how = captures.length ? screen() : { command: "", prefix: [] };
+  if ("error" in how) throw new PlayError(how.error);
 
   const bin = findGodot(options.godot);
   const timeoutMs = options.timeoutMs ?? 5 * 60_000;
@@ -383,15 +419,27 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
       ...(options.until ? { until: options.until } : {}),
       ...(options.signals?.length ? { signals: options.signals } : {}),
       ...(options.perfFrom !== undefined ? { perfFrom: options.perfFrom } : {}),
+      ...(captures.length ? { captures } : {}),
     }),
   );
+  for (const c of captures) {
+    mkdirSync(dirname(c.out), { recursive: true });
+    rmSync(c.out, { force: true });
+  }
   try {
     // A fixed frame rate makes every run the same: one physics step per frame, whatever the machine.
-    const result = await runGodot(bin, [...base, "--fixed-fps", String(fps), "-s", `res://${PLAY_DIR}/play.gd`], { cwd: root, timeoutMs });
+    // Captures need a picture, so that run draws (Compatibility renderer, a window of the given size) instead of --headless.
+    const run = captures.length
+      ? ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--audio-driver", "Dummy"]
+      : base;
+    const args = [...run, "--fixed-fps", String(fps), "-s", `res://${PLAY_DIR}/play.gd`];
+    const result = how.command ? await runGodot(how.command, [...how.prefix, bin, ...args], { cwd: root, timeoutMs }) : await runGodot(bin, args, { cwd: root, timeoutMs });
     const samples: PlaySample[] = [];
     const signals: PlaySignal[] = [];
     let untilFrame: number | undefined;
     let timings: PlayTimings | undefined;
+    let machine: { godot?: string; adapter?: string } = {};
+    const captured = new Set<number>();
     const rest: string[] = [];
     for (const line of result.stdout.split(/\r?\n/)) {
       if (line.startsWith(`${MARK} `)) {
@@ -402,12 +450,16 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
         signals.push({ frame, signal, args });
       } else if (line.startsWith(`${MARK}_PERF `)) {
         timings = { from: options.perfFrom ?? 0, ...(JSON.parse(line.slice(MARK.length + 6)) as Omit<PlayTimings, "from">) };
+      } else if (line.startsWith(`${MARK}_CAPTURE `)) {
+        captured.add(Number(line.slice(MARK.length + 9)));
+      } else if (line.startsWith(`${MARK}_ENV `)) {
+        machine = JSON.parse(line.slice(MARK.length + 5)) as typeof machine;
       } else if (line.startsWith(`${MARK}_UNTIL `)) {
         untilFrame = Number(line.slice(MARK.length + 7));
       } else if (!line.startsWith(`${MARK}_DONE`)) rest.push(line);
     }
     for (const m of result.stderr.matchAll(new RegExp(`${MARK}_NOSIGNAL (\\S+)`, "g"))) warnings.push(`${m[1]} is not a signal of a node in the scene, so it was not recorded`);
-    const diagnostics = parseGodotLog(result.stderr, "play").filter((d) => d.file !== `res://${PLAY_DIR}/play.gd` || d.severity === "error");
+    const diagnostics = parseGodotLog(result.stderr, "play").filter((d) => (d.file !== `res://${PLAY_DIR}/play.gd` || d.severity === "error") && !(captures.length && /V-Sync|ALSA|audio/i.test(d.message)));
     const loadFailed = result.stderr.includes(`${MARK}_FAILED`);
     if (loadFailed) diagnostics.push({ severity: "error", message: `could not load ${scene}`, source: "play" });
     return {
@@ -424,6 +476,9 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
       ...(signals.length || options.signals?.length ? { signals } : {}),
       ...(options.until ? { until: { condition: options.until, ...(untilFrame !== undefined ? { frame: untilFrame } : {}) } } : {}),
       ...(timings ? { timings } : {}),
+      ...(captures.length ? { captures: captures.filter((c) => captured.has(c.frame) && existsSync(c.out)).map((c) => ({ frame: c.frame, file: c.out })) } : {}),
+      ...(machine.godot ? { godot: machine.godot } : {}),
+      ...(machine.adapter ? { adapter: machine.adapter } : {}),
     };
   } finally {
     rmSync(file, { force: true });
