@@ -333,6 +333,8 @@ export interface PoolOptions {
   /** Stop a server unused this long (default 10 minutes). */
   idleMs?: number;
   start?: (root: string, godot: string | undefined) => Promise<GodotLanguageServer>;
+  /** False when the owner stops the servers right after its call (the CLI), so nothing stays warm (default true). */
+  keepWarm?: boolean;
 }
 
 const pools = new Set<LanguageServerPool>();
@@ -386,8 +388,12 @@ export class LanguageServerPool {
   private readonly startServer: (root: string, godot: string | undefined) => Promise<GodotLanguageServer>;
   private readonly live = new Set<GodotLanguageServer>();
 
+  /** Whether a server outlives the call that started it (false in the CLI). */
+  readonly keepsWarm: boolean;
+
   constructor(options: PoolOptions = {}) {
     this.idleMs = options.idleMs ?? 10 * 60_000;
+    this.keepsWarm = options.keepWarm ?? true;
     this.startServer = options.start ?? ((root, godot) => GodotLanguageServer.start({ root, godot: findGodot(godot) }));
   }
 

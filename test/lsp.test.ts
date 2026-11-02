@@ -434,6 +434,22 @@ describe("godot_code against a fake language server", () => {
     expect(unhandled).toEqual([]);
   });
 
+  it("says when Godot imports a project it never opened, and that the CLI keeps nothing warm", async () => {
+    const { fake, root } = await setup();
+    const start = (r: string) => GodotLanguageServer.start({ root: r, port: fake.port, startTimeoutMs: 3000 });
+    const cli = new LanguageServerPool({ keepWarm: false, start });
+    cleanups.push(() => cli.stopAll());
+    const first = formatCode(await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool: cli }));
+    expect(first).toMatch(/note: started Godot's language server in \d+\.\d s; the CLI starts it for every call \(the MCP tool godot_code keeps it warm\)\n/);
+    expect(first).toContain("note: Godot had never opened this project: it imported it, which adds .godot/, a .import file next to each asset and a .uid file next to each script");
+    mkdirSync(join(root, ".godot"));
+    const warm = new LanguageServerPool({ start });
+    cleanups.push(() => warm.stopAll());
+    const second = formatCode(await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool: warm }));
+    expect(second).toContain("; it stays warm for the next calls\n");
+    expect(second).not.toContain("never opened");
+  });
+
   it("stops servers after the idle time", async () => {
     const { pool, root } = await setup();
     await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });

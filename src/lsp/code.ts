@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { findProjectRoot, fromResPath, listProjectFiles, toResPath } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { GodotLanguageServer, LanguageServerPool, pathOfUri, uriOf, type LspDiagnostic } from "./server.js";
@@ -52,7 +52,7 @@ export interface CodeResult {
   column?: number;
   unsaved: boolean;
   /** How the language server was found: warm, or started now (with the time it took and why). */
-  server: { fresh: boolean; startMs: number; restarted?: string };
+  server: { fresh: boolean; startMs: number; restarted?: string; warm: boolean };
   diagnostics?: CodeDiagnostic[];
   /** Scripts analysed for diagnostics. */
   scripts?: number;
@@ -189,6 +189,8 @@ export async function codeIntel(path: string, options: CodeOptions): Promise<Cod
   const text = file ? (options.code ?? readFileSync(file, "utf8")) : "";
   const pos = file && options.op !== "diagnostics" ? position(text, options.line, options.column, options.op) : undefined;
   const pool = options.pool ?? sharedPool();
+  // Godot imports a project it never opened: like the editor, it writes .godot/ and files next to the project's own.
+  const imported = existsSync(join(root, ".godot"));
   return pool.run(root, options.godot, async (server, { fresh, restarted }) => {
     const result: CodeResult = {
       project: root,
@@ -196,9 +198,12 @@ export async function codeIntel(path: string, options: CodeOptions): Promise<Cod
       ...(file ? { file: display(root, file) } : {}),
       ...(pos ? { line: pos.line + 1, column: pos.character + 1 } : {}),
       unsaved: options.code !== undefined,
-      server: { fresh, startMs: fresh ? server.startMs : 0, ...(restarted ? { restarted } : {}) },
+      server: { fresh, startMs: fresh ? server.startMs : 0, ...(restarted ? { restarted } : {}), warm: pool.keepsWarm },
       notes: [],
     };
+    if (fresh && !imported) {
+      result.notes.push("Godot had never opened this project: it imported it, which adds .godot/, a .import file next to each asset and a .uid file next to each script, as the editor does");
+    }
     await run(server, root, file, text, pos, options, result);
     return result;
   });
@@ -385,7 +390,11 @@ export function formatCode(r: CodeResult): string {
 
 function notes(r: CodeResult, out: string[]): void {
   if (r.server.fresh) {
-    out.push(`note: started Godot's language server in ${(r.server.startMs / 1000).toFixed(1)} s${r.server.restarted ? ` (again: ${r.server.restarted})` : ""}; it stays warm for the next calls`);
+    out.push(
+      `note: started Godot's language server in ${(r.server.startMs / 1000).toFixed(1)} s${r.server.restarted ? ` (again: ${r.server.restarted})` : ""}; ${
+        r.server.warm ? "it stays warm for the next calls" : "the CLI starts it for every call (the MCP tool godot_code keeps it warm)"
+      }`,
+    );
   }
   for (const n of r.notes) out.push(`note: ${n}`);
 }

@@ -28,7 +28,8 @@ export function codeCommand(): Command {
         options: { path: string; line?: number; column?: number; code?: string; limit?: number; godot?: string; json?: boolean },
         command: Command,
       ) => {
-        const pool = new LanguageServerPool();
+        // The servers stop when the command ends: nothing stays warm between CLI calls.
+        const pool = new LanguageServerPool({ keepWarm: false });
         try {
           const code = options.code === undefined ? undefined : readFileSync(options.code === "-" ? 0 : options.code, "utf8");
           // A plain path is relative to where the command runs; res:// is inside the project.
