@@ -207,7 +207,8 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
   const context = currentRun();
   const signal = options.signal ?? context?.signal;
   const phase = phaseOf(args);
-  const report = context?.onProgress ? throttle(context.onProgress) : undefined;
+  // The version probe is not a step worth reporting.
+  const report = context?.onProgress && phase !== "version" ? throttle(context.onProgress) : undefined;
   const parser = report ? new ProgressParser(phase) : undefined;
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -242,6 +243,8 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       signal?.removeEventListener("abort", onAbort);
       child.stdout.destroy();
       child.stderr.destroy();
+      if (cancelled) report?.stop();
+      else report?.flush();
       if (cancelled) reject(new CancelledError());
       else resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
     };
@@ -285,6 +288,7 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       done = true;
       groups.delete(child);
       if (timer) clearTimeout(timer);
+      report?.stop();
       signal?.removeEventListener("abort", onAbort);
       reject(error);
     });
