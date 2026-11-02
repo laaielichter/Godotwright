@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { docText, parseXml, readRenames } from "../scripts/build-api.js";
+import { docText, parseXml, readRenames, readShaderTypes } from "../scripts/build-api.js";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/build-api.ts", import.meta.url));
 
@@ -59,6 +59,47 @@ describe("build-api", () => {
         BUTTON_LEFT: "MOUSE_BUTTON_LEFT",
         MARGIN_LEFT: "SIDE_LEFT",
         MARGIN_TOP: "SIDE_TOP",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the shader built-ins, stage functions and render modes", () => {
+    const root = mkdtempSync(join(tmpdir(), "godot-src-"));
+    try {
+      mkdirSync(join(root, "servers", "rendering"), { recursive: true });
+      writeFileSync(
+        join(root, "servers", "rendering", "shader_types.cpp"),
+        [
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["global"].built_ins["TIME"] = constt(ShaderLanguage::TYPE_FLOAT);',
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["constants"].built_ins["PI"] = constvt(ShaderLanguage::TYPE_FLOAT, { pi_scalar });',
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["fragment"].built_ins["ALBEDO"] = ShaderLanguage::TYPE_VEC3;',
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["fragment"].built_ins["FOG"] = ShaderLanguage::TYPE_VEC4; // TODO consider adding to light shader',
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["fragment"].can_discard = true;',
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["fragment"].main_function = true;',
+          '\tshader_modes[RSE::SHADER_SPATIAL].functions["vertex"].can_discard = false;',
+          '\t\tshader_modes[RSE::SHADER_SPATIAL].modes.push_back({ PNAME("blend"), "mix", "add" });',
+          '\t\tshader_modes[RSE::SHADER_SPATIAL].modes.push_back({ PNAME("depth_test"), { "default", "disabled" } });',
+          '\t\tshader_modes[RSE::SHADER_SPATIAL].modes.push_back({ PNAME("unshaded") });',
+          '\t\tshader_modes[RSE::SHADER_SPATIAL].stencil_modes.push_back({ PNAME("read") });',
+          '\tshader_modes[RSE::SHADER_CANVAS_ITEM].functions["fragment"].built_ins["TEXTURE"] = ShaderLanguage::TYPE_SAMPLER2D;',
+          '\t\tshader_modes[RSE::SHADER_CANVAS_ITEM].functions["fragment"].stage_functions["texture_sdf"] = func;',
+          '\tshader_modes[RSE::SHADER_SKY].functions["sky"].built_ins["RADIANCE"] = constt(ShaderLanguage::TYPE_SAMPLERCUBE);',
+        ].join("\n"),
+      );
+      expect(readShaderTypes(root)).toEqual({
+        spatial: {
+          functions: {
+            global: { builtins: { TIME: "const float" } },
+            constants: { builtins: { PI: "const float" } },
+            fragment: { builtins: { ALBEDO: "vec3", FOG: "vec4" }, discard: true, main: true },
+          },
+          renderModes: { blend: ["mix", "add"], depth_test: ["default", "disabled"], unshaded: [] },
+          stencilModes: { read: [] },
+        },
+        canvas_item: { functions: { fragment: { builtins: { TEXTURE: "sampler2D" }, stage: ["texture_sdf"] } }, renderModes: {}, stencilModes: {} },
+        sky: { functions: { sky: { builtins: { RADIANCE: "const samplerCube" } } }, renderModes: {}, stencilModes: {} },
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
