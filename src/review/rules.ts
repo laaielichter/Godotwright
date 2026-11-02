@@ -52,7 +52,7 @@ const list: Rule[] = [
   { id: "quality/packed-setter-skipped", category: "quality", severity: "warning", title: "Packed array element write skips the setter", fix: "Assign the whole array (var p := arr; p[i] = v; arr = p) so the set() block runs, as it did before Godot 4.7." },
   // Upgrade notes: only while the project moves from an older Godot 4 release (review option from/target).
   { id: "api/upgrade-area-mask", category: "api", severity: "warning", title: "Audio player relies on the old area_mask default", fix: "Set area_mask = 1 on players that an Area with audio_bus_override must reroute (the default became 0 in Godot 4.7)." },
-  { id: "api/upgrade-world-boundary-jolt", category: "api", severity: "warning", title: "WorldBoundaryShape3D distance flips under Jolt", fix: "Flip the sign of plane.d: Godot 4.7 reads it the other way round under Jolt Physics." },
+  { id: "api/upgrade-world-boundary-jolt", category: "api", severity: "info", title: "WorldBoundaryShape3D distance flips under Jolt", fix: "Check the sign of plane.d once: Godot 4.7 reads it the other way round under Jolt Physics, so a value written for an older Godot needs the opposite sign." },
   { id: "api/upgrade-mesh-skeleton", category: "api", severity: "warning", title: "Mesh relies on the old parent-skeleton default", fix: "Set skeleton = NodePath(\"..\") on the mesh, or enable animation/compatibility/default_parent_skeleton_in_mesh_instance_3d." },
   { id: "quality/upgrade-note", category: "quality", severity: "info", title: "Looks or acts different after the upgrade", fix: "Check it in the new Godot and re-tune the values named in the message." },
   // Performance.

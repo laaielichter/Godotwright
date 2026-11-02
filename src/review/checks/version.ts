@@ -50,7 +50,8 @@ export function minorVersion(value: string | undefined): string | undefined {
 
 /**
  * The upgrade review works on: `from` defaults to the version in application/config/features, `target` to 4.7.
- * Throws for a target review has no rules for (newer than the bundled class reference, or not a 4.x version).
+ * Throws for a target review has no rules for (newer than the bundled class reference, or not a 4.x version), and for
+ * a `from` that is not a 4.x version.
  */
 export function versionRange(projectVersion: string | undefined, options: { from?: string; target?: string } = {}): VersionRange {
   const target = options.target === undefined ? NEWEST_TARGET : minorVersion(options.target);
@@ -60,6 +61,7 @@ export function versionRange(projectVersion: string | undefined, options: { from
       `No verified rules for Godot ${target} yet (review knows ${NEWEST_TARGET}). To see what breaks in ${target}, run godot_check with compare_godot set to a ${target} binary: it reports only the new errors.`,
     );
   }
+  if (options.from !== undefined && minorVersion(options.from) === undefined) throw new Error(`from must be a Godot 4 version, e.g. 4.5`);
   const from = minorVersion(options.from) ?? minorVersion(projectVersion);
   return from && compareVersions(from, target) < 0 ? { from, target } : { target };
 }
@@ -184,7 +186,7 @@ export function checkVersionChanges(pm: ProjectModel, range: VersionRange): Find
               "api/upgrade-world-boundary-jolt",
               path,
               r.line,
-              `WorldBoundaryShape3D with plane d = ${d} under Jolt Physics: Godot 4.7 reads the sign of d the other way round (GH-118948), so the boundary moves from ${-d} to ${d} along its normal. Set d to ${-d} to keep the ${from} position.`,
+              `WorldBoundaryShape3D with plane d = ${d} under Jolt Physics: Godot 4.7 reads the sign of d the other way round (GH-118948), so a d written for ${from} or older puts the boundary on the other side of the origin. Check this d once in 4.7: if it still has its ${from} value, use ${-d}; if you already changed it for 4.7, keep it.`,
             ),
           );
         }

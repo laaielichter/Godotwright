@@ -39,6 +39,7 @@ describe("version ranges", () => {
   it("refuses targets it has no verified rules for, and points to the two-binary check", () => {
     expect(() => versionRange("4.7", { target: "4.8" })).toThrow(/compare_godot/);
     expect(() => versionRange("4.7", { target: "3.5" })).toThrow(/4.1 to 4.7/);
+    expect(() => versionRange("4.5", { from: "banana" })).toThrow(/from must be/);
   });
 
   it("crosses a release only when it lies after from and up to the target", () => {
@@ -273,9 +274,9 @@ describe("upgrade notes (only while the project moves from an older release)", (
 
   it("reports the 4.6 and 4.7 changes for a project from 4.5", () => {
     expect(lines({ "project.godot": project("4.5", JOLT), "main.tscn": scene }, rules).map(ruleOnly)).toEqual([
-      "res://main.tscn:3: warning [api/upgrade-world-boundary-jolt]",
       'res://main.tscn:16: warning [api/upgrade-mesh-skeleton]',
       'res://main.tscn:24: warning [api/upgrade-area-mask]',
+      "res://main.tscn:3: info [api/upgrade-world-boundary-jolt]",
       "res://main.tscn:9: info [quality/upgrade-note]",
       "res://main.tscn:10: info [quality/upgrade-note]",
       'res://main.tscn:31: info [quality/upgrade-note]',
@@ -284,8 +285,8 @@ describe("upgrade notes (only while the project moves from an older release)", (
 
   it("reports only the 4.7 changes for a project from 4.6, and the from option overrides the saved version", () => {
     const want = [
-      "res://main.tscn:3: warning [api/upgrade-world-boundary-jolt]",
       "res://main.tscn:24: warning [api/upgrade-area-mask]",
+      "res://main.tscn:3: info [api/upgrade-world-boundary-jolt]",
       "res://main.tscn:31: info [quality/upgrade-note]",
     ];
     expect(lines({ "project.godot": project("4.6", JOLT), "main.tscn": scene }, rules).map((l) => l.replace(/\] .*/, "]"))).toEqual(want);
