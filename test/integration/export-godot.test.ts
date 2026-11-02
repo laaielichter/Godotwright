@@ -67,6 +67,23 @@ describe.skipIf(!GODOT)("what Godot really exports", () => {
     expect(files).toEqual(["error res://lib/helper.gd", "error res://data/a.txt"]);
   });
 
+  it("exports an imported file whatever its extension, but not one kept or skipped, as the audit says", { timeout: 300_000 }, async () => {
+    const root = project({
+      "main.gd": 'extends Node\n\n\nfunc _ready() -> void:\n\tprint(load("res://fx/water.glsl"), FileAccess.get_file_as_string("res://fx/notes.txt"), FileAccess.get_file_as_string("res://fx/raw.svg"))\n',
+      "fx/water.glsl": "#[compute]\n#version 450\nvoid main() {}\n",
+      "fx/notes.txt": "x",
+      "fx/notes.txt.import": '[remap]\n\nimporter="keep"\n',
+      "fx/raw.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>',
+      "fx/raw.svg.import": '[remap]\n\nimporter="skip"\n',
+    });
+    const r = await runExport(root, { preset: "Linux", frames: 0 });
+    const names = readPck(r.out!).entries.map((e) => e.path);
+    expect(names).toContain("fx/water.glsl.import");
+    expect(names.filter((n) => n.startsWith("fx/") && !n.startsWith("fx/water"))).toEqual([]);
+    expect(r.contents?.audit).toEqual({ predicted: 2, confirmed: 2, wrong: [] });
+    expect(r.diagnostics.filter((d) => d.source === "contents").map((d) => d.file)).toEqual(["res://fx/notes.txt", "res://fx/raw.svg"]);
+  });
+
   it("export run: reads the real pack, finds what is missing and shipped, and runs it with call chains", { timeout: 300_000 }, async () => {
     const root = project(GAME);
     const r = await runExport(root, { preset: "Linux", frames: 30 });

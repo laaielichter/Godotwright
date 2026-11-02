@@ -85,6 +85,28 @@ export function matchesFilter(rel: string, filter: string): boolean {
   return pattern.test(rel) || pattern.test(name);
 }
 
+/**
+ * How a file's .import next to it says it is imported: by an importer (exported as its import result, whatever the
+ * extension: a .glsl becomes an RDShaderFile), "keep" or "skip" (not exported, as an export of Godot 4.7.2 shows), or
+ * undefined when there is no .import.
+ */
+export function importerOf(root: string, rel: string): string | undefined {
+  try {
+    return /^importer\s*=\s*"([^"]*)"/m.exec(readFileSync(join(root, `${rel}.import`), "utf8"))?.[1] ?? "";
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether Godot exports a file without include_filter naming it: an imported file, or one of its resource types. */
+export function exportedAsResource(root: string, rel: string): boolean {
+  const importer = importerOf(root, rel);
+  if (importer === "keep" || importer === "skip") return false;
+  if (importer !== undefined) return true;
+  // A CSV is a resource only when it is imported (as translations).
+  return RESOURCE_EXT.test(rel) && !/\.csv$/i.test(rel);
+}
+
 /** Where Godot keeps export templates on this machine, most specific first. */
 export function templateBases(env: NodeJS.ProcessEnv = process.env): string[] {
   return [
@@ -201,9 +223,7 @@ export function checkExport(path: string, options: { preset?: string } = {}): Ex
         );
         continue;
       }
-      // An imported file (with a .import next to it) is exported as its import result.
-      const imported = existsSync(join(root, `${rel}.import`));
-      if (!RESOURCE_EXT.test(rel) || (/\.csv$/i.test(rel) && !imported)) {
+      if (!exportedAsResource(root, rel)) {
         if (!included(rel) && existsSync(join(root, rel))) {
           problems.push({
             severity: ref.loaded ? "error" : "warning",
