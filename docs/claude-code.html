@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Godot 4 plugin for Claude Code: hooks, skills and subagents | Godotwright</title>
+<meta name="description" content="The Godotwright plugin puts Godot 4.7 checks in Claude Code's loop: every Godot file Claude edits is reviewed right after the edit, Godot errors come with the lessons that explain them, plus ten skills and two subagents. One command, MIT.">
+<link rel="canonical" href="https://laaielichter.github.io/Godotwright/claude-code.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1d2229">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Godotwright">
+<meta property="og:title" content="Godotwright for Claude Code: Godot 4 checks in Claude's loop">
+<meta property="og:description" content="Every Godot file Claude edits is reviewed right after the edit. Hooks, ten skills, two subagents and 272 lessons from real projects. One command, MIT.">
+<meta property="og:url" content="https://laaielichter.github.io/Godotwright/claude-code.html">
+<meta property="og:image" content="https://laaielichter.github.io/Godotwright/og.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Godotwright: make any coding agent better at Godot 4">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Godotwright for Claude Code: Godot 4 checks in Claude's loop">
+<meta name="twitter:description" content="Every Godot file Claude edits is reviewed right after the edit. Hooks, skills, subagents and 272 lessons.">
+<meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "How do I install the Godotwright plugin in Claude Code?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Run /plugin install godotwright --marketplace laaielichter/Godotwright in Claude Code. On Claude Code older than 2.1.275, run /plugin marketplace add laaielichter/Godotwright and then /plugin install godotwright@godotwright." } },
+    { "@type": "Question", "name": "Can I turn the hooks off?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Set GODOTWRIGHT_HOOKS=0. The MCP tools, skills and subagents keep working." } },
+    { "@type": "Question", "name": "Does the plugin send my code anywhere?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. There is no telemetry. Opt-in sharing of anonymous counters is off unless you turn it on with godotwright learn share on." } },
+    { "@type": "Question", "name": "I use Codex, Cursor or another agent. Can I get the same?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The MCP server works in any MCP client. The hooks are a CLI command, godotwright hook <event>, that reads Claude Code's hook JSON on stdin, so any agent with a similar hook system can call it." } }
+  ]
+}
+</script>
+<style>
+/* Layout: a single column set like Godot's own editor docks: a top bar, panels with tab headers, the Output panel as the hero. */
+:root {
+  --bg: #1d2229;
+  --panel: #262c35;
+  --panel-2: #2e3540;
+  --line: #3a4250;
+  --fg: #e3e8ef;
+  --muted: #9aa6b6;
+  --accent: #478cbf;
+  --accent-ink: #7fb6e0;
+  --n2d: #8da5f3;   /* Godot editor: 2D node icons */
+  --n3d: #fc7f7f;   /* 3D node icons */
+  --nui: #8eef97;   /* Control node icons */
+  --nres: #f5c66b;  /* warnings, resources */
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(2.2rem, 5.5vw, 3.6rem);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+    --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+    --n2d: #4560c4; --n3d: #c4403f; --nui: #1f7330; --nres: #7a5400;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f5f8; --panel: #ffffff; --panel-2: #e9edf2; --line: #d3dae3;
+  --fg: #1b2230; --muted: #566273; --accent: #2f6fa3; --accent-ink: #245d8c;
+  --n2d: #4560c4; --n3d: #c4403f; --nui: #1f7330; --nres: #7a5400;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 var(--step-0)/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; }
+a { color: var(--accent-ink); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
+code, pre, kbd { font-family: var(--mono); font-size: .88em; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: var(--step-2); font-weight: 700; letter-spacing: -.01em; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Top bar */
+.bar { border-bottom: 1px solid var(--line); background: var(--panel); }
+.bar .wrap { display: flex; align-items: center; gap: 1.25rem; padding-block: .7rem; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: .55rem; text-decoration: none; color: var(--fg); font: 800 1.15rem var(--display); }
+.brand img { width: 28px; height: 28px; }
+.bar nav { display: flex; gap: 1.1rem; margin-left: auto; flex-wrap: wrap; }
+.bar nav a { color: var(--muted); text-decoration: none; font-size: .95rem; }
+.bar nav a:hover { color: var(--fg); }
+
+/* Hero */
+.hero { padding-block: clamp(2.5rem, 7vw, 4.5rem) 2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.eyebrow { font: 600 .78rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-size: var(--step-3); font-weight: 800; letter-spacing: -.025em; max-width: 18ch; }
+.hero h1 em { font-style: normal; color: var(--accent-ink); }
+.lede { font-size: var(--step-1); color: var(--muted); max-width: 60ch; line-height: 1.5; }
+.cta { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .7rem 1.1rem;
+  border-radius: 8px; font: 700 1rem var(--body); text-decoration: none; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:hover { filter: brightness(1.08); }
+
+/* Dock panels, like Godot's Output / Scene docks */
+.dock { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.tabs { display: flex; gap: .25rem; background: var(--panel-2); border-bottom: 1px solid var(--line); padding: .35rem .5rem 0; overflow-x: auto; }
+.tab { font: 600 .8rem var(--mono); color: var(--muted); padding: .35rem .75rem; border-radius: 6px 6px 0 0; white-space: nowrap; }
+.tab.on { background: var(--panel); color: var(--fg); }
+.dock .body { padding: 1rem; overflow-x: auto; }
+.demo .body { padding: 0; background: #1d2229; }
+.demo img { display: block; width: 100%; min-width: 760px; }
+.demo video { display: block; width: 100%; height: auto; }
+.caption { font-size: .85rem; color: var(--muted); margin-top: .6rem; }
+
+section { padding-block: 3rem; border-top: 1px solid var(--line); }
+section > .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+.sub { color: var(--muted); max-width: 65ch; }
+
+/* Install */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 1rem; }
+.cmd { position: relative; }
+.cmd pre { margin: 0; padding: 2.4rem 1rem .9rem 1rem; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+.cmd .copy {
+  position: absolute; top: .5rem; right: .5rem; font: 600 .75rem var(--mono); padding: .3rem .55rem;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer;
+}
+.cmd .copy:hover { color: var(--fg); }
+.step-h { font: 600 .85rem var(--mono); color: var(--muted); margin-bottom: .5rem; }
+
+/* Before / after */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
+.code { margin: 0; font: .85rem/1.65 var(--mono); white-space: pre; }
+.code .ln { color: var(--muted); user-select: none; display: inline-block; width: 2.2ch; }
+.code .bad { background: color-mix(in srgb, var(--n3d) 16%, transparent); display: inline-block; min-width: 100%; }
+.find { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; font: .84rem/1.5 var(--mono); }
+.find li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; }
+.find .at { color: var(--muted); }
+.find .e { color: var(--n3d); }
+.find .w { color: var(--nres); }
+.find b { color: var(--fg); font-weight: 600; }
+
+/* Tools: tree like the Scene dock */
+.tree { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tree li { background: var(--panel); padding: 1.1rem 1.1rem 1.2rem; display: grid; gap: .4rem; align-content: start; }
+.node { display: flex; align-items: center; gap: .5rem; font: 600 .95rem var(--mono); }
+.dot { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.tree p { color: var(--muted); font-size: .95rem; }
+.tree code { color: var(--muted); font-size: .78rem; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+.stat { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1rem; display: grid; gap: .2rem; }
+.stat .n { font: 800 2.2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: .92rem; }
+.stat.good { border-color: var(--nui); }
+.stat.good .n { color: var(--nui); }
+
+/* Table */
+.table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .95rem; }
+th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { background: var(--panel-2); font: 600 .8rem var(--mono); color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--muted); }
+.yes { color: var(--nui); font-weight: 700; }
+.no { color: var(--muted); }
+
+/* FAQ */
+.faq { display: grid; gap: .5rem; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; }
+summary { cursor: pointer; font-weight: 700; }
+details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
+
+/* New in a release */
+.new { display: inline-flex; align-items: center; gap: .5rem; width: fit-content; padding: .3rem .8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); text-decoration: none; font-size: .9rem; }
+.new b { font: 700 .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--nui); }
+.new:hover { border-color: var(--accent-ink); }
+.hook { margin: 0; font: .8rem/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.hook .e { color: var(--n3d); }
+.hook .k { color: var(--accent-ink); }
+.hook .m { color: var(--muted); }
+
+footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: .9rem; }
+footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
+footer a { color: var(--muted); }
+/* Page: Claude Code plugin */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: .75rem; }
+.cards.four { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
+.cards li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.1rem 1.2rem; display: grid; gap: .4rem; align-content: start; }
+.cards p { color: var(--muted); font-size: .95rem; }
+.cards .when { font: 600 .74rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); }
+.facts { margin: 0; padding: 0; list-style: none; display: grid; gap: .8rem; max-width: 75ch; }
+.facts b { color: var(--fg); }
+.facts li { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="logo.svg" alt="" width="28" height="28">Godotwright</a>
+    <nav aria-label="Main">
+      <a href="./">Home</a>
+      <a href="#hooks">Hooks</a>
+      <a href="#skills">Skills</a>
+      <a href="#subagents">Subagents</a>
+      <a href="#faq">FAQ</a>
+      <a href="install.html">Other clients</a>
+      <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <p class="eyebrow">Claude Code plugin · Godot 4.7</p>
+    <h1>Claude Code, <em>checked in Godot&nbsp;4</em> after every edit.</h1>
+    <p class="lede">One command puts Godotwright in Claude’s loop. Every Godot file Claude edits is reviewed right after the edit, Godot errors come back with the lessons that explain them, and Claude does not stop with review errors left open. With the MCP tools, ten skills and two subagents.</p>
+    <div class="cmd"><pre><code>/plugin install godotwright --marketplace laaielichter/Godotwright</code></pre><button class="copy" type="button">Copy</button></div>
+    <p class="sub">Start Claude Code in your Godot project folder. Needs Node.js 22.12 or newer. On Claude Code older than 2.1.275: <code>/plugin marketplace add laaielichter/Godotwright</code>, then <code>/plugin install godotwright@godotwright</code>.</p>
+  </div>
+
+  <section id="hooks">
+    <div class="wrap">
+      <h2>Four hooks: Claude does not have to remember a tool</h2>
+      <p class="sub">An agent with a toolbox still forgets to use it. Hooks run on their own at fixed moments. They say nothing when they have nothing to add, never fail the agent, and <code>GODOTWRIGHT_HOOKS=0</code> turns them off.</p>
+      <ul class="cards four">
+        <li><span class="when">At the start</span><h3>session-start</h3><p>A session in a Godot project starts with its name, Godot version, renderer, scripts, scenes, main scene, autoloads, and whether Godot is installed for the tools that run it.</p></li>
+        <li><span class="when">After an edit</span><h3>post-edit</h3><p>After an edit of a <code>.gd</code>, <code>.tscn</code>, <code>.tres</code>, <code>.gdshader</code> or <code>project.godot</code> file, that file is reviewed. Errors go back to Claude at once, with the lessons behind them; warnings come as a note.</p></li>
+        <li><span class="when">After a command</span><h3>post-bash</h3><p>When a command’s output holds Godot errors (<code>SCRIPT ERROR</code>, <code>Parse Error</code>, …), the lessons from real projects that explain them are added.</p></li>
+        <li><span class="when">Before stopping</span><h3>stop</h3><p>Review errors still open in Godot files changed in this session are named once, before Claude says it is done.</p></li>
+      </ul>
+      <div class="dock">
+        <div class="tabs"><span class="tab on">PostToolUse hook</span><span class="tab">old_player.gd</span></div>
+        <div class="body"><pre class="hook"><span class="k">Godotwright reviewed res://scripts/old_player.gd: 11 errors, 1 warning.</span> Godot will report these too:
+  :1  <span class="e">error</span> [api/unknown-type] Cannot extend "KinematicBody2D" … In Godot 4 it is `CharacterBody2D`.
+  :3  <span class="e">error</span> [api/godot3-syntax] `export var` is `@export var` in Godot 4.
+  :4  <span class="e">error</span> [api/godot3-syntax] `onready var` is `@onready var` in Godot 4.
+  :11 <span class="e">error</span> [api/godot3-syntax] `yield()` is `await` in Godot 4.
+  :17 <span class="e">error</span> [api/wrong-arguments] move_and_slide() takes 0 arguments, but 2 are given.
+  :18 <span class="e">error</span> [api/unknown-function] Function "deg2rad()" does not exist … In Godot 4 it is `deg_to_rad`.
+  <span class="m">… and 4 more (godot_review with this file shows all)</span>
+<span class="k">lessons behind these findings:</span> api/wrong-arguments -> gdscript/optional-parent-features-via-call; …
+<span class="k">Next:</span> fix the errors now (look up the API with godot_api).</pre></div>
+      </div>
+      <p class="caption">Excerpt of real output of <code>godotwright hook post-edit</code> 0.3.0 after an edit of a Godot 3 script. Claude reads this before its next step.</p>
+    </div>
+  </section>
+
+  <section id="skills">
+    <div class="wrap">
+      <h2>Ten skills</h2>
+      <p class="sub">Seven Claude uses on its own when the work calls for them, and three you start yourself. Each one leans on the MCP tools and on 272 lessons from real Godot 4 projects.</p>
+      <ul class="cards">
+        <li><span class="when">Any Godot work</span><h3>godot</h3><p>The workflow: map the project, look up the exact Godot 4.7 API instead of guessing, review before and after each edit, check with Godot before finishing.</p></li>
+        <li><span class="when">Errors and wrong behaviour</span><h3>debug</h3><p>From a Godot error, a crash or a body falling through a floor to the cause, the fix and the proof.</p></li>
+        <li><span class="when">Stutter and load times</span><h3>perf</h3><p>Stutter, hitches, slow loading, low fps and memory: measured first, one fix at a time, measured again.</p></li>
+        <li><span class="when">Things that move</span><h3>vehicles</h3><p>Helicopters, aircraft, cars, trains, ships, moving platforms and decks, landing and docking, and the cameras that follow them.</p></li>
+        <li><span class="when">Large worlds</span><h3>world</h3><p>Terrain, streaming, levels of detail, road, rail and water networks, and precision far from the origin.</p></li>
+        <li><span class="when">3D models</span><h3>model</h3><p>Build a model from code, look at it as text and pictures, and lint it against what the thing really is.</p></li>
+        <li><span class="when">Shipped games</span><h3>patch</h3><p>Mods, overlays, installers and hotfixes to a shipped game, with preflight checks, receipts and rollback.</p></li>
+        <li><span class="when">You start it</span><h3>/godotwright:review</h3><p>Review the project and fix what it finds, errors first, re-reviewing after each fix.</p></li>
+        <li><span class="when">You start it</span><h3>/godotwright:port</h3><p>Port Godot 3 GDScript to Godot 4.7, then check it with a review and with Godot.</p></li>
+        <li><span class="when">You start it</span><h3>/godotwright:learn</h3><p>Teach Godotwright what this session learned, anonymously, so the next session starts smarter. Nothing is sent.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="subagents">
+    <div class="wrap">
+      <h2>Two subagents for work that would flood the conversation</h2>
+      <ul class="cards four">
+        <li><h3>godot-reviewer</h3><p>Reviews a change (GDScript, scenes, shaders, settings, models) with Godotwright and, when installed, with Godot itself. It checks every finding against the code and the 4.7 API and returns only confirmed problems with their fixes.</p></li>
+        <li><h3>godot-debugger</h3><p>Finds the root cause of an error, a crash or wrong behaviour with the lessons, the project map, the 4.7 API and headless Godot runs, and proves it.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="runs">
+    <div class="wrap">
+      <h2>What it runs, writes and sends</h2>
+      <ul class="facts">
+        <li><b>Runs:</b> <code>npx -y godotwright@0.3.0 mcp --tier premium</code>, an exact version of the <a href="https://www.npmjs.com/package/godotwright">npm package</a>, published from the repository by GitHub Actions with provenance. The tools that run Godot (<code>check</code>, <code>test</code>, <code>play</code>, <code>screenshot</code>) run your Godot 4.7 headless on your project.</li>
+        <li><b>Hooks:</b> run <code>node</code> with the plugin’s <code>hooks/run.mjs</code>, which starts the same pinned version. They read the file you edited and the output of commands, and keep a small state file per session.</li>
+        <li><b>Writes:</b> only inside your project. Tools that change files show the change first and write only when asked.</li>
+        <li><b>Sends:</b> nothing. There is no telemetry; opt-in sharing of anonymous counters is off by default (<a href="https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md">PRIVACY.md</a>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>FAQ</h2>
+      <div class="faq">
+        <details><summary>Can I turn the hooks off?</summary><p>Yes. Set <code>GODOTWRIGHT_HOOKS=0</code>. The MCP tools, skills and subagents keep working.</p></details>
+        <details><summary>I only want the MCP server, without skills and hooks.</summary><p><code>claude mcp add godotwright -- npx -y godotwright mcp --tier premium</code></p></details>
+        <details><summary>I use Codex, Cursor or another agent. Can I get the same?</summary><p>The MCP server works in any MCP client; see the <a href="install.html">install page</a>. The hooks are a CLI command, <code>godotwright hook &lt;event&gt;</code>, that reads Claude Code’s hook JSON on stdin, so any agent with a similar hook system can call it.</p></details>
+        <details><summary>Does it need Godot installed?</summary><p>Not for the review, the API lookups, the project map, <code>migrate</code> or the edits. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> need Godot 4.7; set <code>GODOT</code> to its path if it is not found in the usual install folders.</p></details>
+        <details><summary>Does it work next to an editor-driving Godot MCP server?</summary><p>Yes. Those drive the open editor through an addon; Godotwright works from files and checks what Claude writes.</p></details>
+      </div>
+      <div class="cta"><a class="btn primary" href="https://github.com/laaielichter/Godotwright">Godotwright on GitHub</a><a class="btn" href="./">Back to the overview</a></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Godotwright · MIT licensed · not affiliated with the Godot Engine project or Anthropic</span>
+    <span><a href="https://github.com/laaielichter/Godotwright">GitHub</a> · <a href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/laaielichter/Godotwright/issues">Issues</a></span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".cmd .copy").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var text = btn.parentElement.querySelector("code").innerText;
+    var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(done, function () { window.getSelection().selectAllChildren(btn.parentElement.querySelector("code")); });
+    } else {
+      window.getSelection().selectAllChildren(btn.parentElement.querySelector("code"));
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -3,8 +3,12 @@
 How Godotwright gets found and used: a strong page first, one launch, then a steady trickle from listings.
 No bought stars, no upvote requests, no alt accounts, and "I built this" in every post.
 
-## Status (1 Nov 2026)
+## Status (2 Nov 2026)
 
+- **New today:** a short README (about 240 lines, down from 600) with a without/with table, the 0.3.0 news and an
+  honest comparison; the full reference moved to `docs/reference.md`; a site page for the Claude Code plugin
+  (`claude-code.html`) with real hook output; 20 topics, including `godot-mcp` (a small topic page where a new repo
+  can rank near the top) and `gemini-cli-extension` (the Gemini CLI gallery lists repos with it on its own).
 - **Released:** 0.3.0 on npm (trusted publishing, provenance), the official MCP Registry, and the GitHub Marketplace
   ("Godotwright receipt", category Game CI).
 - **One-step installs:** Claude Code plugin, Claude Desktop bundle (`godotwright.mcpb` on every release), Gemini CLI
@@ -29,9 +33,12 @@ No bought stars, no upvote requests, no alt accounts, and "I built this" in ever
 
 In this order. Each takes 10 to 30 minutes.
 
+0. **Check that your Hacker News account may post a Show HN.** HN has been restricting Show HNs from new or
+   low-karma accounts since March 2026, and the rules are not public. If the submit page refuses it, e-mail
+   hn@ycombinator.com before Tuesday.
 1. **Anthropic plugin directory** (after PR #96 is merged). At [claude.ai/directory/manage](https://claude.ai/directory/manage):
    *Submit new* > *Plugin bundle*. Repository `laaielichter/Godotwright`, plugin path `plugins/godotwright`, branch
-   `main`. Select *Validate*. Data handling answers that match what Godotwright does:
+   `main` (submitting needs a paid Claude plan). Select *Validate*. Data handling answers that match what Godotwright does:
    - reads or stores personal data: **no** (a local learning file holds counters, built not to hold code, paths or
      project names);
    - sends data to other services: **no** (opt-in anonymous counters only after `godotwright learn share on`, and
@@ -46,7 +53,8 @@ In this order. Each takes 10 to 30 minutes.
    - Build steps: `npm install -g godotwright@0.3.0`
    - CMD: `godotwright mcp --tier premium`
    - Environment variables: none needed
-3. **Write the Show HN text** in your own words from the facts below (Hacker News asks for no AI-written posts).
+3. **Write the Show HN text** in your own words from the facts below. The HN guidelines ask for no generated or
+   AI-edited text at all, not even to polish it. Never ask anyone to upvote.
 
 ## Tuesday 3 November (Amsterdam time)
 
@@ -120,9 +128,16 @@ every run with it produced fully typed code").
 
 ## Wednesday 4 November: r/godot
 
-Check the subreddit's current rules and self-promotion flair that day. Lead with the problem every Godot dev has seen
+Check the subreddit's current rules and the "selfpromo (software)" flair that day. Lead with the problem every Godot dev has seen
 (an AI answer with `yield` and `KinematicBody2D`), show the demo GIF, say what it does not do, and ask which mistakes
 to add as review rules. Then answer comments for a few hours.
+
+Present it as a tool that checks AI-written code, not one that writes games: since June 2026 the Godot Foundation bans
+AI-written contributions to the engine, and many Godot developers are wary of AI. Write the post yourself.
+
+Other subreddits: r/gamedev only in its weekly self-promotion threads; r/ClaudeAI needs 50 karma for a showcase post
+(otherwise its megathread); skip r/opensource, which bans AI projects since 24 Oct 2026. The Godot forum has a
+"Plugins" category for tools.
 
 ## Listings (after the launch)
 
@@ -130,8 +145,15 @@ to add as review rules. Then answer comments for a few hours.
    `- [laaielichter/Godotwright](https://github.com/laaielichter/Godotwright) [![laaielichter/Godotwright MCP server](https://glama.ai/mcp/servers/laaielichter/Godotwright/badges/score.svg)](https://glama.ai/mcp/servers/laaielichter/Godotwright) 📇 🏠 🍎 🪟 🐧 - Godot 4 toolkit for coding agents: offline Godot 4.7 API, scored GDScript review with Godot 3 to 4 fixes, headless checks, tests, play-testing with input, safe scene edits and 3D models from code.`
 2. **awesome-godot** (godotengine), section Other, in alphabetical order:
    `- [Godotwright](https://github.com/laaielichter/Godotwright) - MCP server and CLI that help coding agents with Godot 4: offline API lookup, GDScript review with Godot 3 to 4 fixes, headless checks and tests, and a pull request receipt action.`
-3. **mcp.so** ([submit form](https://mcp.so/submit)): repository URL and the one-line description above.
-4. **Smithery** (optional): `npx @smithery/cli mcp publish` with the release's `godotwright.mcpb`.
+   The list's own rules ban crypto or NFT integrations; a gift address in the README is not an integration, but a
+   reviewer may ask. Keep the Support section short and at the bottom.
+3. **Free directory forms:** [mcp.so](https://mcp.so/submit), [mcpservers.org](https://mcpservers.org/submit) (the
+   way into the wong2 list), [MCP Market](https://mcpmarket.com/submit) and cursor.directory. The free queues take
+   2 to 6 weeks; the paid fast lanes are not needed.
+4. **Cline MCP Marketplace:** a GitHub issue with a 400x400 PNG logo; an `llms-install.md` in the repo helps.
+5. **awesome-claude-code:** from 11 Nov (the repo must be 14 days old), through its web form, filled in by you.
+6. **Already automatic:** the official MCP Registry also feeds Glama, PulseMCP and others; the Gemini CLI gallery
+   picks up the `gemini-cli-extension` topic. Smithery stopped its services on 31 Oct 2026, so skip it.
 
 ## Metrics baseline (1 Nov 2026)
 
