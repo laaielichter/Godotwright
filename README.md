@@ -79,16 +79,16 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 Run the agent from the Godot project folder, or pass `--project <path>`. `--tier premium` gives full detail for large
 models; `--tier cheap` (the default) gives short output and step-by-step instructions for small ones. Needs Node.js 22.12+.
 
-## New in 0.4.0
+## New in 0.5.0
 
-- **A game that stays up between calls.** `godot_session` loads a scene once, headless and paused; `godot_game` reads
-  and sets values, steps frames with input until a condition holds, shows where 3D things really are and what is wrong
-  with the UI per window size, and reloads the scripts you edited with every node's values kept.
-- **`godot_doctor` and `godot_fix`.** One call says what is wrong, in which order to fix it and why (with the lesson);
-  the mechanical fixes are applied for you, each labelled `safe` or `check`.
-- **`godot_undo`.** Every Godotwright write can be taken back; your own later edits are never lost silently.
-- **What the build and the project really hold.** `godot_export` finds what an export will miss, `godot_deps` finds
-  unused files and why a file is used, `godot_perf` measures frame times against a budget and the last run.
+- **Godot's own view of a script: `godot_code`.** Godot's GDScript language server, kept warm: warnings at the
+  project's own levels, the inferred type of a variable, where a name is defined and what can follow a dot, also for
+  code that is not saved yet.
+- **Real shader compilation.** Headless Godot never compiles shaders; `godotwright shaders` (and `godot_check`
+  `shaders: true`) draws every shader and reports errors at the line in the .gdshader, include or scene, with the
+  Godot 4 form of Godot 3 code.
+- **Visual tests.** `godot_screenshot` with `baseline` compares a render with the last one: one line of text when
+  nothing changed, or the percent changed, where, and a diff picture. Renders are now pixel-identical run to run.
 
 All changes: [CHANGELOG.md](CHANGELOG.md).
 
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: laaielichter/godotwright@v0.4.0
+      - uses: laaielichter/godotwright@v0.5.0
         with: { comment: "true" }
 ```
 

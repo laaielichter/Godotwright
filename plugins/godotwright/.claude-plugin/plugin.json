@@ -1,6 +1,6 @@
 {
   "name": "godotwright",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Makes Claude Code better at Godot 4: the offline Godot 4.7 API, a map of your project, headless checks, safe edits, tests, play-testing, screenshots, 3D models and an AAA review of GDScript.",
   "author": {
     "name": "laaielichter",

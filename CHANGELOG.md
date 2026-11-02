@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
-## Unreleased
+## 0.5.0 (Godot's own code intelligence, real shader compilation, visual tests)
 
 - **`godot_code` (and `godotwright code`): Godot's own view of a script.** Diagnostics, hover, definition and
   completion from Godot 4.7's GDScript language server, which runs headless as an editor and stays warm for 10

@@ -253,7 +253,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: laaielichter/godotwright@v0.4.0
+      - uses: laaielichter/godotwright@v0.5.0
         with: { comment: "true" }</code></pre><button class="copy" type="button">Copy</button></div>
       <p class="sub">For a review only, which needs no Godot download, add <code>review-only: "true"</code>. Without <code>comment</code>, the receipt goes to the job summary only, and the job needs just <code>contents: read</code>.</p>
     </div>
@@ -324,12 +324,12 @@ res://scripts/old_player.gd:11: <span class="e">error</span> [api/godot3-syntax]
     <div class="wrap">
       <h2>Findings inline, or a plain review</h2>
       <p class="sub">To see each finding on its line in the pull request, upload the review as SARIF to GitHub code scanning (needs <code>security-events: write</code> and code scanning turned on):</p>
-      <div class="cmd"><pre><code>- run: npx --yes godotwright@0.4.0 review . --sarif &gt; godotwright.sarif || true
+      <div class="cmd"><pre><code>- run: npx --yes godotwright@0.5.0 review . --sarif &gt; godotwright.sarif || true
 - uses: github/codeql-action/upload-sarif@v4
   with:
     sarif_file: godotwright.sarif</code></pre><button class="copy" type="button">Copy</button></div>
       <p class="sub">Or fail a build on errors or a low score, in any CI that has Node.js 22.12 or newer:</p>
-      <div class="cmd"><pre><code>npx --yes godotwright@0.4.0 review . --min-score 80</code></pre><button class="copy" type="button">Copy</button></div>
+      <div class="cmd"><pre><code>npx --yes godotwright@0.5.0 review . --min-score 80</code></pre><button class="copy" type="button">Copy</button></div>
     </div>
   </section>
 
