@@ -21,6 +21,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 `godotwright doctor [path] [--symptom "what you see"]` (godot_doctor): the review and, when Godot is installed, a headless load of every script and scene, grouped by cause and sorted most urgent first; each problem with its place, the lesson that explains it, the fix, and whether `godotwright fix` (godot_fix) or `godotwright migrate` can do it; then numbered next steps.
 `godotwright fix [path] [--write] [--check]` (godot_fix): mechanical fixes for review findings, each labelled safe (only removes the problem) or check (changes more); shows them first, then reviews the changed files again.
 
+## A game session that stays up
+
+`godotwright session start [path] [--scene res://x.tscn]` (godot_session op start): loads the scene once, headless and paused at frame 0, and keeps it running between commands (it quits after 15 idle minutes; `session stop` ends it). `godotwright game tree|get|set|call|eval|step|signals|errors` (godot_game): the live node tree, values read and set, methods called, Godot Expressions evaluated, and `step <frames> --input "..." --watch Node.prop --until "condition"` with the same frame-exact input as play. Every answer lists the errors the game printed since the last one, with their call chain. Loopback only, with a token; the project is not changed.
+
 ## Measuring performance
 
 `godotwright perf [path] --scene res://x.tscn [--input "..."] [--budget 16.6]` (godot_perf): runs the scene headless and reports frame-time p50/p95/p99/max against a budget, the physics step apart, the slowest frames with what changed on them, node and orphan counts, and the change since the last run of the same scene.

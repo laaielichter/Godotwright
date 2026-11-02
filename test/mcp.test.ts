@@ -33,6 +33,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_doctor",
       "godot_feedback",
       "godot_fix",
+      "godot_game",
       "godot_lesson_add",
       "godot_lessons",
       "godot_migrate",
@@ -51,6 +52,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_scan",
       "godot_scene_edit",
       "godot_screenshot",
+      "godot_session",
       "godot_test",
       "godot_usages",
     ]);

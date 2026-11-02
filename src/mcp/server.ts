@@ -89,6 +89,8 @@ import {
 } from "../screenshot/screenshot.js";
 import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
+import { formatGame, formatStart } from "../session/format.js";
+import { gameRequest, newDiagnostics, readSession, startSession, stepPayload, stopSession } from "../session/session.js";
 import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
   TestRunError,
@@ -173,6 +175,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
+      "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
@@ -772,6 +775,110 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
         return text(formatMigration(result, detail ?? profile.detail));
       }),
+  );
+
+  server.registerTool(
+    "godot_session",
+    {
+      title: "Start or stop a game session that stays up",
+      description:
+        "Load a scene in Godot 4.7 headless once and keep it running between calls, paused at frame 0, so godot_game can look at the live game and move it frame by frame without loading the world again (a big world can take a minute to load; godot_play loads it on every call). op `start` (scene: default the main scene; restart: true loads it again), `status`, or `stop`. Only this machine can reach it (a loopback port with a token), the project is not changed (the script lives in .godot/godotwright/), and the game quits by itself after `idle_minutes` without a request (default 15). Stop it when you are done.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["start", "status", "stop"]).describe("start, status or stop"),
+        scene: z.string().optional().describe("the res:// scene to load (default: the main scene)"),
+        restart: z.boolean().optional().describe("stop a running session and load the scene again"),
+        idle_minutes: z.number().int().min(1).max(240).optional().describe("quit after this many minutes without a request (default 15)"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("how long the scene may take to load (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, op, scene, restart, idle_minutes, timeout_seconds }) => {
+      try {
+        const dir = where(path);
+        if (op === "stop") return text((await stopSession(dir)) ? "session stopped\n" : "no session was running\n");
+        if (op === "status") {
+          if (!readSession(dir)) return text("no session is running; start one with op start\n");
+          const { reply, diagnostics } = await gameRequest(dir, "status");
+          return text(formatGame("status", reply, diagnostics));
+        }
+        const started = await startSession(dir, {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          restart: restart === true,
+          ...(idle_minutes ? { idleMinutes: idle_minutes } : {}),
+          timeoutMs: (timeout_seconds ?? 300) * 1000,
+        });
+        return text(formatStart(started));
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_game",
+    {
+      title: "Look at and drive the running game session",
+      description:
+        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `errors` (what the game printed since the last call). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "errors"]).describe("what to do"),
+        root: z.string().optional().describe("tree: start at this node (default the scene root)"),
+        depth: z.number().int().min(0).max(20).optional().describe("tree: levels to show (default 3)"),
+        limit: z.number().int().min(1).max(1000).optional().describe("tree: nodes to show (default 80)"),
+        watch: z.array(z.string()).optional().describe("get and step: values to read, Node.property or Node.method()"),
+        target: z.string().optional().describe("set: Node.property"),
+        value: z.string().optional().describe("set: the new value as Godot writes it"),
+        node: z.string().optional().describe("call: node path from the scene root"),
+        method: z.string().optional().describe("call: method name"),
+        args: z.array(z.string()).optional().describe("call: arguments as Godot values"),
+        expr: z.string().optional().describe("eval: the expression"),
+        frames: z.number().int().min(1).max(100_000).optional().describe("step: frames to run (default 60)"),
+        input: z.string().optional().describe('step: "0 press jump; 10 release jump; 20 hold right 30"'),
+        every: z.number().int().min(1).optional().describe("step: sample every n frames (default: about 10 samples)"),
+        until: z.string().optional().describe('step: stop at the first frame where this holds, "Hero.is_on_floor() == true"'),
+        signals: z.array(z.string()).optional().describe("signals: Node.signal to record"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async (a) => {
+      try {
+        const dir = where(a.path);
+        if (a.op === "errors") {
+          const d = newDiagnostics(dir);
+          return text(d.length ? `${d.map(formatDiagnostic).join("\n")}\n` : "no new errors or warnings\n");
+        }
+        let payload: Record<string, unknown> = {};
+        let timeout: number | undefined;
+        if (a.op === "tree") payload = { root: a.root ?? ".", depth: a.depth ?? 3, limit: a.limit ?? 80 };
+        else if (a.op === "get") payload = { watch: a.watch ?? [] };
+        else if (a.op === "set") {
+          if (!a.target || a.value === undefined) return failure("set needs target (Node.property) and value");
+          payload = { path: a.target, value: a.value };
+        } else if (a.op === "call") {
+          if (!a.method) return failure("call needs node and method");
+          payload = { node: a.node ?? ".", method: a.method, args: a.args ?? [] };
+        } else if (a.op === "eval") {
+          if (!a.expr) return failure("eval needs expr");
+          payload = { expr: a.expr };
+        } else if (a.op === "signals") payload = { signals: a.signals ?? [] };
+        else if (a.op === "step") {
+          const frames = a.frames ?? 60;
+          payload = stepPayload({ frames, ...(a.input ? { input: a.input } : {}), watch: a.watch ?? [], ...(a.every ? { every: a.every } : {}), ...(a.until ? { until: a.until } : {}) });
+          timeout = Math.max(60_000, frames * 200);
+        }
+        const { reply, diagnostics } = await gameRequest(dir, a.op, payload, timeout);
+        const body = formatGame(a.op, reply, diagnostics, a.watch ?? []);
+        return reply["ok"] ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
   );
 
   server.registerTool(

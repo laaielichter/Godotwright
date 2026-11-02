@@ -429,7 +429,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 27 tools
+### The 29 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -451,6 +451,8 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
+| `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
+| `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
 | `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |

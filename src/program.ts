@@ -5,6 +5,7 @@ import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { perfCommand } from "./commands/perf.js";
+import { gameCommand, sessionCommand } from "./commands/session.js";
 import { fixCommand } from "./commands/fix.js";
 import { hookCommand } from "./commands/hook.js";
 import { learnCommand } from "./commands/learn.js";
@@ -38,6 +39,8 @@ export function createProgram(): Command {
     .addCommand(testCommand())
     .addCommand(playCommand())
     .addCommand(perfCommand())
+    .addCommand(sessionCommand())
+    .addCommand(gameCommand())
     .addCommand(scenarioCommand())
     .addCommand(ciCommand())
     .addCommand(screenshotCommand())

@@ -18,6 +18,13 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **Runtime errors come with their GDScript call chain.** `godot_check`, `godot_play`, `godot_test` and screenshots
   keep the backtrace Godot prints with a runtime error and show the callers under it; an error that repeats every
   frame is one line with its count (`(x120)`).
+- **A game session that stays up: `godot_session` and `godot_game`** (and `godotwright session` / `godotwright game`).
+  The scene loads once, headless and paused at frame 0, and keeps running between calls: look at the live tree, read
+  and set values, call methods, evaluate Godot Expressions, record signals, and step frames with the same frame-exact
+  input as `godot_play`, stopping early when a condition holds. Every answer lists the errors the game printed since
+  the last call, with their call chain. Time only moves on a step, so it stays deterministic; a world that takes a
+  minute to load loads once. No editor and no add-on: a temporary script in `.godot/godotwright/` on a loopback port
+  with a token; the game quits by itself after 15 idle minutes.
 - **`godot_perf` (and `godotwright perf`): measure a scene the way a player feels it.** Headless frame-time p50, p95,
   p99 and max against a budget, the physics step apart from the rest, the slowest frames with what changed on them
   (thousands of nodes made in one frame, a heavy physics step, script work), node and orphan counts, the change since

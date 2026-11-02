@@ -19,7 +19,9 @@ Work on $ARGUMENTS (or what the user named).
    teleport only, never every tick. `is_on_floor()` is stale after code moves a body until the next `move_and_slide()`.
 4. **Mind the scale.** Far from the origin, float32 positions lose precision: take velocities from physics, not from
    differences of positions, and keep far-away things simple or simulated less often.
-5. **Test the real body headless.** Reproduce with the real scene, not a stand-in: `godot_play` with an input timeline
+5. **Test the real body headless.** For a long or hard-to-reach situation (a ship far out at sea, a deck in motion),
+   start a `godot_session` once and `step` it with `godot_game` in parts, reading the values between steps.
+   Otherwise: Reproduce with the real scene, not a stand-in: `godot_play` with an input timeline
    and `watch` on position, velocity and `is_on_floor()` per frame; repeat on a moving platform at several speeds and
    with the other physics engine when contacts are involved. Assert numbers (no bounce above a few centimetres, no
    slide), not looks.
