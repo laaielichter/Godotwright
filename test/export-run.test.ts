@@ -121,6 +121,16 @@ describe("export run (Godot faked)", () => {
     expect(failed.contents).toBeUndefined();
   });
 
+  it("keeps what a first import says as warnings: the export and the pack decide", async () => {
+    const root = makeProject(FILES);
+    const { deps } = fakeGodot((flag) =>
+      flag === "--import" ? { stderr: "ERROR: Cannot open file 'res://t/text.en.translation'.\n   at: x (y.cpp:1)\n" } : flag === "--export-pack" ? { write: join(PCK, "game.pck") } : {},
+    );
+    const r = await runExport(root, { preset: "Linux", frames: 0 }, deps);
+    expect(r.diagnostics.find((d) => d.source === "import")).toMatchObject({ severity: "warning", message: "while importing: Cannot open file 'res://t/text.en.translation'." });
+    expect(r.errors).toBe(0);
+  });
+
   it("keeps Godot's multi-line export errors whole", () => {
     const log = [
       "[ DONE ] first_scan_filesystem",
