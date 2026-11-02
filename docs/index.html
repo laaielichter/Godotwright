@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Godotwright: Godot 4 MCP server and CLI for coding agents</title>
-<meta name="description" content="Godotwright makes Claude Code, Codex and other coding agents better at Godot 4.7: an MCP server and CLI with an offline Godot API, a project map, headless checks, an AAA code review for GDScript, and 3D models built and checked from code.">
+<meta name="description" content="Godotwright checks the Godot code your coding agent writes. MCP server, CLI and Claude Code plugin for Godot 4.7: offline API, scored GDScript review, headless checks and tests, safe edits, Godot 3 to 4 migration and 3D models from code.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
 <meta property="og:title" content="Godotwright: make any coding agent better at Godot 4">
-<meta property="og:description" content="MCP server and CLI for Godot 4.7: offline API lookup, project map, headless checks and an AAA review of GDScript. Works with Claude Code and Codex. MIT.">
+<meta property="og:description" content="Checks the Godot code your coding agent writes: offline Godot 4.7 API, scored GDScript review, headless checks and tests, safe edits. MCP server, CLI and Claude Code plugin. MIT.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/og.png">
 <meta property="og:image:width" content="1280">
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="Godotwright: make any coding agent better at Godot 4">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Godotwright: make any coding agent better at Godot 4">
-<meta name="twitter:description" content="MCP server and CLI for Godot 4.7: offline API, project map, headless checks, AAA GDScript review.">
+<meta name="twitter:description" content="Checks the Godot code your coding agent writes: offline Godot 4.7 API, scored review, headless checks, safe edits.">
 <meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,8 +31,8 @@
   "name": "Godotwright",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "description": "MCP server and CLI that makes coding agents better at Godot 4.7: offline API lookup, project map, headless checks, an AAA review of GDScript, and 3D models built, viewed and checked from code.",
-  "featureList": ["Offline Godot 4.7 API lookup", "Project map without starting Godot", "AAA review of GDScript with scores", "Headless Godot checks", "59 ready-made parametric 3D models (.glb)", "3D model viewer as text and model lint"],
+  "description": "MCP server, CLI and Claude Code plugin that checks the Godot code coding agents write: offline Godot 4.7 API lookup, project map, a scored review of GDScript, headless checks and tests, safe edits, Godot 3 to 4 migration, and 3D models built, viewed and checked from code.",
+  "featureList": ["Offline Godot 4.7 API lookup", "Project map without starting Godot", "AAA review of GDScript with scores", "Headless Godot checks", "GUT and GdUnit4 tests, play-testing with input, screenshots", "Safe renames and scene, settings and input map edits", "Godot 3 to 4 script migration", "Claude Code plugin with hooks, skills and subagents", "272 lessons from real Godot projects", "GitHub Action that posts a review receipt on pull requests", "59 ready-made parametric 3D models (.glb)", "3D model viewer as text and model lint"],
   "url": "https://laaielichter.github.io/Godotwright/",
   "codeRepository": "https://github.com/laaielichter/Godotwright",
   "downloadUrl": "https://www.npmjs.com/package/godotwright",
@@ -47,13 +47,15 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does Godotwright need Godot installed?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No for scan, api and review: they read your project files and the bundled Godot 4.7 class reference. Only check runs Godot 4.7 headless." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "No for scan, api, review, migrate and the edits: they read your project files and the bundled Godot 4.7 class reference. check, test, play and screenshot run Godot 4.7 headless." } },
     { "@type": "Question", "name": "Which coding agents work with Godotwright?",
       "acceptedAnswer": { "@type": "Answer", "text": "Any agent that speaks MCP over stdio. CI connects Claude Code and Codex on every push. The CLI works from any shell or agent." } },
     { "@type": "Question", "name": "Does Godotwright send my code anywhere?",
       "acceptedAnswer": { "@type": "Answer", "text": "No. Learning stays on your machine. Sharing anonymous counters is opt-in, off by default, sends no code, file names or paths, and respects DO_NOT_TRACK." } },
     { "@type": "Question", "name": "Does it help with porting Godot 3 projects to Godot 4?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. The review flags Godot 3 syntax and names (export var, yield, KinematicBody2D, deg2rad, move_and_slide with arguments) and gives the Godot 4 replacement." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. The review flags Godot 3 syntax and names (export var, yield, KinematicBody2D, deg2rad, move_and_slide with arguments) and gives the Godot 4 replacement." } },
+    { "@type": "Question", "name": "Does Godotwright work next to other Godot MCP servers?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most Godot MCP servers drive the open editor through an addon. Godotwright works from files, without the editor, and checks what the agent writes. Use both: an editor server to drive the editor, Godotwright to check the code." } }
   ]
 }
 </script>
@@ -216,6 +218,15 @@ details { background: var(--panel); border: 1px solid var(--line); border-radius
 summary { cursor: pointer; font-weight: 700; }
 details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
 
+/* New in a release */
+.new { display: inline-flex; align-items: center; gap: .5rem; width: fit-content; padding: .3rem .8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); text-decoration: none; font-size: .9rem; }
+.new b { font: 700 .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--nui); }
+.new:hover { border-color: var(--accent-ink); }
+.hook { margin: 0; font: .8rem/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.hook .e { color: var(--n3d); }
+.hook .k { color: var(--accent-ink); }
+.hook .m { color: var(--muted); }
+
 footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: .9rem; }
 footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
 footer a { color: var(--muted); }
@@ -228,6 +239,7 @@ footer a { color: var(--muted); }
     <a class="brand" href="./"><img src="logo.svg" alt="" width="28" height="28">Godotwright</a>
     <nav aria-label="Main">
       <a href="#install">Install</a>
+      <a href="claude-code.html">Claude Code</a>
       <a href="#tools">Tools</a>
       <a href="models.html">3D models</a>
       <a href="#benchmark">Benchmark</a>
@@ -240,9 +252,10 @@ footer a { color: var(--muted); }
 
 <main>
   <div class="wrap hero">
-    <p class="eyebrow">MCP server + CLI for Godot 4.7</p>
+    <a class="new" href="claude-code.html"><b>New in 0.3.0</b> Godotwright in Claude's loop: hooks, skills and 272 lessons →</a>
+    <p class="eyebrow">MCP server · CLI · Claude Code plugin · Godot 4.7</p>
     <h1>Make any coding agent <em>fluent in Godot&nbsp;4</em>.</h1>
-    <p class="lede">Claude Code, Codex and other agents write Godot 3 code, invent methods and miss broken node paths. Godotwright gives them the real Godot 4.7 API, a map of your project, headless checks and an AAA review, offline and MIT licensed.</p>
+    <p class="lede">Claude Code, Codex and other agents write Godot 3 code, invent methods and miss broken node paths. Godotwright checks what they write: the real Godot 4.7 API offline, a scored review of every script, headless Godot runs and safe edits. No editor needed, MIT licensed.</p>
     <div class="cta">
       <a class="btn primary" href="install.html">Install in 1 minute</a>
       <a class="btn" href="https://github.com/laaielichter/Godotwright">Star on GitHub</a>
@@ -256,6 +269,25 @@ footer a { color: var(--muted); }
     </div>
     <p class="caption">Real output of godotwright 0.1.0: <code>review</code> scores a Godot 3 script 74/100, <code>migrate</code> rewrites the mechanical parts, and after one fix by hand <code>review</code> gives 100/100.</p>
   </div>
+
+  <section id="with">
+    <div class="wrap">
+      <h2>Your agent, without and with Godotwright</h2>
+      <div class="table">
+        <table>
+          <thead><tr><th>Your agent…</th><th>On its own</th><th>With Godotwright</th></tr></thead>
+          <tbody>
+            <tr><td>writes GDScript</td><td class="no"><code>yield</code>, <code>export var</code>, <code>KinematicBody2D</code>: Godot 3 habits</td><td>Each line flagged with the Godot 4 fix; <code>migrate</code> rewrites the mechanical part</td></tr>
+            <tr><td>calls an engine method</td><td class="no">Guesses a name from memory</td><td>Looks it up in the bundled Godot 4.7 class reference</td></tr>
+            <tr><td>renames a signal or moves a file</td><td class="no">Breaks scene connections and <code>.uid</code> files</td><td><code>rename</code> changes code, scenes, connections and <code>.uid</code> files together, dry run first</td></tr>
+            <tr><td>says “it works”</td><td class="no">Without running anything</td><td><code>check</code>, <code>test</code> and <code>play</code> run it headless and report <code>file:line</code></td></tr>
+            <tr><td>needs a 3D model</td><td class="no">Needs Blender</td><td><code>model build</code> makes a clean <code>.glb</code> from one of 59 kinds, then lints it</td></tr>
+            <tr><td>opens a pull request</td><td class="no">Nobody checks the Godot side</td><td>A GitHub Action posts a receipt: review, check and tests</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
   <section id="install">
     <div class="wrap">
@@ -317,6 +349,31 @@ footer a { color: var(--muted); }
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="loop">
+    <div class="wrap">
+      <h2>In Claude’s loop, not just in its toolbox</h2>
+      <p class="sub">An agent forgets to call a tool. The Claude Code plugin does not depend on that: every Godot file Claude edits is reviewed right after the edit, and the errors go straight back to Claude before it moves on.</p>
+      <div class="dock">
+        <div class="tabs"><span class="tab on">PostToolUse hook</span><span class="tab">old_player.gd</span></div>
+        <div class="body"><pre class="hook"><span class="k">Godotwright reviewed res://scripts/old_player.gd: 11 errors, 1 warning.</span> Godot will report these too:
+  :1  <span class="e">error</span> [api/unknown-type] Cannot extend "KinematicBody2D" … In Godot 4 it is `CharacterBody2D`.
+  :3  <span class="e">error</span> [api/godot3-syntax] `export var` is `@export var` in Godot 4.
+  :11 <span class="e">error</span> [api/godot3-syntax] `yield()` is `await` in Godot 4.
+  :17 <span class="e">error</span> [api/wrong-arguments] move_and_slide() takes 0 arguments, but 2 are given.
+  <span class="m">… and 7 more</span>
+<span class="k">Next:</span> fix the errors now (look up the API with godot_api).</pre></div>
+      </div>
+      <p class="caption">Excerpt of real output of <code>godotwright hook post-edit</code> 0.3.0 after an edit of a Godot 3 script.</p>
+      <div class="stats">
+        <div class="stat"><span class="n">4</span><span class="l">hooks: after an edit, after a command, before stopping, at the start</span></div>
+        <div class="stat"><span class="n">10</span><span class="l">skills: debugging, performance, vehicles, large worlds, 3D models, patches and more</span></div>
+        <div class="stat"><span class="n">2</span><span class="l">subagents: a verified reviewer and a debugger that proves the cause</span></div>
+        <div class="stat good"><span class="n">272</span><span class="l">lessons from real Godot projects: symptom, cause, fix and test</span></div>
+      </div>
+      <div class="cta"><a class="btn primary" href="claude-code.html">The Claude Code plugin</a><span class="sub">Other agents can call <code>godotwright hook &lt;event&gt;</code> the same way.</span></div>
     </div>
   </section>
 
@@ -383,17 +440,18 @@ footer a { color: var(--muted); }
       <h2>How it compares</h2>
       <div class="table">
         <table>
-          <thead><tr><th></th><th>Godotwright</th><th>Agent on its own</th><th>Godot editor</th></tr></thead>
+          <thead><tr><th></th><th>Godotwright</th><th>Editor-driving Godot MCP servers</th><th>GDScript linters (gdtoolkit)</th><th>Godot’s <code>--convert-3to4</code></th></tr></thead>
           <tbody>
-            <tr><td>Godot 4.7 API, offline</td><td class="yes">Bundled class reference</td><td class="no">From training data</td><td class="yes">Built in</td></tr>
-            <tr><td>Flags Godot 3 code with the fix</td><td class="yes">Yes</td><td class="no">Sometimes</td><td class="no">Parse errors only</td></tr>
-            <tr><td>Usable by the agent itself</td><td class="yes">MCP + CLI</td><td>n/a</td><td class="no">Needs a human</td></tr>
-            <tr><td>Performance and structure review</td><td class="yes">Scored per category</td><td class="no">No</td><td class="no">Warnings only</td></tr>
-            <tr><td>Needs Godot installed</td><td>Only for <code>check</code></td><td>No</td><td>Yes</td></tr>
-            <tr><td>Does not</td><td>Write your game, replace playtesting, or review C# code</td><td>Run Godot</td><td>Talk to agents</td></tr>
+            <tr><td>Needs the Godot editor open</td><td class="yes">No</td><td class="no">Yes</td><td>No</td><td>No</td></tr>
+            <tr><td>Scored review: api, performance, quality, structure</td><td class="yes">Yes</td><td class="no">No</td><td class="no">Style, naming, complexity</td><td class="no">No</td></tr>
+            <tr><td>Godot 3 code</td><td class="yes">Flagged with the Godot 4 fix; <code>migrate</code> rewrites scripts</td><td class="no">No</td><td class="no">No</td><td>Rewrites scripts, scenes and settings</td></tr>
+            <tr><td>Live control of the open editor</td><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>C#</td><td class="no">No</td><td>Some do</td><td class="no">No</td><td class="no">Not yet</td></tr>
+            <tr><td>Best for</td><td>Checking and fixing what an agent writes, in the loop and in CI</td><td>Working in the open editor with an agent</td><td>Code style</td><td>A one-time port</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="sub">They work well together: an editor server to drive the editor, Godotwright to check what the agent wrote.</p>
     </div>
   </section>
 
@@ -401,11 +459,13 @@ footer a { color: var(--muted); }
     <div class="wrap">
       <h2>FAQ</h2>
       <div class="faq">
-        <details><summary>Does it need Godot installed?</summary><p>No for <code>scan</code>, <code>api</code> and <code>review</code>: they read your project files and the bundled Godot 4.7 class reference. Only <code>check</code> runs Godot 4.7 headless (<code>--godot &lt;path&gt;</code>, <code>$GODOT</code>, <code>godot</code> on your PATH, or a Godot 4 download it finds in the usual folders, Steam or Downloads).</p></details>
+        <details><summary>Does it need Godot installed?</summary><p>No for <code>scan</code>, <code>api</code>, <code>review</code>, <code>migrate</code> and the edits: they read your project files and the bundled Godot 4.7 class reference. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> run Godot 4.7 headless (<code>--godot &lt;path&gt;</code>, <code>$GODOT</code>, <code>godot</code> on your PATH, or a Godot 4 download it finds in the usual folders, Steam or Downloads).</p></details>
         <details><summary>Which agents does it work with?</summary><p>Any agent that speaks MCP over stdio. CI connects Claude Code and Codex to the server on every push. The CLI works from any shell, so agents without MCP can call it too.</p></details>
         <details><summary>Does it send my code anywhere?</summary><p>No. Learning stays on your machine and stores counters, rule names and API names, never code, names or paths. Sharing anonymous counters is opt-in, off by default, and respects <code>DO_NOT_TRACK</code>. See <a href="https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md">PRIVACY.md</a>.</p></details>
         <details><summary>Will it help me port a Godot 3 project?</summary><p>Yes. The review flags Godot 3 syntax and names such as <code>export var</code>, <code>yield</code>, <code>KinematicBody2D</code>, <code>deg2rad</code> and <code>move_and_slide()</code> with arguments, and gives the Godot 4 replacement for each.</p></details>
         <details><summary>Does it work with Godot 4.0–4.6?</summary><p>The target is Godot 4.7.x. Most findings apply to every Godot 4 version, but API lookups answer for 4.7, so a method added after your version may be reported as present.</p></details>
+        <details><summary>Does it work next to other Godot MCP servers?</summary><p>Yes. Most Godot MCP servers drive the open editor through an addon. Godotwright works from files, without the editor, and checks what the agent writes. Use both: an editor server to drive the editor, Godotwright to check the code.</p></details>
+        <details><summary>Does it write my game?</summary><p>No. It checks, runs and fixes what you or your agent write, and builds clean base 3D models to refine. It does not replace playtesting or your own judgement.</p></details>
         <details><summary>Is it on npm?</summary><p>Yes: <a href="https://www.npmjs.com/package/godotwright">godotwright</a>. <code>npx -y godotwright</code> runs the latest version, or install it with <code>npm install -g godotwright</code>.</p></details>
       </div>
     </div>
