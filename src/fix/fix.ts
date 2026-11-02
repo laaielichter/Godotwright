@@ -263,7 +263,7 @@ FIXERS["api/shader-renamed"] = (lines, i, f) => {
   return { index: i, count: 1, lines: [fixed], safety: "safe" };
 };
 
-// SCREEN_TEXTURE and friends: the sampler uniform Godot's own error suggests, after the shader_type line. One fix adds
+// SCREEN_TEXTURE and friends: the sampler uniform Godot's own error suggests, after the shader_type and render_mode lines. One fix adds
 // every missing one, so the uniforms land in one place.
 FIXERS["api/shader-removed-builtin"] = (lines, i, f) => {
   if (!SHADER_FILE.test(f.file)) return "shader code stored in a resource: change it in Godot, or move it to a .gdshader file";
@@ -274,10 +274,11 @@ FIXERS["api/shader-removed-builtin"] = (lines, i, f) => {
   const names = [...new Set(used.map((t) => t.t))];
   if (names[0] !== name) return `added together with ${names[0]}`;
   const uniforms = names.map(removedTextureUniform);
-  const type = parsed.typeLine;
-  return type === undefined
+  // After the `;` that ends shader_type and the render modes, which may span lines.
+  const end = parsed.headerEndLine;
+  return end === undefined
     ? { index: 0, count: 1, lines: [...uniforms, lines[0]!], safety: "safe" }
-    : { index: type - 1, count: 1, lines: [lines[type - 1]!, ...uniforms], safety: "safe" };
+    : { index: end - 1, count: 1, lines: [lines[end - 1]!, ...uniforms], safety: "safe" };
 };
 
 export const FIXABLE_RULES = Object.keys(FIXERS).sort();

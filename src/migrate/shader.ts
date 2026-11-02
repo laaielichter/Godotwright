@@ -26,12 +26,14 @@ export function migrateShader(source: string, api: GodotApi = GodotApi.load()): 
   });
   const tokens = parsed.tokens;
 
-  // Removed texture built-ins: the uniform Godot suggests, after the shader_type line.
+  // Removed texture built-ins: the uniform Godot suggests, after the shader_type and render_mode lines.
   const removed = [...new Set(tokens.filter((t, n) => Object.hasOwn(REMOVED_TEXTURES, t.t) && !t.member && tokens[n - 1]?.t !== "." && !parsed.declared.has(t.t)).map((t) => t.t))];
   if (removed.length) {
-    const after = parsed.typeLine ?? 0;
+    // After the statement that ends the shader_type and render modes, which may span lines.
+    const after = parsed.headerEndLine ?? 0;
     const added = removed.map(removedTextureUniform);
-    lines.splice(after, 0, ...added);
+    const cr = source.includes("\r\n") ? "\r" : "";
+    lines.splice(after, 0, ...added.map((u) => u + cr));
     // Lines below the insert move down.
     for (const c of [...changes, ...left]) if (c.line > after) c.line += added.length;
     added.forEach((u, i) => changes.push({ line: after + 1 + i, rule: "api/shader-removed-builtin", from: "", to: u }));

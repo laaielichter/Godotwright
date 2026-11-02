@@ -50,6 +50,8 @@ export interface ParsedShader {
   code: string;
   type?: string;
   typeLine?: number;
+  /** 1-based line of the `;` that ends the shader_type line and the render_mode/stencil_mode statements after it. */
+  headerEndLine?: number;
   renderModes: { name: string; line: number }[];
   stencilModes: { name: string; line: number }[];
   uniforms: ShaderUniform[];
@@ -192,12 +194,15 @@ export function parseShader(source: string): ParsedShader {
     if (t === "shader_type") {
       parsed.type ??= tokens[k + 1]?.t;
       parsed.typeLine ??= tok.line;
-      k = statementEnd(k) + 1;
+      const end = statementEnd(k);
+      parsed.headerEndLine = Math.max(parsed.headerEndLine ?? 0, tokens[end]!.line);
+      k = end + 1;
       continue;
     }
     if (t === "render_mode" || t === "stencil_mode") {
       const end = statementEnd(k);
       const list = t === "render_mode" ? parsed.renderModes : parsed.stencilModes;
+      if (parsed.typeLine !== undefined) parsed.headerEndLine = Math.max(parsed.headerEndLine ?? 0, tokens[end]!.line);
       for (let j = k + 1; j < end; j++) {
         const x = tokens[j]!;
         // Stencil modes may hold a reference value: stencil_mode read, compare_equal, 1;
