@@ -35,7 +35,7 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
 
   // `var x: set = _set_x` has no type: the parser reads the accessor keyword as the type.
   const declaredType = (type: string | undefined) => Boolean(type) && type !== "set" && type !== "get";
-  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+  for (const model of pm.modelsOf(path)) {
     const o = model.outline;
     for (const v of o.variables) count(declaredType(v.type) || v.inferred, v.line, `var ${v.name}`);
     for (const fn of o.functions) {
@@ -119,7 +119,7 @@ export function checkScriptQuality(pm: ProjectModel, path: string): { findings: 
 
   // JSON.parse_string() returns null for text that is not valid JSON (a damaged or half-written file); using the
   // result as a Dictionary or Array without a check then stops the script with an error.
-  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+  for (const model of pm.modelsOf(path)) {
     for (const fn of model.outline.functions) {
       const body = bodyOf(script.logicalLines, fn);
       body.forEach((ll, i) => {

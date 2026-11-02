@@ -40,6 +40,12 @@ export interface Connection {
   to: string;
   method: string;
   line: number;
+  /** Extra arguments the connection adds after the signal's own (`binds=[...]`). */
+  binds?: number;
+  /** Signal arguments the connection drops from the end (`unbinds=N`). */
+  unbinds?: number;
+  /** CONNECT_APPEND_SOURCE_OBJECT: the emitting object is passed as one more argument. */
+  appendSource?: boolean;
 }
 
 export interface ResourceFile {
@@ -104,6 +110,9 @@ export function parseResourceText(text: string): ResourceFile {
           to: attr("to") ?? "",
           method: attr("method") ?? "",
           line: section.line,
+          ...(Array.isArray(section.attrs["binds"]) && section.attrs["binds"].length ? { binds: section.attrs["binds"].length } : {}),
+          ...(typeof section.attrs["unbinds"] === "number" && section.attrs["unbinds"] > 0 ? { unbinds: section.attrs["unbinds"] } : {}),
+          ...(typeof section.attrs["flags"] === "number" && (section.attrs["flags"] & 16) !== 0 ? { appendSource: true } : {}),
         });
         break;
       case "resource":

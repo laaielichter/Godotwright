@@ -60,16 +60,30 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
         out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): node "${from === null ? c.from : c.to}" does not exist.`));
         continue;
       }
+      let passes: number | undefined;
       if (from && from.kind !== "enum" && !dynamic(pm, from) && !foreign(from)) {
         const signal = pm.memberOf(from, c.signal);
         if (!signal || signal.kind !== "signal") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal}: ${label(from)} has no signal "${c.signal}".`));
+        } else if (signal.signalArgs !== undefined) {
+          passes = Math.max(0, signal.signalArgs - (raw.unbinds ?? 0)) + (raw.binds ?? 0) + (raw.appendSource ? 1 : 0);
         }
       }
       if (to && to.kind !== "enum" && !dynamic(pm, to) && !foreign(to)) {
         const method = pm.memberOf(to, c.method);
         if (!method || method.kind !== "method") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): ${label(to)} has no method "${c.method}".`));
+        } else if (passes !== undefined && method.args && (passes < method.args.min || passes > method.args.max)) {
+          // Godot calls the method with the signal's arguments (minus unbinds, plus binds); a mismatch fails on every emit.
+          const takes = method.args.min === method.args.max ? `${method.args.min}` : method.args.max === Number.POSITIVE_INFINITY ? `${method.args.min} or more` : `${method.args.min} to ${method.args.max}`;
+          out.push(
+            finding(
+              "structure/connection-arguments",
+              scene.path,
+              c.line,
+              `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): the signal passes ${passes} argument${passes === 1 ? "" : "s"}${raw.binds || raw.unbinds || raw.appendSource ? " (with binds, unbinds or the source object)" : ""}, but ${c.method}() takes ${takes}. Godot fails on every emit: "Method expected ${method.args.min} argument(s), but called with ${passes}".`,
+            ),
+          );
         }
       }
     }
@@ -131,11 +145,20 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
   for (const r of map.resources) if (r.script) referenced.add(r.script);
   for (const a of map.autoloads) referenced.add(a.path);
   const text = code + [...pm.data.resources.values()].map((r) => r.extResources.map((e) => e.path).join("\n")).join("\n");
+  // Every script file name the text mentions, read once. Whole names only: `old_enemy.gd` does not use `enemy.gd`,
+  // but `x.enemy.gd` and `res://enemy.gd` do (the name starts after a character that is not a word character).
+  const mentioned = new Set<string>();
+  for (const m of text.matchAll(/[^\s"'`()[\]{},;:=+*\/\\<>|&!?#]+\.gd(?![\w.])/g)) {
+    const token = m[0];
+    mentioned.add(token);
+    for (let i = 1; i < token.length; i++) if (!/\w/.test(token[i - 1]!)) mentioned.add(token.slice(i));
+  }
   for (const [path, outline] of pm.data.scripts) {
     if (unreadable || path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
-    // Whole file name only: `old_enemy.gd` does not use `enemy.gd`.
-    const base = path.slice(path.lastIndexOf("/") + 1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`(^|[^\\w])${base}(?![\\w.])`).test(text)) continue;
+    const name = path.slice(path.lastIndexOf("/") + 1);
+    if (mentioned.has(name)) continue;
+    // A name with characters the token scan stops at (a space, a bracket): look for it the slow way.
+    if (/[\s"'`()[\]{},;:=+*\\<>|&!?#]/.test(name) && new RegExp(`(^|[^\\w])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w.])`).test(text)) continue;
     const ext = outline.extends ?? "";
     if (/^(EditorScript|EditorPlugin|SceneTree|MainLoop)$/.test(ext)) continue;
     // Unit tests: the test runner (GUT, GdUnit4) loads them, not a scene.

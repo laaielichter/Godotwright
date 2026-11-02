@@ -124,8 +124,13 @@ export function loadScenarios(path: string): { root: string; scenarios: { file: 
 
 /** Checks a finished run against the scenario's expectations. */
 export function judge(scenario: Scenario, report: PlayReport): ExpectationResult[] {
-  const last = report.samples.at(-1)?.frame ?? scenario.frames ?? 0;
-  return scenario.expect.map((e) => {
+  return judgeClaims(scenario.expect, report, scenario.frames);
+}
+
+/** Checks claims against a play run: each on its frame, or on the last frame that was sampled. */
+export function judgeClaims(claims: Expectation[], report: PlayReport, frames?: number): ExpectationResult[] {
+  const last = report.samples.at(-1)?.frame ?? frames ?? 0;
+  return claims.map((e) => {
     const frame = e.frame ?? last;
     const sample = report.samples.find((s) => s.frame === frame);
     if (!sample) return { expect: e.text, ok: false, message: `frame ${frame} was not reached` };
@@ -134,6 +139,15 @@ export function judge(scenario: Scenario, report: PlayReport): ExpectationResult
     const ok = compare(actual, e.op, e.value);
     return { expect: e.text, ok, actual, ...(ok ? {} : { message: `${e.watch} was ${actual} at frame ${frame}` }) };
   });
+}
+
+/** Claim results as lines for a play report; empty when there were none. */
+export function formatClaims(results: ExpectationResult[]): string {
+  if (!results.length) return "";
+  const failed = results.filter((r) => !r.ok).length;
+  const lines = [failed ? `expect: ${failed} of ${results.length} FAILED` : `expect: all ${results.length} hold`];
+  for (const r of results) lines.push(`  ${r.ok ? "ok" : "FAILED"}: ${r.expect}${r.ok ? (r.actual !== undefined ? ` (${r.actual})` : "") : ` (${r.message})`}`);
+  return `${lines.join("\n")}\n`;
 }
 
 export interface ScenarioRunOptions {

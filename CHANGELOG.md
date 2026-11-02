@@ -2,7 +2,90 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
-## Unreleased
+## 0.4.0 (a game that stays up, a doctor, undo, and what the build and the project really hold)
+
+- **`godot_doctor` (and `godotwright doctor`): what is wrong, in which order to fix it, and why.** One call runs the
+  review and, when Godot is installed, loads every script and scene with Godot; it groups the findings by cause
+  (twenty findings from one missing file are one problem), puts the most urgent first, and gives each its place, the
+  lesson that explains it, the fix, and whether `godot_fix` or `godot_migrate` can do it. `symptom` adds the lessons
+  for what you see going wrong. It ends with numbered next steps.
+- **`godot_fix` (and `godotwright fix`): mechanical fixes for review findings**, each labelled `safe` (only removes the
+  problem) or `check` (read it): a freed check put first, `get_meta()` with `has_meta()`, a lone ternary as if/else,
+  text encoded twice decoded, `emit_signal()` as `signal.emit()`, a MultiMesh format moved before `instance_count`,
+  `Timer.start()` moved after `add_child()`, `weakref()` typed `WeakRef`, Variant inference typed, and (check) an
+  `await` added to a coroutine call. It shows the changes first, writes with `write`, and reviews the changed files
+  again so the result says what is left.
+- **Runtime errors come with their GDScript call chain.** `godot_check`, `godot_play`, `godot_test` and screenshots
+  keep the backtrace Godot prints with a runtime error and show the callers under it; an error that repeats every
+  frame is one line with its count (`(x120)`).
+- **A game session that stays up: `godot_session` and `godot_game`** (and `godotwright session` / `godotwright game`).
+  The scene loads once, headless and paused at frame 0, and keeps running between calls: look at the live tree, read
+  and set values, call methods, evaluate Godot Expressions, record signals, and step frames with the same frame-exact
+  input as `godot_play`, stopping early when a condition holds. Every answer lists the errors the game printed since
+  the last call, with their call chain. Time only moves on a step, so it stays deterministic; a world that takes a
+  minute to load loads once. No editor and no add-on: a temporary script in `.godot/godotwright/` on a loopback port
+  with a token; the game quits by itself after 15 idle minutes. The window gets the size the project sets (headless it
+  would be 64x64), so Controls lay out as players see them. Three questions agents get wrong without a picture:
+  - `layout`: every 3D object's global position, size and lowest point, and whether it rests on, floats above or is
+    buried in what is below it, plus scale mistakes (a mesh at 100x);
+  - `ray`: what a physics ray hits, where, with which normal (3D or 2D);
+  - `ui`: the visible controls at one or more window sizes, with clipped labels, panels off-screen, overlapping buttons
+    and tiny targets.
+
+  And `reload` loads the scripts you edited into the running game: every node keeps its values and runs the new code
+  from the next step, new variables get their starting values, a script that extends a changed one is compiled again
+  after it, and a script that does not compile is left as it was (the old code keeps running, the error names the
+  line). Try a fix in seconds on a world that took a minute to load.
+- **`godot_deps` (and `godotwright deps`): the project as a graph of files.** From where the game starts (main
+  scene, autoloads, every `res://` path in `project.godot`, export include filters, the shipped file list in
+  `godotwright.json`, add-ons, tests, editor scripts) through `ext_resource`, `preload`, `load`, `class_name`, folders
+  and file names the code builds paths from, `.gltf` buffers, textures next to models, CSV translations and import
+  settings. `unused` lists what nothing reaches, biggest first (whole folders as one line); `why` gives the chain from
+  the game to a file before you delete it; `of` says what a scene loads with it and what it can load later; `cycles`
+  finds scenes that load each other through `ext_resource`, which Godot 4.7 cannot load and reports as
+  "referenced non-existent resource" for a file that is there. Checked on 139 Godot demo projects: none of the 163
+  files it calls unused there is loaded by anything the game runs (screenshots, source `.blend` files, editor-only
+  scenes, leftovers).
+- **`godot_undo` (and `godotwright undo`): every write can be taken back.** Scene and project edits, renames (with
+  their file moves), migrations, fixes and model builds keep the files as they were in `.godot/godotwright/journal/`
+  (the last 40 writes), and say so in their result. Undo puts back the newest writes first; a file changed after the
+  write stops the undo there, so later edits by hand are never lost silently (`force` to undo anyway).
+- **`godot_export` (and `godotwright export`): "works in the editor, broken in the build", found before anyone exports.**
+  It compares the export presets with what the scripts and scenes load: files that `exclude_filter` leaves out
+  although they are preloaded (Godot leaves them out even when something needs them), plain data files that Godot
+  exports only when `include_filter` names them, and paths built at run time under an excluded folder; plus whether
+  export templates are installed. Checked against what a real Godot 4.7.2 export puts in the pack: JSON and imported
+  CSV go in by themselves; text, binary, GeoJSON, cfg, XML and YAML do not.
+- **`godot_perf` (and `godotwright perf`): measure a scene the way a player feels it.** Headless frame-time p50, p95,
+  p99 and max against a budget, the physics step apart from the rest, the slowest frames with what changed on them
+  (thousands of nodes made in one frame, a heavy physics step, script work), node and orphan counts, the change since
+  the last run of the same scene, and the lessons that fit the numbers. An error result when p95 is over budget or more
+  than 10% worse than last time.
+- **`godot_play` answers "did it happen, and when" in one call:** `until` stops at the first frame a condition holds,
+  `signals` records when signals fire with their arguments, `summary` gives one line per watched value (start, end,
+  min, max, first change) instead of a table, and `expect` checks claims and makes the run fail when one does not hold.
+- **New review rule `structure/connection-arguments` (error):** a signal connection saved in a scene whose method
+  cannot take what the signal passes (counting `binds`, `unbinds` and the source object flag). Godot fails on every
+  emit with "Method expected 1 argument(s), but called with 0"; the review now says so before the game runs. Quiet on
+  the 139 official demos and every project of a large open world.
+- **Reviews are 3.5 times faster on large projects, and the edit hook about 20 times faster.** On a game with 800
+  scripts a full review took 12.6 s and now takes 3.6 s; the findings are byte for byte the same on 163 projects (the
+  139 official demos and every project of a large open world).
+  - Godot API lookups are indexed and kept per class instead of scanned each time.
+  - Finding scripts that nothing refers to reads the code once instead of once per script.
+  - Each check looks up the classes of one script through an index instead of walking all scripts.
+  - A long-running MCP server parses only the files that changed since the last call.
+  - New review option `focus`: the whole project is read so types resolve, but only the named files are checked. The
+    edit and stop hooks use it: 0.6-1.4 s on that game instead of 12.6 s.
+- **Fewer false alarms from the new rules**, found by running them over every overlay of the project the lessons came
+  from:
+  - `quality/standalone-ternary` reads the statement after a match pattern or an `if x:` on the same line, so
+    `"key": return a if c else b` is no longer reported (a match branch that only calls `a() if c else b()` still is).
+  - `quality/time-modulo-window` only looks at the conditions of `if`, `elif` and `while`, and leaves `% 2` alone: a
+    blink value that is true half the time is meant to be.
+  - `api/multimesh-format-after-count` knows that a MultiMesh made anew (once per pass of a loop) starts at
+    `instance_count` 0.
+  - `api/viewport-world-borrowed` is an info: the borrowed world works while the node is in the root viewport.
 
 ## 0.3.0 (agents in the loop, lessons from a large open world, prettier models)
 

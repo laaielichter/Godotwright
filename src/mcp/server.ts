@@ -24,6 +24,8 @@ import {
   reviewLearning,
 } from "../learn/hooks.js";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { FIXABLE_RULES, fixProject, formatFix } from "../fix/fix.js";
+import { doctorProject, formatDoctor } from "../doctor/doctor.js";
 import { findUsages, formatUsages } from "../usages/usages.js";
 import {
   RenameError,
@@ -86,6 +88,13 @@ import {
   type View,
 } from "../screenshot/screenshot.js";
 import { PlayError, formatPlay, playScene } from "../play/play.js";
+import { formatPerf, perfScene } from "../perf/perf.js";
+import { formatGame, formatStart } from "../session/format.js";
+import { checkExport, formatExportCheck } from "../export/export.js";
+import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
+import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
+import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
+import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
   TestRunError,
   formatTests,
@@ -137,15 +146,18 @@ const PROFILES: Record<Tier, Profile> = {
     infos: false,
     instructions: [
       `Godotwright gives you checked Godot ${GODOT_TARGET} knowledge for this project. Follow these steps:`,
+      "0. In a project you do not know yet, or when something is broken and you do not know where to start, call godot_doctor: what is wrong, in which order to fix it, and why.",
       "1. Call godot_scan once to learn the scenes, scripts, signals and input actions.",
       "2. Before you use an engine class, method, property or signal you are not sure about, call godot_api. Never guess API names; Godot 3 names do not work in Godot 4.",
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
-      "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it.",
+      "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
+      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
+      "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
       'To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put "archetype" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.',
     ].join("\n"),
@@ -160,11 +172,18 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_api and godot_api_search answer from the official Godot 4.7 class reference, offline. Use them instead of memory for exact signatures, and to translate Godot 3 names.",
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
+      "- godot_doctor answers \"what is wrong here, and in which order do I fix it\": the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and whether godot_fix or godot_migrate can do it, then numbered next steps. Start here in a project you do not know or when something is broken.",
+      "- godot_fix applies the mechanical fixes for review findings (each labelled safe or check), shows them first, writes with write: true and reviews the changed files again.",
       "- godot_checklist lists every AAA rule with its fix.",
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
+      "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
+      "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
+      "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
+      "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export.",
+      "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
@@ -766,6 +785,300 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   server.registerTool(
+    "godot_export",
+    {
+      title: "Check what the exported game will hold",
+      description:
+        "Compare the export presets (export_presets.cfg) with what the scripts and scenes load, without exporting: files that exclude_filter leaves out although they are preloaded or loaded (Godot leaves them out even when something needs them, so the build fails there), plain data files (text, binary, GeoJSON, cfg, XML, YAML; JSON and imported CSV are fine) that Godot only exports when include_filter names them, and paths built at run time under an excluded folder; plus whether export templates are installed. `preset` limits it to one preset (name or number). Read-only. Run it before an export and after changing what the game loads.",
+      inputSchema: {
+        path: pathParam,
+        preset: z.string().optional().describe("only this preset (its name or number)"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, preset }) =>
+      guard(() => {
+        const result = checkExport(where(path), preset ? { preset } : {});
+        const body = formatExportCheck(result);
+        return result.problems.some((p) => p.severity === "error") ? failure(body) : text(body);
+      }),
+  );
+
+  server.registerTool(
+    "godot_deps",
+    {
+      title: "The project's files as a graph: unused, why used, what a scene loads",
+      description:
+        "Follow what loads what, from where the game starts (main scene, autoloads, every res:// path in project.godot, export include filters, the shipped file list from godotwright.json, add-ons, tests, editor scripts), through ext_resource, preload, load, class_name, folders and file names the code builds paths from, textures next to models and import settings. op `unused`: files nothing reaches, biggest first, whole folders as one line (when in doubt a file counts as used, so the list can be trusted). op `why` (file): the chain from the game to the file, before you delete or move it. op `of` (file): what a scene or resource loads with it, biggest first, what it can load later, and paths that do not exist. op `cycles`: scenes or resources that load each other through ext_resource, which Godot cannot load (it reports \"[ext_resource] referenced non-existent resource\" for a file that is there). Read-only.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["unused", "why", "of", "cycles"]).describe("unused, why, of or cycles"),
+        file: z.string().optional().describe("why and of: the res:// file"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, op, file }) =>
+      guard(() => {
+        const dir = where(path);
+        if (op === "unused") return text(formatUnused(unusedFiles(dir), profile.detail === "full" ? 60 : 25));
+        if (op === "cycles") {
+          const cycles = sceneCycles(dir);
+          return cycles.length ? failure(formatCycles(cycles)) : text(formatCycles(cycles));
+        }
+        if (!file) return failure(`${op} needs file (a res:// path)`);
+        if (op === "why") return text(formatWhy(whyUsed(dir, file)));
+        const d = depsOf(dir, file);
+        return d.missing.length ? failure(formatDepsOf(d)) : text(formatDepsOf(d));
+      }),
+  );
+
+  server.registerTool(
+    "godot_undo",
+    {
+      title: "Undo the last Godotwright writes",
+      description:
+        "Undo what Godotwright wrote, newest first: scene and project edits, renames (moved files go back), migrations, fixes and model builds each keep the files as they were, in .godot/godotwright/journal/ (the last 40 writes). `steps` undoes that many writes (default 1); `list` only shows them. A file changed after the write (by hand or by another tool) stops the undo there, so your later edits are never lost silently; `force` undoes anyway. Use it when a write made things worse, instead of repairing by hand.",
+      inputSchema: {
+        path: pathParam,
+        steps: z.number().int().min(1).max(40).optional().describe("how many writes to undo (default 1)"),
+        list: z.boolean().optional().describe("only list the writes that can be undone"),
+        force: z.boolean().optional().describe("undo even when a file changed after the write; those changes are lost"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, steps, list, force }) =>
+      guard(() => {
+        if (list) return text(formatJournal(readJournal(where(path)).entries));
+        const result = undoJournal(where(path), { ...(steps ? { steps } : {}), ...(force ? { force: true } : {}) });
+        const body = formatUndo(result);
+        return result.blocked ? failure(body) : text(body);
+      }),
+  );
+
+  server.registerTool(
+    "godot_session",
+    {
+      title: "Start or stop a game session that stays up",
+      description:
+        "Load a scene in Godot 4.7 headless once and keep it running between calls, paused at frame 0, so godot_game can look at the live game and move it frame by frame without loading the world again (a big world can take a minute to load; godot_play loads it on every call). op `start` (scene: default the main scene; restart: true loads it again), `status`, or `stop`. Only this machine can reach it (a loopback port with a token), the project is not changed (the script lives in .godot/godotwright/), and the game quits by itself after `idle_minutes` without a request (default 15). Stop it when you are done.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["start", "status", "stop"]).describe("start, status or stop"),
+        scene: z.string().optional().describe("the res:// scene to load (default: the main scene)"),
+        restart: z.boolean().optional().describe("stop a running session and load the scene again"),
+        idle_minutes: z.number().int().min(1).max(240).optional().describe("quit after this many minutes without a request (default 15)"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("how long the scene may take to load (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, op, scene, restart, idle_minutes, timeout_seconds }) => {
+      try {
+        const dir = where(path);
+        if (op === "stop") return text((await stopSession(dir)) ? "session stopped\n" : "no session was running\n");
+        if (op === "status") {
+          if (!readSession(dir)) return text("no session is running; start one with op start\n");
+          const { reply, diagnostics } = await gameRequest(dir, "status");
+          return text(formatGame("status", reply, diagnostics));
+        }
+        const started = await startSession(dir, {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          restart: restart === true,
+          ...(idle_minutes ? { idleMinutes: idle_minutes } : {}),
+          timeoutMs: (timeout_seconds ?? 300) * 1000,
+        });
+        return text(formatStart(started));
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_game",
+    {
+      title: "Look at and drive the running game session",
+      description:
+        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `layout` (3D objects: global position, size, lowest point, and whether each rests on, floats above or sinks into what is below, plus scale mistakes), `ray` (from, to: what a physics ray hits), `ui` (visible controls at one or more window `sizes`, with clipped text, off-screen panels, overlapping buttons and small targets), `errors` (what the game printed since the last call), `reload` (load the scripts you edited into the running game: every node keeps its values and runs the new code from the next step, so you try a fix without loading the world again; `files`, default every script changed since the last reload; a script that does not compile is left as it was). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "layout", "ray", "ui", "errors", "reload"]).describe("what to do"),
+        files: z.array(z.string()).optional().describe("reload: res:// scripts to reload (default: every script changed since the session started or the last reload)"),
+        from: z.string().optional().describe("ray: start, Vector3(...) or Vector2(...)"),
+        to: z.string().optional().describe("ray: end"),
+        sizes: z.array(z.string()).optional().describe("ui: window sizes such as 1280x720 or 720x1280 (default the size the project sets)"),
+        root: z.string().optional().describe("tree: start at this node (default the scene root)"),
+        depth: z.number().int().min(0).max(20).optional().describe("tree: levels to show (default 3)"),
+        limit: z.number().int().min(1).max(1000).optional().describe("tree: nodes to show (default 80)"),
+        watch: z.array(z.string()).optional().describe("get and step: values to read, Node.property or Node.method()"),
+        target: z.string().optional().describe("set: Node.property"),
+        value: z.string().optional().describe("set: the new value as Godot writes it"),
+        node: z.string().optional().describe("call: node path from the scene root"),
+        method: z.string().optional().describe("call: method name"),
+        args: z.array(z.string()).optional().describe("call: arguments as Godot values"),
+        expr: z.string().optional().describe("eval: the expression"),
+        frames: z.number().int().min(1).max(100_000).optional().describe("step: frames to run (default 60)"),
+        input: z.string().optional().describe('step: "0 press jump; 10 release jump; 20 hold right 30"'),
+        every: z.number().int().min(1).optional().describe("step: sample every n frames (default: about 10 samples)"),
+        until: z.string().optional().describe('step: stop at the first frame where this holds, "Hero.is_on_floor() == true"'),
+        signals: z.array(z.string()).optional().describe("signals: Node.signal to record"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async (a) => {
+      try {
+        const dir = where(a.path);
+        if (a.op === "errors") {
+          const d = newDiagnostics(dir);
+          return text(d.length ? `${d.map(formatDiagnostic).join("\n")}\n` : "no new errors or warnings\n");
+        }
+        if (a.op === "reload") {
+          const { reply, diagnostics, others } = await reloadScripts(dir, a.files);
+          const body = formatGame("reload", { ...reply, others }, diagnostics);
+          return reply["ok"] && !((reply["failed"] as string[] | undefined)?.length) ? text(body) : failure(body);
+        }
+        let payload: Record<string, unknown> = {};
+        let timeout: number | undefined;
+        if (a.op === "tree") payload = { root: a.root ?? ".", depth: a.depth ?? 3, limit: a.limit ?? 80 };
+        else if (a.op === "get") payload = { watch: a.watch ?? [] };
+        else if (a.op === "set") {
+          if (!a.target || a.value === undefined) return failure("set needs target (Node.property) and value");
+          payload = { path: a.target, value: a.value };
+        } else if (a.op === "call") {
+          if (!a.method) return failure("call needs node and method");
+          payload = { node: a.node ?? ".", method: a.method, args: a.args ?? [] };
+        } else if (a.op === "eval") {
+          if (!a.expr) return failure("eval needs expr");
+          payload = { expr: a.expr };
+        } else if (a.op === "signals") payload = { signals: a.signals ?? [] };
+        else if (a.op === "layout") payload = { root: a.root ?? ".", limit: a.limit ?? 60 };
+        else if (a.op === "ray") {
+          if (!a.from || !a.to) return failure("ray needs from and to, e.g. Vector3(0, 10, 0) and Vector3(0, -10, 0)");
+          payload = { from: a.from, to: a.to };
+        } else if (a.op === "ui") payload = { sizes: a.sizes ?? [] };
+        else if (a.op === "step") {
+          const frames = a.frames ?? 60;
+          payload = stepPayload({ frames, ...(a.input ? { input: a.input } : {}), watch: a.watch ?? [], ...(a.every ? { every: a.every } : {}), ...(a.until ? { until: a.until } : {}) });
+          timeout = Math.max(60_000, frames * 200);
+        }
+        const { reply, diagnostics } = await gameRequest(dir, a.op, payload, timeout);
+        const body = formatGame(a.op, reply, diagnostics, a.watch ?? [], profile.detail === "full");
+        return reply["ok"] ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_perf",
+    {
+      title: "Measure a scene's frame times",
+      description:
+        "Run a scene in Godot 4.7 headless and measure it the way a player feels it: frame-time p50, p95, p99 and max against a budget (default 16.6 ms), the physics step apart from the rest of the frame, the slowest frames with what changed on them (nodes made or freed in one frame, a heavy physics step, script work), node and orphan counts, and the change since the last run of the same scene (kept in .godot/godotwright/perf/). Headless measures the CPU side (scripts, physics, scene work), not the GPU. `input` plays a timeline as godot_play does, to measure while something happens. An error result when p95 is over budget or more than 10% worse than last time. Lessons that fit the numbers are named. Measure before and after every performance change.",
+      inputSchema: {
+        path: pathParam,
+        scene: z.string().optional().describe("the res:// scene to measure (default: the main scene)"),
+        frames: z.number().int().min(10).max(50_000).optional().describe("frames to measure (default 600)"),
+        warmup: z.number().int().min(0).max(10_000).optional().describe("frames to run first without measuring (default 60)"),
+        input: z.string().optional().describe('input while measuring: "10 hold right 300"'),
+        budget_ms: z.number().positive().optional().describe("frame budget in ms (default 16.6)"),
+        baseline: z.boolean().optional().describe("compare with and save the last run of this scene (default true)"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout of the run (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, scene, frames, warmup, input, budget_ms, baseline, timeout_seconds }) => {
+      try {
+        const report = await perfScene(where(path), {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          ...(frames ? { frames } : {}),
+          ...(warmup !== undefined ? { warmup } : {}),
+          ...(input ? { input } : {}),
+          ...(budget_ms ? { budgetMs: budget_ms } : {}),
+          baseline: baseline !== false,
+          timeoutMs: (timeout_seconds ?? 300) * 1000,
+        });
+        const body = formatPerf(report);
+        return report.verdict === "ok" && report.run.finished ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for the static performance checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_doctor",
+    {
+      title: "What is wrong, and in which order to fix it",
+      description:
+        "One call for a project you do not know yet, or when something is broken and you do not know where to start: runs the review and, when Godot is installed, loads every script and scene with Godot; groups the findings by cause (twenty findings from one missing file are one problem), puts the most urgent first (Godot's errors, then the review's), and gives each the place, the lesson from real projects that explains it, the fix, and whether godot_fix or godot_migrate can do it. Pass `symptom` with what you see going wrong (\"helicopter bounces on the moving deck\") to add the lessons for it. Ends with numbered next steps. Read-only. Use godot_review for the full list and godot_check for Godot's raw output.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only problems in these res:// files"),
+        symptom: z.string().optional().describe("what you see going wrong, in plain words"),
+        godot: z.boolean().optional().describe("run Godot too when it is installed (default true)"),
+        limit: z.number().int().min(1).max(100).optional().describe("problems shown in full (default 12)"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, files, symptom, godot, limit, detail }) => {
+      try {
+        const report = await doctorProject(where(path), {
+          ...(files?.length ? { files: files.map(resPath) } : {}),
+          ...(symptom ? { symptom } : {}),
+          godot: godot !== false,
+          godotPath: options.godot,
+          limit: limit ?? (profile.detail === "brief" ? 8 : 12),
+        });
+        return text(formatDoctor(report, detail ?? profile.detail));
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_fix",
+    {
+      title: "Fix review findings mechanically",
+      description:
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only these res:// files"),
+        rules: z.array(z.string()).optional().describe(`only these rules (fixable: ${FIXABLE_RULES.join(", ")})`),
+        include_check: z.boolean().optional().describe("also apply fixes labelled check (default false)"),
+        write: z.boolean().optional().describe("write the fixes (default false: show them only)"),
+        detail: detailParam,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    async ({ path, files, rules, include_check, write, detail }) =>
+      guard(() => {
+        const result = fixProject(where(path), {
+          ...(files?.length ? { files: files.map(resPath) } : {}),
+          ...(rules?.length ? { rules } : {}),
+          includeCheck: include_check === true,
+          write: write === true,
+        });
+        return text(formatFix(result, detail ?? profile.detail));
+      }),
+  );
+
+  server.registerTool(
     "godot_check",
     {
       title: "Check with real Godot",
@@ -921,7 +1234,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Play a scene with input",
       description:
-        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
+        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. `until` stops the run at the first frame a condition holds (\"Heli.is_on_floor() == true\"); `signals` records when signals fire, with their arguments; `summary: true` gives one line per watched value (start, end, min, max, first change) instead of a table, which saves tokens on long runs; `expect` checks claims such as \"Heli.health > 0\" or \"Heli.position.y < 1 @ 90\" and makes the result an error when one fails, so a play run doubles as a test. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -955,6 +1268,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe(
             "sample every n frames (default 10); frames with input and the last frame are always sampled",
           ),
+        until: z.string().optional().describe('stop at the first frame where this holds: "Heli.is_on_floor() == true"'),
+        signals: z.array(z.string()).optional().describe('signals to record: "Heli.landed", "Deck.body_entered"'),
+        summary: z.boolean().optional().describe("one line per watched value instead of a table (samples every frame)"),
+        expect: z
+          .array(z.string())
+          .optional()
+          .describe('claims to check: "Heli.health > 0" (last frame) or "Heli.position.y < 1 @ 90"; their values are watched'),
         timeout_seconds: z
           .number()
           .int()
@@ -970,20 +1290,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, scene, input, watch, frames, every, timeout_seconds }) => {
+    async ({ path, scene, input, watch, frames, every, until, signals, summary, expect, timeout_seconds }) => {
       try {
+        const claims = (expect ?? []).map(parseExpectation);
+        const watched = [...new Set([...(watch ?? []), ...claims.map((c) => c.watch)])];
         const report = await playScene(where(path), {
           godot: options.godot,
           ...(scene ? { scene } : {}),
           ...(input ? { input } : {}),
-          ...(watch ? { watch } : {}),
+          ...(watched.length ? { watch: watched } : {}),
           ...(frames ? { frames } : {}),
-          ...(every ? { every } : {}),
+          ...(summary ? { every: 1 } : every ? { every } : {}),
+          ...(until ? { until } : {}),
+          ...(signals?.length ? { signals } : {}),
           timeoutMs: (timeout_seconds ?? 300) * 1000,
         });
-        const body = formatPlay(report);
+        const results = judgeClaims(claims, report);
+        const body = formatPlay(report, { summary: summary === true }) + formatClaims(results);
         return !report.finished ||
-          report.diagnostics.some((d) => d.severity === "error")
+          report.diagnostics.some((d) => d.severity === "error") ||
+          results.some((r) => !r.ok)
           ? failure(body)
           : text(body);
       } catch (error) {
@@ -991,7 +1317,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return failure(
             `${error.message}\nUse godot_review for checks without Godot.`,
           );
-        if (error instanceof PlayError || error instanceof ProjectNotFoundError)
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError || error instanceof ScenarioError)
           return failure(error.message);
         throw error;
       }

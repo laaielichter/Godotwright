@@ -19,7 +19,7 @@ vi.mock("node:fs", async (importOriginal) => {
       }
       return (fn as unknown as (...rest: unknown[]) => unknown)(...args);
     }) as unknown as F;
-  return { ...actual, readdirSync: guard(actual.readdirSync), readFileSync: guard(actual.readFileSync) };
+  return { ...actual, readdirSync: guard(actual.readdirSync), readFileSync: guard(actual.readFileSync), openSync: guard(actual.openSync) };
 });
 
 describe("scanProject on the demo project", () => {

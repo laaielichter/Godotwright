@@ -47,6 +47,11 @@ describe("bundled lessons", () => {
     expect(changed).toEqual([]);
   });
 
+  it("name only rules that point to them, not broad ones every typo fires", () => {
+    const broad = ["api/unknown-function", "api/unknown-member", "api/unknown-type", "api/unsafe-member", "api/wrong-arguments", "api/godot3-syntax", "api/unknown-signal", "structure/broken-reference", "structure/parse-error", "structure/missing-node"];
+    for (const l of lessons) for (const r of l.rules ?? []) expect(broad, `${l.id}: ${r}`).not.toContain(r);
+  });
+
   it("explain every rule that came from a lesson", () => {
     const explained = new Set(lessons.flatMap((l) => l.rules ?? []));
     for (const rule of [

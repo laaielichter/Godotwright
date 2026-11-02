@@ -1,5 +1,3 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkProject } from "../../src/check/check.js";
 import { formatDiagnostic } from "../../src/check/log.js";

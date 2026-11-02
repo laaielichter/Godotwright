@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { JournalWriter } from "../journal/journal.js";
 import { codeMask } from "../migrate/migrate.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
@@ -26,6 +26,8 @@ export interface RenamePlan {
   /** Usages the rename could not rewrite safely; they need a look by hand. */
   skipped: Usage[];
   written: boolean;
+  /** The journal entry of the write (godot_undo). */
+  journal?: number;
   /** Review errors before and after, when written. */
   review?: { before: number; after: number };
 }
@@ -163,19 +165,17 @@ export function renameInProject(path: string, from: string, to: string, options:
 
   const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
   const before = errors();
-  for (const [full, text] of newText) writeFileSync(full, text);
-  for (const m of moves) {
-    const target = fromResPath(root, m.to);
-    mkdirSync(dirname(target), { recursive: true });
-    renameSync(fromResPath(root, m.from), target);
-  }
+  const journal = new JournalWriter(root, "rename", `${from} -> ${to}`);
+  for (const [full, text] of newText) journal.write(full, text);
+  for (const m of moves) journal.move(fromResPath(root, m.from), fromResPath(root, m.to));
   // An .import file names its source file; point it at the new path.
   const imported = moves.find((m) => m.to.endsWith(".import"));
   if (imported) {
     const f = fromResPath(root, imported.to);
-    writeFileSync(f, readFileSync(f, "utf8").split(from).join(to));
+    journal.write(f, readFileSync(f, "utf8").split(from).join(to));
   }
-  return { ...plan, written: true, review: { before, after: errors() } };
+  const id = journal.commit();
+  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
 }
 
 /** The plan as a compact diff: one - and + pair per changed line, grouped by file, then what needs a hand. */
@@ -184,7 +184,7 @@ export function formatRename(plan: RenamePlan): string {
   const files = new Set(plan.edits.map((e) => e.file)).size;
   out.push(
     `rename ${plan.from} -> ${plan.to}: ${plan.edits.length} line${plan.edits.length === 1 ? "" : "s"} in ${files} file${files === 1 ? "" : "s"}` +
-      `${plan.moves.length ? `, ${plan.moves.length} file${plan.moves.length === 1 ? "" : "s"} moved` : ""}${plan.written ? " (written)" : " (dry run: add --write to apply)"}`,
+      `${plan.moves.length ? `, ${plan.moves.length} file${plan.moves.length === 1 ? "" : "s"} moved` : ""}${plan.written ? ` (written${plan.journal ? `, journal #${plan.journal}: godot_undo reverts it` : ""})` : " (dry run: add --write to apply)"}`,
   );
   for (const m of plan.moves) out.push(`  move ${m.from} -> ${m.to}`);
   let current = "";

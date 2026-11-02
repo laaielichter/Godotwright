@@ -60,12 +60,15 @@ export class GodotApi {
 
   /** The class and its ancestors, nearest first. */
   ancestors(name: string): ApiClass[] {
+    const known = this.ancestorCache.get(name);
+    if (known) return known;
     const out: ApiClass[] = [];
     let cls = this.getClass(name);
     while (cls && out.length < 64) {
       out.push(cls);
       cls = cls.inherits ? this.classes.get(cls.inherits) : undefined;
     }
+    this.ancestorCache.set(name, out);
     return out;
   }
 
@@ -73,7 +76,15 @@ export class GodotApi {
     return this.ancestors(name).some((c) => c.name === base);
   }
 
+  // Lookups a review makes thousands of times, kept per class (the API never changes after it is loaded).
+  private readonly enumCache = new Map<ApiClass, EnumInfo[]>();
+  private readonly ownIndex = new Map<ApiClass, Map<string, ApiEntry[]>>();
+  private readonly ancestorCache = new Map<string, ApiClass[]>();
+  private readonly memberCache = new Map<string, ApiEntry[]>();
+
   enums(cls: ApiClass): EnumInfo[] {
+    const known = this.enumCache.get(cls);
+    if (known) return known;
     const groups = new Map<string, EnumInfo>();
     for (const c of cls.constants ?? []) {
       if (!c.enum) continue;
@@ -81,21 +92,33 @@ export class GodotApi {
       info.values.push(c);
       groups.set(c.enum, info);
     }
-    return [...groups.values()];
+    const list = [...groups.values()];
+    this.enumCache.set(cls, list);
+    return list;
   }
 
   /** Members called `name` that are defined on the class itself (not inherited). */
   ownMembers(cls: ApiClass, name: string): ApiEntry[] {
-    const out: ApiEntry[] = [];
-    const add = (kind: EntryKind, item: ApiEntry["item"]) => out.push({ kind, owner: cls.name, name, item });
-    for (const m of cls.methods ?? []) if (m.name === name) add("method", m);
-    for (const m of cls.members ?? []) if (m.name === name) add("property", m);
-    for (const s of cls.signals ?? []) if (s.name === name) add("signal", s);
-    for (const c of cls.constants ?? []) if (c.name === name) add("constant", c);
-    for (const e of this.enums(cls)) if (e.name === name) add("enum", e);
-    for (const a of cls.annotations ?? []) if (a.name === name) add("annotation", a);
-    for (const t of cls.themeItems ?? []) if (t.name === name) add("theme_item", t);
-    return out;
+    let index = this.ownIndex.get(cls);
+    if (!index) {
+      const built = new Map<string, ApiEntry[]>();
+      const add = (kind: EntryKind, item: ApiEntry["item"] & { name: string }) => {
+        const list = built.get(item.name);
+        const entry: ApiEntry = { kind, owner: cls.name, name: item.name, item };
+        if (list) list.push(entry);
+        else built.set(item.name, [entry]);
+      };
+      for (const m of cls.methods ?? []) add("method", m);
+      for (const m of cls.members ?? []) add("property", m);
+      for (const s of cls.signals ?? []) add("signal", s);
+      for (const c of cls.constants ?? []) add("constant", c);
+      for (const e of this.enums(cls)) add("enum", e);
+      for (const a of cls.annotations ?? []) add("annotation", a);
+      for (const t of cls.themeItems ?? []) add("theme_item", t);
+      this.ownIndex.set(cls, built);
+      index = built;
+    }
+    return [...(index.get(name) ?? [])];
   }
 
   /**
@@ -105,6 +128,15 @@ export class GodotApi {
    * signal and a `pressed` stylebox).
    */
   member(className: string, name: string): ApiEntry[] {
+    const key = `${className}\u0000${name}`;
+    const known = this.memberCache.get(key);
+    if (known) return [...known];
+    const found = this.findMember(className, name);
+    this.memberCache.set(key, found);
+    return [...found];
+  }
+
+  private findMember(className: string, name: string): ApiEntry[] {
     const chain = this.ancestors(className);
     for (const cls of chain) {
       const found = this.ownMembers(cls, name).filter((e) => e.kind !== "theme_item");

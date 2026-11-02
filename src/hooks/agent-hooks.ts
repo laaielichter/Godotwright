@@ -103,9 +103,12 @@ function writeState(context: HookContext, session: string | undefined, state: Se
   }
 }
 
-/** Review of a project with what this machine and all installs learned applied, without counting it as a review. */
-function review(root: string) {
-  return reviewProject(root, { learning: currentLearning() ?? emptyLearning(), shared: bundledLearning() });
+/**
+ * Review of the given files of a project, with what this machine and all installs learned applied, without counting it
+ * as a review. Focused: the whole project is read, but only these files are checked.
+ */
+function review(root: string, files: string[]) {
+  return reviewProject(root, { learning: currentLearning() ?? emptyLearning(), shared: bundledLearning(), focus: files });
 }
 
 function findingLine(f: Finding): string {
@@ -137,7 +140,7 @@ export function postEdit(input: HookInput, context: HookContext = {}): HookOutpu
   if (!root) return undefined;
   const res = toResPath(root, file);
   if (res.startsWith("res://addons/")) return undefined;
-  const report = review(root);
+  const report = review(root, [res]);
   const mine = findingsOf(report.findings, res).filter((f) => f.severity !== "info");
   const errors = mine.filter((f) => f.severity === "error");
   const warnings = mine.filter((f) => f.severity === "warning");
@@ -213,7 +216,7 @@ export function stop(input: HookInput, context: HookContext = {}): HookOutput | 
   for (const [file, s] of open) byRoot.set(s.root, [...(byRoot.get(s.root) ?? []), file]);
   const still: Finding[] = [];
   for (const [root, files] of byRoot) {
-    const report = review(root);
+    const report = review(root, files.map((file) => toResPath(root, file)));
     for (const file of files) {
       const errors = findingsOf(report.findings, toResPath(root, file)).filter((f) => f.severity === "error");
       state.files[file] = { root, errors: errors.length };
@@ -256,7 +259,7 @@ export function sessionStart(input: HookInput, context: HookContext = {}): HookO
   return context_("SessionStart", [
     `Godotwright: Godot project "${settings.name ?? "(unnamed)"}"${version ? ` (Godot ${version}${settings.renderer ? `, ${settings.renderer}` : ""})` : ""}: ${plural(scripts, "script")}, ${plural(scenes, "scene")}${settings.mainScene ? `, main scene ${settings.mainScene}` : ""}${settings.autoloads.length ? `, autoloads ${settings.autoloads.map((a) => a.name).slice(0, 8).join(", ")}` : ""}.`,
     godot,
-    "Every Godot file you edit is reviewed right after the edit; errors come back to you. Next: map the project once with godot_scan, and look up engine API with godot_api (never guess Godot 3 names).",
+    "Every Godot file you edit is reviewed right after the edit; errors come back to you. Next: godot_doctor when something is broken (what is wrong, in which order, why), godot_scan once to map the project, godot_api for engine names (never guess Godot 3 names).",
     `godot_lessons holds ${bundledLessons().length} lessons from real Godot projects: ask it before you build vehicles, moving platforms, large worlds, shaders or runtime-loaded models, and with any Godot error you do not understand.`,
   ]);
 }

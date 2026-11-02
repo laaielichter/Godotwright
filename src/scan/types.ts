@@ -32,6 +32,9 @@ export interface ConnectionInfo {
   to: string;
   method: string;
   line: number;
+  binds?: number;
+  unbinds?: number;
+  appendSource?: boolean;
 }
 
 export interface SceneInfo {

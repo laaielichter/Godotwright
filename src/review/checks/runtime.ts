@@ -30,7 +30,7 @@ function assignmentAt(code: string): number {
 /** Functions of the script (and the scripts it extends) whose own body awaits: Godot treats them as coroutines. */
 function coroutines(pm: ProjectModel, path: string): Set<string> {
   const out = new Set<string>();
-  const model = [...pm.allModels()].find((m) => m.path === path && !m.owner);
+  const model = pm.modelsOf(path).find((m) => !m.owner);
   if (!model) return out;
   const seen = new Set<string>();
   for (const m of pm.chain(model)) {
@@ -48,7 +48,7 @@ function coroutines(pm: ProjectModel, path: string): Set<string> {
 }
 
 function functionsOf(pm: ProjectModel, path: string): FunctionInfo[] {
-  return [...pm.allModels()].filter((m) => m.path === path).flatMap((m) => m.outline.functions);
+  return pm.modelsOf(path).flatMap((m) => m.outline.functions);
 }
 
 export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
@@ -66,6 +66,7 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
     const call = new RegExp(`(?<![\\w.]|\\.\\s)(?:self\\s*\\.\\s*)?\\b(${names})\\s*\\(`, "g");
     for (const fn of functions) {
       for (const st of splitStatements(bodyOf(lines, fn))) {
+        if (!st.code.includes("(")) continue;
         for (const m of st.code.matchAll(call)) {
           const before = st.code.slice(0, m.index);
           if (/\bawait\s*(?:self\s*\.\s*)?$/.test(before)) continue;
@@ -119,6 +120,12 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
     // MultiMesh format changed after instance_count: the change is ignored.
     const counted = new Map<string, number>();
     for (const st of body) {
+      // A MultiMesh made anew (often once per loop pass) starts with instance_count 0.
+      const fresh = /^(?:var\s+)?([A-Za-z_][\w.]*)\s*(?::\s*\w+\s*)?:?=(?!=)\s*MultiMesh\s*\.\s*new\s*\(/.exec(st.code.trim());
+      if (fresh) {
+        counted.delete(fresh[1]!);
+        continue;
+      }
       const count = /(?<![\w.])([A-Za-z_][\w.]*)\s*\.\s*(?:instance_count\s*=(?!=)\s*(.+)|set_instance_count\s*\((.+)\))\s*$/.exec(st.code);
       if (count) {
         const value = (count[2] ?? count[3] ?? "").trim();
@@ -143,8 +150,10 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
     if (TICK_CALLBACKS.has(fn.name)) {
       // `int(t * k) % n == 0` is true for a whole window of frames, not once per period.
       for (const st of body) {
-        const m = /\bint\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*%\s*[\w.]+\s*==\s*0\b/.exec(st.code);
-        if (!m || !/[*/]/.test(m[1]!) || /frame/i.test(m[1]!)) continue;
+        // Only as the condition that triggers work; `int(t * 6) % 2 == 0` as a value is a blink, true half the time on purpose.
+        if (!/^(?:if|elif|while)\b/.test(st.code.trim())) continue;
+        const m = /\bint\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*%\s*([\w.]+)\s*==\s*0\b/.exec(st.code);
+        if (!m || m[2] === "2" || !/[*/]/.test(m[1]!) || /frame/i.test(m[1]!)) continue;
         if (!/\b(?:time|elapsed|clock|age|t|_t|seconds?|secs|now|timer)\b|get_ticks_(?:msec|usec)|get_unix_time/i.test(m[1]!)) continue;
         out.push(
           finding(
@@ -159,8 +168,9 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
 
     // A ternary on its own: the value is thrown away, and with void calls Godot does not load the script.
     for (const st of body) {
-      const code = st.code.trim();
-      if (KEYWORD_START.test(code) || assignmentAt(code) >= 0 || /:\s*$/.test(code)) continue;
+      if (!/\sif\s/.test(st.code) || !/\selse\s/.test(st.code)) continue;
+      const code = afterHeader(st.code.trim());
+      if (!code || KEYWORD_START.test(code) || assignmentAt(code) >= 0 || /:\s*$/.test(code)) continue;
       if (!/\S\s+if\s+\S.*\s+else\s+\S/.test(topLevel(code)) || /\bfunc\s*\(/.test(code)) continue;
       out.push(
         finding(
@@ -227,7 +237,7 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
 
   // A SubViewport switched to UPDATE_ALWAYS and never switched back renders every frame, seen or not.
   // Test runners, capture tools and editor scripts render on purpose.
-  const top = [...pm.allModels()].find((m) => m.path === path && !m.owner);
+  const top = pm.modelsOf(path).find((m) => !m.owner);
   const tooling = script.tool || /\/(?:tests?|qa)\//.test(path) || (top !== undefined && ["SceneTree", "EditorScript"].includes(pm.nativeOf(top)));
   const always = tooling ? undefined : lines.find((l) => /\brender_target_update_mode\s*=(?!=)\s*(?:SubViewport\s*\.\s*)?(?:UPDATE_ALWAYS|4)\s*$/.test(l.code));
   if (always && !/\bUPDATE_(?:DISABLED|ONCE|WHEN_VISIBLE|WHEN_PARENT_VISIBLE)\b|render_target_update_mode\s*=(?!=)\s*[0-3]\b/.test(source)) {
@@ -256,6 +266,24 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
     break;
   }
   return out;
+}
+
+/**
+ * The statement after a header on the same line: the body of a match branch (`"key": body`), of `if x: body` or of
+ * `else: body`. A line without such a header comes back as it is; a header without a body comes back empty.
+ */
+function afterHeader(code: string): string {
+  const top = topLevel(code);
+  for (let i = 0; i < top.length; i++) {
+    if (top[i] !== ":" || top[i + 1] === "=") continue;
+    const head = code.slice(0, i).trim();
+    // A match pattern (a literal, a name, an enum value, `_`, several of them) or a block keyword ends at this colon.
+    if (/^(?:if|elif|else|for|while|match)\b/.test(head) || /^(?:&?"[^"]*"|'[^']*'|-?[\d.]+|[A-Za-z_][\w.]*|_)(?:\s*,\s*(?:&?"[^"]*"|'[^']*'|-?[\d.]+|[A-Za-z_][\w.]*))*$/.test(head)) {
+      return code.slice(i + 1).trim();
+    }
+    return code;
+  }
+  return code;
 }
 
 /** The text outside any brackets, with bracketed parts blanked: `print(a if b else c)` has no top-level ternary. */

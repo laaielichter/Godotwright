@@ -1531,9 +1531,6 @@
       "cause": "The arresting code read the velocity property of whatever object it was given. CharacterBody3D has velocity, but RigidBody3D only has linear_velocity, so the read is an error on a rigid body (or null through get()).",
       "fix": "Read the velocity through one helper that checks the class: linear_velocity for RigidBody3D, velocity for CharacterBody3D. Alternatively, give the rigid body a small child node that exposes velocity and copies linear_velocity every physics tick, and pass that node to the system.",
       "test": "Run the same arrest test with both body types.",
-      "rules": [
-        "api/unknown-member"
-      ],
       "tags": [
         "RigidBody3D",
         "CharacterBody3D",
@@ -2222,7 +2219,6 @@
       "fix": "Use an if/else statement to choose between actions. Use a ternary only to choose a value, for example pick the parent with it and call add_child() once.",
       "test": "Load every changed script headless and check can_instantiate(); a review rule can flag a ternary that stands alone on a line.",
       "rules": [
-        "structure/parse-error",
         "quality/standalone-ternary"
       ],
       "tags": [
@@ -4540,9 +4536,7 @@
       "fix": "Give the override the new parameter with the same name and default, pass super only the arguments the oldest base accepts, and reach optional base features with has_method() plus call() so the script compiles on both. Keep a compile matrix: base alone, base plus each add-on, and all together, on both base versions.",
       "test": "Compile each combination headless and require zero new errors compared with the bare base.",
       "rules": [
-        "api/override-signature",
-        "api/unknown-function",
-        "api/wrong-arguments"
+        "api/override-signature"
       ],
       "tags": [
         "override",
@@ -5270,9 +5264,6 @@
       "cause": "Godot only parses a script when something loads it. Scripts reached through a rare flag, a QA path or a menu page that is gone are never loaded in normal play, so their parse errors stay hidden.",
       "fix": "Build a check project from the full source, give missing models empty placeholder files, load every script headless (the --check-only option per script, or a SceneTree script that loads each file and records failures), and compare the error list with a stored baseline so only new errors block.",
       "test": "The check must fail on a deliberately broken copy of one script.",
-      "rules": [
-        "api/unknown-function"
-      ],
       "tags": [
         "compile check",
         "headless",
@@ -5437,6 +5428,27 @@
         "reproducible",
         "broncode",
         "bytecode"
+      ]
+    },
+    {
+      "id": "gdscript/index-into-empty-const-array",
+      "topic": "gdscript",
+      "title": "An index into a constant empty array stops the whole script from loading",
+      "symptom": "A generated script that worked with data failed to load once its constant list was empty, with a parse error on every line that read an element, even lines that never run.",
+      "cause": "Godot folds constants while it parses: reading an element of a constant array that is empty is checked then, not at run time, so it is a parse error for the whole script.",
+      "fix": "Use a var for a list that can be empty, or guard the read so it only exists when the list has elements (generate the code only when there is data).",
+      "test": "Load the script with the list empty and with one element, headless, and check that both load.",
+      "tags": [
+        "const",
+        "array",
+        "empty",
+        "parse error",
+        "generated code",
+        "constant folding",
+        "lege lijst"
+      ],
+      "errors": [
+        "Cannot get index"
       ]
     }
   ]

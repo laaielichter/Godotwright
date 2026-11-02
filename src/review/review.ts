@@ -26,6 +26,12 @@ export interface ReviewOptions {
   learning?: LearningData;
   /** What many installs learned (data/learned.json); used together with `learning`. */
   shared?: LearnedData;
+  /**
+   * Review only these `res://` files (after an edit): the whole project is still read, so types and names resolve, but
+   * the per-file checks run only on these files and only their findings come back. Scores then describe these files,
+   * not the project. Much faster on large projects.
+   */
+  focus?: string[];
 }
 
 export interface CategoryScore {
@@ -74,8 +80,10 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
 
   const findings: Finding[] = [];
   const typing: TypingStats = { typed: 0, total: 0 };
+  const focus = options.focus ? new Set(options.focus) : undefined;
+  const focused = (file: string) => !focus || focus.has(file.replace(/::.*$/, ""));
   for (const script of data.scripts.keys()) {
-    if (!inScope(script)) continue;
+    if (!inScope(script) || !focused(script)) continue;
     findings.push(...checkScriptApi(pm, script, { foreignClasses, inputActions }));
     findings.push(...checkScriptPerformance(pm, script));
     findings.push(...checkScriptPhysics(pm, script));
@@ -86,11 +94,12 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     typing.typed += quality.typing.typed;
     typing.total += quality.typing.total;
   }
-  findings.push(...checkScenePerformance(pm).filter((f) => inScope(f.file)));
-  findings.push(...checkScenePitfalls(pm).filter((f) => inScope(f.file)));
-  findings.push(...checkShaderPitfalls(pm).filter((f) => inScope(f.file)));
-  findings.push(...checkUnusedSignals(pm).filter((f) => inScope(f.file)));
-  findings.push(...checkStructure(pm, { foreignClasses }).filter((f) => inScope(f.file)));
+  const project = (f: Finding) => inScope(f.file) && focused(f.file);
+  findings.push(...checkScenePerformance(pm).filter(project));
+  findings.push(...checkScenePitfalls(pm).filter(project));
+  findings.push(...checkShaderPitfalls(pm).filter(project));
+  findings.push(...checkUnusedSignals(pm).filter(project));
+  findings.push(...checkStructure(pm, { foreignClasses }).filter(project));
 
   const adjusted = options.learning ? adjustFindings(findings, options.learning, options.shared) : undefined;
   const sorted = (adjusted?.findings ?? findings).sort(

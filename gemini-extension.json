@@ -1,13 +1,13 @@
 {
   "name": "godotwright",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Makes Gemini CLI better at Godot 4: offline Godot 4.7 API, project map, headless checks, safe edits, tests, 3D models and an AAA GDScript review.",
   "mcpServers": {
     "godotwright": {
       "command": "npx",
       "args": [
         "-y",
-        "godotwright@0.3.0",
+        "godotwright@0.4.0",
         "mcp",
         "--tier",
         "premium"

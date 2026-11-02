@@ -45,6 +45,8 @@ export interface MemberResult {
   owner: string;
   /** For methods: how many arguments it takes (max is Infinity for varargs). */
   args?: { min: number; max: number };
+  /** For signals: how many arguments it passes. */
+  signalArgs?: number;
 }
 
 function argRange(params: { hasDefault?: boolean; default?: string }[] | undefined, vararg = false): { min: number; max: number } {
@@ -144,6 +146,21 @@ export class ProjectModel {
       model.inner.set(inner.name, this.makeModel(path, inner, script, model, inner.line, inner.endLine, inner.name));
     }
     return model;
+  }
+
+  private byPath?: Map<string, ClassModel[]>;
+
+  /** The classes of one script: the script itself first, then its inner classes. Built once, so a check per script stays linear. */
+  modelsOf(path: string): ClassModel[] {
+    if (!this.byPath) {
+      this.byPath = new Map();
+      for (const m of this.allModels()) {
+        const list = this.byPath.get(m.path);
+        if (list) list.push(m);
+        else this.byPath.set(m.path, [m]);
+      }
+    }
+    return this.byPath.get(path) ?? [];
   }
 
   *allModels(): Generator<ClassModel> {
@@ -352,7 +369,8 @@ export class ProjectModel {
       if (v) return { kind: "property", type: this.varType(m, v.name), owner: m.id };
       const c = o.constants.find((x) => x.name === name);
       if (c) return { kind: "constant", type: this.constType(m, name), owner: m.id };
-      if (o.signals.some((s) => s.name === name)) return { kind: "signal", type: native("Signal"), owner: m.id };
+      const sig = o.signals.find((s) => s.name === name);
+      if (sig) return { kind: "signal", type: native("Signal"), owner: m.id, signalArgs: sig.params.length };
       if (o.enums.some((e) => e.name === name)) return { kind: "enum", type: { kind: "enum" }, owner: m.id };
       const inner = m.inner.get(name);
       if (inner) return { kind: "class", type: { kind: "script", model: inner, meta: true }, owner: m.id };
@@ -406,7 +424,7 @@ export class ProjectModel {
         return { kind: "constant", type: ctor && VALUE_TYPES.has(ctor) ? native(ctor) : native("int"), owner: entry.owner };
       }
       case "signal":
-        return { kind: "signal", type: native("Signal"), owner: entry.owner };
+        return { kind: "signal", type: native("Signal"), owner: entry.owner, signalArgs: (item as { params?: unknown[] }).params?.length ?? 0 };
       case "enum":
         return { kind: "enum", type: { kind: "enum" }, owner: entry.owner };
       default:

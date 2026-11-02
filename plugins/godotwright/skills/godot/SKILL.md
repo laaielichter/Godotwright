@@ -11,6 +11,8 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 
 ## Every task
 
+0. **Something broken, or a project you do not know?** Call `godot_doctor` first: what is wrong, in which order to
+   fix it, why (the lesson), and which fixes `godot_fix` or `godot_migrate` can do for you.
 1. **Map first.** Call `godot_scan` once: scenes and node trees, scripts with signatures, signals,
    autoloads and the input map. Node paths and action names come from here, not from guesses.
 2. **Look up, do not guess.** Before you use a class, method, property or signal you are not sure about,
@@ -28,10 +30,20 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 - Scenes: `godot_scene_edit`. Project settings, input actions, autoloads: `godot_project_edit`.
   These keep `.tscn`, `.uid` and `project.godot` valid and touch only the lines of the change.
 - Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs.
+- Mechanical findings (a freed check in the wrong order, `get_meta()` with a null default, a lone ternary, garbled
+  text, `emit_signal()`, MultiMesh or Timer order): `godot_fix` (report, then `write: true`), not by hand.
+- Before deleting or moving a file: `godot_deps` op `why` (also paths the code builds); `op unused` lists what can go.
+- A Godotwright write that made things worse: `godot_undo` puts the files back (newest write first).
 
 ## See what you built
 
-- `godot_play` runs a scene with an input timeline and returns the values you watch per frame.
+- `godot_play` runs a scene with an input timeline and returns the values you watch per frame. `until` stops when a
+  condition holds, `signals` records when signals fire, `summary` keeps long runs short, and `expect` turns a run
+  into a test.
+- `godot_session` loads a scene once and keeps it running; `godot_game` then shows the live tree, reads and sets
+  values and steps frames with input until a condition holds; `reload` puts the scripts you edited into the running
+  game with every node's values kept. Use it when a world loads slowly or a state is hard to reach; stop it when done.
+- `godot_perf` measures frame times (p50/p95/p99, the slowest frames and their cause) and compares with the last run.
 - `godot_screenshot` renders a scene or a model to a PNG.
 
 ## Know what real projects learned
