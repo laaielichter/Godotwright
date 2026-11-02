@@ -823,10 +823,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Look at and drive the running game session",
       description:
-        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `errors` (what the game printed since the last call). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
+        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `layout` (3D objects: global position, size, lowest point, and whether each rests on, floats above or sinks into what is below, plus scale mistakes), `ray` (from, to: what a physics ray hits), `ui` (visible controls at one or more window `sizes`, with clipped text, off-screen panels, overlapping buttons and small targets), `errors` (what the game printed since the last call). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
       inputSchema: {
         path: pathParam,
-        op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "errors"]).describe("what to do"),
+        op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "layout", "ray", "ui", "errors"]).describe("what to do"),
+        from: z.string().optional().describe("ray: start, Vector3(...) or Vector2(...)"),
+        to: z.string().optional().describe("ray: end"),
+        sizes: z.array(z.string()).optional().describe("ui: window sizes such as 1280x720 or 720x1280 (default the size the project sets)"),
         root: z.string().optional().describe("tree: start at this node (default the scene root)"),
         depth: z.number().int().min(0).max(20).optional().describe("tree: levels to show (default 3)"),
         limit: z.number().int().min(1).max(1000).optional().describe("tree: nodes to show (default 80)"),
@@ -866,13 +869,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
           if (!a.expr) return failure("eval needs expr");
           payload = { expr: a.expr };
         } else if (a.op === "signals") payload = { signals: a.signals ?? [] };
+        else if (a.op === "layout") payload = { root: a.root ?? ".", limit: a.limit ?? 60 };
+        else if (a.op === "ray") {
+          if (!a.from || !a.to) return failure("ray needs from and to, e.g. Vector3(0, 10, 0) and Vector3(0, -10, 0)");
+          payload = { from: a.from, to: a.to };
+        } else if (a.op === "ui") payload = { sizes: a.sizes ?? [] };
         else if (a.op === "step") {
           const frames = a.frames ?? 60;
           payload = stepPayload({ frames, ...(a.input ? { input: a.input } : {}), watch: a.watch ?? [], ...(a.every ? { every: a.every } : {}), ...(a.until ? { until: a.until } : {}) });
           timeout = Math.max(60_000, frames * 200);
         }
         const { reply, diagnostics } = await gameRequest(dir, a.op, payload, timeout);
-        const body = formatGame(a.op, reply, diagnostics, a.watch ?? []);
+        const body = formatGame(a.op, reply, diagnostics, a.watch ?? [], profile.detail === "full");
         return reply["ok"] ? text(body) : failure(body);
       } catch (error) {
         if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);

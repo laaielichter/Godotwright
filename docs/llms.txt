@@ -23,7 +23,7 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 ## A game session that stays up
 
-`godotwright session start [path] [--scene res://x.tscn]` (godot_session op start): loads the scene once, headless and paused at frame 0, and keeps it running between commands (it quits after 15 idle minutes; `session stop` ends it). `godotwright game tree|get|set|call|eval|step|signals|errors` (godot_game): the live node tree, values read and set, methods called, Godot Expressions evaluated, and `step <frames> --input "..." --watch Node.prop --until "condition"` with the same frame-exact input as play. Every answer lists the errors the game printed since the last one, with their call chain. Loopback only, with a token; the project is not changed.
+`godotwright session start [path] [--scene res://x.tscn]` (godot_session op start): loads the scene once, headless and paused at frame 0, and keeps it running between commands (it quits after 15 idle minutes; `session stop` ends it). `godotwright game tree|get|set|call|eval|step|signals|layout|ray|ui|errors` (godot_game): the live node tree, values read and set, methods called, Godot Expressions evaluated, `layout` (where 3D objects are and whether they rest on, float above or sink into what is below), `ray` (what a physics ray hits), `ui --size 1280x720 --size 720x1280` (clipped labels, off-screen panels, overlapping buttons), and `step <frames> --input "..." --watch Node.prop --until "condition"` with the same frame-exact input as play. Every answer lists the errors the game printed since the last one, with their call chain. Loopback only, with a token; the project is not changed.
 
 ## Measuring performance
 

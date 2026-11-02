@@ -60,3 +60,41 @@ describe.skipIf(!GODOT)("a game session in Godot", () => {
     expect(existsSync(join(root, ".godot", "godotwright", "session.gd"))).toBe(false);
   });
 });
+
+describe.skipIf(!GODOT)("space and screen questions to a game session", () => {
+  const root = mkdtempSync(join(tmpdir(), "godotwright-space-"));
+  writeFileSync(
+    join(root, "project.godot"),
+    'config_version=5\n[application]\nconfig/name="Space"\nrun/main_scene="res://main.tscn"\nconfig/features=PackedStringArray("4.7")\n[display]\nwindow/size/viewport_width=1280\nwindow/size/viewport_height=720\n',
+  );
+  writeFileSync(
+    join(root, "main.tscn"),
+    [
+      "[gd_scene format=3]",
+      '[sub_resource type="BoxShape3D" id="g"]\nsize = Vector3(40, 1, 40)',
+      '[sub_resource type="BoxMesh" id="m"]',
+      '[node name="Main" type="Node3D"]',
+      '[node name="Ground" type="StaticBody3D" parent="."]\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)',
+      '[node name="Shape" type="CollisionShape3D" parent="Ground"]\nshape = SubResource("g")',
+      '[node name="Crate" type="MeshInstance3D" parent="."]\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.5, 0)\nmesh = SubResource("m")',
+      '[node name="Floating" type="MeshInstance3D" parent="."]\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2.3, 0)\nmesh = SubResource("m")',
+      '[node name="Hud" type="CanvasLayer" parent="."]',
+      '[node name="Start" type="Button" parent="Hud"]\noffset_left = 1200.0\noffset_top = 600.0\noffset_right = 1340.0\noffset_bottom = 640.0\ntext = "Start"',
+      '[node name="Back" type="Button" parent="Hud"]\noffset_left = 1210.0\noffset_top = 605.0\noffset_right = 1300.0\noffset_bottom = 630.0\ntext = "Back"',
+    ].join("\n\n") + "\n",
+  );
+  afterAll(() => stopSession(root));
+
+  it("says where 3D things are, what a ray hits, and what is wrong with the screen", { timeout: 300_000 }, async () => {
+    await startSession(root, { godot: GODOT });
+    const layout = ((await gameRequest(root, "layout", { root: ".", limit: 60 })).reply["lines"] as string[]).join("\n");
+    expect(layout).toMatch(/Crate {2}pos \(2\.0, 0\.5, 0\.0\) {2}size 1\.00x1\.00x1\.00 m {2}lowest y 0\.00 {2}rests on Ground/);
+    expect(layout).toMatch(/Floating .* floating 1\.80 m above Ground/);
+    const ray = (await gameRequest(root, "ray", { from: "Vector3(-3, 10, 0)", to: "Vector3(-3, -10, 0)" })).reply["hit"] as Record<string, unknown>;
+    expect(ray).toMatchObject({ hit: true, node: "Ground", position: "Vector3(-3, 0, 0)" });
+    const ui = (await gameRequest(root, "ui", { sizes: ["1280x720"] })).reply["sizes"] as { size: string; issues: string[] }[];
+    expect(ui[0]!.size).toBe("1280x720");
+    expect(ui[0]!.issues.join("\n")).toMatch(/partly off-screen: Hud\/Start/);
+    expect(ui[0]!.issues.join("\n")).toMatch(/overlap: Hud\/Start and Hud\/Back/);
+  });
+});

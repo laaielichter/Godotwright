@@ -145,6 +145,39 @@ export function gameCommand(): Command {
       }),
     );
   game
+    .command("layout")
+    .description("where 3D things really are: global position, size, lowest point, and whether they rest on, float above or sink into what is below")
+    .option("--root <node>", "start at this node (default: the scene root)")
+    .option("--limit <n>", "objects to show (default 60)", whole, 60)
+    .action((o: { root?: string; limit: number }, c: Command) =>
+      guarded(c, async () => {
+        const { reply, diagnostics } = await gameRequest(path(c), "layout", { root: o.root ?? ".", limit: o.limit });
+        return formatGame("layout", reply, diagnostics);
+      }),
+    );
+  game
+    .command("ray")
+    .description('cast a physics ray: ray "Vector3(0, 10, 0)" "Vector3(0, -10, 0)" (or two Vector2 in 2D)')
+    .argument("<from>", "start, as Godot writes a vector")
+    .argument("<to>", "end")
+    .action((from: string, to: string, _o: unknown, c: Command) =>
+      guarded(c, async () => {
+        const { reply, diagnostics } = await gameRequest(path(c), "ray", { from, to });
+        return formatGame("ray", reply, diagnostics);
+      }),
+    );
+  game
+    .command("ui")
+    .description("visible controls with their rectangles, and clipped text, off-screen panels, overlapping buttons and small targets, at one or more window sizes")
+    .option("--size <WxH>", "a window size, e.g. 1280x720 (repeatable; default the project's size)", collect, [])
+    .option("--brief", "only the issues, not every control")
+    .action((o: { size: string[]; brief?: boolean }, c: Command) =>
+      guarded(c, async () => {
+        const { reply, diagnostics } = await gameRequest(path(c), "ui", { sizes: o.size });
+        return formatGame("ui", reply, diagnostics, [], !o.brief);
+      }),
+    );
+  game
     .command("errors")
     .description("errors and warnings the game printed since the last command, with their call chains")
     .action((_o: unknown, c: Command) =>

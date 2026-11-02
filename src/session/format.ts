@@ -24,7 +24,7 @@ function table(watch: string[], samples: [number, Record<string, string>][]): st
 }
 
 /** One game reply as compact text, with the errors the game printed since the last call under it. */
-export function formatGame(op: string, reply: Reply, diagnostics: Diagnostic[], watch: string[] = []): string {
+export function formatGame(op: string, reply: Reply, diagnostics: Diagnostic[], watch: string[] = [], detailControls = true): string {
   const out: string[] = [];
   if (!reply["ok"]) out.push(`error: ${String(reply["error"] ?? "the game refused the request")}`);
   else {
@@ -55,6 +55,24 @@ export function formatGame(op: string, reply: Reply, diagnostics: Diagnostic[], 
         const signals = (reply["signals"] ?? []) as [number, string, string[]][];
         for (const [frame, name, args] of signals.slice(0, 40)) out.push(`  frame ${frame} ${name}(${args.join(", ")})`);
         if (signals.length > 40) out.push(`  +${signals.length - 40} more signals`);
+        break;
+      }
+      case "layout": {
+        const lines = (reply["lines"] as string[]) ?? [];
+        out.push(`layout at frame ${reply["frame"]} (global position, size, lowest point and what is below):`, ...(lines.length ? lines : ["no 3D objects with a size here"]));
+        break;
+      }
+      case "ray": {
+        const hit = (reply["hit"] ?? {}) as Record<string, unknown>;
+        out.push(hit["error"] ? `error: ${hit["error"]}` : hit["hit"] ? `hit ${hit["node"] || "a collider"} at ${hit["position"]}, normal ${hit["normal"]}` : "the ray hits nothing");
+        break;
+      }
+      case "ui": {
+        for (const size of (reply["sizes"] ?? []) as { size: string; controls: string[]; count: number; issues: string[] }[]) {
+          out.push(`ui at ${size.size}: ${size.count} visible controls, ${size.issues.length} issue${size.issues.length === 1 ? "" : "s"}`);
+          for (const issue of size.issues.slice(0, 30)) out.push(`  ${issue}`);
+          if (detailControls) for (const c of size.controls) out.push(`    ${c}`);
+        }
         break;
       }
       case "status":

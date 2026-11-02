@@ -24,7 +24,13 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   input as `godot_play`, stopping early when a condition holds. Every answer lists the errors the game printed since
   the last call, with their call chain. Time only moves on a step, so it stays deterministic; a world that takes a
   minute to load loads once. No editor and no add-on: a temporary script in `.godot/godotwright/` on a loopback port
-  with a token; the game quits by itself after 15 idle minutes.
+  with a token; the game quits by itself after 15 idle minutes. The window gets the size the project sets (headless it
+  would be 64x64), so Controls lay out as players see them. Three questions agents get wrong without a picture:
+  - `layout`: every 3D object's global position, size and lowest point, and whether it rests on, floats above or is
+    buried in what is below it, plus scale mistakes (a mesh at 100x);
+  - `ray`: what a physics ray hits, where, with which normal (3D or 2D);
+  - `ui`: the visible controls at one or more window sizes, with clipped labels, panels off-screen, overlapping buttons
+    and tiny targets.
 - **`godot_perf` (and `godotwright perf`): measure a scene the way a player feels it.** Headless frame-time p50, p95,
   p99 and max against a budget, the physics step apart from the rest, the slowest frames with what changed on them
   (thousands of nodes made in one frame, a heavy physics step, script work), node and orphan counts, the change since

@@ -20,6 +20,8 @@ var _frame := 0
 var _step := {}
 var _signal_log: Array = []
 var _recorded := {}
+# A ui request in progress: the sizes to try, one per frame, so containers lay out before they are read.
+var _ui := {}
 
 
 func _initialize() -> void:
@@ -39,6 +41,8 @@ func _initialize() -> void:
 		printerr("${SESSION_MARK}_FAILED could not load ", scene_path)
 		quit(1)
 		return
+	# Headless, the window is 64x64: give it the size the project asks for, so Controls lay out as players see them.
+	root.size = Vector2i(int(ProjectSettings.get_setting("display/window/size/viewport_width", 1152)), int(ProjectSettings.get_setting("display/window/size/viewport_height", 648)))
 	_scene = packed.instantiate()
 	root.add_child(_scene)
 	current_scene = _scene
@@ -77,6 +81,9 @@ func _on_process_frame() -> void:
 			_signal_log.clear()
 			_step = {}
 			_send(reply)
+		return
+	if not _ui.is_empty():
+		_ui_tick()
 		return
 	_poll()
 	if Time.get_ticks_msec() - _last_command > _idle_limit:
@@ -177,6 +184,18 @@ func _handle(line: String) -> void:
 			_step = {"id": id, "start": _frame, "frames": maxi(1, int(msg.get("frames", 1))), "every": maxi(1, int(msg.get("every", 1))), "watch": _split_all(msg.get("watch", [])), "until": msg.get("until", []), "inputs": inputs, "samples": []}
 			_apply(0)
 			paused = false
+		"layout":
+			_send({"id": id, "ok": true, "frame": _frame, "lines": _layout(msg.get("root", "."), int(msg.get("limit", 60)))})
+		"ray":
+			var from: Variant = str_to_var(str(msg.get("from", "")))
+			var to: Variant = str_to_var(str(msg.get("to", "")))
+			_send({"id": id, "ok": true, "frame": _frame, "hit": _ray(from, to)})
+		"ui":
+			var sizes: Array = msg.get("sizes", [])
+			if sizes.is_empty():
+				sizes = ["%dx%d" % [root.size.x, root.size.y]]
+			_ui = {"id": id, "sizes": sizes, "index": 0, "wait": 1, "original": root.size, "results": []}
+			_ui_resize()
 		"stop":
 			_send({"id": id, "ok": true, "frame": _frame})
 			quit()
@@ -267,6 +286,146 @@ func _record(s: String) -> void:
 func _on_signal(...args: Array) -> void:
 	var name: String = args.pop_back()
 	_signal_log.append([_frame, name, args.map(func(v: Variant) -> String: return var_to_str(v))])
+
+
+## Where 3D things really are: global position, size, lowest point, and what is below them.
+func _layout(from: String, limit: int) -> Array:
+	var start := _node(from)
+	var lines: Array = []
+	if start == null:
+		return ["no node " + from]
+	var queue: Array = [start]
+	while not queue.is_empty() and lines.size() < limit:
+		var node: Node = queue.pop_front()
+		queue.append_array(node.get_children())
+		if not (node is VisualInstance3D) or node is Light3D or node is Camera3D:
+			continue
+		var vi := node as VisualInstance3D
+		if not vi.is_visible_in_tree():
+			continue
+		var box: AABB = vi.global_transform * vi.get_aabb()
+		if box.size == Vector3.ZERO:
+			continue
+		var path := str(_scene.get_path_to(node))
+		var note := _below(vi, box)
+		var sc := vi.global_transform.basis.get_scale()
+		var big := maxf(sc.x, maxf(sc.y, sc.z))
+		var small := minf(sc.x, minf(sc.y, sc.z))
+		if big >= 50.0 or small <= 0.02:
+			note += "; scale %s: a unit mistake?" % [str(sc.snapped(Vector3.ONE * 0.001))]
+		lines.append("%s  pos %s  size %.2fx%.2fx%.2f m  lowest y %.2f  %s" % [path, str(vi.global_position.snapped(Vector3.ONE * 0.01)), box.size.x, box.size.y, box.size.z, box.position.y, note])
+	return lines
+
+
+func _below(vi: VisualInstance3D, box: AABB) -> String:
+	var space := vi.get_world_3d().direct_space_state
+	var own: Array[RID] = []
+	for n: Node in [vi] + vi.find_children("*", "CollisionObject3D", true, false):
+		if n is CollisionObject3D:
+			own.append((n as CollisionObject3D).get_rid())
+	var up := vi.get_parent()
+	while up != null:
+		if up is CollisionObject3D:
+			own.append((up as CollisionObject3D).get_rid())
+		up = up.get_parent()
+	var center := box.get_center()
+	var q := PhysicsRayQueryParameters3D.create(Vector3(center.x, box.end.y + 0.01, center.z), Vector3(center.x, box.position.y - 200.0, center.z))
+	q.exclude = own
+	var hit := space.intersect_ray(q)
+	if hit.is_empty():
+		return "nothing below it"
+	var ground: float = (hit.position as Vector3).y
+	var what := str(_scene.get_path_to(hit.collider)) if hit.collider is Node else "a collider"
+	var gap := box.position.y - ground
+	if gap > 0.05:
+		return "floating %.2f m above %s" % [gap, what]
+	if gap < -0.05:
+		return "buried %.2f m in %s" % [-gap, what]
+	return "rests on %s" % what
+
+
+func _ray(from: Variant, to: Variant) -> Dictionary:
+	var hit := {}
+	if from is Vector3 and to is Vector3:
+		hit = root.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
+	elif from is Vector2 and to is Vector2:
+		hit = root.get_world_2d().direct_space_state.intersect_ray(PhysicsRayQueryParameters2D.create(from, to))
+	else:
+		return {"error": "from and to must both be Vector3 or both Vector2, e.g. Vector3(0, 10, 0)"}
+	if hit.is_empty():
+		return {"hit": false}
+	return {"hit": true, "node": str(_scene.get_path_to(hit.collider)) if hit.collider is Node else "", "position": var_to_str(hit.position), "normal": var_to_str(hit.normal)}
+
+
+func _ui_resize() -> void:
+	var size_text: String = _ui.sizes[_ui.index]
+	var parts := size_text.split("x")
+	root.size = Vector2i(int(parts[0]), int(parts[1]))
+	_ui.wait = 2
+
+
+## One size per pass: wait two frames for containers to sort, then read every visible Control.
+func _ui_tick() -> void:
+	_ui.wait -= 1
+	if _ui.wait > 0:
+		return
+	_ui.results.append(_ui_read(_ui.sizes[_ui.index]))
+	_ui.index += 1
+	if _ui.index < (_ui.sizes as Array).size():
+		_ui_resize()
+		return
+	root.size = _ui.original
+	var reply := {"id": _ui.id, "ok": true, "frame": _frame, "sizes": _ui.results}
+	_ui = {}
+	_send(reply)
+
+
+func _ui_read(size_text: String) -> Dictionary:
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	var controls: Array = []
+	var issues: Array = []
+	var targets: Array = []
+	for c: Node in root.find_children("*", "Control", true, false):
+		var ctl := c as Control
+		if not ctl.is_visible_in_tree() or ctl.get_global_rect().size == Vector2.ZERO:
+			continue
+		var r := ctl.get_global_rect()
+		var label := str(_scene.get_path_to(ctl)) if _scene.is_ancestor_of(ctl) else str(ctl.get_path())
+		var text := ""
+		if ctl is Label:
+			text = (ctl as Label).text
+		elif ctl is Button:
+			text = (ctl as Button).text
+		elif ctl is RichTextLabel:
+			text = (ctl as RichTextLabel).get_parsed_text()
+		if controls.size() < 60:
+			controls.append("%s  %s%s  (%d,%d %dx%d)" % [label, ctl.get_class(), (' "%s"' % text.left(40)) if text != "" else "", r.position.x, r.position.y, r.size.x, r.size.y])
+		if ctl is Label:
+			var l := ctl as Label
+			if l.get_visible_line_count() < l.get_line_count():
+				issues.append("clipped: %s needs %d lines, shows %d" % [label, l.get_line_count(), l.get_visible_line_count()])
+			elif l.autowrap_mode == TextServer.AUTOWRAP_OFF and not l.clip_text and l.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING and l.get_minimum_size().x > r.size.x + 1.0:
+				issues.append("text wider than its box: %s (%d px in %d px)" % [label, l.get_minimum_size().x, r.size.x])
+		if not view.encloses(r.grow(-2.0)) and view.intersects(r):
+			issues.append("partly off-screen: %s at (%d,%d %dx%d)" % [label, r.position.x, r.position.y, r.size.x, r.size.y])
+		elif not view.intersects(r):
+			issues.append("off-screen: %s at (%d,%d)" % [label, r.position.x, r.position.y])
+		if ctl is BaseButton or ctl is LineEdit or ctl is Slider:
+			if r.size.x < 24.0 or r.size.y < 24.0:
+				issues.append("small target: %s is %dx%d px" % [label, r.size.x, r.size.y])
+			targets.append([label, r, ctl])
+	for i in targets.size():
+		for j in range(i + 1, targets.size()):
+			var a: Rect2 = targets[i][1]
+			var b: Rect2 = targets[j][1]
+			var ca: Control = targets[i][2]
+			var cb: Control = targets[j][2]
+			if ca.is_ancestor_of(cb) or cb.is_ancestor_of(ca) or not a.intersects(b):
+				continue
+			var overlap := a.intersection(b).get_area()
+			if overlap > 0.2 * minf(a.get_area(), b.get_area()):
+				issues.append("overlap: %s and %s share %d%% of the smaller one" % [targets[i][0], targets[j][0], int(100.0 * overlap / minf(a.get_area(), b.get_area()))])
+	return {"size": size_text, "controls": controls, "count": controls.size(), "issues": issues}
 
 
 func _input(ev: Dictionary) -> void:
