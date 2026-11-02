@@ -88,6 +88,7 @@ import {
   type View,
 } from "../screenshot/screenshot.js";
 import { PlayError, formatPlay, playScene } from "../play/play.js";
+import { formatPerf, perfScene } from "../perf/perf.js";
 import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
   TestRunError,
@@ -172,6 +173,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
+      "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
@@ -770,6 +772,46 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
         return text(formatMigration(result, detail ?? profile.detail));
       }),
+  );
+
+  server.registerTool(
+    "godot_perf",
+    {
+      title: "Measure a scene's frame times",
+      description:
+        "Run a scene in Godot 4.7 headless and measure it the way a player feels it: frame-time p50, p95, p99 and max against a budget (default 16.6 ms), the physics step apart from the rest of the frame, the slowest frames with what changed on them (nodes made or freed in one frame, a heavy physics step, script work), node and orphan counts, and the change since the last run of the same scene (kept in .godot/godotwright/perf/). Headless measures the CPU side (scripts, physics, scene work), not the GPU. `input` plays a timeline as godot_play does, to measure while something happens. An error result when p95 is over budget or more than 10% worse than last time. Lessons that fit the numbers are named. Measure before and after every performance change.",
+      inputSchema: {
+        path: pathParam,
+        scene: z.string().optional().describe("the res:// scene to measure (default: the main scene)"),
+        frames: z.number().int().min(10).max(50_000).optional().describe("frames to measure (default 600)"),
+        warmup: z.number().int().min(0).max(10_000).optional().describe("frames to run first without measuring (default 60)"),
+        input: z.string().optional().describe('input while measuring: "10 hold right 300"'),
+        budget_ms: z.number().positive().optional().describe("frame budget in ms (default 16.6)"),
+        baseline: z.boolean().optional().describe("compare with and save the last run of this scene (default true)"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout of the run (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, scene, frames, warmup, input, budget_ms, baseline, timeout_seconds }) => {
+      try {
+        const report = await perfScene(where(path), {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          ...(frames ? { frames } : {}),
+          ...(warmup !== undefined ? { warmup } : {}),
+          ...(input ? { input } : {}),
+          ...(budget_ms ? { budgetMs: budget_ms } : {}),
+          baseline: baseline !== false,
+          timeoutMs: (timeout_seconds ?? 300) * 1000,
+        });
+        const body = formatPerf(report);
+        return report.verdict === "ok" && report.run.finished ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for the static performance checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
   );
 
   server.registerTool(

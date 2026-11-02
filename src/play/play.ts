@@ -39,6 +39,18 @@ export interface PlayOptions {
   until?: string;
   /** Signals to record with the frame they fire on: "Hero.landed", "Deck.body_entered" (or a signal of the scene root). */
   signals?: string[];
+  /** Also time every frame (physics step, the rest of the frame) and count nodes, from this frame on (godot_perf). */
+  perfFrom?: number;
+}
+
+/** Per-frame timings of a run, in microseconds, and node counts: what godot_perf summarises. */
+export interface PlayTimings {
+  from: number;
+  frame: number[];
+  physics: number[];
+  process: number[];
+  nodes: number[];
+  orphans: number[];
 }
 
 /** A signal that fired during a play run. */
@@ -69,6 +81,7 @@ export interface PlayReport {
   signals?: PlaySignal[];
   /** The until condition, and the frame it first held (undefined: it never did). */
   until?: { condition: string; frame?: number };
+  timings?: PlayTimings;
 }
 
 const UNTIL = /^\s*(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+?)\s*$/;
@@ -129,7 +142,7 @@ function eventCode(input: string): string {
 const gdString = (s: string): string => JSON.stringify(s);
 
 /** The SceneTree script that runs the scene, plays the timeline and prints the samples. */
-export function playScript(scene: string, steps: InputStep[], watch: string[], frames: number, every: number, extra: { until?: string; signals?: string[] } = {}): string {
+export function playScript(scene: string, steps: InputStep[], watch: string[], frames: number, every: number, extra: { until?: string; signals?: string[]; perfFrom?: number } = {}): string {
   const byFrame = new Map<number, string[]>();
   for (const s of steps) {
     const call = /^[A-Za-z]+:/.test(s.input)
@@ -161,9 +174,14 @@ const EVERY := ${every}
 # A var, not a const: Godot refuses an index into a constant empty array when it parses the script.
 var UNTIL: Array = ${untilList}
 const SIGNALS: Array = [${signalList.join(", ")}]
+const PERF_FROM := ${extra.perfFrom ?? -1}
 
 var _frame := 0
 var _scene: Node
+var _t_physics := 0
+var _t_process := 0
+var _t_frame := 0
+var _perf := {"frame": [], "physics": [], "process": [], "nodes": [], "orphans": []}
 
 
 func _initialize() -> void:
@@ -185,10 +203,28 @@ func _initialize() -> void:
 	# _physics_process sees it on that very frame, is_action_just_pressed() included.
 	_apply(0)
 	process_frame.connect(_on_frame_done)
+	if PERF_FROM >= 0:
+		physics_frame.connect(_on_physics_start)
+
+
+## Timing: a physics step starts here; the frame before it ended here too.
+func _on_physics_start() -> void:
+	var now := Time.get_ticks_usec()
+	if _t_frame > 0 and _frame > PERF_FROM:
+		_perf.frame.append(now - _t_frame)
+		_perf.process.append(now - _t_process)
+		_perf.nodes.append(int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)))
+		_perf.orphans.append(int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)))
+	_t_frame = now
+	_t_physics = now
 
 
 ## Runs once per frame, after the physics step: sample frame _frame, then give the input for the next one.
 func _on_frame_done() -> void:
+	if PERF_FROM >= 0:
+		_t_process = Time.get_ticks_usec()
+		if _frame >= PERF_FROM:
+			_perf.physics.append(_t_process - _t_physics)
 	var met := not UNTIL.is_empty() and _holds()
 	if _frame % EVERY == 0 or _frame == FRAMES - 1 or INPUT_FRAMES.has(_frame) or met:
 		_sample()
@@ -198,6 +234,8 @@ func _on_frame_done() -> void:
 		quit()
 		return
 	if _frame >= FRAMES - 1:
+		if PERF_FROM >= 0:
+			print("${MARK}_PERF ", JSON.stringify(_perf))
 		print("${MARK}_DONE")
 		quit()
 		return
@@ -339,13 +377,21 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
   mkdirSync(dir, { recursive: true });
   const file = join(dir, "play.gd");
   if (options.until) parseCondition(options.until);
-  writeFileSync(file, playScript(scene, steps, watch, frames, every, { ...(options.until ? { until: options.until } : {}), ...(options.signals?.length ? { signals: options.signals } : {}) }));
+  writeFileSync(
+    file,
+    playScript(scene, steps, watch, frames, every, {
+      ...(options.until ? { until: options.until } : {}),
+      ...(options.signals?.length ? { signals: options.signals } : {}),
+      ...(options.perfFrom !== undefined ? { perfFrom: options.perfFrom } : {}),
+    }),
+  );
   try {
     // A fixed frame rate makes every run the same: one physics step per frame, whatever the machine.
     const result = await runGodot(bin, [...base, "--fixed-fps", String(fps), "-s", `res://${PLAY_DIR}/play.gd`], { cwd: root, timeoutMs });
     const samples: PlaySample[] = [];
     const signals: PlaySignal[] = [];
     let untilFrame: number | undefined;
+    let timings: PlayTimings | undefined;
     const rest: string[] = [];
     for (const line of result.stdout.split(/\r?\n/)) {
       if (line.startsWith(`${MARK} `)) {
@@ -354,6 +400,8 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
       } else if (line.startsWith(`${MARK}_SIGNAL `)) {
         const [frame, signal, args] = JSON.parse(line.slice(MARK.length + 8)) as [number, string, string[]];
         signals.push({ frame, signal, args });
+      } else if (line.startsWith(`${MARK}_PERF `)) {
+        timings = { from: options.perfFrom ?? 0, ...(JSON.parse(line.slice(MARK.length + 6)) as Omit<PlayTimings, "from">) };
       } else if (line.startsWith(`${MARK}_UNTIL `)) {
         untilFrame = Number(line.slice(MARK.length + 7));
       } else if (!line.startsWith(`${MARK}_DONE`)) rest.push(line);
@@ -375,6 +423,7 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
       finished: result.stdout.includes(`${MARK}_DONE`) && !result.timedOut,
       ...(signals.length || options.signals?.length ? { signals } : {}),
       ...(options.until ? { until: { condition: options.until, ...(untilFrame !== undefined ? { frame: untilFrame } : {}) } } : {}),
+      ...(timings ? { timings } : {}),
     };
   } finally {
     rmSync(file, { force: true });

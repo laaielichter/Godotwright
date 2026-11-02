@@ -151,3 +151,31 @@ describe("play summaries and conditions", () => {
     );
   });
 });
+
+describe("perf report text", () => {
+  it("names the verdict, the percentiles, the slowest frames and the next step", async () => {
+    const { formatPerf } = await import("../src/perf/perf.js");
+    const s = { p50: 1, p95: 2, p99: 3, max: 20, mean: 1.2 };
+    const text = formatPerf({
+      scene: "res://main.tscn",
+      frames: 100,
+      warmup: 10,
+      budgetMs: 16.6,
+      frame: s,
+      physics: { ...s, p95: 0.5 },
+      process: s,
+      overBudget: 1,
+      spikes: [{ frame: 50, ms: 20, physicsMs: 0.1, cause: "nodes +3000 (made or freed in one frame)" }],
+      nodes: { start: 2, end: 3002, max: 3002 },
+      orphans: { start: 0, end: 0 },
+      verdict: "ok",
+      hints: ["performance/one-frame-burst: Spread spawning, building and unloading over frames"],
+      run: { scene: "res://main.tscn", frames: 110, fps: 60, steps: [], watch: [], samples: [], diagnostics: [], output: "", warnings: [], finished: true },
+    });
+    expect(text).toMatch(/budget 16\.6 ms: OK/);
+    expect(text).toMatch(/frame ms {4}p50 1 {2}p95 2 {2}p99 3 {2}max 20 {3}over budget 1 \(1%\)/);
+    expect(text).toMatch(/frame 50: 20 ms \(physics 0\.1 ms\): nodes \+3000/);
+    expect(text).toMatch(/one-frame-burst/);
+    expect(text).toMatch(/no earlier run of this scene/);
+  });
+});

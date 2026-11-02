@@ -18,6 +18,11 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **Runtime errors come with their GDScript call chain.** `godot_check`, `godot_play`, `godot_test` and screenshots
   keep the backtrace Godot prints with a runtime error and show the callers under it; an error that repeats every
   frame is one line with its count (`(x120)`).
+- **`godot_perf` (and `godotwright perf`): measure a scene the way a player feels it.** Headless frame-time p50, p95,
+  p99 and max against a budget, the physics step apart from the rest, the slowest frames with what changed on them
+  (thousands of nodes made in one frame, a heavy physics step, script work), node and orphan counts, the change since
+  the last run of the same scene, and the lessons that fit the numbers. An error result when p95 is over budget or more
+  than 10% worse than last time.
 - **`godot_play` answers "did it happen, and when" in one call:** `until` stops at the first frame a condition holds,
   `signals` records when signals fire with their arguments, `summary` gives one line per watched value (start, end,
   min, max, first change) instead of a table, and `expect` checks claims and makes the run fail when one does not hold.

@@ -4,6 +4,7 @@ import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { perfCommand } from "./commands/perf.js";
 import { fixCommand } from "./commands/fix.js";
 import { hookCommand } from "./commands/hook.js";
 import { learnCommand } from "./commands/learn.js";
@@ -36,6 +37,7 @@ export function createProgram(): Command {
     .addCommand(checkCommand())
     .addCommand(testCommand())
     .addCommand(playCommand())
+    .addCommand(perfCommand())
     .addCommand(scenarioCommand())
     .addCommand(ciCommand())
     .addCommand(screenshotCommand())
