@@ -266,10 +266,16 @@ async function step(p: Prepared, deps: ExportDeps, name: string, args: string[],
 export async function importStep(p: Prepared, deps: ExportDeps, timeoutMs: number): Promise<boolean> {
   const r = await step(p, deps, "import", ["--headless", "--path", p.root, "--import"], timeoutMs);
   const found = parseGodotLog(`${r.stderr}\n${r.stdout}`, "import");
-  p.result.diagnostics.push(...found);
   const exit = unexplainedExit("import", r, found);
+  // A first import of a fresh checkout reports files it has not made yet (translations from a CSV, say); the export,
+  // the pack's contents and the smoke run decide, so what the import said is kept as a warning.
+  for (const d of found) {
+    d.severity = "warning";
+    d.message = `while importing: ${d.message}`;
+  }
+  p.result.diagnostics.push(...found);
   if (exit) p.result.diagnostics.push(exit);
-  return !r.timedOut;
+  return !r.timedOut && !exit;
 }
 
 /**
