@@ -103,6 +103,31 @@ describe.skipIf(!GODOT)("godot_code with Godot's language server", () => {
     expect(again.server.fresh).toBe(false);
   });
 
+  it("finishes parallel calls when a class_name appears while they run, with one restart", { timeout: 180_000 }, async () => {
+    const dir = mkdtempSync(join(tmpdir(), "godotwright-code-race-"));
+    writeFileSync(join(dir, "project.godot"), 'config_version=5\n[application]\nconfig/name="R"\nconfig/features=PackedStringArray("4.7")\n');
+    for (let i = 0; i < 12; i++) writeFileSync(join(dir, `s${i}.gd`), `extends Node\n\n\nfunc f${i}() -> int:\n\tvar unused_${i} := ${i}\n\treturn ${i}\n`);
+    writeFileSync(join(dir, "main.gd"), MAIN);
+    const local = new LanguageServerPool();
+    try {
+      await codeIntel(dir, { op: "diagnostics", file: "res://main.gd", godot: GODOT!, pool: local });
+      const all = codeIntel(dir, { op: "diagnostics", godot: GODOT!, pool: local });
+      const hover = codeIntel(dir, { op: "hover", file: "res://main.gd", line: 9, column: 7, godot: GODOT!, pool: local });
+      await new Promise((r) => setTimeout(r, 30));
+      writeFileSync(join(dir, "brand_new.gd"), "class_name BrandNew\nextends Node\n");
+      const after = codeIntel(dir, { op: "hover", file: "res://main.gd", line: 9, column: 7, godot: GODOT!, pool: local });
+      const [a, h, n] = await Promise.all([all, hover, after]);
+      expect(a.scripts).toBe(13);
+      expect(a.diagnostics?.filter((d) => d.warning === "UNUSED_VARIABLE")).toHaveLength(13);
+      expect(h.hover?.signature).toBe("var inferred: float");
+      expect(n.server).toMatchObject({ fresh: true, restarted: "the class_name in res://brand_new.gd changed" });
+      expect(n.hover?.signature).toBe("var inferred: float");
+      expect(local.size).toBe(1);
+    } finally {
+      local.stopAll();
+    }
+  });
+
   it("answers through the MCP tool", { timeout: 180_000 }, async () => {
     const server = createServer({ root, godot: GODOT! });
     const client = new Client({ name: "test", version: "1.0.0" });
