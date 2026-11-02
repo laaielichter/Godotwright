@@ -9,6 +9,7 @@ import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
+import { uidOf } from "./uid.js";
 
 export class SceneError extends Error {}
 
@@ -94,15 +95,6 @@ function resourceType(root: string, path: string, fallback?: string): string {
     if (type) return type;
   }
   return fallback ?? "Resource";
-}
-
-/** The uid of a file, from its .uid file, its .import file or its own header. */
-function uidOf(root: string, path: string): string | undefined {
-  const full = fromResPath(root, path);
-  if (existsSync(`${full}.uid`)) return readFileSync(`${full}.uid`, "utf8").trim() || undefined;
-  if (existsSync(`${full}.import`)) return /^uid="([^"]+)"/m.exec(readFileSync(`${full}.import`, "utf8"))?.[1];
-  if (/\.(tscn|tres)$/.test(path)) return /^\[gd_\w+[^\]]*\buid="([^"]+)"/.exec(readFileSync(full, "utf8"))?.[1];
-  return undefined;
 }
 
 /**
