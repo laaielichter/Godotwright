@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runCi } from "../src/ci/ci.js";
@@ -56,7 +56,7 @@ describe("scenario files with until and signals", () => {
       "true 0",
       "true 2",
       "false 2 Hero.landed fired 2 times by frame 20",
-      "false  never held in 20 frames",
+      "false  never held up to frame 20",
     ]);
   });
 
@@ -103,6 +103,12 @@ describe("saving a scenario", () => {
     await expect(saveScenario(root, scenarioData("../x", { expect: ["A.b == 1"] }), { play: passing })).rejects.toThrow(ScenarioError);
     await expect(saveScenario(root, scenarioData("x", { expect: [] }), { play: passing })).rejects.toThrow(/at least one/);
     await expect(saveScenario(root, scenarioData("x", { input: "soon jump", expect: ["A.b == 1"] }), { play: passing })).rejects.toThrow(/"input"/);
+    // Another file that already uses the name in its "name" field blocks it, even with overwrite.
+    mkdirSync(join(root, ".godotwright/scenarios"), { recursive: true });
+    writeFileSync(join(root, ".godotwright/scenarios/jumpy.json"), JSON.stringify({ name: "jump2", expect: ["A.b == 1"] }));
+    for (const overwrite of [false, true])
+      await expect(saveScenario(root, scenarioData("jump2", { expect: ["Hero.velocity.y == -400 @ 10"] }), { play: passing, overwrite })).rejects.toThrow(/jumpy\.json is already called "jump2"/);
+    expect(existsSync(join(root, ".godotwright/scenarios/jump2.json"))).toBe(false);
   });
 });
 
