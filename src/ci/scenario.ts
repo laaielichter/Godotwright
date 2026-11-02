@@ -174,7 +174,7 @@ export function loadScenarios(path: string): { root: string; scenarios: { file: 
 export function judge(scenario: Scenario, report: PlayReport): ExpectationResult[] {
   const results = judgeClaims(scenario.expect, report, scenario.frames, scenario.signals);
   if (scenario.until && report.until?.frame === undefined)
-    results.push({ expect: `until ${scenario.until}`, ok: false, message: `never held in ${report.samples.at(-1)?.frame ?? scenario.frames ?? 0} frames` });
+    results.push({ expect: `until ${scenario.until}`, ok: false, message: `never held up to frame ${report.samples.at(-1)?.frame ?? Math.max((scenario.frames ?? 1) - 1, 0)}` });
   return results;
 }
 
@@ -327,6 +327,9 @@ export async function saveScenario(path: string, data: Record<string, unknown>, 
   const file = `${SCENARIO_DIR}/${name}.json`;
   const full = join(root, file);
   if (existsSync(full) && !options.overwrite) throw new ScenarioError(`${file} exists; pass overwrite to replace it`);
+  // A name must pick one scenario, so another file may not use it in its "name" field.
+  const other = loadScenarios(root).scenarios.find((s) => s.scenario.name === name && s.file !== file);
+  if (other) throw new ScenarioError(`${other.file} is already called "${name}"; choose another name`);
   const result = await runScenario(root, file, scenario, options);
   if (!result.ok) return { result };
   const json = `${JSON.stringify(scenarioJson(scenario), null, 2)}\n`;
