@@ -648,6 +648,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       if (found) {
         if (found.kind !== "method") return undefined;
         checkArgs(name, found.args, tokens, k + 1);
+        if (name === "add_image" || name === "update_image") imageUnitArgs({ type: native(pm.nativeOf(model)), exact: false }, name, tokens, k + 1);
         return { type: found.type, exact: false };
       }
       const global = api.globalFunction(name);
