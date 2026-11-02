@@ -24,6 +24,8 @@ import {
   reviewLearning,
 } from "../learn/hooks.js";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { FIXABLE_RULES, fixProject, formatFix } from "../fix/fix.js";
+import { doctorProject, formatDoctor } from "../doctor/doctor.js";
 import { findUsages, formatUsages } from "../usages/usages.js";
 import {
   RenameError,
@@ -137,6 +139,7 @@ const PROFILES: Record<Tier, Profile> = {
     infos: false,
     instructions: [
       `Godotwright gives you checked Godot ${GODOT_TARGET} knowledge for this project. Follow these steps:`,
+      "0. In a project you do not know yet, or when something is broken and you do not know where to start, call godot_doctor: what is wrong, in which order to fix it, and why.",
       "1. Call godot_scan once to learn the scenes, scripts, signals and input actions.",
       "2. Before you use an engine class, method, property or signal you are not sure about, call godot_api. Never guess API names; Godot 3 names do not work in Godot 4.",
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
@@ -144,6 +147,7 @@ const PROFILES: Record<Tier, Profile> = {
       "5. If Godot is installed, call godot_check before you finish.",
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it.",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
+      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
@@ -160,6 +164,8 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_api and godot_api_search answer from the official Godot 4.7 class reference, offline. Use them instead of memory for exact signatures, and to translate Godot 3 names.",
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
+      "- godot_doctor answers \"what is wrong here, and in which order do I fix it\": the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and whether godot_fix or godot_migrate can do it, then numbered next steps. Start here in a project you do not know or when something is broken.",
+      "- godot_fix applies the mechanical fixes for review findings (each labelled safe or check), shows them first, writes with write: true and reviews the changed files again.",
       "- godot_checklist lists every AAA rule with its fix.",
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
@@ -762,6 +768,71 @@ export function createServer(options: ServerOptions = {}): McpServer {
             : {}),
         });
         return text(formatMigration(result, detail ?? profile.detail));
+      }),
+  );
+
+  server.registerTool(
+    "godot_doctor",
+    {
+      title: "What is wrong, and in which order to fix it",
+      description:
+        "One call for a project you do not know yet, or when something is broken and you do not know where to start: runs the review and, when Godot is installed, loads every script and scene with Godot; groups the findings by cause (twenty findings from one missing file are one problem), puts the most urgent first (Godot's errors, then the review's), and gives each the place, the lesson from real projects that explains it, the fix, and whether godot_fix or godot_migrate can do it. Pass `symptom` with what you see going wrong (\"helicopter bounces on the moving deck\") to add the lessons for it. Ends with numbered next steps. Read-only. Use godot_review for the full list and godot_check for Godot's raw output.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only problems in these res:// files"),
+        symptom: z.string().optional().describe("what you see going wrong, in plain words"),
+        godot: z.boolean().optional().describe("run Godot too when it is installed (default true)"),
+        limit: z.number().int().min(1).max(100).optional().describe("problems shown in full (default 12)"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, files, symptom, godot, limit, detail }) => {
+      try {
+        const report = await doctorProject(where(path), {
+          ...(files?.length ? { files: files.map(resPath) } : {}),
+          ...(symptom ? { symptom } : {}),
+          godot: godot !== false,
+          godotPath: options.godot,
+          limit: limit ?? (profile.detail === "brief" ? 8 : 12),
+        });
+        return text(formatDoctor(report, detail ?? profile.detail));
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_fix",
+    {
+      title: "Fix review findings mechanically",
+      description:
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only these res:// files"),
+        rules: z.array(z.string()).optional().describe(`only these rules (fixable: ${FIXABLE_RULES.join(", ")})`),
+        include_check: z.boolean().optional().describe("also apply fixes labelled check (default false)"),
+        write: z.boolean().optional().describe("write the fixes (default false: show them only)"),
+        detail: detailParam,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    async ({ path, files, rules, include_check, write, detail }) =>
+      guard(() => {
+        const result = fixProject(where(path), {
+          ...(files?.length ? { files: files.map(resPath) } : {}),
+          ...(rules?.length ? { rules } : {}),
+          includeCheck: include_check === true,
+          write: write === true,
+        });
+        return text(formatFix(result, detail ?? profile.detail));
       }),
   );
 

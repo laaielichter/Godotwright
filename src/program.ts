@@ -3,6 +3,8 @@ import { apiCommand } from "./commands/api.js";
 import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
+import { doctorCommand } from "./commands/doctor.js";
+import { fixCommand } from "./commands/fix.js";
 import { hookCommand } from "./commands/hook.js";
 import { learnCommand } from "./commands/learn.js";
 import { lessonsCommand } from "./commands/lessons.js";
@@ -40,6 +42,8 @@ export function createProgram(): Command {
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
     .addCommand(migrateCommand())
+    .addCommand(fixCommand())
+    .addCommand(doctorCommand())
     .addCommand(usagesCommand())
     .addCommand(renameCommand())
     .addCommand(projectCommand())
