@@ -30,6 +30,10 @@ node dist/cli.js --help
 - `src/scan/`: builds the project map and formats it (brief, full, JSON).
 - `src/check/`: runs Godot headless (import, checker script, optional run) and
   turns its output into diagnostics.
+- `src/shaders/`: compiles every shader by drawing it in Godot (Compatibility renderer, xvfb-run on Linux without a
+  display), because headless Godot never compiles shaders. `runner.ts` is the GDScript it runs, `log.ts` reads Godot's
+  shader errors, `hints.ts` names the Godot 4 form of Godot 3 shader code, and `shaders.ts` maps each error to the line
+  in the .gdshader, .gdshaderinc or .tres/.tscn. `godotwright shaders` and `check --shaders` use it.
 - `src/api/`: lookup and search over the bundled Godot 4.7 class reference.
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
   scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from
