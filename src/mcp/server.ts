@@ -92,6 +92,8 @@ import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
+import { patchExport } from "../export/patch.js";
+import { formatExportRun, inspectPack, runExport, smokePack } from "../export/run.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
@@ -184,7 +186,8 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
       "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
       "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
-      "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export.",
+      "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export; with `pck` it reads an exported pack instead.",
+      "- godot_export_run exports for real, headless: a pack, release or debug build, or a patch with only what changed against base packs or the base game's file list. It checks the file, compares the pack with what the game loads, and runs the exported game for some frames with errors and call chains. Run it before you call a build done.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
@@ -835,19 +838,68 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check what the exported game will hold",
       description:
-        "Compare the export presets (export_presets.cfg) with what the scripts and scenes load, without exporting: files that exclude_filter leaves out although they are preloaded or loaded (Godot leaves them out even when something needs them, so the build fails there), plain data files (text, binary, GeoJSON, cfg, XML, YAML; JSON and imported CSV are fine) that Godot only exports when include_filter names them, and paths built at run time under an excluded folder; plus whether export templates are installed. `preset` limits it to one preset (name or number). Read-only. Run it before an export and after changing what the game loads.",
+        "Compare the export presets (export_presets.cfg) with what the scripts and scenes load, without exporting: files that exclude_filter leaves out although they are preloaded or loaded (Godot leaves them out even when something needs them, so the build fails there), plain data files (text, binary, GeoJSON, cfg, XML, YAML; JSON and imported CSV are fine) that Godot only exports when include_filter names them, paths built at run time under an excluded folder, a BOM that makes Godot read no presets; plus whether export templates are installed. `preset` limits it to one preset (name or number). `pck`: read an exported .pck (or a game executable with the pack inside) instead, without Godot, and compare it with the project: files the game loads that are missing, editor-only and test files shipped. Read-only. Run it before an export and after changing what the game loads; godot_export_run exports for real.",
       inputSchema: {
         path: pathParam,
         preset: z.string().optional().describe("only this preset (its name or number)"),
+        pck: z.string().optional().describe("an exported .pck or game executable to read and compare"),
       },
       annotations: readOnly,
     },
-    async ({ path, preset }) =>
+    async ({ path, preset, pck }) =>
       guard(() => {
+        if (pck) {
+          const r = inspectPack(where(pck), { path: where(path), ...(preset ? { preset } : {}) });
+          return r.errors ? failure(formatExportRun(r)) : text(formatExportRun(r));
+        }
         const result = checkExport(where(path), preset ? { preset } : {});
         const body = formatExportCheck(result);
         return result.problems.some((p) => p.severity === "error") ? failure(body) : text(body);
       }),
+  );
+
+  server.registerTool(
+    "godot_export_run",
+    {
+      title: "Export headless, check the build and run it",
+      description:
+        "Export a preset with Godot 4.7 headless and check the result instead of trusting it. mode `pack` (default; needs no templates), `release` or `debug` (need export templates), `patch` (only what changed: Godot's --export-patch against `against` base packs or the preset's patches, or cut from a full export by `manifest`, the base game's file list with md5, default godotwright.json baseFiles; it never ships an unchanged base file nor misses a changed one, and lists every file), or `smoke` (run an existing `pck`). Stops early on an unknown preset, a BOM in export_presets.cfg or missing templates; checks the file is there; compares the pack with what the game loads (missing files with their load chain, editor-only and test files shipped); runs the exported game headless for `frames` (default 120, 0 = none) and reports runtime errors with call chains. Writes to .godot/godotwright/export/<preset>/ unless `out` is given. An error result on any error.",
+      inputSchema: {
+        path: pathParam,
+        preset: z.string().optional().describe("the preset (name or number); not needed for smoke"),
+        mode: z.enum(["pack", "release", "debug", "patch", "smoke"]).optional().describe("default pack"),
+        out: z.string().optional().describe("output file inside the project (.pck for pack and patch)"),
+        frames: z.number().int().min(0).max(100_000).optional().describe("frames to run the exported game (default 120, 0 = no run)"),
+        against: z.array(z.string()).optional().describe("patch: base .pck files in load order"),
+        manifest: z.array(z.string()).optional().describe("patch: lists of the base game's files (JSON with md5, or paths)"),
+        pck: z.string().optional().describe("smoke: the .pck or exported game to run"),
+        timeout_seconds: z.number().int().min(10).max(7200).optional().describe("timeout per Godot run (default 600)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, preset, mode, out, frames, against, manifest, pck, timeout_seconds }) => {
+      try {
+        const dir = where(path);
+        const common = { godot: options.godot, timeoutMs: (timeout_seconds ?? 600) * 1000, ...(frames !== undefined ? { frames } : {}) };
+        let r;
+        if (mode === "smoke") {
+          if (!pck && !out) return failure("smoke needs pck: the .pck or exported game to run");
+          r = await smokePack(where(pck ?? out), { path: dir, ...common });
+        } else {
+          if (!preset) return failure(`${mode ?? "pack"} needs preset (its name or number)`);
+          r =
+            mode === "patch"
+              ? await patchExport(dir, { preset, ...common, ...(out ? { out: output(out) } : {}), ...(against ? { against: against.map(where) } : {}), ...(manifest ? { manifest: manifest.map(where) } : {}) })
+              : await runExport(dir, { preset, mode: mode ?? "pack", ...common, ...(out ? { out: output(out) } : {}) });
+        }
+        const body = formatExportRun(r, { files: profile.detail === "full" || mode === "patch" });
+        return r.errors ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_export for the checks without Godot.`);
+        if (error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
   );
 
   server.registerTool(

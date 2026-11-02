@@ -46,6 +46,21 @@ describe("godotwright export", () => {
     expect(formatExportCheck(r)).toMatch(/^export check: 1 preset \(Linux, Linux\): 2 errors, 2 warnings/);
   });
 
+  it("counts imported files as exported whatever their extension, but not ones kept or skipped", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="E"\n',
+      "export_presets.cfg": PRESETS,
+      "main.gd": 'extends Node\n\n\nfunc _ready() -> void:\n\tprint(load("res://fx/water.glsl"), FileAccess.get_file_as_string("res://fx/notes.txt"), FileAccess.get_file_as_string("res://fx/raw.png"))\n',
+      "fx/water.glsl": "#[compute]\n",
+      "fx/water.glsl.import": '[remap]\n\nimporter="glsl"\ntype="RDShaderFile"\n',
+      "fx/notes.txt": "x",
+      "fx/notes.txt.import": '[remap]\n\nimporter="keep"\n',
+      "fx/raw.png": "x",
+      "fx/raw.png.import": '[remap]\n\nimporter="skip"\n',
+    });
+    expect(checkExport(root).problems.map((p) => `${p.severity} ${p.file}`)).toEqual(["error res://fx/notes.txt", "error res://fx/raw.png"]);
+  });
+
   it("says when there is nothing to check", async () => {
     const root = makeProject({ "project.godot": '[application]\nconfig/name="E"\n' });
     expect(checkExport(root).notes.join("\n")).toMatch(/no export_presets\.cfg/);

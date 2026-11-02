@@ -1,9 +1,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Tier } from "../src/mcp/server.js";
-import { DEMO, FIXTURES, makeProject } from "./helpers.js";
+import { DEMO, FIXTURES, makeProject, tempFolder } from "./helpers.js";
 
 async function connect(tier: Tier, root = DEMO) {
   const server = createServer({ tier, root, godot: "/no/such/godot" });
@@ -33,6 +34,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_deps",
       "godot_doctor",
       "godot_export",
+      "godot_export_run",
       "godot_feedback",
       "godot_fix",
       "godot_game",
@@ -146,6 +148,34 @@ describe("MCP server (cheap profile)", () => {
     })) as Result;
     expect(r.isError).toBe(true);
     expect(textOf(r)).toContain("not found or not executable");
+  });
+
+  it("exports with destructive hints, and reads a pack read-only without Godot", async () => {
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === "godot_export_run")?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(tools.find((t) => t.name === "godot_export")?.annotations?.readOnlyHint).toBe(true);
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="P"\nrun/main_scene="res://main.tscn"\n',
+      "main.tscn": '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n',
+      "main.gd": 'extends Node\n\n\nfunc _ready() -> void:\n\tprint(FileAccess.get_file_as_string("res://data/b.json"))\n',
+      "data/b.json": "{}",
+      "export_presets.cfg": '[preset.0]\n\nname="Linux"\nplatform="Linux"\nexport_filter="all_resources"\n',
+    });
+    const read = (await client.callTool({ name: "godot_export", arguments: { path: root, pck: `${FIXTURES}/pck/game.pck` } })) as Result;
+    expect(read.isError).toBeFalsy();
+    expect(textOf(read)).toMatch(/^export pck: .*game\.pck: ok\npack: 11 files/);
+    const run = (await client.callTool({ name: "godot_export_run", arguments: { path: root, preset: "Linux" } })) as Result;
+    expect(run.isError).toBe(true);
+    expect(textOf(run)).toContain("not found or not executable");
+    const noPreset = (await client.callTool({ name: "godot_export_run", arguments: { path: root } })) as Result;
+    expect(textOf(noPreset)).toBe("pack needs preset (its name or number)");
+    // An out outside the project is refused before anything is deleted or written.
+    const keep = join(tempFolder("gw-outside-"), "keep.pck");
+    writeFileSync(keep, "PRECIOUS");
+    const escape = (await client.callTool({ name: "godot_export_run", arguments: { path: root, preset: "Linux", out: keep, frames: 0 } })) as Result;
+    expect(escape.isError).toBe(true);
+    expect(textOf(escape)).toContain("is outside the project");
+    expect(readFileSync(keep, "utf8")).toBe("PRECIOUS");
   });
 
   it("returns errors as tool errors, not crashes", async () => {
