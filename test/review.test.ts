@@ -866,3 +866,18 @@ describe("a focused review", () => {
     }
   });
 });
+
+describe("signal connections saved in scenes", () => {
+  it("structure/connection-arguments: a method that cannot take what the signal passes", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn":
+        '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n\n[node name="Timer" type="Timer" parent="."]\n\n[node name="Button" type="Button" parent="."]\n\n[connection signal="timeout" from="Timer" to="." method="_on_timeout"]\n[connection signal="toggled" from="Button" to="." method="_on_toggled" binds=[7]]\n[connection signal="pressed" from="Button" to="." method="_on_pressed" flags=16]\n[connection signal="toggled" from="Button" to="." method="_on_any" unbinds=1]\n',
+      "main.gd":
+        "extends Node\n\n\nfunc _on_timeout(which: int) -> void:\n\tprint(which)\n\n\nfunc _on_toggled(on: bool, extra: int) -> void:\n\tprint(on, extra)\n\n\nfunc _on_pressed(source: Node) -> void:\n\tprint(source)\n\n\nfunc _on_any() -> void:\n\tpass\n",
+    });
+    const found = reviewProject(root).findings.filter((f) => f.rule === "structure/connection-arguments");
+    expect(found.map((f) => f.line)).toEqual([12]);
+    expect(found[0]!.message).toContain('"Method expected 1 argument(s), but called with 0"');
+  });
+});

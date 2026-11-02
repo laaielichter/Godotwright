@@ -87,6 +87,7 @@ const list: Rule[] = [
   { id: "structure/parse-error", category: "structure", severity: "error", title: "File does not parse", fix: "Fix the syntax error at the line shown, or re-save the file from the Godot editor." },
   { id: "structure/missing-node", category: "structure", severity: "warning", title: "Node path not in scene", fix: "Fix the node path, or add the node to the scene." },
   { id: "structure/bad-connection", category: "structure", severity: "error", title: "Broken signal connection", fix: "Fix the connection in the scene, or add the missing method or signal." },
+  { id: "structure/connection-arguments", category: "structure", severity: "error", title: "Connected method takes the wrong number of arguments", fix: "Give the method the signal's parameters (defaults for the ones it may skip), or use binds/unbinds in the connection." },
   { id: "structure/unknown-group", category: "structure", severity: "warning", title: "Group never assigned", fix: "Add nodes to the group (in the scene or with add_to_group()), or fix the name." },
   { id: "structure/file-naming", category: "structure", severity: "info", title: "File naming", fix: "Use snake_case for files and folders, as the Godot docs recommend." },
   { id: "structure/root-clutter", category: "structure", severity: "info", title: "Cluttered project root", fix: "Move scenes, scripts and assets into folders." },

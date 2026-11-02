@@ -26,6 +26,10 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **`godot_play` answers "did it happen, and when" in one call:** `until` stops at the first frame a condition holds,
   `signals` records when signals fire with their arguments, `summary` gives one line per watched value (start, end,
   min, max, first change) instead of a table, and `expect` checks claims and makes the run fail when one does not hold.
+- **New review rule `structure/connection-arguments` (error):** a signal connection saved in a scene whose method
+  cannot take what the signal passes (counting `binds`, `unbinds` and the source object flag). Godot fails on every
+  emit with "Method expected 1 argument(s), but called with 0"; the review now says so before the game runs. Quiet on
+  the 139 official demos and every project of a large open world.
 - **Reviews are 3.5 times faster on large projects, and the edit hook about 20 times faster.** On a game with 800
   scripts a full review took 12.6 s and now takes 3.6 s; the findings are byte for byte the same on 163 projects (the
   139 official demos and every project of a large open world).

@@ -60,16 +60,30 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
         out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): node "${from === null ? c.from : c.to}" does not exist.`));
         continue;
       }
+      let passes: number | undefined;
       if (from && from.kind !== "enum" && !dynamic(pm, from) && !foreign(from)) {
         const signal = pm.memberOf(from, c.signal);
         if (!signal || signal.kind !== "signal") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal}: ${label(from)} has no signal "${c.signal}".`));
+        } else if (signal.signalArgs !== undefined) {
+          passes = Math.max(0, signal.signalArgs - (raw.unbinds ?? 0)) + (raw.binds ?? 0) + (raw.appendSource ? 1 : 0);
         }
       }
       if (to && to.kind !== "enum" && !dynamic(pm, to) && !foreign(to)) {
         const method = pm.memberOf(to, c.method);
         if (!method || method.kind !== "method") {
           out.push(finding("structure/bad-connection", scene.path, c.line, `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): ${label(to)} has no method "${c.method}".`));
+        } else if (passes !== undefined && method.args && (passes < method.args.min || passes > method.args.max)) {
+          // Godot calls the method with the signal's arguments (minus unbinds, plus binds); a mismatch fails on every emit.
+          const takes = method.args.min === method.args.max ? `${method.args.min}` : method.args.max === Number.POSITIVE_INFINITY ? `${method.args.min} or more` : `${method.args.min} to ${method.args.max}`;
+          out.push(
+            finding(
+              "structure/connection-arguments",
+              scene.path,
+              c.line,
+              `Connection ${c.from}.${c.signal} -> ${c.to}.${c.method}(): the signal passes ${passes} argument${passes === 1 ? "" : "s"}${raw.binds || raw.unbinds || raw.appendSource ? " (with binds, unbinds or the source object)" : ""}, but ${c.method}() takes ${takes}. Godot fails on every emit: "Method expected ${method.args.min} argument(s), but called with ${passes}".`,
+            ),
+          );
         }
       }
     }
