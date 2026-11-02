@@ -54,8 +54,17 @@ describe("migrate a script", () => {
     expect(code("export(PoolStringArray) var names")).toBe("@export var names: PackedStringArray");
     expect(code("export(int, \"A\", \"B\") var mode = 0")).toBe('@export_enum("A", "B") var mode: int = 0');
     expect(code("export(int, FLAGS, \"Fire\", \"Water\") var elements = 0")).toBe('@export_flags("Fire", "Water") var elements: int = 0');
-    const m = migrateScript("export(Color, RGB) var tint", api);
-    expect(m.code).toBe("@export var tint: Color");
+    expect(code("export(Color, RGB) var tint")).toBe("@export_color_no_alpha var tint: Color");
+    expect(code("export(Color, RGBA) var tint")).toBe("@export var tint: Color");
+    expect(code("export(int, LAYERS_2D_PHYSICS) var mask = 1")).toBe("@export_flags_2d_physics var mask: int = 1");
+    expect(code("export(int, LAYERS_3D_NAVIGATION) var nav")).toBe("@export_flags_3d_navigation var nav: int");
+    expect(code("export(float, EXP, 100, 1000, 20) var e")).toBe('@export_range(100, 1000, 20, "exp") var e: float');
+    expect(code("export(float, EASE) var ease")).toBe("@export_exp_easing var ease: float");
+    for (const hint of ["Color, RGB", "Color, RGBA", "int, LAYERS_2D_RENDER", "float, EXP, 1, 10", "float, EASE"]) {
+      expect(migrateScript(`export(${hint}) var x`, api).left).toEqual([]);
+    }
+    const m = migrateScript("export(NodePath, HELLO) var target", api);
+    expect(m.code).toBe("@export var target: NodePath");
     expect(m.left[0]?.message).toContain("export hint");
   });
 
