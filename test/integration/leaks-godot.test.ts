@@ -110,6 +110,20 @@ describe.skipIf(!GODOT)("godotwright leaks in Godot", () => {
     expect(kept.verdict).toBe("ok");
   });
 
+  it("does not count a scene the game switched to as a leak", { timeout: 300_000 }, async () => {
+    // One switch early in the cycle, one on the last frame (still pending when the harness frees its scene).
+    for (const at of [3, 10]) {
+      const root = project(["extends Node3D", "", "var f := 0", "", "", "func _process(_d: float) -> void:", "\tf += 1",
+        `\tif f == ${at}:`, '\t\tget_tree().change_scene_to_file("res://other.tscn")', ""].join("\n"));
+      writeFileSync(join(root, "other.tscn"), '[gd_scene format=3]\n\n[node name="Other" type="Node2D"]\n\n[node name="Child" type="Node2D" parent="."]\n');
+      const r = await leakScene(root, { godot: GODOT, cycleFrames: 10, baseline: false });
+      expect(r.run.finished).toBe(true);
+      expect(r.groups).toEqual([]);
+      expect([r.nodes.perCycle, r.objects.perCycle, r.orphanNodes.perCycle]).toEqual([0, 0, 0]);
+      expect(r.verdict).toBe("ok");
+    }
+  });
+
   it("check names the classes leaked at exit", { timeout: 300_000 }, async () => {
     const root = project(LEAKY);
     const result = await checkProject(root, { godot: GODOT, scene: "res://chunk.tscn" });

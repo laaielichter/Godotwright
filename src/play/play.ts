@@ -151,6 +151,10 @@ const CYCLE_FUNCS = `
 
 func _cycle_step() -> void:
 	if _settle:
+		# A scene the game switched to in the last frame (change_scene_to_*) is added only now; a real switch
+		# would free it too, so it is no leak.
+		if _free_switched():
+			return
 		_settle = false
 		_snapshot()
 		if _cycle >= CYCLES:
@@ -172,6 +176,7 @@ func _cycle_step() -> void:
 			current_scene = null
 			_scene.free()
 		_scene = null
+		_free_switched()
 		# One more frame, so what the scene queued (queue_free, call_deferred) has run before the snapshot.
 		_settle = true
 		return
@@ -181,6 +186,17 @@ func _cycle_step() -> void:
 		return
 	_cycle_frame = 0
 	_apply(0)
+
+
+## Frees the scene the game switched to (change_scene_to_file/_packed, reload_current_scene): the harness only
+## made its own instance, and a real scene switch frees the one before. True when there was one.
+func _free_switched() -> bool:
+	var other := current_scene
+	if other == null or other == _scene or not is_instance_valid(other):
+		return false
+	current_scene = null
+	other.free()
+	return true
 
 
 func _finish() -> void:
