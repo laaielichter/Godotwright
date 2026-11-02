@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { connect, createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -88,6 +88,21 @@ export function pathOfUri(uri: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Whether two paths name one file: Godot may answer with the real path (a linked folder, /tmp on macOS). */
+export function samePath(a: string | undefined, b: string): boolean {
+  if (a === undefined) return false;
+  const norm = (p: string) => {
+    let real = p;
+    try {
+      real = realpathSync(p);
+    } catch {
+      // Not on disk (unsaved code): compare as given.
+    }
+    return process.platform === "win32" ? real.toLowerCase() : real;
+  };
+  return a === b || norm(a) === norm(b);
 }
 
 /** What makes a warm server stale: the project settings and the global class names. */
@@ -239,7 +254,7 @@ export class GodotLanguageServer {
       (method, params) => {
         if (method !== "textDocument/publishDiagnostics") return undefined;
         const p = params as { uri?: string; diagnostics?: LspDiagnostic[] };
-        return p.uri && pathOfUri(p.uri) === path ? (p.diagnostics ?? []) : undefined;
+        return p.uri && samePath(pathOfUri(p.uri), path) ? (p.diagnostics ?? []) : undefined;
       },
       timeoutMs,
       `diagnostics for ${path}`,

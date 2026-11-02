@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { findProjectRoot, fromResPath, listProjectFiles, toResPath } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
@@ -95,7 +95,15 @@ function resolveFile(root: string, file: string): string {
 
 /** res:// for a file in the project, else the path itself. */
 function display(root: string, path: string): string {
-  return isInside(root, path) ? toResPath(root, path) : path;
+  if (isInside(root, path)) return toResPath(root, path);
+  try {
+    // Godot may answer with the real path of a linked project folder.
+    const real = realpathSync(root);
+    if (isInside(real, path)) return toResPath(real, path);
+  } catch {
+    // Root gone: show the path as it is.
+  }
+  return path;
 }
 
 export function toCodeDiagnostic(file: string, d: LspDiagnostic): CodeDiagnostic {
