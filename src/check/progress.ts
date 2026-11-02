@@ -36,15 +36,20 @@ export function throwIfCancelled(signal: AbortSignal | undefined = currentRun()?
   if (signal?.aborted) throw new CancelledError();
 }
 
-/** What a Godot run is for, from its arguments: import, export, a script (checker, play, compile) or a run. */
+/**
+ * What a Godot run is for, from its arguments: import, export, a script (checker, play, compile), the version probe
+ * or a run. The last `--script`/`-s` with a value counts: a wrapper before Godot (xvfb-run -s "-screen ...") has its own.
+ */
 export function phaseOf(args: readonly string[]): string {
   if (args.includes("--import")) return "import";
   if (args.some((a) => a.startsWith("--export"))) return "export";
-  const at = Math.max(args.indexOf("--script"), args.indexOf("-s"));
-  if (at >= 0) {
-    const name = basename(args[at + 1] ?? "").replace(/\.gd$/, "");
-    return name === "check" ? "load" : name === "compile" ? "shader compile" : name || "script";
+  for (let at = args.length - 2; at >= 0; at--) {
+    if ((args[at] === "--script" || args[at] === "-s") && !args[at + 1]!.startsWith("-")) {
+      const name = basename(args[at + 1]!).replace(/\.gd$/, "");
+      return name === "check" ? "load" : name === "compile" ? "shader compile" : name || "script";
+    }
   }
+  if (args.includes("--version")) return "version";
   return "run";
 }
 
@@ -79,13 +84,52 @@ export class ProgressParser {
   }
 }
 
-/** Calls `report` at most once per `ms`, except for messages sent with `force`. */
-export function throttle(report: (message: string) => void, ms = 1000): (message: string, force?: boolean) => void {
+export interface Throttled {
+  (message: string, force?: boolean): void;
+  /** Sends the message held back, if any (at the end of a run). */
+  flush(): void;
+  /** Drops the message held back and stops its timer. */
+  stop(): void;
+}
+
+/**
+ * Calls `report` at most once per `ms`, except for messages sent with `force`. A message that comes too soon is held
+ * back and sent once the interval has passed, unless a newer one replaces it first; so the last one is never lost.
+ */
+export function throttle(report: (message: string) => void, ms = 1000): Throttled {
   let last = 0;
-  return (message, force = false) => {
-    const now = Date.now();
-    if (!force && now - last < ms) return;
-    last = now;
+  let held: string | undefined;
+  let timer: NodeJS.Timeout | undefined;
+  const send = (message: string) => {
+    last = Date.now();
     report(message);
   };
+  const stop = () => {
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    held = undefined;
+  };
+  const flush = () => {
+    const message = held;
+    stop();
+    if (message !== undefined) send(message);
+  };
+  const throttled = ((message: string, force = false) => {
+    const wait = last + ms - Date.now();
+    if (force) {
+      flush();
+      send(message);
+      return;
+    }
+    if (wait <= 0 && held === undefined) {
+      send(message);
+      return;
+    }
+    held = message;
+    timer ??= setTimeout(flush, Math.max(0, wait));
+    timer.unref?.();
+  }) as Throttled;
+  throttled.flush = flush;
+  throttled.stop = stop;
+  return throttled;
 }

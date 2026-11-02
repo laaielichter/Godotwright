@@ -2,9 +2,9 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runGodot } from "../src/check/godot.js";
-import { CancelledError, ProgressParser, phaseOf, withRun } from "../src/check/progress.js";
+import { CancelledError, ProgressParser, phaseOf, throttle, withRun } from "../src/check/progress.js";
 import { createServer } from "../src/mcp/server.js";
 import { alive, fakeGodot } from "./fake-godot.js";
 import { makeProject } from "./helpers.js";
@@ -38,6 +38,40 @@ describe("progress parser", () => {
     expect(phaseOf(["-s", "res://.godot/godotwright/play.gd"])).toBe("play");
     expect(phaseOf(["--export-pack", "Linux", "x.pck"])).toBe("export");
     expect(phaseOf(["--quit-after", "10"])).toBe("run");
+    expect(phaseOf(["--version"])).toBe("version");
+    // xvfb-run's own -s comes first; the script is Godot's.
+    const xvfb = ["-a", "-s", "-screen 0 1920x1080x24", "/bin/godot", "--path", "/p", "-s", "res://.godot/godotwright/screenshot.gd"];
+    expect(phaseOf(xvfb)).toBe("screenshot");
+    expect(phaseOf(["-a", "-s", "-screen 0 1920x1080x24", "/bin/godot", "--path", "/p", "--quit-after", "5"])).toBe("run");
+  });
+});
+
+describe("progress throttle", () => {
+  it("holds back a message that comes too soon and sends the newest one once the interval has passed", () => {
+    vi.useFakeTimers();
+    try {
+      const sent: string[] = [];
+      const t = throttle((m) => sent.push(m), 1000);
+      t("play: started", true);
+      t("play: frame 0/5000");
+      t("play: frame 1/5000");
+      expect(sent).toEqual(["play: started"]);
+      vi.advanceTimersByTime(1000);
+      expect(sent).toEqual(["play: started", "play: frame 1/5000"]);
+      t("import: scan done");
+      vi.advanceTimersByTime(10);
+      expect(sent).toHaveLength(2);
+      // The end of a run sends what is held back, before the next phase.
+      t.flush();
+      t("load: started", true);
+      expect(sent.slice(2)).toEqual(["import: scan done", "load: started"]);
+      t("load: 1/4 files");
+      t.stop();
+      vi.advanceTimersByTime(5000);
+      expect(sent).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
