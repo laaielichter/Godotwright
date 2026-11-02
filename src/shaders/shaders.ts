@@ -80,7 +80,8 @@ export interface ShaderCheckResult {
 
 const RUNNER_DIR = ".godot/godotwright";
 const RUNNER_RES = `res://${RUNNER_DIR}/shaders.gd`;
-const EMBEDS = /\btype="(?:Shader|VisualShader)"/;
+/** A .tres/.tscn that is a shader or holds one; a scene that only refers to a .gdshader is covered by that file. */
+const EMBEDS = /^\[(?:sub_resource|gd_resource) type="(?:Shader|VisualShader)"/m;
 const INCLUDE = /#include\s+\\?"([^"\\]+)\\?"/g;
 
 function toRes(root: string, file: string): string {
