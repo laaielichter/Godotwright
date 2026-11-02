@@ -17,7 +17,15 @@ export interface Diagnostic {
   stack?: StackFrame[];
   /** How many times the same error was printed (a runtime error in _process repeats every frame). */
   count?: number;
+  /** The review rule that predicts this message, when one does (so the static finding and Godot's agree). */
+  rule?: string;
 }
+
+/** Godot messages a review rule predicts statically. */
+const RULE_OF: [RegExp, string][] = [
+  [/^UID duplicate detected between /, "structure/duplicate-uid"],
+  [/ext_resource, invalid UID: /, "structure/unknown-uid"],
+];
 
 export interface StackFrame {
   function: string;
@@ -98,6 +106,8 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
         const path = RES_PATH.exec(message);
         if (path && !current) diag.file = path[1];
       }
+      const rule = RULE_OF.find(([re]) => re.test(message))?.[1];
+      if (rule) diag.rule = rule;
       pending = { diag, hasProjectLocation: inMessage !== null };
       continue;
     }
@@ -150,7 +160,7 @@ function dedupe(diags: Diagnostic[]): Diagnostic[] {
 
 export function formatDiagnostic(d: Diagnostic): string {
   const where = d.file ? `${d.file}${d.line ? `:${d.line}` : ""}: ` : "";
-  const lines = [`${where}${d.severity}: ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}`];
+  const lines = [`${where}${d.severity}: ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}${d.rule ? ` [${d.rule}]` : ""}`];
   // The call chain says how the code got there: the frames after the place of the error, the callers.
   const callers = (d.stack ?? []).filter((f, i) => i > 0 || f.file !== d.file || f.line !== d.line);
   for (const f of callers.slice(0, STACK_SHOWN)) lines.push(`    called from ${f.file}:${f.line} ${f.function}()`);
