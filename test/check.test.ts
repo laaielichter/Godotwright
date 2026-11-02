@@ -31,6 +31,7 @@ function fakeGodot(behavior: {
   importLog?: string;
   importExit?: number | "signal";
   runExit?: number | "signal";
+  verboseOut?: string;
 }): string {
   const dir = tempDir("fake-godot-");
   const bin = join(dir, "godot");
@@ -58,6 +59,7 @@ if (scriptAt >= 0 && b.holdPipes) {
   if (b.finish !== false) process.stderr.write("\\nGODOTWRIGHT_DONE 3 1\\n");
   process.exit(0);
 }
+if (args.includes("--quit-after") && args.includes("--verbose")) { process.stdout.write(b.verboseOut ?? ""); process.stderr.write(b.runLog ?? ""); process.exit(0); }
 if (args.includes("--quit-after")) { process.stdout.write(b.runOut ?? ""); process.stderr.write(b.runLog ?? ""); exitWith(b.runExit ?? 0); }
 process.exit(0);
 `;
@@ -94,6 +96,7 @@ describe("checkProject", () => {
         "ERROR: 38 resources still in use at exit (run with --verbose for details).",
         "   at: clear (core/io/resource.cpp:810)",
       ].join("\n"),
+      verboseOut: "Loading resource: res://main.tscn\nResource still in use: res://scripts/main.gd (GDScript)\nResource still in use: res://.godot/godotwright/x.gd (GDScript)\n",
     });
     const result = await checkProject(root, { godot, runFrames: 10 });
     expect(result.godotVersion).toBe("4.7.2.stable.official.fake");
@@ -116,12 +119,15 @@ describe("checkProject", () => {
       },
       {
         severity: "warning",
-        message: "at exit: 38 resources still in use at exit (run with --verbose for details).",
+        message: "at exit: 38 resources still in use at exit: res://scripts/main.gd (GDScript)",
         source: "run",
       },
     ]);
     expect(result.errors).toBe(2);
-    expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
+    // The leak at exit made a second, --verbose run that names what was still in use.
+    expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run", "run-verbose"]);
+    const quiet = await checkProject(root, { godot, runFrames: 10, leakDetails: false });
+    expect(quiet.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
     // The checker script is removed afterwards.
     expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
   });
