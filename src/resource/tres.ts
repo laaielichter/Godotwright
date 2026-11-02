@@ -6,7 +6,7 @@ import { applySplices, blocksOf, contentEnd, propSpan, type Block, type Splice }
 import { parseResourceText } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { asString } from "../godot/variant.js";
-import { fromResPath } from "../project/files.js";
+import { fromResPath, isInside } from "../project/files.js";
 import { resourceType, scriptInfo, uidOf } from "../scene/edit.js";
 import { ResourceEditError, type ResourceOp } from "./types.js";
 
@@ -17,6 +17,8 @@ export interface TextPlan {
   info: string[];
 }
 
+/** Godot's built-in value types: an ExtResource is never one of them. */
+const BUILTIN = /^(bool|int|float|String|StringName|NodePath|Vector[234]i?|Rect2i?|Transform[23]D|Plane|Quaternion|AABB|Basis|Projection|Color|RID|Callable|Signal|Dictionary|Array|Packed\w+Array)$/;
 const SUB_REF = /SubResource\(\s*"([^"]+)"\s*\)/g;
 const EXT_REF = /ExtResource\(\s*"([^"]+)"\s*\)/g;
 
@@ -74,6 +76,7 @@ export function planTres(root: string, resPath: string, original: string, ops: R
     const extFor = (path: string, fallbackType?: string): string => {
       const have = file.extResources.find((e) => e.path === path);
       if (have) return have.id;
+      if (!isInside(root, fromResPath(root, path))) throw new ResourceEditError(`${path} is outside the project`);
       if (!existsSync(fromResPath(root, path))) throw new ResourceEditError(`${path} does not exist in the project`);
       if (path === resPath) throw new ResourceEditError(`a resource cannot contain itself`);
       const type = resourceType(root, path, fallbackType);
@@ -92,7 +95,9 @@ export function planTres(root: string, resPath: string, original: string, ops: R
 
     /** The type, enum constants and default of a property, from the script's exports or the class reference. */
     const propertyInfo = (block: Block, cls: string | undefined, property: string, label: string) => {
-      const scriptRef = block.tag === "resource" ? file.scriptRef : undefined;
+      // [resource] and each sub_resource can have their own script = ExtResource("id").
+      const scriptSpan = propSpan(lines, block, "script");
+      const scriptRef = scriptSpan ? /ExtResource\(\s*"([^"]+)"\s*\)/.exec(lines.slice(scriptSpan.start, scriptSpan.start + scriptSpan.count).join(" "))?.[1] : undefined;
       const scriptPath = file.extResources.find((e) => e.id === scriptRef)?.path;
       const script = scriptPath?.endsWith(".gd") && existsSync(fromResPath(root, scriptPath)) ? scriptInfo(readFileSync(fromResPath(root, scriptPath), "utf8")) : undefined;
       const enumValues: Record<string, number> = {};
@@ -157,11 +162,22 @@ export function planTres(root: string, resPath: string, original: string, ops: R
           if (ref === t.block) throw new ResourceEditError(`a sub_resource cannot contain itself`);
           value = `SubResource("${subRef[1]}")`;
         } else if (isResource && raw.startsWith("res://")) {
+          if (!isInside(root, fromResPath(root, raw))) throw new ResourceEditError(`${raw} is outside the project`);
           const fileType = resourceType(root, raw, type);
           if (type && api.getClass(fileType) && !api.inheritsFrom(fileType, type)) throw new ResourceEditError(`${property} takes a ${type}; ${raw} is a ${fileType}`);
           value = `ExtResource("${extFor(raw, type)}")`;
+        } else if (/^ExtResource\(/.test(raw) && !(type && BUILTIN.test(type))) {
+          const id = /^ExtResource\(\s*"([^"]+)"\s*\)$/.exec(raw)?.[1];
+          const ext = id === undefined ? undefined : file.extResources.find((e) => e.id === id);
+          if (!ext) {
+            const ids = file.extResources.map((e) => e.id);
+            throw new ResourceEditError(`${resPath} has no ext_resource ${id === undefined ? raw : `"${id}"`}${ids.length ? `; it has ${ids.slice(0, 8).join(", ")}` : ""}; give a res:// path instead`);
+          }
+          const extType = ext.type ?? "";
+          if (type && api.getClass(type) && api.getClass(extType) && !api.inheritsFrom(extType, type)) throw new ResourceEditError(`${property} takes a ${type}; ext_resource ${id} is a ${extType}`);
+          value = `ExtResource("${id}")`;
         } else if (isResource && raw === "null") value = "null";
-        else if (isResource && !raw.startsWith("ExtResource(")) throw new ResourceEditError(`${property} takes a ${type}: give a res:// file, SubResource("id") or null`);
+        else if (isResource) throw new ResourceEditError(`${property} takes a ${type}: give a res:// file, SubResource("id") or null`);
         else value = typedValue(`${t.label}.${property}`, raw, isResource ? undefined : type, (m) => new ResourceEditError(m), enumValues);
         if (defaultText !== undefined && defaultText === value) warnings.push(`${value} is Godot's default for ${property}; the editor drops default values when it saves`);
         const span = propSpan(lines, t.block, property);
