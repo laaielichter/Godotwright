@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { toolsFromEnv } from "../src/commands/mcp.js";
 import { createServer, type ServerOptions } from "../src/mcp/server.js";
 import { ALL_TOOLS, TOOLSETS, TOOLSET_NAMES, WRITE_ONLY_TOOLS, enabledTools, envFlag } from "../src/mcp/toolsets.js";
+import { renderInstructions } from "../src/mcp/instructions.js";
 import { DEMO, makeProject } from "./helpers.js";
 
 async function connect(options: ServerOptions) {
@@ -35,6 +36,7 @@ describe("tool sets", () => {
     expect(enabledTools("").size).toBe(ALL_TOOLS.length);
     expect(enabledTools("all,core").size).toBe(ALL_TOOLS.length);
     expect(() => enabledTools("cor")).toThrow(/unknown tool set or tool "cor"; use core, edit/);
+    expect(() => enabledTools("all,bogus")).toThrow(/"bogus"/);
     expect(toolsFromEnv({ GODOTWRIGHT_TOOLS: " core,run " })).toBe("core,run");
     expect(toolsFromEnv({ GODOTWRIGHT_TOOLS: "${user_config.tools}" })).toBeUndefined();
     expect(envFlag("1") && envFlag("true") && !envFlag("0") && !envFlag(undefined)).toBe(true);
@@ -68,6 +70,22 @@ describe("tool sets", () => {
         }
       }
     }
+  });
+
+  it("drops text about tools that are left out", () => {
+    const cheapRun = renderInstructions("cheap", enabledTools("run"));
+    expect(cheapRun).not.toContain("Follow these steps");
+    expect(cheapRun).toContain("When godot_play with expect proved a fix");
+    expect(renderInstructions("cheap", enabledTools("core"))).toContain("Follow these steps:");
+    for (const tier of ["cheap", "premium"] as const) {
+      for (const set of ["core", "edit", "run", "game", "export"]) {
+        const text = renderInstructions(tier, enabledTools(set));
+        expect(text, `${tier} ${set}`).not.toMatch(/3D model|Models face|For models/);
+        expect(text, `${tier} ${set}`).not.toMatch(/\{godot_/);
+      }
+    }
+    expect(renderInstructions("cheap", enabledTools("model"))).toMatch(/To make or check a 3D model .*Models face \+Z/);
+    expect(renderInstructions("premium", enabledTools("all"))).toContain("For models: identify");
   });
 
   it("numbers the cheap steps without gaps when sets are left out", async () => {

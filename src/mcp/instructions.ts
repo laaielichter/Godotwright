@@ -3,16 +3,19 @@ import { GODOT_TARGET } from "../version.js";
 /**
  * The server instructions per profile, filtered by the tools that are enabled, so an agent is never told to call
  * a tool that is not there. A line is split into parts by "|": a part that names a tool that is not enabled is
- * left out, and a line whose first part is left out is dropped. Lines that start with "#." are numbered steps.
+ * left out, and a line whose first part is left out is dropped. A part that starts with "{godot_a godot_b}" is
+ * also left out unless one of those tools is enabled (for text that names no tool but is about them). Lines that
+ * start with "#." are numbered steps; the first line's "| Follow these steps:" goes when no step is left.
  */
 const CHEAP: string[] = [
-  `Godotwright gives you checked Godot ${GODOT_TARGET} knowledge for this project. Follow these steps:`,
+  `Godotwright gives you checked Godot ${GODOT_TARGET} knowledge for this project.| Follow these steps:`,
   "#. In a project you do not know yet, or when something is broken and you do not know where to start, call godot_doctor: what is wrong, in which order to fix it, and why.",
   "#. Call godot_scan once to learn the scenes, scripts, signals and input actions.",
   "#. Before you use an engine class, method, property or signal you are not sure about, call godot_api. Never guess API names; Godot 3 names do not work in Godot 4.",
   "#. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
   "#. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
-  "#. If Godot is installed, call godot_check before you finish.| When godot_play with expect proved a fix, keep it: godot_scenario op save with the same arguments.",
+  "#. If Godot is installed, call godot_check before you finish.",
+  "When godot_play with expect proved a fix, keep it: godot_scenario op save with the same arguments.",
   "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it|; for a file also godot_deps op why (it follows paths the code builds too)|.",
   "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
   "After you write or change a shader (.gdshader, or a Shader in a scene), call godot_shader and fix every error.",
@@ -22,7 +25,7 @@ const CHEAP: string[] = [
   "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
   "To change a .tres or an asset's import settings (loop, compression, per-animation or per-mesh options), call godot_resource_edit (dry run, then write: true) instead of editing the file by hand.",
   "Keep each change small. Use static types (var x: int, func f() -> void).",
-  'To make or check a 3D model (.glb):| godot_model_brief gives one page with everything to start (use it first if you are a small model).| godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate.| godot_model_spec shows the spec format.| godot_model_build builds it (put "archetype" in the spec).| godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape.| godot_model_lint with archetype checks it. Fix every error.| Models face +Z, +Y is up, units are metres.'
+  '{godot_model_brief godot_model_identify godot_model_spec godot_model_build godot_model_view godot_model_lint godot_model_inspect}To make or check a 3D model (.glb):| godot_model_brief gives one page with everything to start (use it first if you are a small model).| godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate.| godot_model_spec shows the spec format.| godot_model_build builds it (put "archetype" in the spec).| godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape.| godot_model_lint with archetype checks it. Fix every error.|{godot_model_brief godot_model_identify godot_model_spec godot_model_build godot_model_view godot_model_lint godot_model_inspect} Models face +Z, +Y is up, units are metres.'
 ];
 
 const PREMIUM: string[] = [
@@ -61,10 +64,18 @@ const PREMIUM: string[] = [
   "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
   "- godot_model_view draws a .glb as text: front, side and top views made of letters (one letter per part), a table of the parts with sizes, and the parts that do not touch the rest (a ladder away from its tree, a wheel without an axle). You cannot see a picture, so use it after every build to check shape, proportions and that everything is attached.",
   "- godot_model_lint scores a .glb (geometry, materials, performance, rig), and with `archetype` also checks it is what it should be: parts, pivots, wheel axes, size, direction.| godot_model_inspect shows what is in a .glb.",
-  "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, view, lint with the archetype, fix, repeat.| When a fix was hard, keep the lesson (godot_lesson_add) so the next session starts smarter."
+  "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish.|{godot_model_identify godot_model_build godot_model_lint} For models: identify, spec, build, view, lint with the archetype, fix, repeat.| When a fix was hard, keep the lesson (godot_lesson_add) so the next session starts smarter."
 ];
 
 const TOOL = /\bgodot_[a-z_]+/g;
+const ANY = /^\{([^}]*)\}/;
+
+/** Whether a part may stay: every tool it names is enabled, and one of its "{...}" tools if it has that tag. */
+function keep(part: string, enabled: ReadonlySet<string>): boolean {
+  const tag = ANY.exec(part);
+  if (tag && !tag[1]!.split(/\s+/).some((t) => enabled.has(t))) return false;
+  return [...part.replace(ANY, "").matchAll(TOOL)].every((m) => enabled.has(m[0]));
+}
 
 /** Renders the instructions for the enabled tools; `readOnly` adds what that mode means. */
 export function renderInstructions(tier: "cheap" | "premium", enabled: ReadonlySet<string>, readOnly = false): string {
@@ -72,13 +83,17 @@ export function renderInstructions(tier: "cheap" | "premium", enabled: ReadonlyS
   let step = 0;
   for (const line of tier === "cheap" ? CHEAP : PREMIUM) {
     const parts = line.split("|");
-    const kept = parts.map((part) => [...part.matchAll(TOOL)].every((m) => enabled.has(m[0])));
+    const kept = parts.map((part) => keep(part, enabled));
     if (!kept[0]) continue;
-    let text = parts.filter((_, i) => kept[i]).join("");
+    let text = parts
+      .filter((_, i) => kept[i])
+      .map((part) => part.replace(ANY, ""))
+      .join("");
     if (text.startsWith("#. ")) text = `${++step}. ${text.slice(3)}`;
     out.push(text);
     if (out.length === 1 && readOnly)
   out.push("This session is read-only: tools that change project files only show their dry run, and write options are refused.");
   }
+  if (step === 0 && out[0]) out[0] = out[0].replace(" Follow these steps:", "");
   return out.join("\n");
 }
