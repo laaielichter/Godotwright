@@ -42,7 +42,7 @@ function parseViews(value: string): View[] {
 
 export function screenshotCommand(): Command {
   return new Command("screenshot")
-    .description("render a scene, or a .glb model framed by a camera, to a PNG with Godot, and say how much of the picture is drawn")
+    .description("render a scene, or a .glb model framed by a camera, to a PNG with Godot, say how much of the picture is drawn, and compare it with a baseline")
     .argument("[path]", "project directory (or any path inside it); for --model, where relative paths start", ".")
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--scene <res-path>", "the scene to render (default: the main scene)")
