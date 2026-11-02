@@ -92,6 +92,25 @@ describe("shader log", () => {
     expect(driver[0]?.more).toEqual(["error: Uniform block MaterialUniforms too big (320000/65536)"]);
   });
 
+  it("reads the line of a file whose name holds parentheses, as Godot names a duplicate", () => {
+    // As Godot 4.7.2 printed it for "glow (copy).gdshader".
+    const log = parseShaderLog(
+      [
+        "--res://fx/glow (copy).gdshader--",
+        "    2 | void fragment() {",
+        "E   3->\tfloat x = vec3(1.0);",
+        "SHADER ERROR: Invalid assignment of 'vec3' to 'float'.",
+        "          at: (null) (res://fx/glow (copy).gdshader:3)",
+        "ERROR: Shader compilation failed.",
+      ].join("\n"),
+    );
+    expect(log.entries).toEqual([expect.objectContaining({ file: "res://fx/glow (copy).gdshader", line: 3, more: [] })]);
+    const root = makeProject({ "project.godot": "config_version=5\n", "fx/glow (copy).gdshader": "shader_type canvas_item;\nvoid fragment() {\n\tfloat x = vec3(1.0);\n}\n" });
+    expect(shaderDiagnostics(root, log)).toEqual([
+      expect.objectContaining({ file: "res://fx/glow (copy).gdshader", line: 3, code: "float x = vec3(1.0);", message: "Invalid assignment of 'vec3' to 'float'." }),
+    ]);
+  });
+
   it("reads a headless run, where the path is missing and the excerpt went to stdout", () => {
     const log = parseShaderLog(`${fixture("fog-headless.stderr.log")}\n${fixture("fog-headless.stdout.log")}`);
     expect(log.entries).toEqual([

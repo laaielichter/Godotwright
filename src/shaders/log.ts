@@ -62,7 +62,10 @@ export interface ShaderLog {
 const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 const HEADER = /^--(.+)--$/;
 const EXCERPT = /^(E?)\s*(\d+)\s*(?:->|\|)\s?(.*)$/;
-const AT = /^at:\s*.*\(([^()]*):(\d+)\)\s*$/;
+// The path may hold parentheses ("glow (copy).gdshader"), so it runs from "(res://" (empty headless) to the last ":N)".
+const AT = /^at:\s*.*?\(((?:res|user|uid):\/\/.*|):(\d+)\)\s*$/;
+/** Any other `at:`, such as the engine's own source file under a driver error. */
+const AT_ENGINE = /^at:\s*.*\(([^()]*):(\d+)\)\s*$/;
 const FRAME = /^\[\d+\]\s/;
 const DRIVER = /^ERROR:\s*(\w*Shader\w*): (Program linking failed|\w+ shader compilation failed|.*compilation failed):?\s*$/;
 const TYPE = /^ERROR:\s*(shader type \S+ not supported in .*)$/;
@@ -160,7 +163,7 @@ export function parseShaderLog(text: string): ShaderLog {
     }
     if (/^GDScript backtrace/i.test(line) || FRAME.test(line)) continue;
 
-    const at = AT.exec(line);
+    const at = AT.exec(line) ?? AT_ENGINE.exec(line);
     if (at) {
       if (pending && !skipping && pending.line === undefined && pending.kind !== "driver") {
         if (at[1]) pending.file = at[1];
