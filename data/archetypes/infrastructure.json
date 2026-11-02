@@ -1939,5 +1939,98 @@
    "Lights flash in their real pattern and only at night; a small lamp is smaller than a pixel at a few kilometres, so add a sprite that keeps its size.",
    "Buoys follow the same water height function as everything else on the water."
   ]
+ },
+ {
+  "id": "infrastructure.traffic-light",
+  "name": "traffic light",
+  "description": "A traffic signal for road traffic on a pole.",
+  "aliases": [
+   "traffic light",
+   "traffic lights",
+   "traffic signal",
+   "stop light",
+   "stoplight",
+   "verkeerslicht",
+   "verkeerslichten",
+   "stoplicht",
+   "stoplichten",
+   "signal light",
+   "verkeersregelinstallatie"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Pole",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "pole",
+     "post",
+     "paal",
+     "mast"
+    ]
+   },
+   {
+    "name": "Head",
+    "role": "head",
+    "required": true,
+    "aliases": [
+     "head",
+     "housing",
+     "signal head",
+     "lantaarn",
+     "kast"
+    ]
+   },
+   {
+    "name": "LightRed",
+    "role": "light",
+    "required": true,
+    "note": "Emissive material; only one of the three is lit at a time.",
+    "aliases": [
+     "light red",
+     "red",
+     "rood"
+    ]
+   },
+   {
+    "name": "LightAmber",
+    "role": "light",
+    "required": true,
+    "aliases": [
+     "light amber",
+     "amber",
+     "yellow",
+     "oranje",
+     "geel"
+    ]
+   },
+   {
+    "name": "LightGreen",
+    "role": "light",
+    "required": true,
+    "aliases": [
+     "light green",
+     "green",
+     "groen"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.3,
+    0.5
+   ],
+   "height": [
+    2.5,
+    6.5
+   ],
+   "source": "general knowledge: a three-light head is about 1 m high with 200 or 300 mm lenses; poles put the head at about 2.5-3.5 m, overhead masts higher; not a single standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Red is always at the top and green at the bottom.",
+   "Give each lamp its own node, so a script can switch them without swapping materials on one mesh."
+  ]
  }
 ]
