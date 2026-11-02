@@ -40,6 +40,9 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 - `godot_play` runs a scene with an input timeline and returns the values you watch per frame. `until` stops when a
   condition holds, `signals` records when signals fire, `summary` keeps long runs short, and `expect` turns a run
   into a test.
+- When `godot_play` with `expect` proves a fix, keep it: `godot_scenario` op `save` with the same arguments runs it
+  once more and writes it to `.godotwright/scenarios/`, where `godotwright ci` runs it on every change. op `run`
+  runs the kept scenarios.
 - `godot_session` loads a scene once and keeps it running; `godot_game` then shows the live tree, reads and sets
   values and steps frames with input until a condition holds; `reload` puts the scripts you edited into the running
   game with every node's values kept. Use it when a world loads slowly or a state is hard to reach; stop it when done.
