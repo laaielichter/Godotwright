@@ -68,11 +68,33 @@ jobs:
             "$archive"
           tar xzf "$archive" mcp-publisher
           rm -f "$archive" "$archive.sigstore.json"
+      - name: Wait until npm serves the new version
+        run: |
+          # npm can take several minutes to serve a version it has accepted (0.4.0 took about 3), and the
+          # MCP Registry checks the package on npm. Wait for it here, up to 15 minutes.
+          version="$(node -p "require('./package.json').version")"
+          for attempt in $(seq 1 45); do
+            if npm view "godotwright@$version" version >/dev/null 2>&1; then
+              echo "npm serves godotwright@$version"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "npm still does not serve godotwright@$version after 15 minutes"
+          exit 1
       - name: Publish to the MCP Registry
         run: |
+          version="$(node -p "require('./package.json').version")"
+          name="$(node -p "require('./server.json').name")"
+          # A re-run after the registry already took this version has nothing left to do.
+          listed="$(curl -fsS "https://registry.modelcontextprotocol.io/v0/servers?search=$name" | node -e "let t='';process.stdin.on('data',c=>t+=c).on('end',()=>{const v=process.argv[1];const s=JSON.parse(t).servers||[];console.log(s.some(x=>(x.server||x).version===v)?'yes':'no')})" "$version" || echo no)"
+          if [ "$listed" = "yes" ]; then
+            echo "$name $version is already in the MCP Registry"
+            exit 0
+          fi
           ./mcp-publisher login github-oidc
-          # The registry checks mcpName on npm, which can take a moment to serve the new version.
-          for attempt in 1 2 3 4 5; do
+          # The registry reads npm through its own cache, which can lag behind npm view.
+          for attempt in $(seq 1 10); do
             ./mcp-publisher publish && exit 0
             sleep 30
           done
