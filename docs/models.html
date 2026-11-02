@@ -190,6 +190,15 @@ details { background: var(--panel); border: 1px solid var(--line); border-radius
 summary { cursor: pointer; font-weight: 700; }
 details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
 
+/* New in a release */
+.new { display: inline-flex; align-items: center; gap: .5rem; width: fit-content; padding: .3rem .8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); text-decoration: none; font-size: .9rem; }
+.new b { font: 700 .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--nui); }
+.new:hover { border-color: var(--accent-ink); }
+.hook { margin: 0; font: .8rem/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.hook .e { color: var(--n3d); }
+.hook .k { color: var(--accent-ink); }
+.hook .m { color: var(--muted); }
+
 footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var(--muted); font-size: .9rem; }
 footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
 footer a { color: var(--muted); }
