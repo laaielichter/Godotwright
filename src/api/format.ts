@@ -10,6 +10,7 @@ import type {
   ApiThemeItem,
   EnumInfo,
 } from "./types.js";
+import { apiChanges, changesOf, formatChange, type ApiChange, removedClass, removedMember, renamedMember } from "./removed.js";
 
 export function docsUrl(className: string): string {
   return `https://docs.godotengine.org/en/4.7/classes/class_${className.toLowerCase()}.html`;
@@ -134,6 +135,7 @@ export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail
     if (result.renamed) {
       out.push(`Godot 3 name: the ${result.renamed.kind} ${result.renamed.from} is called ${result.renamed.to} in Godot 4.`);
     }
+    out.push(...historyLines(api, result.query));
     if (result.suggestions.length) out.push(`did you mean: ${result.suggestions.join(", ")}`);
     return `${out.join("\n")}\n`;
   }
@@ -141,12 +143,36 @@ export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail
   const shown = detail === "full" || result.entries.length <= 12 ? result.entries : result.entries.slice(0, 12);
   for (const entry of shown) {
     out.push(...formatEntry(api, entry, many && detail === "brief" && entry.kind !== "class" ? "brief" : detail));
+    if (entry.kind !== "class") out.push(...entryChanges(api, entry).map((c) => `  ${formatChange(c)}`));
     if (many) out.push("");
   }
   if (shown.length < result.entries.length) {
     out.push(`+${result.entries.length - shown.length} more (${result.entries.slice(shown.length).map((e) => e.owner).join(", ")})`);
   }
   return `${out.join("\n").trimEnd()}\n`;
+}
+
+/** Upgrade-guide changes that affect a member; an engine property that holds a packed array gets the 4.7 element-write change. */
+function entryChanges(api: GodotApi, entry: ApiEntry): ApiChange[] {
+  const own = changesOf(api, entry.owner, entry.name).filter((c) => c.kind !== "renamed");
+  const packed = entry.kind === "property" && /^Packed\w+Array$/.test((entry.item as ApiMember).type ?? "");
+  return packed ? [...own, ...apiChanges().filter((c) => c.id === "packed-element-write")] : own;
+}
+
+/** What happened to a name Godot 4.7 does not have: removed after an older 4.x release, or renamed. */
+function historyLines(api: GodotApi, query: string): string[] {
+  const dot = query.indexOf(".");
+  if (dot < 0) {
+    const last = removedClass(query);
+    return last ? [`removed after Godot ${last}.`] : [];
+  }
+  const cls = query.slice(0, dot);
+  const name = query.slice(dot + 1);
+  const renamed = renamedMember(api, cls, name);
+  if (renamed) return [`renamed in Godot ${renamed.to}: use ${cls}.${renamed.replacement}.${/^Renamed\b/.test(renamed.message) ? "" : ` ${renamed.message}`}`];
+  const old = api.getClass(cls) ? removedMember(api, cls, name) : undefined;
+  if (!old) return [];
+  return [old.compat ? `an old name: Godot ${old.last} documented it; Godot 4.7 still accepts it for old projects.` : `removed after Godot ${old.last}.`];
 }
 
 export function formatSearch(api: GodotApi, hits: SearchHit[]): string {
