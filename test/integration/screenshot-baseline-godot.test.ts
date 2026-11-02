@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createServer } from "../../src/mcp/server.js";
 import { decodePng } from "../../src/screenshot/png.js";
-import { baselineKey, formatScreenshot, takeScreenshot } from "../../src/screenshot/screenshot.js";
+import { GDSCRIPT_WARNINGS, baselineKey, formatScreenshot, takeScreenshot } from "../../src/screenshot/screenshot.js";
 import { makeProject, runCli } from "../helpers.js";
 
 /** Needs a real Godot 4.7 binary in $GODOT and a screen (a display, or xvfb-run). CI provides both. */
@@ -76,6 +76,8 @@ describe.skipIf(!GODOT || !SCREEN)("godotwright screenshot baselines in Godot", 
     expect(r.y).toBeLessThanOrEqual(90);
     expect(r.y + r.height).toBeGreaterThanOrEqual(90);
     expect(r.x).toBeGreaterThan(48);
+    // The diff is scratch: in .godot/godotwright/, which Godot never imports.
+    expect(box.baseline!.diff).toBe(join(root, ".godot", "godotwright", `${baselineKey("res://main.tscn", 320, 180, ["iso"])}-diff.png`));
     const diff = decodePng(readFileSync(box.baseline!.diff!));
     expect([...diff.data.subarray((90 * 320 + 160) * 4, (90 * 320 + 160) * 4 + 3)]).toEqual([255, 0, 0]);
 
@@ -89,6 +91,32 @@ describe.skipIf(!GODOT || !SCREEN)("godotwright screenshot baselines in Godot", 
     expect(label.baseline!.region!.x).toBeLessThan(120);
     expect(label.baseline!.region!.y).toBeLessThan(32);
     expect(label.baseline!.percent).toBeLessThan(1);
+    // Under a loose threshold the same change passes, but is reported as a change with its diff, not as unchanged.
+    const loose = await takeScreenshot(root, { godot: GODOT, ...size, baseline: "auto", threshold: 50 });
+    expect(loose.baseline).toMatchObject({ status: "within-threshold", pixels: label.baseline!.pixels });
+    expect(formatScreenshot(loose)).toContain("baseline within threshold:");
+    expect(existsSync(loose.baseline!.diff!)).toBe(true);
+    // Back to the baseline: unchanged, and the old diff is gone.
+    writeFileSync(join(root, "main.tscn"), scene("0.1, 0.2, 0.9, 1", "Score 10"));
+    const back = await takeScreenshot(root, { godot: GODOT, ...size, baseline: "auto" });
+    expect(back.baseline).toMatchObject({ status: "unchanged", pixels: 0 });
+    expect(existsSync(loose.baseline!.diff!)).toBe(false);
+  });
+
+  it("renders the same picture twice in a project that makes every GDScript warning an error", { timeout: 600_000 }, async () => {
+    const warnings = GDSCRIPT_WARNINGS.map((w) => `gdscript/warnings/${w}=2`).join("\n");
+    const project = makeProject({
+      "project.godot": `config_version=5\n\n[application]\n\nconfig/name="Strict"\nrun/main_scene="res://main.tscn"\nconfig/features=PackedStringArray("4.7")\n\n[debug]\n\n${warnings}\n`,
+      // Random particles: the same picture twice only when their seed is fixed.
+      "main.tscn": `[gd_scene format=3]\n\n[node name="Main" type="Node2D"]\n\n[node name="Sparks" type="CPUParticles2D" parent="."]\nposition = Vector2(160, 90)\namount = 200\nspread = 180.0\ninitial_velocity_min = 20.0\ninitial_velocity_max = 150.0\nscale_amount_min = 6.0\nscale_amount_max = 6.0\n\n[node name="Smoke" type="GPUParticles2D" parent="."]\nposition = Vector2(60, 90)\n`,
+    });
+    const first = await takeScreenshot(project, { godot: GODOT, ...size, frames: 30, baseline: "auto" });
+    console.log(formatScreenshot(first));
+    expect(first.baseline?.status).toBe("saved");
+    expect(first.coverage[0]!.percent).toBeGreaterThan(0);
+    const again = await takeScreenshot(project, { godot: GODOT, ...size, frames: 30, baseline: "auto", threshold: 0, tolerance: 0 });
+    console.log(formatScreenshot(again));
+    expect(again.baseline).toMatchObject({ status: "unchanged", pixels: 0 });
   });
 
   it("gives text only when unchanged, and an error with the diff when changed, over MCP; the CLI exits 1", { timeout: 600_000 }, async () => {
@@ -116,6 +144,16 @@ describe.skipIf(!GODOT || !SCREEN)("godotwright screenshot baselines in Godot", 
       expect(changed.isError).toBe(true);
       expect(changed.content.map((c) => c.type)).toEqual(["text", "image", "image"]);
       expect(changed.content[0]?.text).toMatch(/baseline CHANGED: [\d.]+% of pixels changed/);
+      // Within a loose threshold: no error, but the diff and the picture come along, and the text says it changed.
+      const loose = (await client.callTool({ name: "godot_screenshot", arguments: { ...size, baseline: "auto", threshold: 100 } })) as Result;
+      expect(loose.isError).toBeFalsy();
+      expect(loose.content.map((c) => c.type)).toEqual(["text", "image", "image"]);
+      expect(loose.content[0]?.text).toContain("baseline within threshold:");
+      // A baseline outside the project is refused before Godot runs.
+      const outside = (await client.callTool({ name: "godot_screenshot", arguments: { ...size, baseline: "../evil.png" } })) as Result;
+      expect(outside.isError).toBe(true);
+      expect(outside.content[0]?.text).toMatch(/outside the project/);
+      expect(existsSync(join(project, "..", "evil.png"))).toBe(false);
     } finally {
       await Promise.all([client.close(), server.close()]);
     }
