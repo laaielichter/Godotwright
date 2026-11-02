@@ -127,7 +127,8 @@ jobs:
 ```
 
 It downloads a checksum-verified Godot, runs the review, the check and your tests, and posts the result as a comment.
-No editor, no GPU. `review-only: "true"` skips Godot.
+No editor, no GPU. `review-only: "true"` skips Godot. Inputs, SARIF and plain CI:
+[GDScript review in CI](https://laaielichter.github.io/Godotwright/ci.html).
 
 **Learn.** Rules that real Godot keeps contradicting turn into hints, findings you mark as wrong stay hidden, and
 lessons you add come back when the same error does. All of it stays on your machine; sharing anonymous counts is
@@ -196,10 +197,14 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Scored review (api, performance, quality, structure) | yes | no | style, naming, complexity | no |
 | Godot 3 code | flagged with the Godot 4 fix; `migrate` rewrites scripts | no | no | rewrites scripts, scenes and settings |
 | Live control of the open editor | no | yes | no | no |
+| A running game to inspect and drive | yes, headless (`godot_session`) | some do, through the editor | no | no |
 | C# | no | some do | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 
-They work well together: an editor server to drive the editor, Godotwright to check what the agent wrote.
+Editor servers such as [godot-ai](https://github.com/hi-godot/godot-ai) and [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro)
+control the open editor and have more tools; paid in-editor assistants such as [Ziva](https://ziva.sh) write inside the
+editor. Godotwright works from files and checks what the agent writes, so they work well together: an editor server to
+drive the editor, Godotwright to check the code.
 
 ## FAQ
 
