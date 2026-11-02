@@ -241,6 +241,14 @@ describe("api/shader-render-mode and api/shader-type", () => {
     expect(one("shader_type canvas_item;\nrender_mode unshaded, blend_disabled, light_only;\nvoid fragment() {}\n")).toEqual([]);
   });
 
+  it("checks stencil modes, with their reference value", () => {
+    // Godot 4.7.2: "Invalid stencil mode: 'compare_none'."; `stencil_mode read, compare_equal, 1;` compiles.
+    expect(one("shader_type spatial;\nstencil_mode read, compare_equal, 1;\nvoid fragment() {}\n")).toEqual([]);
+    expect(one("shader_type spatial;\nstencil_mode read, compare_none, 1;\nvoid fragment() {}\n")).toEqual([
+      "res://s.gdshader:2: error [api/shader-render-mode] Unknown stencil mode compare_none for spatial shaders: did you mean compare_less?",
+    ]);
+  });
+
   it("reports a missing or misspelled shader_type", () => {
     expect(one("void fragment() {}\n")[0]).toContain("[api/shader-type] No shader_type");
     expect(one("shader_type particle;\nvoid process() {}\n")).toEqual([
