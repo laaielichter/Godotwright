@@ -17,7 +17,9 @@ describe.skipIf(!GODOT)("godotwright perf in Godot", () => {
     console.log(formatPerf(first));
     expect(first.run.finished).toBe(true);
     expect(first.frames).toBeGreaterThan(240);
-    expect(first.frame.p50).toBeGreaterThan(0);
+    // Real frame times were measured (the median of this near-empty scene can round to 0 ms on a fast machine).
+    expect(first.frame.max).toBeGreaterThan(0);
+    expect(first.frame.p50).toBeLessThanOrEqual(first.frame.max);
     expect(first.spikes.map((s) => s.frame).sort()).toEqual(expect.arrayContaining([99, 199]));
     expect(first.spikes[0]!.cause).toMatch(/^nodes \+3000/);
     expect(first.nodes.end - first.nodes.start).toBeGreaterThanOrEqual(6000);
