@@ -27,7 +27,7 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 ## Change the project with the tools, not by hand
 
 - Renaming or moving anything: `godot_usages` first, then `godot_rename` (dry run, then `write: true`).
-- Scenes: `godot_scene_edit`. Project settings, input actions, autoloads: `godot_project_edit`.
+- Scenes: `godot_scene_edit`. Project settings, input actions, autoloads: `godot_project_edit`. `.tres` resources and import settings (loop, compression, per-animation or per-mesh options): `godot_resource_edit`.
   These keep `.tscn`, `.uid` and `project.godot` valid and touch only the lines of the change.
 - Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs. It ports shaders too.
 - Shaders: after writing or changing a `.gdshader` (or a Shader in a scene), run `godot_shader`; it checks the code

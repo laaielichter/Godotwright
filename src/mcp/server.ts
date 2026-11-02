@@ -113,6 +113,13 @@ import {
   type SceneEdit,
 } from "../scene/edit.js";
 import {
+  ResourceEditError,
+  editResource,
+  formatResourcePlan,
+  planFailed,
+} from "../resource/edit.js";
+import { OPS as RESOURCE_OPS, toOps } from "../resource/types.js";
+import {
   SettingsError,
   editProjectSettings,
   formatSettingsPlan,
@@ -164,6 +171,7 @@ const PROFILES: Record<Tier, Profile> = {
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
       "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
+      "To change a .tres or an asset's import settings (loop, compression, per-animation or per-mesh options), call godot_resource_edit (dry run, then write: true) instead of editing the file by hand.",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
       'To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put "archetype" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.',
     ].join("\n"),
@@ -196,6 +204,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
       "- godot_shader checks shaders statically against Godot 4.7's shader tables and compiles them with Godot headless, with file:line for both.",
+      "- godot_resource_edit changes .tres resources (properties, sub_resources, uids kept) and import settings (audio loop, texture compression, glTF per-animation loop, per-mesh shadows, external materials, importer switch), then reimports headless and checks Godot kept the value. Use it instead of editing .tres or .import files by hand.",
       "- godot_migrate rewrites Godot 3 GDScript and shaders to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right, or says whether a lesson helped; Godotwright learns from it on this machine.",
       "- godot_lessons answers from lessons learned in real Godot projects (symptom, cause, fix, how to test): by words, by a Godot error message, by a rule, or `gaps: true` for the errors Godotwright cannot predict yet. Use it when Godot shows an error you do not understand and before you build moving platforms, vehicles, large worlds, runtime-loaded models or shaders.",
@@ -811,6 +820,59 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return report.errors > 0 ? failure(body) : text(body);
       } catch (error) {
         return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_resource_edit",
+    {
+      title: "Change a resource or import settings",
+      description:
+        'Edit a .tres (or the sub_resources of a .tscn) and import settings, without the editor. .tres: set/unset properties on [resource] or a sub_resource (`sub`: its id), add_sub (type, optional id), remove_sub; names and types checked against Godot 4.7 (enums by name, resources as res:// or SubResource("id"), byte arrays as [0, 255] or base64:...); uids kept, only changed lines touched. Import (give the asset or its .import): get (key: type, default, choices), diff (options changed from default), set/unset an option (names checked against what the importer reads, enums by name: Forward, VRAM Compressed), per sub-resource with `sub` animations/<name>, meshes/<name>, materials/<name>, nodes/PATH:<node> (loop_mode, shadow meshes, external materials, cast shadow), importer (as: animation_library, scene, image, texture, keep), reimport. Ops run in order; one write. Without `write` it returns the diff. With write a .import is reimported headless and checked: Godot kept each value, output changed or not (an error result when Godot dropped a value or the import failed). godot_undo reverts.',
+      inputSchema: {
+        file: z.string().describe("res://path or a path: .tres, .tscn, an asset or its .import"),
+        ops: z
+          .array(
+            z.object({
+              op: z.enum(RESOURCE_OPS),
+              key: z.string().optional().describe("property or import option"),
+              value: z
+                .union([z.string(), z.number(), z.boolean(), z.array(z.union([z.number(), z.string()]))])
+                .optional()
+                .describe("set: the value"),
+              sub: z.string().optional().describe("sub_resource id, or kind/name in a .import"),
+              type: z.string().optional().describe("add_sub: Resource class"),
+              id: z.string().optional().describe("add_sub: id to give it"),
+              as: z.string().optional().describe("importer: the new importer"),
+            }),
+          )
+          .min(1)
+          .describe("changes or questions, applied in order"),
+        write: z.boolean().optional().describe("write (default false: diff only)"),
+        reimport: z.boolean().optional().describe("after a .import write, reimport with Godot and verify (default true)"),
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    async (args) => {
+      try {
+        const file = args.file.startsWith("res://") ? args.file : where(args.file);
+        const plan = await editResource(file, toOps(args.ops), {
+          write: args.write === true,
+          project: base,
+          ...(options.godot ? { godot: options.godot } : {}),
+          ...(args.reimport === false ? { reimport: false } : {}),
+        });
+        const body = formatResourcePlan(plan);
+        return planFailed(plan) ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof ResourceEditError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );

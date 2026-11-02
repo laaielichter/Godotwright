@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
-import { parseResourceFile, type Section } from "../godot/resource-file.js";
+import { blocksOf, contentEnd, propSpan, type Block, type Splice } from "../godot/blocks.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
@@ -41,42 +41,15 @@ export interface ScenePlan {
   review?: { before: number; after: number };
 }
 
-/** A section of the file with its 0-based first line and the line where the next one starts. */
-interface Block extends Section {
-  start: number;
-  end: number;
-}
-
-/** A change planned against the original lines; all are applied bottom-up so the line numbers stay true. */
-interface Splice {
-  start: number;
-  count: number;
-  added: string[];
-  /** Goes after anything else inserted at the same line (an [editable] entry at the end of the file). */
-  tail?: boolean;
-}
-
 /** Bottom-up order for applying splices; at the same line, a tail splice is applied first so it ends up last. */
-const spliceOrder = (a: Splice, b: Splice) => b.start - a.start || b.count - a.count || Number(b.tail ?? false) - Number(a.tail ?? false);
+export const spliceOrder = (a: Splice, b: Splice) => b.start - a.start || b.count - a.count || Number(b.tail ?? false) - Number(a.tail ?? false);
 
 const NODE_NAME = /^[^.:@/"%]+$/;
-
-function blocksOf(lines: string[]): Block[] {
-  const sections = parseResourceFile(lines.join("\n")).filter((s) => s.tag !== "");
-  return sections.map((s, i) => ({ ...s, start: s.line - 1, end: (sections[i + 1]?.line ?? lines.length + 1) - 1 }));
-}
-
-/** The first line after a block's last non-blank line. */
-function contentEnd(lines: string[], block: Block): number {
-  let end = block.end;
-  while (end > block.start + 1 && (lines[end - 1] ?? "").trim() === "") end--;
-  return end;
-}
 
 const inside = (path: string, root: string): boolean => root === "." || path === root || path.startsWith(`${root}/`);
 
 /** What a script declares, read with simple patterns (enough for checks; Godot has the last word). */
-function scriptInfo(source: string): { extends?: string; signals: Map<string, string>; funcs: Map<string, { min: number; max: number }>; exports: Map<string, string | undefined> } {
+export function scriptInfo(source: string): { extends?: string; signals: Map<string, string>; funcs: Map<string, { min: number; max: number }>; exports: Map<string, string | undefined> } {
   const signals = new Map<string, string>();
   const funcs = new Map<string, { min: number; max: number }>();
   const exports = new Map<string, string | undefined>();
@@ -90,7 +63,7 @@ function scriptInfo(source: string): { extends?: string; signals: Map<string, st
 }
 
 /** The resource type an ext_resource line names for a file. */
-function resourceType(root: string, path: string, fallback?: string): string {
+export function resourceType(root: string, path: string, fallback?: string): string {
   if (/\.(tscn|scn)$/.test(path)) return "PackedScene";
   if (path.endsWith(".gd") || path.endsWith(".cs")) return "Script";
   if (path.endsWith(".gdshader")) return "Shader";
@@ -193,17 +166,9 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
 
   /** Sets (or replaces) `property = value` inside a node block. */
   const setProp = (block: Block, property: string, value: string): void => {
-    const keys = Object.entries(block.propLines).sort((a, b) => a[1] - b[1]);
-    const at = keys.findIndex(([k]) => k === property);
     const text = `${property} = ${value}`;
-    if (at < 0) {
-      splices.push({ start: contentEnd(lines, block), count: 0, added: [text] });
-      return;
-    }
-    const start = (keys[at]?.[1] ?? 0) - 1;
-    const next = keys[at + 1];
-    const stop = next ? next[1] - 1 : contentEnd(lines, block);
-    splices.push({ start, count: stop - start, added: [text] });
+    const span = propSpan(lines, block, property);
+    splices.push(span ? { ...span, added: [text] } : { start: contentEnd(lines, block), count: 0, added: [text] });
   };
 
   const removeBlock = (block: Block): void => {
