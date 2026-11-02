@@ -116,7 +116,7 @@ function cause(file: string, preset: ExportPreset | undefined, root: string): st
   if (preset.exclude.some((f) => matchesFilter(rel, f))) return "exclude_filter leaves it out";
   const imported = existsSync(fromResPath(root, `${file}.import`));
   if ((!RESOURCE_EXT.test(rel) || (/\.csv$/i.test(rel) && !imported)) && !preset.include.some((f) => matchesFilter(rel, f))) {
-    return `a plain file that Godot exports only when include_filter names it (add "*.${rel.slice(rel.lastIndexOf(".") + 1)}")`;
+    return `a plain file, which Godot exports only when include_filter names it: add "*.${rel.slice(rel.lastIndexOf(".") + 1)}"`;
   }
   if (preset.exportFilter === "resources" || preset.exportFilter === "scenes") return `the preset exports only the ${preset.exportFilter} it lists and what they load`;
   return "";
@@ -146,7 +146,7 @@ export function checkContents(root: string, pck: Pck, options: { preset?: Export
     diagnostics.push({
       severity: "error",
       file: g.file,
-      message: `the game loads it, but the pack does not hold it${why ? ` (${why})` : ""}: in the build this load fails. Chain: ${g.chain}`,
+      message: `the game loads it, but the pack does not hold it, so this load fails in the build${why ? `; ${why}` : ""}. Chain: ${g.chain}`,
       source: "contents",
     });
   }

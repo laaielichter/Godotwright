@@ -86,7 +86,7 @@ describe("export run (Godot faked)", () => {
     expect(r.smoke).toBeUndefined();
     const missing = r.diagnostics.find((d) => d.file === "res://data/a.txt")!;
     expect(missing.severity).toBe("error");
-    expect(missing.message).toContain('a plain file that Godot exports only when include_filter names it (add "*.txt")');
+    expect(missing.message).toContain('so this load fails in the build; a plain file, which Godot exports only when include_filter names it: add "*.txt". Chain:');
     expect(missing.message).toContain("Chain: res://data/a.txt < load in res://main.gd:5 < ext_resource in res://main.tscn:3 < project.godot: application/run/main_scene");
     expect(formatExportRun(r)).toContain("audit: 1 of 1 predicted missing files confirmed by the pack");
   });
