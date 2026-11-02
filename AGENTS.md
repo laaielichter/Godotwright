@@ -34,7 +34,7 @@ node dist/cli.js --help
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
   scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from
   lessons); `rules.ts` lists every rule.
-  New rules need a test in `test/review.test.ts`, and must stay quiet on the
+  New rules need a test in `test/review.test.ts` (shader rules in `test/review-shader.test.ts`), and must stay quiet on the
   official demo projects (`test/integration/review-demos.test.ts`).
 - `src/model/`: checks `.glb` and `.gltf` files without Godot. `inspect.ts` reads what
   is in a model, `lint.ts` and `rules.ts` hold the AAA model review, `contract.ts` reads
