@@ -1,4 +1,6 @@
 import { checkProject, type CheckOptions, type CheckResult } from "../check/check.js";
+import { kb } from "../export/contents.js";
+import { runExport, type ExportRun } from "../export/run.js";
 import { findProjectRoot } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
@@ -9,7 +11,7 @@ import { formatScenario, loadScenarios, runScenario, type ScenarioResult } from 
 export type StepStatus = "pass" | "fail" | "skip";
 
 export interface CiStep {
-  name: "review" | "check" | "test" | "scenarios";
+  name: "review" | "check" | "test" | "scenarios" | "export";
   status: StepStatus;
   /** One line: what ran and what came out. */
   summary: string;
@@ -29,6 +31,8 @@ export interface CiOptions {
   noGodot?: boolean;
   /** Also review scripts under res://addons/. */
   includeAddons?: boolean;
+  /** Also export this preset as a pack, check what it holds and run it (the export step). */
+  exportPreset?: string;
   /** Most lines of detail per step (default 10). */
   maxDetails?: number;
   /** The real steps, replaceable in tests. */
@@ -40,9 +44,10 @@ export interface CiDeps {
   check: (path: string, options: CheckOptions) => Promise<CheckResult>;
   test: typeof runTests;
   scenario: typeof runScenario;
+  export: (path: string, options: Parameters<typeof runExport>[1]) => Promise<ExportRun>;
 }
 
-const REAL: CiDeps = { review: reviewProject, check: checkProject, test: runTests, scenario: runScenario };
+const REAL: CiDeps = { review: reviewProject, check: checkProject, test: runTests, scenario: runScenario, export: (path, options) => runExport(path, options) };
 
 function clip(lines: string[], max: number): string[] {
   return lines.length > max ? [...lines.slice(0, max), `+${lines.length - max} more`] : lines;
@@ -90,6 +95,21 @@ function scenarioStep(results: ScenarioResult[], max: number): CiStep {
   };
 }
 
+function exportStep(r: ExportRun, max: number): CiStep {
+  const errors = r.diagnostics.filter((d) => d.severity === "error");
+  const parts = [
+    r.pack ? `${r.pack.files} files, ${kb(r.pack.bytes)}` : "no pack",
+    r.contents?.needed ? `${r.contents.needed - r.contents.missing} of ${r.contents.needed} loaded files in it` : "",
+    r.smoke ? `ran ${r.smoke.frames} frames: ${r.smoke.errors} errors` : "",
+  ].filter(Boolean);
+  return {
+    name: "export",
+    status: errors.length ? "fail" : "pass",
+    summary: `pack of ${r.preset?.name ?? "?"}: ${parts.join(", ")}`,
+    details: clip(errors.map((d) => `${d.file ?? ""}${d.line ? `:${d.line}` : ""} ${d.message}`.trim()), max),
+  };
+}
+
 /**
  * The checks a pull request needs, in one run: review, check, tests and scenarios.
  * A step that has nothing to run (no test framework, no scenario files) is skipped and says why.
@@ -106,6 +126,7 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
   const skip = (name: CiStep["name"], why: string): CiStep => ({ name, status: "skip", summary: why, details: [] });
   if (options.noGodot) {
     for (const name of ["check", "test", "scenarios"] as const) steps.push(skip(name, "skipped (--no-godot-checks)"));
+    if (options.exportPreset) steps.push(skip("export", "skipped (--no-godot-checks)"));
   } else {
     steps.push(checkStep(await deps.check(root, { godot: options.godot, includeAddons: options.includeAddons }), max));
     steps.push(detectFramework(root) ? testStep(await deps.test(root, { godot: options.godot, import: false }), max) : skip("test", "no GUT or GdUnit4 in res://addons"));
@@ -116,6 +137,7 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
       for (const { file, scenario } of scenarios) results.push(await deps.scenario(root, file, scenario, { godot: options.godot, import: false }));
       steps.push(scenarioStep(results, max));
     }
+    if (options.exportPreset) steps.push(exportStep(await deps.export(root, { preset: options.exportPreset, mode: "pack", import: false, ...(options.godot ? { godot: options.godot } : {}) }), max));
   }
   return { project: root, ok: steps.every((s) => s.status !== "fail"), steps };
 }

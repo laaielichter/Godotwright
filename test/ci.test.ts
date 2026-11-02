@@ -119,6 +119,38 @@ describe("godotwright ci", () => {
     expect(ci.steps.at(-1)?.details.join("\n")).toContain("A.b was 2 at frame 9");
   });
 
+  it("exports a preset when asked, and fails on what the export found", async () => {
+    const root = files();
+    const asked: unknown[] = [];
+    const ci = await runCi(root, {
+      exportPreset: "Linux",
+      deps: {
+        check: async () => ({ godot: "g", godotVersion: "4.7.2", scripts: 1, scenes: 0, diagnostics: [], steps: [], errors: 0, warnings: 0 }),
+        export: async (_p, o) => {
+          asked.push(o);
+          return {
+            project: root,
+            mode: "pack",
+            preset: { name: "Linux", platform: "Linux" },
+            steps: [],
+            pack: { file: "x.pck", bytes: 2048, files: 9, formatVersion: 4, engine: "4.7.2", encryptedDirectory: false, embedded: false },
+            contents: { files: 9, needed: 4, missing: 1, junk: 0, unreached: { files: 0, bytes: 0, top: [] } },
+            smoke: { frames: 120, fps: 60, how: "Godot --main-pack x.pck", exitCode: 0, timedOut: false, errors: 0, output: "" },
+            diagnostics: [{ severity: "error", file: "res://data/a.txt", message: "the game loads it, but the pack does not hold it", source: "contents" }],
+            errors: 1,
+            warnings: 0,
+            notes: [],
+          };
+        },
+      },
+    });
+    expect(asked).toEqual([{ preset: "Linux", mode: "pack", import: false }]);
+    expect(ci.steps.at(-1)).toMatchObject({ name: "export", status: "fail", summary: "pack of Linux: 9 files, 2.0 KB, 3 of 4 loaded files in it, ran 120 frames: 0 errors" });
+    expect(ci.steps.at(-1)?.details).toEqual(["res://data/a.txt the game loads it, but the pack does not hold it"]);
+    const skipped = await runCi(root, { exportPreset: "Linux", noGodot: true });
+    expect(skipped.steps.at(-1)).toMatchObject({ name: "export", status: "skip" });
+  });
+
   it("runs from the command line without Godot and exits 0 when the review is clean", async () => {
     const root = files();
     const run = await runCli(["ci", root, "--no-godot-checks"]);
