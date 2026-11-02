@@ -316,8 +316,9 @@ godotwright export patch --preset Linux --manifest pck-manifest.json  # no base 
   manifest), a list of paths, or one path per line. Godotwright exports the full pack and keeps the files whose md5
   differs from the list or that are new. With paths only, a listed file cannot be told apart from an unchanged copy, and
   the report says so.
-- **The smoke run** loads the base with the patch over it (a removal takes a file out, as Godot does) and runs that.
-  With only a list, it runs the project's full export and says so.
+- **The smoke run** writes one pack that holds the base with the patch over it (a later file replaces an earlier one, a
+  removal takes it out, as Godot loads them) and runs that with `--main-pack`. With only a list, it runs the project's
+  full export and says so; a patch with delta-encoded files (`patch_delta_encoding`) is not run.
 
 ## Mods and patches over a game
 
