@@ -473,7 +473,8 @@ export async function smokePack(file: string, options: { path?: string; frames?:
 /** Lists a pack and compares it with the project it was exported from (no Godot needed). */
 export function inspectPack(file: string, options: { path?: string; preset?: string } = {}): ExportRun {
   const pack = absolute(file);
-  const root = findProjectRoot(options.path ?? process.cwd());
+  // Without --path: the project around the current folder, else the one the pack sits in (.godot/godotwright/export/).
+  const root = options.path ? findProjectRoot(options.path) : (findProjectRoot(process.cwd()) ?? findProjectRoot(dirname(pack)));
   const p: Prepared = { root: root ?? dirname(pack), result: { project: root ?? "", mode: "pck", out: pack, steps: [], diagnostics: [], errors: 0, warnings: 0, notes: [] } };
   const pck = readPack(p, pack, false);
   if (pck && !pck.encryptedDirectory) {
@@ -546,5 +547,6 @@ function nextStep(r: ExportRun): string {
   if (r.smoke?.errors) return "Next: fix the runtime errors above (they happen in the exported game), then export and run again.";
   if (r.errors) return "Next: fix the errors above, then export again.";
   if (r.warnings) return r.diagnostics.every((d) => d.severity !== "warning" || d.source === "contents") ? "Next: keep editor and test files out (exclude_filter), or ship as it is." : "Next: look at the warnings above, or ship as it is.";
+  if (r.mode === "pck" && !r.project) return "Next: pass path (the project it was exported from) to compare the pack with what the game loads.";
   return r.mode === "pck" ? "Next: nothing to fix in the pack." : "Next: ship it, or keep this run as a CI step (godotwright export run exits 1 on any error).";
 }

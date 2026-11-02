@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { Diagnostic } from "../check/log.js";
 import { configPaths, exportedToSource } from "../scan/scan.js";
@@ -198,6 +198,16 @@ export async function patchExport(path: string, options: PatchOptions, deps: Exp
   const out = options.out ? absolute(options.out) : defaultOut(root, preset, "patch");
   result.out = out;
   if (!/\.pck$/i.test(out)) result.diagnostics.push({ severity: "error", message: `out must end in .pck (got ${out})`, source: "patch" });
+  // The export removes out first, and the temporary packs are removed at the end: none of them may be a base.
+  const scratch = dirname(defaultOut(root, preset, "pack"));
+  const fullFile = join(scratch, "full-for-patch.pck");
+  const merged = join(scratch, "patched-game.pck");
+  const same = (a: string, b: string) => real(a) === real(b);
+  for (const f of [...against, ...manifests]) {
+    if (same(f, out)) result.diagnostics.push({ severity: "error", message: `out is the base ${f}: the export would delete it before Godot reads it; write the patch somewhere else (out)`, source: "patch" });
+    else if (same(f, fullFile) || same(f, merged)) result.diagnostics.push({ severity: "error", message: `${f} is a temporary file of the patch run and would be deleted: copy the base elsewhere first`, source: "patch" });
+  }
+  if (same(out, fullFile) || same(out, merged)) result.diagnostics.push({ severity: "error", message: `out ${out} is a temporary file of the patch run: choose another name`, source: "patch" });
   if (result.diagnostics.some((d) => d.severity === "error")) return finish(result);
 
   let list: BaseList | undefined;
@@ -222,7 +232,6 @@ export async function patchExport(path: string, options: PatchOptions, deps: Exp
 
   if (options.import !== false && !(await importStep(p, deps, timeoutMs))) return finish(result);
   // The full export is what the patch is checked against (and, from a file list, what it is cut from).
-  const fullFile = join(dirname(defaultOut(root, preset, "pack")), "full-for-patch.pck");
   const temps = [fullFile];
   try {
     if ((await exportStep(p, deps, "--export-pack", fullFile, timeoutMs)) !== "ok") return finish(result);
@@ -243,6 +252,8 @@ export async function patchExport(path: string, options: PatchOptions, deps: Exp
       }
     } else {
       const keep = live(full).filter((e) => againstList(e, list!) !== "same");
+      // As in the Godot branch: a patch from an earlier run must not stay at out when nothing changed.
+      rmSync(out, { force: true });
       if (keep.length) {
         const sources = new Map(sourcesOf(full).map((s) => [s.path, s]));
         writePck(out, keep.map((e) => sources.get(e.path)!), full.engine);
@@ -270,7 +281,6 @@ export async function patchExport(path: string, options: PatchOptions, deps: Exp
       else if (bases.length && parts.delta.length) result.notes.push("smoke run skipped: delta-encoded files need Godot to apply them to the base, which a headless run cannot do from the command line");
       else if (bases.length) {
         // What the game sees with the patch loaded over the base: one pack, so --main-pack can start it.
-        const merged = join(dirname(fullFile), "patched-game.pck");
         temps.push(merged);
         const view = overlay([...bases, patch]).files;
         const sources = new Map<string, ReturnType<typeof sourcesOf>[number]>();
@@ -290,5 +300,18 @@ export async function patchExport(path: string, options: PatchOptions, deps: Exp
     return finish(result);
   } finally {
     for (const t of temps) rmSync(t, { force: true });
+  }
+}
+
+/** The file's real place (links followed); the resolved path when it does not exist yet. */
+function real(file: string): string {
+  try {
+    return realpathSync(file);
+  } catch {
+    try {
+      return join(realpathSync(dirname(file)), file.slice(dirname(file).length + 1));
+    } catch {
+      return resolve(file);
+    }
   }
 }
