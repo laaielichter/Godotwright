@@ -57,6 +57,8 @@ export interface FixOptions {
   /** Also apply fixes marked `check`. */
   includeCheck?: boolean;
   write?: boolean;
+  /** Release the project comes from, for the upgrade fixes after it was re-saved in a newer Godot (review `from`). */
+  from?: string;
   /** A review of the project made just before (saves reviewing it again when nothing changed since). */
   report?: ReviewReport;
 }
@@ -250,6 +252,106 @@ const FIXERS: Record<string, Fixer> = {
   },
 };
 
+/**
+ * `obj.prop[i] = v` on a packed array: copy, write, assign back, so the setter runs again as it did before Godot 4.7
+ * (and an engine property keeps the write at all).
+ */
+const packedWrite: Fixer = (lines, i, finding) => {
+  const line = lines[i]!;
+  if (line.includes("#") || line.includes(";") || /:\s*$/.test(line)) return "the line has a comment, a semicolon or a header";
+  const write = /^(\s*)((?:self\.|\$[\w/]+\.|%\w+\.|[A-Za-z_]\w*\.)*([A-Za-z_]\w*))(\[.*)$/;
+  const m = write.exec(line);
+  if (!m) return "the write is not a plain name chain at the start of the line";
+  const [, indent, target, prop, rest] = m as unknown as [string, string, string, string, string];
+  if (/^(?:if|elif|while|for|match|return|var|await)$/.test(target)) return "the write is not a statement of its own";
+  const { start, end } = blockAround(lines, i);
+  const block = lines.slice(start, end + 1);
+  // Each fix in a function gets its own name: fixes are planned on the original lines, so they cannot see each other.
+  const others = block.filter((l) => write.exec(l)?.[3] === prop).length > 1;
+  let copy = others ? `${prop}_copy_${i + 1}` : `${prop}_copy`;
+  for (let n = 2; block.some((l) => new RegExp(`\\b${copy}\\b`).test(l)); n++) copy = `${prop}_copy${others ? `_${i + 1}` : ""}_${n}`;
+  return {
+    index: i,
+    count: 1,
+    // `$Node.prop` is typed Node.prop to the compiler, so `:=` cannot infer it there.
+    lines: [`${indent}var ${copy} ${/[$%]/.test(target) ? "=" : ":="} ${target}`, `${indent}${copy}${rest}`, `${indent}${target} = ${copy}`],
+    // On an engine property the write was lost, so this only restores it; a script setter now runs again: read it.
+    safety: finding.rule === "api/packed-element-write" ? "safe" : "check",
+  };
+};
+
+/** The node or sub-resource block a .tscn finding points at: from its header to the line before the next header. */
+function sectionAt(lines: string[], index: number): number {
+  let end = index + 1;
+  while (end < lines.length && !/^\[/.test(lines[end]!)) end++;
+  return end;
+}
+
+/** A property line added right under a `[node ...]` header (Godot reads properties in any order). */
+const addProperty = (property: string, value: string): Fixer => (lines, i) => {
+  if (!/^\[node\b/.test(lines[i]!)) return "the line is not a [node] header";
+  const end = sectionAt(lines, i);
+  if (lines.slice(i + 1, end).some((l) => l.startsWith(`${property} =`))) return `the node already sets ${property}`;
+  return { index: i, count: 1, lines: [lines[i]!, `${property} = ${value}`], safety: "safe", note: "the value Godot used before the upgrade" };
+};
+
+FIXERS["api/packed-element-write"] = packedWrite;
+FIXERS["quality/packed-setter-skipped"] = packedWrite;
+
+// `add_image(..., true, false)`: the ImageUnit that matches the old bool.
+FIXERS["api/image-unit-bool"] = (lines, i) => {
+  const line = lines[i]!;
+  const call = /\b(add_image|update_image)\s*\(/.exec(line);
+  if (!call) return "the call is not on this line";
+  const open = call.index + call[0].length - 1;
+  // Top-level argument ranges inside the call.
+  const ranges: [number, number][] = [];
+  let depth = 0;
+  let from = open + 1;
+  let quote: string | undefined;
+  let close = -1;
+  for (let k = open; k < line.length; k++) {
+    const c = line[k]!;
+    if (quote) {
+      if (c === "\\") k++;
+      else if (c === quote) quote = undefined;
+      continue;
+    }
+    if (c === '"' || c === "'") quote = c;
+    else if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) {
+      depth--;
+      if (depth === 0) {
+        close = k;
+        break;
+      }
+    } else if (c === "," && depth === 1) {
+      ranges.push([from, k]);
+      from = k + 1;
+    }
+  }
+  if (close < 0) return "the call goes on past this line";
+  ranges.push([from, close]);
+  const first = call[1] === "add_image" ? 9 : 10;
+  let fixed = line;
+  for (const n of [first + 1, first]) {
+    const range = ranges[n];
+    if (!range) continue;
+    const arg = line.slice(range[0], range[1]).trim();
+    if (arg !== "true" && arg !== "false") continue;
+    const unit = arg === "true" ? "RichTextLabel.IMAGE_UNIT_PERCENT" : "RichTextLabel.IMAGE_UNIT_PIXEL";
+    fixed = fixed.slice(0, range[0]) + fixed.slice(range[0], range[1]).replace(arg, unit) + fixed.slice(range[1]);
+  }
+  if (fixed === line) return "no true or false at the unit arguments";
+  return { index: i, count: 1, lines: [fixed], safety: "safe" };
+};
+
+FIXERS["api/upgrade-area-mask"] = addProperty("area_mask", "1");
+FIXERS["api/upgrade-mesh-skeleton"] = addProperty("skeleton", 'NodePath("..")');
+
+// No fixer for api/upgrade-world-boundary-jolt: flipping d cannot tell whether it was flipped already, so a second run
+// would undo the first.
+
 export const FIXABLE_RULES = Object.keys(FIXERS).sort();
 
 export function fixProject(path: string, options: FixOptions = {}): FixResult {
@@ -257,7 +359,7 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
   if (!root) throw new ProjectNotFoundError(path);
   const learning = { learning: currentLearning() ?? emptyLearning(), shared: bundledLearning() };
   const focus = options.files?.map((f) => (f.startsWith("res://") ? f : toResPath(root, f)));
-  const report = options.report ?? reviewProject(root, { ...learning, ...(focus ? { focus } : {}) });
+  const report = options.report ?? reviewProject(root, { ...learning, ...(focus ? { focus } : {}), ...(options.from ? { from: options.from } : {}) });
   const wanted = (rule: string) => FIXABLE_RULES.includes(rule) && (!options.rules?.length || options.rules.includes(rule));
   const byFile = new Map<string, Finding[]>();
   for (const f of report.findings) {
@@ -317,7 +419,7 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
   let remaining: Finding[] | undefined;
   if (options.write && changes.length) {
     const changed = [...new Set(changes.map((c) => c.file))];
-    remaining = reviewProject(root, { ...learning, focus: changed }).findings.filter((f) => f.severity !== "info");
+    remaining = reviewProject(root, { ...learning, focus: changed, ...(options.from ? { from: options.from } : {}) }).findings.filter((f) => f.severity !== "info");
   }
   return { project: root, changes, skipped, needsCheck, written: options.write === true && changes.length > 0, ...(id ? { journal: id } : {}), ...(remaining ? { remaining } : {}) };
 }
