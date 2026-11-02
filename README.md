@@ -10,6 +10,7 @@ Offline Godot 4.7 API, a project map, headless checks, an AAA review of GDScript
   <img src="https://img.shields.io/badge/Godot-4.7-478cbf?logo=godotengine&logoColor=white" alt="Godot 4.7">
   <img src="https://img.shields.io/badge/MCP-server-6e56cf" alt="MCP server">
   <a href="https://www.npmjs.com/package/godotwright"><img src="https://img.shields.io/npm/v/godotwright" alt="npm version"></a>
+  <a href="https://glama.ai/mcp/servers/laaielichter/Godotwright"><img src="https://glama.ai/mcp/servers/laaielichter/Godotwright/badges/score.svg" alt="Godotwright MCP server – quality and maintenance score on Glama"></a>
   <br>
   <a href="https://laaielichter.github.io/Godotwright/install.html#claude-code"><img src="https://img.shields.io/badge/Claude_Code-plugin-d97757" alt="Install the Claude Code plugin"></a>
   <a href="https://laaielichter.github.io/Godotwright/install.html#claude-desktop"><img src="https://img.shields.io/badge/Claude_Desktop-one_file-d97757" alt="Install in Claude Desktop"></a>
