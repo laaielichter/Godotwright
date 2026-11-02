@@ -77,7 +77,16 @@ export function checkIntegrity(data: ProjectData): Finding[] {
   for (const scene of data.map.scenes) {
     const parsed = data.resources.get(scene.path);
     if (!parsed || scene.external) continue;
-    out.push(...lockedInstanceEdits(scene, parsed, scenes));
+    for (const l of lockedInstances(scene, parsed, scenes).locked) {
+      out.push(
+        finding(
+          "structure/locked-instance-edit",
+          scene.path,
+          l.line,
+          `${l.count} edit${l.count === 1 ? "" : "s"} inside the instanced scene at "${l.root}", which has no [editable path="${l.root}"]: Godot applies ${l.count === 1 ? "it" : "them"} when loading, but drops ${l.count === 1 ? "it" : "them"} on the next save from the editor.`,
+        ),
+      );
+    }
   }
   return out;
 }
@@ -169,7 +178,21 @@ function within(path: string, base: string): boolean {
   return base === "." || path === base || path.startsWith(`${base}/`);
 }
 
-function lockedInstanceEdits(scene: SceneInfo, parsed: ResourceFile, scenes: Map<string, SceneInfo>): Finding[] {
+export interface LockedInstance {
+  /** Path of the instanced scene (or of an instance inside it) that is not editable. */
+  root: string;
+  /** Line of the first edit inside it, and how many there are. */
+  line: number;
+  count: number;
+}
+
+/**
+ * The instanced scenes in a scene (and the instances inside those), and the ones this scene changes inside without an
+ * [editable] entry. Checked with Godot 4.7.2: an override of a node inside an instance, a node added below one, and a
+ * connection to one survive an editor save only when every instance on the way is editable; a node added directly
+ * under the instance, and changes to the instance node itself, always do.
+ */
+export function lockedInstances(scene: SceneInfo, parsed: ResourceFile, scenes: Map<string, SceneInfo>): { roots: string[]; locked: LockedInstance[] } {
   // Instanced scenes in this scene, with the instances inside them (an edit below those needs both editable).
   const roots: string[] = [];
   const addNested = (prefix: string, path: string | undefined, depth: number) => {
@@ -200,7 +223,7 @@ function lockedInstanceEdits(scene: SceneInfo, parsed: ResourceFile, scenes: Map
       addNested(n.path, n.instance, 0);
     }
   }
-  if (!roots.length) return [];
+  if (!roots.length) return { roots, locked: [] };
   const editable = new Set(parsed.editable.map((e) => e.path));
   /** The instance roots whose internals a path reaches, outermost first; a node this scene adds stops the walk. */
   const reaches = (path: string, overrideOfPath: boolean): string[] => {
@@ -238,12 +261,5 @@ function lockedInstanceEdits(scene: SceneInfo, parsed: ResourceFile, scenes: Map
     const locked = new Set([c.from, c.to].flatMap((end) => reaches(end, true).filter((r) => r !== end && !editable.has(r))));
     for (const root of locked) note(root, c.line);
   }
-  return [...byRoot].map(([root, { line, count }]) =>
-    finding(
-      "structure/locked-instance-edit",
-      scene.path,
-      line,
-      `${count} edit${count === 1 ? "" : "s"} inside the instanced scene at "${root}", which has no [editable path="${root}"]: Godot applies ${count === 1 ? "it" : "them"} when loading, but drops ${count === 1 ? "it" : "them"} on the next save from the editor.`,
-    ),
-  );
+  return { roots, locked: [...byRoot].map(([root, { line, count }]) => ({ root, line, count })) };
 }

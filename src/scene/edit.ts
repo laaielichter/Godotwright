@@ -7,7 +7,8 @@ import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { lockedInstances } from "../review/checks/integrity.js";
+import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
 import { uidOf } from "./uid.js";
 
@@ -15,10 +16,11 @@ export class SceneError extends Error {}
 
 /** One change to a .tscn. Node paths are relative to the scene root, which is ".". */
 export type SceneEdit =
-  | { op: "add_node"; parent: string; name: string; type?: string; instance?: string }
+  | { op: "add_node"; parent: string; name: string; type?: string; instance?: string; makeEditable?: boolean }
   | { op: "remove_node"; node: string }
-  | { op: "set"; node: string; property: string; value: string }
-  | { op: "connect"; from: string; signal: string; to: string; method: string }
+  | { op: "set"; node: string; property: string; value: string; makeEditable?: boolean }
+  | { op: "connect"; from: string; signal: string; to: string; method: string; makeEditable?: boolean }
+  | { op: "set_editable"; node: string; editable?: boolean }
   | { op: "disconnect"; from: string; signal: string; to: string; method: string }
   | { op: "attach_script"; node: string; script: string };
 
@@ -50,7 +52,12 @@ interface Splice {
   start: number;
   count: number;
   added: string[];
+  /** Goes after anything else inserted at the same line (an [editable] entry at the end of the file). */
+  tail?: boolean;
 }
+
+/** Bottom-up order for applying splices; at the same line, a tail splice is applied first so it ends up last. */
+const spliceOrder = (a: Splice, b: Splice) => b.start - a.start || b.count - a.count || Number(b.tail ?? false) - Number(a.tail ?? false);
 
 const NODE_NAME = /^[^.:@/"%]+$/;
 
@@ -201,6 +208,20 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
 
   const removeBlock = (block: Block): void => {
     splices.push({ start: block.start, count: block.end - block.start, added: [] });
+  };
+
+  /** The instanced scenes in the scene as `text`, and the ones it changes inside without [editable]. */
+  const lockedOf = (text: string) => {
+    const data = loadProject(root, { overrides: { [resPath]: text } });
+    const scene = data.map.scenes.find((sc) => sc.path === resPath);
+    const parsedScene = data.resources.get(resPath);
+    return scene && parsedScene ? lockedInstances(scene, parsedScene, new Map(data.map.scenes.map((sc) => [sc.path, sc]))) : { roots: [], locked: [] };
+  };
+  /** Lines that add [editable path=...] entries at the end of the file. */
+  const editableSplice = (paths: string[]): Splice => {
+    let at = lines.length;
+    while (at > 0 && (lines[at - 1] ?? "").trim() === "") at--;
+    return { start: at, count: 0, added: paths.flatMap((p) => ["", `[editable path="${p}"]`]), tail: true };
   };
 
   let summary = "";
@@ -358,6 +379,22 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
       summary = `connect ${label}`;
       break;
     }
+    case "set_editable": {
+      const path = edit.node.replace(/^\.\//, "");
+      const { roots } = lockedOf(original);
+      if (!roots.includes(path)) throw new SceneError(`${path} is not an instanced scene in ${resPath}${roots.length ? `; instances: ${roots.slice(0, 8).join(", ")}` : ""}`);
+      const existing = blocks.filter((b) => b.tag === "editable" && b.attrs["path"] === path);
+      if (edit.editable === false) {
+        if (!existing.length) throw new SceneError(`nothing to change: ${path} is not editable`);
+        for (const b of existing) removeBlock(b);
+        summary = `make ${path} not editable`;
+      } else {
+        if (existing.length) throw new SceneError(`nothing to change: ${path} is already editable`);
+        splices.push(editableSplice([path]));
+        summary = `make ${path} editable (its children can be changed in this scene)`;
+      }
+      break;
+    }
     case "attach_script": {
       const node = findNode(edit.node);
       const script = edit.script.trim();
@@ -384,15 +421,40 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
   }
 
   if (splices.every((sp) => sp.added.join("\n") === lines.slice(sp.start, sp.start + sp.count).join("\n"))) throw new SceneError(`nothing to change: ${summary} is already so`);
-  splices.sort((a, b) => b.start - a.start || b.count - a.count);
-  const out = [...lines];
-  for (const s of splices) out.splice(s.start, s.count, ...s.added);
-  const text = out.join(eol);
+  const apply = (): string => {
+    const out = [...lines];
+    for (const sp of [...splices].sort(spliceOrder)) out.splice(sp.start, sp.count, ...sp.added);
+    return out.join(eol);
+  };
+  let text = apply();
   try {
     parseResourceText(text);
   } catch (error) {
     throw new SceneError(`the change would leave ${resPath} unreadable (${(error as Error).message}); nothing was written`);
   }
+  if (edit.op === "set_editable" && edit.editable === false) {
+    const lost = lockedOf(text).locked.find((l) => l.root === edit.node.replace(/^\.\//, ""))?.count ?? 0;
+    if (lost) warnings.push(`${lost} edit${lost === 1 ? "" : "s"} inside it will be dropped on the next save from the editor`);
+  }
+  // A change inside an instanced scene that is not editable: Godot would drop it on the next save from the editor.
+  if (edit.op === "add_node" || edit.op === "set" || edit.op === "connect") {
+    // The nodes this change is about: inside a locked instance when strictly below its root.
+    const touched = edit.op === "add_node" ? [edit.parent.replace(/^\.\//, "")] : edit.op === "set" ? [edit.node.replace(/^\.\//, "")] : [edit.from, edit.to];
+    const added = lockedOf(text)
+      .locked.map((l) => l.root)
+      .filter((r) => touched.some((t) => t.startsWith(`${r}/`)));
+    if (added.length && !edit.makeEditable) {
+      throw new SceneError(
+        `this changes the inside of the instanced scene at ${added.map((r) => `"${r}"`).join(", ")}, which is not editable: Godot would drop it on the next save from the editor. Pass make_editable (adds [editable path="${added[0]}"]), or change the instanced scene itself.`,
+      );
+    }
+    if (added.length) {
+      splices.push(editableSplice(added));
+      text = apply();
+      summary += ` (and make ${added.join(", ")} editable)`;
+    }
+  }
+  splices.sort(spliceOrder);
   const hunks = [...splices].reverse().map((s) => ({ line: s.start + 1, removed: lines.slice(s.start, s.start + s.count), added: s.added }));
   const plan: ScenePlan = { summary, file: resPath, hunks, warnings, written: false };
   if (!options.write) return plan;
