@@ -1,8 +1,8 @@
 import { Command, InvalidArgumentError } from "commander";
 import { GodotNotFoundError } from "../check/godot.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
-import { ScreenshotError, VIEWS, formatScreenshot, takeScreenshot, type View } from "../screenshot/screenshot.js";
-import { writeOut } from "./output.js";
+import { DEFAULT_THRESHOLD, DEFAULT_TOLERANCE, ScreenshotError, VIEWS, formatScreenshot, takeScreenshot, type View } from "../screenshot/screenshot.js";
+import { parseNumber, writeOut } from "./output.js";
 
 interface Options {
   godot?: string;
@@ -12,6 +12,10 @@ interface Options {
   size: { width: number; height: number };
   frames: number;
   out?: string;
+  baseline?: string | true;
+  threshold?: number;
+  tolerance?: number;
+  updateBaseline?: boolean;
   json?: boolean;
 }
 
@@ -29,7 +33,7 @@ function parseViews(value: string): View[] {
 
 export function screenshotCommand(): Command {
   return new Command("screenshot")
-    .description("render a scene, or a .glb model framed by a camera, to a PNG with Godot, and say how much of the picture is drawn")
+    .description("render a scene, or a .glb model framed by a camera, to a PNG with Godot, and say how much of the picture is drawn; with --baseline, compare it with the last approved picture")
     .argument("[path]", "project directory (or any path inside it); for --model, where relative paths start", ".")
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--scene <res-path>", "the scene to render (default: the main scene)")
@@ -38,6 +42,10 @@ export function screenshotCommand(): Command {
     .option("--size <WxH>", "size of one view (default 640x360)", parseSize, { width: 640, height: 360 })
     .option("--frames <n>", "frames to run before the picture (default 10)", (v: string) => Number.parseInt(v, 10), 10)
     .option("-o, --out <file>", "where to write the PNG (default: .godot/godotwright/screenshot.png, or the model name with .png)")
+    .option("--baseline [file]", "compare with a baseline PNG, saved on the first run (no file: .godotwright/baselines/<scene or model>@<size>_<views>.png); exit code 1 when it changed")
+    .option("--threshold <percent>", `percent of pixels that may change (default ${DEFAULT_THRESHOLD})`, parseNumber)
+    .option("--tolerance <0-255>", `how far a pixel's colour may move before it counts as changed (default ${DEFAULT_TOLERANCE})`, parseNumber)
+    .option("--update-baseline", "write the new picture as the baseline instead of comparing (default file as --baseline)")
     .option("--json", "print the result as JSON")
     .action(async (path: string, options: Options, command: Command) => {
       try {
@@ -50,8 +58,14 @@ export function screenshotCommand(): Command {
           height: options.size.height,
           frames: options.frames,
           ...(options.out ? { out: options.out } : {}),
+          ...(options.baseline !== undefined ? { baseline: options.baseline === true ? "auto" : options.baseline } : {}),
+          ...(options.threshold !== undefined ? { threshold: options.threshold } : {}),
+          ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
+          ...(options.updateBaseline ? { updateBaseline: true } : {}),
         });
         writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatScreenshot(report));
+        const status = report.baseline?.status;
+        if (status === "changed" || status === "size-mismatch") process.exitCode = 1;
       } catch (error) {
         if (error instanceof GodotNotFoundError) {
           process.exitCode = 2;
