@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { cleanup } from "../src/check/check.js";
+import { doctorProject, formatDoctor } from "../src/doctor/doctor.js";
 import { CHECKER_SCRIPT } from "../src/check/checker-script.js";
 import { formatDiagnostic, parseGodotLog } from "../src/check/log.js";
 import { fixProject } from "../src/fix/fix.js";
@@ -247,5 +248,15 @@ describe("godot_shader without Godot", () => {
     } finally {
       await Promise.all([client.close(), server.close()]);
     }
+  });
+});
+
+describe("godot_doctor on Godot 3 shaders", () => {
+  it("points to godot_migrate and godot_shader", async () => {
+    const root = makeProject({ "project.godot": PROJECT, "fx/water.gdshader": GODOT3 });
+    const text = formatDoctor(await doctorProject(root, { godot: false }));
+    expect(text).toContain("[api/shader-renamed]");
+    expect(text).toContain("godot_migrate rewrites Godot 3 code like this for the whole project");
+    expect(text).toContain("run godot_shader: it compiles every shader with Godot headless");
   });
 });
