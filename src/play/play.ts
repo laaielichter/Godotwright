@@ -431,6 +431,8 @@ ${cycles ? "\t_cycle_step()\n\treturn\n" : ""}	if PERF_FROM >= 0:
 		print("${MARK}_DONE")
 		quit()
 		return
+	if _frame % maxi(1, int(FRAMES / 20.0)) == 0:
+		print("${MARK}_PROGRESS ", _frame, " ", FRAMES)
 	_frame += 1
 	_apply(_frame)
 
@@ -637,7 +639,7 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
         // --verbose engine lines (loading, exit lists) are not the game's output.
       } else if (line.startsWith(`${MARK}_UNTIL `)) {
         untilFrame = Number(line.slice(MARK.length + 7));
-      } else if (!line.startsWith(`${MARK}_DONE`)) rest.push(line);
+      } else if (!line.startsWith(`${MARK}_DONE`) && !line.startsWith(`${MARK}_PROGRESS `)) rest.push(line);
     }
     for (const m of result.stderr.matchAll(new RegExp(`${MARK}_NOSIGNAL (\\S+)`, "g"))) warnings.push(`${m[1]} is not a signal of a node in the scene, so it was not recorded`);
     const diagnostics = parseGodotLog(options.verbose ? runErr : result.stderr, "play").filter((d) => (d.file !== `res://${PLAY_DIR}/play.gd` || d.severity === "error") && !(captures.length && /V-Sync|ALSA|audio/i.test(d.message)));

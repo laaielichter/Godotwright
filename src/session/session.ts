@@ -4,6 +4,7 @@ import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, re
 import { createConnection, createServer } from "node:net";
 import { join } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
+import { CancelledError, currentRun, throwIfCancelled } from "../check/progress.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { isObject, parseVariant } from "../godot/variant.js";
@@ -156,6 +157,7 @@ export async function startSession(path: string, options: SessionOptions = {}): 
   const bin = findGodot(options.godot);
   const timeoutMs = options.timeoutMs ?? 5 * 60_000;
   if (options.import !== false) await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs });
+  throwIfCancelled();
   mkdirSync(p.dir, { recursive: true });
   writeFileSync(p.script, sessionScript());
   const port = await freePort();
@@ -176,6 +178,8 @@ export async function startSession(path: string, options: SessionOptions = {}): 
     return buffer.toString("utf8");
   };
   // Wait until the scene has loaded and the port answers, or the game says why it cannot.
+  const run = currentRun();
+  run?.onProgress?.(`session: loading ${scene}`);
   let text = "";
   try {
     for (;;) {
@@ -185,6 +189,19 @@ export async function startSession(path: string, options: SessionOptions = {}): 
         throw new PlayError(`the game did not start: ${(/GODOTWRIGHT_SESSION_FAILED (.*)/.exec(text)?.[1] ?? diagnostics[0]?.message ?? "Godot quit").trim()}`);
       }
       if (text.includes(`${SESSION_MARK}_READY`)) break;
+      if (run?.signal?.aborted) {
+        try {
+          process.kill(-info.pid, "SIGKILL");
+        } catch {
+          // Already gone, or Windows (no process groups): stop the game itself.
+          try {
+            process.kill(info.pid);
+          } catch {
+            // Already gone.
+          }
+        }
+        throw new CancelledError();
+      }
       if (Date.now() - started > timeoutMs) {
         try {
           process.kill(info.pid);

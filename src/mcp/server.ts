@@ -10,6 +10,9 @@ import {
   sep,
 } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
+import { withRun, type RunContext } from "../check/progress.js";
 import { z } from "zod";
 import { chooseArchetype } from "../archetype/check.js";
 import { briefFor } from "../archetype/brief.js";
@@ -182,6 +185,24 @@ const failure = (value: string) => ({
   content: [{ type: "text" as const, text: value }],
   isError: true,
 });
+type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
+
+/** The run context of a tool call: its cancel signal, and progress notifications when the client asked for them. */
+function runContext(extra: Extra): RunContext {
+  const token = extra._meta?.progressToken;
+  if (token === undefined) return { signal: extra.signal };
+  let progress = 0;
+  return {
+    signal: extra.signal,
+    onProgress: (message) => {
+      if (extra.signal.aborted) return;
+      extra
+        .sendNotification({ method: "notifications/progress", params: { progressToken: token, progress: ++progress, message } })
+        .catch(() => undefined);
+    },
+  };
+}
+
 /** A result with its structured form next to the text; an error result when `ok` is false. */
 const result = <T extends { ok: boolean }>(value: string, data: T, error = !data.ok) => ({
   content: [{ type: "text" as const, text: value }],
@@ -212,17 +233,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
     { name: "godotwright", title: "Godotwright", version: VERSION },
     { instructions: renderInstructions(tier, enabled, options.readOnly === true) },
   );
-  // Registers a tool only when its set is enabled; a read-only server refuses the options that write.
+  // Registers a tool only when its set is enabled; a read-only server refuses the options that write. Every call
+  // runs in a run context: Godot runs it starts report progress (when the client sent a progressToken) and are
+  // stopped, with what they started, when the client cancels the call.
   const registerTool = server.registerTool.bind(server);
-  const tool = ((name: string, config: never, cb: (args: Record<string, unknown>, extra: never) => unknown) => {
+  const tool = ((name: string, config: never, cb: (args: Record<string, unknown>, extra: Extra) => unknown) => {
     if (!ALL_TOOLS.includes(name)) throw new Error(`${name} is in no tool set (src/mcp/toolsets.ts)`);
     if (!enabled.has(name)) return undefined;
-    const run = options.readOnly
-      ? (args: Record<string, unknown>, extra: never) => {
-          const why = readOnlyRefusal(name, args ?? {});
-          return why ? failure(why) : cb(args, extra);
-        }
-      : cb;
+    const run = async (args: Record<string, unknown>, extra: Extra) => {
+      const why = options.readOnly ? readOnlyRefusal(name, args ?? {}) : undefined;
+      if (why) return failure(why);
+      return withRun(runContext(extra), async () => cb(args, extra));
+    };
     return registerTool(name, config, run as never);
   }) as typeof server.registerTool;
 
