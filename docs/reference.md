@@ -48,6 +48,8 @@ godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns 
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
+godotwright review --from 4.5 --target 4.6   # moving between 4.x releases: what changes on the way (default: saved version -> 4.7)
+godotwright check --compare-godot ~/Godot_v4.8-beta2   # the same check with a second Godot on a copy: only new and gone errors
 godotwright review [path] --detail full --min-score 90
 godotwright model car.glb             # what is in a 3D model: nodes, triangles, textures, size
 godotwright model lint car.glb        # model review with a score per category
@@ -205,6 +207,45 @@ Every review remembers its findings in `.godot/godotwright/review-last.json` (Go
 already saw as one short line each (`file:line [rule]`), and how many are fixed. A finding keeps its identity when its
 line moves. An agent fixing a long list reads the list once instead of after every edit.
 
+## Upgrading between Godot 4 releases
+
+```sh
+godotwright review                          # a project saved by 4.5 or 4.6 also gets what changes on the way to 4.7
+godotwright review --from 4.6               # the same after the project was re-saved in 4.7 (the saved version is then 4.7)
+godotwright review --from 4.5 --target 4.6  # only the changes up to 4.6
+godotwright api InputEvent.device           # each member shows what changed in 4.6 and 4.7, and gone names say when they went
+godotwright check --compare-godot /path/to/godot-4.8-beta   # or set GODOT_NEXT and pass --compare-godot alone
+```
+
+`data/api-changes.json` holds the changes from the official 4.6 and 4.7 upgrade guides that matter to GDScript and
+scenes, each checked by running the same project in Godot 4.6.2 and 4.7.2 (or, for rendering, marked as taken from the
+guide). Review turns them into rules (MCP: `godot_review` with `from` and `target`):
+
+| Rule | Since | When |
+| --- | --- | --- |
+| `api/packed-element-write` | 4.7 | `line.points[0] = v`, `poly.polygon[i] += v`, `points[0].x = v`: the element write to an engine property is lost (error) |
+| `quality/packed-setter-skipped` | 4.7 | the same on a script variable with a setter: the array changes but `set()` no longer runs |
+| `api/override-missing-return` | 4.7 | an override without a return type (also of `_get`, `_set`, `_get_configuration_warnings`) that never returns a value: the script no longer loads |
+| `api/image-unit-bool` | 4.7 | `true`/`false` as `width_unit`/`height_unit` of `RichTextLabel.add_image()`/`update_image()`: a parse error, although the guide calls it compatible |
+| `api/input-device-zero` | 4.7 | `.device == 0` on a key or mouse event (they are 16 and 32 now); on a plain `InputEvent` only as an upgrade note |
+| `api/upgrade-world-boundary-jolt` | 4.7 | a `WorldBoundaryShape3D` with `d != 0` under Jolt: the sign flipped |
+| `api/upgrade-area-mask` | 4.7 | a 2D/3D audio player at the default `area_mask` while an area uses `audio_bus_override` (default 1 -> 0) |
+| `api/upgrade-mesh-skeleton` | 4.6 | a `MeshInstance3D` under a `Skeleton3D` without a `skeleton` line (default `..` -> empty) |
+| `quality/upgrade-note` | 4.6, 4.7 | glow and volumetric fog that will look different (4.6), soft bodies under Jolt (4.7) |
+
+The first five are always on: they describe how Godot 4.7 behaves, whatever version the project came from. The
+`upgrade` ones appear only while the project moves: from the version in `config/features` (or `--from`) up to `--target`.
+After the project is saved in 4.7 its version reads 4.7, so pass `--from` to keep seeing them. A target older than 4.7
+leaves the 4.7 rules out. Gone members say since when (`removed after Godot 4.6`), from `data/api-removed.json`, which now
+also covers the 4.6 to 4.7 removals.
+
+For a release review has no rules for yet (a 4.8 beta), `--compare-godot <binary>` (MCP: `godot_check` with
+`compare_godot`, or `next` for `$GODOT_NEXT`) runs the same check with both binaries and prints only what differs:
+`new in 4.8.beta2` and `gone in 4.8.beta2`, matched by file, line and message (numbers left out). The second binary runs
+on a temporary copy of the project without `.godot/` and `.git/`, so a newer engine never re-imports or rewrites your
+files; the copy is removed afterwards. The exit code is 1 only for new errors, so it fits a CI job that tries the next
+release.
+
 ## Review in GitHub Actions
 
 Save this as `.github/workflows/godot-review.yml` in your game repository. It
@@ -336,7 +377,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_scan` | Map the project: scenes and node trees, scripts, signals, autoloads, input map |
 | `godot_api` | Exact Godot 4.7 lookup: signatures, inheritance, Godot 3 names |
 | `godot_api_search` | Search the Godot 4.7 class reference |
-| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`), or only what changed (`only_new`) |
+| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`), or only what changed (`only_new`); `from`/`target` for upgrades between 4.x releases |
 | `godot_checklist` | Every AAA rule with its fix |
 | `godot_feedback` | Mark a review finding as wrong or right, or say whether a lesson helped, so Godotwright learns from it |
 | `godot_lessons` | Lessons from real Godot projects (symptom, cause, fix, test) by words, Godot error, rule or topic; `gaps` lists what it cannot predict yet |
@@ -349,7 +390,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
-| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
+| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain; `compare_godot` diffs against a second Godot |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
