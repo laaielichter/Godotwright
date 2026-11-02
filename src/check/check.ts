@@ -83,7 +83,8 @@ const NOISE = [
 const EXIT_LEAK =
   /(ObjectDB instances? (were|was) leaked at exit|resources? still in use at exit|RIDs? of type .* (were|was) leaked|Pages in use exist at exit)/;
 
-const CHECKER_DIR = ".godot/godotwright";
+// Its own folder: .godot/godotwright also holds the journal and other memory, which a check must keep.
+const CHECKER_DIR = ".godot/godotwright/check";
 const CHECKER_RES = `res://${CHECKER_DIR}/check.gd`;
 
 export async function checkProject(path: string, options: CheckOptions = {}): Promise<CheckResult> {

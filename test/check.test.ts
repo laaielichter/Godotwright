@@ -95,6 +95,9 @@ describe("checkProject", () => {
         "   at: clear (core/io/resource.cpp:810)",
       ].join("\n"),
     });
+    // The journal shares .godot/godotwright with the checker; a check must leave it, so godot_undo still works.
+    mkdirSync(join(root, ".godot", "godotwright", "journal"), { recursive: true });
+    writeFileSync(join(root, ".godot", "godotwright", "journal", "keep"), "x");
     const result = await checkProject(root, { godot, runFrames: 10 });
     expect(result.godotVersion).toBe("4.7.2.stable.official.fake");
     expect([result.scripts, result.scenes]).toEqual([3, 1]);
@@ -123,7 +126,8 @@ describe("checkProject", () => {
     expect(result.errors).toBe(2);
     expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
     // The checker script is removed afterwards.
-    expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
+    expect(existsSync(join(root, ".godot", "godotwright", "check"))).toBe(false);
+    expect(existsSync(join(root, ".godot", "godotwright", "journal", "keep"))).toBe(true);
   });
 
   it("ends a run at its timeout even when a process Godot started keeps the output open", async () => {
