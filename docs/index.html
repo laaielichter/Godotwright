@@ -218,6 +218,11 @@ details { background: var(--panel); border: 1px solid var(--line); border-radius
 summary { cursor: pointer; font-weight: 700; }
 details p { margin-top: .5rem; color: var(--muted); max-width: 70ch; }
 
+/* Model strip under the hero demo */
+.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin-top: .4rem; }
+.strip a { display: block; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.strip img { display: block; width: 100%; height: auto; }
+@media (max-width: 560px) { .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* New in a release */
 .new { display: inline-flex; align-items: center; gap: .5rem; width: fit-content; padding: .3rem .8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); text-decoration: none; font-size: .9rem; }
 .new b { font: 700 .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--nui); }
@@ -269,6 +274,8 @@ footer a { color: var(--muted); }
       </div>
     </div>
     <p class="caption">Real output of godotwright 0.1.0: <code>review</code> scores a Godot 3 script 74/100, <code>migrate</code> rewrites the mechanical parts, and after one fix by hand <code>review</code> gives 100/100.</p>
+    <div class="strip"><a href="models.html"><img src="gallery/car.jpg" width="400" height="300" alt="A car with doors, hood and trunk on hinges, built by godotwright model build"></a><a href="models.html"><img src="gallery/helicopter.jpg" width="400" height="300" alt="A helicopter with a glass cockpit, built by godotwright model build"></a><a href="models.html"><img src="gallery/windmill.jpg" width="400" height="300" alt="A brick windmill with a stage, built by godotwright model build"></a><a href="models.html"><img src="gallery/castle.jpg" width="400" height="300" alt="A castle with a moat and drawbridge, built by godotwright model build"></a></div>
+    <p class="caption">And 3D models from code: <code>godotwright model build car</code> and 58 more kinds, no Blender. <a href="models.html">See all 59</a>.</p>
   </div>
 
   <section id="with">

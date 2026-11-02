@@ -23,6 +23,10 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <img src="docs/demo.gif" alt="Demo: godotwright review gives a Godot 3 player script 74/100, godotwright migrate rewrites KinematicBody2D, export var, onready var and yield, and after the last fix by hand the review gives 100/100" width="860"><br>
   <sub>Real output (godotwright 0.1.0). <a href="https://laaielichter.github.io/Godotwright/demo.mp4">Watch as video</a></sub>
 </p>
+<p align="center">
+  <a href="https://laaielichter.github.io/Godotwright/models.html"><img src="docs/gallery/overview.jpg" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" width="860"></a><br>
+  <sub>And 3D models from code, no Blender: 59 ready-made kinds. <a href="https://laaielichter.github.io/Godotwright/models.html">See the gallery</a></sub>
+</p>
 
 Coding agents learned Godot from years of Godot 3 tutorials. They write `yield`, `export var` and `KinematicBody2D`,
 invent methods, and wire signals to nodes that are not in the scene. Godotwright is the check between the agent and your
@@ -106,10 +110,6 @@ you give on the frames you give, and prints the values you watch; `screenshot` r
 **Build 3D models.** `model build` makes a clean `.glb` with no Blender: one of 59 ready-made kinds (vehicles, aircraft,
 ships, buildings, plants, terrain with lakes and rivers) or your own JSON spec. `model identify` says what a thing is
 (parts, sizes, pivots), `model view` draws it as text for agents that cannot see pictures, and `model lint` scores it.
-
-<p align="center">
-  <a href="https://laaielichter.github.io/Godotwright/models.html"><img src="docs/gallery/overview.jpg" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" width="720"></a>
-</p>
 
 **Review every pull request.** Add this to your game's repository:
 
