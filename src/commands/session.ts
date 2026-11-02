@@ -4,7 +4,7 @@ import { formatDiagnostic } from "../check/log.js";
 import { PlayError } from "../play/play.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { formatGame, formatStart } from "../session/format.js";
-import { gameRequest, newDiagnostics, readSession, startSession, stepPayload, stopSession } from "../session/session.js";
+import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import { collect, writeOut } from "./output.js";
 
 function whole(value: string): number {
@@ -61,7 +61,7 @@ export function sessionCommand(): Command {
 }
 
 export function gameCommand(): Command {
-  const game = new Command("game").description("ask the running game session (see `godotwright session start`): tree, get, set, call, eval, step, signals, errors");
+  const game = new Command("game").description("ask the running game session (see `godotwright session start`): tree, get, set, call, eval, step, signals, layout, ray, ui, reload, errors");
   const path = (c: Command) => (c.optsWithGlobals() as { path?: string }).path ?? ".";
   game.option("--path <dir>", "project directory (default: the current one)");
   game
@@ -175,6 +175,16 @@ export function gameCommand(): Command {
       guarded(c, async () => {
         const { reply, diagnostics } = await gameRequest(path(c), "ui", { sizes: o.size });
         return formatGame("ui", reply, diagnostics, [], !o.brief);
+      }),
+    );
+  game
+    .command("reload")
+    .description("load edited scripts into the running game: every node keeps its values and runs the new code from the next step")
+    .argument("[files...]", "res:// scripts (default: every script changed since the session started or the last reload)")
+    .action((files: string[], _o: unknown, c: Command) =>
+      guarded(c, async () => {
+        const { reply, diagnostics, others } = await reloadScripts(path(c), files);
+        return formatGame("reload", { ...reply, others }, diagnostics);
       }),
     );
   game

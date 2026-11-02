@@ -39,8 +39,8 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
   condition holds, `signals` records when signals fire, `summary` keeps long runs short, and `expect` turns a run
   into a test.
 - `godot_session` loads a scene once and keeps it running; `godot_game` then shows the live tree, reads and sets
-  values and steps frames with input until a condition holds. Use it when a world loads slowly or a state is hard to
-  reach; stop it when done.
+  values and steps frames with input until a condition holds; `reload` puts the scripts you edited into the running
+  game with every node's values kept. Use it when a world loads slowly or a state is hard to reach; stop it when done.
 - `godot_perf` measures frame times (p50/p95/p99, the slowest frames and their cause) and compares with the last run.
 - `godot_screenshot` renders a scene or a model to a PNG.
 

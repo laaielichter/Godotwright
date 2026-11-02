@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { playScene } from "../../src/play/play.js";
 import { formatGame } from "../../src/session/format.js";
-import { gameRequest, newDiagnostics, readSession, startSession, stepPayload, stopSession } from "../../src/session/session.js";
+import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../../src/session/session.js";
 import { FIXTURES } from "../helpers.js";
 
 /** Needs a real Godot 4.7 binary in $GODOT. CI provides one. */
@@ -54,6 +54,27 @@ describe.skipIf(!GODOT)("a game session in Godot", () => {
     expect(bad.reply["ok"]).toBe(false);
     expect(bad.diagnostics.map((d) => d.message).join("\n")).toMatch(/Node not found: "Nope"/);
     expect(newDiagnostics(root)).toEqual([]);
+
+    // Hot reload: the edited script runs on the live node, which keeps its position; a new variable gets its value.
+    expect((await reloadScripts(root)).reply["reloaded"]).toEqual([]);
+    const source = readFileSync(hero, "utf8");
+    writeFileSync(hero, source.replace("var gravity", "var boost := 3.0\nvar gravity").replace("* SPEED", "* SPEED * boost"));
+    const reloaded = await reloadScripts(root);
+    console.log(formatGame("reload", { ...reloaded.reply, others: reloaded.others }, reloaded.diagnostics));
+    expect(reloaded.reply["reloaded"]).toEqual(["res://hero.gd"]);
+    expect(reloaded.reply["initialized"]).toEqual(["boost"]);
+    const moved = await gameRequest(root, "step", stepPayload({ frames: 2, input: "0 hold right 2", watch: ["Hero.velocity.x", "Hero.boost"], every: 1 }));
+    expect((moved.reply["samples"] as [number, Record<string, string>][]).at(-1)?.[1]).toEqual({ "Hero.velocity.x": "600.0", "Hero.boost": "3.0" });
+    expect((await gameRequest(root, "get", { watch: ["Hero.position.y"] })).reply["values"]).not.toEqual({ "Hero.position.y": "490.0" });
+    // A script that does not compile is left as it was: the old code keeps running and the error names the line.
+    writeFileSync(hero, readFileSync(hero, "utf8").replace("velocity.y += gravity * delta", "velocity.y += nothing_here"));
+    const broken = await reloadScripts(root);
+    expect(broken.reply["reloaded"]).toEqual([]);
+    expect(String((broken.reply["failed"] as string[])[0])).toMatch(/^res:\/\/hero\.gd: .*old code keeps running/);
+    expect(broken.diagnostics.some((d) => d.file === "res://hero.gd" && /nothing_here/.test(d.message))).toBe(true);
+    const still = await gameRequest(root, "step", stepPayload({ frames: 1, input: "0 hold right 1", watch: ["Hero.velocity.x"], every: 1 }));
+    expect((still.reply["samples"] as [number, Record<string, string>][]).at(-1)?.[1]["Hero.velocity.x"]).toBe("600.0");
+    writeFileSync(hero, source);
 
     expect(await stopSession(root)).toBe(true);
     expect(readSession(root)).toBeUndefined();

@@ -13,7 +13,8 @@ step below answers from the project or from Godot.
    and puts the most likely cause first. To reproduce at run time, `godot_play` on the scene with the values you
    suspect in `watch`, `until` the moment it goes wrong and `signals` for the order of events. Runtime errors come
    with their call chain: read the callers, not only the line. When the world loads slowly or the state is hard to
-   reach, `godot_session` (start) and `godot_game`: step to the moment, `get` the values, `set` one to test an idea.
+   reach, `godot_session` (start) and `godot_game`: step to the moment, `get` the values, `set` one to test an idea;
+   edit the script and `reload` it into the running game to try the fix without loading the world again.
 2. **Ask the lessons first.** Call `godot_lessons` with the message as `error`. If nothing matches, call it with a few
    words of the symptom ("helicopter bounces on moving deck", "textures shimmer far away", "stutter when streaming").
    A lesson gives symptom, cause, fix and how to test; read the full one with its id.

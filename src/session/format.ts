@@ -75,6 +75,22 @@ export function formatGame(op: string, reply: Reply, diagnostics: Diagnostic[], 
         }
         break;
       }
+      case "reload": {
+        const list = (key: string) => ((reply[key] as string[]) ?? []);
+        const reloaded = list("reloaded");
+        const failed = list("failed");
+        const waiting = list("waiting");
+        if (!reloaded.length && !failed.length && !waiting.length) out.push(`nothing to reload at frame ${reply["frame"]}: no script changed since the session started or the last reload`);
+        else if (reloaded.length) out.push(`reloaded ${reloaded.length} script${reloaded.length === 1 ? "" : "s"} at frame ${reply["frame"]}; every node kept its values and runs the new code from the next step: ${reloaded.join(", ")}`);
+        for (const f of failed) out.push(`not reloaded: ${f}`);
+        if (waiting.length) out.push(`not loaded by the game yet, so they load with the new code: ${waiting.join(", ")}`);
+        if (list("initialized").length) out.push(`new variables got their starting values on the nodes that already exist: ${list("initialized").join(", ")}`);
+        if (list("left").length) out.push(`new variables left null on the nodes that already exist (objects, or a script whose _init needs arguments): ${list("left").join(", ")}`);
+        const others = list("others");
+        if (others.length) out.push(`changed, but a reload only takes scripts: ${others.slice(0, 8).join(", ")}${others.length > 8 ? ` +${others.length - 8} more` : ""}; godot_session start with restart: true loads them`);
+        if (reloaded.length) out.push("_ready() and _init() do not run again: what they set up stays as it was (restart the session when that matters).");
+        break;
+      }
       case "status":
         out.push(`running ${reply["scene"]} at frame ${reply["frame"]}, ${reply["nodes"]} nodes`);
         break;

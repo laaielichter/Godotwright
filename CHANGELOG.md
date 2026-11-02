@@ -31,6 +31,11 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - `ray`: what a physics ray hits, where, with which normal (3D or 2D);
   - `ui`: the visible controls at one or more window sizes, with clipped labels, panels off-screen, overlapping buttons
     and tiny targets.
+
+  And `reload` loads the scripts you edited into the running game: every node keeps its values and runs the new code
+  from the next step, new variables get their starting values, a script that extends a changed one is compiled again
+  after it, and a script that does not compile is left as it was (the old code keeps running, the error names the
+  line). Try a fix in seconds on a world that took a minute to load.
 - **`godot_export` (and `godotwright export`): "works in the editor, broken in the build", found before anyone exports.**
   It compares the export presets with what the scripts and scenes load: files that `exclude_filter` leaves out
   although they are preloaded (Godot leaves them out even when something needs them), plain data files that Godot

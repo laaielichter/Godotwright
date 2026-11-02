@@ -37,6 +37,19 @@ describe("game session requests", () => {
     );
   });
 
+  it("format a reload: what went in, what failed, what needs a restart", () => {
+    const text = formatGame(
+      "reload",
+      { ok: true, frame: 40, reloaded: ["res://hero.gd"], failed: ["res://enemy.gd: Parse error, the old code keeps running"], waiting: [], initialized: ["boost"], left: [], others: ["res://level.tscn"] },
+      [],
+    );
+    expect(text).toContain("reloaded 1 script at frame 40; every node kept its values and runs the new code from the next step: res://hero.gd");
+    expect(text).toContain("not reloaded: res://enemy.gd: Parse error, the old code keeps running");
+    expect(text).toContain("new variables got their starting values on the nodes that already exist: boost");
+    expect(text).toContain("changed, but a reload only takes scripts: res://level.tscn; godot_session start with restart: true loads them");
+    expect(formatGame("reload", { ok: true, frame: 3, reloaded: [], failed: [], waiting: [] }, [])).toBe("nothing to reload at frame 3: no script changed since the session started or the last reload\n");
+  });
+
   it("only listens on this machine and checks a token", () => {
     const script = sessionScript();
     expect(script).toContain('_server.listen(port, "127.0.0.1")');

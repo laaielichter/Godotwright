@@ -91,7 +91,7 @@ import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
-import { gameRequest, newDiagnostics, readSession, startSession, stepPayload, stopSession } from "../session/session.js";
+import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
   TestRunError,
@@ -176,7 +176,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
-      "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
+      "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
       "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
@@ -845,10 +845,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Look at and drive the running game session",
       description:
-        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `layout` (3D objects: global position, size, lowest point, and whether each rests on, floats above or sinks into what is below, plus scale mistakes), `ray` (from, to: what a physics ray hits), `ui` (visible controls at one or more window `sizes`, with clipped text, off-screen panels, overlapping buttons and small targets), `errors` (what the game printed since the last call). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
+        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `layout` (3D objects: global position, size, lowest point, and whether each rests on, floats above or sinks into what is below, plus scale mistakes), `ray` (from, to: what a physics ray hits), `ui` (visible controls at one or more window `sizes`, with clipped text, off-screen panels, overlapping buttons and small targets), `errors` (what the game printed since the last call), `reload` (load the scripts you edited into the running game: every node keeps its values and runs the new code from the next step, so you try a fix without loading the world again; `files`, default every script changed since the last reload; a script that does not compile is left as it was). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
       inputSchema: {
         path: pathParam,
-        op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "layout", "ray", "ui", "errors"]).describe("what to do"),
+        op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "layout", "ray", "ui", "errors", "reload"]).describe("what to do"),
+        files: z.array(z.string()).optional().describe("reload: res:// scripts to reload (default: every script changed since the session started or the last reload)"),
         from: z.string().optional().describe("ray: start, Vector3(...) or Vector2(...)"),
         to: z.string().optional().describe("ray: end"),
         sizes: z.array(z.string()).optional().describe("ui: window sizes such as 1280x720 or 720x1280 (default the size the project sets)"),
@@ -876,6 +877,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (a.op === "errors") {
           const d = newDiagnostics(dir);
           return text(d.length ? `${d.map(formatDiagnostic).join("\n")}\n` : "no new errors or warnings\n");
+        }
+        if (a.op === "reload") {
+          const { reply, diagnostics, others } = await reloadScripts(dir, a.files);
+          const body = formatGame("reload", { ...reply, others }, diagnostics);
+          return reply["ok"] && !((reply["failed"] as string[] | undefined)?.length) ? text(body) : failure(body);
         }
         let payload: Record<string, unknown> = {};
         let timeout: number | undefined;

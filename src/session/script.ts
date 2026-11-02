@@ -196,11 +196,119 @@ func _handle(line: String) -> void:
 				sizes = ["%dx%d" % [root.size.x, root.size.y]]
 			_ui = {"id": id, "sizes": sizes, "index": 0, "wait": 1, "original": root.size, "results": []}
 			_ui_resize()
+		"reload":
+			var result := _reload(msg.get("files", []))
+			result["id"] = id
+			result["ok"] = true
+			result["frame"] = _frame
+			_send(result)
 		"stop":
 			_send({"id": id, "ok": true, "frame": _frame})
 			quit()
 		_:
 			_send({"id": id, "ok": false, "error": "unknown op " + op})
+
+
+## Loads edited scripts into the running game. Every node keeps its values; the new code runs from the next frame.
+## A script that does not compile is put back as it was, so the old code keeps running and the error is in the log.
+func _reload(files: Array) -> Dictionary:
+	var users := {}
+	_scripts_in(root, users)
+	var todo: Array = []
+	var waiting: Array = []
+	var failed: Array = []
+	for path: String in files:
+		if not ResourceLoader.has_cached(path):
+			waiting.append(path)
+			continue
+		var script := load(path) as GDScript
+		if script == null:
+			failed.append(path + ": not a GDScript")
+		elif not todo.has(script):
+			todo.append(script)
+	# A script that extends a changed one is compiled again after it, so its nodes see the new base.
+	var changed := todo.duplicate()
+	for script: GDScript in users.keys():
+		if todo.has(script):
+			continue
+		var base := script.get_base_script() as GDScript
+		while base != null:
+			if changed.has(base):
+				todo.append(script)
+				break
+			base = base.get_base_script() as GDScript
+	var reloaded: Array = []
+	var fresh := {}
+	for script: GDScript in todo:
+		var before := {}
+		for p: Dictionary in script.get_script_property_list():
+			before[p.name] = true
+		var old := script.source_code
+		script.source_code = FileAccess.get_file_as_string(script.resource_path)
+		var err := script.reload(true)
+		if err != OK:
+			script.source_code = old
+			script.reload(true)
+			failed.append(script.resource_path + ": " + error_string(err) + ", the old code keeps running")
+			continue
+		reloaded.append(script.resource_path)
+		var names: Array = []
+		for p: Dictionary in script.get_script_property_list():
+			if not before.has(p.name) and int(p.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				names.append(p.name)
+		if not names.is_empty():
+			fresh[script] = names
+	# New variables on nodes that already exist: the value a new instance starts with (its _ready does not run).
+	var initialized: Array = []
+	var left: Array = []
+	for script: GDScript in fresh.keys():
+		var proto := _proto(script)
+		for node: Node in _nodes_with(script, users):
+			for name: String in fresh[script]:
+				var value: Variant = proto.get(name) if proto != null else null
+				if proto == null or value is Object:
+					if not left.has(name):
+						left.append(name)
+					continue
+				if value != null and node.get(name) == null:
+					node.set(name, value.duplicate(true) if (value is Array or value is Dictionary) else value)
+					if not initialized.has(name):
+						initialized.append(name)
+		if proto != null and not (proto is RefCounted):
+			proto.free()
+	return {"reloaded": reloaded, "failed": failed, "waiting": waiting, "initialized": initialized, "left": left}
+
+
+## A throwaway instance to read the starting values of new variables from; none when _init needs arguments.
+func _proto(script: GDScript) -> Object:
+	if not script.can_instantiate():
+		return null
+	for m: Dictionary in script.get_script_method_list():
+		if m.name == "_init" and (m.args as Array).size() > (m.default_args as Array).size():
+			return null
+	return script.new()
+
+
+func _scripts_in(node: Node, users: Dictionary) -> void:
+	var script := node.get_script() as GDScript
+	if script != null:
+		if not users.has(script):
+			users[script] = []
+		users[script].append(node)
+	for child in node.get_children():
+		_scripts_in(child, users)
+
+
+func _nodes_with(script: GDScript, users: Dictionary) -> Array:
+	var out: Array = []
+	for used: GDScript in users.keys():
+		var b := used
+		while b != null:
+			if b == script:
+				out.append_array(users[used])
+				break
+			b = b.get_base_script() as GDScript
+	return out
 
 
 func _split(w: String) -> Array:

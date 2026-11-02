@@ -8,7 +8,7 @@ import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { isObject, parseVariant } from "../godot/variant.js";
 import { parseCondition, parseTimeline, PlayError } from "../play/play.js";
-import { findProjectRoot, fromResPath } from "../project/files.js";
+import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { inputEventText } from "../settings/edit.js";
 import { SESSION_MARK, sessionScript } from "./script.js";
@@ -31,6 +31,8 @@ export interface SessionInfo {
   /** How much of the log the last request already reported. */
   logOffset: number;
   fps: number;
+  /** When scripts were last reloaded into the game (ISO time); edits after it are what a reload picks up. */
+  reloadedAt?: string;
 }
 
 export interface SessionStart {
@@ -225,6 +227,43 @@ export async function stopSession(path: string): Promise<boolean> {
   rmSync(p.info, { force: true });
   rmSync(p.script, { force: true });
   return stopped;
+}
+
+/**
+ * Files changed since the session loaded them (or since the last reload): the scripts a reload picks up, and the scenes
+ * and resources it cannot (those need a restart).
+ */
+export function changedSince(path: string, info: SessionInfo): { scripts: string[]; others: string[] } {
+  const root = projectRoot(path);
+  const since = Date.parse(info.reloadedAt ?? info.started);
+  const scripts: string[] = [];
+  const others: string[] = [];
+  for (const res of listProjectFiles(root)) {
+    if (!/\.(gd|tscn|tres|gdshader|gdshaderinc)$/i.test(res) || res === "res://project.godot") continue;
+    let mtime = 0;
+    try {
+      mtime = statSync(fromResPath(root, res)).mtimeMs;
+    } catch {
+      continue;
+    }
+    if (mtime <= since) continue;
+    (res.endsWith(".gd") ? scripts : others).push(res);
+  }
+  return { scripts, others };
+}
+
+/** Reloads edited scripts into the running game: the named ones, or every script changed since the last reload. */
+export async function reloadScripts(path: string, files?: string[]): Promise<{ reply: Record<string, unknown>; diagnostics: Diagnostic[]; others: string[] }> {
+  const root = projectRoot(path);
+  const info = readSession(root);
+  if (!info) throw new PlayError("no game session is running: start one with godot_session (op start) or `godotwright session start`");
+  const at = new Date().toISOString();
+  const changed = changedSince(root, info);
+  const list = files?.length ? files.map((f) => (f.startsWith("res://") ? f : `res://${f.replace(/^\/+/, "")}`)) : changed.scripts;
+  const { reply, diagnostics } = await gameRequest(root, "reload", { files: list });
+  const now = readSession(root);
+  if (now && reply["ok"]) writeFileSync(paths(root).info, JSON.stringify({ ...now, reloadedAt: at }, null, 2));
+  return { reply, diagnostics, others: changed.others };
 }
 
 /** What a timeline input becomes for the session script: an action, or the fields of a key, mouse or joypad event. */
