@@ -17,6 +17,9 @@ inputs:
   comment:
     description: "Post the receipt as a comment on the pull request (needs the permission pull-requests: write)."
     default: "false"
+  junit:
+    description: "Also write the results as JUnit XML to this file (relative to the workspace), for a test-report step such as GitLab's, Jenkins' or a JUnit report action. Empty: no file."
+    default: ""
   token:
     description: Token used to post the comment.
     default: ${{ github.token }}
@@ -27,6 +30,9 @@ outputs:
   ok:
     description: "true when every step passed."
     value: ${{ steps.run.outputs.ok }}
+  junit:
+    description: The JUnit XML file, when the junit input was set.
+    value: ${{ steps.run.outputs.junit }}
 runs:
   using: composite
   steps:
@@ -62,9 +68,11 @@ runs:
         GODOTWRIGHT: ${{ inputs.command }}
         PROJECT: ${{ inputs.path }}
         REVIEW_ONLY: ${{ inputs.review-only }}
+        JUNIT: ${{ inputs.junit }}
       run: |
         flags=()
         if [ "$REVIEW_ONLY" = "true" ]; then flags+=(--no-godot-checks); else export GODOT="$HOME/godot/godot"; fi
+        if [ -n "$JUNIT" ]; then flags+=(--junit "$JUNIT"); echo "junit=$JUNIT" >> "$GITHUB_OUTPUT"; fi
         receipt="$RUNNER_TEMP/godotwright-receipt.md"
         set +e
         $GODOTWRIGHT ci "$PROJECT" "${flags[@]}" > "$receipt"
