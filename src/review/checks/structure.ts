@@ -131,11 +131,20 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
   for (const r of map.resources) if (r.script) referenced.add(r.script);
   for (const a of map.autoloads) referenced.add(a.path);
   const text = code + [...pm.data.resources.values()].map((r) => r.extResources.map((e) => e.path).join("\n")).join("\n");
+  // Every script file name the text mentions, read once. Whole names only: `old_enemy.gd` does not use `enemy.gd`,
+  // but `x.enemy.gd` and `res://enemy.gd` do (the name starts after a character that is not a word character).
+  const mentioned = new Set<string>();
+  for (const m of text.matchAll(/[^\s"'`()[\]{},;:=+*\/\\<>|&!?#]+\.gd(?![\w.])/g)) {
+    const token = m[0];
+    mentioned.add(token);
+    for (let i = 1; i < token.length; i++) if (!/\w/.test(token[i - 1]!)) mentioned.add(token.slice(i));
+  }
   for (const [path, outline] of pm.data.scripts) {
     if (unreadable || path.includes("::") || path.startsWith("res://addons/") || referenced.has(path) || outline.className || outline.tool) continue;
-    // Whole file name only: `old_enemy.gd` does not use `enemy.gd`.
-    const base = path.slice(path.lastIndexOf("/") + 1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`(^|[^\\w])${base}(?![\\w.])`).test(text)) continue;
+    const name = path.slice(path.lastIndexOf("/") + 1);
+    if (mentioned.has(name)) continue;
+    // A name with characters the token scan stops at (a space, a bracket): look for it the slow way.
+    if (/[\s"'`()[\]{},;:=+*\\<>|&!?#]/.test(name) && new RegExp(`(^|[^\\w])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w.])`).test(text)) continue;
     const ext = outline.extends ?? "";
     if (/^(EditorScript|EditorPlugin|SceneTree|MainLoop)$/.test(ext)) continue;
     // Unit tests: the test runner (GUT, GdUnit4) loads them, not a scene.

@@ -76,7 +76,7 @@ export function checkScriptPhysics(pm: ProjectModel, path: string): Finding[] {
   const out: Finding[] = [];
   const handlers = overlapHandlers(pm, path, script.logicalLines);
 
-  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+  for (const model of pm.modelsOf(path)) {
     for (const fn of model.outline.functions) {
       if (!handlers.has(fn.name) && !HANDLER_NAME.test(fn.name)) continue;
       const body = bodyOf(script.logicalLines, fn);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { join } from "node:path";
 import { GodotApi } from "../src/api/api.js";
 import { formatFinding, formatReview } from "../src/review/format.js";
 import { reviewProject } from "../src/review/review.js";
@@ -850,5 +851,18 @@ describe("runtime pitfalls stay quiet on idioms from a real project", () => {
   it("a MultiMesh made anew in each pass of a loop starts at instance_count 0", () => {
     const code = "extends Node\n\n\nfunc build() -> void:\n\tfor k in 3:\n\t\tvar mm := MultiMesh.new()\n\t\tmm.transform_format = MultiMesh.TRANSFORM_3D\n\t\tmm.use_colors = true\n\t\tmm.instance_count = 10\n";
     expect(run(code, "api/multimesh-format-after-count")).toEqual([]);
+  });
+});
+
+describe("a focused review", () => {
+  it("gives exactly the findings of the full review for the focused files", () => {
+    const full = reviewProject(join(FIXTURES, "messy"));
+    const files = [...new Set(full.findings.map((f) => f.file.replace(/::.*$/, "")))];
+    expect(files.length).toBeGreaterThan(1);
+    for (const file of files) {
+      const part = reviewProject(join(FIXTURES, "messy"), { focus: [file] });
+      const key = (f: { rule: string; file: string; line?: number; message: string }) => `${f.rule}|${f.file}|${f.line}|${f.message}`;
+      expect(part.findings.map(key).sort()).toEqual(full.findings.filter((f) => f.file.replace(/::.*$/, "") === file).map(key).sort());
+    }
   });
 });

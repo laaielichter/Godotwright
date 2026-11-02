@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 import { formatParams, formatSignature, outlineScript, type ScriptOutline } from "../godot/gdscript.js";
 import { KEY_SETTINGS, parseProjectSettings, type ProjectSettings } from "../godot/project-settings.js";
@@ -21,6 +21,32 @@ export class ProjectNotFoundError extends Error {
     super(`No project.godot found in ${path} or its parent directories.`);
     this.name = "ProjectNotFoundError";
   }
+}
+
+/**
+ * Parsed files kept between scans in one process (the MCP server, a test run), keyed by the absolute path and checked
+ * against the file's size and modification time: a long-running server reads and parses only what changed. Parsed
+ * values are shared, so nothing may change them.
+ */
+const parseCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+const PARSE_CACHE_MAX = 50_000;
+
+function cachedParse<T>(kind: string, file: string, parse: (text: string) => T): T {
+  let stat: { mtimeMs: number; size: number } | undefined;
+  try {
+    stat = statSync(file);
+  } catch {
+    // Let the read below fail with the real error.
+  }
+  const key = `${kind}\u0000${file}`;
+  const hit = stat ? parseCache.get(key) : undefined;
+  if (hit && stat && hit.mtimeMs === stat.mtimeMs && hit.size === stat.size) return hit.value as T;
+  const value = parse(readFileSync(file, "utf8"));
+  if (stat) {
+    if (parseCache.size >= PARSE_CACHE_MAX) parseCache.clear();
+    parseCache.set(key, { mtimeMs: stat.mtimeMs, size: stat.size, value });
+  }
+  return value;
 }
 
 /** Everything read from disk during a scan, kept for later analysis (review, checks). */
@@ -161,6 +187,11 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   const external = new Set(files.filter((f) => origin.get(f) !== root && f !== "res://project.godot"));
   const fileSet = new Set(files);
   const read = (res: string) => overrides[res] ?? readFileSync(fromResPath(origin.get(res) ?? root, res), "utf8");
+  /** A file parsed once per version on disk; unsaved code (overrides) is parsed every time. */
+  const parsed = <T>(res: string, kind: string, parse: (text: string) => T): T => {
+    const override = overrides[res];
+    return override !== undefined ? parse(override) : cachedParse(kind, fromResPath(origin.get(res) ?? root, res), parse);
+  };
   const fail = (file: string, error: unknown) => {
     const code = errorCode(error);
     if (code) {
@@ -202,17 +233,17 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
         const uid = read(file).trim();
         if (uid.startsWith("uid://")) uids.set(uid, file.slice(0, -".uid".length));
       } else if (ext === "import") {
-        const remap = parseResourceFile(read(file)).find((s) => s.tag === "remap");
+        const remap = parsed(file, "import", parseResourceFile).find((s) => s.tag === "remap");
         const uid = asString(remap?.props["uid"]);
         if (uid) uids.set(uid, file.slice(0, -".import".length));
       } else if (ext === "tscn" || ext === "tres") {
-        const parsed = parseResourceText(read(file));
-        resources.set(file, parsed);
-        if (parsed.uid) uids.set(parsed.uid, file);
+        const resource = parsed(file, "resource", parseResourceText);
+        resources.set(file, resource);
+        if (resource.uid) uids.set(resource.uid, file);
       } else if (ext === "gd") {
-        const source = read(file);
-        sources.set(file, source);
-        scripts.set(file, outlineScript(source));
+        const script = parsed(file, "script", (source) => ({ source, outline: outlineScript(source) }));
+        sources.set(file, script.source);
+        scripts.set(file, script.outline);
       }
     } catch (error) {
       fail(file, error);

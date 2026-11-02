@@ -146,6 +146,21 @@ export class ProjectModel {
     return model;
   }
 
+  private byPath?: Map<string, ClassModel[]>;
+
+  /** The classes of one script: the script itself first, then its inner classes. Built once, so a check per script stays linear. */
+  modelsOf(path: string): ClassModel[] {
+    if (!this.byPath) {
+      this.byPath = new Map();
+      for (const m of this.allModels()) {
+        const list = this.byPath.get(m.path);
+        if (list) list.push(m);
+        else this.byPath.set(m.path, [m]);
+      }
+    }
+    return this.byPath.get(path) ?? [];
+  }
+
   *allModels(): Generator<ClassModel> {
     const walk = function* (m: ClassModel): Generator<ClassModel> {
       yield m;

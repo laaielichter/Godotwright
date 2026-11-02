@@ -4,6 +4,15 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Reviews are 3.5 times faster on large projects, and the edit hook about 20 times faster.** On a game with 800
+  scripts a full review took 12.6 s and now takes 3.6 s; the findings are byte for byte the same on 163 projects (the
+  139 official demos and every project of a large open world).
+  - Godot API lookups are indexed and kept per class instead of scanned each time.
+  - Finding scripts that nothing refers to reads the code once instead of once per script.
+  - Each check looks up the classes of one script through an index instead of walking all scripts.
+  - A long-running MCP server parses only the files that changed since the last call.
+  - New review option `focus`: the whole project is read so types resolve, but only the named files are checked. The
+    edit and stop hooks use it: 0.6-1.4 s on that game instead of 12.6 s.
 - **Fewer false alarms from the new rules**, found by running them over every overlay of the project the lessons came
   from:
   - `quality/standalone-ternary` reads the statement after a match pattern or an `if x:` on the same line, so

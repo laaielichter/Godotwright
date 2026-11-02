@@ -30,7 +30,7 @@ function assignmentAt(code: string): number {
 /** Functions of the script (and the scripts it extends) whose own body awaits: Godot treats them as coroutines. */
 function coroutines(pm: ProjectModel, path: string): Set<string> {
   const out = new Set<string>();
-  const model = [...pm.allModels()].find((m) => m.path === path && !m.owner);
+  const model = pm.modelsOf(path).find((m) => !m.owner);
   if (!model) return out;
   const seen = new Set<string>();
   for (const m of pm.chain(model)) {
@@ -48,7 +48,7 @@ function coroutines(pm: ProjectModel, path: string): Set<string> {
 }
 
 function functionsOf(pm: ProjectModel, path: string): FunctionInfo[] {
-  return [...pm.allModels()].filter((m) => m.path === path).flatMap((m) => m.outline.functions);
+  return pm.modelsOf(path).flatMap((m) => m.outline.functions);
 }
 
 export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
@@ -66,6 +66,7 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
     const call = new RegExp(`(?<![\\w.]|\\.\\s)(?:self\\s*\\.\\s*)?\\b(${names})\\s*\\(`, "g");
     for (const fn of functions) {
       for (const st of splitStatements(bodyOf(lines, fn))) {
+        if (!st.code.includes("(")) continue;
         for (const m of st.code.matchAll(call)) {
           const before = st.code.slice(0, m.index);
           if (/\bawait\s*(?:self\s*\.\s*)?$/.test(before)) continue;
@@ -167,6 +168,7 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
 
     // A ternary on its own: the value is thrown away, and with void calls Godot does not load the script.
     for (const st of body) {
+      if (!/\sif\s/.test(st.code) || !/\selse\s/.test(st.code)) continue;
       const code = afterHeader(st.code.trim());
       if (!code || KEYWORD_START.test(code) || assignmentAt(code) >= 0 || /:\s*$/.test(code)) continue;
       if (!/\S\s+if\s+\S.*\s+else\s+\S/.test(topLevel(code)) || /\bfunc\s*\(/.test(code)) continue;
@@ -235,7 +237,7 @@ export function checkScriptRuntime(pm: ProjectModel, path: string): Finding[] {
 
   // A SubViewport switched to UPDATE_ALWAYS and never switched back renders every frame, seen or not.
   // Test runners, capture tools and editor scripts render on purpose.
-  const top = [...pm.allModels()].find((m) => m.path === path && !m.owner);
+  const top = pm.modelsOf(path).find((m) => !m.owner);
   const tooling = script.tool || /\/(?:tests?|qa)\//.test(path) || (top !== undefined && ["SceneTree", "EditorScript"].includes(pm.nativeOf(top)));
   const always = tooling ? undefined : lines.find((l) => /\brender_target_update_mode\s*=(?!=)\s*(?:SubViewport\s*\.\s*)?(?:UPDATE_ALWAYS|4)\s*$/.test(l.code));
   if (always && !/\bUPDATE_(?:DISABLED|ONCE|WHEN_VISIBLE|WHEN_PARENT_VISIBLE)\b|render_target_update_mode\s*=(?!=)\s*[0-3]\b/.test(source)) {

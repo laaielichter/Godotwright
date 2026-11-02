@@ -99,7 +99,7 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
   }
 
   // reset_physics_interpolation() on every tick: the node draws at the raw physics pose and jitters.
-  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+  for (const model of pm.modelsOf(path)) {
     for (const fn of model.outline.functions) {
       if (!TICK_CALLBACKS.has(fn.name)) continue;
       const body = bodyOf(lines, fn);
@@ -119,7 +119,7 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
 
   // A GPU texture read back on every pass of a loop: each get_image() waits for the GPU. Test runners and editor
   // scripts read textures on purpose, and a screenshot (a viewport's texture) can only be read back.
-  for (const model of [...pm.allModels()].filter((m) => m.path === path && !["SceneTree", "EditorScript"].includes(pm.nativeOf(m)) && !script.tool)) {
+  for (const model of pm.modelsOf(path).filter((m) => !["SceneTree", "EditorScript"].includes(pm.nativeOf(m)) && !script.tool)) {
     for (const fn of model.outline.functions) {
       const body = bodyOf(lines, fn);
       const read = body.find((ll) => /\.\s*get_image\s*\(\s*\)/.test(ll.code) && !/get_texture\s*\(\s*\)\s*\.\s*get_image/.test(ll.code) && insideLoop(body, ll));
@@ -158,7 +158,7 @@ function insideLoop(body: LogicalLine[], ll: LogicalLine): boolean {
  * the first frame: global positions read before an await are identity, and every call prints !is_inside_tree().
  */
 function treeTestReadsTooEarly(pm: ProjectModel, path: string, lines: LogicalLine[]): Finding[] {
-  const model = [...pm.allModels()].find((m) => m.path === path && !m.owner);
+  const model = pm.modelsOf(path).find((m) => !m.owner);
   if (!model || pm.nativeOf(model) !== "SceneTree") return [];
   const fn = model.outline.functions.find((f) => f.name === "_initialize");
   if (!fn) return [];
@@ -189,7 +189,7 @@ function treeTestReadsTooEarly(pm: ProjectModel, path: string, lines: LogicalLin
  */
 function overrideSignatures(pm: ProjectModel, path: string): Finding[] {
   const out: Finding[] = [];
-  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+  for (const model of pm.modelsOf(path)) {
     for (const fn of model.outline.functions) {
       if (fn.static || fn.name === "_init" || fn.name === "_static_init") continue;
       const parent = parentSignature(pm, model, fn.name);
@@ -271,7 +271,7 @@ function conditional(body: LogicalLine[], ll: LogicalLine): boolean {
 /** The same member twice in one class: Godot stops with a parse error. A merge or a patch that adds code twice does this. */
 function duplicateDeclarations(pm: ProjectModel, path: string): Finding[] {
   const out: Finding[] = [];
-  for (const model of [...pm.allModels()].filter((m) => m.path === path)) {
+  for (const model of pm.modelsOf(path)) {
     const o = model.outline;
     const members = [
       ...o.functions.map((f) => ({ name: f.name, line: f.line, kind: "function" })),
