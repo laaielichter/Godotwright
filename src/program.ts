@@ -37,6 +37,8 @@ export function createProgram(): Command {
     .version(VERSION, "-v, --version", "print the version")
     .helpOption("-h, --help", "show help")
     .showHelpAfterError()
+    // Options belong to the command they follow, so `export --preset` and `export run --preset` stay apart.
+    .enablePositionalOptions()
     .addCommand(scanCommand())
     .addCommand(checkCommand())
     .addCommand(testCommand())
