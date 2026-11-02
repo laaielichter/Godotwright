@@ -334,6 +334,9 @@ function checkSourceColor(ctx: Context): void {
     }
   }
   for (const u of parsed.uniforms) {
+    // Global and instance uniforms are not filled from the material: Godot stores a global Color linear already, and
+    // source_color does nothing on either.
+    if (u.scope) continue;
     if (u.hints.some((h) => h.name === "source_color" || DATA_HINT.test(h.name)) || shaderRenameHint(u.hints)) continue;
     const isColor = u.type === "vec3" || u.type === "vec4";
     const isTexture = u.type === "sampler2D";
