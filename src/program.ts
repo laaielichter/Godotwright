@@ -20,6 +20,7 @@ import { migrateCommand } from "./commands/migrate.js";
 import { usagesCommand } from "./commands/usages.js";
 import { renameCommand } from "./commands/rename.js";
 import { projectCommand } from "./commands/project.js";
+import { resourceCommand } from "./commands/resource.js";
 import { sceneCommand } from "./commands/scene.js";
 import { testCommand } from "./commands/test.js";
 import { playCommand } from "./commands/play.js";
@@ -59,6 +60,7 @@ export function createProgram(): Command {
     .addCommand(renameCommand())
     .addCommand(projectCommand())
     .addCommand(sceneCommand())
+    .addCommand(resourceCommand())
     .addCommand(modelCommand())
     .addCommand(mcpCommand())
     .addCommand(learnCommand())
