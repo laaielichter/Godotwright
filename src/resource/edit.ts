@@ -1,10 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { cleanup } from "../check/check.js";
 import { GodotNotFoundError, findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog } from "../check/log.js";
 import { JournalWriter } from "../journal/journal.js";
-import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { findProjectRoot, fromResPath, isInside, toResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { lineDiff, formatHunks, type Hunk } from "./diff.js";
@@ -59,6 +59,7 @@ export async function editResource(path: string, ops: ResourceOp[], options: Res
   const root = findProjectRoot(start);
   if (!root) throw new ProjectNotFoundError(start);
   let full = path.startsWith("res://") ? fromResPath(root, path) : isAbsolute(path) ? path : resolve(path);
+  if (!insideProject(root, full)) throw new ResourceEditError(`${path} is outside the project (${root}); give a file inside it`);
   if (!/\.(tres|tscn|import)$/.test(full) && existsSync(`${full}.import`)) full = `${full}.import`;
   // A new asset Godot has not imported yet: a reimport is the one thing to do with it.
   if (!/\.(tres|tscn|import)$/.test(full) && existsSync(full) && ops.every((o) => o.op === "reimport")) {
@@ -105,6 +106,21 @@ export async function editResource(path: string, ops: ResourceOp[], options: Res
   return { ...result, written: true, ...(id ? { journal: id } : {}), ...(done ? { reimport: done } : {}) };
 }
 
+/** Whether `full` lies in the project, also after following links (a missing file is judged by its folder). */
+function insideProject(root: string, full: string): boolean {
+  if (!isInside(root, full)) return false;
+  const real = (p: string): string | undefined => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return undefined;
+    }
+  };
+  const realRoot = real(root) ?? root;
+  const target = real(full) ?? real(dirname(full));
+  return target === undefined || isInside(realRoot, target);
+}
+
 /** Runs `godot --headless --import` and checks what became of the edit. */
 async function reimport(root: string, importFull: string, expect: Expectation[], options: ResourceEditOptions, before: ReturnType<typeof destMd5>): Promise<ReimportResult> {
   let bin: string;
@@ -134,7 +150,9 @@ async function reimport(root: string, importFull: string, expect: Expectation[],
   const kept = expect.length ? `Godot kept ${expect.length === 1 ? "the value" : `all ${expect.length} values`}, ` : "";
   if (!reimported) return { status: "not_reimported", message: `${kept}but Godot did not reimport ${asset} (its import record is unchanged)${tail}`, errors: mine, ms: run.ms };
   if (before && after.md5 === before.md5) return { status: "same", message: `reimported; ${kept}the output is identical (dest_md5 ${after.md5.slice(0, 8)}), so this setting changes nothing for this asset${tail}`, errors: mine, ms: run.ms };
-  return { status: "changed", message: `reimported; ${kept}output changed (dest_md5 ${before ? `${before.md5.slice(0, 8)} -> ` : ""}${after.md5.slice(0, 8)})${tail}`, errors: mine, ms: run.ms };
+  // dest_md5 also changes when only the options changed, so a changed output does not prove a per-item option took effect.
+  const subs = expect.some((e) => e.what === "sub") ? "; Godot also does this for an option it ignores (such as one under a name the asset does not have), so check the result where it matters" : "";
+  return { status: "changed", message: `reimported; ${kept}output changed (dest_md5 ${before ? `${before.md5.slice(0, 8)} -> ` : ""}${after.md5.slice(0, 8)})${subs}${tail}`, errors: mine, ms: run.ms };
 }
 
 /** The plan as compact text: what changes, the diff, warnings, and when written the review or reimport result. */

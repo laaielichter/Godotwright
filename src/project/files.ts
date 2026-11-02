@@ -97,7 +97,8 @@ export function realResPath(dir: string, resPath: string): string | undefined {
   }
 }
 
-function isInside(dir: string, path: string): boolean {
+/** Whether `path` is `dir` or below it (by path only; links are not followed). */
+export function isInside(dir: string, path: string): boolean {
   const rel = relative(dir, path);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
