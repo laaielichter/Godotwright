@@ -11,6 +11,10 @@ installs, the [install page](https://laaielichter.github.io/Godotwright/install.
 - [Scenarios and JUnit reports](#scenarios-and-junit-reports)
 - [Mods and patches over a game](#mods-and-patches-over-a-game)
 - [Install in your coding agent (MCP)](#install-in-your-coding-agent-mcp)
+- [Tool sets and read-only mode](#tool-sets-and-read-only-mode)
+- [Structured results](#structured-results)
+- [Progress and cancel](#progress-and-cancel)
+- [Protected paths](#protected-paths)
 - [Learning](#learning)
 
 ## Commands
@@ -709,7 +713,12 @@ The Claude Code plugin puts Godotwright in Claude's loop, so it does not depend 
   Claude; Godot errors in a command's output come with the lessons that explain them; before Claude stops, review
   errors left in files it changed are named once; and a session in a Godot project starts with a few lines about it.
   `GODOTWRIGHT_HOOKS=0` turns them off. Any agent can use them: `godotwright hook <event>` reads Claude Code's hook
-  JSON on stdin (`post-edit`, `post-bash`, `stop`, `session-start`).
+  JSON on stdin (`pre-edit`, `post-edit`, `post-bash`, `stop`, `session-start`). `pre-edit` refuses edits into
+  [protected paths](#protected-paths).
+- **Settings (`userConfig`):** the Godot project, the Godot program, protected paths, tool sets and read-only, all
+  optional. They reach the server as `GODOTWRIGHT_PROJECT`, `GODOT`,
+  `GODOTWRIGHT_PROTECT`, `GODOTWRIGHT_TOOLS` and `GODOTWRIGHT_READ_ONLY`, and the hooks as
+  `CLAUDE_PLUGIN_OPTION_<KEY>`.
 - **Skills Claude uses on its own:** the Godot workflow, and `debug`, `perf`, `vehicles`, `world`, `model` and `patch`
   (changes to a shipped game with preflight, receipts and rollback).
 - **Skills you start:** `/godotwright:review` (review the project and fix what it finds), `/godotwright:port` (port
@@ -741,7 +750,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 33 tools
+### The 37 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -770,7 +779,6 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders; with `pck`, what an exported pack holds |
 | `godot_export_run` | Export headless (pack, release, debug or patch), check the file and the pack's contents against what the game loads, then run the build for some frames with runtime errors and call chains |
 | `godot_scenario` | Keep a passing `godot_play` run as a regression test in the project (`save` runs it once more first), `list` them, `run` one or all with every failing claim, its value and frame |
-| `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
@@ -783,6 +791,131 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
 | `godot_model_view` | See a `.glb` as text: front, side and top views, parts with sizes, parts that do not touch |
 | `godot_model_inspect` | What is in a `.glb`: nodes, triangles, textures, size |
+
+## Tool sets and read-only mode
+
+Every tool definition goes into the agent's context on every turn. All 37 cost about 72,000 characters (about
+18,000 tokens); the `core` set about 21,000. Load only what the work needs:
+
+```sh
+godotwright mcp --tools core            # or GODOTWRIGHT_TOOLS=core
+godotwright mcp --tools core,run,godot_session,godot_game
+godotwright mcp --read-only             # or GODOTWRIGHT_READ_ONLY=1
+```
+
+| Set | Tools | Size of the tool list |
+| --- | --- | --- |
+| `core` | scan, api, api_search, review, check, doctor, fix, usages, lessons, feedback, undo, checklist | 12 tools, ~21,100 characters |
+| `edit` | rename, scene_edit, project_edit, resource_edit, migrate, shader, lesson_add | 7 tools, ~15,300 |
+| `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~15,100 |
+| `game` | session, game | 2 tools, ~5,400 |
+| `export` | export, export_run, deps | 3 tools, ~5,500 |
+| `model` | model_brief, model_identify, model_spec, model_build, model_view, model_lint, model_inspect | 7 tools, ~10,000 |
+| `all` (default) | everything | 37 tools, ~72,500 |
+
+Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
+server with the valid names. The server instructions name only the tools that are enabled, so a small model is never
+told to call a tool that is not there. The default stays `all` on both tiers, so nothing changes for existing setups.
+
+`--read-only` means "does not change the project's files":
+
+- left out: `godot_undo`, `godot_model_build` and `godot_export_run`, which always write;
+- kept, but `write: true` is refused, so they show their dry run: `godot_fix`, `godot_rename`, `godot_scene_edit`,
+  `godot_project_edit`, `godot_resource_edit`, `godot_migrate`;
+- refused: `godot_scenario` op `save`, `godot_game` ops `set`, `call` and `eval`, and `godot_screenshot` with `model`
+  or `baseline` (they write the picture into the project);
+- kept as they are: the review, API and lessons tools (they write only counters to the local learning file in your
+  home folder, which `GODOTWRIGHT_LEARN=0` turns off), and the tools that run Godot.
+
+Read-only does not make an untrusted project safe: `godot_check`, `godot_test`, `godot_play`, `godot_perf`,
+`godot_leaks`, `godot_screenshot`, `godot_session` and `godot_doctor` (when Godot is installed) run the project's own
+scripts, and Godot rewrites its cache in `.godot/`. For a project you do not trust, also leave out the sets that run
+Godot (`--tools core` still has `godot_check` and `godot_doctor`; pass `godot: false` to the doctor) or do not install
+Godot where the agent runs.
+
+## Structured results
+
+`godot_review`, `godot_check`, `godot_doctor` and `godot_test` declare an `outputSchema` and return
+`structuredContent` next to the same text as before (clients that read only the text see no change). One compact shape:
+
+```json
+{
+  "ok": false, "errors": 1, "warnings": 3, "truncated": 0,
+  "findings": [
+    { "file": "res://player.gd", "line": 4, "severity": "error", "rule": "api/wrong-arguments", "message": "..." }
+  ]
+}
+```
+
+Each finding has `severity` and `message`, and when known `file` (`res://`), `line`, `rule`, `source` (where it was
+found: script, scene, import, run, review, godot, test) and `count` (how often Godot printed it, or how many places a
+doctor problem has). `findings` is capped like the text (15 on the cheap tier, 200 on premium) and `truncated` says how
+many were left out. Per tool:
+
+- `godot_review`: `project`, `overall` and `categories` (score per category); the findings are those the text lists
+  (same `files` focus; infos left out on the cheap tier with brief detail). With `only_new` the text shows the delta and
+  the JSON the current findings.
+- `godot_check`: `godotVersion`, `scripts`, `scenes`, `shaders`, `frames` (when it ran the game). With `compare_godot`
+  the findings are only what the second Godot reports.
+- `godot_doctor`: `godot` (ran, not installed, skipped, failed), `overall`, `next` (the numbered steps); each problem is
+  one finding at its first place. It is never an error result.
+- `godot_test`: `framework`, `tests`, `passed`, `failed`, `skipped`; failing tests come first with rule `test/failure`
+  or `test/error`, then what Godot printed.
+
+An error result (`isError`) still carries `structuredContent` when the tool got that far (a check with errors, failing
+tests, a review of a file that is not in the project). MCP clients skip the schema check on error results; the schema
+holds there too. When Godot is missing there is only the text.
+
+## Progress and cancel
+
+Every tool call runs Godot inside a run context. When the client sends a `progressToken`, Godotwright sends
+`notifications/progress` for each Godot run: the phase when it starts (`import: started`, `load: started`,
+`play: started`, `export: started`, `shader compile: started`, `session: loading res://main.tscn`) and, at most about
+once a second, what Godot reports: import steps with their percentage, `load: 60/212 files` for a check, and
+`play: frame 120/600` for play, perf, leaks and scenarios. `progress` counts up by one; there is no `total`.
+SDK clients that pass `resetTimeoutOnProgress` keep a long `godot_check` or `godot_test` alive this way.
+
+When the client cancels the call (`notifications/cancelled`), Godotwright stops the Godot process and every process it
+started (its process group on Linux and macOS, `taskkill /T` on Windows), waits for it to exit, and does not start the
+next step of that call. `godot_session` op `start` stops the game it was starting. Godot processes still running when
+the server exits are stopped too. The CLI is unchanged: there Godot stays in the terminal's process group, so Ctrl+C
+reaches it.
+
+## Protected paths
+
+Some folders must stay byte-identical: an installed game, a base project a mod is laid over. Name them in a
+`godotwright.json` under `"protect"`:
+
+```json
+{ "protect": ["installed-code", "baseline-authoring"] }
+```
+
+Entries start at the folder of that `godotwright.json`; `res://...` means the same (the folder is the project), and
+`../baseline-authoring` works from a project's own file. Godotwright reads the `protect` lists of every
+`godotwright.json` in and above the folder written to, in and above the folder the agent runs in and the server's
+default project, and in the direct subfolders of the folder the agent runs in, so the list can live outside what it
+protects (changing a file inside a protected folder to add it would break the byte-equality it guards).
+`GODOTWRIGHT_PROTECT` (paths separated by commas or the OS path separator; relative to the working folder) and the
+Claude Code plugin's "Protected paths" setting add more.
+
+What is refused:
+
+- **Godotwright's own writes**, in every client (the CLI too): `godot_scene_edit`, `godot_project_edit`,
+  `godot_resource_edit`, `godot_fix`, `godot_migrate`, `godot_rename` (both ends of a move), `godot_model_build`
+  (`out` and `contract_out`), `godot_export_run` (`out`), `godot_scenario` op `save` and `godot_undo` (checked for every
+  file before any is put back). The tool returns an error that names the path and the `godotwright.json` that protects
+  it; dry runs still work. A call that touches several files stops at the first protected one; what it wrote before
+  stays in the journal, so `godot_undo` can revert it.
+- **Claude Code's own edits**, with the plugin: a `PreToolUse` hook on `Write`, `Edit`, `MultiEdit` and
+  `NotebookEdit` denies the call with the reason (`permissionDecision: "deny"`). It looks only when a `protect` list
+  or setting is in reach, so other edits cost nothing extra.
+
+Not covered: **Bash commands are not parsed** (`cp`, `sed -i`, `>` or `git checkout` into a protected folder go
+through), and neither are other MCP servers. Claude Code's own permission rules (`"deny": ["Edit(./installed-code/**)"]`
+in `.claude/settings.json`) can add a second line of defence. Godot's cache folder `.godot/`
+inside a protected project is not protected: `godot_check` and the other tools that run Godot update it, as Godot
+itself does when it opens the project. Like every hook, the hook fails open: when Godotwright cannot run or the input
+is not what it expects, it allows the edit and says nothing.
 
 ## Learning
 
