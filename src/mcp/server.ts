@@ -178,7 +178,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
-      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
+      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built; with baseline auto it is a visual test that reports what changed since the last approved picture.",
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
       "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
       "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
@@ -1150,7 +1150,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Screenshot a scene or model",
       description:
-        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. As a visual test: `baseline: \"auto\"` keeps the first picture in .godotwright/baselines/ (named after the scene or model, size and views; Godot does not import it, so commit it) and compares every later picture with it, pixel by pixel (renders are deterministic: fixed fps and fixed random seeds). Unchanged (not one pixel) gives text only (saves tokens). Any change gives the percent, the box of the largest change, the mean shift, the diff picture (changed pixels in red, kept in .godot/godotwright/) and the new picture; beyond `threshold` (percent of pixels, default 0.5) it is an error result, within it a warning to look at the diff. `baseline` may also be a .png path inside the project; `update_baseline: true` accepts the new picture as the baseline. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1188,6 +1188,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(10_000)
           .optional()
           .describe("frames to run before the picture (default 10)"),
+        baseline: z
+          .string()
+          .optional()
+          .describe(
+            'compare with a baseline PNG: "auto" (in .godotwright/baselines/, saved on the first run) or a .png path inside the project',
+          ),
+        threshold: z
+          .number()
+          .min(0)
+          .max(100)
+          .optional()
+          .describe(
+            "percent of pixels that may change before the picture counts as changed (default 0.5)",
+          ),
+        update_baseline: z
+          .boolean()
+          .optional()
+          .describe(
+            "save the new picture as the baseline instead of comparing (baseline defaults to auto)",
+          ),
       },
       annotations: {
         readOnlyHint: false,
@@ -1196,7 +1216,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, scene, model, views, width, height, frames }) => {
+    async ({
+      path,
+      scene,
+      model,
+      views,
+      width,
+      height,
+      frames,
+      baseline,
+      threshold,
+      update_baseline,
+    }) => {
       try {
         const report = await takeScreenshot(where(path), {
           godot: options.godot,
@@ -1206,22 +1237,37 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(width ? { width } : {}),
           ...(height ? { height } : {}),
           ...(frames ? { frames } : {}),
+          ...(baseline
+            ? { baseline: baseline === "auto" ? "auto" : output(baseline) }
+            : {}),
+          ...(threshold !== undefined ? { threshold } : {}),
+          ...(update_baseline ? { updateBaseline: true } : {}),
         });
-        return {
-          content: [
-            { type: "text" as const, text: formatScreenshot(report) },
-            {
-              type: "image" as const,
-              data: readFileSync(report.file).toString("base64"),
-              mimeType: "image/png",
-            },
-          ],
-        };
+        const png = (file: string) => ({
+          type: "image" as const,
+          data: readFileSync(file).toString("base64"),
+          mimeType: "image/png",
+        });
+        const status = report.baseline?.status;
+        const content = [
+          { type: "text" as const, text: formatScreenshot(report) },
+          // Unchanged (not one pixel): the text says it all. Any change, also within the threshold: the diff first,
+          // then the new picture.
+          ...(status === "unchanged"
+            ? []
+            : report.baseline?.diff
+              ? [png(report.baseline.diff), png(report.file)]
+              : [png(report.file)]),
+        ];
+        return status === "changed" || status === "size-mismatch"
+          ? { content, isError: true }
+          : { content };
       } catch (error) {
         if (error instanceof GodotNotFoundError) return failure(error.message);
         if (
           error instanceof ScreenshotError ||
-          error instanceof ProjectNotFoundError
+          error instanceof ProjectNotFoundError ||
+          error instanceof ModelError
         )
           return failure(error.message);
         throw error;
