@@ -56,7 +56,10 @@ export interface CompiledShader {
   /** "gpu": compiled and drawn by the OpenGL driver; "parsed": only Godot's shader compiler ran (fog shaders). */
   compiled: "gpu" | "parsed";
   ok: boolean;
-  /** Time of the frame it was first drawn in, compile included (software rendering under xvfb is slow). */
+  /**
+   * Time of the frame it was first drawn in, compile included. Only to compare shaders within one run: software OpenGL
+   * is slow, and Godot's shader cache (user://shader_cache) makes a second run much faster.
+   */
   firstDrawMs?: number;
 }
 
@@ -432,10 +435,6 @@ export function formatShaderCheck(r: ShaderCheckResult): string {
   ];
   out.push(`${counts.join(", ")}; renderer ${r.renderer || "unknown"}; Godot ${r.godotVersion}`);
   out.push(...r.notes);
-  const slow = r.shaders.filter((s) => s.firstDrawMs !== undefined && s.ok).sort((a, b) => b.firstDrawMs! - a.firstDrawMs!).slice(0, 3);
-  if (slow.length && slow[0]!.firstDrawMs! >= 50) {
-    out.push(`slowest first draw (compile included): ${slow.map((s) => `${s.path} ${Math.round(s.firstDrawMs!)} ms`).join(", ")}${/llvmpipe|softpipe|swrast/i.test(r.renderer) ? " (software OpenGL: compare between shaders, not with a GPU)" : ""}`);
-  }
   if (r.errors) out.push("Next: fix each error at the line given (godot_api has the Godot 4 built-ins), then run this again; a shader with an error draws nothing in the game.");
   else if (r.shaders.length) out.push("Next: the shaders compile in the Compatibility renderer; render the scenes that use them with godot_screenshot to see them.");
   else out.push("Next: nothing to compile; pass files to check shaders in a skipped folder.");
