@@ -50,6 +50,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_play",
       "godot_project_edit",
       "godot_rename",
+      "godot_resource_edit",
       "godot_review",
       "godot_scan",
       "godot_scene_edit",
@@ -65,6 +66,27 @@ describe("MCP server (cheap profile)", () => {
     expect(
       tools.find((t) => t.name === "godot_api")?.inputSchema.required,
     ).toEqual(["query"]);
+  });
+
+  it("edits import settings through godot_resource_edit, and refuses an unknown option", async () => {
+    const root = makeProject({
+      "project.godot": "config_version=5\n",
+      "beep.wav.import": '[remap]\n\nimporter="wav"\ntype="AudioStreamWAV"\n\n[params]\n\nedit/loop_mode=0\n',
+    });
+    const server = createServer({ tier: "cheap", root, godot: "/no/such/godot" });
+    const local = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), local.connect(b)]);
+    const call = (args: Record<string, unknown>) => local.callTool({ name: "godot_resource_edit", arguments: { file: "res://beep.wav", ...args } });
+    const dry = (await call({ ops: [{ op: "set", key: "edit/loop_mode", value: "Forward" }] })) as Result;
+    expect(dry.isError).toBeFalsy();
+    expect(textOf(dry)).toContain("+ edit/loop_mode=2");
+    const written = (await call({ ops: [{ op: "set", key: "edit/loop_mode", value: 2 }], write: true })) as Result;
+    expect(textOf(written)).toMatch(/reimport skipped: not reimported/);
+    const bad = (await call({ ops: [{ op: "set", key: "edit/loop", value: "1" }] })) as Result;
+    expect(bad.isError).toBe(true);
+    expect(textOf(bad)).toMatch(/no option edit\/loop; did you mean .*edit\/loop_mode/);
+    await Promise.all([local.close(), server.close()]);
   });
 
   it("does not call the tools that write learning read-only", async () => {
