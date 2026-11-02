@@ -91,6 +91,7 @@ import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
+import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
@@ -1083,7 +1084,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Pass `shaders: true` to also compile every shader by drawing it on the Compatibility renderer (headless Godot never compiles shaders; needs a display, or xvfb-run on Linux): errors come back at the line in the .gdshader, .gdshaderinc or .tres/.tscn, with the Godot 4 name for Godot 3 code. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
       inputSchema: {
         path: pathParam,
         run_frames: z
@@ -1106,6 +1107,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(3600)
           .optional()
           .describe("timeout per Godot run (default 600)"),
+        shaders: z
+          .boolean()
+          .optional()
+          .describe("also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run)"),
       },
       annotations: {
         readOnlyHint: false,
@@ -1114,18 +1119,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, run_frames, scene, timeout_seconds }) => {
+    async ({ path, run_frames, scene, timeout_seconds, shaders }) => {
       try {
         const result = await checkLearning(where(path), {
           godot: options.godot,
           runFrames: run_frames ?? (scene ? 120 : 0),
           ...(scene ? { scene } : {}),
+          ...(shaders ? { shaders: true } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
         const lines = result.diagnostics.map(formatDiagnostic);
         lines.push(
           `${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
         );
+        if (result.shaders) lines.push(shaderSummary(result.shaders));
         lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
         if (result.output !== undefined)
           lines.push(
