@@ -71,7 +71,8 @@ export function checkCommand(): Command {
             const summary = (r: typeof result.base) => ({ godot: r.godot, godotVersion: r.godotVersion, errors: r.errors, warnings: r.warnings, scripts: r.scripts, scenes: r.scenes });
             writeOut(command, `${JSON.stringify({ base: summary(result.base), other: summary(result.other), onlyOther: result.onlyOther, onlyBase: result.onlyBase, same: result.same }, null, 2)}\n`);
           } else {
-            writeOut(command, formatCompare(result, Number.POSITIVE_INFINITY));
+            const hints = lessonHintsForMessages(result.onlyOther.map((d) => d.message));
+            writeOut(command, formatCompare(result, Number.POSITIVE_INFINITY) + (hints.length ? `${hints.join("\n")}\n` : ""));
           }
           if (result.onlyOther.some((d) => d.severity === "error")) process.exitCode = 1;
           return;

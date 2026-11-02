@@ -1139,7 +1139,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
             ...(scene ? { scene } : {}),
             timeoutMs: (timeout_seconds ?? 600) * 1000,
           });
-          const body = formatCompare(compared, profile.findings);
+          const hints = lessonHintsForMessages(compared.onlyOther.map((d) => d.message));
+          const body = formatCompare(compared, profile.findings) + hints.join("\n");
           return compared.onlyOther.some((d) => d.severity === "error") ? failure(body) : text(body);
         }
         const result = await checkLearning(where(path), {
