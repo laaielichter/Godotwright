@@ -90,6 +90,20 @@ describe("Godot's shader errors (verbatim 4.7.2 output)", () => {
     ]);
   });
 
+  it("reports a shader a scene uses once, with its own file:line", () => {
+    const error = [
+      "SHADER ERROR: SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform.",
+      "To continue with minimal code changes add 'uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;' near the top of your shader.",
+      "          at: (null) (:4)",
+      "ERROR: Shader compilation failed.",
+      "   at: shader_set_code (servers/rendering/dummy/storage/material_storage.cpp:192)",
+    ];
+    const importLog = error.join("\n");
+    const checkLog = ["GODOTWRIGHT_BEGIN res://main.tscn", ...error, "GODOTWRIGHT_END res://main.tscn", "GODOTWRIGHT_SHADER res://broken.gdshader", ...error, "GODOTWRIGHT_END res://broken.gdshader"].join("\n");
+    const all = cleanup([...parseGodotLog(importLog, "import"), ...parseGodotLog(checkLog, "check")]);
+    expect(all.map((d) => `${d.file}:${d.line}`)).toEqual(["res://broken.gdshader:4"]);
+  });
+
   it("names the usual cause of the preprocessor's '#' error", () => {
     const missing = "GODOTWRIGHT_SHADER res://b.gdshader\nSHADER ERROR: Tokenizer: Unknown character #35: '#'\n          at: (null) (:2)\nGODOTWRIGHT_END res://b.gdshader\n";
     expect(cleanup(parseGodotLog(missing, "check")).map(formatDiagnostic)).toEqual([
