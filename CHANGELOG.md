@@ -36,6 +36,16 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   from the next step, new variables get their starting values, a script that extends a changed one is compiled again
   after it, and a script that does not compile is left as it was (the old code keeps running, the error names the
   line). Try a fix in seconds on a world that took a minute to load.
+- **`godot_deps` (and `godotwright deps`): the project as a graph of files.** From where the game starts (main
+  scene, autoloads, every `res://` path in `project.godot`, export include filters, the shipped file list in
+  `godotwright.json`, add-ons, tests, editor scripts) through `ext_resource`, `preload`, `load`, `class_name`, folders
+  and file names the code builds paths from, `.gltf` buffers, textures next to models, CSV translations and import
+  settings. `unused` lists what nothing reaches, biggest first (whole folders as one line); `why` gives the chain from
+  the game to a file before you delete it; `of` says what a scene loads with it and what it can load later; `cycles`
+  finds scenes that load each other through `ext_resource`, which Godot 4.7 cannot load and reports as
+  "referenced non-existent resource" for a file that is there. Checked on 139 Godot demo projects: none of the 163
+  files it calls unused there is loaded by anything the game runs (screenshots, source `.blend` files, editor-only
+  scenes, leftovers).
 - **`godot_undo` (and `godotwright undo`): every write can be taken back.** Scene and project edits, renames (with
   their file moves), migrations, fixes and model builds keep the files as they were in `.godot/godotwright/journal/`
   (the last 40 writes), and say so in their result. Undo puts back the newest writes first; a file changed after the

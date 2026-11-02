@@ -92,6 +92,7 @@ import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
+import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
@@ -151,7 +152,7 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
-      "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it.",
+      "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
@@ -179,6 +180,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
+      "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
       "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
       "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
@@ -799,6 +801,34 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const result = checkExport(where(path), preset ? { preset } : {});
         const body = formatExportCheck(result);
         return result.problems.some((p) => p.severity === "error") ? failure(body) : text(body);
+      }),
+  );
+
+  server.registerTool(
+    "godot_deps",
+    {
+      title: "The project's files as a graph: unused, why used, what a scene loads",
+      description:
+        "Follow what loads what, from where the game starts (main scene, autoloads, every res:// path in project.godot, export include filters, the shipped file list from godotwright.json, add-ons, tests, editor scripts), through ext_resource, preload, load, class_name, folders and file names the code builds paths from, textures next to models and import settings. op `unused`: files nothing reaches, biggest first, whole folders as one line (when in doubt a file counts as used, so the list can be trusted). op `why` (file): the chain from the game to the file, before you delete or move it. op `of` (file): what a scene or resource loads with it, biggest first, what it can load later, and paths that do not exist. op `cycles`: scenes or resources that load each other through ext_resource, which Godot cannot load (it reports \"[ext_resource] referenced non-existent resource\" for a file that is there). Read-only.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["unused", "why", "of", "cycles"]).describe("unused, why, of or cycles"),
+        file: z.string().optional().describe("why and of: the res:// file"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, op, file }) =>
+      guard(() => {
+        const dir = where(path);
+        if (op === "unused") return text(formatUnused(unusedFiles(dir), profile.detail === "full" ? 60 : 25));
+        if (op === "cycles") {
+          const cycles = sceneCycles(dir);
+          return cycles.length ? failure(formatCycles(cycles)) : text(formatCycles(cycles));
+        }
+        if (!file) return failure(`${op} needs file (a res:// path)`);
+        if (op === "why") return text(formatWhy(whyUsed(dir, file)));
+        const d = depsOf(dir, file);
+        return d.missing.length ? failure(formatDepsOf(d)) : text(formatDepsOf(d));
       }),
   );
 

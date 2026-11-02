@@ -32,6 +32,7 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 - Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs.
 - Mechanical findings (a freed check in the wrong order, `get_meta()` with a null default, a lone ternary, garbled
   text, `emit_signal()`, MultiMesh or Timer order): `godot_fix` (report, then `write: true`), not by hand.
+- Before deleting or moving a file: `godot_deps` op `why` (also paths the code builds); `op unused` lists what can go.
 - A Godotwright write that made things worse: `godot_undo` puts the files back (newest write first).
 
 ## See what you built
