@@ -1,5 +1,5 @@
 name: Godotwright receipt
-description: Review, Godot check, tests and scenarios of a Godot 4.7 project in one markdown receipt, on a pull request. No editor needed.
+description: Review, Godot check, tests, scenarios and screenshot baselines of a Godot 4.7 project in one markdown receipt, on a pull request. No editor needed.
 author: laaielichter
 branding:
   icon: check-circle
@@ -12,10 +12,12 @@ inputs:
     description: Godot version to download (Linux runner), e.g. 4.7.2. The checks that need Godot use it.
     default: "4.7.2"
   review-only:
-    description: Run only the review, which needs no Godot (skips the check, the tests and the scenarios).
+    description: Run only the review, which needs no Godot (skips the check, the tests, the scenarios and the screenshot baselines).
     default: "false"
   export-preset:
     description: Also export this preset as a .pck (no export templates needed), check what it holds against what the game loads, and run it headless.
+  baseline-dir:
+    description: Folder of the screenshot baselines, when they are not in .godotwright/baselines.
     default: ""
   comment:
     description: "Post the receipt as a comment on the pull request (needs the permission pull-requests: write)."
@@ -58,6 +60,10 @@ runs:
         unzip -q "$file.zip"
         mv "$file" godot
         rm "$file.zip"
+    - name: Virtual screen and software OpenGL, for screenshot baselines
+      if: inputs.review-only != 'true'
+      shell: bash
+      run: command -v xvfb-run >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends xvfb xauth libgl1-mesa-dri)
     - name: Run Godotwright
       id: run
       shell: bash
@@ -66,8 +72,10 @@ runs:
         PROJECT: ${{ inputs.path }}
         REVIEW_ONLY: ${{ inputs.review-only }}
         EXPORT_PRESET: ${{ inputs.export-preset }}
+        BASELINE_DIR: ${{ inputs.baseline-dir }}
       run: |
         flags=()
+        if [ -n "$BASELINE_DIR" ]; then flags+=(--baseline-dir "$BASELINE_DIR"); fi
         if [ "$REVIEW_ONLY" = "true" ]; then flags+=(--no-godot-checks); else export GODOT="$HOME/godot/godot"; fi
         if [ -n "$EXPORT_PRESET" ]; then flags+=(--export-preset "$EXPORT_PRESET"); fi
         receipt="$RUNNER_TEMP/godotwright-receipt.md"
@@ -80,6 +88,14 @@ runs:
         echo "receipt=$receipt" >> "$GITHUB_OUTPUT"
         echo "code=$code" >> "$GITHUB_OUTPUT"
         if [ "$code" = "0" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+    - name: Upload the visual diffs
+      if: always() && inputs.review-only != 'true'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: godotwright-visual-diff
+        path: ${{ inputs.path }}/**/.godot/godotwright/diff/*.png
+        include-hidden-files: true
+        if-no-files-found: ignore
     - name: Comment on the pull request
       if: inputs.comment == 'true' && github.event_name == 'pull_request'
       shell: bash

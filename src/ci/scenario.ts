@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { playScene, type PlayReport } from "../play/play.js";
 import { findProjectRoot } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { BaselineError, baselineFiles, baselineName, compareBaseline, formatBaseline, readBaselineMeta, type BaselineResult } from "../screenshot/baseline.js";
 
 export const SCENARIO_DIR = ".godotwright/scenarios";
 
@@ -28,9 +29,21 @@ export interface Scenario {
   input?: string;
   /** Extra values to sample besides the ones the expectations name. */
   watch: string[];
-  /** Physics frames to run (default: the last frame an expectation names, else 120). */
+  /** Physics frames to run (default: the last frame an expectation or screenshot names, else 120). */
   frames?: number;
   expect: Expectation[];
+  /** Pictures to take during the run and compare with their baselines: "hud @ 60", or an object with a tolerance. */
+  screenshots: ScreenshotStep[];
+  /** Window size for the screenshots (default: the first baseline's, else 640x360). */
+  size?: { width: number; height: number };
+}
+
+export interface ScreenshotStep {
+  /** Baseline name (.godotwright/baselines/<name>.png). */
+  name: string;
+  frame: number;
+  tolerance?: number;
+  maxChanged?: number;
 }
 
 export interface ExpectationResult {
@@ -45,6 +58,8 @@ export interface ScenarioResult {
   file: string;
   ok: boolean;
   results: ExpectationResult[];
+  /** The screenshot steps, each compared with its baseline. */
+  screenshots?: (BaselineResult & { frame: number })[];
   /** Errors the game raised while it ran. */
   errors: string[];
   finished: boolean;
@@ -95,12 +110,56 @@ export function parseScenario(json: unknown, fallbackName: string): Scenario {
     return v;
   };
   const expect = strings("expect").map(parseExpectation);
-  if (!expect.length) throw new ScenarioError('a scenario needs at least one entry in "expect"');
+  const screenshots = parseScreenshots(o.screenshots);
+  if (!expect.length && !screenshots.length) throw new ScenarioError('a scenario needs at least one entry in "expect" or "screenshots"');
+  let size: Scenario["size"];
+  if (o.size !== undefined) {
+    const m = typeof o.size === "string" ? /^(\d+)x(\d+)$/.exec(o.size) : null;
+    if (!m) throw new ScenarioError('"size" must be WIDTHxHEIGHT, e.g. "640x360"');
+    size = { width: Number(m[1]), height: Number(m[2]) };
+  }
   const frames = o.frames;
   if (frames !== undefined && !(typeof frames === "number" && Number.isInteger(frames) && frames > 0)) throw new ScenarioError('"frames" must be a whole number above 0');
   const scene = text("scene");
   const input = text("input");
-  return { name: text("name") ?? fallbackName, ...(scene ? { scene } : {}), ...(input ? { input } : {}), watch: strings("watch"), ...(frames ? { frames: frames as number } : {}), expect };
+  return { name: text("name") ?? fallbackName, ...(scene ? { scene } : {}), ...(input ? { input } : {}), watch: strings("watch"), ...(frames ? { frames: frames as number } : {}), expect, screenshots, ...(size ? { size } : {}) };
+}
+
+/** "hud @ 60" or {"name": "hud", "frame": 60, "tolerance": 24, "maxChanged": 0.5}. */
+function parseScreenshots(value: unknown): ScreenshotStep[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new ScenarioError('"screenshots" must be a list');
+  const steps = value.map((v): ScreenshotStep => {
+    if (typeof v === "string") {
+      const m = /^\s*(.+?)\s*@\s*(\d+)\s*$/.exec(v);
+      if (!m) throw new ScenarioError(`cannot read the screenshot "${v}": write it as <name> @ <frame>, e.g. "hud @ 60"`);
+      return { name: m[1]!, frame: Number(m[2]) };
+    }
+    if (typeof v !== "object" || v === null) throw new ScenarioError('a screenshot is "<name> @ <frame>" or an object with name and frame');
+    const o = v as Record<string, unknown>;
+    if (typeof o.name !== "string" || !(typeof o.frame === "number" && Number.isInteger(o.frame) && o.frame >= 0)) throw new ScenarioError("a screenshot object needs a name and a whole frame number");
+    const num = (k: string, max: number): number | undefined => {
+      const n = o[k];
+      if (n === undefined) return undefined;
+      if (typeof n !== "number" || n < 0 || n > max) throw new ScenarioError(`screenshot ${o.name}: "${k}" must be a number from 0 to ${max}`);
+      return n;
+    };
+    const tolerance = num("tolerance", 255);
+    const maxChanged = num("maxChanged", 100);
+    return { name: o.name, frame: o.frame as number, ...(tolerance !== undefined ? { tolerance } : {}), ...(maxChanged !== undefined ? { maxChanged } : {}) };
+  });
+  const names = new Set<string>();
+  for (const s of steps) {
+    let safe: string;
+    try {
+      safe = baselineName(s.name);
+    } catch (error) {
+      throw new ScenarioError((error as Error).message);
+    }
+    if (names.has(safe)) throw new ScenarioError(`two screenshots are called ${s.name}`);
+    names.add(safe);
+  }
+  return steps;
 }
 
 /** The scenario files of a project, sorted by name. */
@@ -154,13 +213,21 @@ export interface ScenarioRunOptions {
   godot?: string;
   import?: boolean;
   timeoutMs?: number;
+  /** Replace the screenshot baselines with this run's pictures. */
+  update?: boolean;
+  /** Make missing baselines (default true); CI passes false, so a missing one fails. */
+  createMissing?: boolean;
   /** Replaces the real run, for tests. */
   play?: typeof playScene;
 }
 
 export async function runScenario(root: string, file: string, scenario: Scenario, options: ScenarioRunOptions = {}): Promise<ScenarioResult> {
-  const frames = scenario.frames ?? Math.max(120, ...scenario.expect.map((e) => (e.frame ?? 0) + 1));
+  const frames = scenario.frames ?? Math.max(120, ...scenario.expect.map((e) => (e.frame ?? 0) + 1), ...scenario.screenshots.map((s) => s.frame + 1));
   const watch = [...new Set([...scenario.expect.map((e) => e.watch), ...scenario.watch])];
+  const shots = scenario.screenshots.map((s) => ({ ...s, name: baselineName(s.name) }));
+  const first = shots.map((s) => readBaselineMeta(root, s.name)).find((m) => m);
+  const size = scenario.size ?? (first ? { width: first.width, height: first.height } : { width: 640, height: 360 });
+  const captures = shots.filter((s) => s.frame < frames).map((s) => ({ frame: s.frame, out: baselineFiles(root, s.name).actual }));
   const report = await (options.play ?? playScene)(root, {
     godot: options.godot,
     ...(scenario.scene ? { scene: scenario.scene } : {}),
@@ -170,16 +237,61 @@ export async function runScenario(root: string, file: string, scenario: Scenario
     every: 1,
     import: options.import,
     ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
+    ...(captures.length ? { captures, size } : {}),
   });
   const results = judge(scenario, report);
   const errors = report.diagnostics.filter((d) => d.severity === "error").map((d) => `${d.file ?? ""}${d.line ? `:${d.line}` : ""} ${d.message}`.trim());
-  return { name: scenario.name, file, ok: report.finished && !errors.length && results.every((r) => r.ok), results, errors, finished: report.finished };
+  const screenshots = shots.map((s): BaselineResult & { frame: number } => {
+    const files = baselineFiles(root, s.name);
+    const taken = report.captures?.find((c) => c.frame === s.frame);
+    const missing = (why: string): BaselineResult & { frame: number } => ({ name: s.name, frame: s.frame, status: "failed", ok: false, baseline: `.godotwright/baselines/${s.name}.png`, actual: "", notes: [why] });
+    if (!taken) return missing(s.frame >= frames ? `frame ${s.frame} is after the last frame (${frames - 1})` : `no picture of frame ${s.frame}: the run ended before it`);
+    try {
+      const r = compareBaseline(root, s.name, taken.file, {
+        ...(options.update ? { update: true } : {}),
+        ...(options.createMissing === false ? { createMissing: false } : {}),
+        ...(s.tolerance !== undefined ? { tolerance: s.tolerance } : {}),
+        ...(s.maxChanged !== undefined ? { maxChanged: s.maxChanged } : {}),
+        meta: {
+          ...(report.scene ? { scene: report.scene } : {}),
+          width: size.width,
+          height: size.height,
+          frames: s.frame,
+          scenario: file,
+          renderer: "gl_compatibility",
+          ...(report.godot ? { godot: report.godot } : {}),
+          ...(report.adapter ? { adapter: report.adapter } : {}),
+        },
+      });
+      return { ...r, frame: s.frame };
+    } catch (error) {
+      if (!(error instanceof BaselineError)) throw error;
+      return { ...missing(error.message), actual: files.actual };
+    }
+  });
+  const behaviour = report.finished && !errors.length && results.every((r) => r.ok);
+  return { name: scenario.name, file, ok: behaviour && screenshots.every((s) => s.ok), results, ...(screenshots.length ? { screenshots } : {}), errors, finished: report.finished };
 }
 
-export function formatScenario(r: ScenarioResult): string {
-  const out = [`${r.ok ? "PASS" : "FAIL"}  ${r.name}  (${r.file})`];
+/** True when the game did what the scenario expects, leaving its screenshots out (CI reports those as visual changes). */
+export function behaviourOk(r: ScenarioResult): boolean {
+  return r.finished && !r.errors.length && r.results.every((x) => x.ok);
+}
+
+export function formatScenario(r: ScenarioResult, options: { screenshots?: boolean; accept?: string } = {}): string {
+  const visual = options.screenshots !== false;
+  const ok = visual ? r.ok : behaviourOk(r);
+  const out = [`${ok ? "PASS" : "FAIL"}  ${r.name}  (${r.file})`];
   for (const x of r.results) out.push(`  ${x.ok ? "ok  " : "FAIL"} ${x.expect}${x.ok ? "" : `  -> ${x.message}`}`);
+  if (visual) for (const s of r.screenshots ?? []) out.push(...formatShot(s, options.accept));
   if (!r.finished) out.push("  the run ended before the last frame");
   for (const e of r.errors) out.push(`  error: ${e}`);
   return out.join("\n");
+}
+
+/** A screenshot step as scenario lines: "ok   screenshot hud @ 60 (same)", then the diff when it changed. */
+export function formatShot(s: BaselineResult & { frame: number }, accept = "run again with --update"): string[] {
+  const [head = "", ...rest] = formatBaseline(s, accept);
+  const verdict = head.replace(/^baseline \S+: /, "");
+  return [`  ${s.ok ? "ok  " : "FAIL"} screenshot ${s.name} @ ${s.frame} (${verdict})`, ...rest.map((l) => `  ${l}`)];
 }
