@@ -120,6 +120,58 @@ describe.skipIf(!GODOT)("scene and resource integrity against Godot 4.7", () => 
     expect(read("a.gd.uid")).not.toBe(read("b.gd.uid"));
   });
 
+  it("a duplicated uid stays on the file Godot loads for it, so the main scene and uid references do not change", { timeout: 300_000 }, () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="D"\nconfig/features=PackedStringArray("4.7")\nrun/main_scene="uid://caaaaaaaaaa1"\n',
+      "a.tscn": '[gd_scene format=3 uid="uid://caaaaaaaaaa1"]\n\n[node name="A" type="Node"]\n',
+      "sub/b.tscn": '[gd_scene format=3 uid="uid://caaaaaaaaaa1"]\n\n[node name="B" type="Node"]\n',
+      "s.gd": 'extends Node\nconst S = preload("uid://caaaaaaaaaa1")\n',
+      "main.tscn":
+        '[gd_scene format=3]\n\n[ext_resource type="PackedScene" uid="uid://caaaaaaaaaa1" path="res://sub/b.tscn" id="1"]\n[ext_resource type="PackedScene" uid="uid://caaaaaaaaaa1" path="res://sub/b.tscn" id="2"]\n\n[node name="Main" type="Node"]\n\n[node name="X" parent="." instance=ExtResource("1")]\n\n[node name="Y" parent="." instance=ExtResource("2")]\n',
+      "q.gd": 'extends SceneTree\n\n\nfunc _initialize() -> void:\n\tprint("RES ", ResourceUID.get_id_path(ResourceUID.text_to_id("uid://caaaaaaaaaa1")))\n\tquit(0)\n',
+    });
+    // Before Godot has scanned the project, the references by uid alone leave the choice to a check.
+    expect(fixProject(root).needsCheck).toBe(1);
+    expect(uidWarnings(godot(root, "--import"))).toHaveLength(1);
+    const before = /RES (\S+)/.exec(godot(root, "-s", "res://q.gd"))![1];
+    // Godot's uid cache now says which file the uid loads: that file keeps it, as a safe fix.
+    const result = fixProject(root, { write: true });
+    expect(result.changes.every((c) => c.safety === "safe")).toBe(true);
+    expect(result.changes.some((c) => before && c.file === before)).toBe(false);
+    expect(uidWarnings(godot(root, "--import"))).toEqual([]);
+    expect(/RES (\S+)/.exec(godot(root, "-s", "res://q.gd"))![1]).toBe(before);
+  });
+
+  it("edits inside an instance the instanced or inherited scene marks editable itself survive an editor save", { timeout: 300_000 }, () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="L"\nconfig/features=PackedStringArray("4.7")\n',
+      "leaf.tscn": '[gd_scene format=3]\n\n[node name="Leaf" type="Node2D"]\n\n[node name="Sprite" type="Node2D" parent="."]\n',
+      "mid.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://leaf.tscn" id="1_l"]\n\n[node name="Mid" type="Node2D"]\n\n[node name="L" parent="." instance=ExtResource("1_l")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(1, 1)\n\n[editable path="L"]\n',
+      "inh.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Mid" instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(9, 9)\n',
+      "top.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Top" type="Node2D"]\n\n[node name="M" parent="." instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="M/L"]\nposition = Vector2(3, 3)\n\n[editable path="M"]\n',
+      "resave.gd": `extends SceneTree
+
+
+func _initialize() -> void:
+	for pair: Array in [["inh", "L/Sprite"], ["top", "M/L/Sprite"]]:
+		var scene: Node = (load("res://%s.tscn" % pair[0]) as PackedScene).instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
+		var packed := PackedScene.new()
+		packed.pack(scene)
+		ResourceSaver.save(packed, "res://resaved_%s.tscn" % pair[0])
+		scene.free()
+		var again: Node = (load("res://resaved_%s.tscn" % pair[0]) as PackedScene).instantiate()
+		print("KEPT ", pair[0], " ", (again.get_node(pair[1]) as Node2D).position)
+		again.free()
+	quit(0)
+`,
+    });
+    expect(reviewProject(root).findings.filter((f) => f.rule === "structure/locked-instance-edit")).toEqual([]);
+    godot(root, "--import");
+    const out = godot(root, "-s", "res://resave.gd");
+    expect(out).toContain("KEPT inh (9.0, 9.0)");
+    expect(out).toContain("KEPT top (3.0, 3.0)");
+  });
+
   it("files the review says do not load fail in Godot", { timeout: 300_000 }, async () => {
     const root = makeProject({
       "project.godot": 'config_version=5\n\n[application]\n\nconfig/name="Broken"\nconfig/features=PackedStringArray("4.7")\n',

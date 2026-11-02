@@ -78,7 +78,7 @@ export function checkIntegrity(data: ProjectData): Finding[] {
   for (const scene of data.map.scenes) {
     const parsed = data.resources.get(scene.path);
     if (!parsed || scene.external) continue;
-    for (const l of lockedInstances(scene, parsed, scenes).locked) {
+    for (const l of lockedInstances(scene, parsed, scenes, data.resources).locked) {
       out.push(
         finding(
           "structure/locked-instance-edit",
@@ -193,12 +193,20 @@ export interface LockedInstance {
  * connection to one survive an editor save only when every instance on the way is editable; a node added directly
  * under the instance, and changes to the instance node itself, always do.
  */
-export function lockedInstances(scene: SceneInfo, parsed: ResourceFile, scenes: Map<string, SceneInfo>): { roots: string[]; locked: LockedInstance[] } {
+export function lockedInstances(
+  scene: SceneInfo,
+  parsed: ResourceFile,
+  scenes: Map<string, SceneInfo>,
+  resources: Map<string, ResourceFile>,
+): { roots: string[]; locked: LockedInstance[] } {
   // Instanced scenes in this scene, with the instances inside them (an edit below those needs both editable).
   const roots: string[] = [];
+  // An instance inside an instanced (or inherited) scene is editable when that scene marks it so itself: Godot keeps it.
+  const editable = new Set(parsed.editable.map((e) => e.path));
   const addNested = (prefix: string, path: string | undefined, depth: number) => {
     const sub = path ? scenes.get(path) : undefined;
     if (!sub || depth > 8) return;
+    for (const e of resources.get(sub.path)?.editable ?? []) editable.add(prefix === "." ? e.path : `${prefix}/${e.path}`);
     for (const n of sub.nodes) {
       if (n.path === ".") {
         if (n.instance) addNested(prefix, n.instance, depth + 1);
@@ -225,7 +233,6 @@ export function lockedInstances(scene: SceneInfo, parsed: ResourceFile, scenes: 
     }
   }
   if (!roots.length) return { roots, locked: [] };
-  const editable = new Set(parsed.editable.map((e) => e.path));
   /** The instance roots whose internals a path reaches, outermost first; a node this scene adds stops the walk. */
   const reaches = (path: string, overrideOfPath: boolean): string[] => {
     const hit: string[] = [];

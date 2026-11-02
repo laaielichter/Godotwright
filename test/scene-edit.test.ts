@@ -198,6 +198,19 @@ describe("scene edits inside instanced scenes", () => {
     expect(read(withOverride, "main.tscn").match(/\[editable/g)).toHaveLength(1);
   });
 
+  it("allows changes inside an instance the instanced or inherited scene marks editable itself", () => {
+    const root = makeProject({ "project.godot": files["project.godot"], ...{
+    "leaf.tscn": '[gd_scene format=3]\n\n[node name="Leaf" type="Node2D"]\n\n[node name="Sprite" type="Node2D" parent="."]\n',
+    "mid.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://leaf.tscn" id="1_l"]\n\n[node name="Mid" type="Node2D"]\n\n[node name="L" parent="." instance=ExtResource("1_l")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(1, 1)\n\n[editable path="L"]\n',
+    "inh.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Mid" instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(9, 9)\n',
+    "top.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Top" type="Node2D"]\n\n[node name="M" parent="." instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="M/L"]\nposition = Vector2(3, 3)\n\n[editable path="M"]\n',
+  } });
+    editScene(join(root, "inh.tscn"), { op: "set", node: "L/Sprite", property: "position", value: "Vector2(1, 1)" }, { write: true });
+    editScene(join(root, "top.tscn"), { op: "set", node: "M/L/Sprite", property: "position", value: "Vector2(4, 4)" }, { write: true });
+    expect(read(root, "inh.tscn")).not.toContain("[editable");
+    expect(read(root, "top.tscn").match(/\[editable/g)).toHaveLength(1);
+  });
+
   it("set_editable adds and removes [editable], and warns about the edits that will be dropped", () => {
     const root = makeProject(files);
     const scene = join(root, "main.tscn");
