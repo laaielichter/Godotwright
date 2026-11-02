@@ -138,11 +138,27 @@ function screen(): { command: string; prefix: string[] } | { error: string } {
   return { error: "no screen to render on: this Linux machine has no display and no xvfb-run. Install it (sudo apt-get install xvfb libgl1-mesa-dri) and try again." };
 }
 
+/** Every GDScript warning of Godot 4.7 (debug/gdscript/warnings/*); the generated script ignores them all. */
+export const GDSCRIPT_WARNINGS = [
+  "unassigned_variable", "unassigned_variable_op_assign", "unused_variable", "unused_local_constant", "unused_private_class_variable",
+  "unused_parameter", "unused_signal", "shadowed_variable", "shadowed_variable_base_class", "shadowed_global_identifier", "unreachable_code",
+  "unreachable_pattern", "standalone_expression", "standalone_ternary", "incompatible_ternary", "untyped_declaration", "inferred_declaration",
+  "unsafe_property_access", "unsafe_method_access", "unsafe_cast", "unsafe_call_argument", "unsafe_void_return", "return_value_discarded",
+  "static_called_on_instance", "missing_tool", "redundant_static_unload", "redundant_await", "missing_await", "assert_always_true",
+  "assert_always_false", "integer_division", "narrowing_conversion", "int_as_enum_without_cast", "int_as_enum_without_match",
+  "enum_variable_without_default", "empty_file", "deprecated_keyword", "confusable_identifier", "confusable_local_declaration",
+  "confusable_local_usage", "confusable_capture_reassignment", "confusable_temporary_modification", "inference_on_variant",
+  "native_method_override", "get_node_default_without_onready", "onready_with_export", "property_used_as_function",
+  "constant_used_as_function", "function_used_as_property",
+];
+
 /** The script that loads the scene or model, frames it when needed, renders and writes the PNG and the coverage. */
 export function screenshotScript(o: { scene?: string; model?: string; views: View[]; frames: number; out: string; width: number; height: number }): string {
   const views = JSON.stringify(o.views);
   return `extends SceneTree
 # Written by godotwright screenshot; removed after the run.
+# Godot compiles this script with the project's warning settings, and one set to error would stop the picture.
+@warning_ignore_start(${GDSCRIPT_WARNINGS.map((w) => JSON.stringify(w)).join(", ")})
 
 const VIEWS: Array = ${views}
 const FRAMES := ${o.frames}
@@ -173,10 +189,11 @@ func _initialize() -> void:
 
 
 func _fix_seed(node: Node) -> void:
+	# By name with get() and set(): the node is typed Node, and a project may make unsafe property access an error.
 	if node is GPUParticles2D or node is GPUParticles3D or node is CPUParticles2D or node is CPUParticles3D:
-		if not node.use_fixed_seed:
-			node.use_fixed_seed = true
-			node.seed = 1
+		if not node.get("use_fixed_seed"):
+			node.set("use_fixed_seed", true)
+			node.set("seed", 1)
 
 
 func _load_model(path: String) -> Node:

@@ -39,6 +39,17 @@ describe("screenshot", () => {
     expect(scene).toContain('var packed := load("res://main.tscn") as PackedScene');
   });
 
+  it("writes a script that compiles under any project warning setting (strict typing as errors)", () => {
+    const script = screenshotScript({ scene: "res://main.tscn", views: ["iso"], frames: 5, out: "/o/s.png", width: 320, height: 240 });
+    const ignore = /^@warning_ignore_start\((.+)\)$/m.exec(script);
+    expect(ignore).not.toBeNull();
+    for (const w of ["unsafe_property_access", "unsafe_method_access", "unsafe_cast", "unsafe_call_argument", "untyped_declaration", "inferred_declaration", "return_value_discarded", "integer_division"])
+      expect(ignore![1]).toContain(`"${w}"`);
+    // The seed hook sets particle properties by name, so it is safe on a node typed Node even without the ignore.
+    expect(script).toContain('node.set("use_fixed_seed", true)');
+    expect(script).not.toMatch(/node\.(use_fixed_seed|seed)\b/);
+  });
+
   it("refuses bad input before starting Godot", async () => {
     const root = makeProject({ "project.godot": "[application]\n" });
     await expect(takeScreenshot(root, { views: ["below" as never] })).rejects.toThrow(/not a view/);
