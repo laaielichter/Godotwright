@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
-## Unreleased
+## 0.4.0 (a game that stays up, a doctor, undo, and what the build and the project really hold)
 
 - **`godot_doctor` (and `godotwright doctor`): what is wrong, in which order to fix it, and why.** One call runs the
   review and, when Godot is installed, loads every script and scene with Godot; it groups the findings by cause

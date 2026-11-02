@@ -75,18 +75,16 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 Run the agent from the Godot project folder, or pass `--project <path>`. `--tier premium` gives full detail for large
 models; `--tier cheap` (the default) gives short output and step-by-step instructions for small ones. Needs Node.js 22.12+.
 
-## New in 0.3.0
+## New in 0.4.0
 
-- **Godotwright in the agent's loop.** Claude Code hooks review every Godot file right after an edit, explain Godot
-  errors in command output, and name review errors still open before Claude stops. Other agents can call
-  `godotwright hook <event>` the same way.
-- **Six new skills and two subagents** for Claude Code: `debug`, `perf`, `vehicles`, `world`, `model` and `patch`, plus
-  `godot-reviewer` (a verified review of a change) and `godot-debugger` (a root cause, proven with a headless run).
-- **272 lessons from real projects.** Symptom, cause, fix and how to test, for physics on moving decks, streaming
-  large worlds, shaders, frame-time measurement, headless tests and more. A Godot error comes back with the lesson
-  that explains it, and new review rules came out of them.
-- **Every ready-made 3D model rebuilt.** Truer proportions, real textures, bevelled edges and glass with interiors
-  behind it; most now have 3,000 to 19,000 triangles. [See the gallery](https://laaielichter.github.io/Godotwright/models.html).
+- **A game that stays up between calls.** `godot_session` loads a scene once, headless and paused; `godot_game` reads
+  and sets values, steps frames with input until a condition holds, shows where 3D things really are and what is wrong
+  with the UI per window size, and reloads the scripts you edited with every node's values kept.
+- **`godot_doctor` and `godot_fix`.** One call says what is wrong, in which order to fix it and why (with the lesson);
+  the mechanical fixes are applied for you, each labelled `safe` or `check`.
+- **`godot_undo`.** Every Godotwright write can be taken back; your own later edits are never lost silently.
+- **What the build and the project really hold.** `godot_export` finds what an export will miss, `godot_deps` finds
+  unused files and why a file is used, `godot_perf` measures frame times against a budget and the last run.
 
 All changes: [CHANGELOG.md](CHANGELOG.md).
 
@@ -124,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: laaielichter/godotwright@v0.3.0
+      - uses: laaielichter/godotwright@v0.4.0
         with: { comment: "true" }
 ```
 

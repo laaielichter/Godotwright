@@ -45,7 +45,7 @@ Godot 4.7; set `GODOT` to its path if it is not found in the usual install folde
 
 ## What it runs, writes and sends
 
-- **Runs:** `npx -y godotwright@0.3.0 mcp --tier premium`. The first start downloads that exact version of the
+- **Runs:** `npx -y godotwright@0.4.0 mcp --tier premium`. The first start downloads that exact version of the
   [godotwright npm package](https://www.npmjs.com/package/godotwright) (published from this repository by GitHub
   Actions, with provenance). It needs Node.js 22.12 or newer. The `check`, `test`, `play` and `screenshot` tools run
   your Godot binary headless on your project, which runs the project's own scripts.
