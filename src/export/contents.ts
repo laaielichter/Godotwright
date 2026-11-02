@@ -150,20 +150,22 @@ export function checkContents(root: string, pck: Pck, options: { preset?: Export
     });
   }
 
-  // Editor-only and test code, one line per folder.
-  const junk = new Map<string, { kind: string; files: string[]; bytes: number }>();
+  // Editor-only and test code: one line per add-on or test folder.
+  const junk = new Map<string, { label: string; folder: string; classes: Set<string>; files: string[]; bytes: number }>();
   const reached = (f: string) => g.roots.has(f) || g.parent.has(f);
   const own = new Set(g.assets);
   for (const [file, bytes] of sources) {
     const ext = extendsOf(root, file);
-    const kind = ext && EDITOR_CLASS.test(ext) ? `editor-only script|; it extends ${ext}, a class only the editor has` : TEST_ADDON.test(file) || TEST_FILE.test(file) || ext === "GutTest" || ext === "GdUnitTestSuite" ? "test file|" : undefined;
-    if (kind) {
-      const folder = TEST_ADDON.exec(file)?.[0] ?? file.slice(0, file.lastIndexOf("/") + 1);
-      const key = `${kind}|${folder}`;
-      const entry = junk.get(key) ?? { kind, files: [], bytes: 0 };
+    const editor = ext !== undefined && EDITOR_CLASS.test(ext);
+    const test = !editor && (TEST_ADDON.test(file) || TEST_FILE.test(file) || ext === "GutTest" || ext === "GdUnitTestSuite");
+    if (editor || test) {
+      const folder = /^res:\/\/addons\/[^/]+\//.exec(file)?.[0] ?? (test ? /^res:\/\/(.*\/)?tests?\//.exec(file)?.[0] : undefined) ?? file.slice(0, file.lastIndexOf("/") + 1);
+      const label = editor ? "editor-only script" : "test file";
+      const entry = junk.get(`${label}|${folder}`) ?? { label, folder, classes: new Set<string>(), files: [], bytes: 0 };
+      if (editor) entry.classes.add(ext);
       entry.files.push(file);
       entry.bytes += bytes;
-      junk.set(key, entry);
+      junk.set(`${label}|${folder}`, entry);
       continue;
     }
     if (own.has(file) && !reached(file)) {
@@ -173,15 +175,16 @@ export function checkContents(root: string, pck: Pck, options: { preset?: Export
     }
   }
   report.unreached.top = report.unreached.top.sort((a, b) => (sources.get(b) ?? 0) - (sources.get(a) ?? 0)).slice(0, 3);
-  for (const [key, j] of junk) {
-    const folder = key.slice(key.indexOf("|") + 1);
+  for (const j of junk.values()) {
     report.junk += j.files.length;
-    const filter = j.files.length <= 2 ? j.files.map((f) => f.slice(6)).join(",") : `${folder.slice(6)}*`;
-    const [label, detail] = j.kind.split("|") as [string, string];
+    const n = j.files.length;
+    const filter = n <= 2 ? j.files.map((f) => f.slice(6)).join(",") : `${j.folder.slice(6)}*`;
+    const classes = [...j.classes];
+    const detail = classes.length ? `; ${n === 1 ? "it extends" : "they extend"} ${classes.join(", ")}, ${classes.length === 1 ? "a class" : "classes"} only the editor has` : "";
     diagnostics.push({
       severity: "warning",
-      file: j.files.length === 1 ? j.files[0]! : folder,
-      message: `${j.files.length} ${label}${j.files.length === 1 ? "" : "s"} shipped in the pack (${kb(j.bytes)})${detail}: add "${filter}" to the preset's exclude_filter`,
+      file: n === 1 ? j.files[0]! : j.folder,
+      message: `${n} ${j.label}${n === 1 ? "" : "s"} shipped in the pack (${kb(j.bytes)})${detail}: add "${filter}" to the preset's exclude_filter`,
       source: "contents",
     });
   }

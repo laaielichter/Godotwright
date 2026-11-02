@@ -233,6 +233,27 @@ describe("reading a pack against the project (no Godot)", () => {
     expect(inspectPack(join(PCK, "encrypted.pck"), { path: root }).pack).toMatchObject({ encryptedDirectory: true, files: 11 });
   });
 
+  it("groups editor-only and test files per add-on and test folder, with the filter to add", () => {
+    const root = makeProject({
+      ...FILES,
+      "addons/x/plugin.gd": "@tool\nextends EditorPlugin\n",
+      "addons/x/import.gd": "@tool\nextends EditorImportPlugin\n",
+      "tests/functional/test_a.gd": "extends Node\n",
+      "tests/performance/test_b.gd": "extends Node\n",
+      "tests/unit/test_c.gd": "extends Node\n",
+    });
+    const data = join(tempFolder("gw-pck-"), "data.bin");
+    writeFileSync(data, "0123456789");
+    const names = ["project.binary", "addons/x/plugin.gdc", "addons/x/import.gdc", "tests/functional/test_a.gdc", "tests/performance/test_b.gdc", "tests/unit/test_c.gdc"];
+    const out = join(tempFolder("gw-pck-"), "junk.pck");
+    writePck(out, names.map((path) => ({ path, md5: "0".repeat(32), size: 10, flags: 0, from: { file: data, offset: 0, length: 10 } })), [4, 7, 2]);
+    const { diagnostics } = checkContents(root, readPck(out), { main: false });
+    expect(diagnostics.map((d) => `${d.file}: ${d.message}`)).toEqual([
+      'res://addons/x/: 2 editor-only scripts shipped in the pack (20 B); they extend EditorImportPlugin, EditorPlugin, classes only the editor has: add "addons/x/import.gd,addons/x/plugin.gd" to the preset\'s exclude_filter',
+      'res://tests/: 3 test files shipped in the pack (30 B): add "tests/*" to the preset\'s exclude_filter',
+    ]);
+  });
+
   it("needs project.binary in a main pack", () => {
     const root = makeProject(FILES);
     const { diagnostics } = checkContents(root, readPck(join(PCK, "patch.pck")), { main: true });
