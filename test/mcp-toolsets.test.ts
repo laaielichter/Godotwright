@@ -49,7 +49,7 @@ describe("tool sets", () => {
     await close();
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLSETS.core].sort());
     const size = JSON.stringify(tools).length;
-    expect(size).toBeLessThan(20_000);
+    expect(size).toBeLessThan(22_000);
     expect(size * 3).toBeLessThan(allSize);
   });
 

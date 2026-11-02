@@ -140,6 +140,7 @@ import {
 } from "../settings/edit.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
 import { renderInstructions } from "./instructions.js";
+import { CheckOutput, DoctorOutput, ReviewOutput, TestOutput, checkData, compareData, doctorData, reviewData, testData } from "./structured.js";
 import { ALL_TOOLS, WRITE_ONLY_TOOLS, enabledTools, readOnlyRefusal } from "./toolsets.js";
 
 export type Tier = "cheap" | "premium";
@@ -180,6 +181,12 @@ const text = (value: string) => ({
 const failure = (value: string) => ({
   content: [{ type: "text" as const, text: value }],
   isError: true,
+});
+/** A result with its structured form next to the text; an error result when `ok` is false. */
+const result = <T extends { ok: boolean }>(value: string, data: T, error = !data.ok) => ({
+  content: [{ type: "text" as const, text: value }],
+  structuredContent: data as T & Record<string, unknown>,
+  ...(error ? { isError: true } : {}),
 });
 
 export function createServer(options: ServerOptions = {}): McpServer {
@@ -325,7 +332,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "AAA review",
       description:
-        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, functions, members, signals, wrong argument counts, missing input actions), performance, code quality and structure. Returns a 0-100 score per category, then one line per finding: `res://file.gd:12: error [rule] message`; `detail` full adds the fix under each finding. Pass `files` to list only findings in files you changed. Pass `code` and `file` to review GDScript before writing it to disk. Pass `only_new: true` while you are fixing: new findings in full, the ones you already saw as one short line each, and how many are fixed. Upgrades: a project saved by an older 4.x also gets what changes on the way to 4.7; `from`/`target` (e.g. 4.5/4.6) set that range. It never changes your code; it keeps the last review in .godot/godotwright/ for `only_new` and counts rule hits in the local learning file. For errors only the engine finds, run godot_check after it; godot_checklist lists every rule.",
+        "Static AAA review of the project, no Godot needed: API correctness (Godot 3 code, unknown classes, members and signals, wrong argument counts, missing input actions), performance, code quality and structure. Returns a 0-100 score per category, then one line per finding, `res://file.gd:12: error [rule] message`, and the same as JSON (structuredContent); `detail` full adds each fix. `files` lists only findings in files you changed. `code` + `file` reviews GDScript before you write it. `only_new: true` while fixing: new findings in full, ones you saw as one short line, and how many are fixed. An older 4.x project also gets what changes on the way to 4.7; `from`/`target` set that range. It never changes your code (it keeps the last review in .godot/godotwright/ for only_new and counts rule hits in the local learning file). For errors only the engine finds, run godot_check; godot_checklist lists every rule.",
       inputSchema: {
         path: pathParam,
         files: z
@@ -356,6 +363,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe("release it comes from (default: the version saved in project.godot)"),
         detail: detailParam,
       },
+      outputSchema: ReviewOutput,
       annotations: writesLearning,
     },
     async ({ path, files, code, file, only_new, target: targetVersion, from, detail }) =>
@@ -397,7 +405,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
               focus,
               missing,
             );
-        return missing.length ? failure(body) : text(body);
+        const noInfos = !profile.infos && (detail ?? profile.detail) === "brief";
+        const list = report.findings.filter((f) => (!focus.length || focus.includes(f.file)) && !(noInfos && f.severity === "info"));
+        const data = reviewData(report, list, profile.findings);
+        return result(body, data, missing.length > 0);
       }),
   );
 
@@ -406,7 +417,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Find usages",
       description:
-        "Find every place a name is used in the project, offline and without the editor: a function, signal, variable, constant, class_name, autoload, input action, group or node name, or a res:// path / uid:// (which files refer to it, and whether it exists). Looks in GDScript code (not comments), in strings where Godot looks names up (connect, emit_signal, is_action_pressed, add_to_group, get_node, load), in scene connections, node names and groups, and in project settings. Call it before you rename, move or delete anything; to make the change everywhere, use godot_rename. For engine API names use godot_api. Returns where the name is defined, then each file with the line number, the kind of use and the line itself (very common names are capped). Read-only.",
+        "Find every place a name is used in the project, offline: a function, signal, variable, constant, class_name, autoload, input action, group or node name, or a res:// path / uid:// (which files refer to it, and whether it exists). Looks in GDScript (not comments), in strings where Godot looks names up (connect, emit_signal, is_action_pressed, add_to_group, get_node, load), in scene connections, node names and groups, and in project settings. Returns the definition, then each use with file, line, kind and the line itself (very common names are capped). Call it before you rename, move or delete anything; godot_rename makes the change everywhere. Read-only.",
       inputSchema: {
         name: z
           .string()
@@ -1213,7 +1224,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "What is wrong, and in which order to fix it",
       description:
-        "One call for a project you do not know yet, or when something is broken and you do not know where to start: runs the review and, when Godot is installed, loads every script and scene with Godot; groups the findings by cause (twenty findings from one missing file are one problem), puts the most urgent first (Godot's errors, then the review's), and gives each the place, the lesson from real projects that explains it, the fix, and whether godot_fix or godot_migrate can do it. Pass `symptom` with what you see going wrong (\"helicopter bounces on the moving deck\") to add the lessons for it. Ends with numbered next steps. Read-only. Use godot_review for the full list and godot_check for Godot's raw output.",
+        "One call for a project you do not know yet, or when something is broken and you do not know where to start: runs the review and, when Godot is installed, loads every script and scene with Godot; groups the findings by cause (twenty findings from one missing file are one problem), most urgent first, each with its place, the lesson that explains it, the fix, and whether godot_fix or godot_migrate can do it; then numbered next steps. Also returns the problems as JSON. `symptom` (\"helicopter bounces on the moving deck\") adds the lessons for what you see. It changes no project files (Godot updates its cache in .godot/). For the full list use godot_review; for Godot's raw output godot_check.",
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only problems in these res:// files"),
@@ -1222,6 +1233,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         limit: z.number().int().min(1).max(100).optional().describe("problems shown in full (default 12)"),
         detail: detailParam,
       },
+      outputSchema: DoctorOutput,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ path, files, symptom, godot, limit, detail }) => {
@@ -1233,7 +1245,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           godotPath: options.godot,
           limit: limit ?? (profile.detail === "brief" ? 8 : 12),
         });
-        return text(formatDoctor(report, detail ?? profile.detail));
+        return result(formatDoctor(report, detail ?? profile.detail), doctorData(report, profile.findings), false);
       } catch (error) {
         return failure(error instanceof Error ? error.message : String(error));
       }
@@ -1310,6 +1322,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe('second Godot binary to diff against, or "next" for $GODOT_NEXT'),
       },
+      outputSchema: CheckOutput,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -1329,26 +1342,24 @@ export function createServer(options: ServerOptions = {}): McpServer {
           });
           const hints = lessonHintsForMessages(compared.onlyOther.map((d) => d.message));
           const body = formatCompare(compared, profile.findings) + hints.join("\n");
-          return compared.onlyOther.some((d) => d.severity === "error") ? failure(body) : text(body);
+          return result(body, compareData(compared, profile.findings));
         }
-        const result = await checkLearning(where(path), {
+        const checked = await checkLearning(where(path), {
           godot: options.godot,
           runFrames: run_frames ?? (scene ? 120 : 0),
           ...(scene ? { scene } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
-        const lines = result.diagnostics.map(formatDiagnostic);
+        const lines = checked.diagnostics.map(formatDiagnostic);
         lines.push(
-          `${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes${result.shaders ? `, ${result.shaders} shaders` : ""})`,
+          `${checked.errors} errors, ${checked.warnings} warnings (Godot ${checked.godotVersion}, ${checked.scripts} scripts, ${checked.scenes} scenes${checked.shaders ? `, ${checked.shaders} shaders` : ""})`,
         );
-        lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
-        if (result.output !== undefined)
+        lines.push(...lessonHintsForMessages(checked.diagnostics.map((d) => d.message)));
+        if (checked.output !== undefined)
           lines.push(
-            `output of the run (${result.ran ? `${result.ran.frames} frames = ${result.ran.seconds} s of game time, ` : ""}what the game printed):\n${result.output || "(nothing)"}`,
+            `output of the run (${checked.ran ? `${checked.ran.frames} frames = ${checked.ran.seconds} s of game time, ` : ""}what the game printed):\n${checked.output || "(nothing)"}`,
           );
-        return result.errors > 0
-          ? failure(lines.join("\n"))
-          : text(lines.join("\n"));
+        return result(lines.join("\n"), checkData(checked, profile.findings));
       } catch (error) {
         if (error instanceof GodotNotFoundError) {
           return failure(
@@ -1659,6 +1670,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("timeout of the run (default 600)"),
       },
+      outputSchema: TestOutput,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -1675,8 +1687,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(filter ? { filter } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
-        const body = formatTests(report);
-        return testsPassed(report) ? text(body) : failure(body);
+        return result(formatTests(report), testData(report, testsPassed(report), profile.findings));
       } catch (error) {
         if (error instanceof GodotNotFoundError)
           return failure(
@@ -1697,7 +1708,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Feedback on a review finding",
       description:
-        "Tell Godotwright that a godot_review finding was wrong (a false alarm you verified) or right, or whether a lesson from godot_lessons helped. Pass `finding` (the line exactly as godot_review printed it) or `lesson` (its id), not both. For a finding, `verdict` wrong hides it in later reviews on this machine and right counts it as confirmed; a rule marked wrong far more often than right is then reported one level lower. For a lesson, right means it helped and ranks it higher; wrong makes it show up less. Only use it after checking the code (godot_api, godot_check); fix real findings instead of marking them. It writes to the local learning file only (`godotwright learn reset` forgets everything). Returns a one-line confirmation; an error when the line is not a finding, the lesson does not exist, or learning is off.",
+        "Tell Godotwright that a godot_review finding was wrong (a false alarm you verified) or right, or whether a lesson from godot_lessons helped. Pass `finding` (the line as godot_review printed it) or `lesson` (its id), not both. A finding marked wrong is hidden in later reviews on this machine, and a rule marked wrong far more often than right is reported one level lower; a lesson marked right ranks higher, wrong lower. Only use it after checking the code (godot_api, godot_check); fix real findings instead. It writes only to the local learning file (`godotwright learn reset` forgets it). An error when the line is not a finding, the lesson does not exist, or learning is off.",
       inputSchema: {
         finding: z
           .string()
@@ -1756,7 +1767,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Lessons from real Godot projects",
       description:
-        `Answer from lessons learned in real Godot 4 projects and on this machine: what went wrong, why in Godot terms, the fix, and how to test it. Find them by \`query\` (words such as 'helicopter slides off moving ship', or a lesson id), by \`error\` (a Godot message exactly as printed: the lessons that explain it), by \`rule\` (the lessons behind a review or model rule), or narrow by \`topic\` (${LESSON_TOPICS.join(", ")}). Without any of them it lists the lessons. \`gaps: true\` instead lists the Godot errors seen on this machine (and by other installs) that no review rule predicted and no lesson explains yet: what to teach Godotwright next. Use it when Godot shows an error you do not understand, and before you build moving platforms, vehicles, ships, large worlds, runtime-loaded models, shaders or headless tests. \`detail\` brief gives the title and fix; full adds symptom, cause, test, rules and the Godot message. Returns plain text; lessons learned here are marked. It counts which lessons were shown in the local learning file (GODOTWRIGHT_LEARN=0 turns that off). Say whether one helped with godot_feedback (\`lesson\`).`,
+        `Answer from lessons learned in real Godot 4 projects and on this machine: what went wrong, why, the fix and how to test it. Find them by \`query\` (words such as 'helicopter slides off moving ship', or a lesson id), \`error\` (a Godot message as printed), \`rule\` (a review or model rule), or narrow by \`topic\` (${LESSON_TOPICS.join(", ")}); with none of them it lists the lessons. \`gaps: true\` lists the Godot errors seen here (and by other installs) that no rule predicts and no lesson explains yet. Use it when Godot shows an error you do not understand, and before you build moving platforms, vehicles, ships, large worlds, runtime-loaded models, shaders or headless tests. \`detail\` brief gives title and fix; full adds symptom, cause, test, rules and the message. Lessons learned here are marked. It counts shown lessons in the local learning file (GODOTWRIGHT_LEARN=0 turns that off); say whether one helped with godot_feedback (\`lesson\`).`,
       inputSchema: {
         query: z.string().optional().describe("words, or a lesson id"),
         error: z.string().optional().describe("a Godot error or warning message, as printed"),
@@ -2165,7 +2176,7 @@ function isSymlink(path: string): boolean {
   }
 }
 
-function guard(fn: () => ReturnType<typeof text> | ReturnType<typeof failure>) {
+function guard<T>(fn: () => T): T | ReturnType<typeof failure> {
   try {
     return fn();
   } catch (error) {
