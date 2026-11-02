@@ -1,9 +1,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Tier } from "../src/mcp/server.js";
-import { DEMO, FIXTURES, makeProject } from "./helpers.js";
+import { DEMO, FIXTURES, makeProject, tempFolder } from "./helpers.js";
 
 async function connect(tier: Tier, root = DEMO) {
   const server = createServer({ tier, root, godot: "/no/such/godot" });
@@ -167,6 +168,13 @@ describe("MCP server (cheap profile)", () => {
     expect(textOf(run)).toContain("not found or not executable");
     const noPreset = (await client.callTool({ name: "godot_export_run", arguments: { path: root } })) as Result;
     expect(textOf(noPreset)).toBe("pack needs preset (its name or number)");
+    // An out outside the project is refused before anything is deleted or written.
+    const keep = join(tempFolder("gw-outside-"), "keep.pck");
+    writeFileSync(keep, "PRECIOUS");
+    const escape = (await client.callTool({ name: "godot_export_run", arguments: { path: root, preset: "Linux", out: keep, frames: 0 } })) as Result;
+    expect(escape.isError).toBe(true);
+    expect(textOf(escape)).toContain("is outside the project");
+    expect(readFileSync(keep, "utf8")).toBe("PRECIOUS");
   });
 
   it("returns errors as tool errors, not crashes", async () => {
