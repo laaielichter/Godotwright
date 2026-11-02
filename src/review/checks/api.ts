@@ -46,6 +46,19 @@ export const MOVED: Record<string, string> = {
   "Engine.editor_hint": "Engine.is_editor_hint()",
 };
 
+/**
+ * Godot 3 global functions removed without a one-to-one rename, so Godot's rename table does not know them.
+ * `canvas` marks functions that only mean this on a CanvasItem.
+ */
+export const REMOVED_FUNCTIONS: Record<string, { to: string; canvas?: boolean }> = {
+  to_json: { to: "JSON.stringify(v)" },
+  parse_json: { to: "JSON.parse_string(s)" },
+  polar2cartesian: { to: "Vector2.from_angle(a) * r" },
+  cartesian2polar: { to: "Vector2(x, y).length() and Vector2(x, y).angle()" },
+  ColorN: { to: 'Color("red") or Color.RED' },
+  update: { to: "queue_redraw()", canvas: true },
+};
+
 /** `.instance()` is Godot 3's PackedScene call. Scripts may define their own `instance()`, so see checkScriptApi. */
 const PACKED_INSTANCE = /\.instance\(\s*\)/;
 
@@ -553,7 +566,12 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       const ctor = pm.resolveTypeName(name, model);
       if (ctor && ctor.kind !== "enum") return { type: { ...ctor, meta: false }, exact: false };
       if (model.dynamic || (options.foreignClasses && /^[A-Z]/.test(name))) return undefined;
-      const hint = renameHint(name, "function") || (/^[A-Z]/.test(name) ? renameHint(name, "type") : "");
+      const removed = REMOVED_FUNCTIONS[name];
+      const removedHint =
+        removed && (!removed.canvas || api.ancestors(pm.nativeOf(model)).some((c) => c.name === "CanvasItem"))
+          ? ` In Godot 4 use \`${removed.to}\`.`
+          : "";
+      const hint = renameHint(name, "function") || (/^[A-Z]/.test(name) ? renameHint(name, "type") : "") || removedHint;
       // An unresolved parent class is already reported; only Godot 3 names are certain then.
       const unresolved = pm.chain(model).some((c) => c.extendsRaw && !c.parent && !c.renamedBase && !pm.resolveClassRef(c.extendsRaw, c));
       if (unresolved && !hint) return undefined;

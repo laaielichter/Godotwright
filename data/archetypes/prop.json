@@ -534,5 +534,338 @@
    "A fire modelled as a solid orange cone looks like a traffic cone; leave the flame to particles.",
    "Logs sunk into the ground or floating above it: they rest on the ground or on each other."
   ]
+ },
+ {
+  "id": "prop.door",
+  "name": "door",
+  "description": "A hinged door in its frame, as in a house or a building.",
+  "aliases": [
+   "door",
+   "doors",
+   "deur",
+   "deuren",
+   "binnendeur",
+   "buitendeur",
+   "voordeur",
+   "front door",
+   "interior door",
+   "doorway",
+   "hinged door"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "structure",
+    "required": true,
+    "aliases": [
+     "frame",
+     "kozijn",
+     "door frame",
+     "deurkozijn"
+    ]
+   },
+   {
+    "name": "Leaf",
+    "role": "door",
+    "required": true,
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge",
+    "note": "The pivot sits on the hinge line at one vertical edge, not in the middle of the leaf.",
+    "aliases": [
+     "leaf",
+     "deurblad",
+     "panel",
+     "slab"
+    ]
+   },
+   {
+    "name": "Handle",
+    "role": "handle",
+    "required": false,
+    "aliases": [
+     "handle",
+     "knob",
+     "klink",
+     "deurklink",
+     "kruk"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.7,
+    1.0
+   ],
+   "height": [
+    1.95,
+    2.15
+   ],
+   "source": "general knowledge: common interior and front door leaves are about 0.73-0.93 m wide and 2.0-2.1 m high (in the Netherlands 0.83 x 2.015 m is a common size, in the US 32 x 80 in = 0.81 x 2.03 m); not a single standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A door that swings around its centre: put the Leaf's origin on the hinge edge.",
+   "The handle belongs on the edge away from the hinges, at about 1.0-1.05 m above the floor."
+  ]
+ },
+ {
+  "id": "prop.ladder",
+  "name": "ladder",
+  "description": "A leaning ladder with two rails and rungs.",
+  "aliases": [
+   "ladder",
+   "ladders",
+   "leaning ladder",
+   "extension ladder",
+   "rung ladder",
+   "sporten ladder",
+   "houten ladder",
+   "ladderpaal"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "RailLeft",
+    "role": "rail",
+    "required": true,
+    "aliases": [
+     "rail left",
+     "left rail",
+     "stile",
+     "boom",
+     "ladderboom"
+    ]
+   },
+   {
+    "name": "RailRight",
+    "role": "rail",
+    "required": true,
+    "aliases": [
+     "rail right",
+     "right rail",
+     "stile",
+     "boom",
+     "ladderboom"
+    ]
+   },
+   {
+    "name": "Rung",
+    "role": "step",
+    "required": true,
+    "note": "Rungs are about 0.25-0.30 m apart.",
+    "aliases": [
+     "rung",
+     "sport",
+     "step",
+     "trede"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.35,
+    0.55
+   ],
+   "height": [
+    1.5,
+    6
+   ],
+   "source": "general knowledge: single leaning ladders are about 0.4-0.5 m wide with rungs about 0.28 m apart (EN 131 sets the rules for portable ladders); length varies with use",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Rungs pushed into the rails leave hidden faces; end them at the inner side of each rail.",
+   "For climbing, add a collision shape and a climb area separate from the visual mesh."
+  ]
+ },
+ {
+  "id": "prop.tent",
+  "name": "tent",
+  "description": "A camping tent: a dome or ridge tent on the ground.",
+  "aliases": [
+   "tent",
+   "tents",
+   "tenten",
+   "camping tent",
+   "dome tent",
+   "koepeltent",
+   "ridge tent",
+   "pup tent",
+   "trekkerstent",
+   "bivouac"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Canvas",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "canvas",
+     "fly",
+     "flysheet",
+     "doek",
+     "tentdoek",
+     "shell"
+    ]
+   },
+   {
+    "name": "Poles",
+    "role": "support",
+    "required": false,
+    "aliases": [
+     "poles",
+     "pole",
+     "stokken",
+     "tentstok",
+     "frame"
+    ]
+   },
+   {
+    "name": "Entrance",
+    "role": "door",
+    "required": false,
+    "aliases": [
+     "entrance",
+     "door",
+     "ingang",
+     "flap"
+    ]
+   },
+   {
+    "name": "GuyRopes",
+    "role": "rope",
+    "required": false,
+    "aliases": [
+     "guy ropes",
+     "ropes",
+     "scheerlijnen",
+     "lines"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    1.8,
+    3.5
+   ],
+   "width": [
+    1.2,
+    3.0
+   ],
+   "height": [
+    0.9,
+    2.0
+   ],
+   "source": "general knowledge: two- to four-person dome tents are about 2-3 m long and 1.0-1.5 m high; family tents are larger",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "The canvas is single-sided cloth: make it double-sided or give it thickness, or it disappears from inside.",
+   "Stand it on y = 0 with the pegs into the ground, not floating above it."
+  ]
+ },
+ {
+  "id": "prop.well",
+  "name": "well",
+  "description": "A water well: a round wall over a shaft, often with a roof and a winch.",
+  "aliases": [
+   "well",
+   "water well",
+   "wishing well",
+   "waterput",
+   "bron",
+   "drinking well",
+   "stone well"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Wall",
+    "role": "walls",
+    "required": true,
+    "aliases": [
+     "wall",
+     "rim",
+     "ring",
+     "muur",
+     "rand"
+    ]
+   },
+   {
+    "name": "Shaft",
+    "role": "water",
+    "required": false,
+    "note": "A dark disc a little below the rim is cheaper than a deep shaft.",
+    "aliases": [
+     "shaft",
+     "hole",
+     "schacht",
+     "water"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": false,
+    "aliases": [
+     "roof",
+     "dak",
+     "kap"
+    ]
+   },
+   {
+    "name": "Winch",
+    "role": "crank",
+    "required": false,
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub",
+    "aliases": [
+     "winch",
+     "windlass",
+     "crank",
+     "lier",
+     "haspel",
+     "zwengel"
+    ]
+   },
+   {
+    "name": "Bucket",
+    "role": "prop",
+    "required": false,
+    "aliases": [
+     "bucket",
+     "emmer"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.9,
+    2.0
+   ],
+   "height": [
+    0.6,
+    3.0
+   ],
+   "source": "general knowledge: the wall of a traditional well is about 1-1.5 m across and 0.7-1 m high; with a roof it reaches about 2.5 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A wall made from a closed cylinder hides the opening; build it as a ring (a tube or a lathe profile).",
+   "The winch turns about its own axle: put its pivot on the axle between the two posts."
+  ]
  }
 ]

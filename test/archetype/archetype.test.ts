@@ -175,6 +175,19 @@ describe("identify", () => {
     expect(best("wind turbine")).toBe("machine.wind-turbine");
   });
 
+  it("knows a door, a ladder, a traffic light, a tent and a well, in English and Dutch", () => {
+    const cases: [string, string][] = [
+      ["door", "prop.door"], ["deur", "prop.door"],
+      ["ladder", "prop.ladder"],
+      ["traffic light", "infrastructure.traffic-light"], ["verkeerslicht", "infrastructure.traffic-light"], ["stoplicht", "infrastructure.traffic-light"],
+      ["tent", "prop.tent"], ["koepeltent", "prop.tent"],
+      ["well", "prop.well"], ["waterput", "prop.well"],
+    ];
+    for (const [name, id] of cases) expect(identify(name, library).best.id, name).toBe(id);
+    const leaf = library.get("prop.door")!.parts!.find((p) => p.name === "Leaf")!;
+    expect(leaf.pivot).toBe("hinge");
+  });
+
   it("reads Dutch compounds by their last word, but an exact name wins", () => {
     const r = identify("vrachtauto", library);
     expect(r.best.id).toBe("vehicle.wheeled.truck");
