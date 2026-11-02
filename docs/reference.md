@@ -24,6 +24,7 @@ godotwright play --input "10 tap jump; 20 hold right 30" --watch Player.position
 godotwright ci                                     # one receipt: review, check, tests and scenarios (markdown, exit 1 on a failure)
 godotwright doctor --symptom "falls through the floor"   # what is wrong and in which order to fix it: review and Godot grouped by cause, with lessons
 godotwright fix --write               # apply the mechanical fixes for review findings (--check for the ones that need a look)
+godotwright fix --stamp-uids --write  # also give scenes, resources, scripts and shaders without a uid one, as Godot makes them
 godotwright perf --scene res://level.tscn   # frame times p50/p95/p99 against a budget, the slowest frames and their cause, vs the last run
 godotwright session start             # load the main scene once, headless and paused; it stays up between commands
 godotwright game step 120 --input "10 tap jump" --watch Hero.position --until "Hero.is_on_floor() == true"   # play frames in the running game
@@ -45,6 +46,7 @@ godotwright project autoload add Game res://game.gd --write   # checks the file 
 godotwright scene add main.tscn . Music AudioStreamPlayer --write   # add a node (or an instance: res://enemy.tscn); only that line changes
 godotwright scene set main.tscn Timer wait_time 0.5 --write   # property name and type checked; enums by name, resources as res:// files
 godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns when the method is missing or takes other arguments
+godotwright scene editable main.tscn Enemy --write   # [editable path="Enemy"]: this scene may change the instance's children (--off removes it)
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
@@ -205,6 +207,41 @@ Every review remembers its findings in `.godot/godotwright/review-last.json` (Go
 already saw as one short line each (`file:line [rule]`), and how many are fixed. A finding keeps its identity when its
 line moves. An agent fixing a long list reads the list once instead of after every edit.
 
+## Scene and resource integrity
+
+Agents copy scenes, invent uids and hand-write `.tscn` files. Godot then loads the wrong file, warns on every load,
+fails to load a scene, or drops an edit the next time someone saves in the editor. `godotwright review` (and the
+post-edit hook) finds these from the files alone, in milliseconds; `godotwright fix` repairs the ones that can be
+repaired mechanically, through the undo journal. Each rule was reproduced with Godot 4.7.2.
+
+| Rule | What Godot does | Fix |
+| --- | --- | --- |
+| `structure/duplicate-uid` | Two files claim one uid (a copied `.tscn`, or a script or asset copied with its `.uid` or `.import` file): "UID duplicate detected" on every import, and a reference by uid can load the other file | `safe`: the file most references name with that uid keeps it (a base project's file always does); the others get a new uid, and references that name them by path follow |
+| `structure/invalid-uid` | A header, `.uid` or `.import` uid that is not `uid://` plus lowercase letters and digits is ignored: the file has no uid | `safe`: a new valid uid |
+| `structure/unknown-uid` | An `ext_resource` uid no file has: "invalid UID ... using text path instead" on every load | `safe`: the uid of the file the path names, or no `uid=`; a script, shader, scene or resource that lost its uid (a `.uid` file not committed) gets back the uid its references use |
+| `structure/uid-path-mismatch` | The uid names another file than the path: Godot silently loads the uid's file | `check`: the uid of the path's file |
+| `structure/missing-resource-id` | `ExtResource("x")` or `SubResource("x")` with no section of that id, or a sub_resource used above its definition: "Parse Error", the file does not load | by hand; the message lists the ids that exist |
+| `structure/duplicate-resource-id` | Two ext_resources or sub_resources with one id: Godot keeps one (the last ext_resource, the first sub_resource) | by hand |
+| `structure/section-order` | An ext_resource after a sub_resource or node, or a sub_resource after a node or `[resource]`: "Parse Error" | by hand |
+| `structure/unused-resource` (info) | A section nothing uses: still loaded with the file | `safe`: removed |
+| `structure/locked-instance-edit` | An override of a node inside an instanced scene, a node added below one, or a connection to one, without `[editable path=...]` for every instance on the way: applied on load, dropped on the next editor save | `check`: adds `[editable path=...]` |
+
+```sh
+godotwright review                      # the findings, with file:line
+godotwright fix                         # dry run: every change, labelled safe or check, with a count (0 means nothing was done)
+godotwright fix --check --write         # apply them; godotwright undo takes them back
+godotwright fix --stamp-uids --write    # also give every scene, resource, script and shader without a uid a new one
+```
+
+New uids are made the way Godot's `ResourceUID.create_id()` and `id_to_text()` make them (a random 63-bit id in base 34,
+digits `a`-`y` and `0`-`8`), and Godot registers them as written. When a uid in a `.uid` or `.import` file changes, the
+file it belongs to is touched so that Godot's file cache reads it again. `godotwright check` (MCP: `godot_check`) tags
+Godot's own uid warnings with the rule that predicts them (`[structure/duplicate-uid]`, `[structure/unknown-uid]`).
+`godotwright scene` (MCP: `godot_scene_edit`) refuses to set a property on, add a node under or connect to a node inside an
+instance that is not editable, unless you pass `--make-editable` (MCP: `make_editable`); `scene editable` (MCP: op
+`set_editable`) adds or removes the entry by itself. Files in a base project or only in a `.pck` list are context: their
+uids count, their own problems are not reported.
+
 ## Review in GitHub Actions
 
 Save this as `.github/workflows/godot-review.yml` in your game repository. It
@@ -344,11 +381,11 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
-| `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
+| `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
 | `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
-| `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
+| `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`, uid repairs across files included; shows them first, then reviews the changed files again |
 | `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
