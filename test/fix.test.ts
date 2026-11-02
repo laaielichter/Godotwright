@@ -111,6 +111,14 @@ describe("godotwright fix: Godot 4.7 upgrade fixes", () => {
     expect(fixed).toContain("\tvar points_copy_7 = $Line.points\n\tpoints_copy_7[1] = Vector2(6, 6)\n\t$Line.points = points_copy_7\n");
   });
 
+  it("leaves a packed write alone when the statement goes on past the line", () => {
+    const source = "extends Line2D\n\n\nfunc _ready() -> void:\n\tpoints[0] = Vector2(1,\n\t\t2)\n\tpoints[1] = \\\n\t\tVector2.ONE\n";
+    const { root, read } = project(source);
+    const result = fixProject(root, { write: true, includeCheck: true });
+    expect(result.changes.filter((c) => c.rule === "api/packed-element-write")).toEqual([]);
+    expect(read()).toBe(source);
+  });
+
   it("replaces a bool image unit with the matching ImageUnit", () => {
     const { root, read } = project(
       'extends RichTextLabel\n\n\nfunc _ready() -> void:\n\tadd_image(null, 8, 8, Color.WHITE, INLINE_ALIGNMENT_CENTER, Rect2(), null, false, "", true, false)\n',
