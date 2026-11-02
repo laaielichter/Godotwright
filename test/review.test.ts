@@ -319,7 +319,7 @@ describe("rules that had no test", () => {
 
   it("structure/engine-version: a project last saved with Godot 4.6", () => {
     expect(ruleLines({ "project.godot": PROJECT.replace('"4.7"', '"4.6"') }, "structure/engine-version")).toEqual([
-      "res://project.godot: info [structure/engine-version] The project was last saved with Godot 4.6; Godotwright targets 4.7.",
+      "res://project.godot: info [structure/engine-version] The project was last saved with Godot 4.6; Godotwright targets 4.7. Upgrade findings cover 4.6 to 4.7; once the project is saved in 4.7, review with from 4.6 to keep them.",
     ]);
   });
 

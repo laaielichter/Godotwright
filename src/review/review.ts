@@ -10,6 +10,8 @@ import { checkScenePitfalls, checkScriptPitfalls, checkShaderPitfalls } from "./
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
 import { checkScriptQuality, checkUnusedSignals, type TypingStats } from "./checks/quality.js";
 import { checkStructure } from "./checks/structure.js";
+import { checkScriptVersion, checkVersionChanges, crosses, NEWEST_TARGET, RULE_SINCE, versionRange, type VersionRange } from "./checks/version.js";
+import { compareVersions } from "../api/removed.js";
 import { ProjectModel } from "./model.js";
 import { CATEGORIES, CATEGORY_WEIGHTS, type Category, type Finding, type Severity } from "./rules.js";
 
@@ -32,6 +34,13 @@ export interface ReviewOptions {
    * not the project. Much faster on large projects.
    */
   focus?: string[];
+  /**
+   * The Godot release the project moves to (e.g. "4.6"); default 4.7. Rules for changes after it are left out, and
+   * the upgrade notes cover the releases from `from` up to it.
+   */
+  target?: string;
+  /** The release the project comes from; default the version in application/config/features. */
+  from?: string;
 }
 
 export interface CategoryScore {
@@ -51,6 +60,8 @@ export interface ReviewReport {
   typing: TypingStats & { percent: number };
   scripts: number;
   scenes: number;
+  /** The upgrade the version rules looked at: from the project's release to the target. */
+  upgrade?: VersionRange;
   /** Set when learning adjusted the findings. */
   learning?: { downgraded: string[]; softened?: string[]; hidden: number };
 }
@@ -64,6 +75,7 @@ const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2
 export function reviewProject(path: string, options: ReviewOptions = {}): ReviewReport {
   const data = loadProject(path, { overrides: options.overrides, base: options.base, baseFiles: options.baseFiles });
   const api = GodotApi.load();
+  const range = versionRange(data.map.project.godotVersion, { from: options.from, target: options.target });
   const pm = new ProjectModel(data, api);
   // Base project files are context, not under review.
   const inScope = (p: string) => !data.external.has(p.replace(/::.*$/, "")) && (options.includeAddons || !p.startsWith("res://addons/"));
@@ -84,7 +96,8 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   const focused = (file: string) => !focus || focus.has(file.replace(/::.*$/, ""));
   for (const script of data.scripts.keys()) {
     if (!inScope(script) || !focused(script)) continue;
-    findings.push(...checkScriptApi(pm, script, { foreignClasses, inputActions }));
+    findings.push(...checkScriptApi(pm, script, { foreignClasses, inputActions, migrating: crosses(range, "4.7") }));
+    findings.push(...checkScriptVersion(pm, script));
     findings.push(...checkScriptPerformance(pm, script));
     findings.push(...checkScriptPhysics(pm, script));
     findings.push(...checkScriptPitfalls(pm, script));
@@ -99,7 +112,11 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   findings.push(...checkScenePitfalls(pm).filter(project));
   findings.push(...checkShaderPitfalls(pm).filter(project));
   findings.push(...checkUnusedSignals(pm).filter(project));
-  findings.push(...checkStructure(pm, { foreignClasses }).filter(project));
+  findings.push(...checkStructure(pm, { foreignClasses, upgrade: range }).filter(project));
+  findings.push(...checkVersionChanges(pm, range).filter(project));
+  // A target before 4.7: rules for changes that came later do not apply yet.
+  const applies = (f: Finding) => !RULE_SINCE[f.rule] || compareVersions(RULE_SINCE[f.rule]!, range.target) <= 0;
+  if (range.target !== NEWEST_TARGET) findings.splice(0, findings.length, ...findings.filter(applies));
 
   const adjusted = options.learning ? adjustFindings(findings, options.learning, options.shared) : undefined;
   const sorted = (adjusted?.findings ?? findings).sort(
@@ -122,6 +139,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     typing: { ...typing, percent: typingPercent },
     scripts: [...data.scripts.keys()].filter(inScope).length,
     scenes: data.map.scenes.filter((sc) => !sc.external && inScope(sc.path)).length,
+    ...(range.from ? { upgrade: range } : {}),
     ...(adjusted && (adjusted.downgraded.length || adjusted.hidden || adjusted.softened?.length)
       ? { learning: { downgraded: adjusted.downgraded, ...(adjusted.softened?.length ? { softened: adjusted.softened } : {}), hidden: adjusted.hidden } }
       : {}),
