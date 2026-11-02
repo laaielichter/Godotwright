@@ -1,3 +1,5 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -5,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkProject } from "../../src/check/check.js";
 import { formatDiagnostic } from "../../src/check/log.js";
+import { createServer } from "../../src/mcp/server.js";
 import { checkShaders, formatShaderCheck } from "../../src/shaders/shaders.js";
 import { makeProject } from "../helpers.js";
 
@@ -58,6 +61,24 @@ describe.skipIf(!GODOT || !SCREEN)("shader compile check in Godot", () => {
     expect(result.shaders).toMatchObject({ compiled: 4, parsed: 0, errors: 2 });
     expect(result.diagnostics.filter((d) => d.source === "shader").map((d) => `${d.file}:${d.line}`)).toEqual(["res://fx/downwash.gdshader:6", "res://fx/hull.gdshader:6"]);
     expect(result.errors).toBe(2);
+  });
+
+  it("runs from the godot_check tool with shaders: true", { timeout: 300_000 }, async () => {
+    const root = project();
+    const server = createServer({ tier: "premium", root, godot: GODOT! });
+    const client = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), client.connect(b)]);
+    try {
+      const r = (await client.callTool({ name: "godot_check", arguments: { shaders: true } })) as { content: { text: string }[]; isError?: boolean };
+      const text = r.content.map((c) => c.text).join("\n");
+      console.log(text);
+      expect(r.isError).toBe(true);
+      expect(text).toContain("res://fx/hull.gdshader:6: error: Invalid assignment of 'vec3' to 'float'.");
+      expect(text).toMatch(/^shaders: 4 compiled, 2 errors \(opengl3 gl_compatibility/m);
+    } finally {
+      await Promise.all([client.close(), server.close()]);
+    }
   });
 
   describe.skipIf(!DEMOS)("official demos", () => {
