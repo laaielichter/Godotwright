@@ -163,6 +163,7 @@ const FIXERS: Record<string, Fixer> = {
   "quality/standalone-ternary": (lines, i) => {
     const line = lines[i]!;
     if (line.includes("#") || line.includes(";") || /:\s*$/.test(line)) return "the line has a comment, a semicolon or a header";
+  if (continues(line)) return "the statement goes on past this line";
     const indent = /^\s*/.exec(line)![0];
     const code = line.slice(indent.length).trimEnd();
     const ifs = topLevelWord(code, "if");
@@ -259,6 +260,7 @@ const FIXERS: Record<string, Fixer> = {
 const packedWrite: Fixer = (lines, i, finding) => {
   const line = lines[i]!;
   if (line.includes("#") || line.includes(";") || /:\s*$/.test(line)) return "the line has a comment, a semicolon or a header";
+  if (continues(line)) return "the statement goes on past this line";
   const write = /^(\s*)((?:self\.|\$[\w/]+\.|%\w+\.|[A-Za-z_]\w*\.)*([A-Za-z_]\w*))(\[.*)$/;
   const m = write.exec(line);
   if (!m) return "the write is not a plain name chain at the start of the line";
@@ -279,6 +281,23 @@ const packedWrite: Fixer = (lines, i, finding) => {
     safety: finding.rule === "api/packed-element-write" ? "safe" : "check",
   };
 };
+
+/** True when a statement goes on past this line: a backslash at the end, or brackets left open (strings skipped). */
+function continues(line: string): boolean {
+  if (/\\\s*$/.test(line)) return true;
+  let depth = 0;
+  let quote = "";
+  for (let k = 0; k < line.length; k++) {
+    const c = line[k]!;
+    if (quote) {
+      if (c === "\\") k++;
+      else if (c === quote) quote = "";
+    } else if (c === '"' || c === "'") quote = c;
+    else if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+  }
+  return depth !== 0 || quote !== "";
+}
 
 /** The node or sub-resource block a .tscn finding points at: from its header to the line before the next header. */
 function sectionAt(lines: string[], index: number): number {
