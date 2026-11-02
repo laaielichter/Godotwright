@@ -8,7 +8,14 @@
         "mcp",
         "--tier",
         "premium"
-      ]
+      ],
+      "env": {
+        "GODOTWRIGHT_PROJECT": "${user_config.project}",
+        "GODOT": "${user_config.godot}",
+        "GODOTWRIGHT_PROTECT": "${user_config.protect}",
+        "GODOTWRIGHT_TOOLS": "${user_config.tools}",
+        "GODOTWRIGHT_READ_ONLY": "${user_config.read_only}"
+      }
     }
   }
 }

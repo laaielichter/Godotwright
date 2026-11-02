@@ -5,8 +5,8 @@
 // It fails open: when godotwright cannot run, is too old to know the event, or takes too long, it prints nothing and
 // exits 0, so a hook never stands in the way.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const event = process.argv[2];
@@ -19,10 +19,35 @@ try {
   process.exit(0);
 }
 
-// Only Godot files and Godot output are worth starting godotwright for.
+/**
+ * Whether any protection can apply: a protect setting, or a godotwright.json with "protect" in or above the file's
+ * folder, the session's folder or the default project, or in a direct subfolder of the session's folder (the same
+ * places godotwright looks). Cheap, so most edits never start godotwright.
+ */
+function maybeProtected(file, cwd) {
+  const set = (v) => Boolean(v && v.trim() && !v.trim().startsWith("${"));
+  if (set(process.env.GODOTWRIGHT_PROTECT) || set(process.env.CLAUDE_PLUGIN_OPTION_PROTECT)) return true;
+  const base = cwd || process.cwd();
+  const has = (dir) => {
+    const config = join(dir, "godotwright.json");
+    return existsSync(config) && readFileSync(config, "utf8").includes('"protect"');
+  };
+  const above = (start) => {
+    for (let dir = resolve(base, start); ; dir = dirname(dir)) {
+      if (has(dir)) return true;
+      if (dirname(dir) === dir) return false;
+    }
+  };
+  const project = [process.env.GODOTWRIGHT_PROJECT, process.env.CLAUDE_PLUGIN_OPTION_PROJECT].find(set);
+  if ((file && above(dirname(isAbsolute(file) ? file : resolve(base, file)))) || above(base) || (project && above(project))) return true;
+  return readdirSync(base, { withFileTypes: true }).some((e) => e.isDirectory() && has(join(base, e.name)));
+}
+
+// Only Godot files, Godot output and writes near a "protect" list are worth starting godotwright for.
 try {
   const data = JSON.parse(input || "{}");
-  const file = String(data?.tool_input?.file_path ?? "");
+  const file = String(data?.tool_input?.file_path ?? data?.tool_input?.notebook_path ?? "");
+  if (event === "pre-edit" && !maybeProtected(file, data?.cwd)) process.exit(0);
   if (event === "post-edit" && !/\.(gd|tscn|tres|gdshader)$|project\.godot$/.test(file)) process.exit(0);
   if (event === "post-bash") {
     const r = data?.tool_response;

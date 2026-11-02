@@ -80,7 +80,7 @@ describe("Claude Code plugin and marketplace", () => {
 
   it("runs its hooks through the shim, for events and scripts that exist", () => {
     const hooks = read("plugins/godotwright/hooks/hooks.json") as { hooks: Record<string, { matcher?: string; hooks: { type: string; command: string }[] }[]> };
-    expect(Object.keys(hooks.hooks).sort()).toEqual(["PostToolUse", "SessionStart", "Stop"]);
+    expect(Object.keys(hooks.hooks).sort()).toEqual(["PostToolUse", "PreToolUse", "SessionStart", "Stop"]);
     const events = new Set<string>();
     for (const groups of Object.values(hooks.hooks)) {
       for (const group of groups) {

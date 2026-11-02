@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { assertWritable } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 
 /**
@@ -102,13 +103,26 @@ export class JournalWriter {
     }
   }
 
+  /** Refuses a protected path (godotwright.json "protect"); what this call wrote before is kept in the journal, so undo still works. */
+  private guard(full: string): void {
+    try {
+      assertWritable(full);
+    } catch (error) {
+      if (this.before.size && this.dir === undefined) this.commit();
+      throw error;
+    }
+  }
+
   write(full: string, data: string | Uint8Array): void {
+    this.guard(full);
     this.remember(full);
     mkdirSync(dirname(full), { recursive: true });
     writeFileSync(full, data);
   }
 
   move(from: string, to: string): void {
+    this.guard(from);
+    this.guard(to);
     this.remember(from);
     this.remember(to);
     mkdirSync(dirname(to), { recursive: true });
@@ -179,6 +193,8 @@ export function undoJournal(path: string, options: { steps?: number; force?: boo
       blocked = { entry, changed, notKept };
       break;
     }
+    // Undo writes too: a protected file is refused before any file of the entry is put back.
+    for (const f of entry.files) assertWritable(fromResPath(root, f.file));
     const restored: string[] = [];
     const removed: string[] = [];
     for (const f of entry.files) {
