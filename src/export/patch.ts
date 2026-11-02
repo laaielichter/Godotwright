@@ -116,11 +116,10 @@ function checkAgainstPacks(full: Pck, bases: Pck[], patch: Pck): Diagnostic[] {
     if (b && b.entry.md5 === e.md5) continue;
     if (!inPatch.has(e.path)) out.push({ severity: "error", file: `res://${e.path}`, message: `${b ? "changed against the base" : "new"} in a fresh full export, but the patch does not hold it`, source: "patch" });
   }
-  for (const path of base.keys()) {
-    if (fullPaths.has(path)) continue;
-    const e = inPatch.get(path);
-    if (!e || !(e.flags & PACK_FILE_REMOVAL)) out.push({ severity: "warning", file: `res://${path}`, message: "the base has it and the project no longer does, but the patch does not remove it", source: "patch" });
-  }
+  const kept = [...base.keys()].filter((path) => !fullPaths.has(path) && !((inPatch.get(path)?.flags ?? 0) & PACK_FILE_REMOVAL));
+  const message = "the base has it and the project no longer does, but the patch does not remove it";
+  if (kept.length <= 5) for (const path of kept) out.push({ severity: "warning", file: `res://${path}`, message, source: "patch" });
+  else out.push({ severity: "warning", message: `${kept.length} files the base has and the project no longer does are not removed by the patch (${kept.slice(0, 5).join(", ")}, ...)`, source: "patch" });
   return out;
 }
 
