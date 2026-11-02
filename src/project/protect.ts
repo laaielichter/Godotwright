@@ -5,7 +5,7 @@
  * hook refuse to write there. Godot's own cache folder (.godot/) inside a protected project is not protected:
  * Godot rewrites it whenever it opens the project.
  */
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export const PROTECT_KEY = "protect";
@@ -16,6 +16,8 @@ export interface Protection {
   path: string;
   /** Where it was named: a godotwright.json file, or $GODOTWRIGHT_PROTECT. */
   source: string;
+  /** Set when the write targets the godotwright.json that holds the list itself. */
+  list?: boolean;
 }
 
 export class ProtectedPathError extends Error {
@@ -24,21 +26,33 @@ export class ProtectedPathError extends Error {
     readonly protection: Protection,
   ) {
     super(
-      `${file} is protected (${protection.path} is in "${PROTECT_KEY}" of ${protection.source}) and must stay byte-identical; ` +
-        "write in a copy instead, such as a candidate folder.",
+      protection.list
+        ? `${file} holds a "${PROTECT_KEY}" list and is guarded; change it by hand, not through an agent.`
+        : `${file} is protected (${protection.path} is in "${PROTECT_KEY}" of ${protection.source}) and must stay byte-identical; ` +
+            "write in a copy instead, such as a candidate folder.",
     );
     this.name = "ProtectedPathError";
   }
 }
 
-/** The real path of a path that may not exist yet: its nearest existing folder resolved, the rest appended. */
-function real(path: string): string {
+/**
+ * The real path of a path that may not exist yet: its nearest existing folder resolved, the rest appended. A dangling
+ * symlink resolves to its target, since a write through it creates the target.
+ */
+function real(path: string, depth = 0): string {
   const parts: string[] = [];
   let at = resolve(path);
   for (;;) {
     try {
       return join(realpathSync.native(at), ...parts.reverse());
     } catch {
+      let link: string | undefined;
+      try {
+        if (lstatSync(at).isSymbolicLink()) link = readlinkSync(at);
+      } catch {
+        // Nothing at this path: walk up.
+      }
+      if (link !== undefined && depth < 40) return join(real(resolve(dirname(at), link), depth + 1), ...parts.reverse());
       const up = dirname(at);
       if (up === at) return resolve(path);
       parts.push(basename(at));
@@ -51,6 +65,11 @@ function inside(dir: string, path: string): boolean {
   const caseless = process.platform === "win32" || process.platform === "darwin";
   const rel = caseless ? relative(dir.toLowerCase(), path.toLowerCase()) : relative(dir, path);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+function same(a: string, b: string): boolean {
+  const caseless = process.platform === "win32" || process.platform === "darwin";
+  return caseless ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 
 /** A "protect" value from godotwright.json: one path or a list. */
@@ -125,7 +144,12 @@ export function protections(from: string, env: NodeJS.ProcessEnv = process.env, 
 /** The protection a write to `file` would break, or undefined when the write may go ahead. */
 export function protectionOf(file: string, env: NodeJS.ProcessEnv = process.env, cwd: string = process.cwd()): Protection | undefined {
   const target = real(resolve(cwd, file));
-  for (const p of protections(dirname(target), env, cwd)) {
+  const all = protections(dirname(target), env, cwd);
+  // The list itself is guarded too, or it could be edited away before the next write.
+  for (const p of all) {
+    if (p.source !== "$GODOTWRIGHT_PROTECT" && same(real(p.source), target)) return { ...p, list: true };
+  }
+  for (const p of all) {
     if (!inside(p.path, target)) continue;
     // Godot's cache inside a protected project is Godot's to rewrite.
     const rel = relative(p.path, target).split(sep);
