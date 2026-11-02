@@ -94,7 +94,7 @@ describe.skipIf(!GODOT)("shader tables against Godot 4.7", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("every render mode in the table compiles; Godot 3 ones do not", { timeout: 300_000 }, async () => {
+  it("every render and stencil mode in the table compiles; Godot 3 and unknown ones do not", { timeout: 300_000 }, async () => {
     const cases: { label: string; code: string; ok: boolean }[] = [];
     for (const t of types) {
       const fn = mainsOf(t)[0]!;
@@ -104,6 +104,15 @@ describe.skipIf(!GODOT)("shader tables against Godot 4.7", () => {
         }
       }
     }
+    for (const t of types) {
+      const fn = mainsOf(t)[0]!;
+      for (const [mode, options] of Object.entries(api.shaderType(t)!.stencilModes)) {
+        for (const name of options.length ? options.map((o) => `${mode}_${o}`) : [mode]) {
+          cases.push({ label: `${t} stencil ${name}`, code: `shader_type ${t};\nstencil_mode ${name}, 1;\nvoid ${fn}() {}\n`, ok: true });
+        }
+      }
+    }
+    cases.push({ label: "spatial stencil compare_none", code: "shader_type spatial;\nstencil_mode read, compare_none, 1;\nvoid fragment() {}\n", ok: false });
     for (const bad of ["depth_draw_alpha_prepass", "async_visible", "cull_none", "blend_screen"]) {
       cases.push({ label: `spatial ${bad}`, code: `shader_type spatial;\nrender_mode ${bad};\nvoid fragment() {}\n`, ok: false });
     }
