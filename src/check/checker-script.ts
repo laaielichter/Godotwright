@@ -13,6 +13,7 @@ func _initialize() -> void:
 	var scenes: PackedStringArray = PackedStringArray()
 	var shaders: PackedStringArray = PackedStringArray()
 	_collect("res://", scripts, scenes, shaders)
+	printerr(MARKER + "_TOTAL " + str(scripts.size() + scenes.size() + shaders.size()))
 	for path: String in scripts:
 		printerr(MARKER + "_BEGIN " + path)
 		var _script: Resource = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
