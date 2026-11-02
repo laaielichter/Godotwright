@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { checkProject, runOutput } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
-import { findGodot, GodotNotFoundError } from "../src/check/godot.js";
+import { descendantPids, findGodot, GodotNotFoundError, runGodot } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
 
 /** Temp folders this file creates; removed once the tests are done. */
@@ -259,6 +259,42 @@ describe("findGodot", () => {
     const root = home(["Downloads/Godot_v4.7.2-stable_linux.x86_64"]);
     expect(findGodot(undefined, { HOME: root }, "linux")).toBe(join(root, "Downloads", "Godot_v4.7.2-stable_linux.x86_64"));
     expect(() => findGodot(undefined, { HOME: home(["Downloads/godot.txt"]) }, "linux")).toThrow(GodotNotFoundError);
+  });
+});
+
+/** Whether a process still runs: not gone and not a zombie waiting for its parent. */
+function running(pid: number): boolean {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    return stat[stat.lastIndexOf(")") + 2] !== "Z";
+  } catch {
+    return false;
+  }
+}
+
+describe("runGodot on a timeout", () => {
+  it.skipIf(process.platform !== "linux")("stops what a wrapper such as xvfb-run started, and lets the wrapper clean up", async () => {
+    const dir = tempDir("gw-kill-");
+    const marker = join(dir, "marker");
+    const pidFile = join(dir, "pid");
+    writeFileSync(marker, "");
+    // Like xvfb-run: a server in the background, the command in the foreground, cleanup in an EXIT trap.
+    const script = `trap 'rm -f "${marker}"' EXIT; sleep 60 & echo $! > "${pidFile}"; sleep 60; exit 0`;
+    const started = Date.now();
+    const result = await runGodot("sh", ["-c", script], { timeoutMs: 500 });
+    expect(result.timedOut).toBe(true);
+    expect(Date.now() - started).toBeLessThan(5000);
+    const server = Number(readFileSync(pidFile, "utf8"));
+    expect(running(server)).toBe(false);
+    expect(existsSync(marker)).toBe(false);
+    expect(descendantPids(process.pid)).not.toContain(server);
+  });
+
+  it.skipIf(process.platform === "win32")("still kills a process that started nothing at once", async () => {
+    const started = Date.now();
+    const result = await runGodot("sleep", ["60"], { timeoutMs: 300 });
+    expect(result.timedOut).toBe(true);
+    expect(Date.now() - started).toBeLessThan(2000);
   });
 });
 

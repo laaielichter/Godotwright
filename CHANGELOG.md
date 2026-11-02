@@ -2,6 +2,31 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
+## 0.5.0 (Godot's own code intelligence, real shader compilation, visual tests)
+
+- **`godot_code` (and `godotwright code`): Godot's own view of a script.** Diagnostics, hover, definition and
+  completion from Godot 4.7's GDScript language server, which runs headless as an editor and stays warm for 10
+  minutes per project. It reports warnings at the project's own levels, the inferred type of a variable, where a name
+  is defined and what can follow a dot, also for unsaved code. It restarts by itself when a class_name, project.godot
+  or a file that needs an import changes, waits for calls queued on a server it replaces, and keeps Godot's debug
+  adapter off port 6006 so it does not block an editor you open.
+- **Real shader compilation: `godotwright shaders`, `check --shaders`, `godot_check` `shaders: true`.** Headless Godot
+  never compiles shaders, so this draws every spatial, canvas_item, particles and sky shader on the Compatibility
+  renderer (xvfb-run on Linux without a display) and parses fog shaders; errors come back at the line in the
+  .gdshader, .gdshaderinc or the .tres/.tscn that embeds it, every includer of a broken include is named, and Godot 3
+  built-ins, hints and render modes get their Godot 4 form. After a timeout, shaders that were never drawn are
+  reported as not compiled, and nothing is left running.
+- **Visual tests: screenshot baselines and diffs.** `godot_screenshot` takes `baseline` ("auto" or a .png path),
+  `threshold` and `update_baseline`; `godotwright screenshot` takes `--baseline [file]`, `--threshold`, `--tolerance`
+  and `--update-baseline`. The first picture becomes the baseline in `.godotwright/baselines/` (Godot does not import
+  it, so it can be committed); later ones are compared pixel by pixel: unchanged is one line of text (no image
+  tokens), a change gives the percent, the box of the largest change, the mean shift and a diff picture with changed
+  pixels in red, as an error result (exit code 1 in the CLI). A change below the threshold is still named.
+- **Deterministic screenshots:** Godot renders with `--fixed-fps 60` and fixed seeds for random numbers and particles,
+  so repeated renders of the official demos are pixel identical. The render script compiles even when a project turns
+  GDScript warnings into errors.
+- **Godot runs that time out stop everything they started**, also under xvfb-run (Xvfb and its temp folder included).
+
 ## 0.4.0 (a game that stays up, a doctor, undo, and what the build and the project really hold)
 
 - **`godot_doctor` (and `godotwright doctor`): what is wrong, in which order to fix it, and why.** One call runs the

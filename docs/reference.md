@@ -31,6 +31,9 @@ godotwright game reload               # put the scripts you edited into the runn
 godotwright game ui --size 1280x720 --size 720x1280   # clipped labels, off-screen panels, overlapping buttons per window size
 godotwright export                    # what the build will miss: excluded preloads, data files missing from include_filter
 godotwright deps unused               # files nothing the game starts with reaches, biggest first; `deps why <file>` before deleting one
+godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, completion; --code for unsaved text)
+godotwright shaders                   # compile every shader by drawing it (headless Godot never does); errors at the line in the .gdshader
+godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
 godotwright screenshot --model car.glb --view front,side,top,iso   # a PNG of a model from four sides (or of a scene); says how much is drawn
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
@@ -328,7 +331,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 32 tools
+### The 33 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -346,17 +349,18 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
 | `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
+| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
-| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
+| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain; `shaders: true` also compiles every shader by drawing it |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
-| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn |
+| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn; with `baseline`, a visual test: unchanged as text only, or the percent changed, where, and a diff picture |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |

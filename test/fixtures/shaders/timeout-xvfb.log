@@ -1,0 +1,82 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+
+GODOTWRIGHT_SHADERS_FILE	res://s1.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s1.gdshader	res://s1.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s10.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s10.gdshader	res://s10.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s11.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s11.gdshader	res://s11.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s12.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s12.gdshader	res://s12.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s13.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s13.gdshader	res://s13.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s14.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s14.gdshader	res://s14.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s15.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s15.gdshader	res://s15.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s16.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s16.gdshader	res://s16.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s17.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s17.gdshader	res://s17.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s18.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s18.gdshader	res://s18.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s19.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s19.gdshader	res://s19.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s2.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s2.gdshader	res://s2.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s20.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s20.gdshader	res://s20.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s3.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s3.gdshader	res://s3.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s4.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s4.gdshader	res://s4.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s5.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s5.gdshader	res://s5.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s6.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s6.gdshader	res://s6.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s7.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s7.gdshader	res://s7.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s8.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s8.gdshader	res://s8.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://s9.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://s9.gdshader	res://s9.gdshader
+GODOTWRIGHT_SHADERS_PARSED	20
+GODOTWRIGHT_SHADERS_DRAW	res://s1.gdshader
+GODOTWRIGHT_SHADERS_MS	9.2	res://s1.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s10.gdshader
+GODOTWRIGHT_SHADERS_MS	5.7	res://s10.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s11.gdshader
+GODOTWRIGHT_SHADERS_MS	3.1	res://s11.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s12.gdshader
+GODOTWRIGHT_SHADERS_MS	3.8	res://s12.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s13.gdshader
+GODOTWRIGHT_SHADERS_MS	2.8	res://s13.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s14.gdshader
+GODOTWRIGHT_SHADERS_MS	3.7	res://s14.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s15.gdshader
+GODOTWRIGHT_SHADERS_MS	2.9	res://s15.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s16.gdshader
+GODOTWRIGHT_SHADERS_MS	3.3	res://s16.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s17.gdshader
+GODOTWRIGHT_SHADERS_MS	2.8	res://s17.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s18.gdshader
+GODOTWRIGHT_SHADERS_MS	4.8	res://s18.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s19.gdshader
+GODOTWRIGHT_SHADERS_MS	3.7	res://s19.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s2.gdshader
+GODOTWRIGHT_SHADERS_MS	3.0	res://s2.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s20.gdshader
+GODOTWRIGHT_SHADERS_MS	3.6	res://s20.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s3.gdshader
+GODOTWRIGHT_SHADERS_MS	2.9	res://s3.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://s4.gdshader
+GODOTWRIGHT_SHADERS_MS	3.0	res://s4.gdshader
+X connection to :99 broken (explicit kill or server shutdown).
+ERROR: BUG: Unreferenced static string to 0: servers
+   at: unref (core/string/string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: Variant
+   at: unref (core/string/string_name.cpp:118)
+Terminated

@@ -1,9 +1,10 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseProjectSettings } from "../godot/project-settings.js";
-import { findProjectRoot } from "../project/files.js";
+import { findProjectRoot, withoutSubResource } from "../project/files.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
+import { asCheckDiagnostic, checkShaders, ShaderCheckError } from "../shaders/shaders.js";
 import { checkerSource, excludePath } from "./checker-script.js";
 import { findGodot, godotVersion, runGodot, type RunResult } from "./godot.js";
 import { MARKER, parseGodotLog, type Diagnostic } from "./log.js";
@@ -27,6 +28,8 @@ export interface CheckOptions {
   timeoutMs?: number;
   /** Keep the raw Godot output of each step in the result. */
   keepLogs?: boolean;
+  /** Also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run). */
+  shaders?: boolean;
 }
 
 export interface CheckStep {
@@ -51,6 +54,8 @@ export interface CheckResult {
   output?: string;
   /** How long the run was in game time: frames at the project's physics rate. */
   ran?: { frames: number; fps: number; seconds: number };
+  /** With `shaders`: how many were compiled, parsed only (fog) or not reached (the check stopped early), and on which renderer. */
+  shaders?: { compiled: number; parsed: number; notReached: number; errors: number; renderer: string };
 }
 
 /** How much of a run's output is kept: the last lines, so a loop that prints every frame does not drown the rest. */
@@ -109,7 +114,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   // Folders the user excluded are skipped by the checker, so their scan warnings are not wanted either.
   const excluded = exclude.map(excludePath);
   for (const w of scanProject(root).warnings) {
-    const file = w.file.replace(/::.*$/, "");
+    const file = withoutSubResource(w.file);
     if (excluded.some((folder) => file.startsWith(`${folder}/`))) continue;
     diagnostics.push({ severity: "warning", file: w.file, line: w.line, message: w.message, source: "scan" });
   }
@@ -163,6 +168,25 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     rmSync(checkerDir, { recursive: true, force: true });
   }
 
+  let shaders: CheckResult["shaders"];
+  if (options.shaders) {
+    const started = Date.now();
+    try {
+      // `exclude` already holds addons unless they are wanted.
+      const r = await checkShaders(root, { godot: bin, import: false, exclude, includeAddons: Boolean(options.includeAddons), timeoutMs, ...(options.keepLogs ? { keepLogs: true } : {}) });
+      diagnostics.push(...r.diagnostics.map(asCheckDiagnostic));
+      const count = (how: string) => r.shaders.filter((s) => s.compiled === how).length;
+      shaders = { compiled: count("gpu"), parsed: count("parsed"), notReached: count("none"), errors: r.errors, renderer: r.renderer };
+      for (const [name, log] of Object.entries(r.logs ?? {})) logs[`shaders ${name}`] = log;
+      // The run that failed, else the last one.
+      const run = r.runs.find((s) => s.timedOut || s.exitCode !== 0) ?? r.runs.at(-1);
+      steps.push({ name: "shaders", ms: Date.now() - started, exitCode: run ? run.exitCode : 0, timedOut: r.runs.some((s) => s.timedOut) });
+    } catch (error) {
+      if (!(error instanceof ShaderCheckError)) throw error;
+      diagnostics.push({ severity: "error", message: error.message, source: "shader" });
+    }
+  }
+
   const frames = options.runFrames ?? (options.scene ? 120 : 0);
   let output: string | undefined;
   let fps = 60;
@@ -197,6 +221,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     errors: clean.filter((d) => d.severity === "error").length,
     warnings: clean.filter((d) => d.severity === "warning").length,
     ...(options.keepLogs ? { logs } : {}),
+    ...(shaders ? { shaders } : {}),
     ...(output !== undefined ? { output, ran: { frames, fps, seconds: Math.round((frames / fps) * 100) / 100 } } : {}),
   };
 }
