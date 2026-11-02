@@ -345,13 +345,15 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
     wanted,
     ...(focus ? { focus: new Set(focus) } : {}),
     stamp: options.stampUids,
+    includeCheck: options.includeCheck === true,
     lines: (file) => (existsSync(fromResPath(root, file)) ? textOf(file).lines : undefined),
   });
+  needsCheck += plan.needsCheck;
   const planned = new Map<string, { edit: Edit; finding: Finding }[]>();
   for (const e of plan.edits) {
     const list = planned.get(e.file) ?? [];
     if (list.some((p) => p.edit.index === e.index)) continue;
-    list.push({ edit: { index: e.index, count: e.count, lines: e.lines, safety: "safe", ...(e.note ? { note: e.note } : {}) }, finding: { rule: e.rule, line: e.index + 1, file: e.file } as Finding });
+    list.push({ edit: { index: e.index, count: e.count, lines: e.lines, safety: e.safety ?? "safe", ...(e.note ? { note: e.note } : {}) }, finding: { rule: e.rule, line: e.index + 1, file: e.file } as Finding });
     planned.set(e.file, list);
   }
   const ctx: FixContext = { uidAfter: plan.uidAfter };
