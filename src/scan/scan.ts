@@ -245,13 +245,14 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       if (ext === "uid") {
         const uid = read(file).trim();
         if (uid.startsWith("uid://")) uids.set(uid, file.slice(0, -".uid".length));
-        uidClaims.push({ uid, file: file.slice(0, -".uid".length), from: "uid" });
+        // A .uid file left behind by a deleted or moved file claims nothing: Godot only reads it next to its file.
+        if (fileSet.has(file.slice(0, -".uid".length))) uidClaims.push({ uid, file: file.slice(0, -".uid".length), from: "uid" });
       } else if (ext === "import") {
         const remap = parsed(file, "import", parseResourceFile).find((s) => s.tag === "remap");
         const uid = asString(remap?.props["uid"]);
         if (uid) {
           uids.set(uid, file.slice(0, -".import".length));
-          uidClaims.push({ uid, file: file.slice(0, -".import".length), from: "import" });
+          if (fileSet.has(file.slice(0, -".import".length))) uidClaims.push({ uid, file: file.slice(0, -".import".length), from: "import" });
         }
       } else if (ext === "tscn" || ext === "tres") {
         const resource = parsed(file, "resource", parseResourceText);

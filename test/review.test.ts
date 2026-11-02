@@ -943,6 +943,10 @@ describe("scene and resource integrity", () => {
     ).toEqual([]);
   });
 
+  it("ignores a .uid file left behind by a moved script (Godot 4.7.2 does too)", () => {
+    expect(quiet({ "new.gd": "extends Node\n", "new.gd.uid": "uid://cwx83o7xktq7h\n", "old.gd.uid": "uid://cwx83o7xktq7h\n" })).toEqual([]);
+  });
+
   it("checks against the base project, but not a base's own problems or files only a .pck has", () => {
     const base = makeProject({ "project.godot": PROJECT, "child.tscn": child, "dup_in_base.tscn": child });
     const root = makeProject({
