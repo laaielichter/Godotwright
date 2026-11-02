@@ -89,6 +89,7 @@ import {
   type View,
 } from "../screenshot/screenshot.js";
 import { PlayError, formatPlay, playScene } from "../play/play.js";
+import { formatLeaks, leakScene } from "../perf/leaks.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
@@ -189,6 +190,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export; with `pck` it reads an exported pack instead.",
       "- godot_export_run exports for real, headless: a pack, release or debug build, or a patch with only what changed against base packs or the base game's file list. It checks the file, compares the pack with what the game loads, and runs the exported game for some frames with errors and call chains. Run it before you call a build done.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
+      "- godot_leaks loads, runs and frees a scene in cycles headless and reports what grows per cycle (orphan nodes by class, script and scene with where they were made and removed, nodes left behind, objects that are not nodes). Use it when memory or the orphan count grows, and again after the fix to prove 0 per cycle.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
@@ -1115,6 +1117,49 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return report.verdict === "ok" && report.run.finished ? text(body) : failure(body);
       } catch (error) {
         if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for the static performance checks without Godot.`);
+        if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  server.registerTool(
+    "godot_leaks",
+    {
+      title: "Find what leaks per scene reload",
+      description:
+        "Run a scene in Godot 4.7 headless in cycles (load, run cycle_frames frames, free; or keep: true to keep it running), snapshot the live objects after each cycle and report what grows per cycle after the warm-up: orphan nodes by class, script and scene with the parent they were removed from, the code that makes them and the remove_child() that dropped them; nodes left in the tree; objects that are not nodes, with the classes Godot still held at exit (--verbose) and the static or autoload containers that grow. `input` replays a timeline in every cycle. An error result when objects or orphan nodes grow more than the budget per cycle (default 0). Compares with the last run with the same mode, cycle_frames and input (.godot/godotwright/leaks/).",
+      inputSchema: {
+        path: pathParam,
+        scene: z.string().optional().describe("the res:// scene to cycle (default: the main scene)"),
+        cycles: z.number().int().min(2).max(1000).optional().describe("cycles (default 5)"),
+        cycle_frames: z.number().int().min(1).max(100_000).optional().describe("frames per cycle (default 60)"),
+        warmup: z.number().int().min(0).optional().describe("first cycles not counted (default 1)"),
+        keep: z.boolean().optional().describe("keep the scene running instead of freeing it each cycle"),
+        input: z.string().optional().describe('timeline replayed each cycle: "10 press load; 40 press unload"'),
+        objects_per_cycle: z.number().min(0).optional().describe("allowed object growth per cycle (default 0)"),
+        orphans_per_cycle: z.number().min(0).optional().describe("allowed orphan-node growth per cycle (default 0)"),
+        timeout_seconds: z.number().int().min(10).max(3600).optional().describe("timeout of the run (default 300)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, scene, cycles, cycle_frames, warmup, keep, input, objects_per_cycle, orphans_per_cycle, timeout_seconds }) => {
+      try {
+        const report = await leakScene(where(path), {
+          godot: options.godot,
+          ...(scene ? { scene } : {}),
+          ...(cycles ? { cycles } : {}),
+          ...(cycle_frames ? { cycleFrames: cycle_frames } : {}),
+          ...(warmup !== undefined ? { warmupCycles: warmup } : {}),
+          reload: keep !== true,
+          ...(input ? { input } : {}),
+          budget: { ...(objects_per_cycle !== undefined ? { objects: objects_per_cycle } : {}), ...(orphans_per_cycle !== undefined ? { orphans: orphans_per_cycle } : {}) },
+          timeoutMs: (timeout_seconds ?? 300) * 1000,
+        });
+        const body = formatLeaks(report);
+        return report.verdict === "ok" && report.run.finished ? text(body) : failure(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for the static checks without Godot.`);
         if (error instanceof PlayError || error instanceof ProjectNotFoundError) return failure(error.message);
         throw error;
       }

@@ -25,6 +25,9 @@ Work on $ARGUMENTS (or what the user named). Never optimise without a number bef
    in the background with `ResourceLoader.load_threaded_request()`; warm shaders with the same settings as the real view.
 5. **Measure again** with `godot_perf`, the same case and the same method: it shows the change since the last run. Keep the change only when the numbers say so; say how
    much it helped (worst frame, average, load time, memory).
-6. Keep lessons with `godot_lesson_add` when a cause was hard to find.
+6. **Memory that grows** over a long session (or orphan nodes growing in `godot_perf`): run `godot_leaks` on the scene
+   that streams or reloads. It names the class, script and line of what is left behind per cycle; after the fix it
+   must show 0 per cycle.
+7. Keep lessons with `godot_lesson_add` when a cause was hard to find.
 
 End with a table: change, before, after, kept or dropped.

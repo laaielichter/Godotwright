@@ -5,6 +5,7 @@ import { findProjectRoot } from "../project/files.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { checkerSource, excludePath } from "./checker-script.js";
+import { parseExitLeaks, type ExitLeaks } from "./exit-leaks.js";
 import { findGodot, godotVersion, runGodot, type RunResult } from "./godot.js";
 import { MARKER, parseGodotLog, type Diagnostic } from "./log.js";
 
@@ -27,6 +28,8 @@ export interface CheckOptions {
   timeoutMs?: number;
   /** Keep the raw Godot output of each step in the result. */
   keepLogs?: boolean;
+  /** When the run leaks objects or resources at exit, run it once more with --verbose to name them (default true). */
+  leakDetails?: boolean;
 }
 
 export interface CheckStep {
@@ -185,6 +188,13 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
         d.message = `at exit: ${d.message}`;
       }
     }
+    const leaks = found.filter((d) => /ObjectDB instances? (?:were|was) leaked|resources? still in use at exit/.test(d.message));
+    if (leaks.length && options.leakDetails !== false && !result.timedOut) {
+      // Godot names what leaked only with --verbose, which also floods the output; so a second run, only for the names.
+      const verbose = await run("run-verbose", ["--verbose", "--fixed-fps", String(fps), "--quit-after", String(frames), ...(scene ? [scene] : [])]);
+      const named = parseExitLeaks(`${verbose.stdout}\n${verbose.stderr}`);
+      for (const d of leaks) d.message = withLeakNames(d.message, named);
+    }
     diagnostics.push(...found);
     const exit = unexplainedExit("run", result, found);
     if (exit) diagnostics.push(exit);
@@ -219,6 +229,20 @@ function shaderTypeError(d: Diagnostic): Diagnostic {
   const types = "spatial, canvas_item, particles, sky, fog or texture_blit";
   const message = m[1] ? `Unknown shader_type ${m[1]}: use ${types}.` : `No shader_type: start the shader with shader_type ${types}.`;
   return { ...d, message, source: "shader" };
+}
+
+/** "at exit: 15 ObjectDB instances were leaked at exit (run with ...)" with the classes or resources Godot named. */
+export function withLeakNames(message: string, named: ExitLeaks): string {
+  const short = message.replace(/\s*\(run with `?--verbose`? for details\)\.?/, "").replace(/\.$/, "");
+  if (/ObjectDB/.test(message)) {
+    const classes = Object.entries(named.instances).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    if (!classes.length) return message;
+    const list = classes.slice(0, 8).map(([c, n]) => `${c} x${n}`).join(", ");
+    return `${short}: ${list}${classes.length > 8 ? `, +${classes.length - 8} classes` : ""} (godot_leaks shows where they come from)`;
+  }
+  const own = named.resources.filter((r) => !r.path.startsWith("res://.godot/"));
+  if (!own.length) return message;
+  return `${short}: ${own.slice(0, 6).map((r) => `${r.path} (${r.type})`).join(", ")}${own.length > 6 ? `, +${own.length - 6} more` : ""}`;
 }
 
 /** The project's physics ticks per second (default 60). */
@@ -268,7 +292,8 @@ export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
     const restated = /^Failed to load script "(.+?)" with error/.exec(d.message);
     if (restated && scriptErrors.has(restated[1])) return false;
     const paths = d.message.match(MENTIONED_PATH) ?? [];
-    const vague = d.source === "scan" || !d.line;
+    // An at-exit leak names the files still in use; it does not restate their errors.
+    const vague = (d.source === "scan" || !d.line) && !d.message.startsWith("at exit:");
     if (vague && paths.length > 0 && paths.every((p) => located.has(p))) return false;
     const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
     if (seen.has(key)) return false;

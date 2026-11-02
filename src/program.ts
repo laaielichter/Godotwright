@@ -7,6 +7,7 @@ import { doctorCommand } from "./commands/doctor.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
 import { depsCommand } from "./commands/deps.js";
+import { leaksCommand } from "./commands/leaks.js";
 import { perfCommand } from "./commands/perf.js";
 import { gameCommand, sessionCommand } from "./commands/session.js";
 import { fixCommand } from "./commands/fix.js";
@@ -45,6 +46,7 @@ export function createProgram(): Command {
     .addCommand(testCommand())
     .addCommand(playCommand())
     .addCommand(perfCommand())
+    .addCommand(leaksCommand())
     .addCommand(sessionCommand())
     .addCommand(gameCommand())
     .addCommand(scenarioCommand())
