@@ -85,7 +85,7 @@ const list: Rule[] = [
   // Project structure.
   { id: "structure/broken-reference", category: "structure", severity: "error", title: "Broken reference", fix: "Fix the path or uid, or restore the missing file." },
   { id: "structure/parse-error", category: "structure", severity: "error", title: "File does not parse", fix: "Fix the syntax error at the line shown, or re-save the file from the Godot editor." },
-  { id: "structure/duplicate-uid", category: "structure", severity: "error", title: "Two files share a uid", fix: "Give the copy a new uid with godot_fix (stamps a valid one and updates references to the copy); the file most references name keeps it." },
+  { id: "structure/duplicate-uid", category: "structure", severity: "error", title: "Two files share a uid", fix: "Give the copy a new uid with godot_fix (stamps a valid one and updates references to the copy); the file most references name keeps it, or, when references name the uid alone, the file Godot loads for it now." },
   { id: "structure/invalid-uid", category: "structure", severity: "warning", title: "Uid Godot cannot read", fix: "Replace it with a valid uid (uid:// plus a-y and 0-8): godot_fix stamps one." },
   { id: "structure/unknown-uid", category: "structure", severity: "warning", title: "ext_resource uid no file has", fix: "Use the uid of the file the path names, or drop uid= (godot_fix does it); never invent a uid." },
   { id: "structure/uid-path-mismatch", category: "structure", severity: "error", title: "ext_resource uid and path name different files", fix: "Make the uid match the path (godot_fix), or change the path if the uid's file was meant." },

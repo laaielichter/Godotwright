@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readFileSync, statSync, utimesSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FIXABLE_RULES, fixProject, formatFix } from "../src/fix/fix.js";
@@ -134,6 +134,41 @@ describe("godotwright fix: uids and resource sections", () => {
     expect(existsSync(join(root, "lost.gd.uid"))).toBe(false);
     expect(read("dup.tscn")).toBe(read("child.tscn"));
     expect(integrity(root).length).toBeGreaterThan(5);
+  });
+
+  it("keeps a duplicated uid on the file Godot resolves it to, and asks for a check when only uid references could tell", () => {
+    const files = {
+      "project.godot": PROJECT + 'run/main_scene="uid://caaaaaaaaaa1"\n',
+      "a.tscn": '[gd_scene format=3 uid="uid://caaaaaaaaaa1"]\n\n[node name="A" type="Node"]\n',
+      "sub/b.tscn": '[gd_scene format=3 uid="uid://caaaaaaaaaa1"]\n\n[node name="B" type="Node"]\n',
+      "s.gd": 'extends Node\nconst S = preload("uid://caaaaaaaaaa1")\n',
+      "main.tscn":
+        '[gd_scene format=3]\n\n[ext_resource type="PackedScene" uid="uid://caaaaaaaaaa1" path="res://sub/b.tscn" id="1"]\n[ext_resource type="PackedScene" uid="uid://caaaaaaaaaa1" path="res://sub/b.tscn" id="2"]\n\n[node name="Main" type="Node"]\n\n[node name="X" parent="." instance=ExtResource("1")]\n\n[node name="Y" parent="." instance=ExtResource("2")]\n',
+    };
+    // No uid cache: the main scene and the preload name the uid alone, so which file keeps it needs a check.
+    const root = makeProject(files);
+    const dry = fixProject(root);
+    expect(dry.changes).toEqual([]);
+    expect(dry.needsCheck).toBe(1);
+    const checked = fixProject(root, { includeCheck: true });
+    expect(checked.changes.map((c) => `${c.file} ${c.safety}`)).toEqual(["res://a.tscn check"]);
+    expect(checked.changes[0]!.note).toContain("2 references by uid alone (res://project.godot:4, res://s.gd:2) will load res://sub/b.tscn");
+    // Godot's uid cache says the uid loads a.tscn now: a.tscn keeps it, safely, and the references to b.tscn follow b.
+    const cached = makeProject(files);
+    const name = Buffer.from("res://a.tscn");
+    const entry = Buffer.alloc(12);
+    entry.writeBigInt64LE(140377687276064794n, 0); // uid://caaaaaaaaaa1, as Godot 4.7.2 stores it
+    entry.writeUInt32LE(name.length, 8);
+    const count = Buffer.alloc(4);
+    count.writeUInt32LE(1);
+    mkdirSync(join(cached, ".godot"), { recursive: true });
+    writeFileSync(join(cached, ".godot", "uid_cache.bin"), Buffer.concat([count, entry, name]));
+    const result = fixProject(cached, { write: true });
+    expect(result.changes.map((c) => `${c.file}:${c.line} ${c.safety}`)).toEqual(["res://main.tscn:3 safe", "res://main.tscn:4 safe", "res://sub/b.tscn:1 safe"]);
+    expect(readFileSync(join(cached, "a.tscn"), "utf8")).toContain('uid="uid://caaaaaaaaaa1"');
+    const fresh = /uid="([^"]+)"/.exec(readFileSync(join(cached, "sub/b.tscn"), "utf8"))![1]!;
+    expect(fresh).not.toBe("uid://caaaaaaaaaa1");
+    expect(readFileSync(join(cached, "main.tscn"), "utf8")).toContain(`uid="${fresh}" path="res://sub/b.tscn" id="1"`);
   });
 
   it("gives a copied script or asset a new uid in its .uid or .import file, and keeps the original's", () => {
