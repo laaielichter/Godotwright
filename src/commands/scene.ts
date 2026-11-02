@@ -5,6 +5,7 @@ import { writeOut } from "./output.js";
 
 interface Common {
   write?: boolean;
+  makeEditable?: boolean;
   json?: boolean;
   project?: string;
 }
@@ -27,6 +28,10 @@ const common = (c: Command): Command =>
     .option("--json", "print the plan as JSON")
     .option("--project <path>", "project directory, for a res:// scene path (default: the current directory)");
 
+/** For changes that may land inside an instanced scene. */
+const editableOption = (c: Command): Command => c.option("--make-editable", "when the change is inside an instanced scene, also make it editable");
+const make = (options: Common) => (options.makeEditable ? { makeEditable: true } : {});
+
 const SCENE = "the .tscn file (a file path, or res:// with --project)";
 
 export function sceneCommand(): Command {
@@ -35,15 +40,15 @@ export function sceneCommand(): Command {
   );
 
   scene.addCommand(
-    common(
+    editableOption(common(
       new Command("add")
         .description("add a node: scene add main.tscn . Music AudioStreamPlayer, or an instance: scene add main.tscn . Enemy res://enemy.tscn")
         .argument("<scene>", SCENE)
         .argument("<parent>", 'path of the parent node ("." is the root)')
         .argument("<name>", "name of the new node")
         .argument("<type>", "a Godot node class, or a res:// scene to instance"),
-    ).action((file: string, parent: string, name: string, type: string, options: Common, command: Command) =>
-      run(command, file, { op: "add_node", parent, name, ...(type.startsWith("res://") ? { instance: type } : { type }) }, options),
+    )).action((file: string, parent: string, name: string, type: string, options: Common, command: Command) =>
+      run(command, file, { op: "add_node", parent, name, ...(type.startsWith("res://") ? { instance: type } : { type }), ...make(options) }, options),
     ),
   );
 
@@ -57,21 +62,21 @@ export function sceneCommand(): Command {
   );
 
   scene.addCommand(
-    common(
+    editableOption(common(
       new Command("set")
         .description("set a property: the name and type are checked (an enum takes its name, a resource a res:// file)")
         .argument("<scene>", SCENE)
         .argument("<node>", 'path of the node ("." is the root)')
         .argument("<property>", "property name, e.g. position or wait_time")
         .argument("<value>", "the value: 3, true, Vector2(10, 20), ALWAYS, res://icon.svg, null"),
-    ).action((file: string, node: string, property: string, value: string, options: Common, command: Command) =>
-      run(command, file, { op: "set", node, property, value }, options),
+    )).action((file: string, node: string, property: string, value: string, options: Common, command: Command) =>
+      run(command, file, { op: "set", node, property, value, ...make(options) }, options),
     ),
   );
 
   for (const op of ["connect", "disconnect"] as const) {
     scene.addCommand(
-      common(
+      editableOption(common(
         new Command(op)
           .description(op === "connect" ? "connect a signal to a method; checks the signal exists and the method takes its arguments" : "remove a signal connection")
           .argument("<scene>", SCENE)
@@ -79,8 +84,8 @@ export function sceneCommand(): Command {
           .argument("<signal>", "signal name")
           .argument("<to>", "path of the node that receives")
           .argument("<method>", "method name"),
-      ).action((file: string, from: string, signal: string, to: string, method: string, options: Common, command: Command) =>
-        run(command, file, { op, from, signal, to, method }, options),
+      )).action((file: string, from: string, signal: string, to: string, method: string, options: Common, command: Command) =>
+        run(command, file, op === "connect" ? { op, from, signal, to, method, ...make(options) } : { op, from, signal, to, method }, options),
       ),
     );
   }
@@ -93,6 +98,15 @@ export function sceneCommand(): Command {
         .argument("<node>", 'path of the node ("." is the root)')
         .argument("<script>", "res:// path of the .gd or .cs file"),
     ).action((file: string, node: string, script: string, options: Common, command: Command) => run(command, file, { op: "attach_script", node, script }, options)),
+  );
+  scene.addCommand(
+    common(
+      new Command("editable")
+        .description("let this scene change the children of an instanced scene ([editable path=...], Editable Children in the editor); --off removes it")
+        .argument("<scene>", SCENE)
+        .argument("<node>", "path of the instanced scene's node")
+        .option("--off", "make it not editable again"),
+    ).action((file: string, node: string, options: Common & { off?: boolean }, command: Command) => run(command, file, { op: "set_editable", node, editable: !options.off }, options)),
   );
   return scene;
 }

@@ -610,7 +610,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Change a scene",
       description:
-        'Change a .tscn safely, without the editor: add a node (a Godot class or an instanced scene), remove a node (with its children, connections and the resources only it used), set a property (name and type checked against Godot 4.7; enums by name, resources as res:// files), connect or disconnect a signal (checks the signal exists, and warns when the method is missing or takes the wrong number of arguments, with the func line to add), or attach a script (refuses one that extends another node type). Node paths are relative to the scene root, which is ".". `op` picks the change and which fields it needs: add_node (parent, name, and type or instance), remove_node (node), set (node, property, value), connect and disconnect (from, signal, to, method), attach_script (node, script). Only the lines of that change are touched. Without `write` it changes nothing and returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a change it refuses returns an error and writes nothing. Use it instead of editing .tscn files by hand. For project.godot use godot_project_edit; to rename a node everywhere, use godot_rename.',
+        'Change a .tscn safely, without the editor: add a node (a Godot class or an instanced scene), remove a node (with its children, connections and the resources only it used), set a property (name and type checked against Godot 4.7; enums by name, resources as res:// files), connect or disconnect a signal (checks the signal exists, and warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach a script (refuses one that extends another node type), or make the children of an instanced scene editable (set_editable). A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; pass make_editable to add [editable] with it. Node paths are relative to the scene root, which is ".". `op` picks the change and which fields it needs: add_node (parent, name, and type or instance), remove_node (node), set (node, property, value), connect and disconnect (from, signal, to, method), attach_script (node, script), set_editable (node, editable). Only the lines of that change are touched. Without `write` it changes nothing and returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a change it refuses returns an error and writes nothing. Use it instead of editing .tscn files by hand. For project.godot use godot_project_edit; to rename a node everywhere, use godot_rename.',
       inputSchema: {
         scene: z.string().describe("the scene: res://main.tscn, or a path"),
         op: z
@@ -621,13 +621,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
             "connect",
             "disconnect",
             "attach_script",
+            "set_editable",
           ])
           .describe("what to change"),
         node: z
           .string()
           .optional()
           .describe(
-            'remove_node/set/attach_script: path of the node ("." is the root)',
+            'remove_node/set/attach_script/set_editable: path of the node ("." is the root)',
           ),
         parent: z
           .string()
@@ -672,6 +673,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe("attach_script: res:// path of the script"),
+        editable: z.boolean().optional().describe("set_editable: false to make it not editable (default true)"),
+        make_editable: z.boolean().optional().describe("add_node/set/connect: also make the instance editable when the change is inside one"),
         write: z
           .boolean()
           .optional()
@@ -693,6 +696,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       };
       try {
         const { op } = args;
+        const make = args.make_editable ? { makeEditable: true } : {};
         const edit: SceneEdit =
           op === "add_node"
             ? {
@@ -702,6 +706,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
                 ...(args.instance
                   ? { instance: args.instance }
                   : { type: need("type") }),
+                ...make,
               }
             : op === "remove_node"
               ? { op, node: need("node") }
@@ -711,16 +716,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
                     node: need("node"),
                     property: need("property"),
                     value: need("value"),
+                    ...make,
                   }
                 : op === "attach_script"
                   ? { op, node: need("node"), script: need("script") }
-                  : {
-                      op,
-                      from: need("from"),
-                      signal: need("signal"),
-                      to: need("to"),
-                      method: need("method"),
-                    };
+                  : op === "set_editable"
+                    ? { op, node: need("node"), editable: args.editable !== false }
+                    : op === "connect"
+                      ? { op, from: need("from"), signal: need("signal"), to: need("to"), method: need("method"), ...make }
+                      : {
+                          op,
+                          from: need("from"),
+                          signal: need("signal"),
+                          to: need("to"),
+                          method: need("method"),
+                        };
         const scene = args.scene.startsWith("res://")
           ? args.scene
           : where(args.scene);
