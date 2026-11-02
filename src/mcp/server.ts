@@ -178,7 +178,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
-      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
+      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn and whether it is blank. Use it to look at what you built. With `baseline` it compares with the stored picture of that name (pixels changed, boxes, moves) so you can prove a visual change, or that nothing else changed.",
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
       "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
       "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
@@ -1150,7 +1150,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Screenshot a scene or model",
       description:
-        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. It warns when the picture is blank (black, transparent, one colour). `baseline` (a name) compares with .godotwright/baselines/<name>.png (made when missing; its scene, size, views and frames are reused): changed pixels, boxes of change and how far a box moved, brightness, pass/fail by `tolerance` (per channel, 0..255) and `max_changed` (%); a change returns the diff picture (changed pixels magenta) instead of the render and is not an error. `update: true` replaces the baseline. Runs are deterministic (fixed frame rate); baselines are made with the Compatibility renderer, so Forward+-only effects differ from the game. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1188,6 +1188,30 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(10_000)
           .optional()
           .describe("frames to run before the picture (default 10)"),
+        baseline: z
+          .string()
+          .optional()
+          .describe("compare with the baseline of this name (made when missing)"),
+        update: z
+          .boolean()
+          .optional()
+          .describe("with baseline: replace it with this picture"),
+        tolerance: z
+          .number()
+          .min(0)
+          .max(255)
+          .optional()
+          .describe("per-channel difference still the same pixel (default 16)"),
+        max_changed: z
+          .number()
+          .min(0)
+          .max(100)
+          .optional()
+          .describe("% of pixels that may change and still pass (default 0.1)"),
+        baseline_dir: z
+          .string()
+          .optional()
+          .describe("baseline folder (default .godotwright/baselines)"),
       },
       annotations: {
         readOnlyHint: false,
@@ -1196,7 +1220,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, scene, model, views, width, height, frames }) => {
+    async ({ path, scene, model, views, width, height, frames, baseline, update, tolerance, max_changed, baseline_dir }) => {
       try {
         const report = await takeScreenshot(where(path), {
           godot: options.godot,
@@ -1206,15 +1230,32 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(width ? { width } : {}),
           ...(height ? { height } : {}),
           ...(frames ? { frames } : {}),
+          ...(baseline ? { baseline } : {}),
+          ...(update ? { update } : {}),
+          ...(tolerance !== undefined ? { tolerance } : {}),
+          ...(max_changed !== undefined ? { maxChanged: max_changed } : {}),
+          ...(baseline_dir ? { baselineDir: baseline_dir } : {}),
         });
+        // A baseline that did not change needs no picture; a changed one shows the diff, not the render.
+        const status = report.baseline?.status;
+        const picture =
+          status === "same"
+            ? undefined
+            : status === "changed" && report.baseline?.diffPath
+              ? report.baseline.diffPath
+              : report.file;
         return {
           content: [
             { type: "text" as const, text: formatScreenshot(report) },
-            {
-              type: "image" as const,
-              data: readFileSync(report.file).toString("base64"),
-              mimeType: "image/png",
-            },
+            ...(picture
+              ? [
+                  {
+                    type: "image" as const,
+                    data: readFileSync(picture).toString("base64"),
+                    mimeType: "image/png",
+                  },
+                ]
+              : []),
           ],
         };
       } catch (error) {

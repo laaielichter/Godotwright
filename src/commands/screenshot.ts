@@ -9,10 +9,23 @@ interface Options {
   scene?: string;
   model?: string;
   view?: View[];
-  size: { width: number; height: number };
-  frames: number;
+  size?: { width: number; height: number };
+  frames?: number;
   out?: string;
   json?: boolean;
+  baseline?: string;
+  update?: boolean;
+  baselineDir?: string;
+  tolerance?: number;
+  maxChanged?: number;
+}
+
+function parseNumber(min: number, max: number) {
+  return (value: string): number => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < min || n > max) throw new InvalidArgumentError(`expected a number from ${min} to ${max}`);
+    return n;
+  };
 }
 
 function parseSize(value: string): { width: number; height: number } {
@@ -35,9 +48,14 @@ export function screenshotCommand(): Command {
     .option("--scene <res-path>", "the scene to render (default: the main scene)")
     .option("--model <file>", "a .glb or .gltf model to look at instead of a scene")
     .option("--view <views>", `camera views for a model or a 3D scene without a camera, comma-separated: ${VIEWS.join(", ")} (default iso; several make a grid)`, parseViews)
-    .option("--size <WxH>", "size of one view (default 640x360)", parseSize, { width: 640, height: 360 })
-    .option("--frames <n>", "frames to run before the picture (default 10)", (v: string) => Number.parseInt(v, 10), 10)
+    .option("--size <WxH>", "size of one view (default 640x360)", parseSize)
+    .option("--frames <n>", "frames to run before the picture (default 10)", (v: string) => Number.parseInt(v, 10))
     .option("-o, --out <file>", "where to write the PNG (default: .godot/godotwright/screenshot.png, or the model name with .png)")
+    .option("--baseline <name>", "compare with the baseline of this name in .godotwright/baselines (made when missing; its settings are used), exit code 1 when it changed")
+    .option("--update", "with --baseline: replace the baseline with this picture")
+    .option("--baseline-dir <dir>", "folder for baselines (default .godotwright/baselines)")
+    .option("--tolerance <0-255>", "per-channel difference that still counts as the same pixel (default 16, or the baseline's)", parseNumber(0, 255))
+    .option("--max-changed <percent>", "largest share of changed pixels that still passes (default 0.1, or the baseline's)", parseNumber(0, 100))
     .option("--json", "print the result as JSON")
     .action(async (path: string, options: Options, command: Command) => {
       try {
@@ -46,12 +64,18 @@ export function screenshotCommand(): Command {
           ...(options.scene ? { scene: options.scene } : {}),
           ...(options.model ? { model: options.model } : {}),
           ...(options.view ? { views: options.view } : {}),
-          width: options.size.width,
-          height: options.size.height,
-          frames: options.frames,
+          ...(options.size ? { width: options.size.width, height: options.size.height } : {}),
+          ...(options.frames !== undefined ? { frames: options.frames } : {}),
           ...(options.out ? { out: options.out } : {}),
+          ...(options.baseline ? { baseline: options.baseline } : {}),
+          ...(options.update ? { update: true } : {}),
+          ...(options.baselineDir ? { baselineDir: options.baselineDir } : {}),
+          ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
+          ...(options.maxChanged !== undefined ? { maxChanged: options.maxChanged } : {}),
         });
-        writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatScreenshot(report));
+        if (options.update && !options.baseline) process.stderr.write("--update does nothing without --baseline <name>\n");
+        writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatScreenshot(report, "run again with --update"));
+        if (report.baseline && !report.baseline.ok) process.exitCode = 1;
       } catch (error) {
         if (error instanceof GodotNotFoundError) {
           process.exitCode = 2;

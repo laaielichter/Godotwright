@@ -42,3 +42,46 @@ describe("screenshot", () => {
     expect(text).toContain("  side: 0% drawn  <- nothing drawn");
   });
 });
+
+describe("screenshot baselines", () => {
+  const project = () =>
+    makeProject({
+      "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n',
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node2D"]\n',
+      ".godotwright/baselines/hud.json": JSON.stringify({ scene: "res://main.tscn", width: 320, height: 180, frames: 10 }),
+      ".godotwright/baselines/hud.png": "x",
+      ".godotwright/baselines/jump-top.json": JSON.stringify({ scene: "res://main.tscn", width: 640, height: 360, frames: 30, scenario: ".godotwright/scenarios/jump.json" }),
+    });
+
+  it("refuses to compare with other settings than the baseline's, before starting Godot", async () => {
+    await expect(takeScreenshot(project(), { baseline: "hud", width: 640, godot: "/nope" })).rejects.toThrow(
+      "baseline hud was taken with other settings: width 640 (baseline: 320). Leave them out to compare like for like, or pass update to replace the baseline.",
+    );
+    await expect(takeScreenshot(project(), { baseline: "hud", scene: "other.tscn", godot: "/nope" })).rejects.toThrow(/scene other.tscn \(baseline: res:\/\/main.tscn\)/);
+  });
+
+  it("leaves a scenario's baseline to the scenario", async () => {
+    await expect(takeScreenshot(project(), { baseline: "jump-top", godot: "/nope" })).rejects.toThrow(/belongs to the scenario .godotwright\/scenarios\/jump.json/);
+  });
+
+  it("puts the blank warning and the comparison under the picture", () => {
+    const text = formatScreenshot(
+      {
+        file: "/p/.godot/godotwright/diff/hud.actual.png",
+        width: 320,
+        height: 180,
+        subject: "scene res://main.tscn",
+        views: [],
+        coverage: [{ view: "scene", percent: 0 }],
+        autoCamera: false,
+        renderer: "gl_compatibility",
+        diagnostics: [],
+        blank: "the whole picture is black",
+        baseline: { name: "hud", status: "same", ok: true, baseline: ".godotwright/baselines/hud.png", actual: ".godot/godotwright/diff/hud.actual.png", notes: [], blank: "the whole picture is black" },
+      },
+      "run again with --update",
+    );
+    expect(text).toContain("  warning: the picture is blank: the whole picture is black\nbaseline hud: same\n");
+    expect(text.match(/blank/g)).toHaveLength(1);
+  });
+});
