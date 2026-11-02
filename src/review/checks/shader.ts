@@ -144,7 +144,7 @@ function checkType(ctx: Context): void {
   if (ctx.shader.include) return;
   const types = api.shaderTypes();
   if (!parsed.type) {
-    ctx.out.push(finding("api/shader-type", ctx.path, ctx.at(1), `No shader_type: Godot needs one of ${types.map((t) => `shader_type ${t};`).join(", ")} as the first statement.`));
+    ctx.out.push(finding("api/shader-type", ctx.path, ctx.at(1), `No shader_type: start the shader with shader_type ${types[0]}; (or ${types.slice(1).join(", ")}).`));
   } else if (!api.shaderType(parsed.type)) {
     const near = closest(parsed.type, types);
     ctx.out.push(
