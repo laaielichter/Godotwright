@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { lessonsForError, searchLessons } from "../lessons/search.js";
 import { playScene, PlayError, type PlayReport, type PlayTimings } from "../play/play.js";
@@ -117,7 +117,8 @@ export async function perfScene(path: string, options: PerfOptions = {}): Promis
 
   let baseline: PerfReport["baseline"];
   const file = baselinePath(root, run.scene);
-  if (options.baseline !== false && existsSync(file)) {
+  if (options.baseline !== false) {
+    // No baseline yet when the file is not there.
     try {
       baseline = JSON.parse(readFileSync(file, "utf8")) as PerfReport["baseline"];
     } catch {

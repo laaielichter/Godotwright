@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createConnection, createServer } from "node:net";
 import { join } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
@@ -79,7 +79,7 @@ function alive(pid: number): boolean {
 
 export function readSession(path: string): SessionInfo | undefined {
   const file = paths(projectRoot(path)).info;
-  if (!existsSync(file)) return undefined;
+  // No session when the file is not there.
   try {
     const info = JSON.parse(readFileSync(file, "utf8")) as SessionInfo;
     return alive(info.pid) ? info : undefined;
@@ -142,7 +142,13 @@ export async function startSession(path: string, options: SessionOptions = {}): 
     if (status?.["ok"]) return { info: running, loadSeconds: 0, reused: true, diagnostics: [] };
   }
   if (running) await stopSession(root);
-  const settings = parseProjectSettings(existsSync(join(root, "project.godot")) ? readFileSync(join(root, "project.godot"), "utf8") : "");
+  let projectText = "";
+  try {
+    projectText = readFileSync(join(root, "project.godot"), "utf8");
+  } catch {
+    // No project.godot: no settings.
+  }
+  const settings = parseProjectSettings(projectText);
   const scene = options.scene ? (options.scene.startsWith("res://") ? options.scene : `res://${options.scene.replace(/^\/+/, "")}`) : settings.mainScene;
   if (!scene) throw new PlayError("no scene: pass scene (a res:// path), or set a main scene (application/run/main_scene)");
   if (!existsSync(fromResPath(root, scene))) throw new PlayError(`${scene} does not exist in the project`);
@@ -165,8 +171,9 @@ export async function startSession(path: string, options: SessionOptions = {}): 
   closeSync(log);
   const info: SessionInfo = { pid: child.pid ?? 0, port, token, scene, started: new Date(started).toISOString(), logOffset: 0, fps };
   // Wait until the scene has loaded and the port answers, or the game says why it cannot.
+  let text = "";
   for (;;) {
-    let text = "";
+    text = "";
     try {
       text = readFileSync(p.log, "utf8");
     } catch {
@@ -187,7 +194,7 @@ export async function startSession(path: string, options: SessionOptions = {}): 
     }
     await sleep(100);
   }
-  const text = readFileSync(p.log, "utf8");
+  // The log as read when the game said it was ready: what it printed while loading.
   info.logOffset = Buffer.byteLength(text);
   writeFileSync(p.info, JSON.stringify(info, null, 2));
   return { info, loadSeconds: Math.round((Date.now() - started) / 100) / 10, reused: false, diagnostics: parseGodotLog(text, "session") };
@@ -198,12 +205,20 @@ export function newDiagnostics(path: string): Diagnostic[] {
   const root = projectRoot(path);
   const p = paths(root);
   const info = readSession(root);
-  if (!info || !existsSync(p.log)) return [];
-  const size = statSync(p.log).size;
-  if (size <= info.logOffset) return [];
-  const fd = openSync(p.log, "r");
-  const buffer = Buffer.alloc(size - info.logOffset);
+  if (!info) return [];
+  // One open file for the size and the read, so the offset saved is the end of what was read.
+  let fd: number;
   try {
+    fd = openSync(p.log, "r");
+  } catch {
+    return [];
+  }
+  let size = 0;
+  let buffer = Buffer.alloc(0);
+  try {
+    size = fstatSync(fd).size;
+    if (size <= info.logOffset) return [];
+    buffer = Buffer.alloc(size - info.logOffset);
     readSync(fd, buffer, 0, buffer.length, info.logOffset);
   } finally {
     closeSync(fd);

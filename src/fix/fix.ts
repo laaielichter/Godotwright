@@ -199,7 +199,7 @@ const FIXERS: Record<string, Fixer> = {
     const m = /^\s*([A-Za-z_][\w.]*)\s*\.\s*(?:use_custom_data|use_colors|transform_format)\s*=/.exec(lines[i]!);
     if (!m) return "the format is not set on a line of its own";
     const { start } = blockAround(lines, i);
-    const name = m[1]!.replace(/[.$]/g, "\\$&");
+    const name = m[1]!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     for (let k = i - 1; k > start; k--) {
       if (new RegExp(`^\\s*${name}\\s*=\\s*MultiMesh\\s*\\.\\s*new|^\\s*var\\s+${name}\\b`).test(lines[k]!)) break;
       if (new RegExp(`^\\s*${name}\\s*\\.\\s*instance_count\\s*=`).test(lines[k]!)) {

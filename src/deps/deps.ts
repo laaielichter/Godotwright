@@ -50,31 +50,28 @@ export interface DepsGraph {
   exists: (file: string) => boolean;
 }
 
-/** Where a file is on disk: in the project, or in a base project it is laid over (godotwright.json base). */
-function onDisk(roots: string[], file: string): string | undefined {
-  for (const r of roots) {
-    const full = fromResPath(r, file);
-    if (existsSync(full)) return full;
-  }
-  return undefined;
-}
-
+/** A file's size: in the project, or in a base project it is laid over (godotwright.json base); 0 when not found. */
 function size(roots: string[], file: string): number {
-  const full = onDisk(roots, file);
-  try {
-    return full ? statSync(full).size : 0;
-  } catch {
-    return 0;
+  for (const r of roots) {
+    try {
+      return statSync(fromResPath(r, file)).size;
+    } catch {
+      // Not in this root.
+    }
   }
+  return 0;
 }
 
+/** A file's text from the first root that has it; "" when none does. */
 function readText(roots: string[], file: string): string {
-  const full = onDisk(roots, file);
-  try {
-    return full ? readFileSync(full, "utf8") : "";
-  } catch {
-    return "";
+  for (const r of roots) {
+    try {
+      return readFileSync(fromResPath(r, file), "utf8");
+    } catch {
+      // Not in this root.
+    }
   }
+  return "";
 }
 
 /** A string in code with a file extension, as a pattern over project paths: %s, %d and {name} match anything. */
@@ -223,10 +220,8 @@ export function buildGraph(path: string): DepsGraph {
       const dir = file.slice(0, file.lastIndexOf("/") + 1);
       for (const f of assetList) if (IMAGE.test(f) && f.startsWith(dir)) add(f, "next to model");
     }
-    // What the import settings name (extracted materials, an import script).
-    if (onDisk(dirs, `${file}.import`)) {
-      for (const m of readText(dirs, `${file}.import`).matchAll(/"(res:\/\/[^"]+)"/g)) if (!m[1]!.startsWith("res://.godot/")) add(m[1], "import");
-    }
+    // What the import settings name (extracted materials, an import script); no .import file reads as "".
+    for (const m of readText(dirs, `${file}.import`).matchAll(/"(res:\/\/[^"]+)"/g)) if (!m[1]!.startsWith("res://.godot/")) add(m[1], "import");
     cache.set(file, out);
     return out;
   };

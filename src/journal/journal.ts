@@ -38,6 +38,15 @@ export interface JournalEntry {
 
 const hash = (data: Uint8Array | string) => createHash("sha1").update(data).digest("hex");
 
+/** The hash of a file as it is now, or "" when it is not there. */
+function fileHash(full: string): string {
+  try {
+    return hash(readFileSync(full));
+  } catch {
+    return "";
+  }
+}
+
 function journalDir(root: string): string {
   return join(root, ...DIR);
 }
@@ -113,7 +122,7 @@ export class JournalWriter {
     let i = 0;
     for (const [file, b] of this.before) {
       const full = fromResPath(this.root, file);
-      const after = existsSync(full) ? hash(readFileSync(full)) : "";
+      const after = fileHash(full);
       const entry: JournalFile = { file, existed: b.existed, after };
       if (b.data) {
         entry.copy = `${i++}.before`;
@@ -158,7 +167,7 @@ export function undoJournal(path: string, options: { steps?: number; force?: boo
     const notKept: string[] = [];
     for (const f of entry.files) {
       const full = fromResPath(root, f.file);
-      const now = existsSync(full) ? hash(readFileSync(full)) : "";
+      const now = fileHash(full);
       if (now !== f.after) changed.push(f.file);
       if (f.notKept) notKept.push(f.file);
     }
@@ -174,9 +183,13 @@ export function undoJournal(path: string, options: { steps?: number; force?: boo
         mkdirSync(dirname(full), { recursive: true });
         writeFileSync(full, readFileSync(join(dir, f.copy)));
         restored.push(f.file);
-      } else if (!f.existed && existsSync(full)) {
-        rmSync(full, { force: true });
-        removed.push(f.file);
+      } else if (!f.existed) {
+        try {
+          rmSync(full);
+          removed.push(f.file);
+        } catch {
+          // Already gone.
+        }
       }
     }
     rmSync(dir, { recursive: true, force: true });

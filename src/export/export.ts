@@ -144,7 +144,13 @@ export function checkExport(path: string, options: { preset?: string } = {}): Ex
   if (!root) throw new ProjectNotFoundError(path);
   const file = join(root, "export_presets.cfg");
   const notes: string[] = [];
-  const all = existsSync(file) ? parsePresets(readFileSync(file, "utf8")) : [];
+  let presetsText = "";
+  try {
+    presetsText = readFileSync(file, "utf8");
+  } catch {
+    // No export_presets.cfg.
+  }
+  const all = parsePresets(presetsText);
   const presets = options.preset ? all.filter((p) => p.name === options.preset || String(p.index) === options.preset) : all;
   if (!all.length) notes.push("no export_presets.cfg (or no presets in it): add one in Project > Export; nothing to check yet");
   else if (!presets.length) notes.push(`no preset named "${options.preset}" (presets: ${all.map((p) => p.name).join(", ")})`);
