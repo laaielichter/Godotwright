@@ -126,8 +126,32 @@ export function formatClass(api: GodotApi, cls: ApiClass, detail: Detail = "brie
   return out;
 }
 
+/** A shader answer: where a built-in exists, or what a shader type or processor function offers. */
+function formatShader(answer: NonNullable<LookupResult["shader"]>, detail: Detail): string[] {
+  const where = (fn: string) => (fn === "global" || fn === "constants" ? "every function" : `${fn}()`);
+  if (answer.kind === "builtin") {
+    const out = [`shader built-in ${answer.name}:`];
+    for (const p of answer.places) out.push(`  ${p.type} ${where(p.function)}: ${p.dataType.replace(/^const (.*)$/, "$1 (read-only)")}`);
+    out.push("Not available in other shader types or functions, nor in your own functions unless it is in every function.");
+    return out;
+  }
+  const out = [`shader_type ${answer.type}${answer.function ? `, ${answer.function}()` : ""}:`];
+  const byFn = new Map<string, string[]>();
+  for (const b of answer.builtins) {
+    const list = byFn.get(where(b.function)) ?? [];
+    list.push(detail === "full" ? `${b.name}: ${b.dataType}` : `${b.name}${b.dataType.startsWith("const ") ? "" : " (rw)"}`);
+    byFn.set(where(b.function), list);
+  }
+  for (const [label, list] of byFn) out.push(`  ${label}: ${list.join(", ")}`);
+  if (answer.stage.length) out.push(`  stage functions: ${answer.stage.join(", ")}`);
+  if (!answer.function && answer.renderModes.length) out.push(`  render_mode: ${answer.renderModes.join(", ")}`);
+  out.push(detail === "full" ? "Types marked const are read-only." : "(rw) = writable; the others are read-only. detail full adds the types.");
+  return out;
+}
+
 export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail = "brief", hints: string[] = []): string {
   const out: string[] = [];
+  if (result.entries.length === 0 && result.shader) return `${formatShader(result.shader, detail).join("\n")}\n`;
   if (result.entries.length === 0) {
     out.push(`not found in Godot ${api.version}: ${result.query}`);
     if (hints.length) out.push(`learned from earlier lookups, this usually means: ${hints.join(", ")}`);

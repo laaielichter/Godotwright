@@ -60,12 +60,27 @@ export interface ProjectData {
   sources: Map<string, string>;
   /** Parsed .tscn/.tres files by `res://` path. */
   resources: Map<string, ResourceFile>;
+  /**
+   * Shader code by `res://` path: .gdshader and .gdshaderinc files, and Shader resources stored in a scene or resource
+   * (`res://scene.tscn::Shader_id`, or the .tres itself when its root is a Shader).
+   */
+  shaders: Map<string, ShaderSource>;
   /** `uid://` to `res://` path. */
   uids: Map<string, string>;
   /** Files that come only from a base project (see LoadOptions.base). */
   external: Set<string>;
   /** Files only the shipped game holds (from LoadOptions.baseFiles): present, but their contents are unknown. */
   shipped: Set<string>;
+}
+
+export interface ShaderSource {
+  source: string;
+  /** A .gdshaderinc file: code that shaders include. */
+  include?: boolean;
+  /** Code stored in a scene or resource: the 1-based line of `code = "` there (shader line 1 is on that line). */
+  embedded?: number;
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
 }
 
 export interface LoadOptions {
@@ -300,6 +315,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   });
 
   // Scenes and resources.
+  const shaderSources = new Map<string, ShaderSource>();
   const scenes: SceneInfo[] = [];
   const resourceInfos: ResourceInfo[] = [];
   const usedBy = new Map<string, Set<string>>();
@@ -317,6 +333,18 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       }
     }
     const lookup = (id: string | undefined) => (id === undefined ? undefined : ext.get(id));
+
+    // Shader code stored in the file: as a sub-resource (`res://scene.tscn::Id`), or as the root of a .tres.
+    for (const sub of parsed.subResources) {
+      const code = sub.props["code"];
+      if (sub.type === "Shader" && typeof code === "string") {
+        shaderSources.set(`${file}::${sub.id}`, { source: code, embedded: sub.propLines["code"] ?? sub.line, ...(external.has(file) ? { external: true } : {}) });
+      }
+    }
+    const rootCode = parsed.resource?.props["code"];
+    if (parsed.resourceType === "Shader" && typeof rootCode === "string") {
+      shaderSources.set(file, { source: rootCode, embedded: parsed.resource?.propLines["code"] ?? 1, ...(external.has(file) ? { external: true } : {}) });
+    }
 
     // Built-in scripts live inside the scene; Godot names them `res://scene.tscn::Id`.
     const builtins = new Map<string, string>();
@@ -445,6 +473,13 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       }
       const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(source);
       shaders.push({ ...(external.has(file) ? { external: true } : {}), path: file, shaderType: match?.[1] });
+      shaderSources.set(file, { source, ...(external.has(file) ? { external: true } : {}) });
+    } else if (ext === "gdshaderinc") {
+      try {
+        shaderSources.set(file, { source: read(file), include: true, ...(external.has(file) ? { external: true } : {}) });
+      } catch (error) {
+        fail(file, error);
+      }
     } else if (ext === "cs") {
       csharpScripts.push({ ...(external.has(file) ? { external: true } : {}), path: file });
     } else if (!external.has(file)) {
@@ -487,7 +522,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     // A base project's own problems are not this project's.
     warnings: warnings.filter((w) => !external.has(w.file.replace(/::.*$/, ""))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
-  return { root, files, map, scripts, sources, resources, uids, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
+  return { root, files, map, scripts, sources, resources, shaders: shaderSources, uids, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
 }
 
 /** Settings of a base project with the project's own on top; autoloads and input actions add up. */
