@@ -283,6 +283,10 @@ describe("quality/shader-color-no-source-color", () => {
     ]);
   });
 
+  it("stays quiet on global and instance uniforms (not filled from the material, so source_color does nothing)", () => {
+    expect(one("shader_type spatial;\nglobal uniform vec4 g_color;\ninstance uniform vec4 i_color;\nvoid fragment() {\n\tALBEDO = g_color.rgb * i_color.rgb;\n}\n", "quality/shader-color-no-source-color")).toEqual([]);
+  });
+
   it("stays quiet in 2D shaders and in projects on the Compatibility renderer (no conversion there)", () => {
     expect(one("shader_type canvas_item;\nuniform vec4 color = vec4(1.0);\nvoid fragment() {\n\tCOLOR = color;\n}\n")).toEqual([]);
     const compat = `${PROJECT}\n[rendering]\nrenderer/rendering_method="gl_compatibility"\n`;
