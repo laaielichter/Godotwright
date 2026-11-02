@@ -215,7 +215,7 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
     const data = loadProject(root, { overrides: { [resPath]: text } });
     const scene = data.map.scenes.find((sc) => sc.path === resPath);
     const parsedScene = data.resources.get(resPath);
-    return scene && parsedScene ? lockedInstances(scene, parsedScene, new Map(data.map.scenes.map((sc) => [sc.path, sc]))) : { roots: [], locked: [] };
+    return scene && parsedScene ? lockedInstances(scene, parsedScene, new Map(data.map.scenes.map((sc) => [sc.path, sc])), data.resources) : { roots: [], locked: [] };
   };
   /** Lines that add [editable path=...] entries at the end of the file. */
   const editableSplice = (paths: string[]): Splice => {

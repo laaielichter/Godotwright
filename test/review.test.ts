@@ -943,6 +943,21 @@ describe("scene and resource integrity", () => {
     ).toEqual([]);
   });
 
+  // Godot 4.7.2 keeps these after an editor save: the instanced scene marks its own instance editable.
+  const editableInside = {
+    "leaf.tscn": '[gd_scene format=3]\n\n[node name="Leaf" type="Node2D"]\n\n[node name="Sprite" type="Node2D" parent="."]\n',
+    "mid.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://leaf.tscn" id="1_l"]\n\n[node name="Mid" type="Node2D"]\n\n[node name="L" parent="." instance=ExtResource("1_l")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(1, 1)\n\n[editable path="L"]\n',
+    "inh.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Mid" instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(9, 9)\n',
+    "top.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Top" type="Node2D"]\n\n[node name="M" parent="." instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="M/L"]\nposition = Vector2(3, 3)\n\n[editable path="M"]\n',
+  };
+
+  it("structure/locked-instance-edit: counts the [editable] entries of the instanced or inherited scene itself", () => {
+    expect(quiet(editableInside)).toEqual([]);
+    // Without mid.tscn's own [editable], its edit and both others are inside a locked instance again.
+    const locked = quiet({ ...editableInside, "mid.tscn": editableInside["mid.tscn"].replace('\n[editable path="L"]\n', "") });
+    expect(locked.filter((l) => l.includes("locked-instance")).map((l) => l.replace(/ warning .* at "/, ' at "').replace(/",.*$/, ""))).toEqual(['res://inh.tscn:7: at "L', 'res://mid.tscn:9: at "L', 'res://top.tscn:9: at "M/L']);
+  });
+
   it("ignores a .uid file left behind by a moved script (Godot 4.7.2 does too)", () => {
     expect(quiet({ "new.gd": "extends Node\n", "new.gd.uid": "uid://cwx83o7xktq7h\n", "old.gd.uid": "uid://cwx83o7xktq7h\n" })).toEqual([]);
   });
