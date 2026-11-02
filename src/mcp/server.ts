@@ -1150,7 +1150,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Screenshot a scene or model",
       description:
-        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. As a visual test: `baseline: \"auto\"` keeps the first picture in .godotwright/baselines/ (named after the scene or model, size and views; Godot does not import it, so commit it) and compares every later picture with it, pixel by pixel (renders are deterministic: fixed fps and fixed random seeds). Unchanged gives text only (saves tokens); changed beyond `threshold` (percent of pixels, default 0.5) is an error result with the percent, the box of the largest change, the mean shift, and the diff picture (changed pixels in red) plus the new picture. `baseline` may also be a .png path; `update_baseline: true` accepts the new picture as the baseline. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. As a visual test: `baseline: \"auto\"` keeps the first picture in .godotwright/baselines/ (named after the scene or model, size and views; Godot does not import it, so commit it) and compares every later picture with it, pixel by pixel (renders are deterministic: fixed fps and fixed random seeds). Unchanged gives text only (saves tokens); changed beyond `threshold` (percent of pixels, default 0.5) is an error result with the percent, the box of the largest change, the mean shift, and the diff picture (changed pixels in red) plus the new picture. `baseline` may also be a .png path inside the project; `update_baseline: true` accepts the new picture as the baseline. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1192,7 +1192,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe(
-            'compare with a baseline PNG: "auto" (in .godotwright/baselines/, saved on the first run) or a .png path',
+            'compare with a baseline PNG: "auto" (in .godotwright/baselines/, saved on the first run) or a .png path inside the project',
           ),
         threshold: z
           .number()
@@ -1238,7 +1238,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(height ? { height } : {}),
           ...(frames ? { frames } : {}),
           ...(baseline
-            ? { baseline: baseline === "auto" ? "auto" : where(baseline) }
+            ? { baseline: baseline === "auto" ? "auto" : output(baseline) }
             : {}),
           ...(threshold !== undefined ? { threshold } : {}),
           ...(update_baseline ? { updateBaseline: true } : {}),
@@ -1265,7 +1265,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (error instanceof GodotNotFoundError) return failure(error.message);
         if (
           error instanceof ScreenshotError ||
-          error instanceof ProjectNotFoundError
+          error instanceof ProjectNotFoundError ||
+          error instanceof ModelError
         )
           return failure(error.message);
         throw error;

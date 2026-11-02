@@ -1,6 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { existsSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createServer } from "../src/mcp/server.js";
 import { decodePng, encodePng, type RgbaImage } from "../src/screenshot/png.js";
 import { ScreenshotError, baselineKey, compareBaseline, formatScreenshot, screenshotScript, takeScreenshot, type ScreenshotReport } from "../src/screenshot/screenshot.js";
 import { makeProject, tempFolder } from "./helpers.js";
@@ -163,5 +166,42 @@ describe("screenshot", () => {
     const root = makeProject({ "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n', "main.tscn": "[gd_scene format=3]\n" });
     await expect(takeScreenshot(root, { baseline: "base.txt" })).rejects.toThrow(/\.png file/);
     await expect(takeScreenshot(root, { baseline: "same.png", out: join(root, "same.png") })).rejects.toThrow(/same file/);
+  });
+
+  it("keeps baselines inside the project and never writes through a link", async () => {
+    const root = makeProject({ "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n', "main.tscn": "[gd_scene format=3]\n" });
+    const outside = tempFolder("gw-outside-");
+    const options = { godot: "/no/such/godot" };
+    await expect(takeScreenshot(root, { ...options, baseline: "../evil.png" })).rejects.toThrow(/outside the project/);
+    await expect(takeScreenshot(root, { ...options, baseline: join(outside, "deep", "new", "abs.png") })).rejects.toThrow(/outside the project/);
+    // A link inside the project that points out is refused, whether it is the file or a folder on the way.
+    symlinkSync(join(outside, "target.png"), join(root, "link.png"));
+    await expect(takeScreenshot(root, { ...options, baseline: "link.png" })).rejects.toThrow(/outside the project|symbolic link/);
+    symlinkSync(outside, join(root, ".godotwright"));
+    await expect(takeScreenshot(root, { ...options, baseline: "auto" })).rejects.toThrow(/outside the project/);
+    // A link to a file inside the project is still a link: writing through it would change that other file.
+    writeFileSync(join(root, "other.png"), "x");
+    symlinkSync(join(root, "other.png"), join(root, "inner.png"));
+    await expect(takeScreenshot(root, { ...options, baseline: "inner.png" })).rejects.toThrow(/symbolic link/);
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("refuses a baseline outside the project over MCP, before anything is written", async () => {
+    const root = makeProject({ "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n', "main.tscn": "[gd_scene format=3]\n" });
+    const outside = tempFolder("gw-outside-");
+    const server = createServer({ tier: "premium", root, godot: "/no/such/godot" });
+    const client = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), client.connect(b)]);
+    try {
+      for (const baseline of ["../evil.png", "res://../../evil.png", join(outside, "deep", "abs.png")]) {
+        const r = (await client.callTool({ name: "godot_screenshot", arguments: { baseline } })) as { content: { text: string }[]; isError?: boolean };
+        expect(r.isError).toBe(true);
+        expect(r.content[0]?.text).toMatch(/outside the project/);
+      }
+      expect(readdirSync(outside)).toEqual([]);
+    } finally {
+      await Promise.all([client.close(), server.close()]);
+    }
   });
 });

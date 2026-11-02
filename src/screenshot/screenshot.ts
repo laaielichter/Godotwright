@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
@@ -134,6 +134,36 @@ export function compareBaseline(shot: string, baseline: string, options: { thres
     ...(d.region ? { region: d.region } : {}),
     meanShift: d.meanShift,
   };
+}
+
+/** True when a path, with the links in the part that exists followed, is inside a folder (also followed). */
+function within(folder: string, path: string): boolean {
+  const real = (p: string): string | undefined => {
+    const rest: string[] = [];
+    let dir = resolve(p);
+    for (;;) {
+      if (existsSync(dir)) return join(realpathSync(dir), ...rest);
+      // A link to nothing: where a write through it lands cannot be known.
+      if (isLink(dir)) return undefined;
+      const parent = dirname(dir);
+      if (parent === dir) return undefined;
+      rest.unshift(basename(dir));
+      dir = parent;
+    }
+  };
+  const top = real(folder);
+  const full = real(path);
+  if (top === undefined || full === undefined) return false;
+  const rel = relative(top, full);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+function isLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
 }
 
 const MARK = "GODOTWRIGHT_SHOT";
@@ -384,6 +414,11 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
   }
   if (baseline && !/\.png$/i.test(baseline)) fail("the baseline is a .png file");
   if (baseline === out) fail("the baseline and the new picture are the same file; write the picture somewhere else (out)");
+  // Baselines are written and read back: keep them inside the project (or the model's folder), and never write
+  // through a link, which would change the file it points to.
+  const home = model ? (findProjectRoot(dirname(model)) ?? dirname(model)) : root;
+  if (baseline && !within(home, baseline)) fail(`the baseline ${wanted} is outside the project (${home}); use a path inside it`);
+  if (baseline && isLink(baseline)) fail(`the baseline ${wanted} is a symbolic link; use a regular file inside the project`);
   const how = screen();
   if ("error" in how) fail(how.error);
   mkdirSync(dirname(out), { recursive: true });
