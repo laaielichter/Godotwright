@@ -30,6 +30,9 @@ node dist/cli.js --help
 - `src/scan/`: builds the project map and formats it (brief, full, JSON).
 - `src/check/`: runs Godot headless (import, checker script, optional run) and
   turns its output into diagnostics.
+- `src/lsp/`: Godot's own GDScript language server (`godot_code`). `jsonrpc.ts` is the JSON-RPC client with LSP
+  framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
+  stop, killed on exit, restarted when a class_name or project.godot changes), `code.ts` holds the ops and output.
 - `src/api/`: lookup and search over the bundled Godot 4.7 class reference.
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
   scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from
