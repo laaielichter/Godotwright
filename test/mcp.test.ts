@@ -147,6 +147,31 @@ describe("MCP server (cheap profile)", () => {
     expect(textOf(r)).toContain("not found or not executable");
   });
 
+  it("reviews an upgrade between 4.x releases with from and target", async () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="Old"\nconfig/features=PackedStringArray("4.5")\n',
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n\n[node name="Skel" type="Skeleton3D" parent="."]\n\n[node name="Body" type="MeshInstance3D" parent="Skel"]\n',
+    });
+    const review = textOf(await client.callTool({ name: "godot_review", arguments: { path: root, target: "4.6" } }));
+    expect(review).toContain("; upgrade 4.5 -> 4.6");
+    expect(review).toContain("[api/upgrade-mesh-skeleton]");
+    const later = (await client.callTool({ name: "godot_review", arguments: { path: root, target: "4.8" } })) as Result;
+    expect(later.isError).toBe(true);
+    expect(textOf(later)).toContain("compare_godot");
+  });
+
+  it("asks for a second binary when compare_godot is next and GODOT_NEXT is unset", async () => {
+    const saved = process.env["GODOT_NEXT"];
+    delete process.env["GODOT_NEXT"];
+    try {
+      const r = (await client.callTool({ name: "godot_check", arguments: { compare_godot: "next" } })) as Result;
+      expect(r.isError).toBe(true);
+      expect(textOf(r)).toContain("GODOT_NEXT");
+    } finally {
+      if (saved !== undefined) process.env["GODOT_NEXT"] = saved;
+    }
+  });
+
   it("returns errors as tool errors, not crashes", async () => {
     const r = (await client.callTool({
       name: "godot_scan",
