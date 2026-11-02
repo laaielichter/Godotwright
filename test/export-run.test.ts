@@ -141,6 +141,8 @@ describe("export run (Godot faked)", () => {
       "No export template found at the expected path: /data/godot/export_templates/4.7.2.stable/linux_debug.x86_64 No export template found at the expected path: /data/godot/export_templates/4.7.2.stable/linux_release.x86_64 (install the export templates for this Godot version: Editor > Manage Export Templates, or unpack the .tpz there; mode pack needs no templates)",
       "Invalid export preset name: Nope. The following presets were detected in this project's `export_presets.cfg`: \"Linux\"",
     ]);
+    const empty = exportDiagnostics('ERROR: Cannot get keys from nonexistent section "preset.0.options".\n   at: get_section_keys (core/io/config_file.cpp:1)\n');
+    expect(empty.map((d) => `${d.severity} ${d.file}`)).toEqual(["warning res://export_presets.cfg"]);
   });
 
   it("reads the template folder from the version line", () => {

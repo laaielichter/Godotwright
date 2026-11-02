@@ -25,4 +25,14 @@ describe.skipIf(!GODOT)("godotwright ci in Godot", () => {
     expect(bad.ok).toBe(false);
     expect(bad.steps.at(-1)?.details.join("\n")).toContain("Hero.velocity.y was -400.0 at frame 10");
   });
+
+  it("the export step exports a pack, checks it and runs it", { timeout: 300_000 }, async () => {
+    const root = mkdtempSync(join(tmpdir(), "godotwright-ci-"));
+    cpSync(join(FIXTURES, "play"), root, { recursive: true });
+    writeFileSync(join(root, "export_presets.cfg"), '[preset.0]\n\nname="Linux"\nplatform="Linux"\nrunnable=true\nexport_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path=""\n\n[preset.0.options]\n');
+    const r = await runCi(root, { godot: GODOT, exportPreset: "Linux" });
+    const step = r.steps.at(-1)!;
+    expect(step).toMatchObject({ name: "export", status: "pass" });
+    expect(step.summary).toMatch(/^pack of Linux: \d+ files, .*, ran 120 frames: 0 errors$/);
+  });
 });
