@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { ALL_TOOLS } from "../src/mcp/toolsets.js";
 import { projectFromEnv } from "../src/commands/mcp.js";
 import { HOOK_EVENTS } from "../src/hooks/agent-hooks.js";
 
@@ -59,7 +60,7 @@ describe("Claude Code plugin and marketplace", () => {
   });
 
   it("names only MCP tools the server has, in every skill and agent", () => {
-    const tools = new Set([...readFileSync(path("src/mcp/server.ts"), "utf8").matchAll(/registerTool\(\s*"(godot_\w+)"/g)].map((m) => m[1]));
+    const tools = new Set([...readFileSync(path("src/mcp/server.ts"), "utf8").matchAll(/\btool\(\s*"(godot_\w+)"/g)].map((m) => m[1]));
     expect(tools.size).toBeGreaterThan(20);
     const files = [
       ...SKILLS.map((s) => `plugins/godotwright/skills/${s}/SKILL.md`),

@@ -139,6 +139,8 @@ import {
   type SettingsEdit,
 } from "../settings/edit.js";
 import { GODOT_TARGET, VERSION } from "../version.js";
+import { renderInstructions } from "./instructions.js";
+import { ALL_TOOLS, WRITE_ONLY_TOOLS, enabledTools, readOnlyRefusal } from "./toolsets.js";
 
 export type Tier = "cheap" | "premium";
 
@@ -153,6 +155,10 @@ export interface ServerOptions {
   base?: string[];
   /** File lists of the shipped game (e.g. a .pck manifest). */
   baseFiles?: string[];
+  /** Tool sets and tool names to offer (see TOOLSETS; default all). */
+  tools?: string | readonly string[];
+  /** Leave out the tools that always write, and refuse the write options of the others. */
+  readOnly?: boolean;
 }
 
 interface Profile {
@@ -161,77 +167,11 @@ interface Profile {
   findings: number;
   /** Include info-level findings. */
   infos: boolean;
-  instructions: string;
 }
 
 const PROFILES: Record<Tier, Profile> = {
-  cheap: {
-    detail: "brief",
-    findings: 15,
-    infos: false,
-    instructions: [
-      `Godotwright gives you checked Godot ${GODOT_TARGET} knowledge for this project. Follow these steps:`,
-      "0. In a project you do not know yet, or when something is broken and you do not know where to start, call godot_doctor: what is wrong, in which order to fix it, and why.",
-      "1. Call godot_scan once to learn the scenes, scripts, signals and input actions.",
-      "2. Before you use an engine class, method, property or signal you are not sure about, call godot_api. Never guess API names; Godot 3 names do not work in Godot 4.",
-      "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
-      "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
-      "5. If Godot is installed, call godot_check before you finish. When godot_play with expect proved a fix, keep it: godot_scenario op save with the same arguments.",
-      "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
-      "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
-      "After you write or change a shader (.gdshader, or a Shader in a scene), call godot_shader and fix every error.",
-      "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order, uids, unused resources, Godot 4.7 packed-array writes and upgrade defaults), call godot_fix (report, then write: true) instead of editing them by hand.",
-      "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
-      "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
-      "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
-      "To change a .tres or an asset's import settings (loop, compression, per-animation or per-mesh options), call godot_resource_edit (dry run, then write: true) instead of editing the file by hand.",
-      "Keep each change small. Use static types (var x: int, func f() -> void).",
-      'To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put "archetype" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.',
-    ].join("\n"),
-  },
-  premium: {
-    detail: "full",
-    findings: 200,
-    infos: true,
-    instructions: [
-      `Godotwright gives you checked Godot ${GODOT_TARGET} knowledge for this project.`,
-      "- godot_scan maps the project (scenes and node trees, scripts with signatures, autoloads, input map, key settings).",
-      "- godot_api and godot_api_search answer from the official Godot 4.7 class reference, offline. Use them instead of memory for exact signatures, and to translate Godot 3 names.",
-      "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
-      "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
-      "- godot_doctor answers \"what is wrong here, and in which order do I fix it\": the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and whether godot_fix or godot_migrate can do it, then numbered next steps. Start here in a project you do not know or when something is broken.",
-      "- godot_fix applies the mechanical fixes for review findings (each labelled safe or check), shows them first, writes with write: true and reviews the changed files again.",
-      "- godot_checklist lists every AAA rule with its fix.",
-      "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
-      "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
-      "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
-      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn and whether it is blank. Use it to look at what you built. With `baseline` it compares with the stored picture of that name (pixels changed, boxes, moves) so you can prove a visual change, or that nothing else changed.",
-      "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
-      "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
-      "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
-      "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export; with `pck` it reads an exported pack instead.",
-      "- godot_export_run exports for real, headless: a pack, release or debug build, or a patch with only what changed against base packs or the base game's file list. It checks the file, compares the pack with what the game loads, and runs the exported game for some frames with errors and call chains. Run it before you call a build done.",
-      "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
-      "- godot_leaks loads, runs and frees a scene in cycles headless and reports what grows per cycle (orphan nodes by class, script and scene with where they were made and removed, nodes left behind, objects that are not nodes). Use it when memory or the orphan count grows, and again after the fix to prove 0 per cycle.",
-      "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
-      "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
-      "- godot_scenario keeps a passing godot_play run (same arguments, op save) as a regression test in the project that ci runs, and runs the kept ones (op run). Save one after every fix you proved with expect.",
-      "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
-      "- godot_shader checks shaders statically against Godot 4.7's shader tables and compiles them with Godot headless, with file:line for both.",
-      "- godot_resource_edit changes .tres resources (properties, sub_resources, uids kept) and import settings (audio loop, texture compression, glTF per-animation loop, per-mesh shadows, external materials, importer switch), then reimports headless and checks Godot kept the value. Use it instead of editing .tres or .import files by hand.",
-      "- godot_migrate rewrites Godot 3 GDScript and shaders to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
-      "- godot_feedback marks a review finding as wrong (a verified false alarm) or right, or says whether a lesson helped; Godotwright learns from it on this machine.",
-      "- godot_lessons answers from lessons learned in real Godot projects (symptom, cause, fix, how to test): by words, by a Godot error message, by a rule, or `gaps: true` for the errors Godotwright cannot predict yet. Use it when Godot shows an error you do not understand and before you build moving platforms, vehicles, large worlds, runtime-loaded models or shaders.",
-      "- godot_lesson_add keeps a lesson you learned here (title, symptom, cause, fix, the Godot message), scrubbed of names, paths and code, on this machine only. The next godot_check or godot_lessons shows it when the same problem comes back. Add one whenever a fix took more than one try.",
-      "- godot_model_brief is one page before you build: what the thing is, the nearest ready-made kind, parts, size, rules, mistakes, the order of tools and a spec cheat sheet. Start here.",
-      "- godot_model_identify says what a thing is (English or Dutch, typos and descriptions work): the family, the parts that must exist and how they move, a typical size with its source, variants, Godot conventions (models face +Z, +Y is up, units are metres), what to anticipate and the usual mistakes. Call it before you build or check any 3D model.",
-      "- godot_model_spec explains the model spec (a JSON tree of named parts: box, cylinder, ellipsoid, lathe, loft, extrude, roof, tube, with expressions, mirror, repeat, bevels and textured materials) and lists the ready-made kinds.",
-      "- godot_model_build makes a clean .glb from a kind or a spec (UVs, tangents, a node per part, deterministic) and lints it.",
-      "- godot_model_view draws a .glb as text: front, side and top views made of letters (one letter per part), a table of the parts with sizes, and the parts that do not touch the rest (a ladder away from its tree, a wheel without an axle). You cannot see a picture, so use it after every build to check shape, proportions and that everything is attached.",
-      "- godot_model_lint scores a .glb (geometry, materials, performance, rig), and with `archetype` also checks it is what it should be: parts, pivots, wheel axes, size, direction. godot_model_inspect shows what is in a .glb.",
-      "Work in reviewed steps: plan, look up the API, write, review, then check with Godot before you finish. For models: identify, spec, build, view, lint with the archetype, fix, repeat. When a fix was hard, keep the lesson (godot_lesson_add) so the next session starts smarter.",
-    ].join("\n"),
-  },
+  cheap: { detail: "brief", findings: 15, infos: false },
+  premium: { detail: "full", findings: 200, infos: true },
 };
 
 const text = (value: string) => ({
@@ -259,22 +199,37 @@ export function createServer(options: ServerOptions = {}): McpServer {
     return isAbsolute(path) ? path : resolve(base, path);
   };
 
+  const enabled = enabledTools(options.tools);
+  if (options.readOnly) for (const name of WRITE_ONLY_TOOLS) enabled.delete(name);
   const server = new McpServer(
     { name: "godotwright", title: "Godotwright", version: VERSION },
-    { instructions: profile.instructions },
+    { instructions: renderInstructions(tier, enabled, options.readOnly === true) },
   );
+  // Registers a tool only when its set is enabled; a read-only server refuses the options that write.
+  const registerTool = server.registerTool.bind(server);
+  const tool = ((name: string, config: never, cb: (args: Record<string, unknown>, extra: never) => unknown) => {
+    if (!ALL_TOOLS.includes(name)) throw new Error(`${name} is in no tool set (src/mcp/toolsets.ts)`);
+    if (!enabled.has(name)) return undefined;
+    const run = options.readOnly
+      ? (args: Record<string, unknown>, extra: never) => {
+          const why = readOnlyRefusal(name, args ?? {});
+          return why ? failure(why) : cb(args, extra);
+        }
+      : cb;
+    return registerTool(name, config, run as never);
+  }) as typeof server.registerTool;
 
   const detailParam = z
     .enum(["brief", "full"])
     .optional()
     .describe(
-      `brief: short output with capped lists; full: everything (default for this ${tier} profile: ${profile.detail}).`,
+      `brief (capped lists) or full (everything); default ${profile.detail}`,
     );
   const pathParam = z
     .string()
     .optional()
     .describe(
-      "The project folder, or any file or folder inside it (Godotwright walks up to project.godot). Relative paths start at the server's folder. Default: the current project.",
+      "project folder, or a file or folder inside it (relative to the server's folder; default: the current project)",
     );
   const readOnly = {
     readOnlyHint: true,
@@ -290,7 +245,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     openWorldHint: false,
   };
 
-  server.registerTool(
+  tool(
     "godot_scan",
     {
       title: "Map the Godot project",
@@ -313,7 +268,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       ),
   );
 
-  server.registerTool(
+  tool(
     "godot_api",
     {
       title: "Look up the Godot 4.7 API",
@@ -338,7 +293,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_api_search",
     {
       title: "Search the Godot 4.7 API",
@@ -365,7 +320,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_review",
     {
       title: "AAA review",
@@ -446,7 +401,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_usages",
     {
       title: "Find usages",
@@ -476,7 +431,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       ),
   );
 
-  server.registerTool(
+  tool(
     "godot_rename",
     {
       title: "Rename everywhere",
@@ -518,12 +473,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_project_edit",
     {
       title: "Change project settings, input map or autoloads",
       description:
-        "Change project.godot safely, without the editor: set or unset a setting (name and type checked against the Godot 4.7 reference), add events to an input action or remove it, add or remove an autoload (the file must exist and be a Node script or a scene; the name must not clash with a class). Only the lines of that entry change. Events: Key:Space, Key:Ctrl+S, Mouse:Left, JoyButton:A, JoyAxis:left_y-. `op` picks the change and which fields it needs: set (key, value), unset (key), input_add (action, events, deadzone), input_remove (action), autoload_add (name, file, global), autoload_remove (name). Without `write` it changes nothing and returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a change it refuses (bad event, unknown action, name clash) returns an error and writes nothing. Use it instead of editing project.godot by hand: the input map format is easy to break. For .tscn files use godot_scene_edit; to rename an action or autoload everywhere, use godot_rename.",
+        "Change project.godot safely without the editor, touching only the lines of that entry. `op` and its fields: set (key, value; name and type checked against the Godot 4.7 reference), unset (key), input_add (action, events, deadzone), input_remove (action), autoload_add (name, file, global; the file must be a Node script or a scene, the name must not clash with a class), autoload_remove (name). Events: Key:Space, Key:Ctrl+S, Mouse:Left, JoyButton:A, JoyAxis:left_y-. Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a refused change (bad event, unknown action, name clash) is an error and writes nothing. Use it instead of editing project.godot by hand. For .tscn files use godot_scene_edit; to rename an action or autoload everywhere, godot_rename.",
       inputSchema: {
         op: z
           .enum([
@@ -647,12 +602,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_scene_edit",
     {
       title: "Change a scene",
       description:
-        'Change a .tscn safely, without the editor: add a node (a Godot class or an instanced scene), remove a node (with its children, connections and the resources only it used), set a property (name and type checked against Godot 4.7; enums by name, resources as res:// files), connect or disconnect a signal (checks the signal exists, and warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach a script (refuses one that extends another node type), or make the children of an instanced scene editable (set_editable). A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; pass make_editable to add [editable] with it. Node paths are relative to the scene root, which is ".". `op` picks the change and which fields it needs: add_node (parent, name, and type or instance), remove_node (node), set (node, property, value), connect and disconnect (from, signal, to, method), attach_script (node, script), set_editable (node, editable). Only the lines of that change are touched. Without `write` it changes nothing and returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a change it refuses returns an error and writes nothing. Use it instead of editing .tscn files by hand. For project.godot use godot_project_edit; to rename a node everywhere, use godot_rename.',
+        "Change a .tscn safely without the editor, touching only the lines of that change. `op` and its fields: add_node (parent, name, and type or instance), remove_node (node; with its children, connections and the resources only it used), set (node, property, value; checked against Godot 4.7, enums by name, resources as res:// files), connect and disconnect (from, signal, to, method; checks the signal exists, warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach_script (node, script; refuses a script that extends another node type), set_editable (node, editable). A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; make_editable adds [editable] with it. Node paths are relative to the scene root \".\". Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a refused change is an error and writes nothing. For project.godot use godot_project_edit; to rename a node everywhere, godot_rename.",
       inputSchema: {
         scene: z.string().describe("the scene: res://main.tscn, or a path"),
         op: z
@@ -795,7 +750,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_shader",
     {
       title: "Review and compile shaders",
@@ -838,7 +793,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_resource_edit",
     {
       title: "Change a resource or import settings",
@@ -891,12 +846,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_migrate",
     {
       title: "Port Godot 3 scripts to Godot 4",
       description:
-        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, members that moved (OS.get_ticks_msec() to Time); in .gdshader/.gdshaderinc Godot's shader renames (hint_albedo/hint_color to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. Strings, comments and node paths are left alone. Without `write` it only reports the changes; with `write: true` it rewrites the scripts. It also lists what still needs a hand (setget, move_and_slide arguments, rpc keywords, export hints it does not know). Scenes and project settings are not migrated; Godot's --convert-3to4 does those. `files` limits it to some res:// scripts; `detail` brief shows up to 12 changes per file, full shows every change. Running it twice changes nothing more. Use it before fixing Godot 3 findings from godot_review one by one, and run godot_review afterwards.",
+        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, moved members (OS.get_ticks_msec() to Time), shader renames (hint_albedo to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. Strings, comments and node paths are left alone. Without `write` it only reports; with `write: true` it rewrites the scripts. It lists what still needs a hand (setget, move_and_slide arguments, rpc keywords, unknown export hints). Scenes and project settings are not migrated (Godot's --convert-3to4 does those). `files` limits it to some scripts; `detail` brief shows up to 12 changes per file. Running it twice changes nothing more. Use it before fixing Godot 3 findings one by one, then run godot_review.",
       inputSchema: {
         path: pathParam,
         write: z
@@ -932,7 +887,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_export",
     {
       title: "Check what the exported game will hold",
@@ -957,7 +912,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_export_run",
     {
       title: "Export headless, check the build and run it",
@@ -1001,7 +956,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_deps",
     {
       title: "The project's files as a graph: unused, why used, what a scene loads",
@@ -1029,7 +984,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_undo",
     {
       title: "Undo the last Godotwright writes",
@@ -1052,7 +1007,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_session",
     {
       title: "Start or stop a game session that stays up",
@@ -1093,12 +1048,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_game",
     {
       title: "Look at and drive the running game session",
       description:
-        "Ask the game that godot_session started. op `tree` (the live node tree: path, class, script; root, depth, limit), `get` (values now: watch [\"Hero.position\", \"Hero.is_on_floor()\"]), `set` (target \"Hero.position\", value \"Vector3(0, 30, 0)\" as Godot writes values), `call` (node, method, args), `eval` (a Godot Expression with the scene root as base, e.g. get_node(\"Hero\").velocity.length()), `step` (play `frames` frames with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), `signals` (record these signals; later steps list when they fired), `layout` (3D objects: global position, size, lowest point, and whether each rests on, floats above or sinks into what is below, plus scale mistakes), `ray` (from, to: what a physics ray hits), `ui` (visible controls at one or more window `sizes`, with clipped text, off-screen panels, overlapping buttons and small targets), `errors` (what the game printed since the last call), `reload` (load the scripts you edited into the running game: every node keeps its values and runs the new code from the next step, so you try a fix without loading the world again; `files`, default every script changed since the last reload; a script that does not compile is left as it was). Every answer ends with the errors and warnings the game printed since the last call, runtime errors with their call chain. Time only moves on a step, so the session stays deterministic. Use it to try a fix live, find a state that is hard to reach, or watch a long scenario in parts.",
+        "Ask the game godot_session started. op: tree (the live node tree), get (values now), set (a Node.property), call (a method), eval (a Godot Expression on the scene root), step (run `frames` with an `input` timeline counted from this step, sample `watch`, stop early `until` a condition holds; the same frame-exact input as godot_play), signals (record them; later steps list when they fired), layout (3D objects: position, size, and whether each rests on, floats above or sinks into what is below, plus scale mistakes), ray (what a physics ray from-to hits), ui (visible controls at window `sizes`: clipped text, off-screen panels, overlapping buttons, small targets), errors (what the game printed since the last call), reload (load edited scripts into the running game: nodes keep their values and run the new code from the next step; a script that does not compile stays as it was). Every answer ends with the new errors and warnings, runtime errors with their call chain. Time only moves on a step, so the session is deterministic. Use it to try a fix live, reach a state that is hard to reach, or watch a long scenario in parts.",
       inputSchema: {
         path: pathParam,
         op: z.enum(["tree", "get", "set", "call", "eval", "step", "signals", "layout", "ray", "ui", "errors", "reload"]).describe("what to do"),
@@ -1106,16 +1061,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
         from: z.string().optional().describe("ray: start, Vector3(...) or Vector2(...)"),
         to: z.string().optional().describe("ray: end"),
         sizes: z.array(z.string()).optional().describe("ui: window sizes such as 1280x720 or 720x1280 (default the size the project sets)"),
-        root: z.string().optional().describe("tree: start at this node (default the scene root)"),
+        root: z.string().optional().describe("tree and layout: start at this node (default the scene root)"),
         depth: z.number().int().min(0).max(20).optional().describe("tree: levels to show (default 3)"),
         limit: z.number().int().min(1).max(1000).optional().describe("tree: nodes to show (default 80)"),
-        watch: z.array(z.string()).optional().describe("get and step: values to read, Node.property or Node.method()"),
+        watch: z.array(z.string()).optional().describe('get and step: values to read, e.g. "Hero.position", "Hero.is_on_floor()"'),
         target: z.string().optional().describe("set: Node.property"),
-        value: z.string().optional().describe("set: the new value as Godot writes it"),
+        value: z.string().optional().describe("set: the new value as Godot writes it, e.g. Vector3(0, 30, 0)"),
         node: z.string().optional().describe("call: node path from the scene root"),
         method: z.string().optional().describe("call: method name"),
         args: z.array(z.string()).optional().describe("call: arguments as Godot values"),
-        expr: z.string().optional().describe("eval: the expression"),
+        expr: z.string().optional().describe('eval: the expression, e.g. get_node("Hero").velocity.length()'),
         frames: z.number().int().min(1).max(100_000).optional().describe("step: frames to run (default 60)"),
         input: z.string().optional().describe('step: "0 press jump; 10 release jump; 20 hold right 30"'),
         every: z.number().int().min(1).optional().describe("step: sample every n frames (default: about 10 samples)"),
@@ -1170,7 +1125,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_perf",
     {
       title: "Measure a scene's frame times",
@@ -1210,7 +1165,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_leaks",
     {
       title: "Find what leaks per scene reload",
@@ -1253,7 +1208,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_doctor",
     {
       title: "What is wrong, and in which order to fix it",
@@ -1267,7 +1222,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         limit: z.number().int().min(1).max(100).optional().describe("problems shown in full (default 12)"),
         detail: detailParam,
       },
-      annotations: readOnly,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ path, files, symptom, godot, limit, detail }) => {
       try {
@@ -1285,16 +1240,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_fix",
     {
       title: "Fix review findings mechanically",
       description:
-        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, a packed-array element write as copy-write-assign, a bool image unit as ImageUnit, area_mask/skeleton set to their pre-upgrade value, Godot 3 shader names renamed, a hint_screen_texture uniform for SCREEN_TEXTURE, a stale ext_resource uid set from its path, a copied file's duplicate uid renewed with its references, a lost .uid file restored, an unused resource section removed) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type; a uid that named another file than its path; [editable] added for edits inside an instance; a script setter that runs again). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem, e.g. a freed check put first, emit_signal() as signal.emit(), Timer.start() after add_child(), a stale uid set from its path, a lost .uid restored, an unused resource section removed) or \`check\` (it changes more: an await that makes the caller a coroutine, a guessed type, a uid that named another file, [editable] added, a setter that runs again). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first and godot_check after writing.`,
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only these res:// files"),
-        rules: z.array(z.string()).optional().describe(`only these rules (fixable: ${FIXABLE_RULES.join(", ")})`),
+        rules: z.array(z.string()).optional().describe("only these rules (the fixable ones are listed above)"),
         include_check: z.boolean().optional().describe("also apply fixes labelled check (default false)"),
         stamp_uids: z.boolean().optional().describe("also give scenes, resources, scripts and shaders without a uid a new one (header or .uid file)"),
         from: z.string().optional().describe("release the project comes from, as in godot_review"),
@@ -1322,12 +1277,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_check",
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. `compare_godot` (a second binary, or `next` for $GODOT_NEXT) runs the same check with it on a temporary copy and returns only the errors and warnings that differ, e.g. what breaks in a 4.8 beta. To drive input and watch values use godot_play; for unit tests use godot_test.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or `scene`) for `run_frames` frames and return what it printed (put print() calls in the code you test). Returns the errors and warnings as res://file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Scenes and scripts are not changed: Godot updates its cache in .godot/, where the checker script also goes. Sends progress when the client asks for it; cancelling the call stops Godot. Slower than godot_review, so review first. `compare_godot` (a second binary, or `next` for $GODOT_NEXT) runs the same check on a temporary copy and returns only the errors and warnings that differ, e.g. what breaks in a 4.8 beta. To drive input use godot_play; for unit tests godot_test.",
       inputSchema: {
         path: pathParam,
         run_frames: z
@@ -1405,12 +1360,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_screenshot",
     {
       title: "Screenshot a scene or model",
       description:
-        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. It warns when the picture is blank (black, transparent, one colour). `baseline` (a name) compares with .godotwright/baselines/<name>.png (made when missing; its scene, size, views and frames are reused): changed pixels, boxes of change and how far a box moved, brightness, pass/fail by `tolerance` (per channel, 0..255) and `max_changed` (%); a change returns the diff picture (changed pixels magenta) instead of the render and is not an error. `update: true` replaces the baseline. Runs are deterministic (fixed frame rate); baselines are made with the Compatibility renderer, so Forward+-only effects differ from the game. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer; works on software OpenGL and uses xvfb-run on Linux without a display). Returns the picture and how much of each view is drawn and where, and warns when it is blank (black, transparent, one colour). Model views: front (from +Z, where models face), back, side, top, iso; several make a grid. The PNG goes next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. `baseline` (a name) compares with .godotwright/baselines/<name>.png (made when missing; its scene, size, views and frames are reused): changed pixels, boxes of change and how far a box moved, pass/fail by `tolerance` and `max_changed`; a change returns the diff picture (changed pixels magenta) and is not an error; `update: true` replaces the baseline. Runs are deterministic; Forward+-only effects differ from the game. An error result when Godot is missing or the scene cannot run. Without Godot, godot_model_view shows a model as text; to check behaviour, use godot_play.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1532,12 +1487,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_play",
     {
       title: "Play a scene with input",
       description:
-        "Run a scene in Godot 4.7 headless for a number of physics frames, press and release input actions (or keys, mouse and joypad buttons) on the frames you give, and return a table of the values you watch per frame, plus errors and prints. The game sees each input on exactly that physics frame, and runs are deterministic. `input` steps are a frame, a verb (press, release, tap, or hold with a frame count) and an action or an event such as Key:Space; `watch` entries are a node path from the scene root, a dot, then a property or a method call; `every` sets how often values are sampled. Use it to check that the player jumps, moves, takes damage or that a timer fires, without a screen. `until` stops the run at the first frame a condition holds (\"Heli.is_on_floor() == true\"); `signals` records when signals fire, with their arguments; `summary: true` gives one line per watched value (start, end, min, max, first change) instead of a table, which saves tokens on long runs; `expect` checks claims such as \"Heli.health > 0\" or \"Heli.position.y < 1 @ 90\" (a claim on a recorded signal counts how often it fired) and makes the result an error when one fails, so a play run doubles as a test; to keep a passing run as a regression test, pass the same arguments to godot_scenario op save. An error result when the run does not finish or Godot reports an error; an unknown input action gives a warning. Your scenes and scripts are not changed: Godotwright runs it through a temporary script in .godot/godotwright/ and removes it afterwards. For assertions kept in the project use godot_test; for load errors use godot_check.",
+        "Run a scene in Godot 4.7 headless for some physics frames with an input timeline, and return a table of the watched values per frame plus errors and prints. Each input lands on exactly that physics frame and runs are deterministic. `input` steps: a frame, a verb (press, release, tap, or hold with a frame count) and an action or event such as Key:Space. `watch`: a node path from the scene root, a dot, then a property or method call. `until` stops at the first frame a condition holds; `signals` records when signals fire, with their arguments; `summary: true` gives one line per watched value (start, end, min, max, first change), cheaper on long runs; `expect` claims (\"Heli.health > 0\", \"Heli.position.y < 1 @ 90\", or how often a recorded signal fired) make the result an error when one fails, so a run doubles as a test; keep a passing run with godot_scenario op save and the same arguments. An error result when the run does not finish or Godot reports an error; an unknown input action is a warning. Project files are not changed (it runs a temporary script in .godot/godotwright/). For tests kept in the project use godot_test; for load errors godot_check.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1627,7 +1582,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_scenario",
     {
       title: "Keep and run scenario tests",
@@ -1674,7 +1629,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_test",
     {
       title: "Run the unit tests",
@@ -1737,7 +1692,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_feedback",
     {
       title: "Feedback on a review finding",
@@ -1796,7 +1751,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_lessons",
     {
       title: "Lessons from real Godot projects",
@@ -1832,12 +1787,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_lesson_add",
     {
       title: "Keep a lesson learned here",
       description:
-        "Keep a lesson you learned in this project, so Godotwright (and the next session) knows it: when the same Godot message or question comes back, godot_check and godot_lessons show your fix. Write it in general words: `title` is the lesson in one line, `fix` what to do; add `symptom`, `cause`, `error` (the Godot message as printed, kept as a template), `topic`, `tags`, `rules` and `test` when you can. Names of this project (classes, nodes, files, its title), paths, links, e-mail addresses, codes, keys and source code are replaced before anything is stored; a lesson that is mostly names is refused with what to change. The same title again updates that lesson. It writes only to the local learning file and is never sent; `godotwright lessons export` prints these lessons for a person to propose for everyone. Add one whenever a fix took more than one try, and not for what a review rule already reports. Returns the stored lesson and what was replaced; an error when it is refused or learning is off.",
+        "Keep a lesson learned in this project, so the next session knows it: when the same Godot message or question comes back, godot_check and godot_lessons show your fix. Write it in general words: `title` in one line, `fix` what to do; add `symptom`, `cause`, `error` (the Godot message as printed), `topic`, `tags`, `rules` and `test` when you can. Project names, paths, links, e-mail addresses, codes, keys and source code are replaced before anything is stored; a lesson that is mostly names is refused with what to change. The same title again updates that lesson. It writes only to the local learning file and is never sent. Add one whenever a fix took more than one try, not for what a review rule already reports. Returns the stored lesson and what was replaced; an error when it is refused or learning is off.",
       inputSchema: {
         title: z.string().describe("the lesson in one line, e.g. 'A body placed on a moving deck must start at the deck speed'"),
         fix: z.string().describe("what to do instead"),
@@ -1865,7 +1820,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_checklist",
     {
       title: "AAA checklist",
@@ -1910,7 +1865,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     .describe("Path to a .glb or .gltf file, inside the project.");
   const modelDetail = detailParam;
 
-  server.registerTool(
+  tool(
     "godot_model_identify",
     {
       title: "What is this thing?",
@@ -1932,7 +1887,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_model_brief",
     {
       title: "Briefing before you build a model",
@@ -1950,7 +1905,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     async ({ text: query }) => guard(() => text(briefFor(query).text)),
   );
 
-  server.registerTool(
+  tool(
     "godot_model_spec",
     {
       title: "Model spec format",
@@ -1970,12 +1925,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
   );
 
-  server.registerTool(
+  tool(
     "godot_model_build",
     {
       title: "Build a 3D model from code",
       description:
-        'Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` or a model `spec`, write it to `out`, and lint it. Pass `collision` so Godot adds collision shapes when it imports the file (most models need one; nobody remembers to add it by hand). If the spec has an "archetype" (or the kind has one), the result is also checked against what that thing should be. Give `kind` (with optional `params`), `spec` or `spec_file`; `contract_out` also writes a model.contract.json that godot_model_lint can hold later versions to. `out` is replaced if it exists. Returns the size, triangle and node count, then the lint report (`detail` full lists every finding with its fix); an error result when the lint finds errors, though the file is still written. Call godot_model_identify first and godot_model_spec for the format. To check a .glb you did not build here, use godot_model_lint.',
+        "Build a clean .glb (UVs, tangents, one node per part, same bytes every time) from a ready-made `kind` (with `params`), a model `spec` or a `spec_file`, write it to `out` (replaced if it exists) and lint it. If the spec or kind has an \"archetype\", the result is also checked against what that thing should be. Pass `collision`: most models need one. `contract_out` also writes a model.contract.json that godot_model_lint can hold later versions to. Returns the size, triangle and node count, then the lint report; an error result when the lint finds errors, though the file is still written. Call godot_model_identify first and godot_model_spec for the format; to check a .glb not built here, use godot_model_lint.",
       inputSchema: {
         out: z
           .string()
@@ -2074,7 +2029,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_model_lint",
     {
       title: "Review a 3D model",
@@ -2118,7 +2073,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
   );
 
-  server.registerTool(
+  tool(
     "godot_model_view",
     {
       title: "See a 3D model as text",
@@ -2151,7 +2106,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       ),
   );
 
-  server.registerTool(
+  tool(
     "godot_model_inspect",
     {
       title: "Inspect a 3D model",
