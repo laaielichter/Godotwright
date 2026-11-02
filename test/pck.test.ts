@@ -66,6 +66,50 @@ describe("reading a Godot 4.7.2 pack", () => {
     expect(readFileSync(file).subarray(b.offset, b.offset + b.size).toString()).toBe('{"v":1}');
   });
 
+  it("reads format 3 and 2 as Godot 4.7.2's reader does (layouts from its source; no 4.3 or 4.4 export was at hand)", () => {
+    const game = readFileSync(join(PCK, "game.pck"));
+    const dir = tempFolder("gw-pck-");
+    // Format 3 (Godot 4.4) has the same layout as 4.
+    const v3 = Buffer.from(game);
+    v3.writeUInt32LE(3, 4);
+    writeFileSync(join(dir, "v3.pck"), v3);
+    expect(readPck(join(dir, "v3.pck")).entries.map((e) => e.md5)).toEqual(readPck(join(PCK, "game.pck")).entries.map((e) => e.md5));
+    // Format 2 (Godot 4.0-4.3): 16 reserved words after the file base, the directory right after, then the files.
+    const src = readPck(join(PCK, "game.pck"));
+    const entries = src.entries.map((e) => {
+      const name = Buffer.from(e.path);
+      const padded = name.length + ((4 - (name.length % 4)) % 4);
+      return { e, name, padded };
+    });
+    const dirSize = 4 + entries.reduce((n, x) => n + 4 + x.padded + 36, 0);
+    const header = Buffer.alloc(96);
+    header.writeUInt32LE(0x43504447, 0);
+    header.writeUInt32LE(2, 4);
+    [4, 3, 0].forEach((v, i) => header.writeUInt32LE(v, 8 + i * 4));
+    const fileBase = 96 + dirSize;
+    header.writeBigUInt64LE(BigInt(fileBase), 24);
+    const parts: Buffer[] = [header, Buffer.alloc(4)];
+    parts[1]!.writeUInt32LE(entries.length, 0);
+    let at = 0;
+    const data: Buffer[] = [];
+    for (const { e, name, padded } of entries) {
+      const entry = Buffer.alloc(4 + padded + 36);
+      entry.writeUInt32LE(padded, 0);
+      name.copy(entry, 4);
+      entry.writeBigUInt64LE(BigInt(at), 4 + padded);
+      entry.writeBigUInt64LE(BigInt(e.size), 12 + padded);
+      Buffer.from(e.md5, "hex").copy(entry, 20 + padded);
+      parts.push(entry);
+      data.push(game.subarray(e.offset, e.offset + e.size));
+      at += e.size;
+    }
+    writeFileSync(join(dir, "v2.pck"), Buffer.concat([...parts, ...data]));
+    const v2 = readPck(join(dir, "v2.pck"));
+    expect(v2).toMatchObject({ formatVersion: 2, engine: [4, 3, 0], fileBase });
+    const bytes = readFileSync(join(dir, "v2.pck"));
+    for (const e of v2.entries) expect(md5(bytes.subarray(e.offset, e.offset + e.size)), e.path).toBe(e.md5);
+  });
+
   it("refuses what is not a Godot 4 pack, or is cut off", () => {
     const dir = tempFolder("gw-pck-");
     writeFileSync(join(dir, "text.pck"), "hello, this is not a pack at all");
