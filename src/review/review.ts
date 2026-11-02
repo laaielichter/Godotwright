@@ -6,7 +6,8 @@ import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
 import { checkScriptPhysics } from "./checks/physics.js";
 import { checkScriptRuntime } from "./checks/runtime.js";
-import { checkScenePitfalls, checkScriptPitfalls, checkShaderPitfalls } from "./checks/pitfalls.js";
+import { checkScenePitfalls, checkScriptPitfalls } from "./checks/pitfalls.js";
+import { checkShaders } from "./checks/shader.js";
 import { checkScenePerformance, checkScriptPerformance } from "./checks/performance.js";
 import { checkScriptQuality, checkUnusedSignals, type TypingStats } from "./checks/quality.js";
 import { checkStructure } from "./checks/structure.js";
@@ -97,7 +98,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   const project = (f: Finding) => inScope(f.file) && focused(f.file);
   findings.push(...checkScenePerformance(pm).filter(project));
   findings.push(...checkScenePitfalls(pm).filter(project));
-  findings.push(...checkShaderPitfalls(pm).filter(project));
+  findings.push(...checkShaders(pm).filter(project));
   findings.push(...checkUnusedSignals(pm).filter(project));
   findings.push(...checkStructure(pm, { foreignClasses }).filter(project));
 

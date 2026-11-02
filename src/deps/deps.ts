@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, posix } from "node:path";
 import { matchesFilter, parsePresets } from "../export/export.js";
+import { shaderIncludes } from "../godot/shader.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { baseRoots, listedFiles, loadProject, ProjectNotFoundError, type ProjectData } from "../scan/scan.js";
 
@@ -184,12 +185,7 @@ export function buildGraph(path: string): DepsGraph {
       }
     }
     if (/\.(gdshader|gdshaderinc)$/i.test(file)) {
-      readText(dirs, file)
-        .split("\n")
-        .forEach((l, i) => {
-          const m = /^\s*#include\s+"([^"]+)"/.exec(l);
-          if (m) add(resolve(file, m[1]!), "include", i + 1);
-        });
+      for (const inc of shaderIncludes(readText(dirs, file))) add(resolve(file, inc.path), "include", inc.line);
     }
     if (DATA.test(file)) {
       readText(dirs, file)

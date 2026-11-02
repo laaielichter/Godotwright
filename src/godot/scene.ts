@@ -57,6 +57,8 @@ export interface ResourceFile {
   resourceType?: string;
   /** Ext resource id of the script on a .tres root resource. */
   scriptRef?: string;
+  /** Properties of a .tres root resource (its `[resource]` section), with their 1-based lines. */
+  resource?: { props: Record<string, Variant>; propLines: Record<string, number> };
   extResources: ExtResource[];
   subResources: SubResource[];
   nodes: SceneNode[];
@@ -117,6 +119,7 @@ export function parseResourceText(text: string): ResourceFile {
         break;
       case "resource":
         file.scriptRef = refId(section.props["script"]);
+        file.resource = { props: section.props, propLines: section.propLines };
         break;
     }
   }

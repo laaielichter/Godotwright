@@ -46,7 +46,7 @@ export const HOOK_EVENTS = ["post-edit", "post-bash", "stop", "session-start"] a
 export type HookEvent = (typeof HOOK_EVENTS)[number];
 
 /** Files whose edits are reviewed. */
-const GODOT_FILE = /\.(gd|tscn|tres|gdshader)$|(^|[\\/])project\.godot$/;
+const GODOT_FILE = /\.(gd|tscn|tres|gdshader|gdshaderinc)$|(^|[\\/])project\.godot$/;
 /** At most this many findings are listed in one message; the rest are counted. */
 const MAX_LISTED = 8;
 

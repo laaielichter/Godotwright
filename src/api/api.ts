@@ -8,6 +8,7 @@ import type {
   ApiParam,
   EntryKind,
   EnumInfo,
+  ApiShaderType,
 } from "./types.js";
 
 const DATA_URL = new URL("../../data/godot-api.json.gz", import.meta.url);
@@ -16,7 +17,7 @@ const DATA_URL = new URL("../../data/godot-api.json.gz", import.meta.url);
 export const GLOBAL_SCOPES = ["@GlobalScope", "@GDScript"];
 
 export interface Rename {
-  kind: "class" | "function" | "property" | "signal" | "constant" | "type";
+  kind: "class" | "function" | "property" | "signal" | "constant" | "type" | "shader name";
   from: string;
   to: string;
 }
@@ -28,7 +29,21 @@ export interface LookupResult {
   renamed?: Rename;
   /** Close names when nothing matched. */
   suggestions: string[];
+  /** Shader answers: a shader built-in, or what a shader type (or one of its functions) offers (`shader:spatial.fragment`). */
+  shader?: ShaderAnswer;
 }
+
+/** Where a shader built-in exists: `spatial fragment: vec3`, `spatial light: const vec3`. */
+export interface ShaderPlace {
+  type: string;
+  /** Processor function, or "global"/"constants" for names every function of the type sees. */
+  function: string;
+  dataType: string;
+}
+
+export type ShaderAnswer =
+  | { kind: "builtin"; name: string; places: ShaderPlace[] }
+  | { kind: "type"; type: string; function?: string; builtins: { name: string; function: string; dataType: string }[]; renderModes: string[]; stage: string[] };
 
 export interface SearchHit extends ApiEntry {
   score: number;
@@ -175,10 +190,11 @@ export class GodotApi {
     return [...this.classes.values()].filter((c) => c.methods?.some((m) => m.name === name)).map((c) => c.name);
   }
 
-  /** Looks up `Class`, `Class.member`, `Class.Enum.VALUE`, `@annotation` or a bare name. */
+  /** Looks up `Class`, `Class.member`, `Class.Enum.VALUE`, `@annotation`, `shader:type[.function]` or a bare name. */
   lookup(rawQuery: string): LookupResult {
     const query = rawQuery.trim().replace(/\(\)$/, "");
     const result: LookupResult = { query, entries: [], suggestions: [] };
+    if (/^shader:/i.test(query)) return this.shaderLookup(query.slice(7).trim(), result);
     const dot = query.indexOf(".");
 
     if (dot > 0) {
@@ -240,9 +256,67 @@ export class GodotApi {
       }
     }
     if (result.entries.length === 0) {
-      result.renamed = this.renamedClass(query) ?? this.renamedMember(query);
+      const places = this.shaderBuiltin(query);
+      if (places.length) {
+        result.shader = { kind: "builtin", name: query, places };
+        return result;
+      }
+      result.renamed = this.renamedClass(query) ?? this.renamedMember(query) ?? this.renamedShader(query);
       result.suggestions = closest(query, [...this.classes.keys()]);
     }
+    return result;
+  }
+
+  /** The shader types Godot 4.7 has (spatial, canvas_item, particles, sky, fog, texture_blit). */
+  shaderTypes(): string[] {
+    return Object.keys(this.data.shaders ?? {});
+  }
+
+  shaderType(name: string): ApiShaderType | undefined {
+    return Object.hasOwn(this.data.shaders ?? {}, name) ? this.data.shaders![name] : undefined;
+  }
+
+  /** Every shader type and function where a built-in with this exact name exists. */
+  shaderBuiltin(name: string): ShaderPlace[] {
+    const out: ShaderPlace[] = [];
+    for (const [type, data] of Object.entries(this.data.shaders ?? {})) {
+      for (const [fn, info] of Object.entries(data.functions)) {
+        const dataType = Object.hasOwn(info.builtins, name) ? info.builtins[name] : undefined;
+        if (dataType) out.push({ type, function: fn, dataType });
+      }
+    }
+    return out;
+  }
+
+  /** A Godot 3 shader name (built-in, hint or render mode) and its Godot 4 name. */
+  renamedShader(name: string): Rename | undefined {
+    const to = ownRename(this.data.renames.shaders, name);
+    return to ? { kind: "shader name", from: name, to } : undefined;
+  }
+
+  private shaderLookup(query: string, result: LookupResult): LookupResult {
+    const [type = "", fn] = query.split(".");
+    const data = this.shaderType(type);
+    if (!data) {
+      const places = this.shaderBuiltin(query);
+      if (places.length) result.shader = { kind: "builtin", name: query, places };
+      else {
+        result.renamed = this.renamedShader(query);
+        result.suggestions = closest(type, this.shaderTypes());
+      }
+      return result;
+    }
+    if (fn !== undefined && !Object.hasOwn(data.functions, fn)) {
+      result.suggestions = closest(fn, Object.keys(data.functions).filter((f) => data.functions[f]!.main));
+      return result;
+    }
+    const scopes = fn ? ["global", "constants", fn] : Object.keys(data.functions);
+    const builtins = scopes.flatMap((f) =>
+      Object.entries(data.functions[f]?.builtins ?? {}).map(([name, dataType]) => ({ name, function: f, dataType })),
+    );
+    const renderModes = Object.entries(data.renderModes).flatMap(([mode, options]) => (options.length ? options.map((o) => `${mode}_${o}`) : [mode]));
+    const stage = [...new Set(scopes.flatMap((f) => data.functions[f]?.stage ?? []))];
+    result.shader = { kind: "type", type, ...(fn ? { function: fn } : {}), builtins, renderModes, stage };
     return result;
   }
 
