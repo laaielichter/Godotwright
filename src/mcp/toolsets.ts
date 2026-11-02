@@ -58,10 +58,11 @@ export class ToolsetError extends Error {
  */
 export function enabledTools(list?: string | readonly string[]): Set<string> {
   const items = (typeof list === "string" ? list.split(/[\s,]+/) : (list ?? [])).map((s) => s.trim()).filter(Boolean);
-  if (items.length === 0 || items.includes("all")) return new Set(ALL_TOOLS);
+  if (items.length === 0) return new Set(ALL_TOOLS);
   const out = new Set<string>();
   for (const item of items) {
-    if (Object.hasOwn(TOOLSETS, item)) for (const tool of TOOLSETS[item as Toolset]) out.add(tool);
+    if (item === "all") for (const tool of ALL_TOOLS) out.add(tool);
+    else if (Object.hasOwn(TOOLSETS, item)) for (const tool of TOOLSETS[item as Toolset]) out.add(tool);
     else if (ALL_TOOLS.includes(item)) out.add(item);
     else if (ALL_TOOLS.includes(`godot_${item}`)) out.add(`godot_${item}`);
     else throw new ToolsetError(`unknown tool set or tool "${item}"; use ${TOOLSET_NAMES.join(", ")}, all, or tool names such as godot_play`);
