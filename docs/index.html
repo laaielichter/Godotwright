@@ -387,8 +387,8 @@ footer a { color: var(--muted); }
 
   <section id="tools">
     <div class="wrap">
-      <h2>32 MCP tools, one CLI</h2>
-      <p class="sub">31 of the 32 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
+      <h2>33 MCP tools, one CLI</h2>
+      <p class="sub">32 of the 33 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
       <ul class="tree">
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scan</span><p>Map the project without starting Godot: scenes and node trees, scripts with signals and exports, autoloads, input map, broken references.</p><code>godotwright scan</code></li>
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>godot_api</span><p>Exact Godot 4.7 lookup from the bundled class reference (1078 classes): signatures, inheritance, Godot 3 names.</p><code>godotwright api Node2D.look_at</code></li>
@@ -405,6 +405,7 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_screenshot</span><p>Render a scene or a model to a PNG and say how much of the picture is drawn.</p><code>godotwright screenshot --scene res://main.tscn -o shot.png</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_doctor</span><p>Start here when something is broken: the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and the fix, then numbered next steps.</p><code>godotwright doctor --symptom "falls through the floor"</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_fix</span><p>Apply the mechanical fixes for review findings, each labelled safe or check. Shows them first, then reviews the changed files again.</p><code>godotwright fix --write</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>godot_code</span><p>Godot's own GDScript language server, kept warm: warnings at the project's levels, inferred types, definitions and completion, also for code that is not saved yet.</p><code>godotwright code diagnostics res://player.gd</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_deps</span><p>The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads, and scene loops Godot cannot load.</p><code>godotwright deps unused</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_undo</span><p>Undo the last Godotwright writes, newest first: edits, renames with their moves, migrations, fixes and model builds. A file changed by hand since is left alone.</p><code>godotwright undo --steps 2</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_session</span><p>Load a scene once, headless and paused, and keep the game running between calls: a world that takes a minute to load loads once.</p><code>godotwright session start</code></li>
