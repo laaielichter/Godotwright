@@ -45,6 +45,15 @@ godotwright project autoload add Game res://game.gd --write   # checks the file 
 godotwright scene add main.tscn . Music AudioStreamPlayer --write   # add a node (or an instance: res://enemy.tscn); only that line changes
 godotwright scene set main.tscn Timer wait_time 0.5 --write   # property name and type checked; enums by name, resources as res:// files
 godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns when the method is missing or takes other arguments
+godotwright resource set mat.tres roughness 0.8 --write   # .tres: property name and type checked, uids kept, only that line changes
+godotwright resource set level.tres data "[0, 1, 255]"   # byte arrays as a plain list or base64:..., written as PackedByteArray
+godotwright resource add-sub theme.tres StyleBoxFlat --id hover   # then: resource set theme.tres bg_color "Color(0, 1, 0, 1)" --sub hover
+godotwright resource diff car.glb      # import options changed from the importer's defaults, and per-animation/mesh/node options
+godotwright resource set music.ogg loop true --write   # import option checked against the importer; reimported headless and verified
+godotwright resource set beep.wav edit/loop_mode Forward --write   # enum options by name
+godotwright resource set car.glb settings/loop_mode Linear --sub animations/drive --write   # per-animation loop
+godotwright resource set car.glb generate/shadow_meshes Disable --sub meshes/car_body --write   # per-mesh (named <file>_<mesh>)
+godotwright resource importer anims.glb animation_library --write   # import a .glb as an AnimationLibrary, uid kept
 godotwright migrate --write         # port Godot 3 scripts to Godot 4 where that is mechanical; lists what is left
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
@@ -175,6 +184,35 @@ of your own can use any of the texture patterns in its own colour (`"texture": "
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
+
+## Edit resources and import settings
+
+`godotwright resource` (MCP: `godot_resource_edit`) edits text resources and import settings without the editor.
+Nothing is written without `--write` (`write: true`); the dry run shows the changed lines. Several changes go in one
+call with `resource apply <file> '<JSON list>'` (MCP: the `ops` list), so there is one write and one reimport.
+
+- **`.tres`** (and the sub_resources of a `.tscn`): `set`, `unset`, `add-sub`, `remove-sub`, `get`. Property names
+  and types come from the Godot 4.7 reference and the script's exports; enums by name, resources as `res://` files
+  (an `ext_resource` with its uid is added) or `SubResource("id")`, packed arrays as a plain list (`[0, 1, 255]`) or,
+  for bytes, `base64:...`. Only the changed lines are touched: the uid lines are never rewritten. A sub_resource is
+  moved before the first one that uses it (Godot cannot load a forward reference), an `ext_resource` the edit left
+  unused is removed, and a sub_resource still in use cannot be removed. Writes report the review errors before and
+  after. An open editor keeps its cached copy, so reload the resource there.
+- **Import settings**: give the asset (`beep.wav`) or its `.import`. `get` (one option: type, default and choices),
+  `diff` (what differs from the defaults), `set`, `unset` (back to the default). Option names are checked against
+  what Godot already wrote for the asset and the importer's class reference, because Godot drops unknown options
+  without a word. Per-sub-resource options of the scene importer go through `--sub` (`sub`): `animations/<name>`
+  (`settings/loop_mode`, `save_to_file/*`, slices), `meshes/<file>_<mesh>` (`generate/shadow_meshes`,
+  `generate/lightmap_uv`, `generate/lods`), `materials/<name>` (`use_external/enabled`, `use_external/path`) and
+  `nodes/PATH:<node>` (`mesh_instance/cast_shadow`, `generate/physics`, ...); names are checked against the glTF.
+  `importer` switches between `scene` and `animation_library`, `texture` and `image`, or to `keep`, keeping the uid.
+- **Verified reimport**: after a `.import` write Godotwright runs `godot --headless --import` and reads the result
+  back: `changed` (Godot kept every value and the imported output changed, by its `dest_md5`), `same` (kept, but the
+  output is identical), `dropped` (Godot did not keep a value) or `failed`, with the import errors for that asset.
+  `--no-reimport` skips it; without Godot the file is written and the result says it was not reimported.
+  `resource reimport <asset>` only runs the import. The journal entry is stored after the import, so `godotwright
+  undo` still works after Godot rewrote the `.import`; undo restores the settings, and the next import rebuilds the
+  output.
 
 ## Port Godot 3 scripts to Godot 4
 
@@ -328,7 +366,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 32 tools
+### The 33 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -345,6 +383,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
+| `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
