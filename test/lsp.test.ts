@@ -19,8 +19,8 @@ interface Fake {
   methods: string[];
   /** Methods it never answers. */
   silent: Set<string>;
-  /** Drop the connection at the next didOpen, as a Godot that crashes does. */
-  dieAtOpen: boolean;
+  /** Drop the connection at this many next didOpens, as a Godot that crashes does. */
+  dieAtOpen: number;
   /** Wait this long before publishing diagnostics (a slow analysis). */
   delayMs: number;
   /** Connections made, and how many of them are closed. */
@@ -29,7 +29,7 @@ interface Fake {
 }
 
 async function fakeLsp(): Promise<Fake> {
-  const fake: Fake = { port: 0, server: createServer(), opened: [], methods: [], silent: new Set(), dieAtOpen: false, delayMs: 0, connections: [], close: async () => undefined };
+  const fake: Fake = { port: 0, server: createServer(), opened: [], methods: [], silent: new Set(), dieAtOpen: 0, delayMs: 0, connections: [], close: async () => undefined };
   const sockets = fake.connections;
   fake.server.on("connection", (socket) => {
     sockets.push(socket);
@@ -47,8 +47,8 @@ async function fakeLsp(): Promise<Fake> {
             send({ id: m.id, result: { capabilities: { hoverProvider: true } } });
             break;
           case "textDocument/didOpen": {
-            if (fake.dieAtOpen) {
-              fake.dieAtOpen = false;
+            if (fake.dieAtOpen > 0) {
+              fake.dieAtOpen--;
               socket.destroy();
               return;
             }
@@ -348,20 +348,37 @@ describe("godot_code against a fake language server", () => {
     expect(starts).toHaveLength(5);
   });
 
-  it("fails calls queued on a server that dies without an unhandled rejection, and starts it again after", async () => {
+  it("runs the calls queued on a server that dies on a new one", async () => {
+    const { pool, root, starts, fake } = await setup({ "main.gd": MAIN, "b.gd": "extends Node\n" });
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    fake.dieAtOpen = 1;
+    // Parallel calls, as an MCP client sends them: the others wait their turn on the server the first one loses.
+    const calls = await Promise.allSettled([
+      codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool }),
+      codeIntel(root, { op: "diagnostics", file: "res://b.gd", pool }),
+      codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 6, pool }),
+    ]);
+    const [first, second, third] = calls;
+    expect(first.status === "rejected" && String(first.reason)).toBe("Error: the language server closed the connection");
+    expect(second.status === "fulfilled" && second.value.server).toMatchObject({ fresh: true, restarted: "the previous language server had stopped" });
+    expect(third.status === "fulfilled" && third.value.hover?.signature).toBe("var speed: float = 3.0");
+    expect(starts).toHaveLength(2);
+  });
+
+  it("fails calls on a server that keeps dying without an unhandled rejection", async () => {
     const unhandled: unknown[] = [];
     const onUnhandled = (reason: unknown) => unhandled.push(reason);
     process.on("unhandledRejection", onUnhandled);
     cleanups.push(() => process.off("unhandledRejection", onUnhandled));
     const { pool, root, starts, fake } = await setup({ "main.gd": MAIN, "b.gd": "extends Node\n" });
     await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
-    fake.dieAtOpen = true;
-    // Parallel calls, as an MCP client sends them: the second waits its turn on the server the first one loses.
+    fake.dieAtOpen = 99;
     const calls = await Promise.allSettled([
       codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool }),
       codeIntel(root, { op: "diagnostics", file: "res://b.gd", pool }),
       codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 6, pool }),
     ]);
+    // A call is tried on a new server once; the third waited on that one too, and found it dead.
     expect(calls.map((c) => (c.status === "rejected" ? String(c.reason) : "ok"))).toEqual([
       "Error: the language server closed the connection",
       "Error: the language server closed the connection",
@@ -369,9 +386,10 @@ describe("godot_code against a fake language server", () => {
     ]);
     await new Promise((r) => setTimeout(r, 50));
     expect(unhandled).toEqual([]);
+    expect(starts).toHaveLength(2);
+    fake.dieAtOpen = 0;
     const again = await codeIntel(root, { op: "diagnostics", file: "res://b.gd", pool });
     expect(again.server).toMatchObject({ fresh: true, restarted: "the previous language server had stopped" });
-    expect(starts).toHaveLength(2);
   });
 
   it("lets the calls running on a stale server finish before it restarts", async () => {

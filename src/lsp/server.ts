@@ -368,6 +368,8 @@ function hookProcess(): void {
   }
 }
 
+const RETRY = Symbol("retry");
+
 /** What `LanguageServerPool.run` tells the call about the server it got. */
 export interface ServerInfo {
   /** Started for this call (else it was warm). */
@@ -403,15 +405,21 @@ export class LanguageServerPool {
    * (`godot` is the binary, or undefined to find it), and started again when it died or the project changed in a way
    * a running server does not see.
    */
-  async run<T>(root: string, godot: string | undefined, fn: (server: GodotLanguageServer, info: ServerInfo) => Promise<T>): Promise<T> {
-    let job: Promise<T> | undefined;
+  async run<T>(root: string, godot: string | undefined, fn: (server: GodotLanguageServer, info: ServerInfo) => Promise<T>, retried = false): Promise<T> {
+    let job: Promise<T | typeof RETRY> | undefined;
     await this.locked(root, async () => {
       const { server, info } = await this.acquire(root, godot);
       // Queued while the project's lock is held: a restart decided after this waits for it.
-      job = server.exclusive(() => fn(server, info));
+      job = server.exclusive(async () => {
+        // The server died while this call waited its turn (Godot crashed during an earlier call): it never reached
+        // Godot, so it can run on a new server, once.
+        if (!server.alive && !retried) return RETRY;
+        return fn(server, info);
+      });
       job.catch(() => undefined);
     });
-    return job!;
+    const out = await job!;
+    return out === RETRY ? this.run(root, godot, fn, true) : out;
   }
 
   get size(): number {
