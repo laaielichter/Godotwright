@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { playScene, type PlayReport } from "../play/play.js";
+import { JournalWriter } from "../journal/journal.js";
+import { parseCondition, parseTimeline, playScene, type PlayReport } from "../play/play.js";
 import { findProjectRoot } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 
@@ -30,6 +31,10 @@ export interface Scenario {
   watch: string[];
   /** Physics frames to run (default: the last frame an expectation names, else 120). */
   frames?: number;
+  /** Stop at the first frame this condition holds; the scenario fails when it never does. */
+  until?: string;
+  /** Signals to record ("Hero.landed"); a claim on one counts how often it fired up to that frame. */
+  signals?: string[];
   expect: Expectation[];
 }
 
@@ -48,6 +53,10 @@ export interface ScenarioResult {
   /** Errors the game raised while it ran. */
   errors: string[];
   finished: boolean;
+  /** Wall-clock seconds the run took. */
+  seconds?: number;
+  /** The frame the until condition first held. */
+  stoppedAt?: number;
 }
 
 const EXPECT = /^\s*(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+?)\s*(?:@\s*(\d+))?\s*$/;
@@ -100,7 +109,46 @@ export function parseScenario(json: unknown, fallbackName: string): Scenario {
   if (frames !== undefined && !(typeof frames === "number" && Number.isInteger(frames) && frames > 0)) throw new ScenarioError('"frames" must be a whole number above 0');
   const scene = text("scene");
   const input = text("input");
-  return { name: text("name") ?? fallbackName, ...(scene ? { scene } : {}), ...(input ? { input } : {}), watch: strings("watch"), ...(frames ? { frames: frames as number } : {}), expect };
+  const until = text("until");
+  if (until) {
+    try {
+      parseCondition(until);
+    } catch (error) {
+      throw new ScenarioError(`"until": ${(error as Error).message}`);
+    }
+  }
+  const signals = strings("signals");
+  return {
+    name: text("name") ?? fallbackName,
+    ...(scene ? { scene } : {}),
+    ...(input ? { input } : {}),
+    watch: strings("watch"),
+    ...(frames ? { frames: frames as number } : {}),
+    ...(until ? { until } : {}),
+    ...(signals.length ? { signals } : {}),
+    expect,
+  };
+}
+
+/** A scenario as the JSON file holds it: the inverse of parseScenario. */
+export function scenarioJson(s: Scenario): Record<string, unknown> {
+  return {
+    name: s.name,
+    ...(s.scene ? { scene: s.scene } : {}),
+    ...(s.input ? { input: s.input } : {}),
+    ...(s.watch.length ? { watch: s.watch } : {}),
+    ...(s.frames ? { frames: s.frames } : {}),
+    ...(s.until ? { until: s.until } : {}),
+    ...(s.signals?.length ? { signals: s.signals } : {}),
+    expect: s.expect.map((e) => e.text),
+  };
+}
+
+/** Scenarios whose name is `name`, else those whose name contains it; all when no name is given. */
+export function pickScenarios<T extends { scenario: Scenario }>(list: T[], name?: string): T[] {
+  if (!name) return list;
+  const exact = list.filter((s) => s.scenario.name === name);
+  return exact.length ? exact : list.filter((s) => s.scenario.name.includes(name));
 }
 
 /** The scenario files of a project, sorted by name. */
@@ -124,16 +172,32 @@ export function loadScenarios(path: string): { root: string; scenarios: { file: 
 
 /** Checks a finished run against the scenario's expectations. */
 export function judge(scenario: Scenario, report: PlayReport): ExpectationResult[] {
-  return judgeClaims(scenario.expect, report, scenario.frames);
+  const results = judgeClaims(scenario.expect, report, scenario.frames, scenario.signals);
+  if (scenario.until && report.until?.frame === undefined)
+    results.push({ expect: `until ${scenario.until}`, ok: false, message: `never held in ${report.samples.at(-1)?.frame ?? scenario.frames ?? 0} frames` });
+  return results;
 }
 
-/** Checks claims against a play run: each on its frame, or on the last frame that was sampled. */
-export function judgeClaims(claims: Expectation[], report: PlayReport, frames?: number): ExpectationResult[] {
+/** Claim watches that are values to sample: a recorded signal is counted, not sampled. */
+export function sampledWatches(claims: Expectation[], signals: string[] = []): string[] {
+  return claims.map((c) => c.watch).filter((w) => !signals.includes(w));
+}
+
+/**
+ * Checks claims against a play run: each on its frame, or on the last frame that was sampled.
+ * A claim on a recorded signal ("Hero.landed >= 1") compares how often it fired up to that frame.
+ */
+export function judgeClaims(claims: Expectation[], report: PlayReport, frames?: number, signals: string[] = []): ExpectationResult[] {
   const last = report.samples.at(-1)?.frame ?? frames ?? 0;
   return claims.map((e) => {
     const frame = e.frame ?? last;
     const sample = report.samples.find((s) => s.frame === frame);
     if (!sample) return { expect: e.text, ok: false, message: `frame ${frame} was not reached` };
+    if (signals.includes(e.watch)) {
+      const actual = String((report.signals ?? []).filter((s) => s.signal === e.watch && s.frame <= frame).length);
+      const ok = compare(actual, e.op, e.value);
+      return { expect: e.text, ok, actual, ...(ok ? {} : { message: `${e.watch} fired ${actual} times by frame ${frame}` }) };
+    }
     const actual = sample.values[e.watch];
     if (actual === undefined) return { expect: e.text, ok: false, message: `${e.watch} was not sampled` };
     const ok = compare(actual, e.op, e.value);
@@ -160,7 +224,8 @@ export interface ScenarioRunOptions {
 
 export async function runScenario(root: string, file: string, scenario: Scenario, options: ScenarioRunOptions = {}): Promise<ScenarioResult> {
   const frames = scenario.frames ?? Math.max(120, ...scenario.expect.map((e) => (e.frame ?? 0) + 1));
-  const watch = [...new Set([...scenario.expect.map((e) => e.watch), ...scenario.watch])];
+  const watch = [...new Set([...sampledWatches(scenario.expect, scenario.signals), ...scenario.watch])];
+  const started = Date.now();
   const report = await (options.play ?? playScene)(root, {
     godot: options.godot,
     ...(scenario.scene ? { scene: scenario.scene } : {}),
@@ -168,18 +233,107 @@ export async function runScenario(root: string, file: string, scenario: Scenario
     watch,
     frames,
     every: 1,
+    ...(scenario.until ? { until: scenario.until } : {}),
+    ...(scenario.signals?.length ? { signals: scenario.signals } : {}),
     import: options.import,
     ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
   });
   const results = judge(scenario, report);
   const errors = report.diagnostics.filter((d) => d.severity === "error").map((d) => `${d.file ?? ""}${d.line ? `:${d.line}` : ""} ${d.message}`.trim());
-  return { name: scenario.name, file, ok: report.finished && !errors.length && results.every((r) => r.ok), results, errors, finished: report.finished };
+  return {
+    name: scenario.name,
+    file,
+    ok: report.finished && !errors.length && results.every((r) => r.ok),
+    results,
+    errors,
+    finished: report.finished,
+    seconds: Math.round((Date.now() - started) / 100) / 10,
+    ...(report.until?.frame !== undefined ? { stoppedAt: report.until.frame } : {}),
+  };
 }
 
-export function formatScenario(r: ScenarioResult): string {
-  const out = [`${r.ok ? "PASS" : "FAIL"}  ${r.name}  (${r.file})`];
+/** One scenario's result; `brief` puts a passing one on one line. */
+export function formatScenario(r: ScenarioResult, options: { brief?: boolean } = {}): string {
+  if (r.ok && options.brief) return `PASS  ${r.name}  (${r.results.length} claims)`;
+  const out = [`${r.ok ? "PASS" : "FAIL"}  ${r.name}  (${r.file})${r.stoppedAt !== undefined ? `  stopped at frame ${r.stoppedAt} (until)` : ""}`];
   for (const x of r.results) out.push(`  ${x.ok ? "ok  " : "FAIL"} ${x.expect}${x.ok ? "" : `  -> ${x.message}`}`);
   if (!r.finished) out.push("  the run ended before the last frame");
   for (const e of r.errors) out.push(`  error: ${e}`);
   return out.join("\n");
+}
+
+/** Several results with a closing count line. */
+export function formatScenarios(results: ScenarioResult[], options: { brief?: boolean } = {}): string {
+  const failed = results.filter((r) => !r.ok).length;
+  return `${[...results.map((r) => formatScenario(r, options)), `${results.length - failed} of ${results.length} scenarios passed`].join("\n")}\n`;
+}
+
+/** The scenarios of a project, a few lines each, for an agent to read. */
+export function formatScenarioList(list: { file: string; scenario: Scenario }[]): string {
+  if (!list.length) return `no scenarios in ${SCENARIO_DIR}\n`;
+  const out: string[] = [];
+  for (const { scenario: s } of list) {
+    const parts = [s.scene ?? "main scene", s.frames ? `${s.frames} frames` : "", s.input ? `input "${s.input}"` : "", s.until ? `until "${s.until}"` : "", s.signals?.length ? `signals ${s.signals.join(", ")}` : ""];
+    out.push(`${s.name}: ${parts.filter(Boolean).join("; ")}`);
+    for (const e of s.expect) out.push(`  ${e.text}`);
+  }
+  return `${out.join("\n")}\n`;
+}
+
+/** The fields of a scenario file from the arguments of a play run (CLI `signal` or MCP `signals`). */
+export function scenarioData(
+  name: string,
+  o: { scene?: string; input?: string; watch?: string[]; frames?: number; until?: string; signal?: string[]; signals?: string[]; expect?: string[] },
+): Record<string, unknown> {
+  const signals = o.signals ?? o.signal ?? [];
+  return {
+    name,
+    ...(o.scene ? { scene: o.scene } : {}),
+    ...(o.input ? { input: o.input } : {}),
+    ...(o.watch?.length ? { watch: o.watch } : {}),
+    ...(o.frames ? { frames: o.frames } : {}),
+    ...(o.until ? { until: o.until } : {}),
+    ...(signals.length ? { signals } : {}),
+    expect: o.expect ?? [],
+  };
+}
+
+export const SCENARIO_NAME = /^[A-Za-z0-9_-]{1,64}$/;
+
+export interface SaveResult {
+  /** The run that proved it, or disproved it. */
+  result: ScenarioResult;
+  /** res:// path relative to the project, when it was written. */
+  file?: string;
+}
+
+/**
+ * Runs a scenario once and, when it passes, writes it to .godotwright/scenarios/<name>.json (through the journal,
+ * so godot_undo can take it back). A file that is there already is only replaced with `overwrite`.
+ */
+export async function saveScenario(path: string, data: Record<string, unknown>, options: ScenarioRunOptions & { overwrite?: boolean } = {}): Promise<SaveResult> {
+  const root = findProjectRoot(path);
+  if (!root) throw new ProjectNotFoundError(path);
+  const name = data["name"];
+  if (typeof name !== "string" || !SCENARIO_NAME.test(name)) throw new ScenarioError("name must be 1 to 64 letters, digits, _ or -");
+  const scenario = parseScenario(data, name);
+  if (scenario.input) {
+    try {
+      parseTimeline(scenario.input);
+    } catch (error) {
+      throw new ScenarioError(`"input": ${(error as Error).message}`);
+    }
+  }
+  const file = `${SCENARIO_DIR}/${name}.json`;
+  const full = join(root, file);
+  if (existsSync(full) && !options.overwrite) throw new ScenarioError(`${file} exists; pass overwrite to replace it`);
+  const result = await runScenario(root, file, scenario, options);
+  if (!result.ok) return { result };
+  const json = `${JSON.stringify(scenarioJson(scenario), null, 2)}\n`;
+  // The loader must read back what was written.
+  parseScenario(JSON.parse(json), name);
+  const journal = new JournalWriter(root, "scenario save", name);
+  journal.write(full, json);
+  journal.commit();
+  return { result, file };
 }
