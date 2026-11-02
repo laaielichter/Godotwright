@@ -1,5 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { ProtectedPathError, assertWritable } from "../project/protect.js";
 import { diffImages, diffPng, formatDiff, imageStats, type ImageDiff } from "./diff.js";
 import { decodePng, PngError } from "./png.js";
 
@@ -116,6 +117,15 @@ function readImage(file: string, what: string) {
   }
 }
 
+/** A baseline write into a protected path (godotwright.json "protect") is a BaselineError, so callers report it. */
+function writable(file: string): void {
+  try {
+    assertWritable(file);
+  } catch (error) {
+    throw error instanceof ProtectedPathError ? new BaselineError(error.message) : error;
+  }
+}
+
 /**
  * Compares a new capture with the baseline of that name: makes it when it is missing (or reports it as missing),
  * replaces it on update, and otherwise diffs the two and writes the diff picture (changed pixels magenta).
@@ -126,10 +136,13 @@ export function compareBaseline(root: string, rawName: string, actualFile: strin
   const actual = readImage(actualFile, "new capture");
   const stats = imageStats(actual);
   const result: BaselineResult = { name, status: "same", ok: true, baseline: rel(root, files.png), actual: rel(root, actualFile), notes: [], ...(stats.blank ? { blank: stats.blank } : {}) };
+  writable(files.diff);
   rmSync(files.diff, { force: true });
   const exists = existsSync(files.png);
   const old = readBaselineMeta(root, name, options.dir);
   if (options.update || (!exists && options.createMissing !== false)) {
+    writable(files.png);
+    writable(files.json);
     // Never write over a JSON file that is not this baseline's settings: it belongs to something else.
     if (!exists && !old && existsSync(files.json))
       throw new BaselineError(`${rel(root, files.json)} exists and is not a baseline settings file; choose another baseline name or folder`);

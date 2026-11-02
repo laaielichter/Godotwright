@@ -6,10 +6,20 @@ import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
+import { ProtectedPathError, assertWritable } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { BaselineError, baselineFiles, baselineName, compareBaseline, formatBaseline, readBaselineMeta, type BaselineMeta, type BaselineResult } from "./baseline.js";
 import { imageStats } from "./diff.js";
 import { decodePng, PngError } from "./png.js";
+
+/** A picture written into a protected path (godotwright.json "protect") is refused as a ScreenshotError. */
+function writableOut(file: string): void {
+  try {
+    assertWritable(file);
+  } catch (error) {
+    throw error instanceof ProtectedPathError ? new ScreenshotError(error.message) : error;
+  }
+}
 
 export class ScreenshotError extends Error {}
 
@@ -287,6 +297,8 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
     for (const [k, v] of Object.entries(stored) as [keyof ScreenshotOptions, never][]) if (settings[k] === undefined) settings[k] = v;
   }
   const files = baselineFiles(root, name, options.baselineDir);
+  // Refuse a baseline that would be written into a protected path before Godot runs (compareBaseline checks again).
+  if (options.update || (!existsSync(files.png) && options.createMissing !== false)) writableOut(files.png);
   const report = await render(path, { ...settings, out: options.out ?? files.actual });
   const model = settings.model ? (isAbsolute(settings.model) ? settings.model : resolve(path, settings.model)) : undefined;
   const taken: BaselineMeta = {
@@ -345,12 +357,18 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
     if (!scene) throw new ScreenshotError("no scene: pass --scene res://..., or set a main scene (application/run/main_scene)");
     if (!existsSync(fromResPath(root, scene))) throw new ScreenshotError(`${scene} does not exist in the project`);
   }
+  const out = resolve(options.out ?? (model ? model.replace(/\.(glb|gltf)$/i, ".png") : join(root, ".godot", "godotwright", "screenshot.png")));
+  try {
+    writableOut(out);
+  } catch (error) {
+    if (temp) rmSync(temp, { recursive: true, force: true });
+    throw error;
+  }
   const how = screen();
   if ("error" in how) {
     if (temp) rmSync(temp, { recursive: true, force: true });
     throw new ScreenshotError(how.error);
   }
-  const out = resolve(options.out ?? (model ? model.replace(/\.(glb|gltf)$/i, ".png") : join(root, ".godot", "godotwright", "screenshot.png")));
   mkdirSync(dirname(out), { recursive: true });
   rmSync(out, { force: true });
 
