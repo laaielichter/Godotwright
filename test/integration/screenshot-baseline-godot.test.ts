@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createServer } from "../../src/mcp/server.js";
 import { decodePng } from "../../src/screenshot/png.js";
-import { formatScreenshot, takeScreenshot } from "../../src/screenshot/screenshot.js";
+import { baselineKey, formatScreenshot, takeScreenshot } from "../../src/screenshot/screenshot.js";
 import { makeProject, runCli } from "../helpers.js";
 
 /** Needs a real Godot 4.7 binary in $GODOT and a screen (a display, or xvfb-run). CI provides both. */
@@ -55,7 +55,7 @@ describe.skipIf(!GODOT || !SCREEN)("godotwright screenshot baselines in Godot", 
   it("saves a baseline, finds the same picture again, and finds a changed colour and label where they are", { timeout: 600_000 }, async () => {
     const first = await takeScreenshot(root, { godot: GODOT, ...size, baseline: "auto" });
     console.log(formatScreenshot(first));
-    const baseline = join(root, ".godotwright", "baselines", "main_tscn@320x180_iso.png");
+    const baseline = join(root, ".godotwright", "baselines", `${baselineKey("res://main.tscn", 320, 180, ["iso"])}.png`);
     expect(first.baseline).toMatchObject({ status: "saved", file: baseline });
     expect(existsSync(baseline)).toBe(true);
 

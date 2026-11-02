@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
@@ -85,10 +86,16 @@ export interface ScreenshotReport {
   baseline?: BaselineResult;
 }
 
-/** The file name of an automatic baseline: scene or model, size of one view and the views, e.g. main_tscn@640x360_iso. */
+/**
+ * The file name of an automatic baseline: scene or model, size of one view and the views, e.g.
+ * main_tscn-1a2b3c4d@640x360_iso. The readable part keeps letters and digits of any script; the short hash of the
+ * whole path keeps two scenes apart that read the same (a/b_c.tscn and a_b/c.tscn, or names that differ in accents).
+ */
 export function baselineKey(subject: string, width: number, height: number, views: View[]): string {
-  const name = subject.replace(/^res:\/\//, "").replace(/[^A-Za-z0-9-]+/g, "_").replace(/^_+|_+$/g, "") || "shot";
-  return `${name}@${width}x${height}_${views.join("-")}`;
+  const path = subject.replace(/^res:\/\//, "").normalize("NFC");
+  const name = [...path.replace(/[^\p{L}\p{M}\p{N}-]+/gu, "_").replace(/^_+|_+$/g, "")].slice(-60).join("") || "shot";
+  const hash = createHash("sha256").update(path).digest("hex").slice(0, 8);
+  return `${name}-${hash}@${width}x${height}_${views.join("-")}`;
 }
 
 /**

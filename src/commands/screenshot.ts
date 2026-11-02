@@ -42,7 +42,7 @@ export function screenshotCommand(): Command {
     .option("--size <WxH>", "size of one view (default 640x360)", parseSize, { width: 640, height: 360 })
     .option("--frames <n>", "frames to run before the picture (default 10)", (v: string) => Number.parseInt(v, 10), 10)
     .option("-o, --out <file>", "where to write the PNG (default: .godot/godotwright/screenshot.png, or the model name with .png)")
-    .option("--baseline [file]", "compare with a baseline PNG, saved on the first run (no file: .godotwright/baselines/<scene or model>@<size>_<views>.png); exit code 1 when it changed")
+    .option("--baseline [file]", "compare with a baseline PNG, saved on the first run (no file: .godotwright/baselines/<scene or model>-<hash>@<size>_<views>.png); exit code 1 when it changed")
     .option("--threshold <percent>", `percent of pixels that may change (default ${DEFAULT_THRESHOLD})`, parseNumber)
     .option("--tolerance <0-255>", `how far a pixel's colour may move before it counts as changed (default ${DEFAULT_TOLERANCE})`, parseNumber)
     .option("--update-baseline", "write the new picture as the baseline instead of comparing (default file as --baseline)")

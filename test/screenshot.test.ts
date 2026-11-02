@@ -81,9 +81,26 @@ describe("screenshot", () => {
   });
 
   it("names an automatic baseline after the scene or model, the size and the views", () => {
-    expect(baselineKey("res://main.tscn", 640, 360, ["iso"])).toBe("main_tscn@640x360_iso");
-    expect(baselineKey("res://levels/level 1.tscn", 320, 180, ["front", "top"])).toBe("levels_level_1_tscn@320x180_front-top");
-    expect(baselineKey("car.glb", 640, 360, ["iso"])).toBe("car_glb@640x360_iso");
+    expect(baselineKey("res://main.tscn", 640, 360, ["iso"])).toMatch(/^main_tscn-[0-9a-f]{8}@640x360_iso$/);
+    expect(baselineKey("res://main.tscn", 640, 360, ["iso"])).toBe(baselineKey("main.tscn", 640, 360, ["iso"]));
+    expect(baselineKey("res://levels/level 1.tscn", 320, 180, ["front", "top"])).toMatch(/^levels_level_1_tscn-[0-9a-f]{8}@320x180_front-top$/);
+    expect(baselineKey("car.glb", 640, 360, ["iso"])).toMatch(/^car_glb-[0-9a-f]{8}@640x360_iso$/);
+    expect(baselineKey("res://关卡.tscn", 640, 360, ["iso"])).toMatch(/^关卡_tscn-[0-9a-f]{8}@/);
+    expect(baselineKey("res://niveau_één.tscn", 640, 360, ["iso"])).toMatch(/^niveau_één_tscn-/);
+  });
+
+  it("gives every scene its own automatic baseline, also when the readable names are the same", () => {
+    const pairs = [
+      ["res://关卡.tscn", "res://菜单.tscn"],
+      ["res://niveau_één.tscn", "res://niveau_ëën.tscn"],
+      ["res://a/b_c.tscn", "res://a_b/c.tscn"],
+      ["res://a b.tscn", "res://a_b.tscn"],
+    ];
+    for (const [a, b] of pairs) expect(baselineKey(a!, 640, 360, ["iso"])).not.toBe(baselineKey(b!, 640, 360, ["iso"]));
+    // The same file written in decomposed Unicode (as macOS file names are) is the same baseline.
+    expect(baselineKey("res://niveau_één.tscn", 640, 360, ["iso"])).toBe(baselineKey("res://niveau_één.tscn", 640, 360, ["iso"]));
+    // A long path keeps a short name.
+    expect(baselineKey(`res://${"deep/".repeat(40)}level.tscn`, 640, 360, ["iso"]).length).toBeLessThan(100);
   });
 
   it("saves the first picture as the baseline, then compares later ones with it", () => {
@@ -126,9 +143,9 @@ describe("screenshot", () => {
   });
 
   it("says in words whether the picture matches its baseline, and what to do next", () => {
-    const base = { file: "/p/.godotwright/baselines/main_tscn@320x180_iso.png", threshold: 0.5, tolerance: 3 };
+    const base = { file: "/p/.godotwright/baselines/main_tscn-867a7a3a@320x180_iso.png", threshold: 0.5, tolerance: 3 };
     const saved = formatScreenshot({ ...REPORT, baseline: { status: "saved", ...base } });
-    expect(saved).toContain("baseline saved: /p/.godotwright/baselines/main_tscn@320x180_iso.png");
+    expect(saved).toContain("baseline saved: /p/.godotwright/baselines/main_tscn-867a7a3a@320x180_iso.png");
     expect(saved.trimEnd().split("\n").at(-1)).toMatch(/^Next: /);
     const same = formatScreenshot({ ...REPORT, baseline: { status: "unchanged", ...base, diff: "/d.png", percent: 0, pixels: 0, meanShift: 0 } });
     expect(same).toContain("baseline unchanged: 0% of pixels changed (0 px; threshold 0.5%, tolerance 3)");
