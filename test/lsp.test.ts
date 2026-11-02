@@ -16,12 +16,18 @@ interface Fake {
   methods: string[];
   /** Methods it never answers. */
   silent: Set<string>;
+  /** Drop the connection at the next didOpen, as a Godot that crashes does. */
+  dieAtOpen: boolean;
+  /** Wait this long before publishing diagnostics (a slow analysis). */
+  delayMs: number;
+  /** Connections made, and how many of them are closed. */
+  connections: Socket[];
   close: () => Promise<void>;
 }
 
 async function fakeLsp(): Promise<Fake> {
-  const fake: Fake = { port: 0, server: createServer(), opened: [], methods: [], silent: new Set(), close: async () => undefined };
-  const sockets: Socket[] = [];
+  const fake: Fake = { port: 0, server: createServer(), opened: [], methods: [], silent: new Set(), dieAtOpen: false, delayMs: 0, connections: [], close: async () => undefined };
+  const sockets = fake.connections;
   fake.server.on("connection", (socket) => {
     sockets.push(socket);
     const reader = new MessageReader();
@@ -38,6 +44,11 @@ async function fakeLsp(): Promise<Fake> {
             send({ id: m.id, result: { capabilities: { hoverProvider: true } } });
             break;
           case "textDocument/didOpen": {
+            if (fake.dieAtOpen) {
+              fake.dieAtOpen = false;
+              socket.destroy();
+              return;
+            }
             const { uri, text } = p["textDocument"];
             docs.set(uri, text);
             fake.opened.push({ path: fileURLToPath(uri), text });
@@ -54,9 +65,13 @@ async function fakeLsp(): Promise<Fake> {
                 }
               }
             });
-            // Another file's diagnostics first: the client must wait for its own.
-            send({ method: "textDocument/publishDiagnostics", params: { uri: "file:///elsewhere/other.gd", diagnostics: [] } });
-            send({ method: "textDocument/publishDiagnostics", params: { uri: uri.replace(/ /g, "%20"), diagnostics } });
+            const publish = () => {
+              // Another file's diagnostics first: the client must wait for its own.
+              send({ method: "textDocument/publishDiagnostics", params: { uri: "file:///elsewhere/other.gd", diagnostics: [] } });
+              send({ method: "textDocument/publishDiagnostics", params: { uri: uri.replace(/ /g, "%20"), diagnostics } });
+            };
+            if (fake.delayMs) setTimeout(() => !socket.destroyed && publish(), fake.delayMs);
+            else publish();
             break;
           }
           case "textDocument/hover": {
@@ -305,6 +320,45 @@ describe("godot_code against a fake language server", () => {
     const third = await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
     expect(third.server).toMatchObject({ fresh: true, restarted: "a class_name or project.godot changed since it started" });
     expect(starts).toHaveLength(2);
+  });
+
+  it("fails calls queued on a server that dies without an unhandled rejection, and starts it again after", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    cleanups.push(() => process.off("unhandledRejection", onUnhandled));
+    const { pool, root, starts, fake } = await setup({ "main.gd": MAIN, "b.gd": "extends Node\n" });
+    await codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool });
+    fake.dieAtOpen = true;
+    // Parallel calls, as an MCP client sends them: the second waits its turn on the server the first one loses.
+    const calls = await Promise.allSettled([
+      codeIntel(root, { op: "diagnostics", file: "res://main.gd", pool }),
+      codeIntel(root, { op: "diagnostics", file: "res://b.gd", pool }),
+      codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 6, pool }),
+    ]);
+    expect(calls.map((c) => (c.status === "rejected" ? String(c.reason) : "ok"))).toEqual([
+      "Error: the language server closed the connection",
+      "Error: the language server closed the connection",
+      "Error: the language server closed the connection",
+    ]);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(unhandled).toEqual([]);
+    const again = await codeIntel(root, { op: "diagnostics", file: "res://b.gd", pool });
+    expect(again.server).toMatchObject({ fresh: true, restarted: "the previous language server had stopped" });
+    expect(starts).toHaveLength(2);
+  });
+
+  it("rejects open() on a closed connection without leaving a rejected promise behind", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    cleanups.push(() => process.off("unhandledRejection", onUnhandled));
+    const { fake, root } = await setup();
+    const server = await GodotLanguageServer.start({ root, port: fake.port, startTimeoutMs: 3000 });
+    server.stop();
+    await expect(server.exclusive(() => server.open(join(root, "main.gd"), MAIN))).rejects.toThrow("the language server connection was closed");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(unhandled).toEqual([]);
   });
 
   it("stops servers after the idle time", async () => {

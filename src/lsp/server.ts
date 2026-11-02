@@ -259,7 +259,14 @@ export class GodotLanguageServer {
       timeoutMs,
       `diagnostics for ${path}`,
     );
-    this.rpc.notify("textDocument/didOpen", { textDocument: { uri, languageId: "gdscript", version: 1, text } });
+    try {
+      this.rpc.notify("textDocument/didOpen", { textDocument: { uri, languageId: "gdscript", version: 1, text } });
+    } catch (error) {
+      // The connection is gone (Godot died, or the server was stopped while this call waited its turn): nobody awaits
+      // `wait` now, and an unhandled rejection would end the whole process (the MCP server with every tool).
+      wait.catch(() => undefined);
+      throw error;
+    }
     return wait;
   }
 
