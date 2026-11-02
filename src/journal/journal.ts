@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
@@ -72,12 +72,21 @@ export class JournalWriter {
     if (relative(this.root, full).startsWith("..")) return;
     const res = toResPath(this.root, full);
     if (this.before.has(res)) return;
-    if (!existsSync(full)) {
+    // One open file for the size and the copy, so the copy is the file as it was measured.
+    let fd: number;
+    try {
+      fd = openSync(full, "r");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       this.before.set(res, { existed: false });
       return;
     }
-    const size = statSync(full).size;
-    this.before.set(res, size > MAX_COPY ? { existed: true, notKept: true } : { existed: true, data: readFileSync(full) });
+    try {
+      const size = fstatSync(fd).size;
+      this.before.set(res, size > MAX_COPY ? { existed: true, notKept: true } : { existed: true, data: readFileSync(fd) });
+    } finally {
+      closeSync(fd);
+    }
   }
 
   write(full: string, data: string | Uint8Array): void {

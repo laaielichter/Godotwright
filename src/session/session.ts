@@ -166,7 +166,12 @@ export async function startSession(path: string, options: SessionOptions = {}): 
   const info: SessionInfo = { pid: child.pid ?? 0, port, token, scene, started: new Date(started).toISOString(), logOffset: 0, fps };
   // Wait until the scene has loaded and the port answers, or the game says why it cannot.
   for (;;) {
-    const text = existsSync(p.log) ? readFileSync(p.log, "utf8") : "";
+    let text = "";
+    try {
+      text = readFileSync(p.log, "utf8");
+    } catch {
+      // Not written yet.
+    }
     if (text.includes(`${SESSION_MARK}_FAILED`) || !alive(info.pid)) {
       const diagnostics = parseGodotLog(text, "session").filter((d) => d.severity === "error");
       throw new PlayError(`the game did not start: ${(/GODOTWRIGHT_SESSION_FAILED (.*)/.exec(text)?.[1] ?? diagnostics[0]?.message ?? "Godot quit").trim()}`);

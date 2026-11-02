@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, openSync, readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 import { formatParams, formatSignature, outlineScript, type ScriptOutline } from "../godot/gdscript.js";
 import { KEY_SETTINGS, parseProjectSettings, type ProjectSettings } from "../godot/project-settings.js";
@@ -32,21 +32,21 @@ const parseCache = new Map<string, { mtimeMs: number; size: number; value: unkno
 const PARSE_CACHE_MAX = 50_000;
 
 function cachedParse<T>(kind: string, file: string, parse: (text: string) => T): T {
-  let stat: { mtimeMs: number; size: number } | undefined;
+  // One open file for the stat and the read, so the cached version is the version that was read. A file that cannot
+  // be opened throws here with the real error (ENOENT, EACCES), as a plain read would.
+  const fd = openSync(file, "r");
   try {
-    stat = statSync(file);
-  } catch {
-    // Let the read below fail with the real error.
-  }
-  const key = `${kind}\u0000${file}`;
-  const hit = stat ? parseCache.get(key) : undefined;
-  if (hit && stat && hit.mtimeMs === stat.mtimeMs && hit.size === stat.size) return hit.value as T;
-  const value = parse(readFileSync(file, "utf8"));
-  if (stat) {
+    const stat = fstatSync(fd);
+    const key = `${kind}\u0000${file}`;
+    const hit = parseCache.get(key);
+    if (hit && hit.mtimeMs === stat.mtimeMs && hit.size === stat.size) return hit.value as T;
+    const value = parse(readFileSync(fd, "utf8"));
     if (parseCache.size >= PARSE_CACHE_MAX) parseCache.clear();
     parseCache.set(key, { mtimeMs: stat.mtimeMs, size: stat.size, value });
+    return value;
+  } finally {
+    closeSync(fd);
   }
-  return value;
 }
 
 /** Everything read from disk during a scan, kept for later analysis (review, checks). */
