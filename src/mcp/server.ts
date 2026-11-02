@@ -24,6 +24,7 @@ import {
   reviewLearning,
 } from "../learn/hooks.js";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { formatShaderReport, shaderReport } from "../shader/shader.js";
 import { FIXABLE_RULES, fixProject, formatFix } from "../fix/fix.js";
 import { doctorProject, formatDoctor } from "../doctor/doctor.js";
 import { findUsages, formatUsages } from "../usages/usages.js";
@@ -154,6 +155,7 @@ const PROFILES: Record<Tier, Profile> = {
       "5. If Godot is installed, call godot_check before you finish.",
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
+      "After you write or change a shader (.gdshader, or a Shader in a scene), call godot_shader and fix every error.",
       "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
@@ -187,7 +189,8 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
       "- godot_test runs the project's GUT or GdUnit4 tests headless and returns only what failed, with file:line.",
       "- godot_scene_edit changes a .tscn (add or remove nodes, set properties, connect signals, attach scripts) with checks against Godot 4.7, touching only those lines. Use it instead of editing .tscn files by hand.",
-      "- godot_migrate rewrites Godot 3 GDScript to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
+      "- godot_shader checks shaders statically against Godot 4.7's shader tables and compiles them with Godot headless, with file:line for both.",
+      "- godot_migrate rewrites Godot 3 GDScript and shaders to Godot 4 where that is mechanical (report first, then write: true) and lists what still needs a hand. Use it before fixing Godot 3 findings one by one.",
       "- godot_feedback marks a review finding as wrong (a verified false alarm) or right, or says whether a lesson helped; Godotwright learns from it on this machine.",
       "- godot_lessons answers from lessons learned in real Godot projects (symptom, cause, fix, how to test): by words, by a Godot error message, by a rule, or `gaps: true` for the errors Godotwright cannot predict yet. Use it when Godot shows an error you do not understand and before you build moving platforms, vehicles, large worlds, runtime-loaded models or shaders.",
       "- godot_lesson_add keeps a lesson you learned here (title, symptom, cause, fix, the Godot message), scrubbed of names, paths and code, on this machine only. The next godot_check or godot_lessons shows it when the same problem comes back. Add one whenever a fix took more than one try.",
@@ -744,11 +747,54 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   server.registerTool(
+    "godot_shader",
+    {
+      title: "Review and compile shaders",
+      description:
+        "Check every shader (.gdshader, .gdshaderinc, Shader resources in scenes) two ways: a static review against Godot 4.7's own shader tables (Godot 3 names such as hint_albedo, SCREEN_TEXTURE or WORLD_MATRIX; built-ins in the wrong shader_type or function; read-only built-ins written, such as COLOR in a spatial fragment(); unknown render modes; missing includes; colour uniforms without source_color; performance hints), then a headless compile by real Godot when it is installed (no GPU needed) that adds Godot's own errors. Every line is `res://file:line: severity [rule] message`; [godot] marks the compiler's. Pass `code` + `file` to check a shader before you save it, `files` for some shaders (an include also compiles the shaders that use it), `compile: false` to skip Godot. godot_migrate rewrites the Godot 3 names; godot_api `shader:spatial.fragment` lists built-ins.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only these res:// shaders, includes or scenes"),
+        code: z.string().optional().describe("unsaved shader code, checked in place of the file on disk"),
+        file: z.string().optional().describe("res:// path the code belongs to (required with code)"),
+        compile: z.boolean().optional().describe("compile with Godot (default: when Godot is found; true fails without it)"),
+        detail: detailParam,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ path, files, code, file, compile, detail }) => {
+      try {
+        if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
+        const target = file ? resPath(file) : undefined;
+        const overrides = code !== undefined && target ? { [target]: code } : undefined;
+        const focus = [...(files ?? []), ...(target ? [target] : [])].map(resPath);
+        const report = await shaderReport(where(path), {
+          ...(focus.length ? { files: focus } : {}),
+          ...(overrides ? { overrides } : {}),
+          ...(compile !== undefined ? { compile } : {}),
+          godot: options.godot,
+          base: options.base,
+          baseFiles: options.baseFiles,
+        });
+        const body = formatShaderReport(report, detail ?? profile.detail);
+        return report.errors > 0 ? failure(body) : text(body);
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
     "godot_migrate",
     {
       title: "Port Godot 3 scripts to Godot 4",
       description:
-        "Rewrite Godot 3 GDScript to Godot 4 where that is mechanical: @export/@onready/@tool, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, members that moved (OS.get_ticks_msec() to Time). Strings, comments and node paths are left alone. Without `write` it only reports the changes; with `write: true` it rewrites the scripts. It also lists what still needs a hand (setget, move_and_slide arguments, rpc keywords, export hints it does not know). Scenes and project settings are not migrated; Godot's --convert-3to4 does those. `files` limits it to some res:// scripts; `detail` brief shows up to 12 changes per file, full shows every change. Running it twice changes nothing more. Use it before fixing Godot 3 findings from godot_review one by one, and run godot_review afterwards.",
+        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, members that moved (OS.get_ticks_msec() to Time); in .gdshader/.gdshaderinc Godot's shader renames (hint_albedo/hint_color to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. Strings, comments and node paths are left alone. Without `write` it only reports the changes; with `write: true` it rewrites the scripts. It also lists what still needs a hand (setget, move_and_slide arguments, rpc keywords, export hints it does not know). Scenes and project settings are not migrated; Godot's --convert-3to4 does those. `files` limits it to some res:// scripts; `detail` brief shows up to 12 changes per file, full shows every change. Running it twice changes nothing more. Use it before fixing Godot 3 findings from godot_review one by one, and run godot_review afterwards.",
       inputSchema: {
         path: pathParam,
         write: z
@@ -758,7 +804,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         files: z
           .array(z.string())
           .optional()
-          .describe("only these res:// scripts"),
+          .describe("only these res:// scripts or shaders"),
         detail: detailParam,
       },
       annotations: {
@@ -1050,7 +1096,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Fix review findings mechanically",
       description:
-        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
+        `Apply the mechanical fixes for review findings instead of editing them one by one: ${FIXABLE_RULES.join(", ")}. Each fix rewrites only the line a finding points to, only when it looks exactly as expected, and is labelled \`safe\` (it only removes the problem: a freed check put first, get_meta() with has_meta(), a lone ternary as if/else, text encoded twice decoded, emit_signal() as signal.emit(), a MultiMesh format moved before instance_count, Timer.start() moved after add_child(), weakref() typed WeakRef, Godot 3 shader names renamed, a hint_screen_texture uniform for SCREEN_TEXTURE) or \`check\` (it changes more: an await added to a coroutine call makes its caller a coroutine; a guessed type). Without \`write\` it shows the changes; with \`write: true\` it applies them and reviews the changed files again, returning what is left. Only safe fixes unless \`include_check: true\`. Lines it cannot fix are listed with the reason. Run godot_review first to see the findings, and godot_check after writing.`,
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only these res:// files"),
@@ -1083,7 +1129,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
       inputSchema: {
         path: pathParam,
         run_frames: z
@@ -1124,7 +1170,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
         const lines = result.diagnostics.map(formatDiagnostic);
         lines.push(
-          `${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
+          `${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes${result.shaders ? `, ${result.shaders} shaders` : ""})`,
         );
         lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
         if (result.output !== undefined)

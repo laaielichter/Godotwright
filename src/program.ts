@@ -25,6 +25,7 @@ import { testCommand } from "./commands/test.js";
 import { playCommand } from "./commands/play.js";
 import { screenshotCommand } from "./commands/screenshot.js";
 import { scanCommand } from "./commands/scan.js";
+import { shaderCommand } from "./commands/shader.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
 
@@ -49,6 +50,7 @@ export function createProgram(): Command {
     .addCommand(screenshotCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
+    .addCommand(shaderCommand())
     .addCommand(migrateCommand())
     .addCommand(fixCommand())
     .addCommand(doctorCommand())
