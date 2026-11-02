@@ -69,9 +69,12 @@ export async function compileShaders(root: string, shaders: ShaderToCompile[], o
     const result = await runGodot(bin, ["--headless", "--path", root, "--script", `${res}/compile.gd`], { cwd: root, timeoutMs: options.timeoutMs ?? 5 * 60_000 });
     const done = new RegExp(`${MARKER}_DONE (\\d+)`).exec(result.stderr);
     const offsets = new Map(shaders.filter((s) => s.embedded).map((s) => [s.path, s.embedded! - 1]));
+    // Only what Godot printed while it compiled: autoloads load before and after, and their errors are not the shaders'.
+    const first = result.stderr.indexOf(`${MARKER}_SHADER `);
+    const last = result.stderr.indexOf(`${MARKER}_DONE`);
+    const compiling = first < 0 ? "" : result.stderr.slice(first, last < 0 ? undefined : last);
     const diagnostics = cleanup(
-      parseGodotLog(result.stderr, "shader")
-        // Only what is about a project file: engine start-up messages are not the shaders' problem.
+      parseGodotLog(compiling, "shader")
         .filter((d) => d.file?.startsWith("res://") && !d.file.startsWith(res))
         .map((d) => {
           const offset = d.file && d.line ? offsets.get(d.file) : undefined;

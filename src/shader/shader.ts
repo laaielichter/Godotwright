@@ -84,8 +84,10 @@ export async function shaderReport(path: string, options: ShaderOptions = {}): P
     try {
       report.compile = await compileShaders(data.root, targets, { godot: options.godot, timeoutMs: options.timeoutMs });
     } catch (error) {
-      if (!(error instanceof GodotNotFoundError) || options.compile === true) throw error;
-      report.compileSkipped = "Godot not found (set GODOT or pass godot); only the static review ran";
+      // Without Godot (or with a wrong path to it) the static review still stands, unless the compile was required.
+      if (options.compile === true) throw error;
+      const why = error instanceof GodotNotFoundError ? "Godot not found (set GODOT or pass godot)" : error instanceof Error ? error.message : String(error);
+      report.compileSkipped = `${why}; only the static review ran`;
     }
   } else if (options.compile !== false) {
     report.compileSkipped = "nothing to compile";
@@ -134,10 +136,12 @@ function shown(report: ShaderReport): Line[] {
   const out: Line[] = report.findings.map((f) => ({ file: f.file, line: f.line, severity: f.severity, text: formatFinding(f), fix: RULES[f.rule]?.fix }));
   const reviewed = new Set(report.findings.filter((f) => f.severity === "error").map((f) => `${f.file}:${f.line}`));
   const missingInclude = new Set(report.findings.filter((f) => f.rule === "structure/shader-missing-include").map((f) => f.file));
+  const badType = new Set(report.findings.filter((f) => f.rule === "api/shader-type").map((f) => f.file));
   for (const d of report.compile?.diagnostics ?? []) {
     if (d.line && reviewed.has(`${d.file}:${d.line}`)) continue;
     // Godot's "Unknown character #35: '#'" is what a missing include looks like; the review names the include.
     if (d.file && missingInclude.has(d.file) && d.message.startsWith("Tokenizer: Unknown character #35")) continue;
+    if (d.file && badType.has(d.file) && /^(No|Unknown) shader_type/.test(d.message)) continue;
     out.push({ file: d.file, line: d.line, severity: d.severity, text: formatGodot(d) });
   }
   const order: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
