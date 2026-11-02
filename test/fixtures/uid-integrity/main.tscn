@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://b2main4scene7"]
+
+[ext_resource type="Script" uid="uid://bstale0000001" path="res://s.gd" id="1_s"]
+[ext_resource type="PackedScene" uid="uid://d1fq0i6v1abqx" path="res://other.tscn" id="2_other"]
+[ext_resource type="PackedScene" uid="uid://bkq3oe5w8x1y2" path="res://child.tscn" id="3_child"]
+[ext_resource type="PackedScene" uid="uid://bkq3oe5w8x1y2" path="res://dup.tscn" id="4_dup"]
+[ext_resource type="Script" uid="uid://blost0000001" path="res://lost.gd" id="5_lost"]
+[ext_resource type="Gradient" uid="uid://bw0rd7dykc6aa" path="res://g.tres" id="6_unused"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_s")
+
+[node name="Inst" parent="." instance=ExtResource("3_child")]
+position = Vector2(1, 1)
+
+[node name="Inner" parent="Inst"]
+position = Vector2(5, 5)
+
+[node name="X" parent="Inst/Sub"]
+position = Vector2(7, 7)
+
+[node name="NewRoot" type="Node2D" parent="Inst"]
+
+[node name="NewDeep" type="Node2D" parent="Inst/Inner"]
+
+[node name="Copy" parent="." instance=ExtResource("4_dup")]
+
+[node name="Other" parent="." instance=ExtResource("2_other")]
+
+[node name="Lost" type="Node" parent="."]
+script = ExtResource("5_lost")

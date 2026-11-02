@@ -62,10 +62,22 @@ export interface ProjectData {
   resources: Map<string, ResourceFile>;
   /** `uid://` to `res://` path. */
   uids: Map<string, string>;
+  /**
+   * Every uid a file claims, valid or not, with where it is written: its own header, a `.uid` file or a `.import` file.
+   * `uids` keeps one file per uid; this keeps them all, so duplicates show.
+   */
+  uidClaims: UidClaim[];
   /** Files that come only from a base project (see LoadOptions.base). */
   external: Set<string>;
   /** Files only the shipped game holds (from LoadOptions.baseFiles): present, but their contents are unknown. */
   shipped: Set<string>;
+}
+
+export interface UidClaim {
+  uid: string;
+  /** The file the uid belongs to (not the .uid or .import file). */
+  file: string;
+  from: "header" | "uid" | "import";
 }
 
 export interface LoadOptions {
@@ -223,6 +235,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
 
   // uid:// -> res:// from .uid sidecars, .import files and resource headers.
   const uids = new Map<string, string>();
+  const uidClaims: UidClaim[] = [];
   const resources = new Map<string, ResourceFile>();
   const scripts = new Map<string, ScriptOutline>();
   const sources = new Map<string, string>();
@@ -232,14 +245,21 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       if (ext === "uid") {
         const uid = read(file).trim();
         if (uid.startsWith("uid://")) uids.set(uid, file.slice(0, -".uid".length));
+        uidClaims.push({ uid, file: file.slice(0, -".uid".length), from: "uid" });
       } else if (ext === "import") {
         const remap = parsed(file, "import", parseResourceFile).find((s) => s.tag === "remap");
         const uid = asString(remap?.props["uid"]);
-        if (uid) uids.set(uid, file.slice(0, -".import".length));
+        if (uid) {
+          uids.set(uid, file.slice(0, -".import".length));
+          uidClaims.push({ uid, file: file.slice(0, -".import".length), from: "import" });
+        }
       } else if (ext === "tscn" || ext === "tres") {
         const resource = parsed(file, "resource", parseResourceText);
         resources.set(file, resource);
-        if (resource.uid) uids.set(resource.uid, file);
+        if (resource.uid) {
+          uids.set(resource.uid, file);
+          uidClaims.push({ uid: resource.uid, file, from: "header" });
+        }
       } else if (ext === "gd") {
         const script = parsed(file, "script", (source) => ({ source, outline: outlineScript(source) }));
         sources.set(file, script.source);
@@ -487,7 +507,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     // A base project's own problems are not this project's.
     warnings: warnings.filter((w) => !external.has(w.file.replace(/::.*$/, ""))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
-  return { root, files, map, scripts, sources, resources, uids, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
+  return { root, files, map, scripts, sources, resources, uids, uidClaims, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
 }
 
 /** Settings of a base project with the project's own on top; autoloads and input actions add up. */
