@@ -292,7 +292,14 @@ describe("performance hints", () => {
 
   it("reports a spatial shader that reads the screen", () => {
     expect(one("shader_type spatial;\nuniform sampler2D screen : hint_screen_texture;\nvoid fragment() {\n\tALBEDO = texture(screen, SCREEN_UV).rgb;\n}\n")).toEqual([
-      "res://s.gdshader:2: info [performance/shader-screen-read] screen reads the screen (hint_screen_texture): Godot draws this material in the transparent pass after all opaque objects, without a depth prepass, it casts no shadow, and Godot copies the screen every frame it is drawn.",
+      "res://s.gdshader:2: info [performance/shader-screen-read] screen uses hint_screen_texture: Godot draws this material in the transparent pass after the opaque objects, without a depth prepass, and it casts no shadow; Godot copies the screen for it every frame it is drawn.",
+    ]);
+  });
+
+  it("does not claim a missing prepass or shadow with depth_prepass_alpha", () => {
+    const out = one("shader_type spatial;\nrender_mode depth_prepass_alpha;\nuniform sampler2D d : hint_depth_texture, filter_nearest;\nvoid fragment() {\n\tALBEDO = vec3(texture(d, SCREEN_UV).r);\n}\n", "performance/shader-screen-read");
+    expect(out).toEqual([
+      "res://s.gdshader:3: info [performance/shader-screen-read] d uses hint_depth_texture: Godot draws this material in the transparent pass after the opaque objects; Godot copies the depth buffer for it every frame it is drawn.",
     ]);
   });
 

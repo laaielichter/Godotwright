@@ -377,13 +377,20 @@ function checkPerformance(ctx: Context): void {
       );
     }
     if (screenRead) {
-      const hint = screenRead.hints.find((h) => h.name.startsWith("hint_"))!.name;
+      const cost: Record<string, string> = {
+        hint_screen_texture: "Godot copies the screen for it every frame it is drawn",
+        hint_depth_texture: "Godot copies the depth buffer for it every frame it is drawn",
+        hint_normal_roughness_texture: "Godot renders a normal-roughness buffer in the depth prepass for it",
+      };
+      const hint = screenRead.hints.find((h) => Object.hasOwn(cost, h.name))!.name;
+      // depth_prepass_alpha puts a transparent material back in the depth prepass and the shadow pass.
+      const prepass = modes.has("depth_prepass_alpha") && !modes.has("depth_draw_never") && !modes.has("depth_test_disabled");
       ctx.out.push(
         finding(
           "performance/shader-screen-read",
           ctx.path,
           ctx.at(screenRead.line),
-          `${screenRead.name} reads the screen (${hint}): Godot draws this material in the transparent pass after all opaque objects, without a depth prepass, it casts no shadow, and Godot copies the screen every frame it is drawn.`,
+          `${screenRead.name} uses ${hint}: Godot draws this material in the transparent pass after the opaque objects${prepass ? "" : ", without a depth prepass, and it casts no shadow"}; ${cost[hint]}.`,
         ),
       );
     }

@@ -247,7 +247,7 @@ or resource (reported as `res://level.tscn::Shader_id:line`, with the line in th
    | `structure/shader-missing-include` | An `#include` whose file does not exist (Godot only says `Unknown character #35: '#'`) |
    | `quality/shader-color-no-source-color` | A colour uniform (`vec3`/`vec4` named like a colour, or written straight into `ALBEDO`, `EMISSION`, `COLOR` or `FOG`) or albedo texture without `source_color` in a 3D, sky, fog or particle shader; Forward+ and Mobile then use the sRGB value as linear. Quiet on the Compatibility renderer, which does not convert |
    | `performance/shader-discard` | `discard` in an opaque spatial shader: Godot can no longer use its shared depth-only material for the mesh's depth prepass and shadows (info) |
-   | `performance/shader-screen-read` | A spatial shader that reads the screen, depth or normal-roughness texture: it draws in the transparent pass, without a depth prepass, and casts no shadow (info) |
+   | `performance/shader-screen-read` | A spatial shader that reads the screen, depth or normal-roughness texture: it draws in the transparent pass and, without `depth_prepass_alpha`, has no depth prepass and casts no shadow; Godot copies the screen or depth buffer for it (info) |
    | `performance/shader-texture-in-loop` | Texture reads in a loop with more than 16 reads per pixel, or an open-ended count (info) |
    | `quality/shader-reads-own-depth` | A shader that reads the depth texture while it writes depth in the alpha prepass |
 
