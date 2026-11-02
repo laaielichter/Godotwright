@@ -113,6 +113,7 @@ describe("parseGodotLog", () => {
         line: 3,
         message: "ext_resource, invalid UID: uid://abc - using text path instead: res://missing.png",
         source: "check",
+        rule: "structure/unknown-uid",
       },
     ]);
   });
@@ -171,5 +172,23 @@ describe("runtime errors with their call chain (Godot 4.7.2 output)", () => {
   it("keep the same error reached from two places apart", () => {
     const other = out.replace("[1] _apply (res://main.gd:12)", "[1] _land (res://main.gd:30)");
     expect(parseGodotLog(`${out}\n${other}\n`)).toHaveLength(2);
+  });
+});
+
+describe("parseGodotLog: uid warnings carry the rule that predicts them", () => {
+  // Printed by Godot 4.7.2 on --import and on load (test/fixtures/uid-integrity).
+  const log = [
+    "WARNING: UID duplicate detected between res://dup.tscn and res://child.tscn.",
+    "WARNING: res://main.tscn:3 - ext_resource, invalid UID: uid://bstale0000001 - using text path instead: res://s.gd",
+    "     at: load (scene/resources/resource_format_text.cpp:501)",
+  ].join("\n");
+
+  it("maps them to structure/duplicate-uid and structure/unknown-uid", () => {
+    const diags = parseGodotLog(log, "import");
+    expect(diags.map((d) => [d.file, d.line, d.rule])).toEqual([
+      ["res://dup.tscn", undefined, "structure/duplicate-uid"],
+      ["res://main.tscn", 3, "structure/unknown-uid"],
+    ]);
+    expect(formatDiagnostic(diags[1]!)).toBe("res://main.tscn:3: warning: ext_resource, invalid UID: uid://bstale0000001 - using text path instead: res://s.gd [structure/unknown-uid]");
   });
 });
