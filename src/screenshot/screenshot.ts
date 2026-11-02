@@ -1,12 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { PngError, decodePng, diffImages, encodePng, type ImageDiff } from "./png.js";
 
 export class ScreenshotError extends Error {}
 
@@ -28,6 +30,46 @@ export interface ScreenshotOptions {
   /** Where to write the PNG (default: .godot/godotwright/screenshot.png in the project, or next to the model). */
   out?: string;
   timeoutMs?: number;
+  /**
+   * Compare the picture with a baseline PNG: "auto" keeps it in .godotwright/baselines/ of the project (or of the
+   * model's folder), named after the scene or model, the size and the views; any other value is a file path.
+   */
+  baseline?: string;
+  /** Percent of pixels that may change before the picture counts as changed (default 0.5). */
+  threshold?: number;
+  /** Write the new picture as the baseline instead of comparing (implies baseline "auto" when none is given). */
+  updateBaseline?: boolean;
+  /** How far (0-255) a pixel's colour may move before it counts as changed (default 3). */
+  tolerance?: number;
+}
+
+export const DEFAULT_THRESHOLD = 0.5;
+/**
+ * Renders are pixel identical run after run (fixed fps and fixed seeds); a little tolerance absorbs rounding in other
+ * drivers, while any visible colour change, even of one pixel, still counts.
+ */
+export const DEFAULT_TOLERANCE = 3;
+
+export interface BaselineResult {
+  /**
+   * saved: there was no baseline yet (or it was replaced); unchanged: not one pixel changed; within-threshold: some
+   * pixels changed, but no more than the threshold allows; changed: more pixels changed than the threshold allows.
+   */
+  status: "saved" | "unchanged" | "within-threshold" | "changed" | "size-mismatch";
+  /** The baseline PNG. */
+  file: string;
+  /** True when an existing baseline was replaced. */
+  replaced?: boolean;
+  /** The diff picture: the baseline in grey with the changed pixels in red (only when a pixel changed). */
+  diff?: string;
+  percent?: number;
+  pixels?: number;
+  threshold: number;
+  tolerance: number;
+  region?: ImageDiff["region"];
+  meanShift?: number;
+  /** The size of the baseline when it differs from the new picture. */
+  baselineSize?: { width: number; height: number };
 }
 
 export interface ScreenshotReport {
@@ -43,22 +85,117 @@ export interface ScreenshotReport {
   autoCamera: boolean;
   renderer: string;
   diagnostics: Diagnostic[];
+  /** Set when the picture was compared with (or saved as) a baseline. */
+  baseline?: BaselineResult;
+}
+
+/**
+ * The file name of an automatic baseline: scene or model, size of one view and the views, e.g.
+ * main_tscn-1a2b3c4d@640x360_iso. The readable part keeps letters and digits of any script; the short hash of the
+ * whole path keeps two scenes apart that read the same (a/b_c.tscn and a_b/c.tscn, or names that differ in accents).
+ */
+export function baselineKey(subject: string, width: number, height: number, views: View[]): string {
+  const path = subject.replace(/^res:\/\//, "").normalize("NFC");
+  const name = [...path.replace(/[^\p{L}\p{M}\p{N}-]+/gu, "_").replace(/^_+|_+$/g, "")].slice(-60).join("") || "shot";
+  const hash = createHash("sha256").update(path).digest("hex").slice(0, 8);
+  return `${name}-${hash}@${width}x${height}_${views.join("-")}`;
+}
+
+/**
+ * Compares a new picture with its baseline, or saves it as the baseline when there is none yet (or when asked to).
+ * The diff picture (default: next to the shot, shot.png gives shot-diff.png) is written only when a pixel changed;
+ * otherwise an old one is removed, so a diff on disk always belongs to the last compare.
+ */
+export function compareBaseline(shot: string, baseline: string, options: { threshold?: number; tolerance?: number; update?: boolean; diff?: string } = {}): BaselineResult {
+  const threshold = options.threshold ?? DEFAULT_THRESHOLD;
+  const tolerance = options.tolerance ?? DEFAULT_TOLERANCE;
+  const base = { file: baseline, threshold, tolerance };
+  const diff = options.diff ?? `${shot.replace(/\.png$/i, "")}-diff.png`;
+  rmSync(diff, { force: true });
+  const exists = existsSync(baseline);
+  if (!exists || options.update) {
+    mkdirSync(dirname(baseline), { recursive: true });
+    copyFileSync(shot, baseline);
+    return { status: "saved", ...base, ...(exists ? { replaced: true } : {}) };
+  }
+  let before;
+  try {
+    before = decodePng(readFileSync(baseline));
+  } catch (error) {
+    if (error instanceof PngError) throw new ScreenshotError(`the baseline ${baseline} cannot be read (${error.message}); update the baseline to replace it`);
+    throw error;
+  }
+  const after = decodePng(readFileSync(shot));
+  if (before.width !== after.width || before.height !== after.height) return { status: "size-mismatch", ...base, baselineSize: { width: before.width, height: before.height } };
+  const d = diffImages(before, after, tolerance);
+  const amount = { percent: d.percent, pixels: d.pixels, ...(d.region ? { region: d.region } : {}), meanShift: d.meanShift };
+  if (d.pixels === 0) return { status: "unchanged", ...base, ...amount };
+  mkdirSync(dirname(diff), { recursive: true });
+  writeFileSync(diff, encodePng(d.image));
+  const changed = (100 * d.pixels) / (after.width * after.height) > threshold;
+  return { status: changed ? "changed" : "within-threshold", ...base, diff, ...amount };
+}
+
+/** True when a path, with the links in the part that exists followed, is inside a folder (also followed). */
+function within(folder: string, path: string): boolean {
+  const real = (p: string): string | undefined => {
+    const rest: string[] = [];
+    let dir = resolve(p);
+    for (;;) {
+      if (existsSync(dir)) return join(realpathSync(dir), ...rest);
+      // A link to nothing: where a write through it lands cannot be known.
+      if (isLink(dir)) return undefined;
+      const parent = dirname(dir);
+      if (parent === dir) return undefined;
+      rest.unshift(basename(dir));
+      dir = parent;
+    }
+  };
+  const top = real(folder);
+  const full = real(path);
+  if (top === undefined || full === undefined) return false;
+  const rel = relative(top, full);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+function isLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
 }
 
 const MARK = "GODOTWRIGHT_SHOT";
 
 /** How to give Godot a screen: the real one, or a virtual one with xvfb-run on a Linux machine without a display. */
-function screen(): { command: string; prefix: string[] } | { error: string } {
+export function screen(): { command: string; prefix: string[] } | { error: string } {
   if (process.platform !== "linux" || process.env["DISPLAY"] || process.env["WAYLAND_DISPLAY"]) return { command: "", prefix: [] };
   if (spawnSync("which", ["xvfb-run"]).status === 0) return { command: "xvfb-run", prefix: ["-a", "-s", "-screen 0 1920x1080x24"] };
   return { error: "no screen to render on: this Linux machine has no display and no xvfb-run. Install it (sudo apt-get install xvfb libgl1-mesa-dri) and try again." };
 }
+
+/** Every GDScript warning of Godot 4.7 (debug/gdscript/warnings/*); the generated script ignores them all. */
+export const GDSCRIPT_WARNINGS = [
+  "unassigned_variable", "unassigned_variable_op_assign", "unused_variable", "unused_local_constant", "unused_private_class_variable",
+  "unused_parameter", "unused_signal", "shadowed_variable", "shadowed_variable_base_class", "shadowed_global_identifier", "unreachable_code",
+  "unreachable_pattern", "standalone_expression", "standalone_ternary", "incompatible_ternary", "untyped_declaration", "inferred_declaration",
+  "unsafe_property_access", "unsafe_method_access", "unsafe_cast", "unsafe_call_argument", "unsafe_void_return", "return_value_discarded",
+  "static_called_on_instance", "missing_tool", "redundant_static_unload", "redundant_await", "missing_await", "assert_always_true",
+  "assert_always_false", "integer_division", "narrowing_conversion", "int_as_enum_without_cast", "int_as_enum_without_match",
+  "enum_variable_without_default", "empty_file", "deprecated_keyword", "confusable_identifier", "confusable_local_declaration",
+  "confusable_local_usage", "confusable_capture_reassignment", "confusable_temporary_modification", "inference_on_variant",
+  "native_method_override", "get_node_default_without_onready", "onready_with_export", "property_used_as_function",
+  "constant_used_as_function", "function_used_as_property",
+];
 
 /** The script that loads the scene or model, frames it when needed, renders and writes the PNG and the coverage. */
 export function screenshotScript(o: { scene?: string; model?: string; views: View[]; frames: number; out: string; width: number; height: number }): string {
   const views = JSON.stringify(o.views);
   return `extends SceneTree
 # Written by godotwright screenshot; removed after the run.
+# Godot compiles this script with the project's warning settings, and one set to error would stop the picture.
+@warning_ignore_start(${GDSCRIPT_WARNINGS.map((w) => JSON.stringify(w)).join(", ")})
 
 const VIEWS: Array = ${views}
 const FRAMES := ${o.frames}
@@ -75,6 +212,9 @@ var _auto := false
 
 func _initialize() -> void:
 	RenderingServer.set_default_clear_color(BACKGROUND)
+	# The same picture every run: a fixed seed for the global random numbers and for every particle system.
+	seed(1)
+	node_added.connect(_fix_seed)
 	${o.model ? `_content = _load_model(${JSON.stringify(o.model)})` : `var packed := load(${JSON.stringify(o.scene ?? "")}) as PackedScene
 	_content = packed.instantiate() if packed != null else null`}
 	if _content == null:
@@ -83,6 +223,14 @@ func _initialize() -> void:
 		return
 	root.add_child(_content)
 	process_frame.connect(_tick)
+
+
+func _fix_seed(node: Node) -> void:
+	# By name with get() and set(): the node is typed Node, and a project may make unsafe property access an error.
+	if node is GPUParticles2D or node is GPUParticles3D or node is CPUParticles2D or node is CPUParticles3D:
+		if not node.get("use_fixed_seed"):
+			node.set("use_fixed_seed", true)
+			node.set("seed", 1)
 
 
 func _load_model(path: String) -> Node:
@@ -228,6 +376,8 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
   const frames = Math.max(3, options.frames ?? 10);
   const views = options.views?.length ? options.views : ["iso" as View];
   for (const v of views) if (!VIEWS.includes(v)) throw new ScreenshotError(`"${v}" is not a view; use ${VIEWS.join(", ")}`);
+  if (options.threshold !== undefined && !(options.threshold >= 0 && options.threshold <= 100)) throw new ScreenshotError("threshold is a percent of pixels, from 0 to 100");
+  if (options.tolerance !== undefined && !(options.tolerance >= 0 && options.tolerance <= 255)) throw new ScreenshotError("tolerance is a colour distance, from 0 to 255");
 
   let root: string;
   let temp: string | undefined;
@@ -250,12 +400,31 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
     if (!scene) throw new ScreenshotError("no scene: pass --scene res://..., or set a main scene (application/run/main_scene)");
     if (!existsSync(fromResPath(root, scene))) throw new ScreenshotError(`${scene} does not exist in the project`);
   }
-  const how = screen();
-  if ("error" in how) {
-    if (temp) rmSync(temp, { recursive: true, force: true });
-    throw new ScreenshotError(how.error);
-  }
   const out = resolve(options.out ?? (model ? model.replace(/\.(glb|gltf)$/i, ".png") : join(root, ".godot", "godotwright", "screenshot.png")));
+  const wanted = options.baseline ?? (options.updateBaseline ? "auto" : undefined);
+  const baseline =
+    wanted === undefined
+      ? undefined
+      : wanted === "auto"
+        ? join(model ? dirname(model) : root, ".godotwright", "baselines", `${baselineKey(model ? basename(model) : (scene ?? ""), width, height, views)}.png`)
+        : resolve(path, wanted);
+  function fail(message: string): never {
+    if (temp) rmSync(temp, { recursive: true, force: true });
+    throw new ScreenshotError(message);
+  }
+  if (baseline && !/\.png$/i.test(baseline)) fail("the baseline is a .png file");
+  if (baseline === out) fail("the baseline and the new picture are the same file; write the picture somewhere else (out)");
+  // Baselines are written and read back: keep them inside the project (or the model's folder), and never write
+  // through a link, which would change the file it points to.
+  const home = model ? (findProjectRoot(dirname(model)) ?? dirname(model)) : root;
+  if (baseline && !within(home, baseline)) fail(`the baseline ${wanted} is outside the project (${home}); use a path inside it`);
+  if (baseline && isLink(baseline)) fail(`the baseline ${wanted} is a symbolic link; use a regular file inside the project`);
+  // The diff is a scratch picture: in .godot/ of the project, which Godot does not import and version control
+  // usually ignores, or, for a model outside a project, in .godotwright/diff/ next to it (Godot skips dot folders).
+  const project = model ? findProjectRoot(dirname(model)) : root;
+  const diffs = project ? join(project, ".godot", "godotwright") : join(dirname(model ?? root), ".godotwright", "diff");
+  const how = screen();
+  if ("error" in how) fail(how.error);
   mkdirSync(dirname(out), { recursive: true });
   rmSync(out, { force: true });
 
@@ -267,7 +436,7 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
   const timeoutMs = options.timeoutMs ?? 3 * 60_000;
   try {
     if (!model) await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs });
-    const godotArgs = ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--audio-driver", "Dummy", "-s", "res://.godot/godotwright/screenshot.gd"];
+    const godotArgs = ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--fixed-fps", "60", "--audio-driver", "Dummy", "-s", "res://.godot/godotwright/screenshot.gd"];
     const result = how.command ? await runGodot(how.command, [...how.prefix, bin, ...godotArgs], { cwd: root, timeoutMs }) : await runGodot(bin, godotArgs, { cwd: root, timeoutMs });
     const done = new RegExp(`^${MARK}_DONE (\\d+) (\\d+) (true|false) (\\S+)`, "m").exec(result.stdout);
     const diagnostics = parseGodotLog(result.stderr, "screenshot").filter((d) => d.severity === "error" && !/V-Sync|ALSA|audio/i.test(d.message));
@@ -277,6 +446,14 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
     }
     const coverage = [...result.stdout.matchAll(new RegExp(`^${MARK}_VIEW (.+)$`, "gm"))].map((m) => JSON.parse(m[1] ?? "{}") as ScreenshotReport["coverage"][number]);
     const autoCamera = done[3] === "true";
+    const compared = baseline
+      ? compareBaseline(out, baseline, {
+          ...(options.threshold !== undefined ? { threshold: options.threshold } : {}),
+          ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
+          update: options.updateBaseline ?? false,
+          diff: join(diffs, `${basename(baseline, extname(baseline))}-diff.png`),
+        })
+      : undefined;
     return {
       file: out,
       width: Number(done[1]),
@@ -287,6 +464,7 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
       autoCamera,
       renderer: done[4] ?? "",
       diagnostics,
+      ...(compared ? { baseline: compared } : {}),
     };
   } finally {
     rmSync(script, { force: true });
@@ -303,5 +481,36 @@ export function formatScreenshot(r: ScreenshotReport): string {
     out.push(`  ${c.view}: ${c.percent}% drawn${where}${hint}`);
   }
   for (const d of r.diagnostics.slice(0, 10)) out.push(`  error: ${d.file ? `${d.file}${d.line ? `:${d.line}` : ""}  ` : ""}${d.message}`);
+  if (r.baseline) out.push(...formatBaseline(r.baseline, r));
+  else out.push("Next: look at the picture; to catch visual changes later, screenshot with baseline auto (--baseline) once and again after each change.");
   return `${out.join("\n")}\n`;
+}
+
+function formatBaseline(b: BaselineResult, r: ScreenshotReport): string[] {
+  const update = "update the baseline (update_baseline, or --update-baseline)";
+  if (b.status === "saved")
+    return [`baseline ${b.replaced ? "replaced" : "saved"}: ${b.file}`, "Next: look at the picture once; keep the baseline with the project (Godot does not import .godotwright/), and screenshot with the baseline again after a change to compare."];
+  if (b.status === "size-mismatch")
+    return [
+      `baseline size differs: the baseline is ${b.baselineSize?.width}x${b.baselineSize?.height}, the new picture ${r.width}x${r.height}; nothing compared`,
+      `  baseline: ${b.file}`,
+      `Next: render with the size and views the baseline was made with, or ${update} if the new size is intended.`,
+    ];
+  const region = b.region ? `; largest change at (${b.region.x}, ${b.region.y}) size ${b.region.width}x${b.region.height}, mean shift ${b.meanShift}` : "";
+  const amount = `${b.percent}% of pixels changed (${b.pixels} px; threshold ${b.threshold}%, tolerance ${b.tolerance})${region}`;
+  if (b.status === "unchanged")
+    return [`baseline unchanged: ${amount}`, `  baseline: ${b.file}`, "Next: nothing to fix; the picture matches its baseline."];
+  if (b.status === "within-threshold")
+    return [
+      `baseline within threshold: ${amount}`,
+      `  baseline: ${b.file}`,
+      `  diff: ${b.diff} (changed pixels in red)`,
+      `Next: look at the diff; a small change can still matter (a missing icon, a moved label). If it is intended, ${update}; to fail on any change, use threshold 0.`,
+    ];
+  return [
+    `baseline CHANGED: ${amount}`,
+    `  baseline: ${b.file}`,
+    `  diff: ${b.diff} (changed pixels in red)`,
+    `Next: look at the diff; if the change is intended, ${update}; if not, fix it and screenshot again.`,
+  ];
 }

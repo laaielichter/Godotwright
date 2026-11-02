@@ -2,6 +2,7 @@ import { Command, InvalidArgumentError } from "commander";
 import { checkLearning } from "../learn/hooks.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
+import { shaderSummary } from "../shaders/shaders.js";
 import { lessonHintsForMessages } from "../lessons/hints.js";
 import { collect, parseNumber, writeOut } from "./output.js";
 
@@ -13,6 +14,7 @@ interface Options {
   scene?: string;
   exclude: string[];
   includeAddons?: boolean;
+  shaders?: boolean;
   timeout: number;
   json?: boolean;
   verbose?: boolean;
@@ -44,6 +46,7 @@ export function checkCommand(): Command {
     .option("--scene <res-path>", "run this scene instead of the main scene (implies --run)")
     .option("--exclude <dir>", "directory to skip, e.g. levels/old (repeatable); res://addons/ is skipped already", collect, [])
     .option("--include-addons", "also load res://addons/ (third-party code; its errors are not your project's)")
+    .option("--shaders", "also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run)")
     .option("--timeout <seconds>", "timeout per Godot run", parseSeconds, 600)
     .option("--json", "print the result as JSON")
     .option("--verbose", "also print the raw Godot output")
@@ -57,6 +60,7 @@ export function checkCommand(): Command {
           ...(options.scene ? { scene: options.scene } : {}),
           exclude: options.exclude,
           includeAddons: options.includeAddons,
+          ...(options.shaders ? { shaders: true } : {}),
           timeoutMs: options.timeout * 1000,
           keepLogs: options.verbose,
         });
@@ -73,6 +77,7 @@ export function checkCommand(): Command {
             `${result.errors} error${result.errors === 1 ? "" : "s"}, ${result.warnings} warning${result.warnings === 1 ? "" : "s"}` +
               ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
           );
+          if (result.shaders) lines.push(shaderSummary(result.shaders));
           lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
           writeOut(command, `${lines.join("\n")}\n`);
         }

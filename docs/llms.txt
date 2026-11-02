@@ -56,6 +56,18 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright deps unused|why <file>|of <file>|cycles [--path dir]` (godot_deps): follows what loads what from where the game starts (main scene, autoloads, every res:// path in project.godot, export include filters, the shipped file list in godotwright.json, add-ons, tests, editor scripts) through ext_resource, preload, load, class_name, folders and file names the code builds paths from, textures next to models and import settings. `unused` lists files nothing reaches, biggest first; `why` gives the chain from the game to a file; `of` lists what a scene loads with it and what it can load later; `cycles` finds scenes that load each other through ext_resource, which Godot cannot load (it says "[ext_resource] referenced non-existent resource" about a file that is there).
 
+## Godot's own view of a script
+
+`godotwright code diagnostics|hover|definition|completion <file> [--line n --column n] [--code file|-]` (godot_code): asks Godot 4.7's own GDScript language server, started headless as an editor and kept warm for 10 minutes: diagnostics at the project's warning levels, the inferred type or signature under the cursor, where a name is defined, what can follow. `--code` analyses text that is not saved yet.
+
+## Shaders
+
+`godotwright shaders [path]` (and `check --shaders`, godot_check `shaders: true`): headless Godot never compiles shaders, so this draws every spatial, canvas_item, particles and sky shader on the Compatibility renderer (xvfb-run on Linux without a display), parses fog shaders, and reports errors at the line in the .gdshader, .gdshaderinc or .tres/.tscn, with the Godot 4 form of Godot 3 code.
+
+## Visual tests
+
+`godotwright screenshot --scene res://x.tscn --baseline [file]` (godot_screenshot `baseline`): the first picture becomes a baseline in .godotwright/baselines/ (Godot does not import dot folders, so it can be committed); later pictures are compared pixel by pixel: unchanged as one line of text, or the percent changed, the box of the largest change, the mean shift and a diff picture, as an error. Renders are deterministic (fixed fps and fixed seeds).
+
 ## Undo
 
 `godotwright undo [path] [--steps n] [--list] [--force]` (godot_undo): every Godotwright write (scene and project edits, renames with their file moves, migrations, fixes, model builds inside the project) keeps the files as they were in .godot/godotwright/journal/ (the last 40). Undo puts back the newest writes first; a file changed after the write stops the undo, so later edits are not lost unless `--force`.

@@ -4,6 +4,7 @@ import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { codeCommand } from "./commands/code.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
 import { depsCommand } from "./commands/deps.js";
@@ -24,6 +25,7 @@ import { sceneCommand } from "./commands/scene.js";
 import { testCommand } from "./commands/test.js";
 import { playCommand } from "./commands/play.js";
 import { screenshotCommand } from "./commands/screenshot.js";
+import { shadersCommand } from "./commands/shaders.js";
 import { scanCommand } from "./commands/scan.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
@@ -39,6 +41,7 @@ export function createProgram(): Command {
     .showHelpAfterError()
     .addCommand(scanCommand())
     .addCommand(checkCommand())
+    .addCommand(shadersCommand())
     .addCommand(testCommand())
     .addCommand(playCommand())
     .addCommand(perfCommand())
@@ -53,6 +56,7 @@ export function createProgram(): Command {
     .addCommand(fixCommand())
     .addCommand(doctorCommand())
     .addCommand(exportCommand())
+    .addCommand(codeCommand())
     .addCommand(undoCommand())
     .addCommand(depsCommand())
     .addCommand(usagesCommand())

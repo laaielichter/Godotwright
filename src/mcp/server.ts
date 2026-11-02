@@ -91,6 +91,9 @@ import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
+import { CODE_OPS, CodeError, codeIntel, formatCode } from "../lsp/code.js";
+import { LanguageServerError } from "../lsp/server.js";
+import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
@@ -152,6 +155,7 @@ const PROFILES: Record<Tier, Profile> = {
       "3. Before you save new GDScript, pass it to godot_review (code + file) and fix every error.",
       "4. After every edit, call godot_review with the changed files. Fix all errors before the next step.",
       "5. If Godot is installed, call godot_check before you finish.",
+      "When Godot is installed and you need the engine's exact view of a script (its warnings at the project's levels, the inferred type of a variable, where a name is defined, what can follow a dot), call godot_code; it also takes unsaved code.",
       "Before you rename, move or delete a function, signal, node or file, call godot_usages to see everything that uses it; for a file also godot_deps op why (it follows paths the code builds too).",
       "If the review reports Godot 3 code, call godot_migrate (report first, then write: true) instead of fixing the renames by hand.",
       "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
@@ -172,13 +176,14 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_api and godot_api_search answer from the official Godot 4.7 class reference, offline. Use them instead of memory for exact signatures, and to translate Godot 3 names.",
       "- godot_review is a static AAA review with scores (api, performance, quality, structure). It needs no Godot. Pass code + file to review code before you write it, or files to focus on what you changed.",
       "- godot_check runs Godot headless (import, load every script and scene, optionally run the main scene) and reports errors as file:line.",
+      "- godot_code asks Godot's own GDScript language server (kept warm): diagnostics with the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code. Use it for engine-exact answers about a script.",
       "- godot_doctor answers \"what is wrong here, and in which order do I fix it\": the review and Godot grouped by cause, most urgent first, each with the lesson that explains it and whether godot_fix or godot_migrate can do it, then numbered next steps. Start here in a project you do not know or when something is broken.",
       "- godot_fix applies the mechanical fixes for review findings (each labelled safe or check), shows them first, writes with write: true and reviews the changed files again.",
       "- godot_checklist lists every AAA rule with its fix.",
       "- godot_usages finds every place a name or res:// path is used (code, scenes, connections, groups, settings). Call it before you rename, move or delete anything.",
       "- godot_rename renames a name or moves a res:// file everywhere at once (dry run first, then write: true), keeping scene connections, node paths and .uid files right. Use it instead of editing references by hand.",
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
-      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
+      "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built; with baseline auto it is a visual test that reports what changed since the last approved picture.",
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
       "- godot_deps follows what loads what from where the game starts: unused files with their size, why a file is used (before deleting or moving it), what a scene loads with it, and scene loops Godot cannot load.",
       "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
@@ -1083,7 +1088,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, and optionally run the main scene (or the `scene` you name) for `run_frames` frames and return what it printed. Reports engine errors as res://file:line. Put print() calls in the code you are testing and read them back here. `run_frames` defaults to 0 (load only), or 120 when you pass `scene`; `timeout_seconds` caps each Godot run. Pass `shaders: true` to also compile every shader by drawing it on the Compatibility renderer (headless Godot never compiles shaders; needs a display, or xvfb-run on Linux): errors come back at the line in the .gdshader, .gdshaderinc or .tres/.tscn, with the Godot 4 name for Godot 3 code. Returns the errors and warnings with file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Your scenes and scripts are not changed: Godot updates its import cache in .godot/, where Godotwright also puts its checker script. Needs Godot on this machine and is slower than godot_review, so review first. To drive input and watch values use godot_play; for unit tests use godot_test.",
       inputSchema: {
         path: pathParam,
         run_frames: z
@@ -1106,6 +1111,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(3600)
           .optional()
           .describe("timeout per Godot run (default 600)"),
+        shaders: z
+          .boolean()
+          .optional()
+          .describe("also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run)"),
       },
       annotations: {
         readOnlyHint: false,
@@ -1114,18 +1123,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, run_frames, scene, timeout_seconds }) => {
+    async ({ path, run_frames, scene, timeout_seconds, shaders }) => {
       try {
         const result = await checkLearning(where(path), {
           godot: options.godot,
           runFrames: run_frames ?? (scene ? 120 : 0),
           ...(scene ? { scene } : {}),
+          ...(shaders ? { shaders: true } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
         const lines = result.diagnostics.map(formatDiagnostic);
         lines.push(
           `${result.errors} errors, ${result.warnings} warnings (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
         );
+        if (result.shaders) lines.push(shaderSummary(result.shaders));
         lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
         if (result.output !== undefined)
           lines.push(
@@ -1146,11 +1157,59 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   server.registerTool(
+    "godot_code",
+    {
+      title: "Ask Godot's GDScript language server",
+      description:
+        "Engine-exact code intelligence from Godot 4.7's own GDScript language server (Godot started headless as an editor, kept warm for 10 minutes so later calls answer in milliseconds; the first call takes a few seconds). op `diagnostics`: Godot's errors and warnings with the project's warning levels (debug/gdscript/warnings/...), as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or, without it, every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column), e.g. `var t: SceneTree`. op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow at that place (members after a dot, node paths after $), up to `limit` labels with kind and signature, filtered by the word being typed. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot on this machine. It does not change your scripts or scenes, but like opening the editor Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset (png, ogg, ttf...) and a missing .uid file next to each script; the result says so when the project had never been imported. Changes to existing scripts on disk are seen at once; a new class_name, a changed project.godot or a new file that needs an import (png, ogg, glb...) restarts the server, after the calls already running on it. For a check without Godot use godot_review; to load scenes too use godot_check.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition or completion"),
+        file: z.string().optional().describe("the .gd file: res:// path or a path (diagnostics without it: every script)"),
+        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, completion)"),
+        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, completion)"),
+        code: z.string().optional().describe("unsaved GDScript to analyse as `file` instead of the file on disk; nothing is written"),
+        limit: z.number().int().min(1).max(200).optional().describe("completion: most items shown (default 40)"),
+      },
+      // Not read-only: the headless editor imports the project and adds .import and .uid files next to its files, as
+      // godot_check does.
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ path, op, file, line, column, code, limit }) => {
+      try {
+        // res:// names a file in the project of `path`; a plain path starts at the server's folder like `path` does.
+        const target = file === undefined || file.startsWith("res://") || isAbsolute(file) ? file : resolve(base, file);
+        const dir = path === undefined && target && !target.startsWith("res://") ? target : where(path);
+        const result = await codeIntel(dir, {
+          op,
+          ...(target ? { file: target } : {}),
+          ...(line !== undefined ? { line } : {}),
+          ...(column !== undefined ? { column } : {}),
+          ...(code !== undefined ? { code } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(options.godot ? { godot: options.godot } : {}),
+        });
+        const body = formatCode(result);
+        return result.diagnostics?.some((d) => d.severity === "error") ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof CodeError || error instanceof LanguageServerError || error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
     "godot_screenshot",
     {
       title: "Screenshot a scene or model",
       description:
-        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image. For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. As a visual test: `baseline: \"auto\"` keeps the first picture in .godotwright/baselines/ (named after the scene or model, size and views; Godot does not import it, so commit it) and compares every later picture with it, pixel by pixel (renders are deterministic: fixed fps and fixed random seeds). Unchanged (not one pixel) gives text only (saves tokens). Any change gives the percent, the box of the largest change, the mean shift, the diff picture (changed pixels in red, kept in .godot/godotwright/) and the new picture; beyond `threshold` (percent of pixels, default 0.5) it is an error result, within it a warning to look at the diff. `baseline` may also be a .png path inside the project; `update_baseline: true` accepts the new picture as the baseline. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1188,6 +1247,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(10_000)
           .optional()
           .describe("frames to run before the picture (default 10)"),
+        baseline: z
+          .string()
+          .optional()
+          .describe(
+            'compare with a baseline PNG: "auto" (in .godotwright/baselines/, saved on the first run) or a .png path inside the project',
+          ),
+        threshold: z
+          .number()
+          .min(0)
+          .max(100)
+          .optional()
+          .describe(
+            "percent of pixels that may change before the picture counts as changed (default 0.5)",
+          ),
+        update_baseline: z
+          .boolean()
+          .optional()
+          .describe(
+            "save the new picture as the baseline instead of comparing (baseline defaults to auto)",
+          ),
       },
       annotations: {
         readOnlyHint: false,
@@ -1196,7 +1275,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, scene, model, views, width, height, frames }) => {
+    async ({
+      path,
+      scene,
+      model,
+      views,
+      width,
+      height,
+      frames,
+      baseline,
+      threshold,
+      update_baseline,
+    }) => {
       try {
         const report = await takeScreenshot(where(path), {
           godot: options.godot,
@@ -1206,22 +1296,37 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(width ? { width } : {}),
           ...(height ? { height } : {}),
           ...(frames ? { frames } : {}),
+          ...(baseline
+            ? { baseline: baseline === "auto" ? "auto" : output(baseline) }
+            : {}),
+          ...(threshold !== undefined ? { threshold } : {}),
+          ...(update_baseline ? { updateBaseline: true } : {}),
         });
-        return {
-          content: [
-            { type: "text" as const, text: formatScreenshot(report) },
-            {
-              type: "image" as const,
-              data: readFileSync(report.file).toString("base64"),
-              mimeType: "image/png",
-            },
-          ],
-        };
+        const png = (file: string) => ({
+          type: "image" as const,
+          data: readFileSync(file).toString("base64"),
+          mimeType: "image/png",
+        });
+        const status = report.baseline?.status;
+        const content = [
+          { type: "text" as const, text: formatScreenshot(report) },
+          // Unchanged (not one pixel): the text says it all. Any change, also within the threshold: the diff first,
+          // then the new picture.
+          ...(status === "unchanged"
+            ? []
+            : report.baseline?.diff
+              ? [png(report.baseline.diff), png(report.file)]
+              : [png(report.file)]),
+        ];
+        return status === "changed" || status === "size-mismatch"
+          ? { content, isError: true }
+          : { content };
       } catch (error) {
         if (error instanceof GodotNotFoundError) return failure(error.message);
         if (
           error instanceof ScreenshotError ||
-          error instanceof ProjectNotFoundError
+          error instanceof ProjectNotFoundError ||
+          error instanceof ModelError
         )
           return failure(error.message);
         throw error;

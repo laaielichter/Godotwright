@@ -15,7 +15,7 @@ In Claude Code:
 ## What you get
 
 - **The MCP server** with all its tools (`godot_doctor`, `godot_scan`, `godot_api`, `godot_review`, `godot_fix`,
-  `godot_check`, `godot_play`, `godot_session`, `godot_game`, `godot_perf`, `godot_scene_edit`, `godot_model_build`, `godot_lessons` and more). See the [full list](https://github.com/laaielichter/Godotwright#the-32-tools).
+  `godot_check`, `godot_play`, `godot_session`, `godot_game`, `godot_perf`, `godot_scene_edit`, `godot_model_build`, `godot_lessons` and more). See the [full list](https://github.com/laaielichter/Godotwright#the-33-tools).
 - **Hooks that put Godotwright in Claude's loop,** so it does not have to remember a tool:
   - after every edit of a `.gd`, `.tscn`, `.tres`, `.gdshader` or `project.godot` file, that file is reviewed and its
     errors go straight back to Claude (warnings as a note);
@@ -45,7 +45,7 @@ Godot 4.7; set `GODOT` to its path if it is not found in the usual install folde
 
 ## What it runs, writes and sends
 
-- **Runs:** `npx -y godotwright@0.4.0 mcp --tier premium`. The first start downloads that exact version of the
+- **Runs:** `npx -y godotwright@0.5.0 mcp --tier premium`. The first start downloads that exact version of the
   [godotwright npm package](https://www.npmjs.com/package/godotwright) (published from this repository by GitHub
   Actions, with provenance). It needs Node.js 22.12 or newer. The `check`, `test`, `play` and `screenshot` tools run
   your Godot binary headless on your project, which runs the project's own scripts.
