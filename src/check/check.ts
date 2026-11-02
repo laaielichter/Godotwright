@@ -41,6 +41,8 @@ export interface CheckResult {
   godotVersion: string;
   scripts: number;
   scenes: number;
+  /** .gdshader files compiled. */
+  shaders?: number;
   diagnostics: Diagnostic[];
   steps: CheckStep[];
   errors: number;
@@ -140,12 +142,14 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   );
   let scripts = 0;
   let scenes = 0;
+  let shaders = 0;
   try {
     const result = await run("check", ["--script", CHECKER_RES]);
-    const done = new RegExp(`${MARKER}_DONE (\\d+) (\\d+)`).exec(result.stderr);
+    const done = new RegExp(`${MARKER}_DONE (\\d+) (\\d+)(?: (\\d+))?`).exec(result.stderr);
     if (done) {
       scripts = Number(done[1]);
       scenes = Number(done[2]);
+      shaders = Number(done[3] ?? 0);
     } else if (!result.timedOut) {
       diagnostics.push({
         severity: "error",
@@ -156,7 +160,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     for (const d of parseGodotLog(result.stderr, "check")) {
       // The checker exits with resources still cached; those leaks are its own.
       if (d.file === CHECKER_RES || EXIT_LEAK.test(d.message)) continue;
-      if (d.source === "check" && d.file) d.source = d.file.endsWith(".gd") ? "script" : "scene";
+      if (d.source === "check" && d.file) d.source = d.file.endsWith(".gd") ? "script" : d.file.endsWith(".gdshader") ? "shader" : "scene";
       diagnostics.push(d);
     }
   } finally {
@@ -192,6 +196,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     godotVersion: version,
     scripts,
     scenes,
+    shaders,
     diagnostics: clean,
     steps,
     errors: clean.filter((d) => d.severity === "error").length,
@@ -199,6 +204,21 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     ...(options.keepLogs ? { logs } : {}),
     ...(output !== undefined ? { output, ran: { frames, fps, seconds: Math.round((frames / fps) * 100) / 100 } } : {}),
   };
+}
+
+/**
+ * Headless Godot compiles shaders with its dummy renderer, which words a missing or unknown shader_type as
+ * "Shader type X not supported in Dummy renderer."; this says what is wrong with the shader instead.
+ */
+function shaderTypeError(d: Diagnostic): Diagnostic {
+  if (d.source === "shader" && d.message === "Tokenizer: Unknown character #35: '#'") {
+    return { ...d, message: `${d.message} (the shader preprocessor failed, most often on an #include of a file that does not exist; godot_review names it)` };
+  }
+  const m = /^Shader type (\S*) not supported in Dummy renderer\.$/.exec(d.message);
+  if (!m) return d;
+  const types = "spatial, canvas_item, particles, sky, fog or texture_blit";
+  const message = m[1] ? `Unknown shader_type ${m[1]}: use ${types}.` : `No shader_type: start the shader with shader_type ${types}.`;
+  return { ...d, message, source: "shader" };
 }
 
 /** The project's physics ticks per second (default 60). */
@@ -230,7 +250,7 @@ const MENTIONED_PATH = /res:\/\/[^\s'"()]+[^\s'"().,:;]/g;
  * - vaguer reports of a missing file that Godot also reported with a line.
  */
 export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
-  const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message)));
+  const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message))).map(shaderTypeError);
   const scriptErrors = new Set(kept.filter((d) => d.source === "script" && d.line).map((d) => d.file));
   const located = new Set<string>();
   for (const d of kept) {

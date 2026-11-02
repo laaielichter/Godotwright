@@ -71,7 +71,7 @@ export function checkCommand(): Command {
           lines.push(...result.diagnostics.map(formatDiagnostic));
           lines.push(
             `${result.errors} error${result.errors === 1 ? "" : "s"}, ${result.warnings} warning${result.warnings === 1 ? "" : "s"}` +
-              ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
+              ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes${result.shaders ? `, ${result.shaders} shaders` : ""})`,
           );
           lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
           writeOut(command, `${lines.join("\n")}\n`);
