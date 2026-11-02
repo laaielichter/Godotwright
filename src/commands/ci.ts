@@ -44,10 +44,10 @@ Screenshots render with the Compatibility renderer (xvfb-run on Linux without a 
 
 export function ciCommand(): Command {
   return new Command("ci")
-    .description("one receipt for a pull request: review, Godot check, tests and scenarios, as a markdown table (exit code 1 when a step fails)")
+    .description("one receipt for a pull request: review, Godot check, tests, scenarios and screenshot baselines, as a markdown table (exit code 1 when a step fails)")
     .argument("[path]", "project directory (or any path inside it)", ".")
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
-    .option("--no-godot-checks", "only the review, which needs no Godot (skips check, test and scenarios)")
+    .option("--no-godot-checks", "only the review, which needs no Godot (skips check, test, scenarios and visual)")
     .option("--include-addons", "also review and load res://addons/")
     .option("--json", "print the result as JSON")
     .addHelpText("after", SCENARIO_HELP)
