@@ -5,6 +5,15 @@ No bought stars, no upvote requests, no alt accounts, and "I built this" in ever
 
 ## Status (2 Nov 2026)
 
+- **0.5.0 is ready on branch `claude/competitor-analysis-plugin-kgpwv8`, not released yet.** From a second survey of
+  about forty Godot AI tools and their issue trackers: shader review and compile, real exports with a PCK reader and
+  patches, scene integrity with uid repair, saved scenarios with JUnit, screenshot baselines, leak cycles, 4.6/4.7
+  upgrade rules with a two-binary check, resource and import editing, tool sets and read-only, structured results,
+  progress and cancel, protected paths. 37 tools. All unit tests and the Godot 4.7.2 integration tests pass, and the
+  review stays quiet on the official demos. **Decide before Tuesday 15:00:** release 0.5.0 first (merge the PR, then
+  `npm version 0.5.0` and push the tag), or launch with 0.4.0 and post 0.5.0 a week later as a second, smaller news
+  item (r/godot, X). Releasing first is better: the new items answer the questions people ask competitors most.
+
 - **New today:** a short README (about 240 lines, down from 600) with a without/with table, the 0.3.0 news and an
   honest comparison; the full reference moved to `docs/reference.md`; a site page for the Claude Code plugin
   (`claude-code.html`) with real hook output; 20 topics, including `godot-mcp` (a small topic page where a new repo
@@ -90,6 +99,15 @@ What it is:
 - Builds, views and checks 3D models (.glb) from code: 59 ready-made kinds, heightmap terrain with collision.
 - MIT, local, no telemetry. Install: `npx -y godotwright review .` or one command per agent.
 
+New in 0.5.0 (only if released before the post):
+- Shaders are reviewed against Godot 4.7's own shader tables and compiled headless (no GPU), so `hint_albedo` or
+  `SCREEN_TEXTURE` from an old tutorial is caught with the fix.
+- `export run` exports the game headless, reads the `.pck` without Godot, checks every file the game loads is in it,
+  and runs the build. Patch packs list exactly what they carry.
+- A passing play run can be kept as a regression test; screenshot baselines with a pixel diff; JUnit for CI.
+- Duplicate and stale uids after copying scenes are found and repaired across files.
+- `--tools core` loads 12 tools, under a third of the full tool list; `--read-only` for review-only sessions.
+
 Proof, stated honestly:
 - 168 runs (Claude Haiku, Sonnet and Opus, 12 tasks, with and without Godotwright), judged by real Godot 4.7.2 in CI.
 - Correctness: **no difference**. Every run passed, with and without. Current models already solve those tasks.
@@ -108,13 +126,23 @@ Questions to ask readers (pick one):
 - What would a benchmark need to show a real difference?
 
 Likely questions, with true answers:
-- *How is this different from other Godot MCP servers (godot-mcp, godot-mcp-pro, godot-forge)?* Most drive the
+- *How is this different from other Godot MCP servers (godot-ai, Godot MCP Pro, godot-mcp)?* Most drive the
   running editor. Godotwright works without the editor: offline API, static review, checks in CI, and measured results.
+  Where they overlap (shader compile, exports, screenshots), Godotwright does it headless, so it also runs in CI. They
+  are better at live editor work (VisualShader graphs, AnimationTree, the inspector); use both.
 - *Does it work with local models?* Yes, any MCP client; the `cheap` profile gives small models step-by-step
   instructions.
 - *Does it send my code anywhere?* No. See PRIVACY.md.
 
 Link the repository, not the site.
+
+## Second news item (one week after the launch, if 0.5.0 came later)
+
+X / Bluesky (draft, rewrite in your own voice):
+> Godotwright 0.5: your agent's Godot shaders are now reviewed and compiled headless, and `export run` builds the game,
+> reads the .pck and runs it, so "works in the editor, broken in the build" shows up in CI. Also: screenshot baselines,
+> saved playtests with JUnit, uid repair. MIT. Which export bug cost you the most time?
+> https://github.com/laaielichter/Godotwright
 
 ## Short posts (Tuesday 17:50)
 
