@@ -63,7 +63,7 @@ describe("scenario files with until and signals", () => {
   it("passes until and signals to the run and does not sample a signal as a value", async () => {
     let seen: PlayOptions = {};
     const s = parseScenario({ until: "Hero.y < 0", signals: ["Hero.landed"], watch: ["Hero.y"], expect: ["Hero.landed == 0"] }, "s");
-    const r = await runScenario("/p", "f.json", s, { play: async (_p, o) => ((seen = o), report({ 3: {} }, { until: { condition: "Hero.y < 0", frame: 3 } })) });
+    const r = await runScenario("/p", "f.json", s, { play: async (_p, o) => ((seen = o ?? {}), report({ 3: {} }, { until: { condition: "Hero.y < 0", frame: 3 } })) });
     expect(seen).toMatchObject({ until: "Hero.y < 0", signals: ["Hero.landed"], watch: ["Hero.y"] });
     expect(r).toMatchObject({ ok: true, stoppedAt: 3 });
     expect(formatScenarios([r])).toContain("stopped at frame 3 (until)");
