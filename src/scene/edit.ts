@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { JournalWriter } from "../journal/journal.js";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
 import { parseResourceFile, type Section } from "../godot/resource-file.js";
@@ -32,6 +33,8 @@ export interface ScenePlan {
   hunks: SceneHunk[];
   warnings: string[];
   written: boolean;
+  /** The journal entry of the write (godot_undo). */
+  journal?: number;
   review?: { before: number; after: number };
 }
 
@@ -403,13 +406,15 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
   if (!options.write) return plan;
   const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
   const before = errors();
-  writeFileSync(full, text);
-  return { ...plan, written: true, review: { before, after: errors() } };
+  const journal = new JournalWriter(root, "scene edit", `${summary} (${resPath})`);
+  journal.write(full, text);
+  const id = journal.commit();
+  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
 }
 
 /** The plan as a compact diff, with the warnings and, when written, the review errors before and after. */
 export function formatScenePlan(plan: ScenePlan): string {
-  const out = [`scene ${plan.summary}${plan.written ? " (written)" : " (dry run: add --write to apply)"}`, plan.file];
+  const out = [`scene ${plan.summary}${plan.written ? ` (written${plan.journal ? `, journal #${plan.journal}: godot_undo reverts it` : ""})` : " (dry run: add --write to apply)"}`, plan.file];
   for (const h of plan.hunks) {
     h.removed.forEach((l, i) => out.push(`  ${i === 0 ? String(h.line).padStart(4) : "    "}  - ${l}`));
     h.added.forEach((l, i) => out.push(`  ${i === 0 && !h.removed.length ? String(h.line).padStart(4) : "    "}  + ${l}`));

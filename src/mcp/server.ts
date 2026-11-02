@@ -91,6 +91,7 @@ import { PlayError, formatPlay, playScene } from "../play/play.js";
 import { formatPerf, perfScene } from "../perf/perf.js";
 import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
+import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import { ScenarioError, formatClaims, judgeClaims, parseExpectation } from "../ci/scenario.js";
 import {
@@ -155,6 +156,7 @@ const PROFILES: Record<Tier, Profile> = {
       "For findings godot_fix can do (freed checks, get_meta defaults, lone ternaries, garbled text, emit_signal, MultiMesh and Timer order), call godot_fix (report, then write: true) instead of editing them by hand.",
       "6. If you verified that a review finding is a false alarm, pass its line to godot_feedback with verdict wrong.",
       "7. When Godot shows an error you do not understand, call godot_lessons with the message as `error`: lessons from real projects say what it usually means. When you fixed something that took more than one try, keep the lesson with godot_lesson_add (general words, no names or code).",
+      "If a Godotwright write made things worse, call godot_undo: it puts back the files of the last write (steps for more).",
       "Keep each change small. Use static types (var x: int, func f() -> void).",
       'To make or check a 3D model (.glb): 0) godot_model_brief gives one page with everything to start (use it first if you are a small model). 1) godot_model_identify says what the thing is: its parts, size, pivots and what to anticipate. 2) godot_model_spec shows the spec format. 3) godot_model_build builds it (put "archetype" in the spec). 4) godot_model_view shows it as text (front, side, top views and what does not touch) so you can check the shape. 5) godot_model_lint with archetype checks it. Fix every error. Models face +Z, +Y is up, units are metres.',
     ].join("\n"),
@@ -177,6 +179,7 @@ const PROFILES: Record<Tier, Profile> = {
       "- godot_project_edit changes project.godot (settings, input actions, autoloads) with checks, touching only that entry. Use it instead of editing project.godot by hand.",
       "- godot_screenshot renders a scene, or a .glb model from several sides, to a PNG and says how much is drawn. Use it to look at what you built.",
       "- godot_session starts a game that stays up between calls (headless, paused at frame 0); godot_game then shows the live tree, reads and sets values, calls methods, evaluates expressions and steps frames with frame-exact input until a condition holds, and reloads the scripts you edited with every node's values kept, with new runtime errors after every answer. Use it when a world takes long to load or a state is hard to reach; stop it when done.",
+      "- godot_undo undoes the last Godotwright writes (scene and project edits, renames, migrations, fixes, model builds), newest first; a file changed by hand since is left alone. Use it when a write made things worse.",
       "- godot_export compares the export presets with what the game loads: excluded files that are preloaded, plain data files missing from include_filter, and paths built under excluded folders. Run it before an export.",
       "- godot_perf measures a scene's frame times headless (p50/p95/p99 against a budget, the slowest frames and their cause, the change since the last run). Measure before and after every performance change.",
       "- godot_play runs a scene with an input timeline (press jump on frame 10, hold right for 20 frames) and returns the values you watch per frame. Use it to see the game do something without a screen.",
@@ -796,6 +799,29 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const result = checkExport(where(path), preset ? { preset } : {});
         const body = formatExportCheck(result);
         return result.problems.some((p) => p.severity === "error") ? failure(body) : text(body);
+      }),
+  );
+
+  server.registerTool(
+    "godot_undo",
+    {
+      title: "Undo the last Godotwright writes",
+      description:
+        "Undo what Godotwright wrote, newest first: scene and project edits, renames (moved files go back), migrations, fixes and model builds each keep the files as they were, in .godot/godotwright/journal/ (the last 40 writes). `steps` undoes that many writes (default 1); `list` only shows them. A file changed after the write (by hand or by another tool) stops the undo there, so your later edits are never lost silently; `force` undoes anyway. Use it when a write made things worse, instead of repairing by hand.",
+      inputSchema: {
+        path: pathParam,
+        steps: z.number().int().min(1).max(40).optional().describe("how many writes to undo (default 1)"),
+        list: z.boolean().optional().describe("only list the writes that can be undone"),
+        force: z.boolean().optional().describe("undo even when a file changed after the write; those changes are lost"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, steps, list, force }) =>
+      guard(() => {
+        if (list) return text(formatJournal(readJournal(where(path)).entries));
+        const result = undoJournal(where(path), { ...(steps ? { steps } : {}), ...(force ? { force: true } : {}) });
+        const body = formatUndo(result);
+        return result.blocked ? failure(body) : text(body);
       }),
   );
 

@@ -429,7 +429,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 30 tools
+### The 31 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -447,6 +447,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
 | `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
+| `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
 | `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |

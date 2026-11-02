@@ -55,6 +55,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_screenshot",
       "godot_session",
       "godot_test",
+      "godot_undo",
       "godot_usages",
     ]);
     expect(
@@ -248,7 +249,7 @@ describe("MCP server (premium profile)", () => {
     expect(doc).toMatch(/physics\/moving-platform-velocity/);
     expect(doc).toMatch(/Next:\n  1\) apply the 2 mechanical fixes with godot_fix/);
     const fix = ((await client.callTool({ name: "godot_fix", arguments: { path: root, write: true } })) as { content: { text: string }[] }).content[0]!.text;
-    expect(fix).toMatch(/^fix: 2 fixes in 1 file \(written\)/);
+    expect(fix).toMatch(/^fix: 2 fixes in 1 file \(written, journal #1: godot_undo reverts it\)/);
     expect(fix).toMatch(/after the fixes: 1 error and 0 warnings left/);
   });
 

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { JournalWriter } from "../journal/journal.js";
 import { GodotApi } from "../api/api.js";
 import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
@@ -35,6 +36,8 @@ export interface ProjectMigration {
   changes: number;
   left: number;
   written: boolean;
+  /** The journal entry of the write (godot_undo). */
+  journal?: number;
 }
 
 /** Godot 3 method names that the bundled rename table does not carry, with the Godot 4 name. */
@@ -413,15 +416,22 @@ export function migrateProject(path: string, options: MigrateOptions = {}): Proj
         .filter((f) => !options.files || options.files.includes(f))
         .map((res) => ({ res, full: fromResPath(root as string, res) }));
   const files: FileMigration[] = [];
+  // One .gd file outside a project is written as it is; inside one, the write goes in the journal.
+  const journal = root ? new JournalWriter(root, "migrate", "Godot 3 code rewritten for Godot 4") : undefined;
   for (const t of targets) {
     const source = readFileSync(t.full, "utf8");
     const result = migrateScript(source, api);
     if (result.changes.length === 0 && result.left.length === 0) continue;
     const written = options.write === true && result.changes.length > 0;
-    if (written) writeFileSync(t.full, result.code);
+    if (written) {
+      if (journal) journal.write(t.full, result.code);
+      else writeFileSync(t.full, result.code);
+    }
     files.push({ file: t.res, ...result, written });
   }
+  const id = journal?.commit();
   return {
+    ...(id ? { journal: id } : {}),
     project: single ? path : (root as string),
     files,
     changes: files.reduce((n, f) => n + f.changes.length, 0),
@@ -434,7 +444,7 @@ export function migrateProject(path: string, options: MigrateOptions = {}): Proj
 export function formatMigration(m: ProjectMigration, detail: "brief" | "full" = "brief"): string {
   const out: string[] = [];
   const changed = m.files.filter((f) => f.changes.length > 0).length;
-  out.push(`migrate: ${changed} script${changed === 1 ? "" : "s"} with ${m.changes} change${m.changes === 1 ? "" : "s"}, ${m.left} thing${m.left === 1 ? "" : "s"} to do by hand${m.written ? " (written)" : m.changes ? " (dry run: add --write to apply)" : ""}`);
+  out.push(`migrate: ${changed} script${changed === 1 ? "" : "s"} with ${m.changes} change${m.changes === 1 ? "" : "s"}, ${m.left} thing${m.left === 1 ? "" : "s"} to do by hand${m.written ? ` (written${m.journal ? `, journal #${m.journal}: godot_undo reverts it` : ""})` : m.changes ? " (dry run: add --write to apply)" : ""}`);
   for (const f of m.files) {
     out.push(`${f.file}${f.changes.length ? ` (${f.changes.length} change${f.changes.length === 1 ? "" : "s"})` : ""}`);
     const limit = detail === "full" ? f.changes.length : 12;

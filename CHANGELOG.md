@@ -36,6 +36,10 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   from the next step, new variables get their starting values, a script that extends a changed one is compiled again
   after it, and a script that does not compile is left as it was (the old code keeps running, the error names the
   line). Try a fix in seconds on a world that took a minute to load.
+- **`godot_undo` (and `godotwright undo`): every write can be taken back.** Scene and project edits, renames (with
+  their file moves), migrations, fixes and model builds keep the files as they were in `.godot/godotwright/journal/`
+  (the last 40 writes), and say so in their result. Undo puts back the newest writes first; a file changed after the
+  write stops the undo there, so later edits by hand are never lost silently (`force` to undo anyway).
 - **`godot_export` (and `godotwright export`): "works in the editor, broken in the build", found before anyone exports.**
   It compares the export presets with what the scripts and scenes load: files that `exclude_filter` leaves out
   although they are preloaded (Godot leaves them out even when something needs them), plain data files that Godot

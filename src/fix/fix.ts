@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { JournalWriter } from "../journal/journal.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
 import { emptyLearning } from "../learn/store.js";
@@ -42,6 +43,8 @@ export interface FixResult {
   /** Fixable findings left out because they need `check` and only safe fixes were asked for. */
   needsCheck: number;
   written: boolean;
+  /** The journal entry of the write (godot_undo). */
+  journal?: number;
   /** After writing: findings that remain in the changed files (errors and warnings). */
   remaining?: Finding[];
 }
@@ -265,6 +268,7 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
   const changes: FixChange[] = [];
   const skipped: FixSkip[] = [];
   let needsCheck = 0;
+  const journal = new JournalWriter(root, "fix", "mechanical fixes");
   for (const [file, findings] of byFile) {
     const full = fromResPath(root, file);
     const source = readFileSync(full, "utf8");
@@ -305,23 +309,24 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
       });
       lines = [...lines.slice(0, edit.index), ...edit.lines, ...lines.slice(edit.index + edit.count)];
     }
-    if (options.write && edits.length) writeFileSync(full, lines.join(eol));
+    if (options.write && edits.length) journal.write(full, lines.join(eol));
   }
   changes.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 
+  const id = options.write ? journal.commit() : undefined;
   let remaining: Finding[] | undefined;
   if (options.write && changes.length) {
     const changed = [...new Set(changes.map((c) => c.file))];
     remaining = reviewProject(root, { ...learning, focus: changed }).findings.filter((f) => f.severity !== "info");
   }
-  return { project: root, changes, skipped, needsCheck, written: options.write === true && changes.length > 0, ...(remaining ? { remaining } : {}) };
+  return { project: root, changes, skipped, needsCheck, written: options.write === true && changes.length > 0, ...(id ? { journal: id } : {}), ...(remaining ? { remaining } : {}) };
 }
 
 export function formatFix(result: FixResult, detail: "brief" | "full" = "brief"): string {
   const out: string[] = [];
   const files = new Set(result.changes.map((c) => c.file)).size;
   out.push(
-    `fix: ${result.changes.length} fix${result.changes.length === 1 ? "" : "es"} in ${files} file${files === 1 ? "" : "s"}${result.written ? " (written)" : result.changes.length ? " (dry run: pass write to apply)" : ""}` +
+    `fix: ${result.changes.length} fix${result.changes.length === 1 ? "" : "es"} in ${files} file${files === 1 ? "" : "s"}${result.written ? ` (written${result.journal ? `, journal #${result.journal}: godot_undo reverts it` : ""})` : result.changes.length ? " (dry run: pass write to apply)" : ""}` +
       (result.needsCheck ? `; ${result.needsCheck} more need a look (pass include_check / --check)` : ""),
   );
   const limit = detail === "full" ? result.changes.length : 30;

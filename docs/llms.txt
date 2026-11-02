@@ -49,6 +49,10 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 
 `godotwright usages <name>` (godot_usages): every place a function, signal, node, group, input action, autoload or res:// path is used, offline. Call it before renaming, moving or deleting.
 
+## Undo
+
+`godotwright undo [path] [--steps n] [--list] [--force]` (godot_undo): every Godotwright write (scene and project edits, renames with their file moves, migrations, fixes, model builds inside the project) keeps the files as they were in .godot/godotwright/journal/ (the last 40). Undo puts back the newest writes first; a file changed after the write stops the undo, so later edits are not lost unless `--force`.
+
 ## Rename and move
 
 `godotwright rename <from> <to> [--write]` (godot_rename): renames a name or moves a res:// file everywhere at once, with a dry run first, and checks the review before and after.

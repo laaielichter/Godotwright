@@ -1,7 +1,6 @@
 import { checkProject, type CheckResult } from "../check/check.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import type { Diagnostic } from "../check/log.js";
-import { formatDiagnostic } from "../check/log.js";
 import { fixProject } from "../fix/fix.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
