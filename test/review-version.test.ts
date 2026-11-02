@@ -195,6 +195,8 @@ describe("Godot 4.7 rules (always on)", () => {
       "",
     ].join("\n");
     expect(lines({ "main.gd": script }, /image-unit/).map(ruleOnly)).toEqual([
+      "res://main.gd:5: error [api/image-unit-bool]",
+      "res://main.gd:5: error [api/image-unit-bool]",
       "res://main.gd:7: error [api/image-unit-bool]",
     ]);
   });
