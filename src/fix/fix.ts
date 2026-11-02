@@ -7,6 +7,9 @@ import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import type { Finding } from "../review/rules.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { parseShader } from "../godot/shader.js";
+import { shaderRenames } from "../migrate/shader.js";
+import { REMOVED_TEXTURES, removedTextureUniform } from "../review/checks/shader.js";
 
 /**
  * Mechanical fixes for review findings: each rewrites the one line a finding points to, only when that line looks
@@ -248,6 +251,33 @@ const FIXERS: Record<string, Fixer> = {
     if (guess) return { index: i, count: 1, lines: [typed(guess)], safety: "check", note: `${guess} is the likely type; make sure it is the one you mean` };
     return { index: i, count: 1, lines: [typed("Variant")], safety: "safe", note: "typed as Variant; a narrower type is better when you know it" };
   },
+};
+
+const SHADER_FILE = /\.gdshader(inc)?$/;
+
+// A Godot 3 shader name: the name from Godot's rename table (hint_color -> source_color, WORLD_MATRIX -> MODEL_MATRIX).
+FIXERS["api/shader-renamed"] = (lines, i, f) => {
+  if (!SHADER_FILE.test(f.file)) return "shader code stored in a resource: change it in Godot, or move it to a .gdshader file";
+  const fixed = shaderRenames(parseShader(lines.join("\n")), lines).get(i + 1);
+  if (fixed === undefined) return "no one-to-one Godot 4 name: change it by hand as the message says";
+  return { index: i, count: 1, lines: [fixed], safety: "safe" };
+};
+
+// SCREEN_TEXTURE and friends: the sampler uniform Godot's own error suggests, after the shader_type line. One fix adds
+// every missing one, so the uniforms land in one place.
+FIXERS["api/shader-removed-builtin"] = (lines, i, f) => {
+  if (!SHADER_FILE.test(f.file)) return "shader code stored in a resource: change it in Godot, or move it to a .gdshader file";
+  const name = /^(\w+) was removed/.exec(f.message)?.[1];
+  const parsed = parseShader(lines.join("\n"));
+  if (!name || !Object.hasOwn(REMOVED_TEXTURES, name) || parsed.declared.has(name)) return "the uniform is declared already";
+  const used = parsed.tokens.filter((t, n) => Object.hasOwn(REMOVED_TEXTURES, t.t) && !t.member && parsed.tokens[n - 1]?.t !== "." && !parsed.declared.has(t.t));
+  const names = [...new Set(used.map((t) => t.t))];
+  if (names[0] !== name) return `added together with ${names[0]}`;
+  const uniforms = names.map(removedTextureUniform);
+  const type = parsed.typeLine;
+  return type === undefined
+    ? { index: 0, count: 1, lines: [...uniforms, lines[0]!], safety: "safe" }
+    : { index: type - 1, count: 1, lines: [lines[type - 1]!, ...uniforms], safety: "safe" };
 };
 
 export const FIXABLE_RULES = Object.keys(FIXERS).sort();

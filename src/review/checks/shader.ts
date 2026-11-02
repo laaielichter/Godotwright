@@ -28,6 +28,12 @@ export function shaderRename(api: GodotApi, name: string): string | undefined {
   return api.renamedShader(name)?.to;
 }
 
+/** Godot 3 built-ins that Godot 4 dropped without a one-to-one rename (both checked against Godot 4.7.2). */
+export const GODOT3_GONE: Record<string, string> = {
+  CLEARCOAT_GLOSS: "Godot 4 has CLEARCOAT_ROUGHNESS instead, which is 1.0 - gloss",
+  EXTRA_MATRIX: "Godot 4 canvas_item shaders have no EXTRA_MATRIX; MODEL_MATRIX is the node's transform",
+};
+
 /** What to write instead, for read-only built-ins people often try to write. */
 const WRITE_INSTEAD: Record<string, string> = {
   "spatial.fragment.COLOR": "write ALBEDO (and ALPHA); COLOR is the vertex colour here, and vertex() may write it",
@@ -169,6 +175,13 @@ function checkGodot3(ctx: Context): void {
       );
       continue;
     }
+    if (Object.hasOwn(GODOT3_GONE, tok.t)) {
+      const key = `${tok.t}:${tok.line}`;
+      if (reportedRename.has(key)) continue;
+      reportedRename.add(key);
+      ctx.out.push(finding("api/shader-renamed", ctx.path, ctx.at(tok.line), `${tok.t} is a Godot 3 built-in: ${GODOT3_GONE[tok.t]}.`));
+      continue;
+    }
     const to = shaderRename(api, tok.t);
     if (to === undefined) continue;
     const key = `${tok.t}:${tok.line}`;
@@ -176,6 +189,16 @@ function checkGodot3(ctx: Context): void {
     reportedRename.add(key);
     ctx.out.push(finding("api/shader-renamed", ctx.path, ctx.at(tok.line), `${tok.t} is the Godot 3 name: use ${to} (godot_migrate rewrites it).`));
   }
+  // Names in #define and #if lines are code too: the preprocessor pastes them in.
+  parsed.code.split("\n").forEach((l, i) => {
+    if (!/^\s*#\s*(define|if|elif)\b/.test(l)) return;
+    for (const m of l.matchAll(/[A-Za-z_]\w*/g)) {
+      const to = l[m.index - 1] === "." || parsed.declared.has(m[0]) ? undefined : shaderRename(api, m[0]);
+      if (to === undefined || reportedRename.has(`${m[0]}:${i + 1}`)) continue;
+      reportedRename.add(`${m[0]}:${i + 1}`);
+      ctx.out.push(finding("api/shader-renamed", ctx.path, ctx.at(i + 1), `${m[0]} is the Godot 3 name: use ${to} (godot_migrate rewrites it).`));
+    }
+  });
   if (parsed.type === "particles") {
     const vertex = parsed.functions.find((f) => f.name === "vertex");
     if (vertex) {
@@ -245,7 +268,7 @@ function checkBuiltins(ctx: Context, type: ApiShaderType, declared: Set<string>)
       );
       continue;
     }
-    if (!/^[A-Z][A-Z0-9_]*$/.test(tok.t) || Object.hasOwn(REMOVED_TEXTURES, tok.t) || shaderRename(api, tok.t) !== undefined) continue;
+    if (!/^[A-Z][A-Z0-9_]*$/.test(tok.t) || Object.hasOwn(REMOVED_TEXTURES, tok.t) || Object.hasOwn(GODOT3_GONE, tok.t) || shaderRename(api, tok.t) !== undefined) continue;
     const places = api.shaderBuiltin(tok.t);
     if (places.length === 0) continue;
     const here = scopes.map((s) => type.functions[s]?.builtins[tok.t]).find((t) => t !== undefined);
