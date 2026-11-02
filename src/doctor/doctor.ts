@@ -107,6 +107,7 @@ export async function doctorProject(path: string, options: DoctorOptions = {}): 
     problems.push({
       severity: d.severity,
       source: places.some((p) => reviewed.has(p)) ? "both" : "godot",
+      ...(d.rule ? { rule: d.rule, ...(RULES[d.rule] ? { fix: RULES[d.rule]!.fix } : {}) } : {}),
       title: d.message,
       places,
       ...(lesson ? { lesson } : {}),
