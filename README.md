@@ -136,10 +136,10 @@ opt-in and off by default ([PRIVACY.md](PRIVACY.md)).
 
 Every command, option and rule: [docs/reference.md](docs/reference.md).
 
-## The 32 tools
+## The 33 tools
 
 <details>
-<summary>All MCP tools (31 of them are also CLI commands)</summary>
+<summary>All MCP tools (32 of them are also CLI commands)</summary>
 
 | Tool | What it does |
 | --- | --- |
@@ -163,6 +163,7 @@ Every command, option and rule: [docs/reference.md](docs/reference.md).
 | `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
+| `godot_scenario` | Keep a passing `godot_play` run as a regression test in the project, `list` them, `run` one or all with every failing claim, its value and frame |
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
