@@ -48,7 +48,7 @@ export interface ScreenshotReport {
 const MARK = "GODOTWRIGHT_SHOT";
 
 /** How to give Godot a screen: the real one, or a virtual one with xvfb-run on a Linux machine without a display. */
-function screen(): { command: string; prefix: string[] } | { error: string } {
+export function screen(): { command: string; prefix: string[] } | { error: string } {
   if (process.platform !== "linux" || process.env["DISPLAY"] || process.env["WAYLAND_DISPLAY"]) return { command: "", prefix: [] };
   if (spawnSync("which", ["xvfb-run"]).status === 0) return { command: "xvfb-run", prefix: ["-a", "-s", "-screen 0 1920x1080x24"] };
   return { error: "no screen to render on: this Linux machine has no display and no xvfb-run. Install it (sudo apt-get install xvfb libgl1-mesa-dri) and try again." };
