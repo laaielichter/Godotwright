@@ -130,6 +130,9 @@ export function compareBaseline(root: string, rawName: string, actualFile: strin
   const exists = existsSync(files.png);
   const old = readBaselineMeta(root, name, options.dir);
   if (options.update || (!exists && options.createMissing !== false)) {
+    // Never write over a JSON file that is not this baseline's settings: it belongs to something else.
+    if (!exists && !old && existsSync(files.json))
+      throw new BaselineError(`${rel(root, files.json)} exists and is not a baseline settings file; choose another baseline name or folder`);
     mkdirSync(dirname(files.png), { recursive: true });
     copyFileSync(actualFile, files.png);
     const tolerance = options.tolerance ?? old?.tolerance;

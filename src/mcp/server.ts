@@ -1211,7 +1211,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         baseline_dir: z
           .string()
           .optional()
-          .describe("baseline folder (default .godotwright/baselines)"),
+          .describe("baseline folder inside the project (default .godotwright/baselines; godotwright ci needs --baseline-dir for another one)"),
       },
       annotations: {
         readOnlyHint: false,
@@ -1234,7 +1234,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(update ? { update } : {}),
           ...(tolerance !== undefined ? { tolerance } : {}),
           ...(max_changed !== undefined ? { maxChanged: max_changed } : {}),
-          ...(baseline_dir ? { baselineDir: baseline_dir } : {}),
+          // The baseline folder is written to, so it must stay inside the project like every other output.
+          ...(baseline_dir ? { baselineDir: output(baseline_dir) } : {}),
         });
         // A baseline that did not change needs no picture; a changed one shows the diff, not the render.
         const status = report.baseline?.status;
@@ -1262,7 +1263,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (error instanceof GodotNotFoundError) return failure(error.message);
         if (
           error instanceof ScreenshotError ||
-          error instanceof ProjectNotFoundError
+          error instanceof ProjectNotFoundError ||
+          error instanceof ModelError
         )
           return failure(error.message);
         throw error;

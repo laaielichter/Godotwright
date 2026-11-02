@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Tier } from "../src/mcp/server.js";
 import { DEMO, FIXTURES, makeProject } from "./helpers.js";
@@ -236,6 +236,15 @@ describe("MCP server (premium profile)", () => {
     expect(textOf(escape)).toContain(
       "no such file in the project: res://../scripts/enemy.gd",
     );
+  });
+
+  it("keeps the screenshot baseline folder inside the project", async () => {
+    for (const baseline_dir of ["../outside", "/tmp/gw-escape-baselines"]) {
+      const r = (await client.callTool({ name: "godot_screenshot", arguments: { scene: "res://main.tscn", baseline: "evil", baseline_dir } })) as Result;
+      expect(r.isError).toBe(true);
+      expect(textOf(r)).toContain("outside the project");
+    }
+    expect(existsSync(`${FIXTURES}/outside`)).toBe(false);
   });
 
   it("finds what is wrong, in order, and fixes what is mechanical", async () => {
