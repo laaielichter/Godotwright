@@ -38,6 +38,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_feedback",
       "godot_fix",
       "godot_game",
+      "godot_leaks",
       "godot_lesson_add",
       "godot_lessons",
       "godot_migrate",

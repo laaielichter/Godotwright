@@ -47,6 +47,8 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
   values and steps frames with input until a condition holds; `reload` puts the scripts you edited into the running
   game with every node's values kept. Use it when a world loads slowly or a state is hard to reach; stop it when done.
 - `godot_perf` measures frame times (p50/p95/p99, the slowest frames and their cause) and compares with the last run.
+- `godot_leaks` loads, runs and frees a scene in cycles and names what grows per cycle (orphan nodes by class and
+  script with where they were made and removed, nodes left behind, objects that are not nodes); 0 per cycle proves a fix.
 - `godot_screenshot` renders a scene or a model to a PNG.
 
 ## Know what real projects learned

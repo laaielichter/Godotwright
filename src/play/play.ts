@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { dirname, join } from "node:path";
 import { runOutput } from "../check/check.js";
 import { findGodot, runGodot } from "../check/godot.js";
+import { parseExitLeaks, type ExitLeaks } from "../check/exit-leaks.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { parseResourceText } from "../godot/scene.js";
@@ -10,6 +11,8 @@ import { findProjectRoot, fromResPath } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { screen } from "../screenshot/screenshot.js";
 import { inputEventText } from "../settings/edit.js";
+
+export { demangle, parseExitLeaks, type ExitLeaks } from "../check/exit-leaks.js";
 
 export class PlayError extends Error {}
 
@@ -49,6 +52,34 @@ export interface PlayOptions {
   captures?: { frame: number; out: string }[];
   /** Window size for captures (default 640x360). */
   size?: { width: number; height: number };
+  /**
+   * Run the scene in cycles of `frames` frames, `count` times, and snapshot the live objects at the end of each
+   * (godot_leaks). With `reload` (default true) the scene is freed at the end of a cycle and made again for the next;
+   * the input timeline replays inside every cycle. `frames`, `every`, `watch`, `until` and `signals` are not used.
+   */
+  cycles?: { count: number; frames: number; reload?: boolean };
+  /** Run Godot with --verbose, so it lists the objects and resources still alive at exit (godot_leaks). */
+  verbose?: boolean;
+}
+
+/** One group of nodes in a snapshot: how many roots, how many nodes with their children, and where (a parent path). */
+export type SnapshotGroup = [roots: number, nodes: number, where: string, whereScript: string];
+
+/** The live objects at the end of a cycle. Group keys are "class|script path|scene path|owner's scene path". */
+export interface LeakSnapshot {
+  cycle: number;
+  objects: number;
+  /** Nodes in the tree (Performance.OBJECT_NODE_COUNT). */
+  nodes: number;
+  /** Orphan nodes, children included (Performance.OBJECT_ORPHAN_NODE_COUNT). */
+  orphanNodes: number;
+  resources: number;
+  /** Static memory in bytes (debug builds). */
+  memory: number;
+  /** Orphan subtrees (nodes outside the tree with no parent), by key. `where` is the parent they were removed from, "" when never in the tree. */
+  orphans: Record<string, SnapshotGroup>;
+  /** Nodes in the tree, by key; `where` is the parent path of the first one. */
+  tree: Record<string, SnapshotGroup>;
 }
 
 /** Per-frame timings of a run, in microseconds, and node counts: what godot_perf summarises. */
@@ -95,6 +126,10 @@ export interface PlayReport {
   /** Godot version and graphics driver of a rendered run. */
   godot?: string;
   adapter?: string;
+  /** One snapshot per cycle, when `cycles` was set. */
+  snapshots?: LeakSnapshot[];
+  /** What Godot listed at exit, when `verbose` was set. */
+  atExit?: ExitLeaks;
 }
 
 const UNTIL = /^\s*(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+?)\s*$/;
@@ -114,6 +149,141 @@ function splitWatch(w: string): [string, string] {
 }
 
 const MARK = "GODOTWRIGHT_PLAY";
+
+/** Members the cycle mode (godot_leaks) adds to the play script. */
+const CYCLE_VARS = `var _packed: PackedScene
+var _cycle := 0
+var _cycle_frame := 0
+var _settle := false
+## Where each node that left the tree was: [parent path, parent script]. Pruned to live orphans at every snapshot.
+var _where := {}
+`;
+
+/** Functions of the cycle mode: free and remake the scene, wait a frame for queued frees, then snapshot. */
+const CYCLE_FUNCS = `
+
+func _cycle_step() -> void:
+	if _settle:
+		# A scene the game switched to in the last frame (change_scene_to_*) is added only now; a real switch
+		# would free it too, so it is no leak.
+		if _free_switched():
+			return
+		_settle = false
+		_snapshot()
+		if _cycle >= CYCLES:
+			_finish()
+			return
+		_scene = _packed.instantiate()
+		root.add_child(_scene)
+		current_scene = _scene
+		_cycle_frame = 0
+		_apply(0)
+		return
+	if _cycle_frame < CYCLE_FRAMES - 1:
+		_cycle_frame += 1
+		_apply(_cycle_frame)
+		return
+	_cycle += 1
+	if RELOAD:
+		if is_instance_valid(_scene):
+			current_scene = null
+			_scene.free()
+		_scene = null
+		_free_switched()
+		# One more frame, so what the scene queued (queue_free, call_deferred) has run before the snapshot.
+		_settle = true
+		return
+	_snapshot()
+	if _cycle >= CYCLES:
+		_finish()
+		return
+	_cycle_frame = 0
+	_apply(0)
+
+
+## Frees the scene the game switched to (change_scene_to_file/_packed, reload_current_scene): the harness only
+## made its own instance, and a real scene switch frees the one before. True when there was one.
+func _free_switched() -> bool:
+	var other := current_scene
+	if other == null or other == _scene or not is_instance_valid(other):
+		return false
+	current_scene = null
+	other.free()
+	return true
+
+
+func _finish() -> void:
+	print("${MARK}_DONE")
+	# What Godot prints after this line is its own clean-up at exit.
+	printerr("${MARK}_EXIT")
+	quit()
+
+
+func _on_removed(node: Node) -> void:
+	var parent := node.get_parent()
+	if parent == null:
+		return
+	var script: Script = parent.get_script()
+	_where[node.get_instance_id()] = [str(parent.get_path()), script.resource_path if script else parent.scene_file_path]
+
+
+func _group_key(node: Node) -> String:
+	var script: Script = node.get_script()
+	# A node inside an instanced scene has no scene path of its own: its owner's tells where it comes from.
+	var owner_scene := node.owner.scene_file_path if node.owner != null and node.scene_file_path == "" else ""
+	return "%s|%s|%s|%s" % [node.get_class(), script.resource_path if script else "", node.scene_file_path, owner_scene]
+
+
+func _size(node: Node) -> int:
+	var n := 1
+	for child in node.get_children(true):
+		n += _size(child)
+	return n
+
+
+func _walk(node: Node, out: Dictionary) -> void:
+	for child in node.get_children():
+		var key := _group_key(child)
+		var group: Array = out.get(key, [0, 0, str(node.get_path()), ""])
+		group[0] += 1
+		group[1] += 1
+		out[key] = group
+		_walk(child, out)
+
+
+func _snapshot() -> void:
+	var orphans := {}
+	var kept := {}
+	var root_id := root.get_instance_id()
+	# Static: Node.get_orphan_node_ids() works without a node, and only in debug builds.
+	for id: int in Node.get_orphan_node_ids():
+		if id == root_id:
+			continue
+		var node := instance_from_id(id) as Node
+		# Children of an orphan are orphans too; count them with their top node.
+		if node == null or node.get_parent() != null:
+			continue
+		var where: Array = _where.get(id, ["", ""])
+		kept[id] = where
+		var key := _group_key(node)
+		var group: Array = orphans.get(key, [0, 0, where[0], where[1]])
+		group[0] += 1
+		group[1] += _size(node)
+		orphans[key] = group
+	_where = kept
+	var tree := {}
+	_walk(root, tree)
+	print("${MARK}_SNAP ", JSON.stringify({
+		"cycle": _cycle,
+		"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"orphanNodes": maxi(0, int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)) - 1),
+		"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"memory": OS.get_static_memory_usage(),
+		"orphans": orphans,
+		"tree": tree,
+	}))
+`;
 const PLAY_DIR = ".godot/godotwright";
 
 /** Reads "10 press jump; 30 release jump; 40 hold right 20; 50 tap Key:Space" (a colon after the frame is fine too). */
@@ -155,7 +325,7 @@ function eventCode(input: string): string {
 const gdString = (s: string): string => JSON.stringify(s);
 
 /** The SceneTree script that runs the scene, plays the timeline and prints the samples. */
-export function playScript(scene: string, steps: InputStep[], watch: string[], frames: number, every: number, extra: { until?: string; signals?: string[]; perfFrom?: number; captures?: { frame: number; out: string }[] } = {}): string {
+export function playScript(scene: string, steps: InputStep[], watch: string[], frames: number, every: number, extra: { until?: string; signals?: string[]; perfFrom?: number; captures?: { frame: number; out: string }[]; cycles?: PlayOptions["cycles"] } = {}): string {
   const byFrame = new Map<number, string[]>();
   for (const s of steps) {
     const call = /^[A-Za-z]+:/.test(s.input)
@@ -177,6 +347,7 @@ export function playScript(scene: string, steps: InputStep[], watch: string[], f
     return `[${gdString(dot < 0 ? "." : sig.slice(0, dot))}, ${gdString(dot < 0 ? sig : sig.slice(dot + 1))}, ${gdString(sig)}]`;
   });
   const inputFrames = [...byFrame.keys()];
+  const cycles = extra.cycles;
   return `extends SceneTree
 # Written by godotwright play; removed after the run.
 
@@ -189,7 +360,7 @@ var UNTIL: Array = ${untilList}
 const SIGNALS: Array = [${signalList.join(", ")}]
 const PERF_FROM := ${extra.perfFrom ?? -1}
 var CAPTURES: Dictionary = {${(extra.captures ?? []).map((c) => `${c.frame}: ${gdString(c.out)}`).join(", ")}}
-
+${cycles ? `const CYCLES := ${cycles.count}\nconst CYCLE_FRAMES := ${cycles.frames}\nconst RELOAD := ${cycles.reload !== false}\n` : ""}
 var _frame := 0
 var _drawn := -1
 var _scene: Node
@@ -197,7 +368,7 @@ var _t_physics := 0
 var _t_process := 0
 var _t_frame := 0
 var _perf := {"frame": [], "physics": [], "process": [], "nodes": [], "orphans": []}
-
+${cycles ? CYCLE_VARS : ""}
 
 func _initialize() -> void:
 	var packed := load(${gdString(scene)}) as PackedScene
@@ -208,7 +379,7 @@ func _initialize() -> void:
 	_scene = packed.instantiate()
 	root.add_child(_scene)
 	current_scene = _scene
-	for s: Array in SIGNALS:
+${cycles ? "\t_packed = packed\n\tnode_removed.connect(_on_removed)\n" : ""}	for s: Array in SIGNALS:
 		var node := _node(s[0])
 		if node == null or not node.has_signal(s[1]):
 			printerr("${MARK}_NOSIGNAL ", s[2])
@@ -233,7 +404,8 @@ func _on_physics_start() -> void:
 		_perf.frame.append(now - _t_frame)
 		_perf.process.append(now - _t_process)
 		_perf.nodes.append(int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)))
-		_perf.orphans.append(int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)))
+		# In -s mode the root Window counts as an orphan itself.
+		_perf.orphans.append(maxi(0, int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)) - 1))
 	_t_frame = now
 	_t_physics = now
 
@@ -241,7 +413,7 @@ func _on_physics_start() -> void:
 ## Runs once per frame, after the physics step: sample frame _frame, then give the input for the next one.
 func _on_frame_done() -> void:
 	_drawn = _frame
-	if PERF_FROM >= 0:
+${cycles ? "\t_cycle_step()\n\treturn\n" : ""}	if PERF_FROM >= 0:
 		_t_process = Time.get_ticks_usec()
 		if _frame >= PERF_FROM:
 			_perf.physics.append(_t_process - _t_physics)
@@ -275,7 +447,7 @@ func _on_post_draw() -> void:
 func _apply(frame: int) -> void:
 	match frame:
 ${cases || "\t\t_:\n\t\t\tpass"}
-
+${cycles ? CYCLE_FUNCS : ""}
 
 func _node(path: String) -> Node:
 	var node: Node = _scene.get_node_or_null(NodePath(path)) if path != "." else _scene
@@ -420,6 +592,7 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
       ...(options.signals?.length ? { signals: options.signals } : {}),
       ...(options.perfFrom !== undefined ? { perfFrom: options.perfFrom } : {}),
       ...(captures.length ? { captures } : {}),
+      ...(options.cycles ? { cycles: options.cycles } : {}),
     }),
   );
   for (const c of captures) {
@@ -432,8 +605,12 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
     const run = captures.length
       ? ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--audio-driver", "Dummy"]
       : base;
-    const args = [...run, "--fixed-fps", String(fps), "-s", `res://${PLAY_DIR}/play.gd`];
+    const args = [...run, ...(options.verbose ? ["--verbose"] : []), "--fixed-fps", String(fps), "-s", `res://${PLAY_DIR}/play.gd`];
     const result = how.command ? await runGodot(how.command, [...how.prefix, bin, ...args], { cwd: root, timeoutMs }) : await runGodot(bin, args, { cwd: root, timeoutMs });
+    // Godot's own clean-up at exit comes after the exit mark: with --verbose it lists what was still alive.
+    const exitAt = result.stderr.indexOf(`${MARK}_EXIT`);
+    const runErr = exitAt < 0 ? result.stderr : result.stderr.slice(0, exitAt);
+    const snapshots: LeakSnapshot[] = [];
     const samples: PlaySample[] = [];
     const signals: PlaySignal[] = [];
     let untilFrame: number | undefined;
@@ -454,12 +631,16 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
         captured.add(Number(line.slice(MARK.length + 9)));
       } else if (line.startsWith(`${MARK}_ENV `)) {
         machine = JSON.parse(line.slice(MARK.length + 5)) as typeof machine;
+      } else if (line.startsWith(`${MARK}_SNAP `)) {
+        snapshots.push(JSON.parse(line.slice(MARK.length + 6)) as LeakSnapshot);
+      } else if (options.verbose && VERBOSE_NOISE.some((re) => re.test(line))) {
+        // --verbose engine lines (loading, exit lists) are not the game's output.
       } else if (line.startsWith(`${MARK}_UNTIL `)) {
         untilFrame = Number(line.slice(MARK.length + 7));
       } else if (!line.startsWith(`${MARK}_DONE`)) rest.push(line);
     }
     for (const m of result.stderr.matchAll(new RegExp(`${MARK}_NOSIGNAL (\\S+)`, "g"))) warnings.push(`${m[1]} is not a signal of a node in the scene, so it was not recorded`);
-    const diagnostics = parseGodotLog(result.stderr, "play").filter((d) => (d.file !== `res://${PLAY_DIR}/play.gd` || d.severity === "error") && !(captures.length && /V-Sync|ALSA|audio/i.test(d.message)));
+    const diagnostics = parseGodotLog(options.verbose ? runErr : result.stderr, "play").filter((d) => (d.file !== `res://${PLAY_DIR}/play.gd` || d.severity === "error") && !(captures.length && /V-Sync|ALSA|audio/i.test(d.message)));
     const loadFailed = result.stderr.includes(`${MARK}_FAILED`);
     if (loadFailed) diagnostics.push({ severity: "error", message: `could not load ${scene}`, source: "play" });
     return {
@@ -479,11 +660,26 @@ export async function playScene(path: string, options: PlayOptions = {}): Promis
       ...(captures.length ? { captures: captures.filter((c) => captured.has(c.frame) && existsSync(c.out)).map((c) => ({ frame: c.frame, file: c.out })) } : {}),
       ...(machine.godot ? { godot: machine.godot } : {}),
       ...(machine.adapter ? { adapter: machine.adapter } : {}),
+      ...(options.cycles ? { snapshots } : {}),
+      ...(options.verbose ? { atExit: parseExitLeaks(`${result.stdout}\n${result.stderr}`) } : {}),
     };
   } finally {
     rmSync(file, { force: true });
   }
 }
+
+/** Lines --verbose adds to stdout that say nothing about the game. */
+const VERBOSE_NOISE = [
+  /^Loading resource: /,
+  /^Completed load for: /,
+  /^Orphan StringName: /,
+  /^StringName: \d+ unclaimed string names/,
+  /^Leaked instance: /,
+  /^Hint: Leaked instances /,
+  /^Resource still in use: /,
+  /^(TextServer|XR|SDL|WorkerThreadPool|SceneTreeFTI|CORE API HASH|EDITOR API HASH|Loaded system CA|Using ".*" pen tablet|Shader '|Vulkan|OpenGL)/,
+  /RID allocations of type .* were leaked at exit/,
+];
 
 /** Numbers in a value as Godot prints it: "Vector3(1, 2.5, -3)" gives [1, 2.5, -3], "true" gives []. */
 function numbers(value: string): number[] {
