@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
@@ -51,13 +51,16 @@ export const DEFAULT_THRESHOLD = 0.5;
 export const DEFAULT_TOLERANCE = 3;
 
 export interface BaselineResult {
-  /** saved: there was no baseline yet (or it was replaced); changed: more pixels changed than the threshold allows. */
-  status: "saved" | "unchanged" | "changed" | "size-mismatch";
+  /**
+   * saved: there was no baseline yet (or it was replaced); unchanged: not one pixel changed; within-threshold: some
+   * pixels changed, but no more than the threshold allows; changed: more pixels changed than the threshold allows.
+   */
+  status: "saved" | "unchanged" | "within-threshold" | "changed" | "size-mismatch";
   /** The baseline PNG. */
   file: string;
   /** True when an existing baseline was replaced. */
   replaced?: boolean;
-  /** The diff picture: the baseline in grey with the changed pixels in red. */
+  /** The diff picture: the baseline in grey with the changed pixels in red (only when a pixel changed). */
   diff?: string;
   percent?: number;
   pixels?: number;
@@ -100,12 +103,15 @@ export function baselineKey(subject: string, width: number, height: number, view
 
 /**
  * Compares a new picture with its baseline, or saves it as the baseline when there is none yet (or when asked to).
- * The diff picture goes next to the shot: shot.png gives shot-diff.png.
+ * The diff picture (default: next to the shot, shot.png gives shot-diff.png) is written only when a pixel changed;
+ * otherwise an old one is removed, so a diff on disk always belongs to the last compare.
  */
-export function compareBaseline(shot: string, baseline: string, options: { threshold?: number; tolerance?: number; update?: boolean } = {}): BaselineResult {
+export function compareBaseline(shot: string, baseline: string, options: { threshold?: number; tolerance?: number; update?: boolean; diff?: string } = {}): BaselineResult {
   const threshold = options.threshold ?? DEFAULT_THRESHOLD;
   const tolerance = options.tolerance ?? DEFAULT_TOLERANCE;
   const base = { file: baseline, threshold, tolerance };
+  const diff = options.diff ?? `${shot.replace(/\.png$/i, "")}-diff.png`;
+  rmSync(diff, { force: true });
   const exists = existsSync(baseline);
   if (!exists || options.update) {
     mkdirSync(dirname(baseline), { recursive: true });
@@ -122,18 +128,12 @@ export function compareBaseline(shot: string, baseline: string, options: { thres
   const after = decodePng(readFileSync(shot));
   if (before.width !== after.width || before.height !== after.height) return { status: "size-mismatch", ...base, baselineSize: { width: before.width, height: before.height } };
   const d = diffImages(before, after, tolerance);
-  const diff = `${shot.replace(/\.png$/i, "")}-diff.png`;
+  const amount = { percent: d.percent, pixels: d.pixels, ...(d.region ? { region: d.region } : {}), meanShift: d.meanShift };
+  if (d.pixels === 0) return { status: "unchanged", ...base, ...amount };
+  mkdirSync(dirname(diff), { recursive: true });
   writeFileSync(diff, encodePng(d.image));
   const changed = (100 * d.pixels) / (after.width * after.height) > threshold;
-  return {
-    status: changed ? "changed" : "unchanged",
-    ...base,
-    diff,
-    percent: d.percent,
-    pixels: d.pixels,
-    ...(d.region ? { region: d.region } : {}),
-    meanShift: d.meanShift,
-  };
+  return { status: changed ? "changed" : "within-threshold", ...base, diff, ...amount };
 }
 
 /** True when a path, with the links in the part that exists followed, is inside a folder (also followed). */
@@ -419,6 +419,10 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
   const home = model ? (findProjectRoot(dirname(model)) ?? dirname(model)) : root;
   if (baseline && !within(home, baseline)) fail(`the baseline ${wanted} is outside the project (${home}); use a path inside it`);
   if (baseline && isLink(baseline)) fail(`the baseline ${wanted} is a symbolic link; use a regular file inside the project`);
+  // The diff is a scratch picture: in .godot/ of the project, which Godot does not import and version control
+  // usually ignores, or, for a model outside a project, in .godotwright/diff/ next to it (Godot skips dot folders).
+  const project = model ? findProjectRoot(dirname(model)) : root;
+  const diffs = project ? join(project, ".godot", "godotwright") : join(dirname(model ?? root), ".godotwright", "diff");
   const how = screen();
   if ("error" in how) fail(how.error);
   mkdirSync(dirname(out), { recursive: true });
@@ -447,6 +451,7 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
           ...(options.threshold !== undefined ? { threshold: options.threshold } : {}),
           ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
           update: options.updateBaseline ?? false,
+          diff: join(diffs, `${basename(baseline, extname(baseline))}-diff.png`),
         })
       : undefined;
     return {
@@ -494,11 +499,13 @@ function formatBaseline(b: BaselineResult, r: ScreenshotReport): string[] {
   const region = b.region ? `; largest change at (${b.region.x}, ${b.region.y}) size ${b.region.width}x${b.region.height}, mean shift ${b.meanShift}` : "";
   const amount = `${b.percent}% of pixels changed (${b.pixels} px; threshold ${b.threshold}%, tolerance ${b.tolerance})${region}`;
   if (b.status === "unchanged")
+    return [`baseline unchanged: ${amount}`, `  baseline: ${b.file}`, "Next: nothing to fix; the picture matches its baseline."];
+  if (b.status === "within-threshold")
     return [
-      `baseline unchanged: ${amount}`,
+      `baseline within threshold: ${amount}`,
       `  baseline: ${b.file}`,
-      ...(b.pixels ? [`  diff: ${b.diff} (changed pixels in red)`] : []),
-      "Next: nothing to fix; the picture matches its baseline.",
+      `  diff: ${b.diff} (changed pixels in red)`,
+      `Next: look at the diff; a small change can still matter (a missing icon, a moved label). If it is intended, ${update}; to fail on any change, use threshold 0.`,
     ];
   return [
     `baseline CHANGED: ${amount}`,

@@ -114,7 +114,12 @@ describe("screenshot", () => {
     expect(compareBaseline(shot, baseline)).toEqual({ status: "saved", file: baseline, threshold: 0.5, tolerance: 3 });
     expect(readFileSync(baseline).equals(readFileSync(shot))).toBe(true);
 
-    expect(compareBaseline(shot, baseline)).toMatchObject({ status: "unchanged", percent: 0, pixels: 0, diff: join(dir, "shot-diff.png") });
+    // Not one pixel changed: no diff picture, and a stale one from an earlier compare is removed.
+    writeFileSync(join(dir, "shot-diff.png"), "stale");
+    const same = compareBaseline(shot, baseline);
+    expect(same).toMatchObject({ status: "unchanged", percent: 0, pixels: 0 });
+    expect(same.diff).toBeUndefined();
+    expect(existsSync(join(dir, "shot-diff.png"))).toBe(false);
 
     // A 20x10 block changes colour: 1.39% of the pixels, above the default threshold of 0.5%.
     writeFileSync(shot, flat(160, 90, [40, 80, 120], { x: 100, y: 40, w: 20, h: 10, colour: [200, 40, 40] }));
@@ -122,8 +127,12 @@ describe("screenshot", () => {
     expect(changed).toMatchObject({ status: "changed", pixels: 200, percent: 1.39, region: { x: 96, y: 32, width: 32, height: 32 } });
     const diff = decodePng(readFileSync(join(dir, "shot-diff.png")));
     expect([...diff.data.subarray((45 * 160 + 110) * 4, (45 * 160 + 110) * 4 + 3)]).toEqual([255, 0, 0]);
-    // The same change within a looser threshold passes, but still says where it is.
-    expect(compareBaseline(shot, baseline, { threshold: 2 })).toMatchObject({ status: "unchanged", pixels: 200 });
+    // The same change within a looser threshold passes, but is not called unchanged, and still says where it is.
+    expect(compareBaseline(shot, baseline, { threshold: 2 })).toMatchObject({ status: "within-threshold", pixels: 200, diff: join(dir, "shot-diff.png"), region: { x: 96, y: 32 } });
+    // The diff can go elsewhere, e.g. out of the folders Godot imports.
+    const elsewhere = join(dir, ".scratch", "main-diff.png");
+    expect(compareBaseline(shot, baseline, { diff: elsewhere })).toMatchObject({ status: "changed", diff: elsewhere });
+    expect(existsSync(elsewhere)).toBe(true);
     // A one-pixel-wide line in a slightly different colour is caught at the default tolerance.
     writeFileSync(shot, flat(160, 90, [40, 80, 120], { x: 30, y: 0, w: 1, h: 90, colour: [60, 80, 120] }));
     expect(compareBaseline(shot, baseline, { threshold: 0 })).toMatchObject({ status: "changed", pixels: 90, region: { x: 16, y: 0, width: 16, height: 90 } });
@@ -131,6 +140,7 @@ describe("screenshot", () => {
     // Accepting the change replaces the baseline.
     expect(compareBaseline(shot, baseline, { update: true })).toMatchObject({ status: "saved", replaced: true });
     expect(compareBaseline(shot, baseline)).toMatchObject({ status: "unchanged", pixels: 0 });
+    expect(existsSync(join(dir, "shot-diff.png"))).toBe(false);
   });
 
   it("reports a baseline of another size without comparing", () => {
@@ -150,9 +160,16 @@ describe("screenshot", () => {
     const saved = formatScreenshot({ ...REPORT, baseline: { status: "saved", ...base } });
     expect(saved).toContain("baseline saved: /p/.godotwright/baselines/main_tscn-867a7a3a@320x180_iso.png");
     expect(saved.trimEnd().split("\n").at(-1)).toMatch(/^Next: /);
-    const same = formatScreenshot({ ...REPORT, baseline: { status: "unchanged", ...base, diff: "/d.png", percent: 0, pixels: 0, meanShift: 0 } });
+    const same = formatScreenshot({ ...REPORT, baseline: { status: "unchanged", ...base, percent: 0, pixels: 0, meanShift: 0 } });
     expect(same).toContain("baseline unchanged: 0% of pixels changed (0 px; threshold 0.5%, tolerance 3)");
     expect(same).not.toContain("diff:");
+    expect(same).toContain("Next: nothing to fix");
+    // A small visible change under the threshold is not called a match.
+    const small = formatScreenshot({ ...REPORT, baseline: { status: "within-threshold", ...base, diff: "/d.png", percent: 0.35, pixels: 800, region: { x: 0, y: 0, width: 64, height: 32 }, meanShift: 122.2 } });
+    expect(small).toContain("baseline within threshold: 0.35% of pixels changed (800 px; threshold 0.5%, tolerance 3); largest change at (0, 0) size 64x32, mean shift 122.2");
+    expect(small).toContain("  diff: /d.png (changed pixels in red)");
+    expect(small).not.toMatch(/unchanged|nothing to fix|matches/);
+    expect(small.trimEnd().split("\n").at(-1)).toMatch(/^Next: look at the diff/);
     const changed = formatScreenshot({ ...REPORT, baseline: { status: "changed", ...base, diff: "/d.png", percent: 1.39, pixels: 800, region: { x: 96, y: 32, width: 32, height: 32 }, meanShift: 87.5 } });
     expect(changed).toContain("baseline CHANGED: 1.39% of pixels changed (800 px; threshold 0.5%, tolerance 3); largest change at (96, 32) size 32x32, mean shift 87.5");
     expect(changed).toContain("  diff: /d.png (changed pixels in red)");
