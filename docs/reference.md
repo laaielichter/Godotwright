@@ -25,6 +25,7 @@ godotwright ci                                     # one receipt: review, check,
 godotwright doctor --symptom "falls through the floor"   # what is wrong and in which order to fix it: review and Godot grouped by cause, with lessons
 godotwright fix --write               # apply the mechanical fixes for review findings (--check for the ones that need a look)
 godotwright perf --scene res://level.tscn   # frame times p50/p95/p99 against a budget, the slowest frames and their cause, vs the last run
+godotwright leaks --scene res://chunk.tscn   # load, run and free a scene 5 times: what grows per cycle, by class, script and scene, and where it is made
 godotwright session start             # load the main scene once, headless and paused; it stays up between commands
 godotwright game step 120 --input "10 tap jump" --watch Hero.position --until "Hero.is_on_floor() == true"   # play frames in the running game
 godotwright game reload               # put the scripts you edited into the running game; every node keeps its values
@@ -175,6 +176,42 @@ of your own can use any of the texture patterns in its own colour (`"texture": "
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
+
+## Find leaks
+
+```sh
+godotwright leaks --scene res://chunk.tscn                  # 5 cycles of 60 frames: load, run, free; exit code 1 when anything grows
+godotwright leaks --scene res://world.tscn --keep --input "10 press load_chunk; 40 press unload_chunk"   # keep the scene, replay input per cycle
+godotwright leaks --cycles 10 --budget-objects 2 --json     # a budget per cycle for CI, JSON for scripts
+```
+
+`leaks` (MCP: `godot_leaks`) runs a scene headless in cycles. By default every cycle loads the scene, runs it for
+`--cycle-frames` frames and frees it; one frame later, when queued frees have run, it snapshots the live objects.
+`--keep` keeps the scene running and snapshots every `--cycle-frames` frames instead. The input timeline (`--input`, as
+`play` takes it) replays inside every cycle, so a game that streams chunks on input can be cycled too. The first
+`--warmup` cycles (default 1) are not counted: caches and first-time loads fill them.
+
+For the counted cycles it reports the growth per cycle (a least-squares slope, counted as a leak only when it grows in at
+least half of the cycles and never drops):
+
+- **orphan nodes** (`Node.get_orphan_node_ids()`, children counted with their top node), grouped by class, script and
+  scene, with the parent they were removed from, the code that makes them (`MeshInstance3D.new()`, a class_name or
+  preload alias, `instantiate()` of a scene, an exported `PackedScene` property, a scene that instances it) and the
+  `remove_child()` that dropped them;
+- **nodes left in the tree** after the scene was freed (added to the root or an autoload), with where they hang;
+- **objects that are not nodes** (objects minus nodes): Godot is run with `--verbose`, so at exit it names the classes
+  still alive (`Object x5`) and the resources still in use, with the code that makes them; growth that is not on that
+  list was freed only at exit, so a static var, autoload or cache holds it, and the growing containers are named;
+- loaded resources, static memory, and the change since the last run of the same scene (`.godot/godotwright/leaks/`).
+
+The verdict is `LEAKING` (exit code 1, an error result over MCP) when objects or orphan nodes grow more than the budget
+per cycle (`--budget-objects`, `--budget-orphans`, default 0). With `--keep`, nodes that pile up in the tree are shown
+but not counted, since spawning can be the design. Each kind of leak names its lesson. Not visible to it: objects
+GDScript cannot list one by one (they show only as counts and at exit by class), and the call stack that made a node
+(Godot does not record it; the creation sites come from the project's code).
+
+`check` names leaks too: when the run step ends with `ObjectDB instances were leaked at exit` or `resources still in use`,
+it runs once more with `--verbose` and lists the classes (`MeshInstance3D x1, Object x1`) or resource paths.
 
 ## Port Godot 3 scripts to Godot 4
 
@@ -328,7 +365,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 32 tools
+### The 33 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -356,6 +393,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
+| `godot_leaks` | Load, run and free a scene in cycles and report what grows per cycle: orphan nodes by class, script and scene with where they were made and removed, nodes left behind, objects that are not nodes, what Godot held at exit; fails over a budget |
 | `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
