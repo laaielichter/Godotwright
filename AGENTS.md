@@ -34,6 +34,10 @@ node dist/cli.js --help
   framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
   stop, killed on exit, restarted when a class_name, project.godot or a file that needs an import changes; a restart
   waits for the calls queued on the old server), `code.ts` holds the ops and output.
+- `src/shaders/`: compiles every shader by drawing it in Godot (Compatibility renderer, xvfb-run on Linux without a
+  display), because headless Godot never compiles shaders. `runner.ts` is the GDScript it runs, `log.ts` reads Godot's
+  shader errors, `hints.ts` names the Godot 4 form of Godot 3 shader code, and `shaders.ts` maps each error to the line
+  in the .gdshader, .gdshaderinc or .tres/.tscn. `godotwright shaders` and `check --shaders` use it.
 - `src/api/`: lookup and search over the bundled Godot 4.7 class reference.
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
   scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from

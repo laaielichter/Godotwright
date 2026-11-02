@@ -1,0 +1,240 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+
+GODOTWRIGHT_SHADERS_FILE	res://fx/after_inc.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://fx/after_inc.gdshader	res://fx/after_inc.gdshader
+--res://fx/after_inc.gdshader--
+    7 | 
+    8 | void fragment() {
+E   9->  ALBEDO = vec3(wave2(TIME * speed));
+   10 |  ROUGHNESS = undefined_rough;
+   11 | }
+SHADER ERROR: Unknown identifier in expression: 'undefined_rough'.
+          at: (null) (res://fx/after_inc.gdshader:9)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://fx/bad_canvas.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://fx/bad_canvas.gdshader	res://fx/bad_canvas.gdshader
+--res://fx/bad_canvas.gdshader--
+    4 | 
+    5 | void fragment() {
+E   6->  vec4 c = texture(SCREEN_TEXTURE, SCREEN_UV);
+    7 |  COLOR = c * strength;
+    8 | }
+SHADER ERROR: SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform.
+To continue with minimal code changes add 'uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;' near the top of your shader.
+          at: (null) (res://fx/bad_canvas.gdshader:6)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:2695)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://fx/bad_fog.gdshader
+GODOTWRIGHT_SHADERS_SHADER	4	Shader	res://fx/bad_fog.gdshader	res://fx/bad_fog.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://fx/bad_particles.gdshader
+GODOTWRIGHT_SHADERS_SHADER	2	Shader	res://fx/bad_particles.gdshader	res://fx/bad_particles.gdshader
+--res://fx/bad_particles.gdshader--
+    6 | 
+    7 | void process() {
+E   8->  VELOCITY += GRAVITY * DELTA;
+    9 |  COLOR = vec3(1.0);
+   10 | }
+SHADER ERROR: Unknown identifier in expression: 'GRAVITY'.
+          at: (null) (res://fx/bad_particles.gdshader:8)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3313)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://fx/bad_sky.gdshader
+GODOTWRIGHT_SHADERS_SHADER	3	Shader	res://fx/bad_sky.gdshader	res://fx/bad_sky.gdshader
+--res://fx/bad_sky.gdshader--
+    3 | void sky() {
+    4 |  COLOR = EYEDIR;
+E   5->  ALPHA = 2;
+    6 | }
+    7 | 
+SHADER ERROR: Invalid arguments to operator '=': 'float, int'.
+          at: (null) (res://fx/bad_sky.gdshader:5)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:2875)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://fx/bad_spatial.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://fx/bad_spatial.gdshader	res://fx/bad_spatial.gdshader
+--res://fx/bad_spatial.gdshader--
+    4 | 
+    5 | void fragment() {
+E   6->  float x = tint;
+    7 |  ALBEDO = vec3(x);
+    8 | }
+SHADER ERROR: Invalid assignment of 'vec3' to 'float'.
+          at: (null) (res://fx/bad_spatial.gdshader:6)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://fx/bad_undef.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://fx/bad_undef.gdshader	res://fx/bad_undef.gdshader
+--res://fx/bad_undef.gdshader--
+    2 | 
+    3 | void vertex() {
+E   4->  VERTEX += NORMAL * wobble;
+    5 | }
+    6 | 
+SHADER ERROR: Unknown identifier in expression: 'wobble'.
+          at: (null) (res://fx/bad_undef.gdshader:4)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://fx/big_array.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://fx/big_array.gdshader	res://fx/big_array.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://fx/good_canvas.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://fx/good_canvas.gdshader	res://fx/good_canvas.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://fx/uses_bad_inc.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://fx/uses_bad_inc.gdshader	res://fx/uses_bad_inc.gdshader
+--res://fx/uses_bad_inc.gdshader--
+    1 | shader_type spatial;
+    2 | 
+E   3-> #include "res://inc/common.gdshaderinc"
+    4 | 
+    5 | 
+--res://inc/common.gdshaderinc--
+    5 | 
+    6 | vec3 tintit(vec3 c) {
+E   7->  return c * missing_tint;
+    8 | }
+    9 | 
+SHADER ERROR: Unknown identifier in expression: 'missing_tint'.
+          at: (null) (res://inc/common.gdshaderinc:7)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://mat.tres
+--res://mat.tres::Shader_abc12--
+    3 | void fragment() {
+    4 |  ALBEDO = vec3(1.0);
+E   5->  EMISSION = foo;
+    6 | }
+    7 | 
+SHADER ERROR: Unknown identifier in expression: 'foo'.
+          at: (null) (res://mat.tres::Shader_abc12:5)
+          GDScript backtrace (most recent call first):
+              [0] _initialize (res://.godot/godotwright/shaders.gd:26)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://.godot/godotwright/shaders.gd:26)
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://mat.tres::Shader_abc12	res://mat.tres
+GODOTWRIGHT_SHADERS_FILE	res://vs_bad.tres
+GODOTWRIGHT_SHADERS_SHADER	0	VisualShader	res://vs_bad.tres	res://vs_bad.tres
+--res://vs_bad.tres--
+   10 |  n_out2p0 = vec3(0.0, 0.0, 0.0);
+   11 |  {
+E  12->  n_out2p0 = vec3(bad_vs_thing);
+   13 |  }
+   14 | 
+SHADER ERROR: Unknown identifier in expression: 'bad_vs_thing'.
+          at: (null) (res://vs_bad.tres:12)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://vs_good.tres
+GODOTWRIGHT_SHADERS_SHADER	1	VisualShader	res://vs_good.tres	res://vs_good.tres
+GODOTWRIGHT_SHADERS_PARSED	12
+GODOTWRIGHT_SHADERS_DRAW	res://fx/after_inc.gdshader
+GODOTWRIGHT_SHADERS_MS	54.1	res://fx/after_inc.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/bad_canvas.gdshader
+GODOTWRIGHT_SHADERS_MS	9.7	res://fx/bad_canvas.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/bad_particles.gdshader
+GODOTWRIGHT_SHADERS_MS	1.4	res://fx/bad_particles.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/bad_sky.gdshader
+GODOTWRIGHT_SHADERS_MS	81.8	res://fx/bad_sky.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/bad_spatial.gdshader
+GODOTWRIGHT_SHADERS_MS	1.9	res://fx/bad_spatial.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/bad_undef.gdshader
+GODOTWRIGHT_SHADERS_MS	1.9	res://fx/bad_undef.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/big_array.gdshader
+ERROR: Condition "p_ubo_size > uint32_t(Config::get_singleton()->max_uniform_buffer_size)" is true.
+   at: update_parameters_internal (drivers/gles3/storage/material_storage.cpp:1109)
+1: 
+ERROR: SceneShaderGLES3: Program linking failed:
+error: Uniform block MaterialUniforms too big (320000/65536)
+
+   at: _display_error_with_code (drivers/gles3/shader_gles3.cpp:262)
+ERROR: Method/function failed.
+   at: _compile_specialization (drivers/gles3/shader_gles3.cpp:464)
+WARNING: shader failed to compile, unable to bind shader.
+     at: _version_bind_shader (./drivers/gles3/shader_gles3.h:215)
+1: 
+ERROR: SceneShaderGLES3: Program linking failed:
+error: Uniform block MaterialUniforms too big (320000/65536)
+
+   at: _display_error_with_code (drivers/gles3/shader_gles3.cpp:262)
+ERROR: Method/function failed.
+   at: _compile_specialization (drivers/gles3/shader_gles3.cpp:464)
+GODOTWRIGHT_SHADERS_MS	52.3	res://fx/big_array.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/good_canvas.gdshader
+GODOTWRIGHT_SHADERS_MS	14.2	res://fx/good_canvas.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/uses_bad_inc.gdshader
+GODOTWRIGHT_SHADERS_MS	1.7	res://fx/uses_bad_inc.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://mat.tres::Shader_abc12
+GODOTWRIGHT_SHADERS_MS	3.6	res://mat.tres::Shader_abc12
+GODOTWRIGHT_SHADERS_DRAW	res://vs_bad.tres
+GODOTWRIGHT_SHADERS_MS	1.5	res://vs_bad.tres
+GODOTWRIGHT_SHADERS_DRAW	res://vs_good.tres
+GODOTWRIGHT_SHADERS_MS	9.4	res://vs_good.tres
+GODOTWRIGHT_SHADERS_DONE	12	opengl3	gl_compatibility	llvmpipe (LLVM 20.1.2, 256 bits)

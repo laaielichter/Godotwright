@@ -1,0 +1,147 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+
+GODOTWRIGHT_SHADERS_FILE	res://n_badtype.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://n_badtype.gdshader	res://n_badtype.gdshader
+ERROR: shader type spetial not supported in OpenGL renderer
+   at: shader_set_code (drivers/gles3/storage/material_storage.cpp:2283)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://l_missing_inc.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://l_missing_inc.gdshader	res://l_missing_inc.gdshader
+--res://l_missing_inc.gdshader--
+    1 | shader_type spatial;
+E   2-> #include "res://inc/nope.gdshaderinc"
+    3 | void fragment() {}
+    4 | 
+SHADER ERROR: Tokenizer: Unknown character #35: '#'
+          at: (null) (res://l_missing_inc.gdshader:2)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://m_syntax.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://m_syntax.gdshader	res://m_syntax.gdshader
+--res://m_syntax.gdshader--
+    2 | void fragment() {
+    3 |  ALBEDO = vec3(1.0)
+E   4-> }
+    5 | 
+SHADER ERROR: Expected a ';'.
+          at: (null) (res://m_syntax.gdshader:4)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://a_one.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://a_one.gdshader	res://a_one.gdshader
+--res://a_one.gdshader--
+    3 | 
+    4 | void fragment() {
+E   5->  ALBEDO = vec3(one());
+    6 |  ROUGHNESS = bad_a;
+    7 | }
+SHADER ERROR: Unknown identifier in expression: 'bad_a'.
+          at: (null) (res://a_one.gdshader:5)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://d_two.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://d_two.gdshader	res://d_two.gdshader
+--res://d_two.gdshader--
+    3 | 
+    4 | #include "res://inc/long.gdshaderinc"
+E   5-> 
+    6 | void fragment() {
+    7 |  ROUGHNESS = bad_d;
+SHADER ERROR: Unknown identifier in expression: 'bad_d'.
+          at: (null) (res://d_two.gdshader:5)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://e_nested.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://e_nested.gdshader	res://e_nested.gdshader
+--res://e_nested.gdshader--
+    2 | #include "res://inc/nested.gdshaderinc"
+    3 | 
+E   4-> void fragment() {
+    5 |  ROUGHNESS = bad_e;
+    6 | }
+SHADER ERROR: Unknown identifier in expression: 'bad_e'.
+          at: (null) (res://e_nested.gdshader:4)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_FILE	res://f_next.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://f_next.gdshader	res://f_next.gdshader
+--res://f_next.gdshader--
+    1 | shader_type spatial;
+    2 | #include "res://inc/one.gdshaderinc"
+E   3-> 
+    4 | float bad_f_fn() { return bad_f; }
+    5 | void fragment() {}
+SHADER ERROR: Unknown identifier in expression: 'bad_f'.
+          at: (null) (res://f_next.gdshader:3)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:129)
+              [1] _walk (res://.godot/godotwright/shaders.gd:88)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:129)
+       [1] _walk (res://.godot/godotwright/shaders.gd:88)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:30)
+GODOTWRIGHT_SHADERS_PARSED	7
+GODOTWRIGHT_SHADERS_DRAW	res://n_badtype.gdshader
+GODOTWRIGHT_SHADERS_MS	38.2	res://n_badtype.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://l_missing_inc.gdshader
+GODOTWRIGHT_SHADERS_MS	1.7	res://l_missing_inc.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://m_syntax.gdshader
+GODOTWRIGHT_SHADERS_MS	2.2	res://m_syntax.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://a_one.gdshader
+GODOTWRIGHT_SHADERS_MS	1.3	res://a_one.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://d_two.gdshader
+GODOTWRIGHT_SHADERS_MS	1.2	res://d_two.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://e_nested.gdshader
+GODOTWRIGHT_SHADERS_MS	1.7	res://e_nested.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://f_next.gdshader
+GODOTWRIGHT_SHADERS_MS	2.3	res://f_next.gdshader
+GODOTWRIGHT_SHADERS_DONE	7	opengl3	gl_compatibility	llvmpipe (LLVM 20.1.2, 256 bits)

@@ -97,6 +97,11 @@ jobs:
             2d/finite_state_machine
             3d/platformer
             3d/squash_the_creeps
+            3d/sky_shaders
+            3d/antialiasing
+            3d/volumetric_fog
+            2d/sprite_shaders
+            2d/screen_space_shaders
       - name: Virtual screen and software OpenGL, for the render test
         run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends xvfb xauth libgl1-mesa-dri
       - name: Check out GUT

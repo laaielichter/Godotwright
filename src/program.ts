@@ -25,6 +25,7 @@ import { sceneCommand } from "./commands/scene.js";
 import { testCommand } from "./commands/test.js";
 import { playCommand } from "./commands/play.js";
 import { screenshotCommand } from "./commands/screenshot.js";
+import { shadersCommand } from "./commands/shaders.js";
 import { scanCommand } from "./commands/scan.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
@@ -40,6 +41,7 @@ export function createProgram(): Command {
     .showHelpAfterError()
     .addCommand(scanCommand())
     .addCommand(checkCommand())
+    .addCommand(shadersCommand())
     .addCommand(testCommand())
     .addCommand(playCommand())
     .addCommand(perfCommand())
