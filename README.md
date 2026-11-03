@@ -10,6 +10,7 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <img src="https://img.shields.io/badge/Godot-4.7-478cbf?logo=godotengine&logoColor=white" alt="Godot 4.7">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <a href="https://glama.ai/mcp/servers/laaielichter/Godotwright"><img src="https://glama.ai/mcp/servers/laaielichter/Godotwright/badges/score.svg" alt="Godotwright MCP server – quality and maintenance score on Glama"></a>
+  <a href="https://mcpservers.org/servers/laaielichter/godotwright"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org" height="20"></a>
 </p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
