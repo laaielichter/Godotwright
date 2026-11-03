@@ -341,6 +341,12 @@ const PROJECT_FIXES = ["structure/duplicate-uid", "structure/invalid-uid"];
 
 
 /**
+ * A packed write at the start of a line: indent, a chain of names (`self.` is one of them), the array, then `[`. Each
+ * part of the chain ends in a dot that names cannot hold, so the match is linear.
+ */
+export const PACKED_WRITE = /^(\s*)((?:\$[\w/]+\.|%\w+\.|[A-Za-z_]\w*\.)*([A-Za-z_]\w*))(\[.*)$/;
+
+/**
  * `obj.prop[i] = v` on a packed array: copy, write, assign back, so the setter runs again as it did before Godot 4.7
  * (and an engine property keeps the write at all).
  */
@@ -348,7 +354,7 @@ const packedWrite: Fixer = (lines, i, finding) => {
   const line = lines[i]!;
   if (line.includes("#") || line.includes(";") || /:\s*$/.test(line)) return "the line has a comment, a semicolon or a header";
   if (continues(line)) return "the statement goes on past this line";
-  const write = /^(\s*)((?:self\.|\$[\w/]+\.|%\w+\.|[A-Za-z_]\w*\.)*([A-Za-z_]\w*))(\[.*)$/;
+  const write = PACKED_WRITE;
   const m = write.exec(line);
   if (!m) return "the write is not a plain name chain at the start of the line";
   const [, indent, target, prop, rest] = m as unknown as [string, string, string, string, string];
