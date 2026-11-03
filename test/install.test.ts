@@ -151,7 +151,11 @@ describe("install page", () => {
     const jsonMatch = /<pre><code>([\s\S]*?)<\/code><\/pre>/.exec(section!)?.[1];
     expect(jsonMatch).toBeDefined();
     const config = JSON.parse(jsonMatch!.replaceAll("&quot;", '"'));
-    expect(config.mcp.godotwright).toEqual({ type: "local", command: [expected.command, ...expected.args], enabled: true });
+    expect(config.mcp.godotwright).toEqual({
+      type: "local",
+      command: [expected.command, ...expected.args],
+      enabled: true,
+    });
   });
 });
 

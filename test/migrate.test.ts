@@ -129,10 +129,9 @@ describe("migrate a script", () => {
     expect(formatted).toContain("note: setters in Godot 4 run on assignment inside the script");
   });
 
-  it("does not warn when a setter assigns its own property (#116)", () => {
-    // Godot 4 sets the underlying member directly inside the property's own setter, so this does not recurse.
-    const own = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
-    expect(own.left).toEqual([]);
+  it("leaves no TO DO when setter assigns its property directly (Godot 4 accesses the underlying member)", () => {
+    const script = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
+    expect(script.left).toEqual([]);
   });
 });
 
