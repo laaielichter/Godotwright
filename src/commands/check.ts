@@ -48,7 +48,7 @@ export function checkCommand(): Command {
     .option("--scene <res-path>", "run this scene instead of the main scene (implies --run)")
     .option("--exclude <dir>", "directory to skip, e.g. levels/old (repeatable); res://addons/ is skipped already", collect, [])
     .option("--include-addons", "also load res://addons/ (third-party code; its errors are not your project's)")
-    .option("--shaders", "also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run)")
+    .option("--shaders", "also draw every shader on the GPU, for what only the driver rejects (every .gdshader is compiled headless anyway; needs a display or xvfb-run)")
     .option("--timeout <seconds>", "timeout per Godot run", parseSeconds, 600)
     .option("--json", "print the result as JSON")
     .option("--verbose", "also print the raw Godot output")
