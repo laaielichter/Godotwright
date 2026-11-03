@@ -106,12 +106,7 @@ describe("migrate a script", () => {
   });
 
   it("lists what it cannot do by hand, once per line", () => {
-    const m = migrateScript("var hp = 1 setget
-master func ping():
-	pass
-func f():
-	move_and_slide(v, Vector3.UP)
-	yield()", api);
+    const m = migrateScript("var hp = 1 setget\nmaster func ping():\n\tpass\nfunc f():\n\tmove_and_slide(v, Vector3.UP)\n\tyield()", api);
     const msgs = m.left.map((l) => `${l.line}:${l.message.split(":")[0]}`);
     expect(msgs).toEqual(["1:setget is gone in Godot 4", "2:master and mastersync ran on the master when called by others in Godot 3", "5:move_and_slide() takes no arguments in Godot 4", "6:yield() with no arguments (a resumable function) has no direct Godot 4 form"]);
   });
