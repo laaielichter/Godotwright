@@ -225,6 +225,12 @@ class Migrator {
     line = this.sub(line, /^(\s*)onready\s+var\b/g, "annotation", (m) => `${m[1]}@onready var`);
     line = this.sub(line, /^(\s*)export\s*\(([^)]*)\)\s*var\s+(\w+)(\s*:\s*[\w[\]]+)?/g, "annotation", (m) => this.exportHint(m[1] as string, m[2] as string, m[3] as string, m[4]));
     line = this.sub(line, /^(\s*)export\s+var\b/g, "annotation", (m) => `${m[1]}@export var`);
+    line = this.sub(line, /^(\s*)remotesync\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("any_peer", "call_local") ${m[2]}`);
+    line = this.sub(line, /^(\s*)remote\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("any_peer") ${m[2]}`);
+    line = this.sub(line, /^(\s*)puppetsync\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("call_local") ${m[2]}`);
+    line = this.sub(line, /^(\s*)puppet\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc ${m[2]}`);
+    line = this.sub(line, /^(\s*)sync\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("any_peer", "call_local") ${m[2]}`);
+    line = this.sub(line, /^(\s*)slave\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc ${m[2]}`);
     line = this.sub(line, /^(\s*)\.(\w+)\s*\(/g, "super", (m) => `${m[1]}super.${m[2]}(`);
     line = this.sub(line, /\.instance\(\s*\)/g, "rename", () => ".instantiate()");
 
@@ -382,7 +388,7 @@ class Migrator {
     const slide = at(/\bmove_and_slide\s*\(\s*[^)\s]/g);
     if (slide) this.todo("move_and_slide() takes no arguments in Godot 4: set `velocity` first, call move_and_slide(), and read `velocity` back");
     if (at(/\bmove_and_slide_with_snap\s*\(/g)) this.todo("move_and_slide_with_snap() is gone: set `floor_snap_length` and call move_and_slide()");
-    if (at(/^\s*(remote|master|puppet|remotesync|mastersync|puppetsync|sync|slave)\s+(func|var)\b/g)) this.todo("network keywords are @rpc annotations in Godot 4: @rpc(\"any_peer\") for remote, @rpc(\"authority\") for master/puppet, add \"call_local\" for the sync variants");
+    if (at(/^\s*(master|mastersync)\s+(func|var)\b/g)) this.todo("master and mastersync ran on the master when called by others in Godot 3: in Godot 4 use @rpc(\"any_peer\") (with \"call_local\" for mastersync) and check if not is_multiplayer_authority()");
     if (at(/\byield\s*\(\s*\)/g)) this.todo("yield() with no arguments (a resumable function) has no direct Godot 4 form: use await on a signal");
     if (at(/\bOS\.window_(fullscreen|size|borderless)\b/g) || at(/\bOS\.vsync_enabled\b/g)) this.todo("window settings moved to DisplayServer.window_set_mode() / window_set_size() / window_set_vsync_mode(), or get_window()");
     if (at(/\bget_tree\(\)\.set_input_as_handled\(/g)) this.todo("set_input_as_handled() is on the Viewport in Godot 4: get_viewport().set_input_as_handled()");
