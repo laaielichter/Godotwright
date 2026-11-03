@@ -55,6 +55,9 @@ built headless and checked against Godot 4.7.2.
 - **Protected paths.** `"protect"` in `godotwright.json`: no Godotwright write may touch those folders, and the Claude
   Code plugin's new `PreToolUse` hook denies Claude's own edits there. Plugin settings for the project, Godot binary,
   protected paths, tool sets and read-only.
+- **Linear text readers.** Finding resource references in scenes, reading Godot's RID type names at exit, the
+  packed-write fix and the shader paths now use scanners or regular expressions that cannot backtrack: a long or
+  broken file stays fast (found by CodeQL).
 - 38 MCP tools (with 0.5.0's `godot_code`).
 
 ## 0.5.0 (Godot's own code intelligence, real shader compilation, visual tests)
