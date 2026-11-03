@@ -326,6 +326,7 @@ godotwright shader                          # every shader: static review, then 
 godotwright shader --file res://fx/water.gdshader   # one shader (an include also compiles the shaders that use it)
 godotwright shader --no-compile             # static review only, no Godot needed
 godotwright shader --compile --json         # CI: fail when Godot is missing, JSON out, exit 1 on an error
+godotwright shader --gpu                    # also draw them on the GPU (Compatibility renderer, xvfb-run on Linux)
 ```
 
 `shader` (MCP: `godot_shader`) checks every `.gdshader`, every `.gdshaderinc` and every Shader resource stored in a scene
@@ -364,7 +365,19 @@ or resource (reported as `res://level.tscn::Shader_id:line`, with the line in th
    error on a line the review already reports is shown once. `compile: false` (CLI `--no-compile`) skips this step; without
    Godot it is skipped with a note unless `--compile` requires it.
 
-`godot_check` compiles every `.gdshader` too, also those no scene uses, and reports them as `res://file.gdshader:line`.
+3. **With `--gpu` (MCP: `gpu: true`), the GPU pass.** Headless, no GPU driver ever sees the code, so what only a driver
+   rejects is not found there: a uniform block bigger than the GPU allows (`uniform float big[200000]`), a sampler array
+   indexed by a variable, a GLSL compile or link error. The GPU pass (the same as `godotwright shaders`) draws every
+   shader on the Compatibility renderer for a few frames, xvfb-run on Linux without a display, and adds those as
+   `[gpu]` lines; the language errors it finds again at the same line are shown once. It draws the files on disk, not
+   unsaved code, and parses fog shaders only (they need Forward+). On a test project with broken spatial, canvas_item,
+   particles, sky and fog shaders, a broken include and a broken shader in a scene, the headless compile found every
+   language error at the same line as the GPU pass in under a second; the GPU pass took about 6 s and added the two
+   driver errors.
+
+`godot_check` compiles every `.gdshader` headless too, also those no scene uses, and reports them as
+`res://file.gdshader:line`; `shaders: true` (CLI `check --shaders`) adds the GPU pass over the whole project, and an
+error both find is reported once.
 `godot_fix` renames the Godot 3 names and adds the missing texture uniforms (both `safe`). `godot_api` answers shader
 questions: `ALBEDO` gives every shader type and function that has it and whether it can be written there,
 `shader:canvas_item.fragment` lists a function's built-ins (`shader:spatial` adds the render modes), and `hint_albedo`
