@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Install Godotwright in Claude Code, Cursor, VS Code, Codex and Gemini CLI</title>
-<meta name="description" content="Install the Godotwright MCP server for Godot 4 in one step: a Claude Code plugin, a Claude Desktop bundle, one-click buttons for Cursor and VS Code, and setups for Codex, Gemini CLI, Windsurf and Zed.">
+<meta name="description" content="Install the Godotwright MCP server for Godot 4 in one step: a Claude Code plugin, a Claude Desktop bundle, one-click buttons for Cursor and VS Code, and setups for Codex, Gemini CLI, opencode, Windsurf and Zed.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/install.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1d2229">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Install Godotwright in your coding agent">
-<meta property="og:description" content="One step for Claude Code, Claude Desktop, Cursor, VS Code, Codex, Gemini CLI, Windsurf and Zed.">
+<meta property="og:description" content="One step for Claude Code, Claude Desktop, Cursor, VS Code, Codex, Gemini CLI, opencode, Windsurf and Zed.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/install.html">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -202,7 +202,7 @@ main > section:first-of-type { border-top: 0; padding-top: 0; }
 <p class="eyebrow">Install</p>
 <h1>Add Godotwright to <em>your agent.</em></h1>
 <p class="lede">One step for each client. Everything runs on your machine; the first start downloads the package from npm. Needs Node.js 22.12 or newer.</p>
-<nav class="jump" aria-label="Clients"><a href="#claude-code">Claude Code</a><a href="#claude-desktop">Claude Desktop</a><a href="#cursor">Cursor</a><a href="#vscode">VS Code</a><a href="#codex">Codex</a><a href="#gemini">Gemini CLI</a><a href="#windsurf">Windsurf</a><a href="#zed">Zed</a><a href="#other">Any other MCP client</a></nav>
+<nav class="jump" aria-label="Clients"><a href="#claude-code">Claude Code</a><a href="#claude-desktop">Claude Desktop</a><a href="#cursor">Cursor</a><a href="#vscode">VS Code</a><a href="#codex">Codex</a><a href="#gemini">Gemini CLI</a><a href="#opencode">opencode</a><a href="#windsurf">Windsurf</a><a href="#zed">Zed</a><a href="#other">Any other MCP client</a></nav>
 </div>
 <section><div class="wrap">
 <div class="clients">
@@ -279,6 +279,23 @@ startup_timeout_sec = 30 # the first npx run downloads the package</code></pre><
     &quot;godotwright&quot;: {
       &quot;command&quot;: &quot;npx&quot;,
       &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+    }
+  }
+}</code></pre><button class="copy" type="button">Copy</button></div>
+  </div>
+</article>
+<article class="dock client" id="opencode">
+  <div class="tabs" aria-hidden="true"><span class="tab on">opencode</span></div>
+  <div class="body">
+    <h2>opencode</h2>
+    <p>Add it to <code>~/.config/opencode/opencode.json</code> (all projects) or <code>opencode.json</code> (this project), see the <a href="https://opencode.ai/docs/mcp-servers/">opencode MCP docs</a>:</p>
+<div class="cmd"><pre><code>{
+  &quot;$schema&quot;: &quot;https://opencode.ai/config.json&quot;,
+  &quot;mcp&quot;: {
+    &quot;godotwright&quot;: {
+      &quot;type&quot;: &quot;local&quot;,
+      &quot;command&quot;: [&quot;npx&quot;, &quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;],
+      &quot;enabled&quot;: true
     }
   }
 }</code></pre><button class="copy" type="button">Copy</button></div>

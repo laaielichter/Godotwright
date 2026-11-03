@@ -144,6 +144,15 @@ describe("install page", () => {
       expect(JSON.parse(decodeURIComponent(config!))).toEqual({ name: "godotwright", type: "stdio", ...expected });
     }
   });
+
+  it("has an opencode snippet with the expected command and arguments", () => {
+    const section = /<article[^>]*id="opencode"[^>]*>([\s\S]*?)<\/article>/.exec(html)?.[1];
+    expect(section).toBeDefined();
+    const jsonMatch = /<pre><code>([\s\S]*?)<\/code><\/pre>/.exec(section!)?.[1];
+    expect(jsonMatch).toBeDefined();
+    const config = JSON.parse(jsonMatch!.replaceAll("&quot;", '"'));
+    expect(config.mcp.godotwright).toEqual({ type: "local", command: [expected.command, ...expected.args], enabled: true });
+  });
 });
 
 describe("projectFromEnv", () => {
