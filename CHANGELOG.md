@@ -2,6 +2,24 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
+## Unreleased
+
+- **`godotwright migrate`: Godot 3 network keywords become `@rpc`.** `remote`, `remotesync`, `puppet`, `puppetsync`,
+  `sync` and `slave` on `func` and `var` are rewritten to the matching `@rpc(...)` annotation; `master` and
+  `mastersync` keep a TODO with the Godot 4 way (#127).
+- **`godotwright migrate`: `setget` becomes Godot 4 property syntax** (`var hp = 10: set = set_hp, get = get_hp`), with
+  types, comments and `@export` kept, and a note that setters now also run inside the script (#129).
+- **Install page: opencode**, with opencode's own `mcp` config format (#130).
+- **Recipe `traffic-light`:** a three-aspect signal with separately named red, amber and green lenses (#136).
+- **Archetypes for indoor and street furniture:** bed, sofa, bookcase, cupboard, bench, waste bin, mailbox, fire
+  hydrant and bus stop, with English and Dutch aliases. The Dutch `bank` matches both sofa and bench on purpose (#137).
+
+### Thanks
+
+- @ANO3457 for #127, #129, #130, #136 and #137.
+- In 0.6.0: @Vamsi-2581 for the duplicate `funcref` fix (#83) and @bfs2021 for the Packed-type hint on Godot 3 Pool
+  arrays (#91).
+
 ## 0.6.0 (shader review, the real build, scene integrity, regression proof, upgrades, and a smaller tool list)
 
 From a survey of about forty Godot AI tools and their issue trackers (November 2026): what users keep asking for,
