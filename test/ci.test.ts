@@ -185,8 +185,8 @@ describe("screenshots in scenarios and the visual step", () => {
     }) as typeof playScene;
 
   it("reads screenshot steps as text or objects, with a window size", () => {
-    const s = parseScenario({ screenshots: ["hud @ 60", { name: "menu", frame: 5, tolerance: 30, maxChanged: 1 }], size: "320x180" }, "x");
-    expect(s.screenshots).toEqual([{ name: "hud", frame: 60 }, { name: "menu", frame: 5, tolerance: 30, maxChanged: 1 }]);
+    const s = parseScenario({ screenshots: ["hud @ 60", { name: "menu", frame: 5, tolerance: 30, threshold: 1 }], size: "320x180" }, "x");
+    expect(s.screenshots).toEqual([{ name: "hud", frame: 60 }, { name: "menu", frame: 5, tolerance: 30, threshold: 1 }]);
     expect(s.size).toEqual({ width: 320, height: 180 });
     expect(() => parseScenario({ screenshots: ["hud at 60"] }, "x")).toThrow(/<name> @ <frame>/);
     expect(() => parseScenario({ screenshots: ["a @ 1", "a @ 2"] }, "x")).toThrow(/two screenshots/);
@@ -201,13 +201,13 @@ describe("screenshots in scenarios and the visual step", () => {
     const first = await runScenario(root, ".godotwright/scenarios/walk.json", s, { play: fakePlay(10, seen) });
     expect(seen[0]).toMatchObject({ frames: 120, size: { width: 64, height: 32 }, captures: [{ frame: 40 }] });
     expect(first.ok).toBe(true);
-    expect(first.screenshots?.[0]).toMatchObject({ name: "hud", frame: 40, status: "created" });
+    expect(first.screenshots?.[0]).toMatchObject({ name: "hud", frame: 40, status: "saved" });
     expect(readBaselineMeta(root, "hud")).toMatchObject({ width: 64, height: 32, frames: 40, scenario: ".godotwright/scenarios/walk.json" });
-    expect(formatScenario(first)).toContain("  ok   screenshot hud @ 40 (created .godotwright/baselines/hud.png (commit it))");
+    expect(formatScenario(first)).toContain("  ok   screenshot hud @ 40 (saved)");
 
     const same = await runScenario(root, "walk.json", parseScenario({ expect: ["Hero.health == 3 @ 20"], screenshots: ["hud @ 40"] }, "walk"), { play: fakePlay(10, seen) });
     expect(seen[1]).toMatchObject({ size: { width: 64, height: 32 } });
-    expect(same.screenshots?.[0]?.status).toBe("same");
+    expect(same.screenshots?.[0]?.status).toBe("unchanged");
 
     const moved = await runScenario(root, "walk.json", s, { play: fakePlay(18) });
     expect(moved.ok).toBe(false);
@@ -218,7 +218,7 @@ describe("screenshots in scenarios and the visual step", () => {
     expect(formatScenario(moved, { screenshots: false })).not.toContain("screenshot");
 
     const updated = await runScenario(root, "walk.json", s, { play: fakePlay(18), update: true });
-    expect(updated.screenshots?.[0]?.status).toBe("updated");
+    expect(updated.screenshots?.[0]).toMatchObject({ status: "saved", replaced: true });
   });
 
   it("fails a screenshot whose frame was never drawn, and one whose baseline is missing in CI", async () => {
@@ -257,8 +257,8 @@ describe("screenshots in scenarios and the visual step", () => {
     const text = visual.details.join("\n");
     expect(text).toContain(".godotwright/scenarios/a.json:");
     expect(text).toContain("  FAIL screenshot hud @ 40 (CHANGED)");
-    expect(text).toContain("intended? godotwright scenario --update to accept it");
-    expect(text).toContain("diff pictures (changed pixels magenta) and new captures are in .godot/godotwright/diff/");
+    expect(text).toContain("if the change is intended, run `godotwright scenario --update`");
+    expect(text).toContain("diff pictures (changed pixels red) and new captures are in .godot/godotwright/diff/");
     expect(formatCi(ci)).toContain("| visual | ❌ 1 of 2 baselines unchanged, 1 changed |");
   });
 
@@ -283,6 +283,6 @@ describe("screenshots in scenarios and the visual step", () => {
     expect(shots).toEqual([expect.objectContaining({ baseline: "g", baselineDir: "vis", createMissing: false })]);
     const visual = ci.steps.at(-1)!;
     expect(visual).toMatchObject({ status: "fail", summary: "0 of 1 baselines unchanged, 1 changed" });
-    expect(visual.details.join("\n")).toContain("godotwright screenshot --baseline g --baseline-dir vis --update");
+    expect(visual.details.join("\n")).toContain("godotwright screenshot --baseline g --baseline-dir vis --update-baseline");
   });
 });

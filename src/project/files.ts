@@ -72,6 +72,12 @@ export function listProjectFiles(root: string, onError?: (folder: string, error:
   return out.sort();
 }
 
+/** The file part of a path to a sub-resource or built-in script (`res://a.tscn::Script_1` gives `res://a.tscn`). */
+export function withoutSubResource(path: string): string {
+  const cut = path.indexOf("::");
+  return cut < 0 ? path : path.slice(0, cut);
+}
+
 export function toResPath(root: string, file: string): string {
   return `res://${relative(root, file).split(sep).join("/")}`;
 }

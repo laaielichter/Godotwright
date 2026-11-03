@@ -10,6 +10,7 @@ interface Options {
   godot?: string;
   timeout: number;
   includeAddons?: boolean;
+  gpu?: boolean;
   base: string[];
   baseFiles: string[];
   detail: "brief" | "full";
@@ -19,7 +20,7 @@ interface Options {
 export function shaderCommand(): Command {
   return new Command("shader")
     .description(
-      "review every shader (.gdshader, .gdshaderinc, Shader resources in scenes) against Godot 4.7's shader tables, and compile them with Godot headless; errors as file:line",
+      "review every shader (.gdshader, .gdshaderinc, Shader resources in scenes) against Godot 4.7's shader tables, and compile them with Godot headless (--gpu also draws them); errors as file:line",
     )
     .argument("[path]", "project directory (or any path inside it)", ".")
     .option("--file <res-path>", "only this shader, include or scene (repeatable)", collect, [])
@@ -28,6 +29,7 @@ export function shaderCommand(): Command {
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--timeout <seconds>", "timeout of the Godot run", parseNumber, 300)
     .option("--include-addons", "also shaders in res://addons/")
+    .option("--gpu", "also draw them on the Compatibility renderer (needs a display or xvfb-run), for what only the GPU driver rejects; `godotwright shaders` is this pass alone")
     .option("--base <dir>", BASE_HELP, collect, [])
     .option("--base-files <file>", BASE_FILES_HELP, collect, [])
     .addOption(new Option("-d, --detail <level>", "output detail (full adds performance hints and the fix of each rule)").choices(["brief", "full"]).default("brief"))
@@ -40,6 +42,7 @@ export function shaderCommand(): Command {
           godot: options.godot,
           timeoutMs: options.timeout * 1000,
           includeAddons: options.includeAddons,
+          ...(options.gpu ? { gpu: true } : {}),
           base: options.base,
           baseFiles: options.baseFiles,
         });

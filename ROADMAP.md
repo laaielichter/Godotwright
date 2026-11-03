@@ -161,7 +161,9 @@ Godotwright gets better with every use, without collecting anything personal.
     issue trackers and user complaints: shader review and a headless compile, real exports with a PCK reader, smoke
     runs and patches, scene integrity with uid repair, saved scenarios with JUnit, screenshot baselines, leak cycles,
     rules for the 4.6 and 4.7 changes with a two-binary check, resource and import editing, tool sets and read-only,
-    structured results, progress and cancel, and protected paths.
+    structured results, progress and cancel, and protected paths. Ships as 0.6.0, on top of the released 0.5.0
+    (`godot_code`, shader drawing, screenshot baselines): one shader compile path (headless, with the GPU pass on
+    request) and one baseline implementation, with 0.5.0's options kept.
     *Done when:* each is checked against real Godot 4.7.2 in CI, and the review stays quiet on the official demos.
 
 ## After layer 1

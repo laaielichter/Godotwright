@@ -5,15 +5,7 @@ import { KEY_SETTINGS, parseProjectSettings, type ProjectSettings } from "../god
 import { parseResourceFile } from "../godot/resource-file.js";
 import { parseResourceText, type ResourceFile } from "../godot/scene.js";
 import { asString, VariantParseError } from "../godot/variant.js";
-import {
-  ASSET_KINDS,
-  extension,
-  findProjectRoot,
-  fromResPath,
-  listProjectFiles,
-  realResPath,
-  resolveResPath,
-} from "../project/files.js";
+import { ASSET_KINDS, extension, findProjectRoot, fromResPath, listProjectFiles, realResPath, resolveResPath, withoutSubResource } from "../project/files.js";
 import type { CSharpScriptInfo, ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
 
 export class ProjectNotFoundError extends Error {
@@ -452,13 +444,13 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   const scriptUids = new Map([...uids].map(([uid, path]) => [path, uid]));
   for (const [file, outline] of scripts) {
     for (const ref of outline.preloads) {
-      const target = resolveResPath(file.replace(/::.*$/, ""), ref.path);
+      const target = resolveResPath(withoutSubResource(file), ref.path);
       if (!resolve({ path: target })) {
         warnings.push({ file, line: ref.line, message: `${ref.kind}() path not found: ${ref.path}` });
       }
     }
     scriptInfos.push({
-      ...(external.has(file.replace(/::.*$/, "")) ? { external: true } : {}),
+      ...(external.has(withoutSubResource(file)) ? { external: true } : {}),
       path: file,
       uid: scriptUids.get(file),
       className: outline.className,
@@ -553,7 +545,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     csharpScripts,
     ...(bases.length || listed.size ? { base: { roots: bases, files: external.size, ...(listed.size ? { listed: listed.size } : {}) } } : {}),
     // A base project's own problems are not this project's.
-    warnings: warnings.filter((w) => !external.has(w.file.replace(/::.*$/, ""))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
+    warnings: warnings.filter((w) => !external.has(withoutSubResource(w.file))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
   return { root, files, map, scripts, sources, resources, shaders: shaderSources, uids, uidClaims, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
 }

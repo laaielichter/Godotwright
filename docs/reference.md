@@ -46,9 +46,12 @@ godotwright export run --preset Linux # export headless, check the pack against 
 godotwright export patch --preset Linux --against base.pck   # a patch with only what changed, checked and run over the base
 godotwright export pck game.pck       # what a .pck (or a game .exe) holds, against the project; no Godot needed
 godotwright deps unused               # files nothing the game starts with reaches, biggest first; `deps why <file>` before deleting one
+godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, completion; --code for unsaved text)
+godotwright shaders                   # the GPU pass: draw every shader (Compatibility renderer) for driver errors; errors at the line in the .gdshader
+godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
 godotwright screenshot --model car.glb --view front,side,top,iso   # a PNG of a model from four sides (or of a scene); says how much is drawn
-godotwright screenshot --scene res://hud.tscn --baseline hud   # compare with .godotwright/baselines/hud.png: changed pixels, boxes, moves (exit 1 on a change)
+godotwright screenshot --scene res://hud.tscn --baseline hud   # a named baseline: .godotwright/baselines/hud.png with its settings in hud.json
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
 godotwright api --search "is on floor"
 godotwright review [path]             # AAA review with a score per category
@@ -404,34 +407,46 @@ uids count, their own problems are not reported.
 
 ## Visual regression: screenshot baselines
 
-`godotwright screenshot --baseline <name>` (MCP: `godot_screenshot` with `baseline`) renders the scene or model and
-compares it with `.godotwright/baselines/<name>.png`. The first run makes that file and a `<name>.json` next to it with
-how it was taken (scene or model, views, size, frames, tolerances, Godot version, graphics driver); commit both. Later runs
-reuse those settings, so a compare is always like for like, and say what changed in text:
+`godotwright screenshot --baseline` (MCP: `godot_screenshot` with `baseline`) renders the scene or model and compares
+it with the last approved picture. `baseline` is one of:
+
+- nothing (CLI) or `"auto"` (MCP): `.godotwright/baselines/<scene or model>-<hash>@<size>_<views>.png`, named after
+  what was rendered, its size and views;
+- a `.png` path inside the project (or the model's folder);
+- a name (`hud`): `.godotwright/baselines/hud.png` and a `hud.json` next to it with how it was taken (scene or model,
+  views, size, frames, threshold and tolerance when given, Godot version, graphics driver). Later runs reuse those
+  settings, so `--baseline hud` alone compares like for like; `godotwright ci` compares every named baseline.
+
+The first run saves the picture as the baseline; commit it (Godot does not import `.godotwright/`). Later runs compare
+pixel by pixel and say what changed in text:
 
 ```text
-baseline hud: CHANGED
-  544 px changed (0.944%, allowed 0.1% at tolerance 16/255)
-  boxes: (117,70)-(170,95) 544 px moved (12,0)
+baseline hud CHANGED: 0.94% of pixels changed (544 px; threshold 0.5%, tolerance 3); largest change at (112, 64) size 64x32, mean shift 88.4
+  areas: (117,70)-(170,95) 544 px moved (12,0)
   where: centre 8.5%
-  diff: .godot/godotwright/diff/hud.diff.png (changed pixels magenta)  new: .godot/godotwright/diff/hud.actual.png  baseline: .godotwright/baselines/hud.png
-  intended? run again with --update to accept it
+  baseline: /game/.godotwright/baselines/hud.png
+  new: /game/.godot/godotwright/diff/hud.actual.png
+  diff: /game/.godot/godotwright/diff/hud-diff.png (changed pixels in red)
+Next: look at the diff; if the change is intended, run again with --update-baseline; if not, fix it and screenshot again.
 ```
 
-- A pixel counts as changed when a channel differs by more than `--tolerance` (0 to 255, default 16). A pixel on an
-  anti-aliased edge (its colour is found within 1 px in the other picture) does not count. The compare fails when more
-  than `--max-changed` percent of the pixels changed (default 0.1). Both are kept per baseline.
-- Areas of change are listed as boxes, biggest first, with `moved (dx,dy)` when a shift of up to 16 px explains one
-  both ways (something moved, not removed). A brightness shift of 3 levels or more is named (`darker`, `brighter`).
+- A pixel counts as changed when its colour moves by more than `--tolerance` (0 to 255, luma-weighted, default 3).
+  The picture counts as changed when more than `--threshold` percent of the pixels changed (default 0.5); a change
+  within the threshold is still named, with its diff. A named baseline keeps a threshold and tolerance you give it.
+- Areas of change are listed biggest first, with `moved (dx,dy)` when a shift of up to 16 px explains one both ways
+  (something moved, not removed). A brightness shift of 3 levels or more is named (`darker`, `brighter`).
 - A blank picture is named on every screenshot, baseline or not: black, white, fully transparent, the background colour
   only, or one colour over at least 99.9% of the picture.
-- `--update` (MCP: `update: true`) replaces the baseline; `--baseline-dir` keeps baselines elsewhere (over MCP
-  `baseline_dir` must be inside the project). A change is a
-  normal result with exit code 1, not an error. Over MCP a changed compare returns the diff picture, a same one no picture.
-- Runs are deterministic: a fixed frame rate (`--fixed-fps 60`), the Compatibility renderer and a fixed window size.
-  Two runs on one machine give the same bytes. Another GPU driver or Mesa version can shade edges a few levels
-  differently, so make baselines on the machine (or CI image) that compares them; a changed compare says when the
-  driver differs. Compatibility does not draw Forward+-only effects (SDFGI, volumetric fog), so those are not covered.
+- The diff picture is the baseline faded to grey with the changed pixels in red, in `.godot/godotwright/` (Godot does
+  not import it and version control usually ignores it).
+- `--update-baseline` (MCP: `update_baseline: true`) replaces the baseline; `--baseline-dir` keeps named baselines
+  elsewhere (over MCP `baseline_dir` must be inside the project). A change beyond the threshold, or a size that differs,
+  gives exit code 1 (MCP: an error result with the diff and the new picture); unchanged returns text only.
+- Runs are deterministic: a fixed frame rate (`--fixed-fps 60`), fixed random seeds (also for particles), the
+  Compatibility renderer and a fixed window size. Two runs on one machine give the same bytes. Another GPU driver or Mesa
+  version can shade edges a few levels differently, so make baselines on the machine (or CI image) that compares them; a
+  changed compare of a named baseline says when the driver differs. Compatibility does not draw Forward+-only effects
+  (SDFGI, volumetric fog), so those are not covered.
 
 ### Screenshots in scenarios
 
@@ -442,7 +457,7 @@ A scenario can take pictures during its input run and compare each with its base
   "input": "0 hold right 20",
   "frames": 40,
   "expect": ["Hero.position.x >= 60 @ 30"],
-  "screenshots": ["walk-start @ 0", { "name": "walk-end", "frame": 30, "tolerance": 24, "maxChanged": 0.5 }],
+  "screenshots": ["walk-start @ 0", { "name": "walk-end", "frame": 30, "tolerance": 8, "threshold": 1 }],
   "size": "640x360"
 }
 ```
@@ -750,7 +765,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 37 tools
+### The 38 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -769,11 +784,12 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
-| `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; errors as `file:line` |
+| `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
+| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`, uid repairs across files included; shows them first, then reviews the changed files again |
-| `godot_check` | Run Godot headless (load every script and scene, compile every shader) and report errors as `file:line`, runtime errors with their call chain; `compare_godot` diffs against a second Godot |
+| `godot_check` | Run Godot headless (load every script and scene, compile every shader) and report errors as `file:line`, runtime errors with their call chain; `shaders: true` also draws every shader; `compare_godot` diffs against a second Godot |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
 | `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders; with `pck`, what an exported pack holds |
@@ -783,7 +799,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
 | `godot_leaks` | Load, run and free a scene in cycles and report what grows per cycle: orphan nodes by class, script and scene with where they were made and removed, nodes left behind, objects that are not nodes, what Godot held at exit; fails over a budget |
-| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn and whether it is blank; with `baseline`, compare with the stored picture (changed pixels, boxes, moves) |
+| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn and whether it is blank; with `baseline`, a visual test: unchanged as text only, or the percent changed, the areas of change and moves, and a diff picture |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |

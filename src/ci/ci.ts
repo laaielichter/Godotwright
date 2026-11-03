@@ -113,7 +113,7 @@ function visualStep(visuals: Visual[], max: number): CiStep {
   const blank = visuals.filter((v) => v.result?.blank).length;
   const changed = visuals.filter((v) => v.result?.status === "changed");
   const lines = failed.flatMap((v) => v.lines);
-  if (changed.length) lines.push(`diff pictures (changed pixels magenta) and new captures are in ${DIFF_DIR}/`);
+  if (changed.length) lines.push(`diff pictures (changed pixels red) and new captures are in ${DIFF_DIR}/`);
   return {
     name: "visual",
     status: failed.length ? "fail" : "pass",
@@ -171,14 +171,14 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
       for (const { file, scenario } of scenarios) results.push(await deps.scenario(root, file, scenario, { godot: options.godot, import: false, createMissing: false }));
       kept.scenarios = results;
       steps.push(scenarioStep(results, max));
-      for (const r of results) for (const shot of r.screenshots ?? []) visuals.push({ result: shot, lines: [`${r.file}:`, ...formatShot(shot, "godotwright scenario --update")] });
+      for (const r of results) for (const shot of r.screenshots ?? []) visuals.push({ result: shot, lines: [`${r.file}:`, ...formatShot(shot, "run `godotwright scenario --update`")] });
     }
     const dir = options.baselineDir;
     const dirFlag = dir ? ` --baseline-dir ${dir}` : "";
     for (const { name } of loadBaselines(root, dir).filter((b) => !b.meta.scenario)) {
       try {
         const report = await deps.screenshot(root, { godot: options.godot, baseline: name, createMissing: false, ...(dir ? { baselineDir: dir } : {}) });
-        if (report.baseline) visuals.push({ result: report.baseline, lines: formatBaseline(report.baseline, `godotwright screenshot --baseline ${name}${dirFlag} --update`) });
+        if (report.baseline) visuals.push({ result: report.baseline, lines: formatBaseline(report.baseline, `run \`godotwright screenshot --baseline ${name}${dirFlag} --update-baseline\``) });
       } catch (error) {
         if (!(error instanceof ScreenshotError)) throw error;
         visuals.push({ lines: [`baseline ${name}: NOT COMPARED: ${error.message}`] });

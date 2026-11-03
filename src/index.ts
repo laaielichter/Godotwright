@@ -12,6 +12,7 @@ export { reviewProject, type CategoryScore, type ReviewOptions, type ReviewRepor
 export { RULES, type Category, type Finding, type Rule, type Severity } from "./review/rules.js";
 export { formatProjectMap, type Detail } from "./scan/format.js";
 export { formatShaderReport, shaderReport, type ShaderOptions, type ShaderReport } from "./shader/shader.js";
+export { checkShaders, formatShaderCheck, type ShaderCheckOptions, type ShaderCheckResult } from "./shaders/shaders.js";
 export { loadProject, ProjectNotFoundError, scanProject, type ProjectData } from "./scan/scan.js";
 export type * from "./scan/types.js";
 export { GODOT_TARGET, VERSION } from "./version.js";

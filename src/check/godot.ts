@@ -1,5 +1,5 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { accessSync, constants, existsSync, readdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, delimiter, join, resolve as resolvePath } from "node:path";
 import { CancelledError, ProgressParser, currentRun, phaseOf, throttle } from "./progress.js";
 
@@ -156,6 +156,77 @@ export interface RunResult {
   ms: number;
 }
 
+/** Parent pid of every running process, from /proc (Linux) or `ps` (macOS and other Unix); empty on Windows. */
+function parentPids(): Map<number, number> {
+  const parents = new Map<number, number>();
+  if (process.platform === "win32") return parents;
+  try {
+    for (const name of readdirSync("/proc")) {
+      if (!/^\d+$/.test(name)) continue;
+      try {
+        // "pid (comm) state ppid ...": comm may hold spaces and parentheses, so read after the last ')'.
+        const stat = readFileSync(`/proc/${name}/stat`, "utf8");
+        const ppid = Number(stat.slice(stat.lastIndexOf(")") + 2).split(" ")[1]);
+        parents.set(Number(name), ppid);
+      } catch {
+        // The process ended while the list was read.
+      }
+    }
+    if (parents.size) return parents;
+  } catch {
+    // No /proc.
+  }
+  const ps = spawnSync("ps", ["-A", "-o", "pid=,ppid="], { encoding: "utf8" });
+  for (const line of (ps.stdout ?? "").split("\n")) {
+    const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+    if (pid && ppid !== undefined && !Number.isNaN(ppid)) parents.set(pid, ppid);
+  }
+  return parents;
+}
+
+/** Every process started by `pid`, also indirectly (children before their own children). */
+export function descendantPids(pid: number): number[] {
+  const parents = parentPids();
+  const out: number[] = [];
+  const queue = [pid];
+  while (queue.length) {
+    const parent = queue.shift()!;
+    for (const [child, ppid] of parents) {
+      if (ppid === parent && !out.includes(child)) {
+        out.push(child);
+        queue.push(child);
+      }
+    }
+  }
+  return out;
+}
+
+/** True while the process exists and is not a zombie waiting to be reaped. */
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+  } catch {
+    return false;
+  }
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    return stat.slice(stat.lastIndexOf(")") + 2, stat.lastIndexOf(")") + 3) !== "Z";
+  } catch {
+    return true;
+  }
+}
+
+function sendSignal(pid: number, name: NodeJS.Signals): void {
+  try {
+    process.kill(pid, name);
+  } catch {
+    // Already gone.
+  }
+}
+
+/** How long a wrapper such as xvfb-run gets to clean up after the processes it started were stopped. */
+const KILL_GRACE_MS = 3000;
+
 export interface RunOptions {
   cwd?: string;
   timeoutMs?: number;
@@ -228,10 +299,31 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
     let exitCode: number | null | undefined;
     let done = false;
     let timer: NodeJS.Timeout | undefined;
+    let grace: NodeJS.Timeout | undefined;
+    /** The processes the child had started when it was stopped. */
+    let stopped: number[] = [];
+    /**
+     * Stops Godot and everything it started, on a timeout or a cancel. A wrapper such as xvfb-run: SIGKILL on it would
+     * leave its Xvfb server running with no parent. So stop what it started (Godot, Xvfb) first, so it cleans up and
+     * exits by itself, and kill whatever is left (the whole process group when Godot has one) after a grace period.
+     */
+    const stop = () => {
+      stopped = child.pid ? descendantPids(child.pid) : [];
+      if (!stopped.length) {
+        killTree(child, group);
+        return;
+      }
+      for (const pid of stopped) sendSignal(pid, "SIGTERM");
+      grace = setTimeout(() => {
+        if (exitCode !== undefined || !child.pid) return;
+        for (const pid of [...new Set([...descendantPids(child.pid), ...stopped])]) sendSignal(pid, "SIGKILL");
+        killTree(child, group);
+      }, KILL_GRACE_MS);
+    };
     const onAbort = () => {
       if (done) return;
       cancelled = true;
-      if (exitCode === undefined) killTree(child, group);
+      if (exitCode === undefined) stop();
       else finish(exitCode);
     };
     // 'close' waits for every process that holds the pipes, and a process Godot started can keep them open.
@@ -241,6 +333,7 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       done = true;
       if (timer) clearTimeout(timer);
       signal?.removeEventListener("abort", onAbort);
+      if (grace) clearTimeout(grace);
       child.stdout.destroy();
       child.stderr.destroy();
       if (cancelled) report?.stop();
@@ -272,11 +365,21 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       errLines(chunk);
     });
     signal?.addEventListener("abort", onAbort, { once: true });
+    /** After a timeout or a cancel: finish once the stopped processes are gone too, so the caller can remove the files they used. */
+    const finishWhenGone = (code: number | null, deadline = Date.now() + KILL_GRACE_MS) => {
+      const left = stopped.filter(alive);
+      if (!left.length) return finish(code);
+      if (Date.now() >= deadline) {
+        for (const pid of left) sendSignal(pid, "SIGKILL");
+        return finish(code);
+      }
+      setTimeout(() => finishWhenGone(code, deadline), 50);
+    };
     if (options.timeoutMs) {
       timer = setTimeout(() => {
         if (exitCode === undefined) {
           timedOut = true;
-          killTree(child, group);
+          stop();
         } else {
           // Godot had already exited; only a process it started was still holding the output.
           finish(exitCode);
@@ -290,12 +393,13 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       if (timer) clearTimeout(timer);
       report?.stop();
       signal?.removeEventListener("abort", onAbort);
+      if (grace) clearTimeout(grace);
       reject(error);
     });
     child.on("exit", (code) => {
       exitCode = code;
       groups.delete(child);
-      if (timedOut || cancelled) finish(code);
+      if (timedOut || cancelled) finishWhenGone(code);
     });
     child.on("close", (code) => finish(code));
   });

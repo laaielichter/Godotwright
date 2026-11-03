@@ -10,6 +10,7 @@ export const TOOLSETS = {
     "godot_api_search",
     "godot_review",
     "godot_check",
+    "godot_code",
     "godot_doctor",
     "godot_fix",
     "godot_usages",

@@ -44,7 +44,9 @@ export const CheckOutput = {
   godotVersion: z.string().optional(),
   scripts: z.number().optional(),
   scenes: z.number().optional(),
-  shaders: z.number().optional(),
+  shaderFiles: z.number().optional(),
+  /** With `shaders: true`: the shaders drawn on the Compatibility renderer. */
+  shaders: z.object({ compiled: z.number(), parsed: z.number(), notReached: z.number(), errors: z.number(), renderer: z.string() }).optional(),
   frames: z.number().optional(),
 };
 export const DoctorOutput = {
@@ -108,6 +110,7 @@ export function checkData(result: CheckResult, cap: number): z.infer<typeof sche
     godotVersion: result.godotVersion,
     scripts: result.scripts,
     scenes: result.scenes,
+    shaderFiles: result.shaderFiles,
     shaders: result.shaders,
     frames: result.ran?.frames,
   });

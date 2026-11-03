@@ -15,6 +15,7 @@ import { checkScriptVersion, checkVersionChanges, crosses, NEWEST_TARGET, RULE_S
 import { compareVersions } from "../api/removed.js";
 import { ProjectModel } from "./model.js";
 import { CATEGORIES, CATEGORY_WEIGHTS, type Category, type Finding, type Severity } from "./rules.js";
+import { withoutSubResource } from "../project/files.js";
 
 export interface ReviewOptions {
   /** Also review scripts under res://addons/ (third-party code). Default false. */
@@ -79,7 +80,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   const range = versionRange(data.map.project.godotVersion, { from: options.from, target: options.target });
   const pm = new ProjectModel(data, api);
   // Base project files are context, not under review.
-  const inScope = (p: string) => !data.external.has(p.replace(/::.*$/, "")) && (options.includeAddons || !p.startsWith("res://addons/"));
+  const inScope = (p: string) => !data.external.has(withoutSubResource(p)) && (options.includeAddons || !p.startsWith("res://addons/"));
 
   const inputActions = new Set(data.map.inputActions.map((a) => a.name));
   for (const source of data.sources.values()) {
@@ -94,7 +95,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
   const findings: Finding[] = [];
   const typing: TypingStats = { typed: 0, total: 0 };
   const focus = options.focus ? new Set(options.focus) : undefined;
-  const focused = (file: string) => !focus || focus.has(file.replace(/::.*$/, ""));
+  const focused = (file: string) => !focus || focus.has(withoutSubResource(file));
   for (const script of data.scripts.keys()) {
     if (!inScope(script) || !focused(script)) continue;
     findings.push(...checkScriptApi(pm, script, { foreignClasses, inputActions, migrating: crosses(range, "4.7") }));
