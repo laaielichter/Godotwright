@@ -31,7 +31,7 @@ function parseSeconds(value: string): number {
 
 export function shadersCommand(): Command {
   return new Command("shaders")
-    .description("compile every shader with real Godot (Compatibility renderer, xvfb-run on Linux without a display) and report errors at the line in the .gdshader, .gdshaderinc or .tres/.tscn")
+    .description("draw every shader with real Godot (Compatibility renderer, xvfb-run on Linux without a display) and report errors at the line in the .gdshader, .gdshaderinc or .tres/.tscn: the GPU pass of `godotwright shader --gpu`, without the review")
     .argument("[path]", "project directory (or any path inside it)", ".")
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--file <path>", "only this shader file (repeatable); a .gdshaderinc checks every shader that includes it", collect, [])

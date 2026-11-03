@@ -5450,6 +5450,198 @@
       "errors": [
         "Cannot get index"
       ]
+    },
+    {
+      "id": "performance/remove-child-without-free-orphans",
+      "topic": "performance",
+      "title": "remove_child() without queue_free() leaves an orphan node on every reload",
+      "symptom": "Memory and the orphan node count grew a little every time a level chunk was loaded and unloaded. At exit Godot printed that object instances were leaked.",
+      "cause": "A node taken out of the tree with remove_child() is not freed. It stays alive as an orphan with all its children and resources, and freeing the scene it came from does not free it, because it is no longer a child of that scene.",
+      "fix": "Call queue_free() on a node you remove and do not add back. If you keep it on purpose (a screen you swap in and out), keep it in a variable and free it in _exit_tree() of the owner, or hide it instead of removing it.",
+      "test": "Load, run and free the scene several times headless and check that the orphan node count stays the same after every cycle.",
+      "errors": [
+        "ObjectDB instances were leaked at exit",
+        "Leaked instances typically happen when nodes are removed from the scene tree"
+      ],
+      "tags": [
+        "memory leak",
+        "orphan nodes",
+        "remove_child",
+        "queue_free",
+        "chunk",
+        "streaming",
+        "reload",
+        "geheugen",
+        "lek",
+        "weesnodes"
+      ]
+    },
+    {
+      "id": "performance/nodes-outside-scene-survive-reload",
+      "topic": "performance",
+      "title": "Nodes a scene adds to the root or an autoload survive when the scene is freed",
+      "symptom": "After loading and leaving a level a few times, the root of the tree held more and more extra nodes: effects, timers and helpers from levels that were long gone.",
+      "cause": "A level added nodes to get_tree().root or to an autoload, so they were not children of the level. Freeing or changing the scene frees only its own children.",
+      "fix": "Add such nodes under the level itself when they belong to it. When they must live elsewhere, keep a reference and queue_free() them in the level's _exit_tree().",
+      "test": "Free the scene, wait one frame and count the nodes under the root; the count must be the same after every load and unload.",
+      "tags": [
+        "memory leak",
+        "scene change",
+        "autoload",
+        "root",
+        "reload",
+        "chunk",
+        "geheugen",
+        "lek"
+      ]
+    },
+    {
+      "id": "performance/static-array-holds-resources",
+      "topic": "performance",
+      "title": "A static var or autoload array keeps resources alive across reloads",
+      "symptom": "Memory kept growing with every chunk reload, yet Godot reported no leaked objects at exit and the loaded-resource monitor stayed flat.",
+      "cause": "Each chunk appended a material, mesh or data object to a static var or an autoload array. The array keeps them alive for the whole session; they are freed only when the game quits, so the exit report never lists them, and resources made in code are not counted by the loaded-resource monitor.",
+      "fix": "Key such caches by id so a reload reuses the entry, cap their size, or remove a chunk's entries when the chunk is freed.",
+      "test": "Load and unload the same chunk many times and check that the number of live objects stays the same after every cycle.",
+      "tags": [
+        "memory leak",
+        "static var",
+        "autoload",
+        "cache",
+        "resources",
+        "chunk",
+        "streaming",
+        "reload",
+        "geheugen",
+        "groeit"
+      ]
+    },
+    {
+      "id": "performance/object-new-needs-free",
+      "topic": "performance",
+      "title": "Object.new() is never freed on its own",
+      "symptom": "The object count grew by a few every time a system ran, and the exit report listed leaked instances of class Object.",
+      "cause": "A plain Object (and every class that extends Object but not RefCounted or Node) is not reference counted. Dropping the last variable that points to it does not free it.",
+      "fix": "Call free() on it when done, or extend RefCounted instead so it is freed when nothing refers to it any more.",
+      "test": "Run the code in a loop headless and check that the object count does not grow per loop; with --verbose, the exit report must not list class Object.",
+      "errors": [
+        "ObjectDB instances were leaked at exit"
+      ],
+      "tags": [
+        "memory leak",
+        "Object",
+        "RefCounted",
+        "free",
+        "geheugen",
+        "lek"
+      ]
+    },
+    {
+      "id": "gdscript/packed-element-write-lost",
+      "topic": "gdscript",
+      "title": "In Godot 4.7 writing one element of a packed array property changes a copy",
+      "symptom": "After the move to Godot 4.7 a line, polygon or gradient stopped updating: code that wrote one point of it ran without an error, but the node kept the old points. A script variable with a setter changed, but the work in its setter (a redraw, a signal) no longer happened.",
+      "cause": "Since Godot 4.7, writing one element of a packed array no longer calls the setter of the whole property. An engine property hands out a copy of its array, so the write lands in the copy and is lost; a script variable is changed in place, without its setter.",
+      "fix": "Copy the array into a local variable, change the copy, and assign the whole array back to the property. Do the same for a script variable whose setter must run.",
+      "test": "Print the element after the write: in Godot 4.7 a point of a Line2D written through its points property stays at its old value until the whole array is assigned.",
+      "rules": [
+        "api/packed-element-write",
+        "quality/packed-setter-skipped"
+      ],
+      "tags": [
+        "packed array",
+        "setter",
+        "line",
+        "polygon",
+        "godot 4.7",
+        "upgrade",
+        "lost write"
+      ]
+    },
+    {
+      "id": "gdscript/override-inherits-return-type",
+      "topic": "gdscript",
+      "title": "An override without a return type inherits the parent's in Godot 4.7",
+      "symptom": "Scripts that loaded in Godot 4.6 stopped with a parse error in 4.7 on overrides such as _get(), _set() or _get_configuration_warnings() that only did some work and returned nothing.",
+      "cause": "Since Godot 4.7 an override without a return type takes the return type of the method it overrides, also of engine virtual methods. A body that does not return a value on every path is then an error, and a bare return in a method that returns bool is one too.",
+      "fix": "Return a value of the parent's type on every path: false for bool, an empty array for an array, null only where the parent returns Variant or an object.",
+      "test": "Run the Godot check after the upgrade: every override it reports with this message needs a return value.",
+      "rules": [
+        "api/override-missing-return"
+      ],
+      "tags": [
+        "override",
+        "return type",
+        "virtual",
+        "parse error",
+        "godot 4.7",
+        "upgrade"
+      ],
+      "errors": [
+        "Not all code paths return a value"
+      ]
+    },
+    {
+      "id": "ui/rich-text-image-unit",
+      "topic": "ui",
+      "title": "RichTextLabel image size flags became an enum in Godot 4.7",
+      "symptom": "A script that passed true or false for the percent flags of add_image() or update_image() stopped loading in Godot 4.7, although the upgrade guide lists the change as compatible.",
+      "cause": "The two percent flags became unit parameters of type RichTextLabel.ImageUnit, and typed GDScript does not turn a bool into that enum.",
+      "fix": "Pass RichTextLabel.IMAGE_UNIT_PIXEL for false and IMAGE_UNIT_PERCENT for true.",
+      "rules": [
+        "api/image-unit-bool"
+      ],
+      "tags": [
+        "richtextlabel",
+        "add_image",
+        "update_image",
+        "enum",
+        "godot 4.7",
+        "upgrade"
+      ],
+      "errors": [
+        "as \"RichTextLabel.ImageUnit\""
+      ]
+    },
+    {
+      "id": "gameplay/input-device-keyboard-mouse",
+      "topic": "gameplay",
+      "title": "Keyboard and mouse events are no longer device 0 in Godot 4.7",
+      "symptom": "After the move to Godot 4.7 keyboard and mouse input for the first local player stopped working, while the first gamepad still worked.",
+      "cause": "Godot 4.7 gives keyboard events the device InputEvent.DEVICE_ID_KEYBOARD and mouse events DEVICE_ID_MOUSE, because a gamepad can be device 0 too. Code that took device 0 to mean keyboard and mouse no longer matches them.",
+      "fix": "Test the event type, or compare the device with InputEvent.DEVICE_ID_KEYBOARD and DEVICE_ID_MOUSE; keep device numbers for gamepads.",
+      "rules": [
+        "api/input-device-zero"
+      ],
+      "tags": [
+        "input",
+        "device",
+        "keyboard",
+        "mouse",
+        "local multiplayer",
+        "godot 4.7",
+        "upgrade"
+      ]
+    },
+    {
+      "id": "physics/jolt-world-boundary-sign",
+      "topic": "physics",
+      "title": "Under Jolt the distance of a world boundary plane flipped in Godot 4.7",
+      "symptom": "After the move to Godot 4.7 with the Jolt engine, bodies fell through the floor or rested above it where a world boundary shape used a plane distance other than zero.",
+      "cause": "Godot 4.7 makes Jolt read the plane distance of a world boundary shape the way the built-in engine does, which is the opposite sign of what Jolt used in 4.6.",
+      "fix": "Flip the sign of the plane distance on every world boundary shape, or move the static body instead and keep the distance at zero.",
+      "test": "Drop a ball onto the boundary and print where it rests: it must rest on the side and at the height you meant.",
+      "rules": [
+        "api/upgrade-world-boundary-jolt"
+      ],
+      "tags": [
+        "jolt",
+        "world boundary",
+        "plane",
+        "floor",
+        "godot 4.7",
+        "upgrade"
+      ]
     }
   ]
 }

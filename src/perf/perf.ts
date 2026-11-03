@@ -185,7 +185,7 @@ export function formatPerf(r: PerfReport): string {
   out.push(`frame ms    ${fmt(r.frame)}   over budget ${r.overBudget} (${r.frames ? Math.round((1000 * r.overBudget) / r.frames) / 10 : 0}%)`);
   out.push(`physics ms  ${fmt(r.physics)}`);
   out.push(`rest ms     ${fmt(r.process)}   (_process, signals, deferred calls, the main loop)`);
-  out.push(`nodes ${r.nodes.start} -> ${r.nodes.end} (max ${r.nodes.max}); orphan nodes ${r.orphans.start} -> ${r.orphans.end}${r.orphans.end > r.orphans.start + 50 ? " (growing: nodes removed but never freed?)" : ""}`);
+  out.push(`nodes ${r.nodes.start} -> ${r.nodes.end} (max ${r.nodes.max}); orphan nodes ${r.orphans.start} -> ${r.orphans.end}${r.orphans.end > r.orphans.start + 50 ? " (growing: nodes removed but never freed; godot_leaks names their class, script and where they were made)" : ""}`);
   if (r.spikes.length) {
     out.push("slowest frames:");
     for (const s of r.spikes) out.push(`  frame ${s.frame}: ${s.ms} ms (physics ${s.physicsMs} ms): ${s.cause}`);

@@ -11,10 +11,12 @@ import { parseShaderLog, type ShaderLog, type ShaderLogEntry, type ShaderSeen } 
 import { shaderRunnerSource } from "./runner.js";
 
 /**
- * Compiles the project's shaders with real Godot. `godot_check` runs headless, where the dummy renderer never compiles a
- * shader for the GPU, so shader errors slip through it; this draws every shader for a few frames on the Compatibility
- * renderer (OpenGL, which also runs in software under xvfb) and reports Godot's errors at the line in the .gdshader,
- * .gdshaderinc, or the .tres/.tscn that embeds the shader.
+ * The GPU pass over the project's shaders. Headless Godot runs the full shader compiler on its dummy renderer
+ * (src/check/shader-compile.ts and the checker of godot_check use it), which finds every language error, but no GPU
+ * driver ever sees the code. This draws every shader for a few frames on the Compatibility renderer (OpenGL, which also
+ * runs in software under xvfb), which adds what only the driver rejects (a uniform block that is too big, a sampler
+ * array indexed by a variable), and reports Godot's errors at the line in the .gdshader, .gdshaderinc, or the
+ * .tres/.tscn that embeds the shader. `godotwright shaders`, `check --shaders` and `shader --gpu` use it.
  */
 
 export class ShaderCheckError extends Error {}
@@ -373,7 +375,7 @@ export async function checkShaders(path: string, options: ShaderCheckOptions = {
   const includes = explicit ? [...usedIncludes].sort() : all.includes;
   // Fail early when there is no screen, before Godot is looked for or anything is imported.
   const how = screen();
-  if ("error" in how) throw new ShaderCheckError(`cannot compile shaders, they are compiled by drawing them: ${how.error.replace(/^no screen/, "there is no screen")}`);
+  if ("error" in how) throw new ShaderCheckError(`cannot draw the shaders on the GPU (headless Godot still compiles them: godot_shader, godot_check): ${how.error.replace(/^no screen/, "there is no screen")}`);
   const bin = findGodot(options.godot);
   const version = await godotVersion(bin);
   const timeoutMs = options.timeoutMs ?? 10 * 60_000;

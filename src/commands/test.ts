@@ -2,6 +2,7 @@ import { Command, InvalidArgumentError } from "commander";
 import { GodotNotFoundError } from "../check/godot.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { TestRunError, formatTests, runTests, testsPassed, type Framework } from "../test/run.js";
+import { writeJUnit } from "./ci.js";
 import { collect, parseNumber, writeOut } from "./output.js";
 
 interface Options {
@@ -12,6 +13,7 @@ interface Options {
   import: boolean;
   timeout: number;
   json?: boolean;
+  junit?: string;
 }
 
 function parseFramework(value: string): Framework {
@@ -30,6 +32,7 @@ export function testCommand(): Command {
     .option("--no-import", "skip the import step (faster when .godot/ is up to date)")
     .option("--timeout <seconds>", "timeout of the test run", (v: string) => parseNumber(v), 600)
     .option("--json", "print the result as JSON")
+    .option("--junit <file>", "also write the framework's JUnit XML to this file (a report with an error case when the run left none)")
     .action(async (path: string, options: Options, command: Command) => {
       try {
         const report = await runTests(path, {
@@ -39,8 +42,11 @@ export function testCommand(): Command {
           ...(options.filter ? { filter: options.filter } : {}),
           import: options.import,
           timeoutMs: options.timeout * 1000,
+          ...(options.junit ? { keepXml: true } : {}),
         });
-        writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatTests(report));
+        const { xml, ...shown } = report;
+        if (options.junit) writeJUnit(options.junit, xml ?? { tests: report });
+        writeOut(command, options.json ? `${JSON.stringify(shown, null, 2)}\n` : formatTests(report));
         if (!testsPassed(report)) process.exitCode = 1;
       } catch (error) {
         if (error instanceof GodotNotFoundError) {

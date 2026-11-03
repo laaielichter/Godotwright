@@ -23,8 +23,10 @@ A change to a game people already have must never leave it half-changed. Work on
 5. **Make it idempotent and reversible.** Running the installer twice changes nothing the second time. Rollback gives
    the original bytes back; test that with a byte comparison, not by eye.
 6. **Give every change a switch** (a setting or a flag) so it can be turned off without a reinstall.
-7. **Check the export before you build it:** `godot_export` finds files the presets leave out although the game loads
-   them, and data files that need `include_filter`.
+7. **Check the export before you build it, and the build after:** `godot_export` finds files the presets leave out
+   although the game loads them, and data files that need `include_filter`. `godot_export_run` with mode `patch` then
+   builds a patch .pck with only what changed (against the base .pck, or the base game's .pck manifest with md5),
+   lists every file it carries, checks it never ships an unchanged base file or misses a changed one, and runs it.
 8. **Test on a synthetic copy** of the shipped files when the real ones are out of reach, and say plainly what was not
    tested on the real game.
 

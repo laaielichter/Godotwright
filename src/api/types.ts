@@ -86,12 +86,33 @@ export interface ApiRenames {
   projectSettings?: Record<string, string>;
 }
 
+/** One function scope of a shader type in Godot's shader_types.cpp ("global", "constants", or a processor function). */
+export interface ApiShaderFunction {
+  /** Built-in name -> GLSL type, with "const " in front when it can only be read. */
+  builtins: Record<string, string>;
+  /** Functions only this stage can call (texture_sdf, emit_subparticle). */
+  stage?: string[];
+  /** A processor function Godot calls (vertex, fragment, ...). */
+  main?: boolean;
+  /** `discard` is allowed in it. */
+  discard?: boolean;
+}
+
+export interface ApiShaderType {
+  functions: Record<string, ApiShaderFunction>;
+  /** render_mode names with their options (blend -> mix, add, ...); an empty list is a flag. */
+  renderModes: Record<string, string[]>;
+  stencilModes: Record<string, string[]>;
+}
+
 export interface ApiData {
   godot: string;
   commit: string;
   license: string;
   classes: ApiClass[];
   renames: ApiRenames;
+  /** Shader types by name (spatial, canvas_item, ...), from servers/rendering/shader_types.cpp. */
+  shaders?: Record<string, ApiShaderType>;
 }
 
 export type EntryKind =

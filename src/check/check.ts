@@ -6,6 +6,7 @@ import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { asCheckDiagnostic, checkShaders, ShaderCheckError } from "../shaders/shaders.js";
 import { checkerSource, excludePath } from "./checker-script.js";
+import { parseExitLeaks, type ExitLeaks } from "./exit-leaks.js";
 import { findGodot, godotVersion, runGodot, type RunResult } from "./godot.js";
 import { MARKER, parseGodotLog, type Diagnostic } from "./log.js";
 
@@ -28,7 +29,9 @@ export interface CheckOptions {
   timeoutMs?: number;
   /** Keep the raw Godot output of each step in the result. */
   keepLogs?: boolean;
-  /** Also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run). */
+  /** When the run leaks objects or resources at exit, run it once more with --verbose to name them (default true). */
+  leakDetails?: boolean;
+  /** Also draw every shader on the GPU (Compatibility renderer; needs a display or xvfb-run), for what only the driver rejects. */
   shaders?: boolean;
 }
 
@@ -44,6 +47,8 @@ export interface CheckResult {
   godotVersion: string;
   scripts: number;
   scenes: number;
+  /** .gdshader files the checker compiled headless (Godot's shader compiler, without a GPU). */
+  shaderFiles?: number;
   diagnostics: Diagnostic[];
   steps: CheckStep[];
   errors: number;
@@ -85,10 +90,11 @@ const NOISE = [
 ];
 
 /** Leak reports Godot prints when it exits. */
-const EXIT_LEAK =
+export const EXIT_LEAK =
   /(ObjectDB instances? (were|was) leaked at exit|resources? still in use at exit|RIDs? of type .* (were|was) leaked|Pages in use exist at exit)/;
 
-const CHECKER_DIR = ".godot/godotwright";
+// Its own folder: .godot/godotwright also holds the journal and other memory, which a check must keep.
+const CHECKER_DIR = ".godot/godotwright/check";
 const CHECKER_RES = `res://${CHECKER_DIR}/check.gd`;
 
 export async function checkProject(path: string, options: CheckOptions = {}): Promise<CheckResult> {
@@ -145,12 +151,14 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   );
   let scripts = 0;
   let scenes = 0;
+  let shaderFiles = 0;
   try {
     const result = await run("check", ["--script", CHECKER_RES]);
-    const done = new RegExp(`${MARKER}_DONE (\\d+) (\\d+)`).exec(result.stderr);
+    const done = new RegExp(`${MARKER}_DONE (\\d+) (\\d+)(?: (\\d+))?`).exec(result.stderr);
     if (done) {
       scripts = Number(done[1]);
       scenes = Number(done[2]);
+      shaderFiles = Number(done[3] ?? 0);
     } else if (!result.timedOut) {
       diagnostics.push({
         severity: "error",
@@ -161,7 +169,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     for (const d of parseGodotLog(result.stderr, "check")) {
       // The checker exits with resources still cached; those leaks are its own.
       if (d.file === CHECKER_RES || EXIT_LEAK.test(d.message)) continue;
-      if (d.source === "check" && d.file) d.source = d.file.endsWith(".gd") ? "script" : "scene";
+      if (d.source === "check" && d.file) d.source = d.file.endsWith(".gd") ? "script" : d.file.endsWith(".gdshader") ? "shader" : "scene";
       diagnostics.push(d);
     }
   } finally {
@@ -205,6 +213,13 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
         d.message = `at exit: ${d.message}`;
       }
     }
+    const leaks = found.filter((d) => /ObjectDB instances? (?:were|was) leaked|resources? still in use at exit/.test(d.message));
+    if (leaks.length && options.leakDetails !== false && !result.timedOut) {
+      // Godot names what leaked only with --verbose, which also floods the output; so a second run, only for the names.
+      const verbose = await run("run-verbose", ["--verbose", "--fixed-fps", String(fps), "--quit-after", String(frames), ...(scene ? [scene] : [])]);
+      const named = parseExitLeaks(`${verbose.stdout}\n${verbose.stderr}`);
+      for (const d of leaks) d.message = withLeakNames(d.message, named);
+    }
     diagnostics.push(...found);
     const exit = unexplainedExit("run", result, found);
     if (exit) diagnostics.push(exit);
@@ -216,6 +231,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     godotVersion: version,
     scripts,
     scenes,
+    shaderFiles,
     diagnostics: clean,
     steps,
     errors: clean.filter((d) => d.severity === "error").length,
@@ -226,8 +242,37 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   };
 }
 
+/**
+ * Headless Godot compiles shaders with its dummy renderer, which words a missing or unknown shader_type as
+ * "Shader type X not supported in Dummy renderer."; this says what is wrong with the shader instead.
+ */
+function shaderTypeError(d: Diagnostic): Diagnostic {
+  if (d.source === "shader" && d.message === "Tokenizer: Unknown character #35: '#'") {
+    return { ...d, message: `${d.message} (the shader preprocessor failed, most often on an #include of a file that does not exist; godot_review names it)` };
+  }
+  const m = /^Shader type (\S*) not supported in Dummy renderer\.$/.exec(d.message);
+  if (!m) return d;
+  const types = "spatial, canvas_item, particles, sky, fog or texture_blit";
+  const message = m[1] ? `Unknown shader_type ${m[1]}: use ${types}.` : `No shader_type: start the shader with shader_type ${types}.`;
+  return { ...d, message, source: "shader" };
+}
+
+/** "at exit: 15 ObjectDB instances were leaked at exit (run with ...)" with the classes or resources Godot named. */
+export function withLeakNames(message: string, named: ExitLeaks): string {
+  const short = message.replace(/\s*\(run with `?--verbose`? for details\)\.?/, "").replace(/\.$/, "");
+  if (/ObjectDB/.test(message)) {
+    const classes = Object.entries(named.instances).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    if (!classes.length) return message;
+    const list = classes.slice(0, 8).map(([c, n]) => `${c} x${n}`).join(", ");
+    return `${short}: ${list}${classes.length > 8 ? `, +${classes.length - 8} classes` : ""} (godot_leaks shows where they come from)`;
+  }
+  const own = named.resources.filter((r) => !r.path.startsWith("res://.godot/"));
+  if (!own.length) return message;
+  return `${short}: ${own.slice(0, 6).map((r) => `${r.path} (${r.type})`).join(", ")}${own.length > 6 ? `, +${own.length - 6} more` : ""}`;
+}
+
 /** The project's physics ticks per second (default 60). */
-function physicsRate(root: string): number {
+export function physicsRate(root: string): number {
   try {
     const value = parseProjectSettings(readFileSync(join(root, "project.godot"), "utf8")).values["physics/common/physics_ticks_per_second"];
     return typeof value === "number" && value > 0 ? value : 60;
@@ -237,7 +282,7 @@ function physicsRate(root: string): number {
 }
 
 /** A step that exits badly must not pass as clean just because Godot printed no error for it. */
-function unexplainedExit(name: string, result: RunResult, found: Diagnostic[]): Diagnostic | undefined {
+export function unexplainedExit(name: string, result: RunResult, found: Diagnostic[]): Diagnostic | undefined {
   if (result.timedOut || result.code === 0 || cleanup(found).some((d) => d.severity === "error")) return undefined;
   const how = result.code === null ? "was killed by a signal" : `exited with code ${result.code}`;
   return { severity: "error", message: `${name} ${how}`, source: name };
@@ -252,10 +297,14 @@ const MENTIONED_PATH = /res:\/\/[^\s'"()]+[^\s'"().,:;]/g;
 /**
  * Drops noise and repeats, so each root cause is reported once:
  * - follow-up errors that only restate a script error,
- * - vaguer reports of a missing file that Godot also reported with a line.
+ * - vaguer reports of a missing file that Godot also reported with a line,
+ * - a shader error found both headless and by drawing the shader.
  */
 export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
-  const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message)));
+  const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message))).map(shaderTypeError);
+  // A shader error seen while a scene (or the import) compiled the shader names only the shader's line; the shader pass
+  // reports the same error with its file, so the vaguer copy goes.
+  const shaderErrors = new Set(kept.filter((d) => d.source === "shader" && d.file && d.line).map((d) => `${d.message} (shader line ${d.line})`));
   const scriptErrors = new Set(kept.filter((d) => d.source === "script" && d.line).map((d) => d.file));
   const located = new Set<string>();
   for (const d of kept) {
@@ -264,12 +313,31 @@ export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
       for (const path of d.message.match(MENTIONED_PATH) ?? []) located.add(path);
     }
   }
+  // The checker compiles shaders headless and `shaders` draws them too: the same error at the same line twice. The copy
+  // with the most to say (a hint, the including shader) stays.
+  // Godot words a few errors differently in the two passes, so they are matched on their first sentence.
+  const firstSentence = (m: string) => m.replace(/ \(.*\)$/, "").replace(/(\.) .*$/, "$1");
+  const shaderKey = (d: Diagnostic) => (d.source === "shader" && d.file && d.line ? `${d.severity}|${d.file}|${d.line}|${firstSentence(d.message)}` : undefined);
+  // A shader in a scene that failed while the scene loaded is named with the line in its code; the GPU pass names the
+  // line in the scene file. Same file and error: the one with the file's line stays.
+  const inFile = new Set(kept.filter((d) => d.source === "shader" && d.file && d.line).map((d) => `${d.file}|${firstSentence(d.message)}`));
+  const fullest = new Map<string, Diagnostic>();
+  for (const d of kept) {
+    const k = shaderKey(d);
+    if (k && (fullest.get(k)?.message.length ?? -1) < d.message.length) fullest.set(k, d);
+  }
   const seen = new Set<string>();
   return kept.filter((d) => {
+    if (d.source === "shader" && shaderErrors.has(d.message)) return false;
+    const k = shaderKey(d);
+    if (k && fullest.get(k) !== d) return false;
+    const inCode = d.file && !d.line ? /^(.*) \(shader line \d+\)$/.exec(d.message) : null;
+    if (inCode && inFile.has(`${d.file}|${firstSentence(inCode[1]!)}`)) return false;
     const restated = /^Failed to load script "(.+?)" with error/.exec(d.message);
     if (restated && scriptErrors.has(restated[1])) return false;
     const paths = d.message.match(MENTIONED_PATH) ?? [];
-    const vague = d.source === "scan" || !d.line;
+    // An at-exit leak names the files still in use; it does not restate their errors.
+    const vague = (d.source === "scan" || !d.line) && !d.message.startsWith("at exit:");
     if (vague && paths.length > 0 && paths.every((p) => located.has(p))) return false;
     const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
     if (seen.has(key)) return false;

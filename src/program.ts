@@ -8,6 +8,7 @@ import { codeCommand } from "./commands/code.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
 import { depsCommand } from "./commands/deps.js";
+import { leaksCommand } from "./commands/leaks.js";
 import { perfCommand } from "./commands/perf.js";
 import { gameCommand, sessionCommand } from "./commands/session.js";
 import { fixCommand } from "./commands/fix.js";
@@ -21,12 +22,14 @@ import { migrateCommand } from "./commands/migrate.js";
 import { usagesCommand } from "./commands/usages.js";
 import { renameCommand } from "./commands/rename.js";
 import { projectCommand } from "./commands/project.js";
+import { resourceCommand } from "./commands/resource.js";
 import { sceneCommand } from "./commands/scene.js";
 import { testCommand } from "./commands/test.js";
 import { playCommand } from "./commands/play.js";
 import { screenshotCommand } from "./commands/screenshot.js";
 import { shadersCommand } from "./commands/shaders.js";
 import { scanCommand } from "./commands/scan.js";
+import { shaderCommand } from "./commands/shader.js";
 import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
 
@@ -39,12 +42,15 @@ export function createProgram(): Command {
     .version(VERSION, "-v, --version", "print the version")
     .helpOption("-h, --help", "show help")
     .showHelpAfterError()
+    // Options belong to the command they follow, so `export --preset` and `export run --preset` stay apart.
+    .enablePositionalOptions()
     .addCommand(scanCommand())
     .addCommand(checkCommand())
     .addCommand(shadersCommand())
     .addCommand(testCommand())
     .addCommand(playCommand())
     .addCommand(perfCommand())
+    .addCommand(leaksCommand())
     .addCommand(sessionCommand())
     .addCommand(gameCommand())
     .addCommand(scenarioCommand())
@@ -52,6 +58,7 @@ export function createProgram(): Command {
     .addCommand(screenshotCommand())
     .addCommand(apiCommand())
     .addCommand(reviewCommand())
+    .addCommand(shaderCommand())
     .addCommand(migrateCommand())
     .addCommand(fixCommand())
     .addCommand(doctorCommand())
@@ -63,6 +70,7 @@ export function createProgram(): Command {
     .addCommand(renameCommand())
     .addCommand(projectCommand())
     .addCommand(sceneCommand())
+    .addCommand(resourceCommand())
     .addCommand(modelCommand())
     .addCommand(mcpCommand())
     .addCommand(learnCommand())

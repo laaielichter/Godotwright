@@ -5,17 +5,19 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createServer } from "../src/mcp/server.js";
 import { decodePng, encodePng, type RgbaImage } from "../src/screenshot/png.js";
-import { ScreenshotError, baselineKey, compareBaseline, formatScreenshot, screenshotScript, takeScreenshot, type ScreenshotReport } from "../src/screenshot/screenshot.js";
+import { compareBaselineFile as compareBaseline } from "../src/screenshot/baseline.js";
+import { ScreenshotError, baselineKey, formatScreenshot, screenshotScript, takeScreenshot, type ScreenshotReport } from "../src/screenshot/screenshot.js";
 import { makeProject, tempFolder } from "./helpers.js";
 
 function flat(width: number, height: number, colour: [number, number, number], box?: { x: number; y: number; w: number; h: number; colour: [number, number, number] }): Buffer {
-  const data = new Uint8Array(width * height * 4);
+  const rgba = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
       const inside = box && x >= box.x && x < box.x + box.w && y >= box.y && y < box.y + box.h;
-      data.set([...(inside ? box.colour : colour), 255], (y * width + x) * 4);
+      rgba.set([...(inside ? box.colour : colour), 255], (y * width + x) * 4);
     }
-  return encodePng({ width, height, data } satisfies RgbaImage);
+  const img: RgbaImage = { width, height, rgba };
+  return encodePng(img.width, img.height, img.rgba, 4);
 }
 
 const REPORT: ScreenshotReport = {
@@ -111,7 +113,7 @@ describe("screenshot", () => {
     const shot = join(dir, "shot.png");
     const baseline = join(dir, "baselines", "main.png");
     writeFileSync(shot, flat(160, 90, [40, 80, 120]));
-    expect(compareBaseline(shot, baseline)).toEqual({ status: "saved", file: baseline, threshold: 0.5, tolerance: 3 });
+    expect(compareBaseline(shot, baseline)).toEqual({ status: "saved", ok: true, file: baseline, threshold: 0.5, tolerance: 3 });
     expect(readFileSync(baseline).equals(readFileSync(shot))).toBe(true);
 
     // Not one pixel changed: no diff picture, and a stale one from an earlier compare is removed.
@@ -126,7 +128,7 @@ describe("screenshot", () => {
     const changed = compareBaseline(shot, baseline);
     expect(changed).toMatchObject({ status: "changed", pixels: 200, percent: 1.39, region: { x: 96, y: 32, width: 32, height: 32 } });
     const diff = decodePng(readFileSync(join(dir, "shot-diff.png")));
-    expect([...diff.data.subarray((45 * 160 + 110) * 4, (45 * 160 + 110) * 4 + 3)]).toEqual([255, 0, 0]);
+    expect([...diff.rgba.subarray((45 * 160 + 110) * 4, (45 * 160 + 110) * 4 + 3)]).toEqual([255, 0, 0]);
     // The same change within a looser threshold passes, but is not called unchanged, and still says where it is.
     expect(compareBaseline(shot, baseline, { threshold: 2 })).toMatchObject({ status: "within-threshold", pixels: 200, diff: join(dir, "shot-diff.png"), region: { x: 96, y: 32 } });
     // The diff can go elsewhere, e.g. out of the folders Godot imports.
@@ -156,7 +158,7 @@ describe("screenshot", () => {
   });
 
   it("says in words whether the picture matches its baseline, and what to do next", () => {
-    const base = { file: "/p/.godotwright/baselines/main_tscn-867a7a3a@320x180_iso.png", threshold: 0.5, tolerance: 3 };
+    const base = { file: "/p/.godotwright/baselines/main_tscn-867a7a3a@320x180_iso.png", threshold: 0.5, tolerance: 3, ok: true };
     const saved = formatScreenshot({ ...REPORT, baseline: { status: "saved", ...base } });
     expect(saved).toContain("baseline saved: /p/.godotwright/baselines/main_tscn-867a7a3a@320x180_iso.png");
     expect(saved.trimEnd().split("\n").at(-1)).toMatch(/^Next: /);
@@ -170,18 +172,19 @@ describe("screenshot", () => {
     expect(small).toContain("  diff: /d.png (changed pixels in red)");
     expect(small).not.toMatch(/unchanged|nothing to fix|matches/);
     expect(small.trimEnd().split("\n").at(-1)).toMatch(/^Next: look at the diff/);
-    const changed = formatScreenshot({ ...REPORT, baseline: { status: "changed", ...base, diff: "/d.png", percent: 1.39, pixels: 800, region: { x: 96, y: 32, width: 32, height: 32 }, meanShift: 87.5 } });
+    const changed = formatScreenshot({ ...REPORT, baseline: { status: "changed", ...base, ok: false, diff: "/d.png", percent: 1.39, pixels: 800, region: { x: 96, y: 32, width: 32, height: 32 }, meanShift: 87.5 } });
     expect(changed).toContain("baseline CHANGED: 1.39% of pixels changed (800 px; threshold 0.5%, tolerance 3); largest change at (96, 32) size 32x32, mean shift 87.5");
     expect(changed).toContain("  diff: /d.png (changed pixels in red)");
     expect(changed).toMatch(/Next: look at the diff; if the change is intended, update the baseline/);
-    const size = formatScreenshot({ ...REPORT, baseline: { status: "size-mismatch", ...base, baselineSize: { width: 640, height: 360 } } });
+    const size = formatScreenshot({ ...REPORT, baseline: { status: "size-mismatch", ...base, ok: false, baselineSize: { width: 640, height: 360 }, actualSize: { width: 320, height: 180 } } });
     expect(size).toContain("baseline size differs: the baseline is 640x360, the new picture 320x180; nothing compared");
     expect(formatScreenshot(REPORT)).toMatch(/Next: look at the picture/);
   });
 
-  it("refuses a baseline that is not a PNG, or that is the picture itself", async () => {
+  it("refuses a baseline that is the picture itself, or a threshold or tolerance out of range", async () => {
     const root = makeProject({ "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n', "main.tscn": "[gd_scene format=3]\n" });
-    await expect(takeScreenshot(root, { baseline: "base.txt" })).rejects.toThrow(/\.png file/);
+    await expect(takeScreenshot(root, { baseline: "auto", threshold: 101 })).rejects.toThrow(/threshold is a percent/);
+    await expect(takeScreenshot(root, { baseline: "hud", tolerance: -1 })).rejects.toThrow(/tolerance is a colour distance/);
     await expect(takeScreenshot(root, { baseline: "same.png", out: join(root, "same.png") })).rejects.toThrow(/same file/);
   });
 
@@ -220,5 +223,48 @@ describe("screenshot", () => {
     } finally {
       await Promise.all([client.close(), server.close()]);
     }
+  });
+});
+
+describe("screenshot baselines", () => {
+  const project = () =>
+    makeProject({
+      "project.godot": '[application]\nrun/main_scene="res://main.tscn"\n',
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node2D"]\n',
+      ".godotwright/baselines/hud.json": JSON.stringify({ scene: "res://main.tscn", width: 320, height: 180, frames: 10 }),
+      ".godotwright/baselines/hud.png": "x",
+      ".godotwright/baselines/jump-top.json": JSON.stringify({ scene: "res://main.tscn", width: 640, height: 360, frames: 30, scenario: ".godotwright/scenarios/jump.json" }),
+    });
+
+  it("refuses to compare with other settings than the baseline's, before starting Godot", async () => {
+    await expect(takeScreenshot(project(), { baseline: "hud", width: 640, godot: "/nope" })).rejects.toThrow(
+      "baseline hud was taken with other settings: width 640 (baseline: 320). Leave them out to compare like for like, or update the baseline to replace it.",
+    );
+    await expect(takeScreenshot(project(), { baseline: "hud", scene: "other.tscn", godot: "/nope" })).rejects.toThrow(/scene other.tscn \(baseline: res:\/\/main.tscn\)/);
+  });
+
+  it("leaves a scenario's baseline to the scenario", async () => {
+    await expect(takeScreenshot(project(), { baseline: "jump-top", godot: "/nope" })).rejects.toThrow(/belongs to the scenario .godotwright\/scenarios\/jump.json/);
+  });
+
+  it("puts the blank warning and the comparison under the picture", () => {
+    const text = formatScreenshot(
+      {
+        file: "/p/.godot/godotwright/diff/hud.actual.png",
+        width: 320,
+        height: 180,
+        subject: "scene res://main.tscn",
+        views: [],
+        coverage: [{ view: "scene", percent: 0 }],
+        autoCamera: false,
+        renderer: "gl_compatibility",
+        diagnostics: [],
+        blank: "the whole picture is black",
+        baseline: { name: "hud", status: "unchanged", ok: true, file: "/p/.godotwright/baselines/hud.png", threshold: 0.5, tolerance: 3, percent: 0, pixels: 0, meanShift: 0, actual: "/p/.godot/godotwright/diff/hud.actual.png", blank: "the whole picture is black" },
+      },
+      "run again with --update-baseline",
+    );
+    expect(text).toContain("  warning: the picture is blank: the whole picture is black\nbaseline hud unchanged: 0% of pixels changed");
+    expect(text.match(/blank/g)).toHaveLength(1);
   });
 });

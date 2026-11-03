@@ -1,9 +1,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Tier } from "../src/mcp/server.js";
-import { DEMO, FIXTURES, makeProject } from "./helpers.js";
+import { DEMO, FIXTURES, makeProject, tempFolder } from "./helpers.js";
 
 async function connect(tier: Tier, root = DEMO) {
   const server = createServer({ tier, root, godot: "/no/such/godot" });
@@ -34,9 +35,11 @@ describe("MCP server (cheap profile)", () => {
       "godot_deps",
       "godot_doctor",
       "godot_export",
+      "godot_export_run",
       "godot_feedback",
       "godot_fix",
       "godot_game",
+      "godot_leaks",
       "godot_lesson_add",
       "godot_lessons",
       "godot_migrate",
@@ -51,11 +54,14 @@ describe("MCP server (cheap profile)", () => {
       "godot_play",
       "godot_project_edit",
       "godot_rename",
+      "godot_resource_edit",
       "godot_review",
       "godot_scan",
+      "godot_scenario",
       "godot_scene_edit",
       "godot_screenshot",
       "godot_session",
+      "godot_shader",
       "godot_test",
       "godot_undo",
       "godot_usages",
@@ -66,6 +72,27 @@ describe("MCP server (cheap profile)", () => {
     expect(
       tools.find((t) => t.name === "godot_api")?.inputSchema.required,
     ).toEqual(["query"]);
+  });
+
+  it("edits import settings through godot_resource_edit, and refuses an unknown option", async () => {
+    const root = makeProject({
+      "project.godot": "config_version=5\n",
+      "beep.wav.import": '[remap]\n\nimporter="wav"\ntype="AudioStreamWAV"\n\n[params]\n\nedit/loop_mode=0\n',
+    });
+    const server = createServer({ tier: "cheap", root, godot: "/no/such/godot" });
+    const local = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), local.connect(b)]);
+    const call = (args: Record<string, unknown>) => local.callTool({ name: "godot_resource_edit", arguments: { file: "res://beep.wav", ...args } });
+    const dry = (await call({ ops: [{ op: "set", key: "edit/loop_mode", value: "Forward" }] })) as Result;
+    expect(dry.isError).toBeFalsy();
+    expect(textOf(dry)).toContain("+ edit/loop_mode=2");
+    const written = (await call({ ops: [{ op: "set", key: "edit/loop_mode", value: 2 }], write: true })) as Result;
+    expect(textOf(written)).toMatch(/reimport skipped: not reimported/);
+    const bad = (await call({ ops: [{ op: "set", key: "edit/loop", value: "1" }] })) as Result;
+    expect(bad.isError).toBe(true);
+    expect(textOf(bad)).toMatch(/no option edit\/loop; did you mean .*edit\/loop_mode/);
+    await Promise.all([local.close(), server.close()]);
   });
 
   it("does not call the tools that write learning read-only", async () => {
@@ -80,6 +107,25 @@ describe("MCP server (cheap profile)", () => {
       tools.find((t) => t.name === "godot_api_search")?.annotations
         ?.readOnlyHint,
     ).toBe(true);
+  });
+
+  it("lists and checks scenarios, and needs Godot to run or save one", async () => {
+    const root = makeProject({
+      "project.godot": "[application]\n",
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node"]\n',
+      ".godotwright/scenarios/jump.json": '{"input": "10 tap jump", "frames": 70, "expect": ["Hero.velocity.y == -400 @ 10"]}',
+    });
+    const call = (args: Record<string, unknown>) => client.callTool({ name: "godot_scenario", arguments: { path: root, ...args } }) as Promise<Result>;
+    expect(textOf(await call({ op: "list" }))).toBe('jump: main scene; 70 frames; input "10 tap jump"\n  Hero.velocity.y == -400 @ 10\n');
+    const none = await call({ op: "run", name: "swim" });
+    expect(none.isError).toBe(true);
+    expect(textOf(none)).toContain('no scenarios matching "swim"');
+    expect((await call({ op: "save" })).isError).toBe(true);
+    const noGodot = await call({ op: "save", name: "jump2", scene: "res://main.tscn", input: "10 tap jump", expect: ["Hero.velocity.y == -400 @ 10"] });
+    expect(noGodot.isError).toBe(true);
+    expect(textOf(noGodot)).toMatch(/Godot/);
+    const exists = await call({ op: "save", name: "jump", expect: ["Hero.velocity.y == -400 @ 10"] });
+    expect(textOf(exists)).toContain("exists; pass overwrite");
   });
 
   it("sends step-by-step instructions", () => {
@@ -146,6 +192,59 @@ describe("MCP server (cheap profile)", () => {
     })) as Result;
     expect(r.isError).toBe(true);
     expect(textOf(r)).toContain("not found or not executable");
+  });
+
+  it("exports with destructive hints, and reads a pack read-only without Godot", async () => {
+    const { tools } = await client.listTools();
+    expect(tools.find((t) => t.name === "godot_export_run")?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(tools.find((t) => t.name === "godot_export")?.annotations?.readOnlyHint).toBe(true);
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="P"\nrun/main_scene="res://main.tscn"\n',
+      "main.tscn": '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://main.gd" id="1"]\n\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n',
+      "main.gd": 'extends Node\n\n\nfunc _ready() -> void:\n\tprint(FileAccess.get_file_as_string("res://data/b.json"))\n',
+      "data/b.json": "{}",
+      "export_presets.cfg": '[preset.0]\n\nname="Linux"\nplatform="Linux"\nexport_filter="all_resources"\n',
+    });
+    const read = (await client.callTool({ name: "godot_export", arguments: { path: root, pck: `${FIXTURES}/pck/game.pck` } })) as Result;
+    expect(read.isError).toBeFalsy();
+    expect(textOf(read)).toMatch(/^export pck: .*game\.pck: ok\npack: 11 files/);
+    const run = (await client.callTool({ name: "godot_export_run", arguments: { path: root, preset: "Linux" } })) as Result;
+    expect(run.isError).toBe(true);
+    expect(textOf(run)).toContain("not found or not executable");
+    const noPreset = (await client.callTool({ name: "godot_export_run", arguments: { path: root } })) as Result;
+    expect(textOf(noPreset)).toBe("pack needs preset (its name or number)");
+    // An out outside the project is refused before anything is deleted or written.
+    const keep = join(tempFolder("gw-outside-"), "keep.pck");
+    writeFileSync(keep, "PRECIOUS");
+    const escape = (await client.callTool({ name: "godot_export_run", arguments: { path: root, preset: "Linux", out: keep, frames: 0 } })) as Result;
+    expect(escape.isError).toBe(true);
+    expect(textOf(escape)).toContain("is outside the project");
+    expect(readFileSync(keep, "utf8")).toBe("PRECIOUS");
+  });
+
+  it("reviews an upgrade between 4.x releases with from and target", async () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="Old"\nconfig/features=PackedStringArray("4.5")\n',
+      "main.tscn": '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n\n[node name="Skel" type="Skeleton3D" parent="."]\n\n[node name="Body" type="MeshInstance3D" parent="Skel"]\n',
+    });
+    const review = textOf(await client.callTool({ name: "godot_review", arguments: { path: root, target: "4.6" } }));
+    expect(review).toContain("; upgrade 4.5 -> 4.6");
+    expect(review).toContain("[api/upgrade-mesh-skeleton]");
+    const later = (await client.callTool({ name: "godot_review", arguments: { path: root, target: "4.8" } })) as Result;
+    expect(later.isError).toBe(true);
+    expect(textOf(later)).toContain("compare_godot");
+  });
+
+  it("asks for a second binary when compare_godot is next and GODOT_NEXT is unset", async () => {
+    const saved = process.env["GODOT_NEXT"];
+    delete process.env["GODOT_NEXT"];
+    try {
+      const r = (await client.callTool({ name: "godot_check", arguments: { compare_godot: "next" } })) as Result;
+      expect(r.isError).toBe(true);
+      expect(textOf(r)).toContain("GODOT_NEXT");
+    } finally {
+      if (saved !== undefined) process.env["GODOT_NEXT"] = saved;
+    }
   });
 
   it("returns errors as tool errors, not crashes", async () => {
@@ -237,6 +336,15 @@ describe("MCP server (premium profile)", () => {
     expect(textOf(escape)).toContain(
       "no such file in the project: res://../scripts/enemy.gd",
     );
+  });
+
+  it("keeps the screenshot baseline folder inside the project", async () => {
+    for (const baseline_dir of ["../outside", "/tmp/gw-escape-baselines"]) {
+      const r = (await client.callTool({ name: "godot_screenshot", arguments: { scene: "res://main.tscn", baseline: "evil", baseline_dir } })) as Result;
+      expect(r.isError).toBe(true);
+      expect(textOf(r)).toContain("outside the project");
+    }
+    expect(existsSync(`${FIXTURES}/outside`)).toBe(false);
   });
 
   it("finds what is wrong, in order, and fixes what is mechanical", async () => {

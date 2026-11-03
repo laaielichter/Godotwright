@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import type { ApiMethod } from "../../api/types.js";
 import type { LogicalLine } from "../../godot/gdscript.js";
-import { fromResPath } from "../../project/files.js";
 import { finding, type Finding } from "../rules.js";
 import type { ClassModel, ProjectModel } from "../model.js";
 import { bodyOf } from "./performance.js";
@@ -228,32 +226,6 @@ function parentSignature(pm: ProjectModel, model: ClassModel, name: string): { c
   return { count: params.length, defaults: params.filter((p) => p.default !== undefined).length, where: `${base}.${name}()` };
 }
 
-/** A water or glass shader that reads the depth texture while it writes depth in a prepass reads its own surface. */
-export function checkShaderPitfalls(pm: ProjectModel): Finding[] {
-  const out: Finding[] = [];
-  for (const shader of pm.data.map.shaders) {
-    if (shader.external) continue;
-    let source: string;
-    try {
-      source = readFileSync(fromResPath(pm.data.root, shader.path), "utf8");
-    } catch {
-      continue;
-    }
-    // Comments blanked to spaces, so positions (and line numbers) stay the same.
-    const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (c) => c.replace(/[^\n]/g, " "));
-    const mode = /\brender_mode\b[^;]*\bdepth_prepass_alpha\b[^;]*;/.exec(code);
-    if (!mode || !/\bhint_depth_texture\b/.test(code)) continue;
-    out.push(
-      finding(
-        "quality/shader-reads-own-depth",
-        shader.path,
-        code.slice(0, mode.index).split("\n").length,
-        "This shader writes its own depth in the alpha prepass and also reads the depth texture, so it reads its own surface: depth-based foam or fog shows everywhere. Use depth_draw_always instead of depth_prepass_alpha.",
-      ),
-    );
-  }
-  return out;
-}
 
 /** True when a line only runs under a condition: inside an if, elif, else, match or while, or after an early return. */
 function conditional(body: LogicalLine[], ll: LogicalLine): boolean {

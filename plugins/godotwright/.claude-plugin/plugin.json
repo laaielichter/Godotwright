@@ -15,5 +15,38 @@
     "gdscript",
     "gamedev",
     "mcp"
-  ]
+  ],
+  "userConfig": {
+    "project": {
+      "type": "directory",
+      "title": "Godot project",
+      "description": "The folder with your project.godot. Tools use it when Claude does not pass a path.",
+      "required": false
+    },
+    "godot": {
+      "type": "file",
+      "title": "Godot 4.7 program (optional)",
+      "description": "Only for checks, tests, play and screenshots. Leave empty to look in the usual install folders.",
+      "required": false
+    },
+    "protect": {
+      "type": "string",
+      "title": "Protected paths (optional)",
+      "description": "Folders or files that must stay byte-identical, separated by commas: Claude's file edits and Godotwright's write tools refuse them. Absolute, or relative to the folder Claude Code runs in. A godotwright.json \"protect\" list does the same per project.",
+      "required": false
+    },
+    "tools": {
+      "type": "string",
+      "title": "Tool sets (optional)",
+      "description": "Which Godotwright tools Claude sees, comma separated: core, edit, run, game, export, model, or tool names. Empty means all.",
+      "required": false
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read-only",
+      "description": "Leave out the tools that always write and refuse write: true on the others.",
+      "required": false,
+      "default": false
+    }
+  }
 }

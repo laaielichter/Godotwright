@@ -4,7 +4,8 @@
  * Usage: node scripts/build-api.ts <godot-source-dir> [version] [commit]
  *
  * The source dir is a checkout of github.com/godotengine/godot at a release tag
- * (only doc/classes, modules/<name>/doc_classes and platform/<name>/doc_classes are read).
+ * (only doc/classes, modules/<name>/doc_classes and platform/<name>/doc_classes are read, plus
+ * editor/project_upgrade/renames_map_3_to_4.cpp and servers/rendering/shader_types.cpp).
  * The class reference is MIT licensed, like the engine.
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -250,6 +251,78 @@ export function readRenames(source: string): Record<string, Record<string, strin
   return out;
 }
 
+/** Shader mode names as Godot writes them after `shader_type` (RSE::SHADER_CANVAS_ITEM -> canvas_item). */
+const SHADER_MODES: Record<string, string> = {
+  SPATIAL: "spatial",
+  CANVAS_ITEM: "canvas_item",
+  PARTICLES: "particles",
+  SKY: "sky",
+  FOG: "fog",
+  TEXTURE_BLIT: "texture_blit",
+};
+
+/** GLSL spelling of a ShaderLanguage::TYPE_* name (TYPE_SAMPLER2D -> sampler2D). */
+function glslType(name: string): string {
+  const lower = name.toLowerCase();
+  return lower.replace(/^(.?sampler)(2darray|2d|3d|cube|cubearray)$/, (_m, s: string, d: string) => s + d.replace("d", "D").replace("array", "Array").replace("cube", "Cube"));
+}
+
+export interface ShaderFunctionData {
+  /** Built-in name -> GLSL type, with "const " in front when it can only be read. */
+  builtins: Record<string, string>;
+  /** Functions only this stage can call (texture_sdf, emit_subparticle). */
+  stage?: string[];
+  /** A processor function Godot calls (vertex, fragment, ...); "global" and "constants" are not. */
+  main?: boolean;
+  /** `discard` is allowed in it. */
+  discard?: boolean;
+}
+
+export interface ShaderModeData {
+  functions: Record<string, ShaderFunctionData>;
+  /** render_mode names with their options (blend -> mix, add, ...); an empty list is a flag. */
+  renderModes: Record<string, string[]>;
+  stencilModes: Record<string, string[]>;
+}
+
+/**
+ * Reads the built-ins, stage functions and render modes of every shader type from servers/rendering/shader_types.cpp,
+ * the table Godot's shader compiler checks names against.
+ */
+export function readShaderTypes(source: string): Record<string, ShaderModeData> {
+  const file = join(source, "servers", "rendering", "shader_types.cpp");
+  if (!existsSync(file)) return {};
+  const cpp = readFileSync(file, "utf8");
+  const out: Record<string, ShaderModeData> = {};
+  const mode = (key: string): ShaderModeData => {
+    const name = SHADER_MODES[key];
+    if (!name) throw new Error(`shader_types.cpp: unknown shader mode ${key}`);
+    return (out[name] ??= { functions: {}, renderModes: {}, stencilModes: {} });
+  };
+  const fn = (m: ShaderModeData, name: string): ShaderFunctionData => (m.functions[name] ??= { builtins: {} });
+  const strings = (text: string) => [...text.matchAll(/"([^"]*)"/g)].map((s) => s[1]!);
+  for (const line of cpp.split("\n")) {
+    const head = /shader_modes\[RSE::SHADER_([A-Z_]+)\]\.(.*)$/.exec(line);
+    if (!head) continue;
+    const m = mode(head[1]!);
+    const rest = head[2]!;
+    let r: RegExpExecArray | null;
+    if ((r = /^functions\["(\w+)"\]\.built_ins\["(\w+)"\] = (constt\(|constvt\()?ShaderLanguage::TYPE_(\w+)/.exec(rest))) {
+      fn(m, r[1]!).builtins[r[2]!] = `${r[3] ? "const " : ""}${glslType(r[4]!)}`;
+    } else if ((r = /^functions\["(\w+)"\]\.stage_functions\["(\w+)"\]/.exec(rest))) {
+      const f = fn(m, r[1]!);
+      if (!f.stage?.includes(r[2]!)) (f.stage ??= []).push(r[2]!);
+    } else if ((r = /^functions\["(\w+)"\]\.(main_function|can_discard) = (true|false);/.exec(rest))) {
+      if (r[3] === "true") fn(m, r[1]!)[r[2] === "main_function" ? "main" : "discard"] = true;
+    } else if ((r = /^(modes|stencil_modes)\.push_back\(\{ PNAME\("(\w+)"\)(.*)\}\);/.exec(rest))) {
+      (r[1] === "modes" ? m.renderModes : m.stencilModes)[r[2]!] = strings(r[3]!);
+    } else if (/built_ins|stage_functions|modes/.test(rest)) {
+      throw new Error(`shader_types.cpp: line not understood: ${line.trim()}`);
+    }
+  }
+  return out;
+}
+
 function main(): void {
   const [source, version = "4.7.2-stable", commit = ""] = process.argv.slice(2);
   if (!source) {
@@ -260,12 +333,14 @@ function main(): void {
     .map((file) => convertClass(parseXml(readFileSync(file, "utf8"))))
     .sort((a, b) => a.name.localeCompare(b.name));
   const renames = readRenames(source);
-  const data = { godot: version, commit, license: "MIT (Godot Engine contributors)", classes, renames };
+  const shaders = readShaderTypes(source);
+  const data = { godot: version, commit, license: "MIT (Godot Engine contributors)", classes, renames, ...(Object.keys(shaders).length ? { shaders } : {}) };
   const json = JSON.stringify(data);
   const out = join(import.meta.dirname, "..", "data", "godot-api.json.gz");
   writeFileSync(out, gzipSync(json, { level: 9 }));
   const renameCount = Object.values(renames).reduce((n, t) => n + Object.keys(t).length, 0);
-  console.log(`${classes.length} classes, ${renameCount} renames, ${(json.length / 1e6).toFixed(1)} MB JSON -> ${out}`);
+  const builtins = Object.values(shaders).reduce((n, m) => n + Object.values(m.functions).reduce((k, f) => k + Object.keys(f.builtins).length, 0), 0);
+  console.log(`${classes.length} classes, ${renameCount} renames, ${builtins} shader built-ins, ${(json.length / 1e6).toFixed(1)} MB JSON -> ${out}`);
 }
 
 // Compare file paths, not URLs: a URL is percent-encoded (spaces) and differs on Windows.

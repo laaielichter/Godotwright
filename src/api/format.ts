@@ -10,6 +10,7 @@ import type {
   ApiThemeItem,
   EnumInfo,
 } from "./types.js";
+import { apiChanges, changesOf, formatChange, type ApiChange, removedClass, removedMember, renamedMember } from "./removed.js";
 
 export function docsUrl(className: string): string {
   return `https://docs.godotengine.org/en/4.7/classes/class_${className.toLowerCase()}.html`;
@@ -126,14 +127,39 @@ export function formatClass(api: GodotApi, cls: ApiClass, detail: Detail = "brie
   return out;
 }
 
+/** A shader answer: where a built-in exists, or what a shader type or processor function offers. */
+function formatShader(answer: NonNullable<LookupResult["shader"]>, detail: Detail): string[] {
+  const where = (fn: string) => (fn === "global" || fn === "constants" ? "every function" : `${fn}()`);
+  if (answer.kind === "builtin") {
+    const out = [`shader built-in ${answer.name}:`];
+    for (const p of answer.places) out.push(`  ${p.type} ${where(p.function)}: ${p.dataType.replace(/^const (.*)$/, "$1 (read-only)")}`);
+    out.push("Not available in other shader types or functions, nor in your own functions unless it is in every function.");
+    return out;
+  }
+  const out = [`shader_type ${answer.type}${answer.function ? `, ${answer.function}()` : ""}:`];
+  const byFn = new Map<string, string[]>();
+  for (const b of answer.builtins) {
+    const list = byFn.get(where(b.function)) ?? [];
+    list.push(detail === "full" ? `${b.name}: ${b.dataType}` : `${b.name}${b.dataType.startsWith("const ") ? "" : " (rw)"}`);
+    byFn.set(where(b.function), list);
+  }
+  for (const [label, list] of byFn) out.push(`  ${label}: ${list.join(", ")}`);
+  if (answer.stage.length) out.push(`  stage functions: ${answer.stage.join(", ")}`);
+  if (!answer.function && answer.renderModes.length) out.push(`  render_mode: ${answer.renderModes.join(", ")}`);
+  out.push(detail === "full" ? "Types marked const are read-only." : "(rw) = writable; the others are read-only. detail full adds the types.");
+  return out;
+}
+
 export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail = "brief", hints: string[] = []): string {
   const out: string[] = [];
+  if (result.entries.length === 0 && result.shader) return `${formatShader(result.shader, detail).join("\n")}\n`;
   if (result.entries.length === 0) {
     out.push(`not found in Godot ${api.version}: ${result.query}`);
     if (hints.length) out.push(`learned from earlier lookups, this usually means: ${hints.join(", ")}`);
     if (result.renamed) {
       out.push(`Godot 3 name: the ${result.renamed.kind} ${result.renamed.from} is called ${result.renamed.to} in Godot 4.`);
     }
+    out.push(...historyLines(api, result.query));
     if (result.suggestions.length) out.push(`did you mean: ${result.suggestions.join(", ")}`);
     return `${out.join("\n")}\n`;
   }
@@ -141,12 +167,36 @@ export function formatLookup(api: GodotApi, result: LookupResult, detail: Detail
   const shown = detail === "full" || result.entries.length <= 12 ? result.entries : result.entries.slice(0, 12);
   for (const entry of shown) {
     out.push(...formatEntry(api, entry, many && detail === "brief" && entry.kind !== "class" ? "brief" : detail));
+    if (entry.kind !== "class") out.push(...entryChanges(api, entry).map((c) => `  ${formatChange(c)}`));
     if (many) out.push("");
   }
   if (shown.length < result.entries.length) {
     out.push(`+${result.entries.length - shown.length} more (${result.entries.slice(shown.length).map((e) => e.owner).join(", ")})`);
   }
   return `${out.join("\n").trimEnd()}\n`;
+}
+
+/** Upgrade-guide changes that affect a member; an engine property that holds a packed array gets the 4.7 element-write change. */
+function entryChanges(api: GodotApi, entry: ApiEntry): ApiChange[] {
+  const own = changesOf(api, entry.owner, entry.name).filter((c) => c.kind !== "renamed");
+  const packed = entry.kind === "property" && /^Packed\w+Array$/.test((entry.item as ApiMember).type ?? "");
+  return packed ? [...own, ...apiChanges().filter((c) => c.id === "packed-element-write")] : own;
+}
+
+/** What happened to a name Godot 4.7 does not have: removed after an older 4.x release, or renamed. */
+function historyLines(api: GodotApi, query: string): string[] {
+  const dot = query.indexOf(".");
+  if (dot < 0) {
+    const last = removedClass(query);
+    return last ? [`removed after Godot ${last}.`] : [];
+  }
+  const cls = query.slice(0, dot);
+  const name = query.slice(dot + 1);
+  const renamed = renamedMember(api, cls, name);
+  if (renamed) return [`renamed in Godot ${renamed.to}: use ${cls}.${renamed.replacement}.${/^Renamed\b/.test(renamed.message) ? "" : ` ${renamed.message}`}`];
+  const old = api.getClass(cls) ? removedMember(api, cls, name) : undefined;
+  if (!old) return [];
+  return [old.compat ? `an old name: Godot ${old.last} documented it; Godot 4.7 still accepts it for old projects.` : `removed after Godot ${old.last}.`];
 }
 
 export function formatSearch(api: GodotApi, hits: SearchHit[]): string {

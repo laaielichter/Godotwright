@@ -52,12 +52,39 @@ export interface ProjectData {
   sources: Map<string, string>;
   /** Parsed .tscn/.tres files by `res://` path. */
   resources: Map<string, ResourceFile>;
+  /**
+   * Shader code by `res://` path: .gdshader and .gdshaderinc files, and Shader resources stored in a scene or resource
+   * (`res://scene.tscn::Shader_id`, or the .tres itself when its root is a Shader).
+   */
+  shaders: Map<string, ShaderSource>;
   /** `uid://` to `res://` path. */
   uids: Map<string, string>;
+  /**
+   * Every uid a file claims, valid or not, with where it is written: its own header, a `.uid` file or a `.import` file.
+   * `uids` keeps one file per uid; this keeps them all, so duplicates show.
+   */
+  uidClaims: UidClaim[];
   /** Files that come only from a base project (see LoadOptions.base). */
   external: Set<string>;
   /** Files only the shipped game holds (from LoadOptions.baseFiles): present, but their contents are unknown. */
   shipped: Set<string>;
+}
+
+export interface ShaderSource {
+  source: string;
+  /** A .gdshaderinc file: code that shaders include. */
+  include?: boolean;
+  /** Code stored in a scene or resource: the 1-based line of `code = "` there (shader line 1 is on that line). */
+  embedded?: number;
+  /** Comes from a base project, not from this one. */
+  external?: boolean;
+}
+
+export interface UidClaim {
+  uid: string;
+  /** The file the uid belongs to (not the .uid or .import file). */
+  file: string;
+  from: "header" | "uid" | "import";
 }
 
 export interface LoadOptions {
@@ -87,7 +114,7 @@ function errorCode(error: unknown): string | undefined {
 }
 
 /** Reads a list of paths from godotwright.json, resolved against the project root. */
-function configPaths(root: string, key: "base" | "baseFiles"): string[] {
+export function configPaths(root: string, key: "base" | "baseFiles"): string[] {
   const config = resolvePath(root, CONFIG_FILE);
   if (!existsSync(config)) return [];
   let parsed: Record<string, unknown>;
@@ -115,6 +142,20 @@ export function baseRoots(root: string, base: string[] = []): string[] {
 }
 
 /**
+ * The source file an exported file stands for, as a res:// path: `x.glb.import` and `x.tscn.remap` are `x.glb` and
+ * `x.tscn`, `x.gdc` is `x.gd`, `project.binary` is `project.godot`. Godot's own `.godot/` files (exported scenes,
+ * import results, caches) stand for no source file: undefined, as for an empty name or a URL.
+ */
+export function exportedToSource(name: string): string | undefined {
+  const trimmed = name.trim().replace(/\\/g, "/").replace(/^res:\/\//, "");
+  if (/^[a-z]+:\/\//i.test(trimmed)) return undefined;
+  const path = trimmed.replace(/\/{2,}/g, "/").replace(/^\/+/, "");
+  if (!path || path.startsWith(".godot/")) return undefined;
+  if (path === "project.binary") return "res://project.godot";
+  return `res://${path.replace(/\.(import|remap)$/, "").replace(/\.gdc$/, ".gd")}`;
+}
+
+/**
  * `res://` paths listed in file lists such as a .pck manifest. Exported forms
  * map back to their source: `x.glb.import` and `x.gd.remap` to `x.glb` and `x.gd`,
  * `x.gdc` to `x.gd`; Godot's own `.godot/` cache is left out.
@@ -122,10 +163,8 @@ export function baseRoots(root: string, base: string[] = []): string[] {
 export function listedFiles(root: string, lists: string[] = []): Set<string> {
   const out = new Set<string>();
   const add = (raw: string) => {
-    const path = raw.trim().replace(/\\/g, "/").replace(/^res:\/\//, "").replace(/\/{2,}/g, "/").replace(/^\/+/, "");
-    if (!path || path.startsWith(".godot/") || /^[a-z]+:\/\//i.test(path)) return;
-    const source = path.replace(/\.(import|remap)$/, "").replace(/\.gdc$/, ".gd");
-    out.add(`res://${source}`);
+    const source = exportedToSource(raw);
+    if (source && source !== "res://project.godot") out.add(source);
   };
   const walk = (value: unknown) => {
     if (typeof value === "string") add(value);
@@ -215,6 +254,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
 
   // uid:// -> res:// from .uid sidecars, .import files and resource headers.
   const uids = new Map<string, string>();
+  const uidClaims: UidClaim[] = [];
   const resources = new Map<string, ResourceFile>();
   const scripts = new Map<string, ScriptOutline>();
   const sources = new Map<string, string>();
@@ -224,14 +264,22 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       if (ext === "uid") {
         const uid = read(file).trim();
         if (uid.startsWith("uid://")) uids.set(uid, file.slice(0, -".uid".length));
+        // A .uid file left behind by a deleted or moved file claims nothing: Godot only reads it next to its file.
+        if (fileSet.has(file.slice(0, -".uid".length))) uidClaims.push({ uid, file: file.slice(0, -".uid".length), from: "uid" });
       } else if (ext === "import") {
         const remap = parsed(file, "import", parseResourceFile).find((s) => s.tag === "remap");
         const uid = asString(remap?.props["uid"]);
-        if (uid) uids.set(uid, file.slice(0, -".import".length));
+        if (uid) {
+          uids.set(uid, file.slice(0, -".import".length));
+          if (fileSet.has(file.slice(0, -".import".length))) uidClaims.push({ uid, file: file.slice(0, -".import".length), from: "import" });
+        }
       } else if (ext === "tscn" || ext === "tres") {
         const resource = parsed(file, "resource", parseResourceText);
         resources.set(file, resource);
-        if (resource.uid) uids.set(resource.uid, file);
+        if (resource.uid) {
+          uids.set(resource.uid, file);
+          uidClaims.push({ uid: resource.uid, file, from: "header" });
+        }
       } else if (ext === "gd") {
         const script = parsed(file, "script", (source) => ({ source, outline: outlineScript(source) }));
         sources.set(file, script.source);
@@ -292,6 +340,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   });
 
   // Scenes and resources.
+  const shaderSources = new Map<string, ShaderSource>();
   const scenes: SceneInfo[] = [];
   const resourceInfos: ResourceInfo[] = [];
   const usedBy = new Map<string, Set<string>>();
@@ -309,6 +358,18 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       }
     }
     const lookup = (id: string | undefined) => (id === undefined ? undefined : ext.get(id));
+
+    // Shader code stored in the file: as a sub-resource (`res://scene.tscn::Id`), or as the root of a .tres.
+    for (const sub of parsed.subResources) {
+      const code = sub.props["code"];
+      if (sub.type === "Shader" && typeof code === "string") {
+        shaderSources.set(`${file}::${sub.id}`, { source: code, embedded: sub.propLines["code"] ?? sub.line, ...(external.has(file) ? { external: true } : {}) });
+      }
+    }
+    const rootCode = parsed.resource?.props["code"];
+    if (parsed.resourceType === "Shader" && typeof rootCode === "string") {
+      shaderSources.set(file, { source: rootCode, embedded: parsed.resource?.propLines["code"] ?? 1, ...(external.has(file) ? { external: true } : {}) });
+    }
 
     // Built-in scripts live inside the scene; Godot names them `res://scene.tscn::Id`.
     const builtins = new Map<string, string>();
@@ -437,6 +498,13 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
       }
       const match = /^\s*shader_type\s+(\w+)\s*;/m.exec(source);
       shaders.push({ ...(external.has(file) ? { external: true } : {}), path: file, shaderType: match?.[1] });
+      shaderSources.set(file, { source, ...(external.has(file) ? { external: true } : {}) });
+    } else if (ext === "gdshaderinc") {
+      try {
+        shaderSources.set(file, { source: read(file), include: true, ...(external.has(file) ? { external: true } : {}) });
+      } catch (error) {
+        fail(file, error);
+      }
     } else if (ext === "cs") {
       csharpScripts.push({ ...(external.has(file) ? { external: true } : {}), path: file });
     } else if (!external.has(file)) {
@@ -479,7 +547,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     // A base project's own problems are not this project's.
     warnings: warnings.filter((w) => !external.has(withoutSubResource(w.file))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
-  return { root, files, map, scripts, sources, resources, uids, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
+  return { root, files, map, scripts, sources, resources, shaders: shaderSources, uids, uidClaims, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
 }
 
 /** Settings of a base project with the project's own on top; autoloads and input actions add up. */

@@ -2,22 +2,25 @@ import { existsSync, readFileSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
-import { parseResourceFile, type Section } from "../godot/resource-file.js";
+import { blocksOf, contentEnd, propSpan, type Block, type Splice } from "../godot/blocks.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { lockedInstances } from "../review/checks/integrity.js";
+import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
+import { uidOf } from "./uid.js";
 
 export class SceneError extends Error {}
 
 /** One change to a .tscn. Node paths are relative to the scene root, which is ".". */
 export type SceneEdit =
-  | { op: "add_node"; parent: string; name: string; type?: string; instance?: string }
+  | { op: "add_node"; parent: string; name: string; type?: string; instance?: string; makeEditable?: boolean }
   | { op: "remove_node"; node: string }
-  | { op: "set"; node: string; property: string; value: string }
-  | { op: "connect"; from: string; signal: string; to: string; method: string }
+  | { op: "set"; node: string; property: string; value: string; makeEditable?: boolean }
+  | { op: "connect"; from: string; signal: string; to: string; method: string; makeEditable?: boolean }
+  | { op: "set_editable"; node: string; editable?: boolean }
   | { op: "disconnect"; from: string; signal: string; to: string; method: string }
   | { op: "attach_script"; node: string; script: string };
 
@@ -38,37 +41,15 @@ export interface ScenePlan {
   review?: { before: number; after: number };
 }
 
-/** A section of the file with its 0-based first line and the line where the next one starts. */
-interface Block extends Section {
-  start: number;
-  end: number;
-}
-
-/** A change planned against the original lines; all are applied bottom-up so the line numbers stay true. */
-interface Splice {
-  start: number;
-  count: number;
-  added: string[];
-}
+/** Bottom-up order for applying splices; at the same line, a tail splice is applied first so it ends up last. */
+export const spliceOrder = (a: Splice, b: Splice) => b.start - a.start || b.count - a.count || Number(b.tail ?? false) - Number(a.tail ?? false);
 
 const NODE_NAME = /^[^.:@/"%]+$/;
-
-function blocksOf(lines: string[]): Block[] {
-  const sections = parseResourceFile(lines.join("\n")).filter((s) => s.tag !== "");
-  return sections.map((s, i) => ({ ...s, start: s.line - 1, end: (sections[i + 1]?.line ?? lines.length + 1) - 1 }));
-}
-
-/** The first line after a block's last non-blank line. */
-function contentEnd(lines: string[], block: Block): number {
-  let end = block.end;
-  while (end > block.start + 1 && (lines[end - 1] ?? "").trim() === "") end--;
-  return end;
-}
 
 const inside = (path: string, root: string): boolean => root === "." || path === root || path.startsWith(`${root}/`);
 
 /** What a script declares, read with simple patterns (enough for checks; Godot has the last word). */
-function scriptInfo(source: string): { extends?: string; signals: Map<string, string>; funcs: Map<string, { min: number; max: number }>; exports: Map<string, string | undefined> } {
+export function scriptInfo(source: string): { extends?: string; signals: Map<string, string>; funcs: Map<string, { min: number; max: number }>; exports: Map<string, string | undefined> } {
   const signals = new Map<string, string>();
   const funcs = new Map<string, { min: number; max: number }>();
   const exports = new Map<string, string | undefined>();
@@ -82,7 +63,7 @@ function scriptInfo(source: string): { extends?: string; signals: Map<string, st
 }
 
 /** The resource type an ext_resource line names for a file. */
-function resourceType(root: string, path: string, fallback?: string): string {
+export function resourceType(root: string, path: string, fallback?: string): string {
   if (/\.(tscn|scn)$/.test(path)) return "PackedScene";
   if (path.endsWith(".gd") || path.endsWith(".cs")) return "Script";
   if (path.endsWith(".gdshader")) return "Shader";
@@ -94,15 +75,6 @@ function resourceType(root: string, path: string, fallback?: string): string {
     if (type) return type;
   }
   return fallback ?? "Resource";
-}
-
-/** The uid of a file, from its .uid file, its .import file or its own header. */
-function uidOf(root: string, path: string): string | undefined {
-  const full = fromResPath(root, path);
-  if (existsSync(`${full}.uid`)) return readFileSync(`${full}.uid`, "utf8").trim() || undefined;
-  if (existsSync(`${full}.import`)) return /^uid="([^"]+)"/m.exec(readFileSync(`${full}.import`, "utf8"))?.[1];
-  if (/\.(tscn|tres)$/.test(path)) return /^\[gd_\w+[^\]]*\buid="([^"]+)"/.exec(readFileSync(full, "utf8"))?.[1];
-  return undefined;
 }
 
 /**
@@ -194,21 +166,27 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
 
   /** Sets (or replaces) `property = value` inside a node block. */
   const setProp = (block: Block, property: string, value: string): void => {
-    const keys = Object.entries(block.propLines).sort((a, b) => a[1] - b[1]);
-    const at = keys.findIndex(([k]) => k === property);
     const text = `${property} = ${value}`;
-    if (at < 0) {
-      splices.push({ start: contentEnd(lines, block), count: 0, added: [text] });
-      return;
-    }
-    const start = (keys[at]?.[1] ?? 0) - 1;
-    const next = keys[at + 1];
-    const stop = next ? next[1] - 1 : contentEnd(lines, block);
-    splices.push({ start, count: stop - start, added: [text] });
+    const span = propSpan(lines, block, property);
+    splices.push(span ? { ...span, added: [text] } : { start: contentEnd(lines, block), count: 0, added: [text] });
   };
 
   const removeBlock = (block: Block): void => {
     splices.push({ start: block.start, count: block.end - block.start, added: [] });
+  };
+
+  /** The instanced scenes in the scene as `text`, and the ones it changes inside without [editable]. */
+  const lockedOf = (text: string) => {
+    const data = loadProject(root, { overrides: { [resPath]: text } });
+    const scene = data.map.scenes.find((sc) => sc.path === resPath);
+    const parsedScene = data.resources.get(resPath);
+    return scene && parsedScene ? lockedInstances(scene, parsedScene, new Map(data.map.scenes.map((sc) => [sc.path, sc])), data.resources) : { roots: [], locked: [] };
+  };
+  /** Lines that add [editable path=...] entries at the end of the file. */
+  const editableSplice = (paths: string[]): Splice => {
+    let at = lines.length;
+    while (at > 0 && (lines[at - 1] ?? "").trim() === "") at--;
+    return { start: at, count: 0, added: paths.flatMap((p) => ["", `[editable path="${p}"]`]), tail: true };
   };
 
   let summary = "";
@@ -366,6 +344,22 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
       summary = `connect ${label}`;
       break;
     }
+    case "set_editable": {
+      const path = edit.node.replace(/^\.\//, "");
+      const { roots } = lockedOf(original);
+      if (!roots.includes(path)) throw new SceneError(`${path} is not an instanced scene in ${resPath}${roots.length ? `; instances: ${roots.slice(0, 8).join(", ")}` : ""}`);
+      const existing = blocks.filter((b) => b.tag === "editable" && b.attrs["path"] === path);
+      if (edit.editable === false) {
+        if (!existing.length) throw new SceneError(`nothing to change: ${path} is not editable`);
+        for (const b of existing) removeBlock(b);
+        summary = `make ${path} not editable`;
+      } else {
+        if (existing.length) throw new SceneError(`nothing to change: ${path} is already editable`);
+        splices.push(editableSplice([path]));
+        summary = `make ${path} editable (its children can be changed in this scene)`;
+      }
+      break;
+    }
     case "attach_script": {
       const node = findNode(edit.node);
       const script = edit.script.trim();
@@ -392,15 +386,40 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
   }
 
   if (splices.every((sp) => sp.added.join("\n") === lines.slice(sp.start, sp.start + sp.count).join("\n"))) throw new SceneError(`nothing to change: ${summary} is already so`);
-  splices.sort((a, b) => b.start - a.start || b.count - a.count);
-  const out = [...lines];
-  for (const s of splices) out.splice(s.start, s.count, ...s.added);
-  const text = out.join(eol);
+  const apply = (): string => {
+    const out = [...lines];
+    for (const sp of [...splices].sort(spliceOrder)) out.splice(sp.start, sp.count, ...sp.added);
+    return out.join(eol);
+  };
+  let text = apply();
   try {
     parseResourceText(text);
   } catch (error) {
     throw new SceneError(`the change would leave ${resPath} unreadable (${(error as Error).message}); nothing was written`);
   }
+  if (edit.op === "set_editable" && edit.editable === false) {
+    const lost = lockedOf(text).locked.find((l) => l.root === edit.node.replace(/^\.\//, ""))?.count ?? 0;
+    if (lost) warnings.push(`${lost} edit${lost === 1 ? "" : "s"} inside it will be dropped on the next save from the editor`);
+  }
+  // A change inside an instanced scene that is not editable: Godot would drop it on the next save from the editor.
+  if (edit.op === "add_node" || edit.op === "set" || edit.op === "connect") {
+    // The nodes this change is about: inside a locked instance when strictly below its root.
+    const touched = edit.op === "add_node" ? [edit.parent.replace(/^\.\//, "")] : edit.op === "set" ? [edit.node.replace(/^\.\//, "")] : [edit.from, edit.to];
+    const added = lockedOf(text)
+      .locked.map((l) => l.root)
+      .filter((r) => touched.some((t) => t.startsWith(`${r}/`)));
+    if (added.length && !edit.makeEditable) {
+      throw new SceneError(
+        `this changes the inside of the instanced scene at ${added.map((r) => `"${r}"`).join(", ")}, which is not editable: Godot would drop it on the next save from the editor. Pass make_editable (adds [editable path="${added[0]}"]), or change the instanced scene itself.`,
+      );
+    }
+    if (added.length) {
+      splices.push(editableSplice(added));
+      text = apply();
+      summary += ` (and make ${added.join(", ")} editable)`;
+    }
+  }
+  splices.sort(spliceOrder);
   const hunks = [...splices].reverse().map((s) => ({ line: s.start + 1, removed: lines.slice(s.start, s.start + s.count), added: s.added }));
   const plan: ScenePlan = { summary, file: resPath, hunks, warnings, written: false };
   if (!options.write) return plan;

@@ -157,6 +157,15 @@ Godotwright gets better with every use, without collecting anything personal.
     have this through an editor add-on.
     *Done when:* a session steps frame-exact like `godot_play` in CI with real Godot, and stops by itself when idle.
 
+28. **What competitors have, round two.** From a second survey (November 2026) of about forty Godot AI tools, their
+    issue trackers and user complaints: shader review and a headless compile, real exports with a PCK reader, smoke
+    runs and patches, scene integrity with uid repair, saved scenarios with JUnit, screenshot baselines, leak cycles,
+    rules for the 4.6 and 4.7 changes with a two-binary check, resource and import editing, tool sets and read-only,
+    structured results, progress and cancel, and protected paths. Ships as 0.6.0, on top of the released 0.5.0
+    (`godot_code`, shader drawing, screenshot baselines): one shader compile path (headless, with the GPU pass on
+    request) and one baseline implementation, with 0.5.0's options kept.
+    *Done when:* each is checked against real Godot 4.7.2 in CI, and the review stays quiet on the official demos.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -194,6 +203,7 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 25: Agents in the loop (hooks, task skills and subagents in the Claude Code plugin)
 - [x] Step 26: What competitors have, headless (doctor, fix, perf, richer play, call chains, connection arguments)
 - [x] Step 27: A game session that stays up across calls
+- [x] Step 28: What competitors have, round two
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

@@ -52,3 +52,66 @@ export function removedNote(found: RemovedMember | string | undefined): string {
   if (!found || (typeof found !== "string" && found.compat)) return "";
   return ` It was removed after Godot ${typeof found === "string" ? found : found.last}.`;
 }
+
+/** A change between Godot releases from the upgrade guides (data/api-changes.json). */
+export interface ApiChange {
+  id: string;
+  /** The release that brought the change, e.g. "4.7". */
+  to: string;
+  kind: "behaviour" | "default" | "signature" | "renamed" | "removed";
+  /** A class name, or "GDScript" for language changes. */
+  class: string;
+  member?: string;
+  /** The new name, for kind "renamed". */
+  replacement?: string;
+  message: string;
+  fix?: string;
+  gh?: string;
+  /** How it was checked: the Godot releases it ran in, or the class reference. */
+  verified: string;
+  /** Review rules that find code this change affects. */
+  rules?: string[];
+}
+
+const CHANGES_URL = new URL("../../data/api-changes.json", import.meta.url);
+let changes: ApiChange[] | undefined;
+
+/** Every change from data/api-changes.json (empty when missing). */
+export function apiChanges(): ApiChange[] {
+  if (!changes) {
+    try {
+      changes = (JSON.parse(readFileSync(CHANGES_URL, "utf8")) as { changes: ApiChange[] }).changes;
+    } catch {
+      changes = [];
+    }
+  }
+  return changes;
+}
+
+/** Changes to a member of this class or one of its ancestors (or to the class itself when `member` is omitted). */
+export function changesOf(api: GodotApi, className: string, member?: string): ApiChange[] {
+  const classes = api.ancestors(className).map((c) => c.name);
+  if (!classes.length) classes.push(className);
+  return apiChanges().filter((c) => classes.includes(c.class) && (member === undefined || c.member === member));
+}
+
+/** The new name of an old member that a later release renamed, e.g. RichTextLabel.UPDATE_WIDTH_IN_PERCENT. */
+export function renamedMember(api: GodotApi, className: string, name: string): ApiChange | undefined {
+  return changesOf(api, className, name).find((c) => c.kind === "renamed" && c.replacement);
+}
+
+/** Compares two "4.x" versions: negative when a is older. */
+export function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+/** One line for a change: "changed in Godot 4.7 (default): message Fix: ...". */
+export function formatChange(c: ApiChange): string {
+  return `changed in Godot ${c.to} (${c.kind}${c.gh ? `, ${c.gh}` : ""}): ${c.message}${c.fix ? ` Fix: ${c.fix}` : ""}`;
+}

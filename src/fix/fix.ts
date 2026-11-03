@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, utimesSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
@@ -6,7 +6,12 @@ import { emptyLearning } from "../learn/store.js";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import type { Finding } from "../review/rules.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
+import { parseShader } from "../godot/shader.js";
+import { shaderRenames } from "../migrate/shader.js";
+import { REMOVED_TEXTURES, removedTextureUniform } from "../review/checks/shader.js";
+import { withExtUid } from "../scene/uid.js";
+import { planUids } from "./uids.js";
 
 /**
  * Mechanical fixes for review findings: each rewrites the one line a finding points to, only when that line looks
@@ -57,8 +62,12 @@ export interface FixOptions {
   /** Also apply fixes marked `check`. */
   includeCheck?: boolean;
   write?: boolean;
+  /** Release the project comes from, for the upgrade fixes after it was re-saved in a newer Godot (review `from`). */
+  from?: string;
   /** A review of the project made just before (saves reviewing it again when nothing changed since). */
   report?: ReviewReport;
+  /** Also give every scene, resource, script and shader without a uid a new one (a header uid or a .uid file). */
+  stampUids?: boolean;
 }
 
 /** A line edit: replace `count` lines starting at `index` (0-based) with `lines`. */
@@ -70,7 +79,25 @@ interface Edit {
   note?: string;
 }
 
-type Fixer = (lines: string[], index: number, finding: Finding) => Edit | string;
+interface FixContext {
+  /** Each file's uid once the project-wide uid repairs are applied. */
+  uidAfter: Map<string, string | undefined>;
+}
+
+/** An edit, the reason a line cannot be fixed, or null when another fix already takes care of it. */
+type Fixer = (lines: string[], index: number, finding: Finding, ctx: FixContext) => Edit | string | null;
+
+/** An ext_resource line pointed at the uid its path's file has (or will have), or without uid= when it has none. */
+function extUidFix(lines: string[], i: number, ctx: FixContext, safety: FixSafety): Edit | string | null {
+  const line = lines[i]!;
+  if (!line.startsWith("[ext_resource")) return "the line is no longer an ext_resource";
+  const path = /\bpath="([^"]*)"/.exec(line)?.[1];
+  if (!path) return "the ext_resource has no path";
+  const uid = ctx.uidAfter.get(path);
+  const fixed = withExtUid(line, uid);
+  if (fixed === line) return null;
+  return { index: i, count: 1, lines: [fixed], safety, note: uid ? `the uid of ${path}` : `${path} has no uid; Godot loads it by path` };
+}
 
 const CP1252: Record<string, number> = {
   "€": 0x80, "‚": 0x82, "ƒ": 0x83, "„": 0x84, "…": 0x85, "†": 0x86, "‡": 0x87, "ˆ": 0x88, "‰": 0x89, "Š": 0x8a, "‹": 0x8b,
@@ -138,6 +165,36 @@ function blockAround(lines: string[], index: number): { start: number; end: numb
 }
 
 const FIXERS: Record<string, Fixer> = {
+  // An ext_resource uid no file has: the uid of the file its path names.
+  "structure/unknown-uid": (lines, i, _f, ctx) => extUidFix(lines, i, ctx, "safe"),
+
+  // An ext_resource uid of another file than its path: Godot loads the uid's file; make it the path's.
+  "structure/uid-path-mismatch": (lines, i, _f, ctx) => {
+    const result = extUidFix(lines, i, ctx, "check");
+    return result && typeof result !== "string" ? { ...result, note: `${result.note}; Godot loaded the uid's file before, so check the path is the one you mean` } : result;
+  },
+
+  // An ext_resource or sub_resource nothing uses: remove its section.
+  "structure/unused-resource": (lines, i) => {
+    if (!/^\[(ext|sub)_resource\b/.test(lines[i]!)) return "the line is no longer an ext_resource or sub_resource";
+    let end = i + 1;
+    while (end < lines.length && !lines[end]!.startsWith("[")) end++;
+    let content = end;
+    while (content > i + 1 && lines[content - 1]!.trim() === "") content--;
+    const extraBlank = i > 0 && lines[i - 1]!.trim() === "" && (lines[content] ?? "").trim() === "" && content < lines.length ? 1 : 0;
+    return { index: i, count: content - i + extraBlank, lines: [], safety: "safe" };
+  },
+
+  // Edits inside an instanced scene that is not editable: make it editable, as the editor does with Editable Children.
+  "structure/locked-instance-edit": (lines, _i, f) => {
+    const path = /instanced scene at "([^"]+)"/.exec(f.message)?.[1];
+    if (!path) return "the instance is not named in the finding";
+    if (lines.some((l) => l.trim() === `[editable path="${path}"]`)) return null;
+    let end = lines.length;
+    while (end > 0 && lines[end - 1]!.trim() === "") end--;
+    return { index: end, count: 0, lines: ["", `[editable path="${path}"]`], safety: "check", note: "the scene now also saves the instance's own nodes you change; the other option is to edit the instanced scene itself" };
+  },
+
   // `x is T and is_instance_valid(x)`: test that it is valid first.
   "api/freed-check-order": (lines, i) => {
     const re = /\b([A-Za-z_][\w.]*)\s+is\s+(not\s+)?([A-Za-z_][\w.]*)\s+and\s+is_instance_valid\s*\(\s*\1\s*\)/;
@@ -161,6 +218,7 @@ const FIXERS: Record<string, Fixer> = {
   "quality/standalone-ternary": (lines, i) => {
     const line = lines[i]!;
     if (line.includes("#") || line.includes(";") || /:\s*$/.test(line)) return "the line has a comment, a semicolon or a header";
+  if (continues(line)) return "the statement goes on past this line";
     const indent = /^\s*/.exec(line)![0];
     const code = line.slice(indent.length).trimEnd();
     const ifs = topLevelWord(code, "if");
@@ -250,18 +308,174 @@ const FIXERS: Record<string, Fixer> = {
   },
 };
 
-export const FIXABLE_RULES = Object.keys(FIXERS).sort();
+const SHADER_FILE = /\.gdshader(inc)?$/;
+
+// A Godot 3 shader name: the name from Godot's rename table (hint_color -> source_color, WORLD_MATRIX -> MODEL_MATRIX).
+FIXERS["api/shader-renamed"] = (lines, i, f) => {
+  if (!SHADER_FILE.test(f.file)) return "shader code stored in a resource: change it in Godot, or move it to a .gdshader file";
+  const fixed = shaderRenames(parseShader(lines.join("\n")), lines).get(i + 1);
+  if (fixed === undefined) return "no one-to-one Godot 4 name: change it by hand as the message says";
+  return { index: i, count: 1, lines: [fixed], safety: "safe" };
+};
+
+// SCREEN_TEXTURE and friends: the sampler uniform Godot's own error suggests, after the shader_type and render_mode lines. One fix adds
+// every missing one, so the uniforms land in one place.
+FIXERS["api/shader-removed-builtin"] = (lines, i, f) => {
+  if (!SHADER_FILE.test(f.file)) return "shader code stored in a resource: change it in Godot, or move it to a .gdshader file";
+  const name = /^(\w+) was removed/.exec(f.message)?.[1];
+  const parsed = parseShader(lines.join("\n"));
+  if (!name || !Object.hasOwn(REMOVED_TEXTURES, name) || parsed.declared.has(name)) return "the uniform is declared already";
+  const used = parsed.tokens.filter((t, n) => Object.hasOwn(REMOVED_TEXTURES, t.t) && !t.member && parsed.tokens[n - 1]?.t !== "." && !parsed.declared.has(t.t));
+  const names = [...new Set(used.map((t) => t.t))];
+  if (names[0] !== name) return `added together with ${names[0]}`;
+  const uniforms = names.map(removedTextureUniform);
+  // After the `;` that ends shader_type and the render modes, which may span lines.
+  const end = parsed.headerEndLine;
+  return end === undefined
+    ? { index: 0, count: 1, lines: [...uniforms, lines[0]!], safety: "safe" }
+    : { index: end - 1, count: 1, lines: [lines[end - 1]!, ...uniforms], safety: "safe" };
+};
+
+/** Rules fixed project-wide (several files at once), not line by line: see uids.ts. */
+const PROJECT_FIXES = ["structure/duplicate-uid", "structure/invalid-uid"];
+
+
+/**
+ * A packed write at the start of a line: indent, a chain of names (`self.` is one of them), the array, then `[`. Each
+ * part of the chain ends in a dot that names cannot hold, so the match is linear.
+ */
+export const PACKED_WRITE = /^(\s*)((?:\$[\w/]+\.|%\w+\.|[A-Za-z_]\w*\.)*([A-Za-z_]\w*))(\[.*)$/;
+
+/**
+ * `obj.prop[i] = v` on a packed array: copy, write, assign back, so the setter runs again as it did before Godot 4.7
+ * (and an engine property keeps the write at all).
+ */
+const packedWrite: Fixer = (lines, i, finding) => {
+  const line = lines[i]!;
+  if (line.includes("#") || line.includes(";") || /:\s*$/.test(line)) return "the line has a comment, a semicolon or a header";
+  if (continues(line)) return "the statement goes on past this line";
+  const write = PACKED_WRITE;
+  const m = write.exec(line);
+  if (!m) return "the write is not a plain name chain at the start of the line";
+  const [, indent, target, prop, rest] = m as unknown as [string, string, string, string, string];
+  if (/^(?:if|elif|while|for|match|return|var|await)$/.test(target)) return "the write is not a statement of its own";
+  const { start, end } = blockAround(lines, i);
+  const block = lines.slice(start, end + 1);
+  // Each fix in a function gets its own name: fixes are planned on the original lines, so they cannot see each other.
+  const others = block.filter((l) => write.exec(l)?.[3] === prop).length > 1;
+  let copy = others ? `${prop}_copy_${i + 1}` : `${prop}_copy`;
+  for (let n = 2; block.some((l) => new RegExp(`\\b${copy}\\b`).test(l)); n++) copy = `${prop}_copy${others ? `_${i + 1}` : ""}_${n}`;
+  return {
+    index: i,
+    count: 1,
+    // `$Node.prop` is typed Node.prop to the compiler, so `:=` cannot infer it there.
+    lines: [`${indent}var ${copy} ${/[$%]/.test(target) ? "=" : ":="} ${target}`, `${indent}${copy}${rest}`, `${indent}${target} = ${copy}`],
+    // On an engine property the write was lost, so this only restores it; a script setter now runs again: read it.
+    safety: finding.rule === "api/packed-element-write" ? "safe" : "check",
+  };
+};
+
+/** True when a statement goes on past this line: a backslash at the end, or brackets left open (strings skipped). */
+function continues(line: string): boolean {
+  if (/\\\s*$/.test(line)) return true;
+  let depth = 0;
+  let quote = "";
+  for (let k = 0; k < line.length; k++) {
+    const c = line[k]!;
+    if (quote) {
+      if (c === "\\") k++;
+      else if (c === quote) quote = "";
+    } else if (c === '"' || c === "'") quote = c;
+    else if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+  }
+  return depth !== 0 || quote !== "";
+}
+
+/** The node or sub-resource block a .tscn finding points at: from its header to the line before the next header. */
+function sectionAt(lines: string[], index: number): number {
+  let end = index + 1;
+  while (end < lines.length && !/^\[/.test(lines[end]!)) end++;
+  return end;
+}
+
+/** A property line added right under a `[node ...]` header (Godot reads properties in any order). */
+const addProperty = (property: string, value: string): Fixer => (lines, i) => {
+  if (!/^\[node\b/.test(lines[i]!)) return "the line is not a [node] header";
+  const end = sectionAt(lines, i);
+  if (lines.slice(i + 1, end).some((l) => l.startsWith(`${property} =`))) return `the node already sets ${property}`;
+  return { index: i, count: 1, lines: [lines[i]!, `${property} = ${value}`], safety: "safe", note: "the value Godot used before the upgrade" };
+};
+
+FIXERS["api/packed-element-write"] = packedWrite;
+FIXERS["quality/packed-setter-skipped"] = packedWrite;
+
+// `add_image(..., true, false)`: the ImageUnit that matches the old bool.
+FIXERS["api/image-unit-bool"] = (lines, i) => {
+  const line = lines[i]!;
+  const call = /\b(add_image|update_image)\s*\(/.exec(line);
+  if (!call) return "the call is not on this line";
+  const open = call.index + call[0].length - 1;
+  // Top-level argument ranges inside the call.
+  const ranges: [number, number][] = [];
+  let depth = 0;
+  let from = open + 1;
+  let quote: string | undefined;
+  let close = -1;
+  for (let k = open; k < line.length; k++) {
+    const c = line[k]!;
+    if (quote) {
+      if (c === "\\") k++;
+      else if (c === quote) quote = undefined;
+      continue;
+    }
+    if (c === '"' || c === "'") quote = c;
+    else if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) {
+      depth--;
+      if (depth === 0) {
+        close = k;
+        break;
+      }
+    } else if (c === "," && depth === 1) {
+      ranges.push([from, k]);
+      from = k + 1;
+    }
+  }
+  if (close < 0) return "the call goes on past this line";
+  ranges.push([from, close]);
+  const first = call[1] === "add_image" ? 9 : 10;
+  let fixed = line;
+  for (const n of [first + 1, first]) {
+    const range = ranges[n];
+    if (!range) continue;
+    const arg = line.slice(range[0], range[1]).trim();
+    if (arg !== "true" && arg !== "false") continue;
+    const unit = arg === "true" ? "RichTextLabel.IMAGE_UNIT_PERCENT" : "RichTextLabel.IMAGE_UNIT_PIXEL";
+    fixed = fixed.slice(0, range[0]) + fixed.slice(range[0], range[1]).replace(arg, unit) + fixed.slice(range[1]);
+  }
+  if (fixed === line) return "no true or false at the unit arguments";
+  return { index: i, count: 1, lines: [fixed], safety: "safe" };
+};
+
+FIXERS["api/upgrade-area-mask"] = addProperty("area_mask", "1");
+FIXERS["api/upgrade-mesh-skeleton"] = addProperty("skeleton", 'NodePath("..")');
+
+// No fixer for api/upgrade-world-boundary-jolt: flipping d cannot tell whether it was flipped already, so a second run
+// would undo the first.
+
+export const FIXABLE_RULES = [...Object.keys(FIXERS), ...PROJECT_FIXES].sort();
 
 export function fixProject(path: string, options: FixOptions = {}): FixResult {
   const root = findProjectRoot(path);
   if (!root) throw new ProjectNotFoundError(path);
   const learning = { learning: currentLearning() ?? emptyLearning(), shared: bundledLearning() };
   const focus = options.files?.map((f) => (f.startsWith("res://") ? f : toResPath(root, f)));
-  const report = options.report ?? reviewProject(root, { ...learning, ...(focus ? { focus } : {}) });
+  const report = options.report ?? reviewProject(root, { ...learning, ...(focus ? { focus } : {}), ...(options.from ? { from: options.from } : {}) });
   const wanted = (rule: string) => FIXABLE_RULES.includes(rule) && (!options.rules?.length || options.rules.includes(rule));
   const byFile = new Map<string, Finding[]>();
   for (const f of report.findings) {
-    if (!wanted(f.rule) || f.line === undefined || f.file.includes("::")) continue;
+    if (!wanted(f.rule) || !FIXERS[f.rule] || f.line === undefined || f.file.includes("::")) continue;
     byFile.set(f.file, [...(byFile.get(f.file) ?? []), f]);
   }
 
@@ -269,18 +483,53 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
   const skipped: FixSkip[] = [];
   let needsCheck = 0;
   const journal = new JournalWriter(root, "fix", "mechanical fixes");
-  for (const [file, findings] of byFile) {
+
+  // Files as lines, read once; a file that does not exist yet (a new .uid file) is one empty line.
+  const texts = new Map<string, { lines: string[]; eol: string; existed: boolean }>();
+  const textOf = (file: string) => {
+    let t = texts.get(file);
+    if (!t) {
+      const full = fromResPath(root, file);
+      const existed = existsSync(full);
+      const source = existed ? readFileSync(full, "utf8") : "";
+      t = { lines: source.split(/\r?\n/), eol: source.includes("\r\n") ? "\r\n" : "\n", existed };
+      texts.set(file, t);
+    }
+    return t;
+  };
+
+  // Uid repairs across files first: line fixes below use the uids they give.
+  const data = loadProject(root);
+  const plan = planUids(data, {
+    wanted,
+    ...(focus ? { focus: new Set(focus) } : {}),
+    stamp: options.stampUids,
+    includeCheck: options.includeCheck === true,
+    lines: (file) => (existsSync(fromResPath(root, file)) ? textOf(file).lines : undefined),
+  });
+  needsCheck += plan.needsCheck;
+  const planned = new Map<string, { edit: Edit; finding: Finding }[]>();
+  for (const e of plan.edits) {
+    const list = planned.get(e.file) ?? [];
+    if (list.some((p) => p.edit.index === e.index)) continue;
+    list.push({ edit: { index: e.index, count: e.count, lines: e.lines, safety: e.safety ?? "safe", ...(e.note ? { note: e.note } : {}) }, finding: { rule: e.rule, line: e.index + 1, file: e.file } as Finding });
+    planned.set(e.file, list);
+  }
+  const ctx: FixContext = { uidAfter: plan.uidAfter };
+
+  for (const file of new Set([...byFile.keys(), ...planned.keys()])) {
+    const findings = byFile.get(file) ?? [];
     const full = fromResPath(root, file);
-    const source = readFileSync(full, "utf8");
-    const eol = source.includes("\r\n") ? "\r\n" : "\n";
-    let lines = source.split(/\r?\n/);
+    const { eol, existed } = textOf(file);
+    let lines = textOf(file).lines;
     // One fix per line, bottom up, so the line numbers of the fixes above stay right.
-    const seen = new Set<number>();
-    const edits: { edit: Edit; finding: Finding }[] = [];
+    const edits = [...(planned.get(file) ?? [])];
+    const seen = new Set<number>(edits.map((e) => e.edit.index));
     for (const f of [...findings].sort((a, b) => (b.line ?? 0) - (a.line ?? 0))) {
       const index = f.line! - 1;
       if (seen.has(index) || index >= lines.length) continue;
-      const result = FIXERS[f.rule]!(lines, index, f);
+      const result = FIXERS[f.rule]!(lines, index, f, ctx);
+      if (result === null) continue;
       if (typeof result === "string") {
         skipped.push({ file, line: f.line!, rule: f.rule, reason: result });
         continue;
@@ -303,13 +552,21 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
         line: finding.line!,
         rule: finding.rule,
         safety: edit.safety,
-        from: lines.slice(edit.index, edit.index + edit.count).join("\n"),
-        to: edit.lines.join("\n"),
+        from: existed ? lines.slice(edit.index, edit.index + edit.count).join("\n") : "",
+        to: edit.lines.join("\n").replace(/\n$/, ""),
         ...(edit.note ? { note: edit.note } : {}),
       });
       lines = [...lines.slice(0, edit.index), ...edit.lines, ...lines.slice(edit.index + edit.count)];
     }
-    if (options.write && edits.length) journal.write(full, lines.join(eol));
+    if (options.write && edits.length) {
+      journal.write(full, lines.join(eol));
+      // Godot's file cache only rereads a uid in a .uid or .import file when the file it belongs to changed.
+      const owner = /\.(uid|import)$/.test(full) ? full.replace(/\.(uid|import)$/, "") : undefined;
+      if (owner && existsSync(owner)) {
+        const now = new Date();
+        utimesSync(owner, now, now);
+      }
+    }
   }
   changes.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 
@@ -317,7 +574,7 @@ export function fixProject(path: string, options: FixOptions = {}): FixResult {
   let remaining: Finding[] | undefined;
   if (options.write && changes.length) {
     const changed = [...new Set(changes.map((c) => c.file))];
-    remaining = reviewProject(root, { ...learning, focus: changed }).findings.filter((f) => f.severity !== "info");
+    remaining = reviewProject(root, { ...learning, focus: changed, ...(options.from ? { from: options.from } : {}) }).findings.filter((f) => f.severity !== "info");
   }
   return { project: root, changes, skipped, needsCheck, written: options.write === true && changes.length > 0, ...(id ? { journal: id } : {}), ...(remaining ? { remaining } : {}) };
 }
@@ -332,8 +589,8 @@ export function formatFix(result: FixResult, detail: "brief" | "full" = "brief")
   const limit = detail === "full" ? result.changes.length : 30;
   for (const c of result.changes.slice(0, limit)) {
     out.push(`${c.file}:${c.line} [${c.rule}] ${c.safety}${c.note ? ` (${c.note})` : ""}`);
-    for (const l of c.from.split("\n")) out.push(`  - ${l.trim()}`);
-    for (const l of c.to.split("\n")) out.push(`  + ${l.trim()}`);
+    if (c.from) for (const l of c.from.split("\n")) if (l.trim()) out.push(`  - ${l.trim()}`);
+    if (c.to) for (const l of c.to.split("\n")) if (l.trim()) out.push(`  + ${l.trim()}`);
   }
   if (result.changes.length > limit) out.push(`+${result.changes.length - limit} more fixes (detail full)`);
   for (const s of result.skipped.slice(0, detail === "full" ? undefined : 10)) out.push(`skipped ${s.file}:${s.line} [${s.rule}]: ${s.reason}`);

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { assertWritable } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 
 /**
@@ -34,6 +35,8 @@ export interface JournalEntry {
   summary: string;
   date: string;
   files: JournalFile[];
+  /** What undo cannot put back by itself, said after undoing (e.g. a reimport is needed). */
+  note?: string;
 }
 
 const hash = (data: Uint8Array | string) => createHash("sha1").update(data).digest("hex");
@@ -65,14 +68,16 @@ export class JournalWriter {
   private readonly root: string;
   private readonly tool: string;
   private readonly summary: string;
+  private readonly note: string | undefined;
   private readonly before = new Map<string, { existed: boolean; data?: Buffer; notKept?: boolean }>();
   private dir: string | undefined;
   private id = 0;
 
-  constructor(root: string, tool: string, summary: string) {
+  constructor(root: string, tool: string, summary: string, note?: string) {
     this.root = root;
     this.tool = tool;
     this.summary = summary;
+    this.note = note;
   }
 
   /** Remember the file as it is now, the first time this call touches it (before a write made elsewhere). */
@@ -98,13 +103,26 @@ export class JournalWriter {
     }
   }
 
+  /** Refuses a protected path (godotwright.json "protect"); what this call wrote before is kept in the journal, so undo still works. */
+  private guard(full: string): void {
+    try {
+      assertWritable(full);
+    } catch (error) {
+      if (this.before.size && this.dir === undefined) this.commit();
+      throw error;
+    }
+  }
+
   write(full: string, data: string | Uint8Array): void {
+    this.guard(full);
     this.remember(full);
     mkdirSync(dirname(full), { recursive: true });
     writeFileSync(full, data);
   }
 
   move(from: string, to: string): void {
+    this.guard(from);
+    this.guard(to);
     this.remember(from);
     this.remember(to);
     mkdirSync(dirname(to), { recursive: true });
@@ -131,7 +149,7 @@ export class JournalWriter {
       if (b.notKept) entry.notKept = true;
       files.push(entry);
     }
-    const entry: JournalEntry = { id: this.id, tool: this.tool, summary: this.summary, date: new Date().toISOString(), files };
+    const entry: JournalEntry = { id: this.id, tool: this.tool, summary: this.summary, date: new Date().toISOString(), files, ...(this.note ? { note: this.note } : {}) };
     writeFileSync(join(this.dir, "entry.json"), `${JSON.stringify(entry, null, 2)}\n`);
     for (const old of entryIds(this.root).slice(0, -KEEP)) rmSync(join(journalDir(this.root), String(old)), { recursive: true, force: true });
     return this.id;
@@ -175,6 +193,8 @@ export function undoJournal(path: string, options: { steps?: number; force?: boo
       blocked = { entry, changed, notKept };
       break;
     }
+    // Undo writes too: a protected file is refused before any file of the entry is put back.
+    for (const f of entry.files) assertWritable(fromResPath(root, f.file));
     const restored: string[] = [];
     const removed: string[] = [];
     for (const f of entry.files) {
@@ -217,6 +237,7 @@ export function formatUndo(r: UndoResult): string {
     const parts = [u.restored.length ? `${u.restored.length} file${u.restored.length === 1 ? "" : "s"} restored` : "", u.removed.length ? `${u.removed.length} new file${u.removed.length === 1 ? "" : "s"} removed` : ""].filter(Boolean);
     out.push(`undone #${u.entry.id} ${u.entry.tool}: ${u.entry.summary}: ${parts.join(", ") || "nothing left to restore"}`);
     for (const f of [...u.restored, ...u.removed].slice(0, 12)) out.push(`  ${f}`);
+    if (u.entry.note) out.push(`  note: ${u.entry.note}`);
   }
   if (r.blocked) {
     const b = r.blocked;

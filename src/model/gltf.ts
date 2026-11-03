@@ -5,7 +5,8 @@ import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path"
 export interface Gltf {
   asset?: { version?: string; generator?: string };
   scene?: number;
-  scenes?: { nodes?: number[] }[];
+  scenes?: { name?: string; nodes?: number[] }[];
+  extensionsUsed?: string[];
   nodes?: GltfNode[];
   meshes?: { name?: string; primitives: GltfPrimitive[] }[];
   materials?: GltfMaterial[];
