@@ -172,3 +172,54 @@ describe("scene edits", () => {
     process.exitCode = undefined;
   });
 });
+
+describe("scene edits inside instanced scenes", () => {
+  const files = {
+    "project.godot": '[application]\nconfig/name="E"\nconfig/features=PackedStringArray("4.7")\n',
+    "child.tscn": '[gd_scene format=3]\n\n[node name="Child" type="Node2D"]\n\n[node name="Inner" type="Node2D" parent="."]\n',
+    "main.tscn":
+      '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://child.tscn" id="1_c"]\n\n[node name="Main" type="Node2D"]\n\n[node name="Inst" parent="." instance=ExtResource("1_c")]\n\n[node name="Inner" parent="Inst"]\n',
+  };
+
+  it("refuses a change Godot would drop on the next editor save, and makes the instance editable when asked", () => {
+    const root = makeProject({ ...files, "main.tscn": files["main.tscn"].replace('\n[node name="Inner" parent="Inst"]\n', "") });
+    const scene = join(root, "main.tscn");
+    // A new node directly under the instance is kept by Godot: allowed.
+    editScene(scene, { op: "add_node", parent: "Inst", name: "Mine", type: "Node2D" }, { write: true });
+    const withOverride = makeProject(files);
+    const target = join(withOverride, "main.tscn");
+    expect(() => editScene(target, { op: "set", node: "Inst/Inner", property: "position", value: "Vector2(5, 5)" })).toThrow(/instanced scene at "Inst", which is not editable/);
+    expect(() => editScene(target, { op: "add_node", parent: "Inst/Inner", name: "Deep", type: "Node2D" })).toThrow(SceneError);
+    const plan = editScene(target, { op: "set", node: "Inst/Inner", property: "position", value: "Vector2(5, 5)", makeEditable: true }, { write: true });
+    expect(plan.summary).toContain("(and make Inst editable)");
+    expect(read(withOverride, "main.tscn")).toMatch(/position = Vector2\(5, 5\)\n\n\[editable path="Inst"\]\n$/);
+    // Now editable: further changes need nothing more.
+    editScene(target, { op: "add_node", parent: "Inst/Inner", name: "Deep", type: "Node2D" }, { write: true });
+    expect(read(withOverride, "main.tscn").match(/\[editable/g)).toHaveLength(1);
+  });
+
+  it("allows changes inside an instance the instanced or inherited scene marks editable itself", () => {
+    const root = makeProject({ "project.godot": files["project.godot"], ...{
+    "leaf.tscn": '[gd_scene format=3]\n\n[node name="Leaf" type="Node2D"]\n\n[node name="Sprite" type="Node2D" parent="."]\n',
+    "mid.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://leaf.tscn" id="1_l"]\n\n[node name="Mid" type="Node2D"]\n\n[node name="L" parent="." instance=ExtResource("1_l")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(1, 1)\n\n[editable path="L"]\n',
+    "inh.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Mid" instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="L"]\nposition = Vector2(9, 9)\n',
+    "top.tscn": '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://mid.tscn" id="1_m"]\n\n[node name="Top" type="Node2D"]\n\n[node name="M" parent="." instance=ExtResource("1_m")]\n\n[node name="Sprite" parent="M/L"]\nposition = Vector2(3, 3)\n\n[editable path="M"]\n',
+  } });
+    editScene(join(root, "inh.tscn"), { op: "set", node: "L/Sprite", property: "position", value: "Vector2(1, 1)" }, { write: true });
+    editScene(join(root, "top.tscn"), { op: "set", node: "M/L/Sprite", property: "position", value: "Vector2(4, 4)" }, { write: true });
+    expect(read(root, "inh.tscn")).not.toContain("[editable");
+    expect(read(root, "top.tscn").match(/\[editable/g)).toHaveLength(1);
+  });
+
+  it("set_editable adds and removes [editable], and warns about the edits that will be dropped", () => {
+    const root = makeProject(files);
+    const scene = join(root, "main.tscn");
+    expect(() => editScene(scene, { op: "set_editable", node: "Main" })).toThrow(/not an instanced scene/);
+    editScene(scene, { op: "set_editable", node: "Inst" }, { write: true });
+    expect(read(root, "main.tscn")).toContain('\n[editable path="Inst"]\n');
+    expect(() => editScene(scene, { op: "set_editable", node: "Inst" })).toThrow(/already editable/);
+    const off = editScene(scene, { op: "set_editable", node: "Inst", editable: false }, { write: true });
+    expect(read(root, "main.tscn")).not.toContain("[editable");
+    expect(off.warnings).toEqual(["1 edit inside it will be dropped on the next save from the editor"]);
+  });
+});

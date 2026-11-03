@@ -41,6 +41,10 @@ from files, so it needs no open editor, and it works fine next to an editor-driv
 | calls an engine method | guesses a name from memory | looks it up in the bundled Godot 4.7 class reference |
 | renames a signal or moves a file | breaks the scene connections and `.uid` files | `rename` changes code, scenes, connections and `.uid` files together, dry run first |
 | says "it works" | without running anything | `check`, `test` and `play` run it headless and report `file:line` |
+| writes a shader | `hint_albedo`, `SCREEN_TEXTURE`, `ALBEDO` in a 2D shader | reviewed against Godot 4.7's shader tables and compiled headless; `fix` renames the Godot 3 names |
+| copies a scene or writes a `.tscn` by hand | duplicate or invalid uids, edits Godot drops on the next save | caught from the files alone; `fix` repairs uids across files, with undo |
+| says the build works | never exports it | `export run` exports headless, reads the `.pck`, checks it against what the game loads and runs it; patch packs too |
+| changes the HUD | cannot see what changed | screenshot baselines with a pixel diff, in scenarios and in CI |
 | needs a 3D model | needs Blender | `model build` makes a clean `.glb` from one of 59 kinds, then lints it |
 | opens a pull request | nobody checks the Godot side | a GitHub Action posts a receipt: review, check and tests |
 
@@ -79,16 +83,26 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 Run the agent from the Godot project folder, or pass `--project <path>`. `--tier premium` gives full detail for large
 models; `--tier cheap` (the default) gives short output and step-by-step instructions for small ones. Needs Node.js 22.12+.
 
-## New in 0.5.0
+## New in 0.6.0
 
-- **Godot's own view of a script: `godot_code`.** Godot's GDScript language server, kept warm: warnings at the
-  project's own levels, the inferred type of a variable, where a name is defined and what can follow a dot, also for
-  code that is not saved yet.
-- **Real shader compilation.** Headless Godot never compiles shaders; `godotwright shaders` (and `godot_check`
-  `shaders: true`) draws every shader and reports errors at the line in the .gdshader, include or scene, with the
-  Godot 4 form of Godot 3 code.
-- **Visual tests.** `godot_screenshot` with `baseline` compares a render with the last one: one line of text when
-  nothing changed, or the percent changed, where, and a diff picture. Renders are now pixel-identical run to run.
+- **Shaders.** `godot_shader` reviews every shader against Godot 4.7's own shader tables (Godot 3 names, built-ins in
+  the wrong place, read-only built-ins written, colours without `source_color`) and compiles it with Godot headless,
+  which finds every language error without a GPU; `gpu: true` also draws it, for what only the driver rejects.
+- **The real build.** `godot_export_run` exports headless, reads the `.pck` without Godot, checks it against what the
+  game loads, runs it, and makes patch packs that carry only what changed.
+- **Scene integrity.** Duplicate, invalid and stale uids, broken resource ids and edits Godot drops on the next editor
+  save, found from the files and repaired by `godot_fix` across files.
+- **Proof that stays.** `godot_scenario` keeps a passing play run as a regression test; screenshot steps in scenarios and named
+  baselines, compared with moved areas and blank pictures named; JUnit XML for your CI's test tab; `godot_leaks` names what grows per cycle and where it is made.
+- **Upgrades.** Godot 4.6 and 4.7 changes as review rules and fixes, `target` for a project on an older 4.x, and
+  `compare_godot` to see what a 4.8 beta breaks.
+- **Resources and imports.** `godot_resource_edit` edits `.tres` files and import settings and verifies the reimport.
+- **For agents and teams.** Tool sets (`--tools core` is about a third of the tool list), `--read-only`,
+  structured results, progress and cancel for long Godot runs, and protected folders that no write may touch.
+
+0.5.0 brought `godot_code` (Godot's own GDScript language server: warnings at the project's levels, inferred types,
+definitions and completion, also for unsaved code), shader compilation by drawing (`godotwright shaders`, `godot_check`
+`shaders: true`) and visual tests with screenshot baselines; see the [changelog](CHANGELOG.md).
 
 All changes: [CHANGELOG.md](CHANGELOG.md).
 
@@ -136,10 +150,10 @@ opt-in and off by default ([PRIVACY.md](PRIVACY.md)).
 
 Every command, option and rule: [docs/reference.md](docs/reference.md).
 
-## The 33 tools
+## The 38 tools
 
 <details>
-<summary>All MCP tools (32 of them are also CLI commands)</summary>
+<summary>All MCP tools (most are also CLI commands; <code>--tools core</code> loads 13)</summary>
 
 | Tool | What it does |
 | --- | --- |
@@ -147,7 +161,7 @@ Every command, option and rule: [docs/reference.md](docs/reference.md).
 | `godot_scan` | Map the project: scenes and node trees, scripts, signals, autoloads, input map |
 | `godot_api` | Exact Godot 4.7 lookup: signatures, inheritance, Godot 3 names |
 | `godot_api_search` | Search the Godot 4.7 class reference |
-| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`), or only what changed (`only_new`) |
+| `godot_review` | AAA review with scores; also reviews unsaved code (`code` + `file`), or only what changed (`only_new`); `from`/`target` for upgrades between 4.x releases |
 | `godot_checklist` | Every AAA rule with its fix |
 | `godot_feedback` | Mark a review finding as wrong or right, or say whether a lesson helped, so Godotwright learns from it |
 | `godot_lessons` | Lessons from real Godot projects (symptom, cause, fix, test) by words, Godot error, rule or topic; `gaps` lists what it cannot predict yet |
@@ -155,20 +169,25 @@ Every command, option and rule: [docs/reference.md](docs/reference.md).
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
-| `godot_scene_edit` | Add or remove nodes, set properties, connect signals and attach scripts in a `.tscn` |
-| `godot_migrate` | Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left |
+| `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
+| `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
+| `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
+| `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
 | `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
-| `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`; shows them first, then reviews the changed files again |
-| `godot_check` | Run Godot headless and report errors as `file:line`, runtime errors with their call chain; `shaders: true` also compiles every shader by drawing it |
+| `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`, uid repairs across files included; shows them first, then reviews the changed files again |
+| `godot_check` | Run Godot headless (load every script and scene, compile every shader) and report errors as `file:line`, runtime errors with their call chain; `shaders: true` also draws every shader; `compare_godot` diffs against a second Godot |
 | `godot_test` | Run GUT or GdUnit4 tests headless; only what failed, with `file:line` |
 | `godot_play` | Run a scene with an input timeline and return the values you watch per frame; `until` a condition, `signals` with their frame, `summary` per value, `expect` claims |
-| `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders |
+| `godot_export` | Before an export: files the presets leave out although the game loads them, plain data files missing from `include_filter`, paths built under excluded folders; with `pck`, what an exported pack holds |
+| `godot_export_run` | Export headless (pack, release, debug or patch), check the file and the pack's contents against what the game loads, then run the build for some frames with runtime errors and call chains |
+| `godot_scenario` | Keep a passing `godot_play` run as a regression test in the project (`save` runs it once more first), `list` them, `run` one or all with every failing claim, its value and frame |
 | `godot_session` | Load a scene once and keep the game running between calls, headless and paused, until you stop it |
 | `godot_game` | Look at and drive that running game: live tree, get and set values, call, eval, step frames with input until a condition holds, 3D layout (floating, buried, scale), rays, UI issues per window size, hot reload of edited scripts (state kept), new errors with their call chain |
 | `godot_perf` | Measure a scene's frame times: p50/p95/p99 against a budget, the slowest frames and what changed on them, the change since the last run |
-| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn; with `baseline`, a visual test: unchanged as text only, or the percent changed, where, and a diff picture |
+| `godot_leaks` | Load, run and free a scene in cycles and report what grows per cycle: orphan nodes by class, script and scene with where they were made and removed, nodes left behind, objects that are not nodes, what Godot held at exit; fails over a budget |
+| `godot_screenshot` | Render a scene or a `.glb` to a PNG and say how much is drawn and whether it is blank; with `baseline`, a visual test: unchanged as text only, or the percent changed, the areas of change and moves, and a diff picture |
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
@@ -199,6 +218,10 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Godot 3 code | flagged with the Godot 4 fix; `migrate` rewrites scripts | no | no | rewrites scripts, scenes and settings |
 | Live control of the open editor | no | yes | no | no |
 | A running game to inspect and drive | yes, headless (`godot_session`) | some do, through the editor | no | no |
+| Shader review and compile | yes, headless, also in CI | compile through the editor (godot-ai) | no | renames only |
+| Export, read the `.pck` and run the build | yes, headless; patch packs | export or patch through the editor (Godot MCP Pro) | no | no |
+| Visual regression | screenshot baselines in scenarios and CI | screenshot diffs in one fork (grinry) | no | no |
+| Smaller tool list, read-only mode | tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
 | C# | no | some do | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 

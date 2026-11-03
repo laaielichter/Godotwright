@@ -6,13 +6,18 @@
   "4.2",
   "4.3",
   "4.4",
-  "4.5"
+  "4.5",
+  "4.6",
+  "4.7"
  ],
  "classes": {
   "AnimationTrackEditPlugin": "4.0",
   "EditorSceneFormatImporterFBX": "4.2"
  },
  "members": {
+  "AudioEffectSpectrumAnalyzer.get_tap_back_pos": "4.6",
+  "AudioEffectSpectrumAnalyzer.set_tap_back_pos": "4.6",
+  "AudioEffectSpectrumAnalyzer.tap_back_pos": "4.6",
   "BoneAttachment3D.on_bone_pose_update": "4.2",
   "GDExtension.close_library": "4.2",
   "GDExtension.initialize_library": "4.2",
@@ -50,6 +55,9 @@
   "GraphNode.is_comment": "4.1",
   "GraphNode.language": "4.1",
   "GraphNode.overlay": "4.1",
+  "GraphNode.OVERLAY_BREAKPOINT": "4.1",
+  "GraphNode.OVERLAY_DISABLED": "4.1",
+  "GraphNode.OVERLAY_POSITION": "4.1",
   "GraphNode.set_comment": "4.1",
   "GraphNode.set_language": "4.1",
   "GraphNode.set_overlay": "4.1",
@@ -94,6 +102,7 @@
   "PathFollow2D.set_lookahead": "4.0",
   "RenderingServer.instance_reset_physics_interpolation": "4.4",
   "RenderingServer.instance_set_interpolated": "4.4",
+  "RichTextLabel.UPDATE_WIDTH_IN_PERCENT": "4.6",
   "Skeleton3D.bone_pose_changed": "4.2",
   "TileMap.get_quadrant_size": "4.1",
   "TileMap.set_quadrant_size": "4.1"

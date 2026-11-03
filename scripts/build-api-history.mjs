@@ -9,6 +9,9 @@
  * Usage: npm run build && GODOT=/path/to/godot node scripts/build-api-history.mjs <dir>
  * <dir> holds extension_api-<version>.json files, for example from godot-cpp's godot-4.2-stable branch:
  *   https://raw.githubusercontent.com/godotengine/godot-cpp/godot-4.2-stable/gdextension/extension_api.json
+ * or dumped by a Godot binary of that release (godot-cpp has no 4.6 or 4.7 branch):
+ *   cd <dir> && godot-4.6 --headless --dump-extension-api && mv extension_api.json extension_api-4.6.json
+ * Put a 4.7 dump in too: only what disappeared before the newest file counts, so the 4.6 removals need a 4.7 file.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -44,6 +47,7 @@ for (const version of versions) {
       ...(cls.properties ?? []).map((p) => p.name).filter((n) => !n.includes("/")),
       ...(cls.signals ?? []).map((s) => s.name),
       ...(cls.constants ?? []).map((c) => c.name),
+      ...(cls.enums ?? []).flatMap((e) => (e.values ?? []).map((v) => v.name)),
     ];
     for (const name of names) if (!present(name)) members[`${cls.name}.${name}`] = version;
   }

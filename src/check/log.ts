@@ -11,13 +11,21 @@ export interface Diagnostic {
   file?: string;
   line?: number;
   message: string;
-  /** Which check produced it: "script", "scene", "import", "run" or "engine". */
+  /** Which check produced it: "script", "scene", "shader", "import", "run" or "engine". */
   source: string;
   /** The GDScript call chain Godot printed with a runtime error, most recent call first (project frames only). */
   stack?: StackFrame[];
   /** How many times the same error was printed (a runtime error in _process repeats every frame). */
   count?: number;
+  /** The review rule that predicts this message, when one does (so the static finding and Godot's agree). */
+  rule?: string;
 }
+
+/** Godot messages a review rule predicts statically. */
+const RULE_OF: [RegExp, string][] = [
+  [/^UID duplicate detected between /, "structure/duplicate-uid"],
+  [/ext_resource, invalid UID: /, "structure/unknown-uid"],
+];
 
 export interface StackFrame {
   function: string;
@@ -32,6 +40,8 @@ const STACK_SHOWN = 4;
 export const MARKER = "GODOTWRIGHT";
 
 const HEADS: [RegExp, Severity, string][] = [
+  [/^SHADER ERROR:\s*(.*)$/, "error", "shader"],
+  [/^SHADER WARNING:\s*(.*)$/, "warning", "shader"],
   [/^SCRIPT ERROR:\s*(.*)$/, "error", "script"],
   [/^USER ERROR:\s*(.*)$/, "error", "script"],
   [/^ERROR:\s*(.*)$/, "error", "engine"],
@@ -41,7 +51,10 @@ const HEADS: [RegExp, Severity, string][] = [
 ];
 
 const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
-const AT = /^at:\s*(.*?)\s*\((.+):(\d+)\)\s*$/;
+// The file may be empty: a shader compiled from code reports `at: (null) (:4)`, a line in the code being compiled.
+const AT = /^at:\s*(\(null\)|.*?)\s*\((.*):(\d+)\)\s*$/;
+/** Godot echoes the shader code around an error: `--Main Shader--`, `--res://lib.gdshaderinc--`, `    3 | code`, `E   4-> code`. */
+const SHADER_ECHO = /^--(?:Main Shader|res:\/\/.*)--$|^E?\s*\d+\s*(?:\||->)/;
 const FRAME = /^\[\d+\]\s*(.*?)\s*\((.+):(\d+)\)\s*$/;
 const RES_LINE = /(res:\/\/[^\s'"()]+?):(\d+)\b/;
 const RES_PATH = /(res:\/\/[^\s'"()]+[^\s'"().,:;])/;
@@ -53,16 +66,22 @@ interface Pending {
 
 /**
  * Parses Godot output into diagnostics. `currentFile` markers from the checker
- * attribute engine errors that do not name a project file.
+ * attribute engine errors that do not name a project file. Inside a `GODOTWRIGHT_SHADER <path>` marker a shader
+ * error's line is a line of that shader; elsewhere (a scene that holds a Shader) it is kept in the message.
  */
 export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
   const out: Diagnostic[] = [];
   let pending: Pending | undefined;
   let current: string | undefined;
+  let currentShader = false;
+  // "Shader compilation failed." follows every SHADER ERROR (or its include's) and says nothing more.
+  let afterShaderError = false;
   const flush = () => {
     if (pending) {
       if (!pending.diag.file && current) pending.diag.file = current;
-      out.push(pending.diag);
+      const followUp = afterShaderError && pending.diag.message === "Shader compilation failed.";
+      if (!followUp) out.push(pending.diag);
+      afterShaderError = pending.diag.source === "shader" && pending.diag.severity === "error";
     }
     pending = undefined;
   };
@@ -71,23 +90,29 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
     const line = rawLine.trim();
     if (line === "") continue;
 
-    if (line.startsWith(`${MARKER}_BEGIN `)) {
+    if (line.startsWith(`${MARKER}_BEGIN `) || line.startsWith(`${MARKER}_SHADER `)) {
       flush();
-      current = line.slice(MARKER.length + 7).trim();
+      currentShader = line.startsWith(`${MARKER}_SHADER `);
+      current = line.slice(line.indexOf(" ") + 1).trim();
       continue;
     }
     if (line.startsWith(`${MARKER}_END`)) {
       flush();
       current = undefined;
+      currentShader = false;
       continue;
     }
     if (line.startsWith(MARKER)) continue;
+    if (SHADER_ECHO.test(line)) {
+      flush();
+      continue;
+    }
 
     const head = HEADS.find(([re]) => re.test(line));
     if (head) {
       flush();
       const message = head[0].exec(line)![1]!.trim();
-      const diag: Diagnostic = { severity: head[1], message, source: head[2] === "script" ? "script" : source };
+      const diag: Diagnostic = { severity: head[1], message, source: head[2] === "script" || head[2] === "shader" ? head[2] : source };
       const inMessage = RES_LINE.exec(message);
       if (inMessage) {
         diag.file = inMessage[1];
@@ -98,6 +123,8 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
         const path = RES_PATH.exec(message);
         if (path && !current) diag.file = path[1];
       }
+      const rule = RULE_OF.find(([re]) => re.test(message))?.[1];
+      if (rule) diag.rule = rule;
       pending = { diag, hasProjectLocation: inMessage !== null };
       continue;
     }
@@ -112,6 +139,14 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
       }
     }
     const location = AT.exec(line) ?? frame;
+    if (location && location[2] === "" && pending.diag.source === "shader") {
+      if (!pending.hasProjectLocation) {
+        if (currentShader) pending.diag.line = Number(location[3]);
+        else pending.diag.message += ` (shader line ${location[3]})`;
+        pending.hasProjectLocation = true;
+      }
+      continue;
+    }
     if (location) {
       const file = location[2]!;
       // Frames in res://.godot/ belong to Godotwright's own checker, not the project.
@@ -123,6 +158,11 @@ export function parseGodotLog(text: string, source = "engine"): Diagnostic[] {
       continue;
     }
     if (/^GDScript backtrace/i.test(line)) continue;
+    // A shader error's message can go on over a second line (SCREEN_TEXTURE: "To continue with minimal code changes ...").
+    if (pending.diag.source === "shader" && !pending.hasProjectLocation && !pending.diag.stack) {
+      pending.diag.message += ` ${line}`;
+      continue;
+    }
     // Any other line ends the current entry.
     flush();
   }
@@ -150,7 +190,7 @@ function dedupe(diags: Diagnostic[]): Diagnostic[] {
 
 export function formatDiagnostic(d: Diagnostic): string {
   const where = d.file ? `${d.file}${d.line ? `:${d.line}` : ""}: ` : "";
-  const lines = [`${where}${d.severity}: ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}`];
+  const lines = [`${where}${d.severity}: ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}${d.rule ? ` [${d.rule}]` : ""}`];
   // The call chain says how the code got there: the frames after the place of the error, the callers.
   const callers = (d.stack ?? []).filter((f, i) => i > 0 || f.file !== d.file || f.line !== d.line);
   for (const f of callers.slice(0, STACK_SHOWN)) lines.push(`    called from ${f.file}:${f.line} ${f.function}()`);

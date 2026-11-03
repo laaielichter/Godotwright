@@ -5,10 +5,10 @@ import { collect, writeOut } from "./output.js";
 
 export function migrateCommand(): Command {
   return new Command("migrate")
-    .description("rewrite Godot 3 GDScript to Godot 4 where that is mechanical (annotations, renames, yield, connect, moved members), and list what is left to do by hand")
-    .argument("[path]", "project directory, or one .gd file", ".")
+    .description("rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical (annotations, renames, yield, connect, moved members, shader renames and SCREEN_TEXTURE), and list what is left to do by hand")
+    .argument("[path]", "project directory, or one .gd or .gdshader file", ".")
     .option("--write", "write the migrated scripts (default: only show what would change)")
-    .option("--file <res-path>", "only this res:// script (repeatable)", collect, [])
+    .option("--file <res-path>", "only this res:// script or shader (repeatable)", collect, [])
     .option("--include-addons", "also migrate scripts in res://addons/")
     .addOption(new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief"))
     .option("--json", "print the result as JSON")

@@ -54,10 +54,15 @@ describe.skipIf(!GODOT || !SCREEN)("shader compile check in Godot", () => {
     expect(formatShaderCheck(result)).toMatch(/^4 shaders compiled, 2 errors, 1 include; renderer opengl3 gl_compatibility/m);
   });
 
-  it("is part of godot_check with shaders, which headless loading alone misses", { timeout: 300_000 }, async () => {
+  it("is part of godot_check: every run compiles shaders headless, shaders adds the GPU pass, each error once", { timeout: 300_000 }, async () => {
     const root = project();
+    // Headless loading alone missed these in 0.5.0; since 0.6.0 every check compiles each .gdshader headless.
     const plain = await checkProject(root, { godot: GODOT });
-    expect(plain.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(plain.diagnostics.filter((d) => d.severity === "error").map((d) => `${d.source} ${d.file}:${d.line} ${d.message.slice(0, 40)}`)).toEqual([
+      "shader res://fx/downwash.gdshader:6 SCREEN_TEXTURE has been removed in favor",
+      "shader res://fx/hull.gdshader:6 Invalid assignment of 'vec3' to 'float'.",
+    ]);
+    expect(plain.errors).toBe(2);
     const result = await checkProject(root, { godot: GODOT, shaders: true });
     for (const d of result.diagnostics) console.log(formatDiagnostic(d));
     expect(result.shaders).toMatchObject({ compiled: 4, parsed: 0, errors: 2 });
@@ -157,6 +162,53 @@ describe.skipIf(!GODOT || !SCREEN)("shader compile check in Godot", () => {
       expect(existsSync(join(root, ".godot", "godotwright", "shaders.gd"))).toBe(false);
       const check = await checkProject(root, { godot: GODOT, import: false, shaders: true, timeoutMs: 3000 });
       expect(check.steps.find((s) => s.name === "shaders")).toMatchObject({ timedOut: true });
+      expect(strays(root).filter((p) => !before.has(p))).toEqual([]);
+    });
+
+    it.skipIf(!SCREEN)("a cancelled GPU pass stops Godot, xvfb-run and Xvfb", { timeout: 300_000 }, async () => {
+      // Busy only when Godot draws, so the headless compile is quick and the GPU pass hangs.
+      const root = makeProject({
+        "project.godot": `${PROJECT_GODOT}\n[autoload]\n\nBusy="*res://busy.gd"\n`,
+        "busy.gd": 'extends Node\n\nfunc _init() -> void:\n\tif DisplayServer.get_name() != "headless":\n\t\tOS.delay_msec(120000)\n',
+        "ok.gdshader": "shader_type canvas_item;\nvoid fragment() {\n\tCOLOR = vec4(1.0);\n}\n",
+      });
+      const screens = (): string[] =>
+        spawnSync("ps", ["-eo", "pid=,stat=,args="], { encoding: "utf8" })
+          .stdout.split("\n")
+          .map((l) => l.trim().split(/\s+/))
+          .filter(([, stat, ...args]) => !stat?.startsWith("Z") && (/^(\S*\/)?(Xvfb|xvfb-run)$/.test(args[0] ?? "") || /xvfb-run/.test(args[1] ?? "")))
+          .map(([pid]) => pid!);
+      const godots = (): string[] =>
+        spawnSync("ps", ["-eo", "pid=,stat=,args="], { encoding: "utf8" })
+          .stdout.split("\n")
+          .map((l) => l.trim().split(/\s+/))
+          .filter(([, stat, ...args]) => !stat?.startsWith("Z") && args.join(" ").includes(root) && !args.includes("--headless"))
+          .map(([pid]) => pid!);
+      const before = new Set([...strays(root), ...screens()]);
+      const headless = process.platform === "linux" && !process.env["DISPLAY"];
+      const server = createServer({ tier: "premium", root, godot: GODOT! });
+      const client = new Client({ name: "test", version: "1.0.0" });
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      await Promise.all([server.connect(a), client.connect(b)]);
+      try {
+        const controller = new AbortController();
+        const call = client.callTool({ name: "godot_shader", arguments: { gpu: true } }, undefined, { signal: controller.signal, timeout: 300_000 });
+        // Wait until Godot draws (and, without a display, Xvfb runs).
+        const until = Date.now() + 120_000;
+        while (Date.now() < until && !(godots().length > 0 && (!headless || screens().some((p) => !before.has(p))))) await new Promise((r) => setTimeout(r, 200));
+        expect(godots().length).toBeGreaterThan(0);
+        if (headless) expect(screens().filter((p) => !before.has(p)).length).toBeGreaterThan(0);
+        const cancelled = Date.now();
+        controller.abort();
+        await expect(call).rejects.toThrow();
+        const gone = Date.now() + 10_000;
+        const left = () => [...godots(), ...strays(root), ...screens()].filter((p) => !before.has(p.split(" ")[0]!) && !before.has(p));
+        while (left().length && Date.now() < gone) await new Promise((r) => setTimeout(r, 100));
+        expect(left()).toEqual([]);
+        expect(Date.now() - cancelled).toBeLessThan(10_000);
+      } finally {
+        await Promise.all([client.close(), server.close()]);
+      }
     });
 
     it("does not report fog shaders as parsed when their headless run timed out", { timeout: 300_000 }, async () => {

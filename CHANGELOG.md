@@ -2,6 +2,64 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
+## 0.6.0 (shader review, the real build, scene integrity, regression proof, upgrades, and a smaller tool list)
+
+From a survey of about forty Godot AI tools and their issue trackers (November 2026): what users keep asking for,
+built headless and checked against Godot 4.7.2.
+
+- **`godot_shader` (and `godotwright shader`).** A static review of every `.gdshader`, `.gdshaderinc` and Shader stored
+  in a scene, against Godot 4.7's own shader tables (bundled from the 4.7.2 source): Godot 3 names, `SCREEN_TEXTURE` and
+  friends, built-ins in the wrong shader type or function, read-only built-ins written, unknown render modes, missing
+  includes, colour uniforms without `source_color`, and performance hints. Then a headless compile by real Godot (no
+  GPU, no display): 0.5.0 said headless Godot never compiles shaders, but `Shader.get_rid()` runs Godot's full shader
+  compiler on the dummy renderer, and on spatial, canvas_item, particles, sky and fog shaders, includes and shaders
+  stored in scenes it finds every language error at the same line as drawing them does, in a fraction of the time.
+  `gpu: true` (`--gpu`) adds 0.5.0's GPU pass for what only the driver rejects (a uniform block that is too big, a
+  sampler array indexed by a variable); `godotwright shaders`, `check --shaders` and `godot_check` `shaders: true` are
+  that pass and work as before. `godot_check` now compiles every `.gdshader` headless on every run, and an error both
+  passes find is reported once. `godot_migrate` and `godot_fix` rename the Godot 3 names and add the texture uniforms.
+- **`godot_export_run` (and `godotwright export run|patch|pck|smoke`).** A real headless export (`--export-pack` needs
+  no templates), a PCK reader in TypeScript (formats 2 to 4, packs inside executables, encrypted directories detected),
+  every file the game loads checked against the pack with the chain that loads it, editor-only and test code shipped
+  flagged, a smoke run of the exported game with runtime errors and call chains, and patch packs that list exactly what
+  they carry. `godotwright ci --export-preset` adds it to the receipt.
+- **Scene and resource integrity.** New review rules for duplicate, invalid and unknown uids, uids that name another
+  file than their path, missing or duplicate resource ids, section order, unused resources, and edits inside an
+  instanced scene that Godot drops on the next editor save. `godot_fix` repairs uids across files (Godot's own uid
+  format and cache), and `godot_scene_edit` refuses an edit Godot would drop unless you make the instance editable.
+- **`godot_scenario`.** Keep a passing `godot_play` run as a regression test (it runs once more first), list and run
+  them; `until` and signal claims in scenarios; `--junit` on `ci`, `test` and `scenario`, and in the GitHub Action.
+- **More from screenshot baselines.** 0.5.0's `baseline` ("auto" or a .png path), `threshold`, `tolerance` and
+  `update_baseline` work as before; a compare now also lists up to five areas of change and how far one moved, where in
+  the picture they are and a brightness shift, and warns about blank pictures (black, transparent, one colour).
+  `baseline` may also be a name (`hud`): `.godotwright/baselines/hud.png` with its scene, size, views, frames and
+  limits in `hud.json`, so later calls need only the name (`baseline_dir`, `--baseline-dir` for another folder).
+  Scenarios take screenshots on chosen frames and compare them; `godotwright ci` has a visual step for every named
+  baseline and scenario screenshot, and the Action uploads the diffs. One PNG reader and writer (16-bit, palette and
+  transparency) and one compare for all of them; diffs stay red.
+- **`godot_leaks` (and `godotwright leaks`).** Load, run and free a scene in cycles and report what grows per cycle:
+  orphan nodes by class, script and scene with the code that makes them, nodes in the tree, resources; an error over a
+  budget. `check` names the leaked classes at exit.
+- **Upgrades between Godot 4 releases.** The 4.6 removals and the 4.7 behaviour changes as review rules and fixes
+  (packed-array element writes, image units, defaults that changed), `from`/`target` on the review, and
+  `compare_godot` on `godot_check`: the same check with a second Godot binary, only what differs.
+- **`godot_resource_edit` (and `godotwright resource`).** Edit `.tres` resources (properties, sub_resources, uids kept)
+  and import settings (audio loop, texture compression, glTF per-animation and per-mesh options, importer switch),
+  checked against the importer's real option names, then reimported headless and verified.
+- **A smaller tool list.** `--tools` / `GODOTWRIGHT_TOOLS` with the sets core, edit, run, game, export and model
+  (`core` is 13 tools and about a third of the tool list), and `--read-only`. The instructions name only enabled tools.
+- **Structured results.** `godot_review`, `godot_check`, `godot_doctor` and `godot_test` return `structuredContent`
+  with an output schema next to the same text.
+- **Progress and cancel.** Long Godot runs send progress (phase, import percentage, files loaded, frames played) and
+  stop Godot and everything it started (xvfb-run and Xvfb included) when the call is cancelled, as a timeout does.
+- **Protected paths.** `"protect"` in `godotwright.json`: no Godotwright write may touch those folders, and the Claude
+  Code plugin's new `PreToolUse` hook denies Claude's own edits there. Plugin settings for the project, Godot binary,
+  protected paths, tool sets and read-only.
+- **Linear text readers.** Finding resource references in scenes, reading Godot's RID type names at exit, the
+  packed-write fix and the shader paths now use scanners or regular expressions that cannot backtrack: a long or
+  broken file stays fast (found by CodeQL).
+- 38 MCP tools (with 0.5.0's `godot_code`).
+
 ## 0.5.0 (Godot's own code intelligence, real shader compilation, visual tests)
 
 - **`godot_code` (and `godotwright code`): Godot's own view of a script.** Diagnostics, hover, definition and

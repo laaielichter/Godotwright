@@ -2,14 +2,22 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { PngError, decodePng, diffImages, encodePng, type RgbaImage } from "../src/screenshot/png.js";
+import { diffImages as diffWith } from "../src/screenshot/diff.js";
+import { PngError, decodePng, encodePng as encodeRgba, type RgbaImage } from "../src/screenshot/png.js";
 import { FIXTURES } from "./helpers.js";
 
 function image(width: number, height: number, pixel: (x: number, y: number) => [number, number, number, number]): RgbaImage {
-  const data = new Uint8Array(width * height * 4);
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) data.set(pixel(x, y), (y * width + x) * 4);
-  return { width, height, data };
+  const rgba = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) rgba.set(pixel(x, y), (y * width + x) * 4);
+  return { width, height, rgba };
 }
+
+const encodePng = (img: RgbaImage): Buffer => encodeRgba(img.width, img.height, img.rgba, 4);
+/** The diff as godot_screenshot computes it, with the picture as `image`. */
+const diffImages = (before: RgbaImage, after: RgbaImage, tolerance?: number) => {
+  const { diff, image } = diffWith(before, after, tolerance === undefined ? {} : { tolerance });
+  return { ...diff, image };
+};
 
 /** A PNG whose rows use the given filters in turn, so the decoder sees every filter type. */
 function filteredPng(img: RgbaImage, filters: number[]): Buffer {
@@ -19,7 +27,7 @@ function filteredPng(img: RgbaImage, filters: number[]): Buffer {
     const filter = filters[y % filters.length]!;
     raw[y * (stride + 1)] = filter;
     for (let x = 0; x < stride; x++) {
-      const at = (yy: number, xx: number) => (yy < 0 || xx < 0 ? 0 : img.data[yy * stride + xx]!);
+      const at = (yy: number, xx: number) => (yy < 0 || xx < 0 ? 0 : img.rgba[yy * stride + xx]!);
       const a = at(y, x - 4);
       const b = at(y - 1, x);
       const c = at(y - 1, x - 4);
@@ -45,12 +53,12 @@ describe("png", () => {
     const back = decodePng(encodePng(noise));
     expect(back.width).toBe(37);
     expect(back.height).toBe(23);
-    expect(Buffer.from(back.data).equals(Buffer.from(noise.data))).toBe(true);
+    expect(Buffer.from(back.rgba).equals(Buffer.from(noise.rgba))).toBe(true);
   });
 
   it("undoes every row filter: none, sub, up, average and paeth", () => {
     const back = decodePng(filteredPng(noise, [0, 1, 2, 3, 4, 3, 2, 4, 1]));
-    expect(Buffer.from(back.data).equals(Buffer.from(noise.data))).toBe(true);
+    expect(Buffer.from(back.rgba).equals(Buffer.from(noise.rgba))).toBe(true);
   });
 
   it("reads PNG files written by Godot (RGBA, RGB, grey, grey with alpha, and a cropped render) as Godot reads them", () => {
@@ -58,15 +66,18 @@ describe("png", () => {
     const expected = JSON.parse(readFileSync(join(dir, "expected.json"), "utf8")) as Record<string, string>;
     for (const name of ["rgba", "rgb", "grey", "greyalpha", "render"]) {
       const img = decodePng(readFileSync(join(dir, `${name}.png`)));
-      expect(Buffer.from(img.data).toString("hex"), name).toBe(expected[name]);
+      expect(Buffer.from(img.rgba).toString("hex"), name).toBe(expected[name]);
     }
   });
 
   it("refuses files it cannot read", () => {
     expect(() => decodePng(Buffer.from("not a png"))).toThrow(PngError);
-    const sixteen = encodePng(noise);
-    sixteen[24] = 16;
-    expect(() => decodePng(sixteen)).toThrow(/only 8-bit/);
+    const interlaced = encodePng(noise);
+    interlaced[28] = 1;
+    expect(() => decodePng(interlaced)).toThrow(/interlaced/);
+    const fourBit = encodePng(noise);
+    fourBit[24] = 4;
+    expect(() => decodePng(fourBit)).toThrow(/bit depth of 4/);
   });
 
   it("finds no change between identical pictures", () => {
@@ -85,7 +96,7 @@ describe("png", () => {
     // Cells of 16 pixels: the block spans cells 6-7 across and 2-3 down.
     expect(diff.region).toEqual({ x: 96, y: 32, width: 32, height: 32 });
     expect(diff.meanShift).toBeGreaterThan(100);
-    const at = (x: number, y: number) => [...diff.image.data.subarray((y * 160 + x) * 4, (y * 160 + x) * 4 + 4)];
+    const at = (x: number, y: number) => [...diff.image.rgba.subarray((y * 160 + x) * 4, (y * 160 + x) * 4 + 4)];
     expect(at(110, 45)).toEqual([255, 0, 0, 255]);
     expect(at(50, 20)[0]).toBe(at(50, 20)[1]);
   });

@@ -2,7 +2,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rm
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { checkProject, runOutput } from "../src/check/check.js";
+import { checkProject, cleanup, runOutput } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
 import { descendantPids, findGodot, GodotNotFoundError, runGodot } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
@@ -31,6 +31,7 @@ function fakeGodot(behavior: {
   importLog?: string;
   importExit?: number | "signal";
   runExit?: number | "signal";
+  verboseOut?: string;
 }): string {
   const dir = tempDir("fake-godot-");
   const bin = join(dir, "godot");
@@ -58,6 +59,7 @@ if (scriptAt >= 0 && b.holdPipes) {
   if (b.finish !== false) process.stderr.write("\\nGODOTWRIGHT_DONE 3 1\\n");
   process.exit(0);
 }
+if (args.includes("--quit-after") && args.includes("--verbose")) { process.stdout.write(b.verboseOut ?? ""); process.stderr.write(b.runLog ?? ""); process.exit(0); }
 if (args.includes("--quit-after")) { process.stdout.write(b.runOut ?? ""); process.stderr.write(b.runLog ?? ""); exitWith(b.runExit ?? 0); }
 process.exit(0);
 `;
@@ -94,7 +96,11 @@ describe("checkProject", () => {
         "ERROR: 38 resources still in use at exit (run with --verbose for details).",
         "   at: clear (core/io/resource.cpp:810)",
       ].join("\n"),
+      verboseOut: "Loading resource: res://main.tscn\nResource still in use: res://scripts/main.gd (GDScript)\nResource still in use: res://.godot/godotwright/x.gd (GDScript)\n",
     });
+    // The journal shares .godot/godotwright with the checker; a check must leave it, so godot_undo still works.
+    mkdirSync(join(root, ".godot", "godotwright", "journal"), { recursive: true });
+    writeFileSync(join(root, ".godot", "godotwright", "journal", "keep"), "x");
     const result = await checkProject(root, { godot, runFrames: 10 });
     expect(result.godotVersion).toBe("4.7.2.stable.official.fake");
     expect([result.scripts, result.scenes]).toEqual([3, 1]);
@@ -116,14 +122,18 @@ describe("checkProject", () => {
       },
       {
         severity: "warning",
-        message: "at exit: 38 resources still in use at exit (run with --verbose for details).",
+        message: "at exit: 38 resources still in use at exit: res://scripts/main.gd (GDScript)",
         source: "run",
       },
     ]);
     expect(result.errors).toBe(2);
-    expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
+    // The leak at exit made a second, --verbose run that names what was still in use.
+    expect(result.steps.map((s) => s.name)).toEqual(["import", "check", "run", "run-verbose"]);
+    const quiet = await checkProject(root, { godot, runFrames: 10, leakDetails: false });
+    expect(quiet.steps.map((s) => s.name)).toEqual(["import", "check", "run"]);
     // The checker script is removed afterwards.
-    expect(existsSync(join(root, ".godot", "godotwright"))).toBe(false);
+    expect(existsSync(join(root, ".godot", "godotwright", "check"))).toBe(false);
+    expect(existsSync(join(root, ".godot", "godotwright", "journal", "keep"))).toBe(true);
   });
 
   it("ends a run at its timeout even when a process Godot started keeps the output open", async () => {
@@ -345,5 +355,26 @@ describe("running a scene and reading its output", () => {
     expect(plain.output).not.toContain("output of the run");
     const json = JSON.parse((await runCli(["check", root, "--godot", godot, "--run", "10", "--json"])).output) as { output?: string };
     expect(json.output).toBe("hello from _ready");
+  });
+});
+
+describe("shader errors found headless and by drawing", () => {
+  it("reports an error both passes find once, keeping the copy with the most to say", () => {
+    const kept = cleanup([
+      { severity: "error", file: "res://fx/a.gdshader", line: 3, message: "SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform. To continue with minimal code changes add it.", source: "shader" },
+      { severity: "error", file: "res://fx/lib.gdshaderinc", line: 2, message: "Unknown identifier in expression: 'x'.", source: "shader" },
+      { severity: "error", file: "res://level.tscn", message: 'Invalid arguments for the built-in function: "vec4(float,float)". (shader line 4)', source: "scene" },
+      { severity: "error", file: "res://fx/a.gdshader", line: 3, message: "SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform. (Godot 3; use a uniform)", source: "shader" },
+      { severity: "error", file: "res://fx/lib.gdshaderinc", line: 2, message: "Unknown identifier in expression: 'x'. (included from res://fx/b.gdshader:2)", source: "shader" },
+      { severity: "error", file: "res://level.tscn", line: 7, message: 'Invalid arguments for the built-in function: "vec4(float,float)".', source: "shader" },
+      { severity: "error", file: "res://fx/b.gdshader", line: 3, message: "Unknown identifier in expression: 'x'.", source: "shader" },
+    ]);
+    expect(kept.map((d) => `${d.file}:${d.line ?? ""} ${d.message.slice(0, 40)}`)).toEqual([
+      "res://fx/a.gdshader:3 SCREEN_TEXTURE has been removed in favor",
+      "res://fx/lib.gdshaderinc:2 Unknown identifier in expression: 'x'. (",
+      'res://level.tscn:7 Invalid arguments for the built-in funct',
+      "res://fx/b.gdshader:3 Unknown identifier in expression: 'x'.",
+    ]);
+    expect(kept[0]!.message).toContain("To continue");
   });
 });

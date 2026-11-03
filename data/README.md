@@ -17,16 +17,26 @@ and archetypes. They are anonymous: no code, names, paths or numbers that point 
 `test/lessons.test.ts` runs every one through the same scrubber that local lessons go through. Propose new ones from
 `godotwright lessons export`.
 
-`api-removed.json` lists what Godot 4.0 to 4.5 had and Godot 4.7 does not, with the last release that had it.
+`api-removed.json` lists what Godot 4.0 to 4.6 had and Godot 4.7 does not, with the last release that had it.
 It comes from the `extension_api.json` of each release (the `godot-4.x-stable` branches of
-[godot-cpp](https://github.com/godotengine/godot-cpp)), and every entry was then tried in a real Godot 4.7.2: names Godot
+[godot-cpp](https://github.com/godotengine/godot-cpp) for 4.0 to 4.5, and `--dump-extension-api` of Godot 4.6.2 and
+4.7.2, since godot-cpp has no 4.6 or 4.7 file), and every entry was then tried in a real Godot 4.7.2: names Godot
 still accepts for old projects are listed apart under `compat`, and internal classes that still exist are left out.
-Removals in 4.6 and 4.7 are not in it (godot-cpp has no 4.6 or 4.7 file to compare with). Rebuild it with:
+Rebuild it with:
 
 ```sh
 npm run build
-GODOT=/path/to/godot node scripts/build-api-history.mjs /folder/with/extension_api-4.0.json...extension_api-4.5.json
+cd /folder && godot-4.6 --headless --dump-extension-api && mv extension_api.json extension_api-4.6.json  # same for 4.7
+GODOT=/path/to/godot node scripts/build-api-history.mjs /folder/with/extension_api-4.0.json...extension_api-4.7.json
 ```
+
+`api-changes.json` is written by hand from the official upgrade guides (`upgrading_to_godot_4.6.rst` and
+`upgrading_to_godot_4.7.rst` in [godot-docs](https://github.com/godotengine/godot-docs)): changes that still compile
+but behave differently, changed defaults, and signature changes that matter to GDScript. Each entry says how it was
+checked (`verified`): by running the same script in Godot 4.6.2 and 4.7.2, or against the 4.7.2 class reference. Changes
+the guide lists as GDScript compatible (a parameter that became `StringName` or `float`) are left out: they only
+matter to C#. `godot_api` shows the entry under the member, and the review rules in `src/review/checks/version.ts` use
+the ids.
 
 The Godot class reference and rename tables are MIT licensed:
 

@@ -11,6 +11,7 @@ import { emptyLearning } from "../learn/store.js";
 import { lessonHintsForMessages, lessonHintsForRules } from "../lessons/hints.js";
 import { bundledLessons } from "../lessons/library.js";
 import { findProjectRoot, listProjectFiles, toResPath } from "../project/files.js";
+import { ProtectedPathError, protectionOf } from "../project/protect.js";
 import { reviewProject } from "../review/review.js";
 import type { Finding } from "../review/rules.js";
 
@@ -39,14 +40,20 @@ export interface HookInput {
 export interface HookOutput {
   decision?: "block";
   reason?: string;
-  hookSpecificOutput?: { hookEventName: string; additionalContext: string };
+  hookSpecificOutput?: {
+    hookEventName: string;
+    additionalContext?: string;
+    /** PreToolUse only: deny the tool call, with the reason Claude sees. */
+    permissionDecision?: "deny";
+    permissionDecisionReason?: string;
+  };
 }
 
-export const HOOK_EVENTS = ["post-edit", "post-bash", "stop", "session-start"] as const;
+export const HOOK_EVENTS = ["pre-edit", "post-edit", "post-bash", "stop", "session-start"] as const;
 export type HookEvent = (typeof HOOK_EVENTS)[number];
 
 /** Files whose edits are reviewed. */
-const GODOT_FILE = /\.(gd|tscn|tres|gdshader)$|(^|[\\/])project\.godot$/;
+const GODOT_FILE = /\.(gd|tscn|tres|gdshader|gdshaderinc)$|(^|[\\/])project\.godot$/;
 /** At most this many findings are listed in one message; the rest are counted. */
 const MAX_LISTED = 8;
 
@@ -122,7 +129,7 @@ function listFindings(findings: Finding[]): string[] {
 }
 
 function editedFile(input: HookInput): string | undefined {
-  const raw = input.tool_input?.["file_path"] ?? input.tool_input?.["path"];
+  const raw = input.tool_input?.["file_path"] ?? input.tool_input?.["notebook_path"] ?? input.tool_input?.["path"];
   if (typeof raw !== "string" || !raw) return undefined;
   return isAbsolute(raw) ? raw : resolve(input.cwd ?? process.cwd(), raw);
 }
@@ -130,6 +137,25 @@ function editedFile(input: HookInput): string | undefined {
 /** Findings of one file (a scene's findings may name a node after `::`). */
 function findingsOf(findings: Finding[], res: string): Finding[] {
   return findings.filter((f) => f.file === res || f.file.startsWith(`${res}::`));
+}
+
+/**
+ * Before Write, Edit, MultiEdit or NotebookEdit: deny a write into a protected path (godotwright.json "protect" or
+ * $GODOTWRIGHT_PROTECT) with the reason. Any file type counts. Bash commands are not parsed.
+ */
+export function preEdit(input: HookInput, context: HookContext = {}): HookOutput | undefined {
+  const file = editedFile(input);
+  if (!file) return undefined;
+  const env = context.env ?? process.env;
+  const protection = protectionOf(file, env, input.cwd ?? process.cwd());
+  if (!protection) return undefined;
+  return {
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: new ProtectedPathError(file, protection).message,
+    },
+  };
 }
 
 /** After Edit, Write or MultiEdit of a Godot file: review it, send errors back, mention warnings. */
@@ -266,6 +292,8 @@ export function sessionStart(input: HookInput, context: HookContext = {}): HookO
 
 export function runHook(event: HookEvent, input: HookInput, context: HookContext = {}): HookOutput | undefined {
   switch (event) {
+    case "pre-edit":
+      return preEdit(input, context);
     case "post-edit":
       return postEdit(input, context);
     case "post-bash":

@@ -27,9 +27,12 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 ## Change the project with the tools, not by hand
 
 - Renaming or moving anything: `godot_usages` first, then `godot_rename` (dry run, then `write: true`).
-- Scenes: `godot_scene_edit`. Project settings, input actions, autoloads: `godot_project_edit`.
+- Scenes: `godot_scene_edit`. Project settings, input actions, autoloads: `godot_project_edit`. `.tres` resources and import settings (loop, compression, per-animation or per-mesh options): `godot_resource_edit`.
   These keep `.tscn`, `.uid` and `project.godot` valid and touch only the lines of the change.
-- Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs.
+- Godot 3 code: `godot_migrate` (report, then `write: true`), then fix the listed TO DOs. It ports shaders too.
+- Shaders: after writing or changing a `.gdshader` (or a Shader in a scene), run `godot_shader`; it checks the code
+  against Godot 4.7's shader tables and compiles it with Godot headless. `godot_api` with `shader:spatial.fragment`
+  lists the built-ins of a shader type and function.
 - Mechanical findings (a freed check in the wrong order, `get_meta()` with a null default, a lone ternary, garbled
   text, `emit_signal()`, MultiMesh or Timer order): `godot_fix` (report, then `write: true`), not by hand.
 - Before deleting or moving a file: `godot_deps` op `why` (also paths the code builds); `op unused` lists what can go.
@@ -40,10 +43,15 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
 - `godot_play` runs a scene with an input timeline and returns the values you watch per frame. `until` stops when a
   condition holds, `signals` records when signals fire, `summary` keeps long runs short, and `expect` turns a run
   into a test.
+- When `godot_play` with `expect` proves a fix, keep it: `godot_scenario` op `save` with the same arguments runs it
+  once more and writes it to `.godotwright/scenarios/`, where `godotwright ci` runs it on every change. op `run`
+  runs the kept scenarios.
 - `godot_session` loads a scene once and keeps it running; `godot_game` then shows the live tree, reads and sets
   values and steps frames with input until a condition holds; `reload` puts the scripts you edited into the running
   game with every node's values kept. Use it when a world loads slowly or a state is hard to reach; stop it when done.
 - `godot_perf` measures frame times (p50/p95/p99, the slowest frames and their cause) and compares with the last run.
+- `godot_leaks` loads, runs and frees a scene in cycles and names what grows per cycle (orphan nodes by class and
+  script with where they were made and removed, nodes left behind, objects that are not nodes); 0 per cycle proves a fix.
 - `godot_screenshot` renders a scene or a model to a PNG.
 
 ## Know what real projects learned

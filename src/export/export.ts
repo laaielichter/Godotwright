@@ -49,7 +49,7 @@ export interface ExportCheck {
  * GeoJSON, cfg, XML, YAML...) needs include_filter, as an export of Godot 4.7.2 shows. A CSV is a resource only when
  * it is imported (as translations, with an .import file next to it); otherwise it is data.
  */
-const RESOURCE_EXT = /\.(gd|gdshader|gdshaderinc|tscn|scn|tres|res|cs|gdextension|translation|import|uid|json|png|jpe?g|webp|svg|tga|bmp|exr|hdr|ktx2?|dds|glb|gltf|blend|fbx|obj|dae|wav|ogg|mp3|ttf|otf|woff2?|fnt|font|csv)$/i;
+export const RESOURCE_EXT = /\.(gd|gdshader|gdshaderinc|tscn|scn|tres|res|cs|gdextension|translation|import|uid|json|png|jpe?g|webp|svg|tga|bmp|exr|hdr|ktx2?|dds|glb|gltf|blend|fbx|obj|dae|wav|ogg|mp3|ttf|otf|woff2?|fnt|font|csv)$/i;
 
 function strings(value: Variant | undefined): string[] {
   if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
@@ -85,17 +85,44 @@ export function matchesFilter(rel: string, filter: string): boolean {
   return pattern.test(rel) || pattern.test(name);
 }
 
-function templatesDir(): string | undefined {
-  const version = `${GODOT_TARGET}`;
-  const bases = [
-    process.env["APPDATA"] ? join(process.env["APPDATA"], "Godot", "export_templates") : "",
+/**
+ * How a file's .import next to it says it is imported: by an importer (exported as its import result, whatever the
+ * extension: a .glsl becomes an RDShaderFile), "keep" or "skip" (not exported, as an export of Godot 4.7.2 shows), or
+ * undefined when there is no .import.
+ */
+export function importerOf(root: string, rel: string): string | undefined {
+  try {
+    return /^importer\s*=\s*"([^"]*)"/m.exec(readFileSync(join(root, `${rel}.import`), "utf8"))?.[1] ?? "";
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether Godot exports a file without include_filter naming it: an imported file, or one of its resource types. */
+export function exportedAsResource(root: string, rel: string): boolean {
+  const importer = importerOf(root, rel);
+  if (importer === "keep" || importer === "skip") return false;
+  if (importer !== undefined) return true;
+  // A CSV is a resource only when it is imported (as translations).
+  return RESOURCE_EXT.test(rel) && !/\.csv$/i.test(rel);
+}
+
+/** Where Godot keeps export templates on this machine, most specific first. */
+export function templateBases(env: NodeJS.ProcessEnv = process.env): string[] {
+  return [
+    env["XDG_DATA_HOME"] ? join(env["XDG_DATA_HOME"], "godot", "export_templates") : "",
+    env["APPDATA"] ? join(env["APPDATA"], "Godot", "export_templates") : "",
     join(homedir(), ".local", "share", "godot", "export_templates"),
     join(homedir(), "Library", "Application Support", "Godot", "export_templates"),
   ].filter(Boolean);
-  for (const base of bases) {
+}
+
+/** The export templates folder for a Godot version ("4.7.2.stable"; by default any 4.7 one), when installed. */
+export function templatesDir(version = `${GODOT_TARGET}`): string | undefined {
+  for (const base of templateBases()) {
     if (!existsSync(base)) continue;
     try {
-      const found = readdirSync(base).find((d) => d.startsWith(version));
+      const found = readdirSync(base).find((d) => (version.includes(".stable") || /\.[a-z]/.test(version) ? d === version : d.startsWith(version)));
       if (found) return join(base, found);
     } catch {
       // Unreadable: treat as missing.
@@ -103,6 +130,14 @@ function templatesDir(): string | undefined {
   }
   return undefined;
 }
+
+/** A UTF-8 byte order mark at the start: Godot 4.7.2 then reads no presets at all from export_presets.cfg. */
+export function hasBom(text: string | Buffer): boolean {
+  return typeof text === "string" ? text.charCodeAt(0) === 0xfeff : text.length >= 3 && text[0] === 0xef && text[1] === 0xbb && text[2] === 0xbf;
+}
+
+export const BOM_MESSAGE =
+  "export_presets.cfg starts with a UTF-8 byte order mark (BOM): Godot 4.7.2 then reads no presets from it and every headless export fails with \"Invalid export preset name\"; save it as UTF-8 without BOM";
 
 interface Reference {
   path: string;
@@ -151,11 +186,13 @@ export function checkExport(path: string, options: { preset?: string } = {}): Ex
     // No export_presets.cfg.
   }
   const all = parsePresets(presetsText);
+  const bom = hasBom(presetsText);
   const presets = options.preset ? all.filter((p) => p.name === options.preset || String(p.index) === options.preset) : all;
   if (!all.length) notes.push("no export_presets.cfg (or no presets in it): add one in Project > Export; nothing to check yet");
   else if (!presets.length) notes.push(`no preset named "${options.preset}" (presets: ${all.map((p) => p.name).join(", ")})`);
   const refs = presets.length ? references(root) : [];
   const problems: ExportProblem[] = [];
+  if (bom) problems.push({ severity: "error", preset: "*", file: "res://export_presets.cfg", message: BOM_MESSAGE });
   for (const preset of presets) {
     if (preset.exportFilter !== "all_resources" && preset.exportFilter !== "exclude") {
       notes.push(`${preset.name}: exports ${preset.exportFilter === "scenes" ? "selected scenes" : "selected resources"} and their dependencies; only plain files and excluded folders are checked`);
@@ -186,9 +223,7 @@ export function checkExport(path: string, options: { preset?: string } = {}): Ex
         );
         continue;
       }
-      // An imported file (with a .import next to it) is exported as its import result.
-      const imported = existsSync(join(root, `${rel}.import`));
-      if (!RESOURCE_EXT.test(rel) || (/\.csv$/i.test(rel) && !imported)) {
+      if (!exportedAsResource(root, rel)) {
         if (!included(rel) && existsSync(join(root, rel))) {
           problems.push({
             severity: ref.loaded ? "error" : "warning",

@@ -107,6 +107,7 @@ export async function doctorProject(path: string, options: DoctorOptions = {}): 
     problems.push({
       severity: d.severity,
       source: places.some((p) => reviewed.has(p)) ? "both" : "godot",
+      ...(d.rule ? { rule: d.rule, ...(RULES[d.rule] ? { fix: RULES[d.rule]!.fix } : {}) } : {}),
       title: d.message,
       places,
       ...(lesson ? { lesson } : {}),
@@ -155,7 +156,8 @@ export async function doctorProject(path: string, options: DoctorOptions = {}): 
   const symptomLessons = options.symptom ? searchLessons(options.symptom, { learning, shared, limit: 3 }).map((h) => lessonOf(h)!) : [];
   const errors = problems.filter((p) => p.severity === "error").length;
   const next: string[] = [];
-  if (problems.some((p) => p.rule === "api/godot3-syntax")) next.push("run godot_migrate (report, then write: true): it rewrites the Godot 3 code mechanically");
+  if (problems.some((p) => p.rule === "api/godot3-syntax" || p.rule === "api/shader-renamed" || p.rule === "api/shader-removed-builtin")) next.push("run godot_migrate (report, then write: true): it rewrites the Godot 3 code mechanically");
+  if (problems.some((p) => p.rule?.includes("/shader-"))) next.push("after a shader change, run godot_shader: it compiles every shader with Godot headless");
   if (fix.changes.length) next.push(`apply the ${fix.changes.length} mechanical fix${fix.changes.length === 1 ? "" : "es"} with godot_fix (write: true; include_check: true for the ones marked check)`);
   if (errors) next.push(`fix the ${errors} error${errors === 1 ? "" : "s"} in the order shown (godot_review lists those not shown); look up every engine name you change with godot_api`);
   if (problems.some((p) => p.severity === "warning")) next.push("then the warnings that touch what you are building; a lesson says why each matters");
@@ -194,7 +196,7 @@ export function formatDoctor(d: DoctorReport, detail: "brief" | "full" = "brief"
     const fix = p.lesson?.fix ?? p.fix;
     if (fix) out.push(`   fix: ${fix}${p.mechanical ? " (godot_fix can do this)" : ""}`);
     else if (p.mechanical) out.push("   fix: godot_fix can do this");
-    if (p.rule === "api/godot3-syntax" || /\(Godot 3 name\)|In Godot 4 /.test(p.title)) out.push("   godot_migrate rewrites Godot 3 code like this for the whole project");
+    if (p.rule === "api/godot3-syntax" || p.rule === "api/shader-renamed" || p.rule === "api/shader-removed-builtin" || /\(Godot 3 name\)|In Godot 4 /.test(p.title)) out.push("   godot_migrate rewrites Godot 3 code like this for the whole project");
   });
   if (d.more.errors || d.more.warnings) out.push(`+${d.more.errors} more errors and ${d.more.warnings} more warnings (godot_review lists them all)`);
   if (!d.problems.length) out.push("No errors or warnings: the review and Godot agree the project is clean.");

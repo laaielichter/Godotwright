@@ -1,5 +1,6 @@
 import { Command, InvalidArgumentError } from "commander";
 import { checkLearning } from "../learn/hooks.js";
+import { compareGodot, formatCompare } from "../check/compare.js";
 import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { shaderSummary } from "../shaders/shaders.js";
@@ -18,6 +19,7 @@ interface Options {
   timeout: number;
   json?: boolean;
   verbose?: boolean;
+  compareGodot?: string | true;
 }
 
 /** `--run [frames]` takes a positive whole number. A project path given here is refused, not read as a frame count. */
@@ -46,12 +48,38 @@ export function checkCommand(): Command {
     .option("--scene <res-path>", "run this scene instead of the main scene (implies --run)")
     .option("--exclude <dir>", "directory to skip, e.g. levels/old (repeatable); res://addons/ is skipped already", collect, [])
     .option("--include-addons", "also load res://addons/ (third-party code; its errors are not your project's)")
-    .option("--shaders", "also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run)")
+    .option("--shaders", "also draw every shader on the GPU, for what only the driver rejects (every .gdshader is compiled headless anyway; needs a display or xvfb-run)")
     .option("--timeout <seconds>", "timeout per Godot run", parseSeconds, 600)
     .option("--json", "print the result as JSON")
     .option("--verbose", "also print the raw Godot output")
+    .option(
+      "--compare-godot [path]",
+      "also check with a second Godot binary (default $GODOT_NEXT) on a temporary copy, and print only what differs; exit 1 on new errors",
+    )
     .action(async (path: string, options: Options, command: Command) => {
       try {
+        if (options.compareGodot !== undefined) {
+          const result = await compareGodot(path, {
+            godot: options.godot,
+            compareGodot: options.compareGodot === true ? undefined : options.compareGodot,
+            import: options.import,
+            instantiate: options.instantiate,
+            runFrames: options.run === undefined ? (options.scene ? 120 : 0) : options.run === true ? 120 : options.run,
+            ...(options.scene ? { scene: options.scene } : {}),
+            exclude: options.exclude,
+            includeAddons: options.includeAddons,
+            timeoutMs: options.timeout * 1000,
+          });
+          if (options.json) {
+            const summary = (r: typeof result.base) => ({ godot: r.godot, godotVersion: r.godotVersion, errors: r.errors, warnings: r.warnings, scripts: r.scripts, scenes: r.scenes });
+            writeOut(command, `${JSON.stringify({ base: summary(result.base), other: summary(result.other), onlyOther: result.onlyOther, onlyBase: result.onlyBase, same: result.same }, null, 2)}\n`);
+          } else {
+            const hints = lessonHintsForMessages(result.onlyOther.map((d) => d.message));
+            writeOut(command, formatCompare(result, Number.POSITIVE_INFINITY) + (hints.length ? `${hints.join("\n")}\n` : ""));
+          }
+          if (result.onlyOther.some((d) => d.severity === "error")) process.exitCode = 1;
+          return;
+        }
         const result = await checkLearning(path, {
           godot: options.godot,
           import: options.import,
@@ -75,7 +103,7 @@ export function checkCommand(): Command {
           lines.push(...result.diagnostics.map(formatDiagnostic));
           lines.push(
             `${result.errors} error${result.errors === 1 ? "" : "s"}, ${result.warnings} warning${result.warnings === 1 ? "" : "s"}` +
-              ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes)`,
+              ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes${result.shaderFiles ? `, ${result.shaderFiles} shaders` : ""})`,
           );
           if (result.shaders) lines.push(shaderSummary(result.shaders));
           lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));

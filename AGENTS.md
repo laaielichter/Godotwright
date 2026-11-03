@@ -34,15 +34,23 @@ node dist/cli.js --help
   framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
   stop, killed on exit, restarted when a class_name, project.godot or a file that needs an import changes; a restart
   waits for the calls queued on the old server), `code.ts` holds the ops and output.
-- `src/shaders/`: compiles every shader by drawing it in Godot (Compatibility renderer, xvfb-run on Linux without a
-  display), because headless Godot never compiles shaders. `runner.ts` is the GDScript it runs, `log.ts` reads Godot's
+- `src/shaders/`: the GPU pass over shaders: draws every shader in Godot (Compatibility renderer, xvfb-run on Linux
+  without a display), for what only the GPU driver rejects (a uniform block that is too big, a sampler array indexed by
+  a variable). Language errors are found headless, without it: `src/check/shader-compile.ts` (`Shader.get_rid()` runs
+  Godot's full shader compiler on the dummy renderer) for `godot_shader`, and the checker of `godot_check`. `runner.ts` is the GDScript it runs, `log.ts` reads Godot's
   shader errors, `hints.ts` names the Godot 4 form of Godot 3 shader code, and `shaders.ts` maps each error to the line
-  in the .gdshader, .gdshaderinc or .tres/.tscn. `godotwright shaders` and `check --shaders` use it.
+  in the .gdshader, .gdshaderinc or .tres/.tscn. `godotwright shaders`, `check --shaders` and `shader --gpu` use it; `src/shader/shader.ts` (`godot_shader`) puts the
+  static review, the headless compile and this pass together.
+- `src/screenshot/`: `screenshot.ts` renders a scene or model with Godot; `png.ts` is the one PNG reader and writer,
+  `diff.ts` the pixel compare (areas of change, moves, blank pictures; diffs in red), and `baseline.ts` the one baseline
+  implementation ("auto", a .png path, or a name with its settings in JSON) that screenshots, scenario screenshot steps
+  and `godotwright ci` share. Option names released in 0.5.0 (`baseline`, `threshold`, `tolerance`, `update_baseline`)
+  keep their meaning.
 - `src/api/`: lookup and search over the bundled Godot 4.7 class reference.
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
   scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from
   lessons); `rules.ts` lists every rule.
-  New rules need a test in `test/review.test.ts`, and must stay quiet on the
+  New rules need a test in `test/review.test.ts` (shader rules in `test/review-shader.test.ts`), and must stay quiet on the
   official demo projects (`test/integration/review-demos.test.ts`).
 - `src/model/`: checks `.glb` and `.gltf` files without Godot. `inspect.ts` reads what
   is in a model, `lint.ts` and `rules.ts` hold the AAA model review, `contract.ts` reads
@@ -63,7 +71,14 @@ node dist/cli.js --help
   lessons learned on this machine, `anonymize.ts` scrubs names, paths, codes and source code from them (bundled lessons
   must pass it unchanged; `test/lessons.test.ts` checks this), `hints.ts` adds lessons to check and review output,
   and `format.ts` prints lessons and gaps. A new rule that comes from a lesson names it in the lesson's `rules`.
-- `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles.
+- `src/mcp/server.ts`: the MCP tools and the cheap/premium profiles. Register tools with `tool(...)`, never
+  `server.registerTool`: every tool must be in one set in `src/mcp/toolsets.ts` (`--tools`, `--read-only` and the
+  read-only refusals), `src/mcp/instructions.ts` holds the server instructions (filtered by the enabled tools), and
+  `src/mcp/structured.ts` the `outputSchema`s and `structuredContent` of review, check, doctor and test.
+- `src/check/progress.ts`: the run context of a tool call: progress messages from Godot's output and cancellation;
+  `runGodot` uses it, so code that starts Godot needs nothing extra.
+- `src/project/protect.ts`: protected paths (godotwright.json `"protect"`, `$GODOTWRIGHT_PROTECT`). Every write
+  Godotwright makes to a project goes through `JournalWriter` or calls `assertWritable` itself.
 - `src/hooks/agent-hooks.ts`: hooks for coding agents (`godotwright hook <event>`, Claude Code hook JSON on stdin):
   review after an edit, lessons under Godot errors in command output, open errors before the agent stops, a project
   brief at the start. A hook must never fail the agent: on any problem it prints nothing. The plugin calls it through

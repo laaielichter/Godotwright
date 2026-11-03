@@ -4,6 +4,8 @@ import { GodotApi } from "../api/api.js";
 import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
+import { assertWritable } from "../project/protect.js";
+import { migrateShader } from "./shader.js";
 
 /** One mechanical rewrite in a script. */
 export interface Change {
@@ -398,21 +400,23 @@ export interface MigrateOptions {
   write?: boolean;
   /** Also migrate scripts in res://addons/ (default false). */
   includeAddons?: boolean;
-  /** Only these res:// files (default: every .gd in the project). */
+  /** Only these res:// files (default: every .gd, .gdshader and .gdshaderinc in the project). */
   files?: string[];
 }
 
-/** Migrates every GDScript file of a project (or one .gd file), and writes the result when asked. */
+const SHADER_FILE = /\.gdshader(inc)?$/;
+
+/** Migrates every GDScript and shader file of a project (or one .gd or .gdshader file), and writes the result when asked. */
 export function migrateProject(path: string, options: MigrateOptions = {}): ProjectMigration {
   const api = GodotApi.load();
   if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
-  const single = path.endsWith(".gd");
+  const single = path.endsWith(".gd") || SHADER_FILE.test(path);
   const root = single ? undefined : findProjectRoot(path);
   if (!single && !root) throw new ProjectNotFoundError(path);
   const targets = single
     ? [{ res: path, full: path }]
     : listProjectFiles(root as string)
-        .filter((f) => f.endsWith(".gd") && (options.includeAddons || !f.startsWith("res://addons/")))
+        .filter((f) => (f.endsWith(".gd") || SHADER_FILE.test(f)) && (options.includeAddons || !f.startsWith("res://addons/")))
         .filter((f) => !options.files || options.files.includes(f))
         .map((res) => ({ res, full: fromResPath(root as string, res) }));
   const files: FileMigration[] = [];
@@ -420,12 +424,15 @@ export function migrateProject(path: string, options: MigrateOptions = {}): Proj
   const journal = root ? new JournalWriter(root, "migrate", "Godot 3 code rewritten for Godot 4") : undefined;
   for (const t of targets) {
     const source = readFileSync(t.full, "utf8");
-    const result = migrateScript(source, api);
+    const result = SHADER_FILE.test(t.res) ? migrateShader(source, api) : migrateScript(source, api);
     if (result.changes.length === 0 && result.left.length === 0) continue;
     const written = options.write === true && result.changes.length > 0;
     if (written) {
       if (journal) journal.write(t.full, result.code);
-      else writeFileSync(t.full, result.code);
+      else {
+        assertWritable(t.full);
+        writeFileSync(t.full, result.code);
+      }
     }
     files.push({ file: t.res, ...result, written });
   }

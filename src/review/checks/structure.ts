@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { finding, type Finding } from "../rules.js";
 import type { GType, ProjectModel } from "../model.js";
+import { checkIntegrity } from "./integrity.js";
 
 const ROOT_FILES_OK = new Set([
   "project.godot",
@@ -28,6 +29,8 @@ const PARSE_FAILED = /^could not parse file/;
 export interface StructureOptions {
   /** Project uses C# or GDExtension, so node types the bundled API does not know may be real. */
   foreignClasses?: boolean;
+  /** The upgrade review looks at (checks/version.ts), named in the engine-version note. */
+  upgrade?: { from?: string; target: string };
 }
 
 export function checkStructure(pm: ProjectModel, options: StructureOptions = {}): Finding[] {
@@ -40,6 +43,9 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
 
   // Broken references found while scanning.
   for (const w of map.warnings) out.push(finding(PARSE_FAILED.test(w.message) ? "structure/parse-error" : "structure/broken-reference", w.file, w.line, w.message));
+
+  // Uids, resource ids and edits inside instanced scenes.
+  out.push(...checkIntegrity(pm.data));
 
   // Signal connections saved in scenes.
   for (const scene of map.scenes) {
@@ -136,7 +142,7 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
 
   // Engine version.
   if (map.project.godotVersion && !map.project.godotVersion.startsWith("4.7")) {
-    out.push(finding("structure/engine-version", "res://project.godot", undefined, `The project was last saved with Godot ${map.project.godotVersion}; Godotwright targets 4.7.`));
+    out.push(finding("structure/engine-version", "res://project.godot", undefined, `The project was last saved with Godot ${map.project.godotVersion}; Godotwright targets 4.7.${options.upgrade?.from ? ` Upgrade findings cover ${options.upgrade.from} to ${options.upgrade.target}; once the project is saved in ${options.upgrade.target}, review with from ${options.upgrade.from} to keep them.` : ""}`));
   }
 
   // Scripts nothing refers to.

@@ -1,6 +1,7 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { accessSync, constants, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, delimiter, join, resolve as resolvePath } from "node:path";
+import { CancelledError, ProgressParser, currentRun, phaseOf, throttle } from "./progress.js";
 
 export class GodotNotFoundError extends Error {
   constructor() {
@@ -215,7 +216,7 @@ function alive(pid: number): boolean {
   }
 }
 
-function signal(pid: number, name: NodeJS.Signals): void {
+function sendSignal(pid: number, name: NodeJS.Signals): void {
   try {
     process.kill(pid, name);
   } catch {
@@ -226,60 +227,163 @@ function signal(pid: number, name: NodeJS.Signals): void {
 /** How long a wrapper such as xvfb-run gets to clean up after the processes it started were stopped. */
 const KILL_GRACE_MS = 3000;
 
-/** Runs Godot with the given arguments and collects its output. */
-export function runGodot(bin: string, args: string[], options: { cwd?: string; timeoutMs?: number } = {}): Promise<RunResult> {
+export interface RunOptions {
+  cwd?: string;
+  timeoutMs?: number;
+  /** Stops the Godot process tree and rejects with CancelledError (default: the signal of the current run context). */
+  signal?: AbortSignal;
+  /** Called with every complete line Godot prints. */
+  onLine?: (line: string, stream: "stdout" | "stderr") => void;
+}
+
+/**
+ * Stops a process and what it started. A detached child leads its own process group, so the whole group goes;
+ * on Windows taskkill /T does the same. Otherwise only the child itself is killed.
+ */
+export function killTree(child: ChildProcess, group: boolean): void {
+  const pid = child.pid;
+  try {
+    if (pid !== undefined && process.platform === "win32") {
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+      return;
+    }
+    if (pid !== undefined && group) {
+      process.kill(-pid, "SIGKILL");
+      return;
+    }
+  } catch {
+    // Already gone, or no group: fall back to the child alone.
+  }
+  child.kill("SIGKILL");
+}
+
+/** Godot process groups still running: stopped when this process exits, since they are not in our group. */
+const groups = new Set<ChildProcess>();
+let exitHook = false;
+function trackGroup(child: ChildProcess): void {
+  groups.add(child);
+  if (exitHook) return;
+  exitHook = true;
+  process.once("exit", () => {
+    for (const c of groups) killTree(c, true);
+  });
+}
+
+/**
+ * Runs Godot with the given arguments and collects its output. Inside a run context (see progress.ts) it reports
+ * the phase and Godot's progress lines, and a cancelled context stops the process tree.
+ */
+export function runGodot(bin: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   const started = Date.now();
+  const context = currentRun();
+  const signal = options.signal ?? context?.signal;
+  const phase = phaseOf(args);
+  // The version probe is not a step worth reporting.
+  const report = context?.onProgress && phase !== "version" ? throttle(context.onProgress) : undefined;
+  const parser = report ? new ProgressParser(phase) : undefined;
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"] });
+    if (signal?.aborted) {
+      reject(new CancelledError());
+      return;
+    }
+    report?.(`${phase}: started`, true);
+    // With a signal, Godot gets its own process group so a cancel stops what it started too. Without one (the CLI),
+    // it stays in ours, so Ctrl+C in a terminal still reaches it.
+    const group = signal !== undefined && process.platform !== "win32";
+    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group });
+    if (group) trackGroup(child);
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let cancelled = false;
     let exitCode: number | null | undefined;
     let done = false;
     let timer: NodeJS.Timeout | undefined;
     let grace: NodeJS.Timeout | undefined;
-    /** The processes the child had started when it timed out. */
+    /** The processes the child had started when it was stopped. */
     let stopped: number[] = [];
+    /**
+     * Stops Godot and everything it started, on a timeout or a cancel. A wrapper such as xvfb-run: SIGKILL on it would
+     * leave its Xvfb server running with no parent. So stop what it started (Godot, Xvfb) first, so it cleans up and
+     * exits by itself, and kill whatever is left (the whole process group when Godot has one) after a grace period.
+     */
+    const stop = () => {
+      stopped = child.pid ? descendantPids(child.pid) : [];
+      if (!stopped.length) {
+        killTree(child, group);
+        return;
+      }
+      for (const pid of stopped) sendSignal(pid, "SIGTERM");
+      grace = setTimeout(() => {
+        if (exitCode !== undefined || !child.pid) return;
+        for (const pid of [...new Set([...descendantPids(child.pid), ...stopped])]) sendSignal(pid, "SIGKILL");
+        killTree(child, group);
+      }, KILL_GRACE_MS);
+    };
+    const onAbort = () => {
+      if (done) return;
+      cancelled = true;
+      if (exitCode === undefined) stop();
+      else {
+        // Godot is gone, but a process it started still holds the output: stop its process group too.
+        if (group) killTree(child, true);
+        finish(exitCode);
+      }
+    };
     // 'close' waits for every process that holds the pipes, and a process Godot started can keep them open.
     // So after a timeout, or once Godot has exited on its own, the run is taken as finished at 'exit'.
     const finish = (code: number | null) => {
       if (done) return;
       done = true;
       if (timer) clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       if (grace) clearTimeout(grace);
       child.stdout.destroy();
       child.stderr.destroy();
-      resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
+      if (cancelled) report?.stop();
+      else report?.flush();
+      if (cancelled) reject(new CancelledError());
+      else resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
     };
-    /** After a timeout: finish once the stopped processes are gone too, so the caller can remove the files they used. */
+    const lines = (stream: "stdout" | "stderr") => {
+      let partial = "";
+      return (chunk: string) => {
+        if (!options.onLine && !parser) return;
+        const parts = (partial + chunk).split(/\r?\n/);
+        partial = parts.pop() ?? "";
+        for (const line of parts) {
+          options.onLine?.(line, stream);
+          const message = parser?.line(line);
+          if (message) report?.(message);
+        }
+      };
+    };
+    const outLines = lines("stdout");
+    const errLines = lines("stderr");
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+      stdout += chunk;
+      outLines(chunk);
+    });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+      stderr += chunk;
+      errLines(chunk);
+    });
+    signal?.addEventListener("abort", onAbort, { once: true });
+    /** After a timeout or a cancel: finish once the stopped processes are gone too, so the caller can remove the files they used. */
     const finishWhenGone = (code: number | null, deadline = Date.now() + KILL_GRACE_MS) => {
       const left = stopped.filter(alive);
       if (!left.length) return finish(code);
       if (Date.now() >= deadline) {
-        for (const pid of left) signal(pid, "SIGKILL");
+        for (const pid of left) sendSignal(pid, "SIGKILL");
         return finish(code);
       }
       setTimeout(() => finishWhenGone(code, deadline), 50);
     };
-    child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
-    child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
     if (options.timeoutMs) {
       timer = setTimeout(() => {
         if (exitCode === undefined) {
           timedOut = true;
-          stopped = child.pid ? descendantPids(child.pid) : [];
-          if (!stopped.length) {
-            child.kill("SIGKILL");
-            return;
-          }
-          // A wrapper such as xvfb-run: SIGKILL on it would leave its Xvfb server running with no parent. Stop what it
-          // started (Godot, Xvfb), so it cleans up and exits by itself; kill whatever is left after a grace period.
-          for (const pid of stopped) signal(pid, "SIGTERM");
-          grace = setTimeout(() => {
-            if (exitCode !== undefined || !child.pid) return;
-            for (const pid of [...new Set([...descendantPids(child.pid), ...stopped])]) signal(pid, "SIGKILL");
-            child.kill("SIGKILL");
-          }, KILL_GRACE_MS);
+          stop();
         } else {
           // Godot had already exited; only a process it started was still holding the output.
           finish(exitCode);
@@ -289,13 +393,17 @@ export function runGodot(bin: string, args: string[], options: { cwd?: string; t
     child.on("error", (error) => {
       if (done) return;
       done = true;
+      groups.delete(child);
       if (timer) clearTimeout(timer);
+      report?.stop();
+      signal?.removeEventListener("abort", onAbort);
       if (grace) clearTimeout(grace);
       reject(error);
     });
     child.on("exit", (code) => {
       exitCode = code;
-      if (timedOut) finishWhenGone(code);
+      groups.delete(child);
+      if (timedOut || cancelled) finishWhenGone(code);
     });
     child.on("close", (code) => finish(code));
   });

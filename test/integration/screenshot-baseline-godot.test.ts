@@ -79,7 +79,7 @@ describe.skipIf(!GODOT || !SCREEN)("godotwright screenshot baselines in Godot", 
     // The diff is scratch: in .godot/godotwright/, which Godot never imports.
     expect(box.baseline!.diff).toBe(join(root, ".godot", "godotwright", `${baselineKey("res://main.tscn", 320, 180, ["iso"])}-diff.png`));
     const diff = decodePng(readFileSync(box.baseline!.diff!));
-    expect([...diff.data.subarray((90 * 320 + 160) * 4, (90 * 320 + 160) * 4 + 3)]).toEqual([255, 0, 0]);
+    expect([...diff.rgba.subarray((90 * 320 + 160) * 4, (90 * 320 + 160) * 4 + 3)]).toEqual([255, 0, 0]);
 
     // Only the label changes: a small change in the top left corner, still caught at a threshold of 0.
     const update = await takeScreenshot(root, { godot: GODOT, ...size, updateBaseline: true });

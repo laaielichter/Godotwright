@@ -28,7 +28,8 @@ step below answers from the project or from Godot.
    after every edit when the plugin hooks are on).
 6. **Prove it.** Run the same reproduction again (`godot_check`, `godot_play` with `expect`, `godot_test`) and show
    before and after.
-   A fix that cannot be shown failing first is not proven.
+   A fix that cannot be shown failing first is not proven. Keep a `godot_play` proof as a regression test with
+   `godot_scenario` op `save` (same arguments).
 7. **Teach it back.** If the fix took more than one try, keep it with `godot_lesson_add` (general words, the Godot
    message as `error`, no names or code). Rate every lesson you used with `godot_feedback` (`lesson`, verdict `right`
    or `wrong`).
