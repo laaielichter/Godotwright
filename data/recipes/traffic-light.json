@@ -1,0 +1,158 @@
+{
+ "version": 1,
+ "name": "traffic-light",
+ "archetype": "infrastructure.traffic-light",
+ "description": "A three-aspect road traffic signal with separate red, amber and green lenses, red at the top, a dark signal head, and a steel pole with a ground-level mounting plate. The red lens is emissive; the other aspects remain unlit until animated.",
+ "params": [
+  {
+   "name": "height",
+   "type": "number",
+   "default": 3.2,
+   "min": 2.5,
+   "max": 5.5,
+   "description": "Height of the pole in metres."
+  },
+  {
+   "name": "lensRadius",
+   "type": "number",
+   "default": 0.1,
+   "min": 0.08,
+   "max": 0.12,
+   "description": "Radius of each independently addressable lens in metres."
+  }
+ ],
+ "materials": {
+  "signal_steel": {
+   "color": [
+    0.42,
+    0.44,
+    0.46
+   ],
+   "metallic": 0.8,
+   "roughness": 0.4
+  },
+  "signal_housing": {
+   "color": [
+    0.035,
+    0.04,
+    0.035
+   ],
+   "metallic": 0.05,
+   "roughness": 0.7
+  },
+  "signal_red": {
+   "color": [
+    0.85,
+    0.015,
+    0.01
+   ],
+   "roughness": 0.35,
+   "emissive": [
+    0.85,
+    0.015,
+    0.01
+   ]
+  },
+  "signal_amber": {
+   "color": [
+    0.3,
+    0.15,
+    0.01
+   ],
+   "roughness": 0.35
+  },
+  "signal_green": {
+   "color": [
+    0.01,
+    0.18,
+    0.04
+   ],
+   "roughness": 0.35
+  }
+ },
+ "nodes": [
+  {
+   "name": "TrafficLight",
+   "children": [
+    {
+     "name": "MountingPlate",
+     "shape": "cylinder",
+     "material": "signal_steel",
+     "radius": 0.18,
+     "height": 0.04,
+     "anchor": "base",
+     "segments": 24
+    },
+    {
+     "name": "Pole",
+     "shape": "cylinder",
+     "material": "signal_steel",
+     "radius": 0.055,
+     "height": "$height",
+     "anchor": "base",
+     "segments": 24
+    },
+    {
+     "name": "Head",
+     "shape": "box",
+     "material": "signal_housing",
+     "size": [
+      0.36,
+      1.04,
+      0.2
+     ],
+     "bevel": 0.015,
+     "at": [
+      0,
+      "$height - 0.48",
+      0.08
+     ],
+     "children": [
+      {
+       "name": "LightRed",
+       "shape": "cylinder",
+       "material": "signal_red",
+       "radius": "$lensRadius",
+       "height": 0.025,
+       "axis": "z",
+       "segments": 32,
+       "at": [
+        0,
+        0.32,
+        0.1125
+       ]
+      },
+      {
+       "name": "LightAmber",
+       "shape": "cylinder",
+       "material": "signal_amber",
+       "radius": "$lensRadius",
+       "height": 0.025,
+       "axis": "z",
+       "segments": 32,
+       "at": [
+        0,
+        0,
+        0.1125
+       ]
+      },
+      {
+       "name": "LightGreen",
+       "shape": "cylinder",
+       "material": "signal_green",
+       "radius": "$lensRadius",
+       "height": 0.025,
+       "axis": "z",
+       "segments": 32,
+       "at": [
+        0,
+        -0.32,
+        0.1125
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
