@@ -117,12 +117,9 @@ describe("migrate a script", () => {
     expect(formatted).toContain("note: setters in Godot 4 run on assignment inside the script");
   });
 
-  it("detects recursive assignment loops in setters and leaves a TO DO", () => {
-    const looping = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
-    expect(looping.left.some((l) => l.message.includes("setter set_hp() assigns hp") && l.message.includes("infinite loop"))).toBe(true);
-
-    const safe = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\t_hp = val", api);
-    expect(safe.left).toEqual([]);
+  it("leaves no TO DO when setter assigns its property directly (Godot 4 accesses the underlying member)", () => {
+    const script = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
+    expect(script.left).toEqual([]);
   });
 });
 
