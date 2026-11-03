@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { GodotApi } from "../../src/api/api.js";
 import { checkProject } from "../../src/check/check.js";
@@ -304,4 +305,32 @@ describe.skipIf(!GODOT || !DEMOS)("godot_shader on every official demo project",
     expect(problems).toEqual([]);
   });
 
+});
+
+/** A display, or xvfb-run, for the GPU pass. */
+const SCREEN = process.platform !== "linux" || Boolean(process.env["DISPLAY"]) || spawnSync("which", ["xvfb-run"]).status === 0;
+
+describe.skipIf(!GODOT || !SCREEN)("godot_shader gpu: the headless compile and the GPU pass together", () => {
+  it("finds the language errors headless, and the GPU pass adds only what the driver rejects", { timeout: 600_000 }, async () => {
+    const root = project({
+      "fx/spatial_bad.gdshader": "shader_type spatial;\nvoid fragment() {\n\tfloat x = vec3(1.0);\n\tALBEDO = vec3(x);\n}\n",
+      "fx/sky_bad.gdshader": "shader_type sky;\nvoid sky() {\n\tCOLOR = vec2(1.0);\n}\n",
+      "fx/big.gdshader": "shader_type spatial;\nuniform float big[200000];\nvoid fragment() {\n\tALBEDO = vec3(big[int(UV.x * 10.0)]);\n}\n",
+      "fx/samplers.gdshader": "shader_type canvas_item;\nuniform sampler2D t[64];\nvoid fragment() {\n\tvec4 c = vec4(0.0);\n\tfor (int i = 0; i < 64; i++) { c += texture(t[i], UV); }\n\tCOLOR = c;\n}\n",
+    });
+    const headless = await shaderReport(root, { godot: GODOT });
+    const lines = (r: typeof headless) => formatShaderReport(r).split("\n").filter((l) => / error \[/.test(l));
+    expect(lines(headless)).toEqual([
+      "res://fx/sky_bad.gdshader:3: error [godot] Invalid arguments to operator '=': 'vec3, vec2'.",
+      "res://fx/spatial_bad.gdshader:3: error [godot] Invalid assignment of 'vec3' to 'float'.",
+    ]);
+    const gpu = await shaderReport(root, { godot: GODOT, gpu: true });
+    console.log(formatShaderReport(gpu));
+    const found = lines(gpu);
+    // The language errors once (the GPU pass finds them again at the same line), and the two only a driver rejects.
+    expect(found.filter((l) => l.includes("[godot]"))).toEqual(lines(headless));
+    expect(found.filter((l) => l.includes("[gpu]")).map((l) => l.slice(0, l.indexOf(" error")))).toEqual(["res://fx/big.gdshader:", "res://fx/samplers.gdshader:"]);
+    expect(gpu.errors).toBe(4);
+    expect(formatShaderReport(gpu)).toMatch(/drew \d+ on the GPU \(opengl3 gl_compatibility/);
+  });
 });

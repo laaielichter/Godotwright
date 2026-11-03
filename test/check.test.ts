@@ -2,7 +2,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rm
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { checkProject, runOutput } from "../src/check/check.js";
+import { checkProject, cleanup, runOutput } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
 import { descendantPids, findGodot, GodotNotFoundError, runGodot } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
@@ -355,5 +355,26 @@ describe("running a scene and reading its output", () => {
     expect(plain.output).not.toContain("output of the run");
     const json = JSON.parse((await runCli(["check", root, "--godot", godot, "--run", "10", "--json"])).output) as { output?: string };
     expect(json.output).toBe("hello from _ready");
+  });
+});
+
+describe("shader errors found headless and by drawing", () => {
+  it("reports an error both passes find once, keeping the copy with the most to say", () => {
+    const kept = cleanup([
+      { severity: "error", file: "res://fx/a.gdshader", line: 3, message: "SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform. To continue with minimal code changes add it.", source: "shader" },
+      { severity: "error", file: "res://fx/lib.gdshaderinc", line: 2, message: "Unknown identifier in expression: 'x'.", source: "shader" },
+      { severity: "error", file: "res://level.tscn", message: 'Invalid arguments for the built-in function: "vec4(float,float)". (shader line 4)', source: "scene" },
+      { severity: "error", file: "res://fx/a.gdshader", line: 3, message: "SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform. (Godot 3; use a uniform)", source: "shader" },
+      { severity: "error", file: "res://fx/lib.gdshaderinc", line: 2, message: "Unknown identifier in expression: 'x'. (included from res://fx/b.gdshader:2)", source: "shader" },
+      { severity: "error", file: "res://level.tscn", line: 7, message: 'Invalid arguments for the built-in function: "vec4(float,float)".', source: "shader" },
+      { severity: "error", file: "res://fx/b.gdshader", line: 3, message: "Unknown identifier in expression: 'x'.", source: "shader" },
+    ]);
+    expect(kept.map((d) => `${d.file}:${d.line ?? ""} ${d.message.slice(0, 40)}`)).toEqual([
+      "res://fx/a.gdshader:3 SCREEN_TEXTURE has been removed in favor",
+      "res://fx/lib.gdshaderinc:2 Unknown identifier in expression: 'x'. (",
+      'res://level.tscn:7 Invalid arguments for the built-in funct',
+      "res://fx/b.gdshader:3 Unknown identifier in expression: 'x'.",
+    ]);
+    expect(kept[0]!.message).toContain("To continue");
   });
 });
