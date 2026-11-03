@@ -222,7 +222,7 @@
   ],
   "scale": {
    "length": [
-    6.0,
+    6,
     12.2
    ],
    "width": [
@@ -252,12 +252,7 @@
    "stool",
    "kruk",
    "armchair",
-   "fauteuil",
-   "sofa",
-   "bank",
-   "bench",
-   "zitbank",
-   "couch"
+   "fauteuil"
   ],
   "extends": "prop",
   "scale": {
@@ -338,15 +333,13 @@
    "workbench",
    "werkbank",
    "shelf",
-   "plank",
-   "kast",
-   "cupboard"
+   "plank"
   ],
   "extends": "prop",
   "scale": {
    "length": [
     0.6,
-    3.0
+    3
    ],
    "width": [
     0.5,
@@ -512,11 +505,11 @@
   "scale": {
    "length": [
     0.5,
-    2.0
+    2
    ],
    "width": [
     0.5,
-    2.0
+    2
    ],
    "height": [
     0.2,
@@ -601,7 +594,7 @@
   "scale": {
    "width": [
     0.7,
-    1.0
+    1
    ],
    "height": [
     1.95,
@@ -758,11 +751,11 @@
    ],
    "width": [
     1.2,
-    3.0
+    3
    ],
    "height": [
     0.9,
-    2.0
+    2
    ],
    "source": "general knowledge: two- to four-person dome tents are about 2-3 m long and 1.0-1.5 m high; family tents are larger",
    "confidence": "C"
@@ -854,11 +847,11 @@
   "scale": {
    "width": [
     0.9,
-    2.0
+    2
    ],
    "height": [
     0.6,
-    3.0
+    3
    ],
    "source": "general knowledge: the wall of a traditional well is about 1-1.5 m across and 0.7-1 m high; with a roof it reaches about 2.5 m",
    "confidence": "C"
@@ -866,6 +859,559 @@
   "pitfalls": [
    "A wall made from a closed cylinder hides the opening; build it as a ring (a tube or a lathe profile).",
    "The winch turns about its own axle: put its pivot on the axle between the two posts."
+  ]
+ },
+ {
+  "id": "prop.bed",
+  "name": "bed",
+  "description": "A bed with a frame and mattress, for one or two sleepers.",
+  "aliases": [
+   "bed",
+   "beds",
+   "single bed",
+   "double bed",
+   "eenpersoonsbed",
+   "tweepersoonsbed"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "frame",
+    "required": true,
+    "aliases": [
+     "frame",
+     "bedframe",
+     "bed frame"
+    ]
+   },
+   {
+    "name": "Mattress",
+    "role": "mattress",
+    "required": true,
+    "aliases": [
+     "mattress",
+     "matras"
+    ]
+   },
+   {
+    "name": "Headboard",
+    "role": "headboard",
+    "required": false,
+    "aliases": [
+     "headboard",
+     "hoofdbord"
+    ]
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": false,
+    "aliases": [
+     "leg",
+     "poot"
+    ],
+    "count": [
+     0,
+     8
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.8,
+    2.2
+   ],
+   "length": [
+    1.9,
+    2.2
+   ],
+   "height": [
+    0.35,
+    1.4
+   ],
+   "source": "General knowledge of typical household furniture dimensions, not a standard or manufacturer specification. A single mattress is commonly about 0.9 x 2.0 m.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Keep the mattress separate from the frame; the frame should support it rather than intersect its visible top."
+  ]
+ },
+ {
+  "id": "prop.sofa",
+  "name": "sofa",
+  "description": "A sofa or couch with a shared frame and space for multiple people.",
+  "aliases": [
+   "sofa",
+   "sofas",
+   "couch",
+   "couches",
+   "bank",
+   "bankstel",
+   "zitbank voor binnen"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "frame",
+    "required": true,
+    "aliases": [
+     "frame",
+     "body"
+    ]
+   },
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": true,
+    "aliases": [
+     "seat",
+     "zitting",
+     "cushion"
+    ],
+    "count": [
+     1,
+     5
+    ]
+   },
+   {
+    "name": "Back",
+    "role": "back",
+    "required": true,
+    "aliases": [
+     "back",
+     "backrest",
+     "rugleuning"
+    ]
+   },
+   {
+    "name": "Arm",
+    "role": "arm",
+    "required": false,
+    "aliases": [
+     "arm",
+     "armrest",
+     "armleuning"
+    ],
+    "count": [
+     0,
+     2
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    1.2,
+    3
+   ],
+   "length": [
+    0.7,
+    1.2
+   ],
+   "height": [
+    0.6,
+    1.2
+   ],
+   "source": "General knowledge of typical household furniture dimensions, not a standard or manufacturer specification. Width spans compact two-seat and larger sofas.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A sofa is a shared seating unit, not a single chair stretched without changing the frame and cushions."
+  ]
+ },
+ {
+  "id": "prop.bookcase",
+  "name": "bookcase",
+  "description": "A freestanding bookcase or bookshelf with stacked shelves.",
+  "aliases": [
+   "bookcase",
+   "bookcases",
+   "bookshelf",
+   "bookshelves",
+   "boekenkast",
+   "boekenkasten"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "case",
+     "kast"
+    ]
+   },
+   {
+    "name": "Shelf",
+    "role": "shelf",
+    "required": true,
+    "aliases": [
+     "shelf",
+     "shelves",
+     "plank",
+     "planken"
+    ],
+    "count": [
+     1,
+     12
+    ]
+   },
+   {
+    "name": "Back",
+    "role": "back",
+    "required": false,
+    "aliases": [
+     "back",
+     "back panel",
+     "achterwand"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.4,
+    1.4
+   ],
+   "length": [
+    0.2,
+    0.5
+   ],
+   "height": [
+    0.6,
+    2.4
+   ],
+   "source": "General knowledge of typical household furniture dimensions, not a standard or manufacturer specification. Freestanding domestic shelving is usually shallower than a wardrobe.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Leave usable space between shelves; solid stacked boxes do not read as open shelving."
+  ]
+ },
+ {
+  "id": "prop.cupboard",
+  "name": "cupboard",
+  "description": "A storage cupboard, cabinet or wardrobe with hinged doors and shelves.",
+  "aliases": [
+   "cupboard",
+   "cupboards",
+   "cabinet",
+   "wardrobe",
+   "kast",
+   "kasten",
+   "kledingkast",
+   "keukenkast"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "case",
+     "carcass"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": true,
+    "aliases": [
+     "door",
+     "doors",
+     "deur",
+     "deuren"
+    ],
+    "count": [
+     1,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge"
+   },
+   {
+    "name": "Shelf",
+    "role": "shelf",
+    "required": true,
+    "aliases": [
+     "shelf",
+     "shelves",
+     "plank"
+    ],
+    "count": [
+     1,
+     12
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.4,
+    2.4
+   ],
+   "length": [
+    0.3,
+    0.7
+   ],
+   "height": [
+    0.6,
+    2.4
+   ],
+   "source": "General knowledge of typical household furniture dimensions, not a standard or manufacturer specification. Wardrobes are commonly deeper than kitchen wall cupboards.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Put each door pivot at its vertical hinge edge, not at the centre of the leaf."
+  ]
+ },
+ {
+  "id": "prop.bench",
+  "name": "bench",
+  "description": "A park or street bench with a long shared seat.",
+  "aliases": [
+   "bench",
+   "benches",
+   "park bench",
+   "street bench",
+   "bank",
+   "zitbank",
+   "parkbank",
+   "tuinbank"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": true,
+    "aliases": [
+     "seat",
+     "zitting"
+    ]
+   },
+   {
+    "name": "Support",
+    "role": "support",
+    "required": true,
+    "aliases": [
+     "support",
+     "leg",
+     "poot"
+    ],
+    "count": [
+     2,
+     6
+    ]
+   },
+   {
+    "name": "Back",
+    "role": "back",
+    "required": false,
+    "aliases": [
+     "back",
+     "backrest",
+     "rugleuning"
+    ]
+   },
+   {
+    "name": "Arm",
+    "role": "arm",
+    "required": false,
+    "aliases": [
+     "arm",
+     "armrest",
+     "armleuning"
+    ],
+    "count": [
+     0,
+     3
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    1.2,
+    2.4
+   ],
+   "length": [
+    0.4,
+    0.8
+   ],
+   "height": [
+    0.4,
+    1.1
+   ],
+   "source": "General knowledge of park furniture: shared seats are commonly about 1.5-2.0 m wide with seats around 0.45 m high; not a standard.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Keep the long shared seat distinct from the optional back; do not inherit a single-chair silhouette."
+  ]
+ },
+ {
+  "id": "prop.bin",
+  "name": "bin",
+  "description": "A street waste bin or trash can, with an opening and optional lid.",
+  "aliases": [
+   "bin",
+   "bins",
+   "trash can",
+   "trash bin",
+   "rubbish bin",
+   "waste bin",
+   "prullenbak",
+   "afvalbak",
+   "vuilnisbak"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "container",
+     "bak"
+    ]
+   },
+   {
+    "name": "Opening",
+    "role": "opening",
+    "required": true,
+    "aliases": [
+     "opening",
+     "mouth",
+     "inworp"
+    ]
+   },
+   {
+    "name": "Lid",
+    "role": "lid",
+    "required": false,
+    "aliases": [
+     "lid",
+     "deksel"
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge"
+   }
+  ],
+  "scale": {
+   "width": [
+    0.25,
+    0.8
+   ],
+   "length": [
+    0.25,
+    0.8
+   ],
+   "height": [
+    0.4,
+    1.3
+   ],
+   "source": "General knowledge of small public waste bins and household trash cans; dimensions vary by capacity, not a standard.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Keep an actual opening or dark recess visible instead of sealing the top with a solid cap."
+  ]
+ },
+ {
+  "id": "prop.mailbox",
+  "name": "mailbox",
+  "description": "A letter box or mailbox with a mail slot and an access door.",
+  "aliases": [
+   "mailbox",
+   "mailboxes",
+   "letter box",
+   "letterbox",
+   "post box",
+   "postbox",
+   "brievenbus"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "box",
+     "kast"
+    ]
+   },
+   {
+    "name": "Slot",
+    "role": "opening",
+    "required": true,
+    "aliases": [
+     "slot",
+     "mail slot",
+     "briefsleuf"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": false,
+    "aliases": [
+     "door",
+     "access door",
+     "deur"
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge"
+   },
+   {
+    "name": "Post",
+    "role": "support",
+    "required": false,
+    "aliases": [
+     "post",
+     "pole",
+     "paal"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.2,
+    0.6
+   ],
+   "length": [
+    0.15,
+    0.5
+   ],
+   "height": [
+    0.25,
+    1.5
+   ],
+   "source": "General knowledge of residential letter boxes, wall-mounted or on a post; not a postal regulation.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A wall-mounted box needs a flat mounting face; a freestanding box needs a supporting post."
   ]
  }
 ]
