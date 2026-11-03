@@ -106,9 +106,33 @@ describe("migrate a script", () => {
   });
 
   it("lists what it cannot do by hand, once per line", () => {
-    const m = migrateScript("var hp = 1 setget set_hp\nmaster func ping():\n\tpass\nfunc f():\n\tmove_and_slide(v, Vector3.UP)\n\tyield()", api);
+    const m = migrateScript("var hp = 1 setget\nmaster func ping():\n\tpass\nfunc f():\n\tmove_and_slide(v, Vector3.UP)\n\tyield()", api);
     const msgs = m.left.map((l) => `${l.line}:${l.message.split(":")[0]}`);
     expect(msgs).toEqual(["1:setget is gone in Godot 4", "2:master and mastersync ran on the master when called by others in Godot 3", "5:move_and_slide() takes no arguments in Godot 4", "6:yield() with no arguments (a resumable function) has no direct Godot 4 form"]);
+  });
+  it("rewrites simple setget declarations to Godot 4 property syntax", () => {
+    expect(code("var hp = 10 setget set_hp, get_hp")).toBe("var hp = 10: set = set_hp, get = get_hp");
+    expect(code("var hp = 10 setget set_hp")).toBe("var hp = 10: set = set_hp");
+    expect(code("var hp = 10 setget , get_hp")).toBe("var hp = 10: get = get_hp");
+    expect(code("var hp: int = 10 setget set_hp")).toBe("var hp: int = 10: set = set_hp");
+    expect(code("var hp: int setget set_hp")).toBe("var hp: int: set = set_hp");
+    expect(code("var hp setget set_hp, get_hp")).toBe("var hp: set = set_hp, get = get_hp");
+    expect(code("var hp setget , get_hp")).toBe("var hp: get = get_hp");
+    expect(code("var hp = 10 setget set_hp # keep")).toBe("var hp = 10: set = set_hp # keep");
+    expect(code("@export var hp: int = 10 setget set_hp")).toBe("@export var hp: int = 10: set = set_hp");
+
+    const m = migrateScript("var hp = 10 setget set_hp\nvar mp = 5 setget set_mp", api);
+    expect(m.notes).toEqual(["setters in Godot 4 run on assignment inside the script (in Godot 3 they required self.)"]);
+
+    const root = makeProject({ "project.godot": PROJECT, "prop.gd": "var hp = 10 setget set_hp\n" });
+    const formatted = formatMigration(migrateProject(root));
+    expect(formatted).toContain("note: setters in Godot 4 run on assignment inside the script");
+  });
+
+  it("does not warn when a setter assigns its own property (#116)", () => {
+    // Godot 4 sets the underlying member directly inside the property's own setter, so this does not recurse.
+    const own = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
+    expect(own.left).toEqual([]);
   });
 });
 
