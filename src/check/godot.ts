@@ -324,7 +324,11 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       if (done) return;
       cancelled = true;
       if (exitCode === undefined) stop();
-      else finish(exitCode);
+      else {
+        // Godot is gone, but a process it started still holds the output: stop its process group too.
+        if (group) killTree(child, true);
+        finish(exitCode);
+      }
     };
     // 'close' waits for every process that holds the pipes, and a process Godot started can keep them open.
     // So after a timeout, or once Godot has exited on its own, the run is taken as finished at 'exit'.

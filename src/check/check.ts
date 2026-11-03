@@ -31,7 +31,7 @@ export interface CheckOptions {
   keepLogs?: boolean;
   /** When the run leaks objects or resources at exit, run it once more with --verbose to name them (default true). */
   leakDetails?: boolean;
-  /** Also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run). */
+  /** Also draw every shader on the GPU (Compatibility renderer; needs a display or xvfb-run), for what only the driver rejects. */
   shaders?: boolean;
 }
 
