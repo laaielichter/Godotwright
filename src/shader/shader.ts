@@ -90,7 +90,7 @@ export async function shaderReport(path: string, options: ShaderOptions = {}): P
     includeAddons: options.includeAddons,
     learning: currentLearning() ?? emptyLearning(),
     shared: bundledLearning(),
-    focus: [...new Set(selected.map(([p]) => p.replace(/::.*$/, "")))],
+    focus: [...new Set(selected.map(([p]) => beforeFirst(p, "::")))],
   });
   const findings = review.findings.filter((f) => SHADER_RULES.includes(f.rule) && wanted(f.file));
 
@@ -112,7 +112,7 @@ export async function shaderReport(path: string, options: ShaderOptions = {}): P
   }
   if (options.gpu && targets.length > 0) {
     // Scenes and resources that hold a shader are drawn as a whole file.
-    const files = options.files ? [...new Set([...targets.map((t) => t.path), ...selected.map(([p]) => p)].map((p) => p.replace(/::.*$/, "")))] : undefined;
+    const files = options.files ? [...new Set([...targets.map((t) => t.path), ...selected.map(([p]) => p)].map((p) => beforeFirst(p, "::")))] : undefined;
     try {
       report.gpu = await checkShaders(data.root, { godot: options.godot, ...(files ? { files } : {}), includeAddons: Boolean(options.includeAddons), ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}) });
       if (options.overrides && Object.keys(options.overrides).length) report.gpu.notes.push("the GPU pass drew the files on disk, not the unsaved code");
@@ -174,7 +174,7 @@ function shown(report: ShaderReport): Line[] {
     out.push({ file: d.file, line: d.line, severity: d.severity, text: formatGodot(d) });
   }
   // The GPU pass finds the language errors again (same file and line): only what it adds is shown.
-  const at = (file: string | undefined, line: number | undefined) => `${(file ?? "").replace(/::.*$/, "")}:${line ?? ""}`;
+  const at = (file: string | undefined, line: number | undefined) => `${beforeFirst(file ?? "", "::")}:${line ?? ""}`;
   const known = new Set(out.filter((l) => l.line).map((l) => at(l.file, l.line)));
   for (const g of report.gpu?.diagnostics ?? []) {
     if (g.line && known.has(at(g.file, g.line))) continue;
@@ -204,7 +204,7 @@ export function formatShaderReport(report: ShaderReport, detail: Detail = "brief
   const summary = [...kinds].map(([k, n]) => `${k} ${n}`).join(", ");
   out.push(`shaders: ${report.shaders.length}${summary ? ` (${summary}${embedded ? `; ${embedded} stored in scenes or resources` : ""})` : ""}`);
   if (report.compile) {
-    out.push(`compiled ${report.compile.compiled} with Godot ${report.compile.godotVersion.replace(/\.official.*$/, "")} headless in ${(report.compile.ms / 1000).toFixed(1)} s`);
+    out.push(`compiled ${report.compile.compiled} with Godot ${beforeFirst(report.compile.godotVersion, ".official")} headless in ${(report.compile.ms / 1000).toFixed(1)} s`);
   } else if (report.compileSkipped) {
     out.push(`not compiled: ${report.compileSkipped}`);
   }
@@ -228,4 +228,10 @@ export function formatShaderReport(report: ShaderReport, detail: Detail = "brief
       `${infos ? `, ${infos} performance hint${infos === 1 ? "" : "s"} (detail full shows them)` : ""}`,
   );
   return `${out.join("\n")}\n`;
+}
+
+/** `text` up to the first `separator` (all of it when there is none). indexOf, not a regex, so it stays linear. */
+export function beforeFirst(text: string, separator: string): string {
+  const at = text.indexOf(separator);
+  return at < 0 ? text : text.slice(0, at);
 }
