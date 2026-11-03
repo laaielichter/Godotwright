@@ -9,7 +9,7 @@ const PIVOTS = ["center", "hub", "hinge", "base", "mount"];
 const CONFIDENCE = ["A", "B", "C", "D", "X"];
 const AXES = ["x", "y", "z"];
 /** Aliases that two archetypes may share on purpose (two things really have that name); identify then reports the ambiguity. */
-export const SHARED_ALIASES = new Set(["windmolen", "bike", "motor"]);
+export const SHARED_ALIASES = new Set(["windmolen", "bike", "motor", "bank"]);
 
 /** The word an alias stands for, as identify compares it: "Hills" and "hill" are one word. */
 export const aliasKey = (alias: string): string => tokens(alias).map(stem).join(" ");
