@@ -30,6 +30,22 @@ node dist/cli.js --help
 - `src/scan/`: builds the project map and formats it (brief, full, JSON).
 - `src/check/`: runs Godot headless (import, checker script, optional run) and
   turns its output into diagnostics.
+- `src/lsp/`: Godot's own GDScript language server (`godot_code`). `jsonrpc.ts` is the JSON-RPC client with LSP
+  framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
+  stop, killed on exit, restarted when a class_name, project.godot or a file that needs an import changes; a restart
+  waits for the calls queued on the old server), `code.ts` holds the ops and output.
+- `src/shaders/`: the GPU pass over shaders: draws every shader in Godot (Compatibility renderer, xvfb-run on Linux
+  without a display), for what only the GPU driver rejects (a uniform block that is too big, a sampler array indexed by
+  a variable). Language errors are found headless, without it: `src/check/shader-compile.ts` (`Shader.get_rid()` runs
+  Godot's full shader compiler on the dummy renderer) for `godot_shader`, and the checker of `godot_check`. `runner.ts` is the GDScript it runs, `log.ts` reads Godot's
+  shader errors, `hints.ts` names the Godot 4 form of Godot 3 shader code, and `shaders.ts` maps each error to the line
+  in the .gdshader, .gdshaderinc or .tres/.tscn. `godotwright shaders`, `check --shaders` and `shader --gpu` use it; `src/shader/shader.ts` (`godot_shader`) puts the
+  static review, the headless compile and this pass together.
+- `src/screenshot/`: `screenshot.ts` renders a scene or model with Godot; `png.ts` is the one PNG reader and writer,
+  `diff.ts` the pixel compare (areas of change, moves, blank pictures; diffs in red), and `baseline.ts` the one baseline
+  implementation ("auto", a .png path, or a name with its settings in JSON) that screenshots, scenario screenshot steps
+  and `godotwright ci` share. Option names released in 0.5.0 (`baseline`, `threshold`, `tolerance`, `update_baseline`)
+  keep their meaning.
 - `src/api/`: lookup and search over the bundled Godot 4.7 class reference.
 - `src/review/`: the AAA review. `src/review/model.ts` resolves classes, types, members and
   scene nodes; `checks/` holds one file per category (`pitfalls.ts` and `runtime.ts` hold the rules that came from

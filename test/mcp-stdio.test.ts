@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { describe, expect, it } from "vitest";
+import { ALL_TOOLS } from "../src/mcp/toolsets.js";
 import { DEMO } from "./helpers.js";
 
 /** Starts the built CLI the way agents do: `godotwright mcp` over stdio. Needs `npm run build`. */
@@ -24,7 +25,8 @@ describe.skipIf(!existsSync(CLI))("godotwright mcp over stdio", () => {
     try {
       expect(client.getServerVersion()?.name).toBe("godotwright");
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(37);
+      expect(tools).toHaveLength(ALL_TOOLS.length);
+      expect(tools.map((t) => t.name).sort()).toEqual([...ALL_TOOLS].sort());
       const result = (await client.callTool({ name: "godot_review", arguments: {} })) as { content: { text: string }[] };
       expect(result.content[0]!.text).toContain("overall 100/100");
     } finally {

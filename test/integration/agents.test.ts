@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ALL_TOOLS } from "../../src/mcp/toolsets.js";
 import { DEMO } from "../helpers.js";
 
 /**
@@ -61,7 +62,7 @@ describe.skipIf(!enabled)("agent CLIs talk to godotwright mcp", () => {
       const status = await call("mcpServerStatus/list", { serverName: "godotwright" });
       const tools = Object.keys(status.result?.data?.[0]?.tools ?? {}).sort();
       console.log("codex sees:", tools.join(", "));
-      expect(tools).toEqual(["godot_api", "godot_api_search", "godot_check", "godot_checklist", "godot_deps", "godot_doctor", "godot_export", "godot_export_run", "godot_feedback", "godot_fix", "godot_game", "godot_leaks", "godot_lesson_add", "godot_lessons", "godot_migrate", "godot_model_brief", "godot_model_build", "godot_model_identify", "godot_model_inspect", "godot_model_lint", "godot_model_spec", "godot_model_view", "godot_perf", "godot_play", "godot_project_edit", "godot_rename", "godot_review", "godot_scan", "godot_scene_edit", "godot_screenshot", "godot_session", "godot_test", "godot_undo", "godot_usages"]);
+      expect(tools).toEqual([...ALL_TOOLS].sort());
       const thread = await call("thread/start", { cwd });
       const threadId = thread.result?.thread?.id;
       expect(threadId).toBeTruthy();

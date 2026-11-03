@@ -4,6 +4,7 @@ import { logicalLines } from "../godot/gdscript.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { tokenize } from "../review/tokens.js";
 import { loadProject, ProjectNotFoundError, type LoadOptions } from "../scan/scan.js";
+import { withoutSubResource } from "../project/files.js";
 
 /** What kind of place a name turns up in. */
 export type UsageKind =
@@ -59,7 +60,7 @@ export function findUsages(path: string, name: string, options: UsageOptions = {
   if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
   const data = loadProject(path, options);
   const wanted = name.trim();
-  const inScope = (file: string): boolean => !data.external.has(file.replace(/::.*$/, "")) && (options.includeAddons || !file.startsWith("res://addons/"));
+  const inScope = (file: string): boolean => !data.external.has(withoutSubResource(file)) && (options.includeAddons || !file.startsWith("res://addons/"));
   const usages: Usage[] = [];
   const add = (u: Usage): void => {
     if (!usages.some((o) => o.file === u.file && o.line === u.line && o.kind === u.kind)) usages.push(u);

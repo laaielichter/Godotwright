@@ -64,7 +64,7 @@ counts how often it fired up to that frame).
 
 "screenshots": ["hud @ 60"] takes a picture of frame 60 and compares it with .godotwright/baselines/hud.png
 (made on the first run; "godotwright scenario --update" replaces it). An entry can also be
-{"name": "hud", "frame": 60, "tolerance": 16, "maxChanged": 0.1}; "size": "640x360" sets the window.
+{"name": "hud", "frame": 60, "tolerance": 3, "threshold": 0.5}; "size": "640x360" sets the window.
 Screenshots render with the Compatibility renderer (xvfb-run on Linux without a display); "ci" reports them as visual.
 `;
 

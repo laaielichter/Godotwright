@@ -255,7 +255,7 @@ describe.skipIf(!GODOT)("godot_shader and godot_check compile with real Godot", 
   it("godot_check compiles shaders no scene uses, with file:line", { timeout: 300_000 }, async () => {
     const root = project({ "scr.gdshader": "shader_type canvas_item;\n\nvoid fragment() {\n\tCOLOR = texture(SCREEN_TEXTURE, SCREEN_UV);\n}\n" });
     const result = await checkProject(root, { godot: GODOT });
-    expect(result.shaders).toBe(1);
+    expect(result.shaderFiles).toBe(1);
     const errors = result.diagnostics.filter((d) => d.severity === "error").map(formatDiagnostic);
     expect(errors).toEqual([
       "res://scr.gdshader:4: error: SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform. To continue with minimal code changes add 'uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;' near the top of your shader.",

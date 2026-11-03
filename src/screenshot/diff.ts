@@ -1,17 +1,20 @@
-import { encodePng, type RgbaImage } from "./png.js";
+import { PngError, type RgbaImage } from "./png.js";
 
 /** How strict a comparison is. */
 export interface DiffOptions {
-  /** Largest difference per channel (0..255) that still counts as the same pixel (default 16). */
+  /** How far (0-255) a pixel's colour may move before it counts as changed (default 3). */
   tolerance?: number;
-  /** Largest share of changed pixels, in percent, that still passes (default 0.1). */
-  maxChanged?: number;
-  /** Ignore a changed pixel when both pictures have its colour within 1 px (anti-aliased edges; default true). */
-  antialias?: boolean;
+  /** Percent of pixels that may change before the picture counts as changed (default 0.5). */
+  threshold?: number;
 }
 
-export const DEFAULT_TOLERANCE = 16;
-export const DEFAULT_MAX_CHANGED = 0.1;
+/** Percent of pixels that may change before a picture counts as changed. */
+export const DEFAULT_THRESHOLD = 0.5;
+/**
+ * Renders are pixel identical run after run (fixed fps and fixed seeds); a little tolerance absorbs rounding in other
+ * drivers, while any visible colour change, even of one pixel, still counts.
+ */
+export const DEFAULT_TOLERANCE = 3;
 
 /** A connected area of changed pixels, and how far it moved when a shift explains it. */
 export interface ChangeBox {
@@ -26,14 +29,18 @@ export interface ChangeBox {
 export interface ImageDiff {
   width: number;
   height: number;
-  /** Pixels that differ by more than the tolerance (all of them when the sizes differ). */
-  changed: number;
-  changedPercent: number;
+  /** Pixels whose colour moved by more than the tolerance. */
+  pixels: number;
+  /** Share of changed pixels, in percent (two decimals). */
+  percent: number;
   tolerance: number;
-  maxChanged: number;
+  threshold: number;
+  /** True when no more pixels changed than the threshold allows. */
   ok: boolean;
-  /** Set when the pictures have different sizes; then nothing else is compared. */
-  sizeMismatch?: { base: string; actual: string };
+  /** The box around the largest group of changed pixels (by a coarse grid of 16x16 cells). */
+  region?: { x: number; y: number; width: number; height: number };
+  /** Mean change of the changed pixels, 0-255 (how strong the change is). */
+  meanShift: number;
   /** Share of changed pixels per ninth of the picture, only where something changed. */
   regions: { region: string; percent: number }[];
   /** Up to five areas of change, biggest first. */
@@ -54,7 +61,6 @@ export interface ImageStats {
 }
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
-const round3 = (v: number): number => Math.round(v * 1000) / 1000;
 const luma = (px: Uint8Array, o: number): number => 0.2126 * (px[o] as number) + 0.7152 * (px[o + 1] as number) + 0.0722 * (px[o + 2] as number);
 
 /** The clear colour Godotwright's screenshot script draws behind a scene: Color(0.3, 0.3, 0.3) as 8-bit. */
@@ -101,24 +107,16 @@ export function imageStats(img: RgbaImage, background: [number, number, number] 
   return stats;
 }
 
-/** The largest per-channel difference (alpha included) between pixel i of a and pixel j of b. */
-function delta(a: Uint8Array, i: number, b: Uint8Array, j: number): number {
-  return Math.max(Math.abs((a[i] as number) - (b[j] as number)), Math.abs((a[i + 1] as number) - (b[j + 1] as number)), Math.abs((a[i + 2] as number) - (b[j + 2] as number)), Math.abs((a[i + 3] as number) - (b[j + 3] as number)));
-}
-
-/** True when pixel (x, y) of `from` has a colour that `to` has within 1 px of (x, y). */
-function nearMatch(from: Uint8Array, to: Uint8Array, x: number, y: number, w: number, h: number, tol: number): boolean {
-  const o = (y * w + x) * 4;
-  for (let dy = -1; dy <= 1; dy++) {
-    const yy = y + dy;
-    if (yy < 0 || yy >= h) continue;
-    for (let dx = -1; dx <= 1; dx++) {
-      const xx = x + dx;
-      if (xx < 0 || xx >= w || (dx === 0 && dy === 0)) continue;
-      if (delta(from, o, to, (yy * w + xx) * 4) <= tol) return true;
-    }
-  }
-  return false;
+/**
+ * How far the colour of pixel i of a is from pixel j of b, 0-255: luma-weighted (YIQ Y weights), plus half the alpha
+ * change, so anti-aliasing noise stays small and a visible change does not.
+ */
+function distance(a: Uint8Array, i: number, b: Uint8Array, j: number): number {
+  const dr = (a[i] as number) - (b[j] as number);
+  const dg = (a[i + 1] as number) - (b[j + 1] as number);
+  const db = (a[i + 2] as number) - (b[j + 2] as number);
+  const da = (a[i + 3] as number) - (b[j + 3] as number);
+  return Math.sqrt(0.299 * dr * dr + 0.587 * dg * dg + 0.114 * db * db) + Math.abs(da) * 0.5;
 }
 
 const REGIONS = ["top-left", "top", "top-right", "left", "centre", "right", "bottom-left", "bottom", "bottom-right"];
@@ -144,7 +142,7 @@ function findShift(base: RgbaImage, actual: RgbaImage, pixels: number[], tol: nu
         const y = (p - x) / w;
         // What is now at p was at p - d, and what was at p is now at p + d.
         const bx = x - dx, by = y - dy, ax = x + dx, ay = y + dy;
-        const ok = bx >= 0 && by >= 0 && bx < w && by < h && ax >= 0 && ay >= 0 && ax < w && ay < h && delta(actual.rgba, p * 4, base.rgba, (by * w + bx) * 4) <= tol && delta(base.rgba, p * 4, actual.rgba, (ay * w + ax) * 4) <= tol;
+        const ok = bx >= 0 && by >= 0 && bx < w && by < h && ax >= 0 && ay >= 0 && ax < w && ay < h && distance(actual.rgba, p * 4, base.rgba, (by * w + bx) * 4) <= tol && distance(base.rgba, p * 4, actual.rgba, (ay * w + ax) * 4) <= tol;
         if (ok) hits++;
         else if (++misses > allowed) break;
       }
@@ -157,44 +155,92 @@ function findShift(base: RgbaImage, actual: RgbaImage, pixels: number[], tol: nu
   return best && best.score >= 0.9 ? { dx: best.dx, dy: best.dy } : undefined;
 }
 
-/**
- * Compares a new capture with its baseline, pixel by pixel. Returns the numbers an agent can read (changed share,
- * where, boxes of change and whether they moved, brightness) and a mask of the changed pixels for the diff picture.
- */
-export function diffImages(base: RgbaImage, actual: RgbaImage, options: DiffOptions = {}): { diff: ImageDiff; mask: Uint8Array } {
-  const tolerance = options.tolerance ?? DEFAULT_TOLERANCE;
-  const maxChanged = options.maxChanged ?? DEFAULT_MAX_CHANGED;
-  const lumaOf = (img: RgbaImage): number => {
-    let s = 0;
-    for (let p = 0; p < img.width * img.height; p++) s += luma(img.rgba, p * 4);
-    return round1(s / Math.max(1, img.width * img.height));
-  };
-  const lumas = { base: lumaOf(base), actual: lumaOf(actual) };
-  if (base.width !== actual.width || base.height !== actual.height) {
-    const n = actual.width * actual.height;
-    return {
-      diff: { width: actual.width, height: actual.height, changed: n, changedPercent: 100, tolerance, maxChanged, ok: false, sizeMismatch: { base: `${base.width}x${base.height}`, actual: `${actual.width}x${actual.height}` }, regions: [], boxes: [], moreBoxes: 0, luma: lumas },
-      mask: new Uint8Array(n).fill(1),
-    };
+/** The box around the largest 4-connected group of 16x16 cells with changes, weighed by their changed pixels. */
+function largestRegion(mask: Uint8Array, width: number, height: number): ImageDiff["region"] {
+  const cell = 16;
+  const cols = Math.ceil(width / cell);
+  const rows = Math.ceil(height / cell);
+  const cells = new Uint32Array(cols * rows);
+  for (let p = 0; p < mask.length; p++) if (mask[p]) cells[Math.floor(Math.floor(p / width) / cell) * cols + Math.floor((p % width) / cell)]! += 1;
+  let region: ImageDiff["region"];
+  const seen = new Uint8Array(cols * rows);
+  let best = 0;
+  for (let start = 0; start < cells.length; start++) {
+    if (!cells[start] || seen[start]) continue;
+    const stack = [start];
+    seen[start] = 1;
+    let count = 0;
+    let x0 = cols, y0 = rows, x1 = -1, y1 = -1;
+    while (stack.length) {
+      const c = stack.pop()!;
+      count += cells[c]!;
+      const cx = c % cols;
+      const cy = Math.floor(c / cols);
+      x0 = Math.min(x0, cx);
+      y0 = Math.min(y0, cy);
+      x1 = Math.max(x1, cx);
+      y1 = Math.max(y1, cy);
+      for (const [nx, ny] of [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]] as const) {
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+        const n = ny * cols + nx;
+        if (cells[n] && !seen[n]) {
+          seen[n] = 1;
+          stack.push(n);
+        }
+      }
+    }
+    if (count > best) {
+      best = count;
+      const x = x0 * cell;
+      const y = y0 * cell;
+      region = { x, y, width: Math.min(width, (x1 + 1) * cell) - x, height: Math.min(height, (y1 + 1) * cell) - y };
+    }
   }
+  return region;
+}
+
+/**
+ * Compares a new picture with its baseline, pixel by pixel; both must have the same size. A pixel counts as changed
+ * when its colour moved by more than `tolerance`. Returns the numbers an agent can read (changed share, the largest
+ * changed area, areas of change and whether they moved, where, brightness) and the diff picture: the baseline faded
+ * to grey with the changed pixels in red.
+ */
+export function diffImages(base: RgbaImage, actual: RgbaImage, options: DiffOptions = {}): { diff: ImageDiff; image: RgbaImage } {
+  if (base.width !== actual.width || base.height !== actual.height) throw new PngError(`sizes differ: ${base.width}x${base.height} and ${actual.width}x${actual.height}`);
+  const tolerance = options.tolerance ?? DEFAULT_TOLERANCE;
+  const threshold = options.threshold ?? DEFAULT_THRESHOLD;
   const w = base.width;
   const h = base.height;
   const mask = new Uint8Array(w * h);
+  const out = new Uint8Array(w * h * 4);
   const cols = Math.ceil(w / CELL);
   const rows = Math.ceil(h / CELL);
   const cells = new Uint32Array(cols * rows);
   const regionCount = new Uint32Array(9);
   const regionSize = new Uint32Array(9);
   let changed = 0;
+  let shift = 0;
+  let lumaBase = 0;
+  let lumaActual = 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const p = y * w + x;
+      const o = p * 4;
+      lumaBase += luma(base.rgba, o);
+      lumaActual += luma(actual.rgba, o);
       const region = Math.min(2, Math.floor((3 * y) / h)) * 3 + Math.min(2, Math.floor((3 * x) / w));
       regionSize[region]! += 1;
-      if (delta(base.rgba, p * 4, actual.rgba, p * 4) <= tolerance) continue;
-      if (options.antialias !== false && nearMatch(base.rgba, actual.rgba, x, y, w, h, tolerance) && nearMatch(actual.rgba, base.rgba, x, y, w, h, tolerance)) continue;
+      out[o + 3] = 255;
+      const d = distance(actual.rgba, o, base.rgba, o);
+      if (d <= tolerance) {
+        const grey = Math.round(0.299 * (base.rgba[o] as number) + 0.587 * (base.rgba[o + 1] as number) + 0.114 * (base.rgba[o + 2] as number));
+        out[o] = out[o + 1] = out[o + 2] = 128 + Math.round(grey / 2);
+        continue;
+      }
+      out[o] = 255;
       mask[p] = 1;
       changed++;
+      shift += d;
       regionCount[region]! += 1;
       cells[Math.floor(y / CELL) * cols + Math.floor(x / CELL)]! += 1;
     }
@@ -273,51 +319,34 @@ export function diffImages(base: RgbaImage, actual: RgbaImage, options: DiffOpti
   }
   merged.sort((a, b) => b.pixels - a.pixels);
   const top = merged.slice(0, 5);
-  const changedPercent = round3((100 * changed) / (w * h));
+  const region = largestRegion(mask, w, h);
+  const n = Math.max(1, w * h);
   return {
     diff: {
       width: w,
       height: h,
-      changed,
-      changedPercent,
+      pixels: changed,
+      percent: Math.round((10000 * changed) / n) / 100,
       tolerance,
-      maxChanged,
-      ok: changedPercent <= maxChanged,
-      regions: REGIONS.map((region, i) => ({ region, percent: round1((100 * (regionCount[i] as number)) / Math.max(1, regionSize[i] as number)) })).filter((r) => r.percent > 0),
+      threshold,
+      ok: (100 * changed) / n <= threshold,
+      ...(region ? { region } : {}),
+      meanShift: changed ? Math.round((10 * shift) / changed) / 10 : 0,
+      regions: REGIONS.map((name, i) => ({ region: name, percent: round1((100 * (regionCount[i] as number)) / Math.max(1, regionSize[i] as number)) })).filter((r) => r.percent > 0),
       boxes: top,
       moreBoxes: Math.max(0, merged.length - top.length) + Math.max(0, boxes.length - tried.length),
-      luma: lumas,
+      luma: { base: round1(lumaBase / n), actual: round1(lumaActual / n) },
     },
-    mask,
+    image: { width: w, height: h, rgba: out },
   };
 }
 
-/** The diff picture: changed pixels magenta, everything else the new picture in dim grey. */
-export function diffPng(actual: RgbaImage, mask: Uint8Array): Buffer {
-  const n = actual.width * actual.height;
-  const rgb = new Uint8Array(n * 3);
-  for (let p = 0; p < n; p++) {
-    if (mask[p]) {
-      rgb[p * 3] = 255;
-      rgb[p * 3 + 1] = 0;
-      rgb[p * 3 + 2] = 255;
-    } else {
-      const v = Math.round(40 + luma(actual.rgba, p * 4) * 0.35);
-      rgb[p * 3] = v;
-      rgb[p * 3 + 1] = v;
-      rgb[p * 3 + 2] = v;
-    }
-  }
-  return encodePng(actual.width, actual.height, rgb, 3);
-}
-
-/** The diff as a few lines: verdict, boxes (with a move when a shift explains one), regions and brightness. */
+/** The areas of change, where they are and a brightness shift, as a few lines (the verdict is the caller's). */
 export function formatDiff(d: ImageDiff): string[] {
-  if (d.sizeMismatch) return [`size differs: baseline ${d.sizeMismatch.base}, now ${d.sizeMismatch.actual}`];
-  const out = [`${d.changed} px changed (${d.changedPercent}%, allowed ${d.maxChanged}% at tolerance ${d.tolerance}/255)`];
+  const out: string[] = [];
   if (d.boxes.length) {
     const boxes = d.boxes.map((b) => `(${b.x0},${b.y0})-(${b.x1},${b.y1}) ${b.pixels} px${b.moved ? ` moved (${b.moved.dx},${b.moved.dy})` : ""}`);
-    out.push(`boxes: ${boxes.join("; ")}${d.moreBoxes ? `; +${d.moreBoxes} more` : ""}`);
+    out.push(`areas: ${boxes.join("; ")}${d.moreBoxes ? `; +${d.moreBoxes} more` : ""}`);
   }
   if (d.regions.length) out.push(`where: ${d.regions.map((r) => `${r.region} ${r.percent}%`).join(", ")}`);
   const shift = round1(d.luma.actual - d.luma.base);

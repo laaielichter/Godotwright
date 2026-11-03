@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { BaselineError, baselineName, compareBaseline, formatBaseline, loadBaselines, readBaselineMeta } from "../src/screenshot/baseline.js";
-import { diffImages, diffPng, formatDiff, imageStats } from "../src/screenshot/diff.js";
+import { diffImages, formatDiff, imageStats } from "../src/screenshot/diff.js";
 import { PngError, decodePng, encodePng, type RgbaImage } from "../src/screenshot/png.js";
 import { FIXTURES, tempFolder } from "./helpers.js";
 
@@ -136,22 +136,24 @@ describe("diffImages", () => {
 
   it("finds nothing in the same picture", () => {
     const { diff } = diffImages(scene(60), scene(60));
-    expect(diff).toMatchObject({ changed: 0, changedPercent: 0, ok: true, boxes: [], regions: [] });
+    expect(diff).toMatchObject({ pixels: 0, percent: 0, meanShift: 0, ok: true, boxes: [], regions: [] });
+    expect(diff.region).toBeUndefined();
   });
 
   it("finds a label that moved 12 px, with its box, its region and the move", () => {
-    const { diff, mask } = diffImages(scene(60), scene(72));
+    const { diff, image } = diffImages(scene(60), scene(72));
     expect(diff.ok).toBe(false);
     expect(diff.boxes).toHaveLength(1);
     expect(diff.boxes[0]).toMatchObject({ x0: 60, y0: 90, x1: 111, y1: 99, moved: { dx: 12, dy: 0 } });
-    // 12 columns where it was and 12 where it is now; the four inner corners pass as anti-aliased edges.
-    expect(diff.changed).toBe(2 * 12 * 10 - 4);
+    // 12 columns where it was and 12 where it is now.
+    expect(diff.pixels).toBe(2 * 12 * 10);
+    expect(diff.percent).toBe(1);
     expect(diff.regions.map((r) => r.region)).toEqual(["bottom-left", "bottom"]);
-    expect(mask[95 * 200 + 65]).toBe(1);
-    expect(mask[95 * 200 + 80]).toBe(0);
+    const at = (x: number, y: number) => [...image.rgba.subarray((y * 200 + x) * 4, (y * 200 + x) * 4 + 4)];
+    expect(at(65, 95)).toEqual([255, 0, 0, 255]);
+    expect(at(80, 95)[1]).toBe(at(80, 95)[0]);
     const text = formatDiff(diff).join("\n");
-    expect(text).toContain("236 px changed (0.983%, allowed 0.1% at tolerance 16/255)");
-    expect(text).toContain("boxes: (60,90)-(111,99) 236 px moved (12,0)");
+    expect(text).toContain("areas: (60,90)-(111,99) 240 px moved (12,0)");
   });
 
   it("does not call a removed label a move", () => {
@@ -168,39 +170,28 @@ describe("diffImages", () => {
     expect(formatDiff(diff).join("\n")).toMatch(/mean brightness .* -> .* \(darker\)/);
   });
 
-  it("ignores small colour noise below the tolerance and a 1 px anti-aliased edge", () => {
+  it("ignores colour noise within the tolerance, and counts a 1 px shift", () => {
     const noisy = scene(60);
     for (let i = 0; i < noisy.rgba.length; i += 4 * 7) noisy.rgba[i] = noisy.rgba[i]! + 5;
-    expect(diffImages(scene(60), noisy).diff.changed).toBe(0);
-    const shifted = scene(61);
-    expect(diffImages(scene(60), shifted).diff.changed).toBe(0);
-    expect(diffImages(scene(60), shifted, { antialias: false }).diff.changed).toBe(20);
+    expect(diffImages(scene(60), noisy).diff.pixels).toBe(0);
+    expect(diffImages(scene(60), noisy, { tolerance: 0 }).diff.pixels).toBeGreaterThan(0);
+    expect(diffImages(scene(60), scene(61)).diff.pixels).toBe(20);
   });
 
-  it("passes within maxChanged and fails above it, and a stricter tolerance catches more", () => {
+  it("passes within the threshold and fails above it, and a stricter tolerance catches more", () => {
     const a = scene(60);
     const b = scene(60);
     b.rgba.set([77, 77, 120, 255], (5 * 200 + 150) * 4);
-    expect(diffImages(a, b).diff).toMatchObject({ changed: 1, ok: true });
-    expect(diffImages(a, b, { maxChanged: 0 }).diff.ok).toBe(false);
+    expect(diffImages(a, b).diff).toMatchObject({ pixels: 1, ok: true, threshold: 0.5, tolerance: 3 });
+    expect(diffImages(a, b, { threshold: 0 }).diff.ok).toBe(false);
+    // A blue change of 13 is a distance of 4.4: over the default tolerance of 3, under 5.
     b.rgba.set([77, 77, 90, 255], (6 * 200 + 150) * 4);
-    expect(diffImages(a, b).diff.changed).toBe(1);
-    expect(diffImages(a, b, { tolerance: 4 }).diff.changed).toBe(2);
+    expect(diffImages(a, b).diff.pixels).toBe(2);
+    expect(diffImages(a, b, { tolerance: 5 }).diff.pixels).toBe(1);
   });
 
-  it("reports a size change instead of comparing pixels", () => {
-    const { diff } = diffImages(picture(20, 10, []), picture(10, 10, []));
-    expect(diff).toMatchObject({ ok: false, changedPercent: 100, sizeMismatch: { base: "20x10", actual: "10x10" } });
-    expect(formatDiff(diff)).toEqual(["size differs: baseline 20x10, now 10x10"]);
-  });
-
-  it("draws changed pixels magenta on a dim copy of the new picture", () => {
-    const { mask } = diffImages(scene(60), scene(72));
-    const img = decodePng(diffPng(scene(72), mask));
-    expect([...img.rgba.subarray((95 * 200 + 65) * 4, (95 * 200 + 65) * 4 + 4)]).toEqual([255, 0, 255, 255]);
-    const grey = [...img.rgba.subarray(0, 3)];
-    expect(grey[0]).toBe(grey[1]);
-    expect(grey[0]).toBeLessThan(77);
+  it("refuses pictures of different sizes", () => {
+    expect(() => diffImages(picture(20, 10, []), picture(10, 10, []))).toThrow(PngError);
   });
 });
 
@@ -215,27 +206,31 @@ describe("baselines", () => {
   it("makes a missing baseline, then says same, then changed with a diff picture, then takes an update", () => {
     const root = tempFolder("gw-baseline-");
     const first = compareBaseline(root, "hud", capture(root, picture(64, 32, [{ x: 4, y: 4, w: 20, h: 8, c: [255, 0, 0] }])), { meta });
-    expect(first).toMatchObject({ status: "created", ok: true, baseline: ".godotwright/baselines/hud.png" });
+    const png = join(root, ".godotwright/baselines/hud.png");
+    expect(first).toMatchObject({ status: "saved", ok: true, name: "hud", file: png });
+    expect(first.replaced).toBeUndefined();
     expect(readBaselineMeta(root, "hud")).toMatchObject({ scene: "res://hud.tscn", width: 64 });
-    expect(formatBaseline(first)).toEqual(["baseline hud: created .godotwright/baselines/hud.png (commit it)"]);
+    expect(formatBaseline(first)[0]).toBe(`baseline hud saved: ${png}`);
 
     const same = compareBaseline(root, "hud", capture(root, picture(64, 32, [{ x: 4, y: 4, w: 20, h: 8, c: [255, 0, 0] }])), { meta });
-    expect(same).toMatchObject({ status: "same", ok: true });
+    expect(same).toMatchObject({ status: "unchanged", ok: true, pixels: 0 });
 
     const moved = capture(root, picture(64, 32, [{ x: 30, y: 20, w: 20, h: 8, c: [255, 0, 0] }]));
     const changed = compareBaseline(root, "hud", moved, { meta: { ...meta, adapter: "llvmpipe B" } });
-    expect(changed).toMatchObject({ status: "changed", ok: false, diffFile: ".godot/godotwright/diff/hud.diff.png" });
-    expect(existsSync(join(root, ".godot/godotwright/diff/hud.diff.png"))).toBe(true);
-    const text = formatBaseline(changed, "run again with --update").join("\n");
-    expect(text).toContain("baseline hud: CHANGED");
-    expect(text).toContain("intended? run again with --update to accept it");
+    const diff = join(root, ".godot/godotwright/diff/hud-diff.png");
+    expect(changed).toMatchObject({ status: "changed", ok: false, diff, actual: moved });
+    expect(existsSync(diff)).toBe(true);
+    const text = formatBaseline(changed, "run again with --update-baseline").join("\n");
+    expect(text).toContain("baseline hud CHANGED: ");
+    expect(text).toContain("(changed pixels in red)");
+    expect(text).toContain("if the change is intended, run again with --update-baseline");
     expect(text).toContain("made with the graphics driver llvmpipe A, this capture with llvmpipe B");
 
     const updated = compareBaseline(root, "hud", moved, { meta, update: true, tolerance: 30 });
-    expect(updated.status).toBe("updated");
-    expect(existsSync(join(root, ".godot/godotwright/diff/hud.diff.png"))).toBe(false);
+    expect(updated).toMatchObject({ status: "saved", replaced: true });
+    expect(existsSync(diff)).toBe(false);
     expect(readBaselineMeta(root, "hud")?.tolerance).toBe(30);
-    expect(compareBaseline(root, "hud", moved, { meta }).status).toBe("same");
+    expect(compareBaseline(root, "hud", moved, { meta }).status).toBe("unchanged");
     expect(loadBaselines(root).map((b) => b.name)).toEqual(["hud"]);
   });
 
@@ -243,17 +238,18 @@ describe("baselines", () => {
     const root = tempFolder("gw-baseline-");
     const r = compareBaseline(root, "menu", capture(root, picture(16, 16, [], [0, 0, 0])), { meta, createMissing: false });
     expect(r).toMatchObject({ status: "missing", ok: false, blank: "the whole picture is black" });
-    expect(formatBaseline(r, "run again with --update").join("\n")).toContain("baseline menu: MISSING .godotwright/baselines/menu.png; make it with --update and commit it");
+    expect(formatBaseline(r, "run again with --update-baseline").join("\n")).toContain(`baseline menu MISSING: ${join(root, ".godotwright/baselines/menu.png")}`);
+    expect(formatBaseline(r, "run again with --update-baseline").join("\n")).toContain("Next: make it (run again with --update-baseline), then commit it.");
     expect(existsSync(join(root, ".godotwright/baselines/menu.png"))).toBe(false);
   });
 
-  it("uses the tolerance stored with the baseline, and a given folder", () => {
+  it("uses the threshold stored with the baseline, and a given folder", () => {
     const root = tempFolder("gw-baseline-");
     mkdirSync(join(root, "shots"));
-    compareBaseline(root, "a", capture(root, picture(16, 16, [])), { meta, dir: "shots", maxChanged: 50 });
+    compareBaseline(root, "a", capture(root, picture(16, 16, [])), { meta, dir: "shots", threshold: 50 });
     const r = compareBaseline(root, "a", capture(root, picture(16, 16, [{ x: 0, y: 0, w: 8, h: 8, c: [0, 0, 0] }])), { meta, dir: "shots" });
-    expect(r).toMatchObject({ status: "same", baseline: "shots/a.png" });
-    expect(formatBaseline(r)[0]).toBe("baseline a: same (64 px changed, 25%, within 50%)");
+    expect(r).toMatchObject({ status: "within-threshold", ok: true, file: join(root, "shots/a.png"), percent: 25, threshold: 50 });
+    expect(formatBaseline(r)[0]).toMatch(/^baseline a within threshold: 25% of pixels changed \(64 px; threshold 50%, tolerance 3\)/);
   });
 
   it("will not write over a JSON file that is not a baseline", () => {
@@ -265,7 +261,7 @@ describe("baselines", () => {
     // A baseline whose settings file is damaged can still be replaced: its picture shows it is a baseline.
     compareBaseline(root, "hud", capture(root, picture(16, 16, [])), { meta });
     writeFileSync(join(root, ".godotwright/baselines/hud.json"), "not json");
-    expect(compareBaseline(root, "hud", capture(root, picture(16, 16, [])), { meta, update: true }).status).toBe("updated");
+    expect(compareBaseline(root, "hud", capture(root, picture(16, 16, [])), { meta, update: true })).toMatchObject({ status: "saved", replaced: true });
     expect(readBaselineMeta(root, "hud")?.width).toBe(64);
   });
 

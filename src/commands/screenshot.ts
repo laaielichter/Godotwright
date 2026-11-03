@@ -1,7 +1,7 @@
 import { Command, InvalidArgumentError } from "commander";
 import { GodotNotFoundError } from "../check/godot.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
-import { ScreenshotError, VIEWS, formatScreenshot, takeScreenshot, type View } from "../screenshot/screenshot.js";
+import { DEFAULT_THRESHOLD, DEFAULT_TOLERANCE, ScreenshotError, VIEWS, formatScreenshot, takeScreenshot, type View } from "../screenshot/screenshot.js";
 import { writeOut } from "./output.js";
 
 interface Options {
@@ -12,12 +12,12 @@ interface Options {
   size?: { width: number; height: number };
   frames?: number;
   out?: string;
-  json?: boolean;
-  baseline?: string;
-  update?: boolean;
-  baselineDir?: string;
+  baseline?: string | true;
+  threshold?: number;
   tolerance?: number;
-  maxChanged?: number;
+  updateBaseline?: boolean;
+  baselineDir?: string;
+  json?: boolean;
 }
 
 function parseNumber(min: number, max: number) {
@@ -42,7 +42,7 @@ function parseViews(value: string): View[] {
 
 export function screenshotCommand(): Command {
   return new Command("screenshot")
-    .description("render a scene, or a .glb model framed by a camera, to a PNG with Godot, say how much of the picture is drawn, and compare it with a baseline")
+    .description("render a scene, or a .glb model framed by a camera, to a PNG with Godot, and say how much of the picture is drawn; with --baseline, compare it with the last approved picture")
     .argument("[path]", "project directory (or any path inside it); for --model, where relative paths start", ".")
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
     .option("--scene <res-path>", "the scene to render (default: the main scene)")
@@ -51,11 +51,11 @@ export function screenshotCommand(): Command {
     .option("--size <WxH>", "size of one view (default 640x360)", parseSize)
     .option("--frames <n>", "frames to run before the picture (default 10)", (v: string) => Number.parseInt(v, 10))
     .option("-o, --out <file>", "where to write the PNG (default: .godot/godotwright/screenshot.png, or the model name with .png)")
-    .option("--baseline <name>", "compare with the baseline of this name in .godotwright/baselines (made when missing; its settings are used), exit code 1 when it changed")
-    .option("--update", "with --baseline: replace the baseline with this picture")
-    .option("--baseline-dir <dir>", "folder for baselines (default .godotwright/baselines)")
-    .option("--tolerance <0-255>", "per-channel difference that still counts as the same pixel (default 16, or the baseline's)", parseNumber(0, 255))
-    .option("--max-changed <percent>", "largest share of changed pixels that still passes (default 0.1, or the baseline's)", parseNumber(0, 100))
+    .option("--baseline [file-or-name]", "compare with a baseline, saved on the first run: no value is .godotwright/baselines/<scene or model>-<hash>@<size>_<views>.png, a .png is that file, a name (hud) is .godotwright/baselines/hud.png with its scene, size, views and frames in hud.json; exit code 1 when it changed")
+    .option("--threshold <percent>", `percent of pixels that may change (default ${DEFAULT_THRESHOLD}, or the named baseline's)`, parseNumber(0, 100))
+    .option("--tolerance <0-255>", `how far a pixel's colour may move before it counts as changed (default ${DEFAULT_TOLERANCE}, or the named baseline's)`, parseNumber(0, 255))
+    .option("--update-baseline", "write the new picture as the baseline instead of comparing (default file as --baseline)")
+    .option("--baseline-dir <dir>", "folder for named baselines (default .godotwright/baselines)")
     .option("--json", "print the result as JSON")
     .action(async (path: string, options: Options, command: Command) => {
       try {
@@ -67,14 +67,13 @@ export function screenshotCommand(): Command {
           ...(options.size ? { width: options.size.width, height: options.size.height } : {}),
           ...(options.frames !== undefined ? { frames: options.frames } : {}),
           ...(options.out ? { out: options.out } : {}),
-          ...(options.baseline ? { baseline: options.baseline } : {}),
-          ...(options.update ? { update: true } : {}),
-          ...(options.baselineDir ? { baselineDir: options.baselineDir } : {}),
+          ...(options.baseline !== undefined ? { baseline: options.baseline === true ? "auto" : options.baseline } : {}),
+          ...(options.threshold !== undefined ? { threshold: options.threshold } : {}),
           ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
-          ...(options.maxChanged !== undefined ? { maxChanged: options.maxChanged } : {}),
+          ...(options.updateBaseline ? { updateBaseline: true } : {}),
+          ...(options.baselineDir ? { baselineDir: options.baselineDir } : {}),
         });
-        if (options.update && !options.baseline) process.stderr.write("--update does nothing without --baseline <name>\n");
-        writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatScreenshot(report, "run again with --update"));
+        writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatScreenshot(report, "run again with --update-baseline"));
         if (report.baseline && !report.baseline.ok) process.exitCode = 1;
       } catch (error) {
         if (error instanceof GodotNotFoundError) {

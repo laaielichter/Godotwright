@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow semver; before 1.0 a minor version may change behaviour.
 
-## 0.5.0 (shaders, the real build, scene integrity, regression proof, upgrades, and a smaller tool list)
+## 0.6.0 (shader review, the real build, scene integrity, regression proof, upgrades, and a smaller tool list)
 
 From a survey of about forty Godot AI tools and their issue trackers (November 2026): what users keep asking for,
 built headless and checked against Godot 4.7.2.
@@ -11,8 +11,13 @@ built headless and checked against Godot 4.7.2.
   in a scene, against Godot 4.7's own shader tables (bundled from the 4.7.2 source): Godot 3 names, `SCREEN_TEXTURE` and
   friends, built-ins in the wrong shader type or function, read-only built-ins written, unknown render modes, missing
   includes, colour uniforms without `source_color`, and performance hints. Then a headless compile by real Godot (no
-  GPU): Godot's errors as `file:line`. `godot_check` compiles every shader too; `godot_migrate` and `godot_fix` rename
-  the Godot 3 names and add the texture uniforms.
+  GPU, no display): 0.5.0 said headless Godot never compiles shaders, but `Shader.get_rid()` runs Godot's full shader
+  compiler on the dummy renderer, and on spatial, canvas_item, particles, sky and fog shaders, includes and shaders
+  stored in scenes it finds every language error at the same line as drawing them does, in a fraction of the time.
+  `gpu: true` (`--gpu`) adds 0.5.0's GPU pass for what only the driver rejects (a uniform block that is too big, a
+  sampler array indexed by a variable); `godotwright shaders`, `check --shaders` and `godot_check` `shaders: true` are
+  that pass and work as before. `godot_check` now compiles every `.gdshader` headless on every run, and an error both
+  passes find is reported once. `godot_migrate` and `godot_fix` rename the Godot 3 names and add the texture uniforms.
 - **`godot_export_run` (and `godotwright export run|patch|pck|smoke`).** A real headless export (`--export-pack` needs
   no templates), a PCK reader in TypeScript (formats 2 to 4, packs inside executables, encrypted directories detected),
   every file the game loads checked against the pack with the chain that loads it, editor-only and test code shipped
@@ -24,9 +29,14 @@ built headless and checked against Godot 4.7.2.
   format and cache), and `godot_scene_edit` refuses an edit Godot would drop unless you make the instance editable.
 - **`godot_scenario`.** Keep a passing `godot_play` run as a regression test (it runs once more first), list and run
   them; `until` and signal claims in scenarios; `--junit` on `ci`, `test` and `scenario`, and in the GitHub Action.
-- **Screenshot baselines.** `godot_screenshot` with `baseline` compares with a stored picture (pure TypeScript PNG
-  diff, tolerance, moved areas, blank pictures named) and writes a diff in magenta; scenarios take screenshots on chosen
-  frames; `godotwright ci` has a visual step and the Action uploads the diffs.
+- **More from screenshot baselines.** 0.5.0's `baseline` ("auto" or a .png path), `threshold`, `tolerance` and
+  `update_baseline` work as before; a compare now also lists up to five areas of change and how far one moved, where in
+  the picture they are and a brightness shift, and warns about blank pictures (black, transparent, one colour).
+  `baseline` may also be a name (`hud`): `.godotwright/baselines/hud.png` with its scene, size, views, frames and
+  limits in `hud.json`, so later calls need only the name (`baseline_dir`, `--baseline-dir` for another folder).
+  Scenarios take screenshots on chosen frames and compare them; `godotwright ci` has a visual step for every named
+  baseline and scenario screenshot, and the Action uploads the diffs. One PNG reader and writer (16-bit, palette and
+  transparency) and one compare for all of them; diffs stay red.
 - **`godot_leaks` (and `godotwright leaks`).** Load, run and free a scene in cycles and report what grows per cycle:
   orphan nodes by class, script and scene with the code that makes them, nodes in the tree, resources; an error over a
   budget. `check` names the leaked classes at exit.
@@ -37,15 +47,40 @@ built headless and checked against Godot 4.7.2.
   and import settings (audio loop, texture compression, glTF per-animation and per-mesh options, importer switch),
   checked against the importer's real option names, then reimported headless and verified.
 - **A smaller tool list.** `--tools` / `GODOTWRIGHT_TOOLS` with the sets core, edit, run, game, export and model
-  (`core` is 12 tools and under a third of the tool list), and `--read-only`. The instructions name only enabled tools.
+  (`core` is 13 tools and about a third of the tool list), and `--read-only`. The instructions name only enabled tools.
 - **Structured results.** `godot_review`, `godot_check`, `godot_doctor` and `godot_test` return `structuredContent`
   with an output schema next to the same text.
 - **Progress and cancel.** Long Godot runs send progress (phase, import percentage, files loaded, frames played) and
-  stop the Godot process tree when the call is cancelled.
+  stop Godot and everything it started (xvfb-run and Xvfb included) when the call is cancelled, as a timeout does.
 - **Protected paths.** `"protect"` in `godotwright.json`: no Godotwright write may touch those folders, and the Claude
   Code plugin's new `PreToolUse` hook denies Claude's own edits there. Plugin settings for the project, Godot binary,
   protected paths, tool sets and read-only.
-- 37 MCP tools.
+- 38 MCP tools (with 0.5.0's `godot_code`).
+
+## 0.5.0 (Godot's own code intelligence, real shader compilation, visual tests)
+
+- **`godot_code` (and `godotwright code`): Godot's own view of a script.** Diagnostics, hover, definition and
+  completion from Godot 4.7's GDScript language server, which runs headless as an editor and stays warm for 10
+  minutes per project. It reports warnings at the project's own levels, the inferred type of a variable, where a name
+  is defined and what can follow a dot, also for unsaved code. It restarts by itself when a class_name, project.godot
+  or a file that needs an import changes, waits for calls queued on a server it replaces, and keeps Godot's debug
+  adapter off port 6006 so it does not block an editor you open.
+- **Real shader compilation: `godotwright shaders`, `check --shaders`, `godot_check` `shaders: true`.** Headless Godot
+  never compiles shaders, so this draws every spatial, canvas_item, particles and sky shader on the Compatibility
+  renderer (xvfb-run on Linux without a display) and parses fog shaders; errors come back at the line in the
+  .gdshader, .gdshaderinc or the .tres/.tscn that embeds it, every includer of a broken include is named, and Godot 3
+  built-ins, hints and render modes get their Godot 4 form. After a timeout, shaders that were never drawn are
+  reported as not compiled, and nothing is left running.
+- **Visual tests: screenshot baselines and diffs.** `godot_screenshot` takes `baseline` ("auto" or a .png path),
+  `threshold` and `update_baseline`; `godotwright screenshot` takes `--baseline [file]`, `--threshold`, `--tolerance`
+  and `--update-baseline`. The first picture becomes the baseline in `.godotwright/baselines/` (Godot does not import
+  it, so it can be committed); later ones are compared pixel by pixel: unchanged is one line of text (no image
+  tokens), a change gives the percent, the box of the largest change, the mean shift and a diff picture with changed
+  pixels in red, as an error result (exit code 1 in the CLI). A change below the threshold is still named.
+- **Deterministic screenshots:** Godot renders with `--fixed-fps 60` and fixed seeds for random numbers and particles,
+  so repeated renders of the official demos are pixel identical. The render script compiles even when a project turns
+  GDScript warnings into errors.
+- **Godot runs that time out stop everything they started**, also under xvfb-run (Xvfb and its temp folder included).
 
 ## 0.4.0 (a game that stays up, a doctor, undo, and what the build and the project really hold)
 

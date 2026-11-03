@@ -7,6 +7,7 @@ import type { Finding } from "../review/rules.js";
 import { learningAllowed, readLearning, ruleStats, updateLearning, type LearningData } from "./store.js";
 import { scrubTemplate, shareableQuery } from "./share.js";
 import { messageTemplate, shareableTemplate } from "./template.js";
+import { withoutSubResource } from "../project/files.js";
 
 /**
  * Rules whose errors real Godot always reports when it loads a script, so a
@@ -115,8 +116,7 @@ function contradictions(rule: string, data: LearningData, shared?: LearnedData):
 
 /** True for a file inside a folder whose name starts with a dot. */
 function inDotFolder(file: string): boolean {
-  return file
-    .replace(/::.*$/, "")
+  return withoutSubResource(file)
     .replace(/^res:\/\//, "")
     .split("/")
     .slice(0, -1)

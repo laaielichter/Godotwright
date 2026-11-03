@@ -1,5 +1,7 @@
 import { compileShaders, type ShaderCompileResult, type ShaderToCompile } from "../check/shader-compile.js";
 import { GodotNotFoundError } from "../check/godot.js";
+import { ProjectNotFoundError } from "../scan/scan.js";
+import { asCheckDiagnostic, checkShaders, ShaderCheckError, type ShaderCheckResult } from "../shaders/shaders.js";
 import type { Diagnostic } from "../check/log.js";
 import { parseShader, resolveInclude } from "../godot/shader.js";
 import { bundledLearning } from "../learn/bundled.js";
@@ -14,6 +16,9 @@ import { loadProject, type ShaderSource } from "../scan/scan.js";
 /**
  * godot_shader: every shader of a project (.gdshader, .gdshaderinc and Shader resources stored in scenes) reviewed
  * statically against Godot 4.7's shader tables, then compiled by real Godot headless, with file:line for both.
+ * Headless Godot runs the full shader compiler (get_rid() compiles a shader on the dummy renderer), which finds every
+ * language error. With `gpu` the shaders are also drawn on the Compatibility renderer (src/shaders/), which adds what
+ * only a GPU driver rejects: a uniform block that is too big, a sampler array indexed by a variable.
  */
 
 export interface ShaderOptions {
@@ -27,6 +32,11 @@ export interface ShaderOptions {
   timeoutMs?: number;
   /** Also shaders under res://addons/ (third-party code). */
   includeAddons?: boolean;
+  /**
+   * Also draw the shaders on the Compatibility renderer (needs a display, or xvfb-run on Linux): finds what only the
+   * GPU driver rejects. Draws the files on disk, not unsaved code.
+   */
+  gpu?: boolean;
   base?: string[];
   baseFiles?: string[];
 }
@@ -50,6 +60,10 @@ export interface ShaderReport {
   unknownFiles?: string[];
   /** Why Godot did not compile them, when it did not. */
   compileSkipped?: string;
+  /** With `gpu`: the result of drawing them on the Compatibility renderer. */
+  gpu?: ShaderCheckResult;
+  /** With `gpu`: why they were not drawn, when they were not. */
+  gpuSkipped?: string;
   errors: number;
   warnings: number;
 }
@@ -95,6 +109,17 @@ export async function shaderReport(path: string, options: ShaderOptions = {}): P
     }
   } else if (options.compile !== false) {
     report.compileSkipped = "nothing to compile";
+  }
+  if (options.gpu && targets.length > 0) {
+    // Scenes and resources that hold a shader are drawn as a whole file.
+    const files = options.files ? [...new Set([...targets.map((t) => t.path), ...selected.map(([p]) => p)].map((p) => p.replace(/::.*$/, "")))] : undefined;
+    try {
+      report.gpu = await checkShaders(data.root, { godot: options.godot, ...(files ? { files } : {}), includeAddons: Boolean(options.includeAddons), ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}) });
+      if (options.overrides && Object.keys(options.overrides).length) report.gpu.notes.push("the GPU pass drew the files on disk, not the unsaved code");
+    } catch (error) {
+      if (!(error instanceof ShaderCheckError || error instanceof GodotNotFoundError || error instanceof ProjectNotFoundError)) throw error;
+      report.gpuSkipped = error instanceof GodotNotFoundError ? "Godot not found (set GODOT or pass godot)" : error.message;
+    }
   }
   const lines = shown(report);
   report.errors = lines.filter((l) => l.severity === "error").length;
@@ -148,6 +173,14 @@ function shown(report: ShaderReport): Line[] {
     if (d.file && badType.has(d.file) && /^(No|Unknown) shader_type/.test(d.message)) continue;
     out.push({ file: d.file, line: d.line, severity: d.severity, text: formatGodot(d) });
   }
+  // The GPU pass finds the language errors again (same file and line): only what it adds is shown.
+  const at = (file: string | undefined, line: number | undefined) => `${(file ?? "").replace(/::.*$/, "")}:${line ?? ""}`;
+  const known = new Set(out.filter((l) => l.line).map((l) => at(l.file, l.line)));
+  for (const g of report.gpu?.diagnostics ?? []) {
+    if (g.line && known.has(at(g.file, g.line))) continue;
+    const d = asCheckDiagnostic(g);
+    out.push({ file: d.file, line: d.line, severity: d.severity, text: formatGodot(d, "gpu") });
+  }
   for (const f of report.unknownFiles ?? []) {
     out.push({ file: f, severity: "error", text: `${f}: error no shader, shader include or scene holding a shader at this path in the project` });
   }
@@ -155,9 +188,9 @@ function shown(report: ShaderReport): Line[] {
   return out.sort((a, b) => order[a.severity] - order[b.severity] || (a.file ?? "").localeCompare(b.file ?? "") || (a.line ?? 0) - (b.line ?? 0));
 }
 
-function formatGodot(d: Diagnostic): string {
+function formatGodot(d: Diagnostic, tag = "godot"): string {
   const where = d.file ? `${d.file}${d.line ? `:${d.line}` : ""}: ` : "";
-  return `${where}${d.severity} [godot] ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}`;
+  return `${where}${d.severity} [${tag}] ${d.message}${d.count && d.count > 1 ? ` (x${d.count})` : ""}`;
 }
 
 export function formatShaderReport(report: ShaderReport, detail: Detail = "brief"): string {
@@ -174,6 +207,14 @@ export function formatShaderReport(report: ShaderReport, detail: Detail = "brief
     out.push(`compiled ${report.compile.compiled} with Godot ${report.compile.godotVersion.replace(/\.official.*$/, "")} headless in ${(report.compile.ms / 1000).toFixed(1)} s`);
   } else if (report.compileSkipped) {
     out.push(`not compiled: ${report.compileSkipped}`);
+  }
+  if (report.gpu) {
+    const drawn = report.gpu.shaders.filter((s) => s.compiled === "gpu").length;
+    const ms = report.gpu.runs.reduce((n, r) => n + r.ms, 0);
+    out.push(`drew ${drawn} on the GPU (${report.gpu.renderer || "renderer unknown"}) in ${(ms / 1000).toFixed(1)} s`);
+    out.push(...report.gpu.notes);
+  } else if (report.gpuSkipped) {
+    out.push(`not drawn on the GPU: ${report.gpuSkipped}`);
   }
   const lines = shown(report);
   const visible = detail === "full" ? lines : lines.filter((l) => l.severity !== "info");

@@ -40,30 +40,29 @@ describe.skipIf(!GODOT || !SCREEN)("visual regression in Godot", () => {
     const root = game();
     const first = await takeScreenshot(root, { godot: GODOT, baseline: "main", width: 320, height: 180 });
     console.log(formatScreenshot(first));
-    expect(first.baseline).toMatchObject({ status: "created", baseline: ".godotwright/baselines/main.png" });
+    expect(first.baseline).toMatchObject({ status: "saved", name: "main", file: join(root, ".godotwright/baselines/main.png") });
     expect(first.blank).toBeUndefined();
     // The coverage compares with the clear colour, so the red box in the corner counts as drawn, not as background.
     expect(first.coverage[0]?.box).toMatchObject({ x0: 20, y0: 20 });
     expect(first.coverage[0]?.percent).toBeLessThan(10);
 
     const again = await takeScreenshot(root, { godot: GODOT, baseline: "main" });
-    expect(again.baseline).toMatchObject({ status: "same" });
-    expect(again.baseline?.diff?.changed).toBe(0);
+    expect(again.baseline).toMatchObject({ status: "unchanged", pixels: 0 });
     expect(sha(again.file)).toBe(sha(join(root, ".godotwright/baselines/main.png")));
 
     const scene = readFileSync(join(root, "main.tscn"), "utf8").replace("offset_left = 20.0", "offset_left = 32.0").replace("offset_right = 60.0", "offset_right = 72.0");
     writeFileSync(join(root, "main.tscn"), scene);
     const moved = await takeScreenshot(root, { godot: GODOT, baseline: "main" });
     console.log(formatScreenshot(moved));
-    expect(moved.baseline).toMatchObject({ status: "changed", ok: false, diffFile: ".godot/godotwright/diff/main.diff.png" });
-    const box = moved.baseline?.diff?.boxes[0];
+    expect(moved.baseline).toMatchObject({ status: "changed", ok: false, diff: join(root, ".godot/godotwright/diff/main-diff.png") });
+    const box = moved.baseline?.boxes?.[0];
     expect(box?.moved).toEqual({ dx: 12, dy: 0 });
     expect(box?.x0).toBeGreaterThanOrEqual(18);
     expect(box?.x0).toBeLessThanOrEqual(22);
 
-    const updated = await takeScreenshot(root, { godot: GODOT, baseline: "main", update: true });
-    expect(updated.baseline?.status).toBe("updated");
-    expect((await takeScreenshot(root, { godot: GODOT, baseline: "main" })).baseline?.status).toBe("same");
+    const updated = await takeScreenshot(root, { godot: GODOT, baseline: "main", updateBaseline: true });
+    expect(updated.baseline).toMatchObject({ status: "saved", replaced: true });
+    expect((await takeScreenshot(root, { godot: GODOT, baseline: "main" })).baseline?.status).toBe("unchanged");
   });
 
   it("says a picture is blank when the scene draws one black rectangle over everything", { timeout: 300_000 }, async () => {
@@ -81,10 +80,10 @@ describe.skipIf(!GODOT || !SCREEN)("visual regression in Godot", () => {
     const dir = tempFolder("godotwright-visual-");
     writeFileSync(join(dir, "car.glb"), buildGlb(buildKind("car", {})));
     const made = await takeScreenshot(dir, { godot: GODOT, model: "car.glb", views: ["front", "iso"], width: 200, height: 120, baseline: "car" });
-    expect(made.baseline?.status).toBe("created");
+    expect(made.baseline?.status).toBe("saved");
     expect(JSON.parse(readFileSync(join(dir, ".godotwright/baselines/car.json"), "utf8"))).toMatchObject({ model: "car.glb", views: ["front", "iso"], width: 200, height: 120 });
     const same = await takeScreenshot(dir, { godot: GODOT, baseline: "car" });
-    expect(same.baseline?.status).toBe("same");
+    expect(same.baseline?.status).toBe("unchanged");
     expect(same.width).toBe(400);
   });
 
@@ -100,7 +99,7 @@ describe.skipIf(!GODOT || !SCREEN)("visual regression in Godot", () => {
     const first = await runScenario(root, file, scenario, { godot: GODOT });
     console.log(formatScenario(first));
     expect(first.ok).toBe(true);
-    expect(first.screenshots?.map((s) => s.status)).toEqual(["created", "created"]);
+    expect(first.screenshots?.map((s) => s.status)).toEqual(["saved", "saved"]);
     // Frame 0 already holds right once (input goes in before the first physics step); frame 30 is after 20 steps of 2 px.
     expect(redFrom(join(root, ".godotwright/baselines/walk-start.png"), 40)).toBe(22);
     expect(redFrom(join(root, ".godotwright/baselines/walk-end.png"), 40)).toBe(60);

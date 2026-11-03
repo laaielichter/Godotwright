@@ -1,9 +1,10 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseProjectSettings } from "../godot/project-settings.js";
-import { findProjectRoot } from "../project/files.js";
+import { findProjectRoot, withoutSubResource } from "../project/files.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
+import { asCheckDiagnostic, checkShaders, ShaderCheckError } from "../shaders/shaders.js";
 import { checkerSource, excludePath } from "./checker-script.js";
 import { parseExitLeaks, type ExitLeaks } from "./exit-leaks.js";
 import { findGodot, godotVersion, runGodot, type RunResult } from "./godot.js";
@@ -30,6 +31,8 @@ export interface CheckOptions {
   keepLogs?: boolean;
   /** When the run leaks objects or resources at exit, run it once more with --verbose to name them (default true). */
   leakDetails?: boolean;
+  /** Also compile every shader by drawing it (Compatibility renderer; needs a display or xvfb-run). */
+  shaders?: boolean;
 }
 
 export interface CheckStep {
@@ -44,8 +47,8 @@ export interface CheckResult {
   godotVersion: string;
   scripts: number;
   scenes: number;
-  /** .gdshader files compiled. */
-  shaders?: number;
+  /** .gdshader files the checker compiled headless (Godot's shader compiler, without a GPU). */
+  shaderFiles?: number;
   diagnostics: Diagnostic[];
   steps: CheckStep[];
   errors: number;
@@ -56,6 +59,8 @@ export interface CheckResult {
   output?: string;
   /** How long the run was in game time: frames at the project's physics rate. */
   ran?: { frames: number; fps: number; seconds: number };
+  /** With `shaders`: how many were compiled, parsed only (fog) or not reached (the check stopped early), and on which renderer. */
+  shaders?: { compiled: number; parsed: number; notReached: number; errors: number; renderer: string };
 }
 
 /** How much of a run's output is kept: the last lines, so a loop that prints every frame does not drown the rest. */
@@ -115,7 +120,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   // Folders the user excluded are skipped by the checker, so their scan warnings are not wanted either.
   const excluded = exclude.map(excludePath);
   for (const w of scanProject(root).warnings) {
-    const file = w.file.replace(/::.*$/, "");
+    const file = withoutSubResource(w.file);
     if (excluded.some((folder) => file.startsWith(`${folder}/`))) continue;
     diagnostics.push({ severity: "warning", file: w.file, line: w.line, message: w.message, source: "scan" });
   }
@@ -146,14 +151,14 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
   );
   let scripts = 0;
   let scenes = 0;
-  let shaders = 0;
+  let shaderFiles = 0;
   try {
     const result = await run("check", ["--script", CHECKER_RES]);
     const done = new RegExp(`${MARKER}_DONE (\\d+) (\\d+)(?: (\\d+))?`).exec(result.stderr);
     if (done) {
       scripts = Number(done[1]);
       scenes = Number(done[2]);
-      shaders = Number(done[3] ?? 0);
+      shaderFiles = Number(done[3] ?? 0);
     } else if (!result.timedOut) {
       diagnostics.push({
         severity: "error",
@@ -169,6 +174,25 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     }
   } finally {
     rmSync(checkerDir, { recursive: true, force: true });
+  }
+
+  let shaders: CheckResult["shaders"];
+  if (options.shaders) {
+    const started = Date.now();
+    try {
+      // `exclude` already holds addons unless they are wanted.
+      const r = await checkShaders(root, { godot: bin, import: false, exclude, includeAddons: Boolean(options.includeAddons), timeoutMs, ...(options.keepLogs ? { keepLogs: true } : {}) });
+      diagnostics.push(...r.diagnostics.map(asCheckDiagnostic));
+      const count = (how: string) => r.shaders.filter((s) => s.compiled === how).length;
+      shaders = { compiled: count("gpu"), parsed: count("parsed"), notReached: count("none"), errors: r.errors, renderer: r.renderer };
+      for (const [name, log] of Object.entries(r.logs ?? {})) logs[`shaders ${name}`] = log;
+      // The run that failed, else the last one.
+      const run = r.runs.find((s) => s.timedOut || s.exitCode !== 0) ?? r.runs.at(-1);
+      steps.push({ name: "shaders", ms: Date.now() - started, exitCode: run ? run.exitCode : 0, timedOut: r.runs.some((s) => s.timedOut) });
+    } catch (error) {
+      if (!(error instanceof ShaderCheckError)) throw error;
+      diagnostics.push({ severity: "error", message: error.message, source: "shader" });
+    }
   }
 
   const frames = options.runFrames ?? (options.scene ? 120 : 0);
@@ -207,12 +231,13 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     godotVersion: version,
     scripts,
     scenes,
-    shaders,
+    shaderFiles,
     diagnostics: clean,
     steps,
     errors: clean.filter((d) => d.severity === "error").length,
     warnings: clean.filter((d) => d.severity === "warning").length,
     ...(options.keepLogs ? { logs } : {}),
+    ...(shaders ? { shaders } : {}),
     ...(output !== undefined ? { output, ran: { frames, fps, seconds: Math.round((frames / fps) * 100) / 100 } } : {}),
   };
 }
@@ -272,7 +297,8 @@ const MENTIONED_PATH = /res:\/\/[^\s'"()]+[^\s'"().,:;]/g;
 /**
  * Drops noise and repeats, so each root cause is reported once:
  * - follow-up errors that only restate a script error,
- * - vaguer reports of a missing file that Godot also reported with a line.
+ * - vaguer reports of a missing file that Godot also reported with a line,
+ * - a shader error found both headless and by drawing the shader.
  */
 export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
   const kept = diagnostics.filter((d) => !NOISE.some((re) => re.test(d.message))).map(shaderTypeError);
@@ -287,9 +313,26 @@ export function cleanup(diagnostics: Diagnostic[]): Diagnostic[] {
       for (const path of d.message.match(MENTIONED_PATH) ?? []) located.add(path);
     }
   }
+  // The checker compiles shaders headless and `shaders` draws them too: the same error at the same line twice. The copy
+  // with the most to say (a hint, the including shader) stays.
+  // Godot words a few errors differently in the two passes, so they are matched on their first sentence.
+  const firstSentence = (m: string) => m.replace(/ \(.*\)$/, "").replace(/(\.) .*$/, "$1");
+  const shaderKey = (d: Diagnostic) => (d.source === "shader" && d.file && d.line ? `${d.severity}|${d.file}|${d.line}|${firstSentence(d.message)}` : undefined);
+  // A shader in a scene that failed while the scene loaded is named with the line in its code; the GPU pass names the
+  // line in the scene file. Same file and error: the one with the file's line stays.
+  const inFile = new Set(kept.filter((d) => d.source === "shader" && d.file && d.line).map((d) => `${d.file}|${firstSentence(d.message)}`));
+  const fullest = new Map<string, Diagnostic>();
+  for (const d of kept) {
+    const k = shaderKey(d);
+    if (k && (fullest.get(k)?.message.length ?? -1) < d.message.length) fullest.set(k, d);
+  }
   const seen = new Set<string>();
   return kept.filter((d) => {
     if (d.source === "shader" && shaderErrors.has(d.message)) return false;
+    const k = shaderKey(d);
+    if (k && fullest.get(k) !== d) return false;
+    const inCode = d.file && !d.line ? /^(.*) \(shader line \d+\)$/.exec(d.message) : null;
+    if (inCode && inFile.has(`${d.file}|${firstSentence(inCode[1]!)}`)) return false;
     const restated = /^Failed to load script "(.+?)" with error/.exec(d.message);
     if (restated && scriptErrors.has(restated[1])) return false;
     const paths = d.message.match(MENTIONED_PATH) ?? [];

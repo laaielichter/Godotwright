@@ -1,15 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { ProtectedPathError, assertWritable } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
-import { BaselineError, baselineFiles, baselineName, compareBaseline, formatBaseline, readBaselineMeta, type BaselineMeta, type BaselineResult } from "./baseline.js";
+import { BaselineError, UPDATE_HINT, baselineFiles, baselineName, compareBaseline, compareBaselineFile, formatBaseline, readBaselineMeta, type BaselineMeta, type BaselineResult } from "./baseline.js";
 import { imageStats } from "./diff.js";
+
+export { DEFAULT_THRESHOLD, DEFAULT_TOLERANCE } from "./diff.js";
+export type { BaselineResult } from "./baseline.js";
 import { decodePng, PngError } from "./png.js";
 
 /** A picture written into a protected path (godotwright.json "protect") is refused as a ScreenshotError. */
@@ -41,18 +45,23 @@ export interface ScreenshotOptions {
   /** Where to write the PNG (default: .godot/godotwright/screenshot.png in the project, or next to the model). */
   out?: string;
   timeoutMs?: number;
-  /** Compare the picture with the baseline of this name (made when it is missing); its settings fill in the rest. */
+  /**
+   * Compare the picture with a baseline: "auto" keeps it in .godotwright/baselines/ of the project (or of the model's
+   * folder), named after the scene or model, the size and the views; a value ending in .png is a file path; any other
+   * value is a name: .godotwright/baselines/<name>.png (or in `baselineDir`) with its settings in <name>.json, which
+   * fill in the scene, size, views and frames when they are left out.
+   */
   baseline?: string;
-  /** Replace the baseline with this picture. */
-  update?: boolean;
-  /** Folder for baselines (default .godotwright/baselines in the project). */
-  baselineDir?: string;
-  /** Make a missing baseline (default true); false reports it as missing, as CI does. */
-  createMissing?: boolean;
-  /** Per-channel tolerance 0..255 (default 16, or the baseline's). */
+  /** Percent of pixels that may change before the picture counts as changed (default 0.5, or the named baseline's). */
+  threshold?: number;
+  /** Write the new picture as the baseline instead of comparing (implies baseline "auto" when none is given). */
+  updateBaseline?: boolean;
+  /** How far (0-255) a pixel's colour may move before it counts as changed (default 3, or the named baseline's). */
   tolerance?: number;
-  /** Largest share of changed pixels in percent that still passes (default 0.1, or the baseline's). */
-  maxChanged?: number;
+  /** Folder for named baselines (default .godotwright/baselines in the project). */
+  baselineDir?: string;
+  /** Make a missing named baseline (default true); false reports it as missing, as CI does. */
+  createMissing?: boolean;
 }
 
 export interface ScreenshotReport {
@@ -79,6 +88,48 @@ export interface ScreenshotReport {
   baseline?: BaselineResult;
 }
 
+/**
+ * The file name of an automatic baseline: scene or model, size of one view and the views, e.g.
+ * main_tscn-1a2b3c4d@640x360_iso. The readable part keeps letters and digits of any script; the short hash of the
+ * whole path keeps two scenes apart that read the same (a/b_c.tscn and a_b/c.tscn, or names that differ in accents).
+ */
+export function baselineKey(subject: string, width: number, height: number, views: View[]): string {
+  const path = subject.replace(/^res:\/\//, "").normalize("NFC");
+  const name = [...path.replace(/[^\p{L}\p{M}\p{N}-]+/gu, "_").replace(/^_+|_+$/g, "")].slice(-60).join("") || "shot";
+  const hash = createHash("sha256").update(path).digest("hex").slice(0, 8);
+  return `${name}-${hash}@${width}x${height}_${views.join("-")}`;
+}
+
+/** True when a path, with the links in the part that exists followed, is inside a folder (also followed). */
+function within(folder: string, path: string): boolean {
+  const real = (p: string): string | undefined => {
+    const rest: string[] = [];
+    let dir = resolve(p);
+    for (;;) {
+      if (existsSync(dir)) return join(realpathSync(dir), ...rest);
+      // A link to nothing: where a write through it lands cannot be known.
+      if (isLink(dir)) return undefined;
+      const parent = dirname(dir);
+      if (parent === dir) return undefined;
+      rest.unshift(basename(dir));
+      dir = parent;
+    }
+  };
+  const top = real(folder);
+  const full = real(path);
+  if (top === undefined || full === undefined) return false;
+  const rel = relative(top, full);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+function isLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 const MARK = "GODOTWRIGHT_SHOT";
 
 /** How to give Godot a screen: the real one, or a virtual one with xvfb-run on a Linux machine without a display. */
@@ -88,11 +139,27 @@ export function screen(): { command: string; prefix: string[] } | { error: strin
   return { error: "no screen to render on: this Linux machine has no display and no xvfb-run. Install it (sudo apt-get install xvfb libgl1-mesa-dri) and try again." };
 }
 
+/** Every GDScript warning of Godot 4.7 (debug/gdscript/warnings/*); the generated script ignores them all. */
+export const GDSCRIPT_WARNINGS = [
+  "unassigned_variable", "unassigned_variable_op_assign", "unused_variable", "unused_local_constant", "unused_private_class_variable",
+  "unused_parameter", "unused_signal", "shadowed_variable", "shadowed_variable_base_class", "shadowed_global_identifier", "unreachable_code",
+  "unreachable_pattern", "standalone_expression", "standalone_ternary", "incompatible_ternary", "untyped_declaration", "inferred_declaration",
+  "unsafe_property_access", "unsafe_method_access", "unsafe_cast", "unsafe_call_argument", "unsafe_void_return", "return_value_discarded",
+  "static_called_on_instance", "missing_tool", "redundant_static_unload", "redundant_await", "missing_await", "assert_always_true",
+  "assert_always_false", "integer_division", "narrowing_conversion", "int_as_enum_without_cast", "int_as_enum_without_match",
+  "enum_variable_without_default", "empty_file", "deprecated_keyword", "confusable_identifier", "confusable_local_declaration",
+  "confusable_local_usage", "confusable_capture_reassignment", "confusable_temporary_modification", "inference_on_variant",
+  "native_method_override", "get_node_default_without_onready", "onready_with_export", "property_used_as_function",
+  "constant_used_as_function", "function_used_as_property",
+];
+
 /** The script that loads the scene or model, frames it when needed, renders and writes the PNG and the coverage. */
 export function screenshotScript(o: { scene?: string; model?: string; views: View[]; frames: number; out: string; width: number; height: number }): string {
   const views = JSON.stringify(o.views);
   return `extends SceneTree
 # Written by godotwright screenshot; removed after the run.
+# Godot compiles this script with the project's warning settings, and one set to error would stop the picture.
+@warning_ignore_start(${GDSCRIPT_WARNINGS.map((w) => JSON.stringify(w)).join(", ")})
 
 const VIEWS: Array = ${views}
 const FRAMES := ${o.frames}
@@ -109,6 +176,9 @@ var _auto := false
 
 func _initialize() -> void:
 	RenderingServer.set_default_clear_color(BACKGROUND)
+	# The same picture every run: a fixed seed for the global random numbers and for every particle system.
+	seed(1)
+	node_added.connect(_fix_seed)
 	${o.model ? `_content = _load_model(${JSON.stringify(o.model)})` : `var packed := load(${JSON.stringify(o.scene ?? "")}) as PackedScene
 	_content = packed.instantiate() if packed != null else null`}
 	if _content == null:
@@ -117,6 +187,14 @@ func _initialize() -> void:
 		return
 	root.add_child(_content)
 	process_frame.connect(_tick)
+
+
+func _fix_seed(node: Node) -> void:
+	# By name with get() and set(): the node is typed Node, and a project may make unsafe property access an error.
+	if node is GPUParticles2D or node is GPUParticles3D or node is CPUParticles2D or node is CPUParticles3D:
+		if not node.get("use_fixed_seed"):
+			node.set("use_fixed_seed", true)
+			node.set("seed", 1)
 
 
 func _load_model(path: String) -> Node:
@@ -260,7 +338,10 @@ func _coverage(image: Image, view: String) -> Dictionary:
  * compares the picture with the stored one of that name.
  */
 export async function takeScreenshot(path: string, options: ScreenshotOptions = {}): Promise<ScreenshotReport> {
-  if (!options.baseline) return render(path, options);
+  if (options.threshold !== undefined && !(options.threshold >= 0 && options.threshold <= 100)) throw new ScreenshotError("threshold is a percent of pixels, from 0 to 100");
+  if (options.tolerance !== undefined && !(options.tolerance >= 0 && options.tolerance <= 255)) throw new ScreenshotError("tolerance is a colour distance, from 0 to 255");
+  // "auto" and a .png path compare in render(); any other value is a named baseline with its settings beside it.
+  if (!options.baseline || options.baseline === "auto" || /\.png$/i.test(options.baseline)) return render(path, options);
   let name: string;
   try {
     name = baselineName(options.baseline);
@@ -281,7 +362,7 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
       height: meta.height,
       frames: meta.frames,
     };
-    if (!options.update) {
+    if (!options.updateBaseline) {
       const normal = (k: keyof ScreenshotOptions, v: unknown) => (k === "model" && typeof v === "string" ? (isAbsolute(v) ? v : resolve(path, v)) : k === "scene" && typeof v === "string" && !v.startsWith("res://") ? `res://${v.replace(/^\/+/, "")}` : v);
       const asked = (k: keyof ScreenshotOptions, v: unknown, shown: string) => (v === undefined || JSON.stringify(normal(k, v)) === JSON.stringify(normal(k, stored[k])) ? [] : [`${k} ${shown}`]);
       const differ = [
@@ -292,14 +373,15 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
         ...asked("height", options.height, `${options.height} (baseline: ${meta.height})`),
         ...asked("frames", options.frames, `${options.frames} (baseline: ${meta.frames})`),
       ];
-      if (differ.length) throw new ScreenshotError(`baseline ${name} was taken with other settings: ${differ.join(", ")}. Leave them out to compare like for like, or pass update to replace the baseline.`);
+      if (differ.length) throw new ScreenshotError(`baseline ${name} was taken with other settings: ${differ.join(", ")}. Leave them out to compare like for like, or update the baseline to replace it.`);
     }
     for (const [k, v] of Object.entries(stored) as [keyof ScreenshotOptions, never][]) if (settings[k] === undefined) settings[k] = v;
   }
   const files = baselineFiles(root, name, options.baselineDir);
   // Refuse a baseline that would be written into a protected path before Godot runs (compareBaseline checks again).
-  if (options.update || (!existsSync(files.png) && options.createMissing !== false)) writableOut(files.png);
-  const report = await render(path, { ...settings, out: options.out ?? files.actual });
+  if (options.updateBaseline || (!existsSync(files.png) && options.createMissing !== false)) writableOut(files.png);
+  const { baseline: _named, updateBaseline: _update, ...plain } = settings;
+  const report = await render(path, { ...plain, out: options.out ?? files.actual });
   const model = settings.model ? (isAbsolute(settings.model) ? settings.model : resolve(path, settings.model)) : undefined;
   const taken: BaselineMeta = {
     ...(report.scene ? { scene: report.scene } : {}),
@@ -315,10 +397,10 @@ export async function takeScreenshot(path: string, options: ScreenshotOptions = 
   try {
     report.baseline = compareBaseline(root, name, report.file, {
       ...(options.baselineDir ? { dir: options.baselineDir } : {}),
-      ...(options.update ? { update: true } : {}),
+      ...(options.updateBaseline ? { update: true } : {}),
       ...(options.createMissing === false ? { createMissing: false } : {}),
       ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
-      ...(options.maxChanged !== undefined ? { maxChanged: options.maxChanged } : {}),
+      ...(options.threshold !== undefined ? { threshold: options.threshold } : {}),
       meta: taken,
     });
   } catch (error) {
@@ -358,17 +440,35 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
     if (!existsSync(fromResPath(root, scene))) throw new ScreenshotError(`${scene} does not exist in the project`);
   }
   const out = resolve(options.out ?? (model ? model.replace(/\.(glb|gltf)$/i, ".png") : join(root, ".godot", "godotwright", "screenshot.png")));
+  const wanted = options.baseline ?? (options.updateBaseline ? "auto" : undefined);
+  const baseline =
+    wanted === undefined
+      ? undefined
+      : wanted === "auto"
+        ? join(model ? dirname(model) : root, ".godotwright", "baselines", `${baselineKey(model ? basename(model) : (scene ?? ""), width, height, views)}.png`)
+        : resolve(path, wanted);
+  function fail(message: string): never {
+    if (temp) rmSync(temp, { recursive: true, force: true });
+    throw new ScreenshotError(message);
+  }
+  if (baseline === out) fail("the baseline and the new picture are the same file; write the picture somewhere else (out)");
+  // Baselines are written and read back: keep them inside the project (or the model's folder), and never write
+  // through a link, which would change the file it points to.
+  const home = model ? (findProjectRoot(dirname(model)) ?? dirname(model)) : root;
+  if (baseline && !within(home, baseline)) fail(`the baseline ${wanted} is outside the project (${home}); use a path inside it`);
+  if (baseline && isLink(baseline)) fail(`the baseline ${wanted} is a symbolic link; use a regular file inside the project`);
+  // The diff is a scratch picture: in .godot/ of the project, which Godot does not import and version control
+  // usually ignores, or, for a model outside a project, in .godotwright/diff/ next to it (Godot skips dot folders).
+  const project = model ? findProjectRoot(dirname(model)) : root;
+  const diffs = project ? join(project, ".godot", "godotwright") : join(dirname(model ?? root), ".godotwright", "diff");
   try {
     writableOut(out);
+    if (baseline) writableOut(baseline);
   } catch (error) {
-    if (temp) rmSync(temp, { recursive: true, force: true });
-    throw error;
+    fail(error instanceof Error ? error.message : String(error));
   }
   const how = screen();
-  if ("error" in how) {
-    if (temp) rmSync(temp, { recursive: true, force: true });
-    throw new ScreenshotError(how.error);
-  }
+  if ("error" in how) fail(how.error);
   mkdirSync(dirname(out), { recursive: true });
   rmSync(out, { force: true });
 
@@ -380,9 +480,7 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
   const timeoutMs = options.timeoutMs ?? 3 * 60_000;
   try {
     if (!model) await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs });
-    // A fixed frame rate makes every run draw the same frames: anything driven by delta (animations, shaders on
-    // TIME read through a script, tweens) is at the same point each time, so baselines compare like for like.
-    const godotArgs = ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--audio-driver", "Dummy", "--fixed-fps", "60", "-s", "res://.godot/godotwright/screenshot.gd"];
+    const godotArgs = ["--path", root, "--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility", "--resolution", `${width}x${height}`, "--fixed-fps", "60", "--audio-driver", "Dummy", "-s", "res://.godot/godotwright/screenshot.gd"];
     const result = how.command ? await runGodot(how.command, [...how.prefix, bin, ...godotArgs], { cwd: root, timeoutMs }) : await runGodot(bin, godotArgs, { cwd: root, timeoutMs });
     const done = new RegExp(`^${MARK}_DONE (\\d+) (\\d+) (true|false) (\\S+)`, "m").exec(result.stdout);
     const diagnostics = parseGodotLog(result.stderr, "screenshot").filter((d) => d.severity === "error" && !/V-Sync|ALSA|audio/i.test(d.message));
@@ -401,6 +499,20 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
       if (!(error instanceof PngError)) throw error;
       blank = `Godot wrote a PNG this reader cannot check: ${error.message}`;
     }
+    let compared: BaselineResult | undefined;
+    try {
+      compared = baseline
+      ? compareBaselineFile(out, baseline, {
+          ...(options.threshold !== undefined ? { threshold: options.threshold } : {}),
+          ...(options.tolerance !== undefined ? { tolerance: options.tolerance } : {}),
+          update: options.updateBaseline ?? false,
+          diff: join(diffs, `${basename(baseline, extname(baseline))}-diff.png`),
+        })
+      : undefined;
+    } catch (error) {
+      if (error instanceof BaselineError) throw new ScreenshotError(error.message);
+      throw error;
+    }
     return {
       file: out,
       width: Number(done[1]),
@@ -415,6 +527,7 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
       ...(blank ? { blank } : {}),
       ...(machine.godot ? { godot: machine.godot } : {}),
       ...(machine.adapter ? { adapter: machine.adapter } : {}),
+      ...(compared ? { baseline: compared } : {}),
     };
   } finally {
     rmSync(script, { force: true });
@@ -423,7 +536,7 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
 }
 
 /** A few lines about the picture, for agents that cannot read images, and the file to open for those that can. */
-export function formatScreenshot(r: ScreenshotReport, accept = "run again with update: true"): string {
+export function formatScreenshot(r: ScreenshotReport, update = UPDATE_HINT): string {
   const out = [`screenshot of ${r.subject}: ${r.file} (${r.width}x${r.height}, ${r.renderer} renderer${r.autoCamera ? `, camera placed by Godotwright: ${r.views.join(", ")}` : ""})`];
   for (const c of r.coverage) {
     const where = c.box ? `, from (${c.box.x0}, ${c.box.y0}) to (${c.box.x1}, ${c.box.y1})` : "";
@@ -432,6 +545,7 @@ export function formatScreenshot(r: ScreenshotReport, accept = "run again with u
   }
   if (r.blank) out.push(`  warning: the picture is blank: ${r.blank}`);
   for (const d of r.diagnostics.slice(0, 10)) out.push(`  error: ${d.file ? `${d.file}${d.line ? `:${d.line}` : ""}  ` : ""}${d.message}`);
-  if (r.baseline) out.push(...formatBaseline({ ...r.baseline, blank: undefined }, accept));
+  if (r.baseline) out.push(...formatBaseline({ ...r.baseline, blank: undefined }, update));
+  else out.push("Next: look at the picture; to catch visual changes later, screenshot with baseline auto (--baseline) once and again after each change.");
   return `${out.join("\n")}\n`;
 }

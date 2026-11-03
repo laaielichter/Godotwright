@@ -100,6 +100,9 @@ import { formatGame, formatStart } from "../session/format.js";
 import { checkExport, formatExportCheck } from "../export/export.js";
 import { patchExport } from "../export/patch.js";
 import { formatExportRun, inspectPack, runExport, smokePack } from "../export/run.js";
+import { CODE_OPS, CodeError, codeIntel, formatCode } from "../lsp/code.js";
+import { LanguageServerError } from "../lsp/server.js";
+import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
@@ -791,13 +794,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Review and compile shaders",
       description:
-        "Check every shader (.gdshader, .gdshaderinc, Shader resources in scenes) two ways: a static review against Godot 4.7's own shader tables (Godot 3 names such as hint_albedo, SCREEN_TEXTURE or WORLD_MATRIX; built-ins in the wrong shader_type or function; read-only built-ins written, such as COLOR in a spatial fragment(); unknown render modes; missing includes; colour uniforms without source_color; performance hints), then a headless compile by real Godot when it is installed (no GPU needed) that adds Godot's own errors. Every line is `res://file:line: severity [rule] message`; [godot] marks the compiler's. Pass `code` + `file` to check a shader before you save it, `files` for some shaders (an include also compiles the shaders that use it), `compile: false` to skip Godot. godot_migrate rewrites the Godot 3 names; godot_api `shader:spatial.fragment` lists built-ins.",
+        "Check every shader (.gdshader, .gdshaderinc, Shader resources in scenes) two ways: a static review against Godot 4.7's own shader tables (Godot 3 names such as hint_albedo, SCREEN_TEXTURE or WORLD_MATRIX; built-ins in the wrong shader_type or function; read-only built-ins written, such as COLOR in a spatial fragment(); unknown render modes; missing includes; colour uniforms without source_color; performance hints), then a headless compile by real Godot when it is installed (no GPU needed) that adds Godot's own errors (headless Godot runs the full shader compiler). `gpu: true` also draws the shaders on the Compatibility renderer (needs a display, or xvfb-run on Linux; slower) for what only the GPU driver rejects: a uniform block that is too big, a sampler array indexed by a variable, a driver compile or link error. Every line is `res://file:line: severity [rule] message`; [godot] marks the compiler's, [gpu] the driver's. Pass `code` + `file` to check a shader before you save it (the GPU pass draws the file on disk), `files` for some shaders (an include also compiles the shaders that use it), `compile: false` to skip Godot. godot_check `shaders: true` runs the GPU pass over the whole project. godot_migrate rewrites the Godot 3 names; godot_api `shader:spatial.fragment` lists built-ins.",
       inputSchema: {
         path: pathParam,
         files: z.array(z.string()).optional().describe("only these res:// shaders, includes or scenes"),
         code: z.string().optional().describe("unsaved shader code, checked in place of the file on disk"),
         file: z.string().optional().describe("res:// path the code belongs to (required with code)"),
         compile: z.boolean().optional().describe("compile with Godot (default: when Godot is found; true fails without it)"),
+        gpu: z.boolean().optional().describe("also draw them on the Compatibility renderer, for GPU driver errors (needs a display or xvfb-run)"),
         detail: detailParam,
       },
       annotations: {
@@ -807,7 +811,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, files, code, file, compile, detail }) => {
+    async ({ path, files, code, file, compile, gpu, detail }) => {
       try {
         if (code !== undefined && !file) return failure("Pass `file` (a res:// path) together with `code`.");
         const target = file ? resPath(file) : undefined;
@@ -817,6 +821,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(focus.length ? { files: focus } : {}),
           ...(overrides ? { overrides } : {}),
           ...(compile !== undefined ? { compile } : {}),
+          ...(gpu ? { gpu: true } : {}),
           godot: options.godot,
           base: options.base,
           baseFiles: options.baseFiles,
@@ -1319,7 +1324,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Check with real Godot",
       description:
-        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or `scene`) for `run_frames` frames and return what it printed (put print() calls in the code you test). Returns the errors and warnings as res://file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. Scenes and scripts are not changed: Godot updates its cache in .godot/, where the checker script also goes. Sends progress when the client asks for it; cancelling the call stops Godot. Slower than godot_review, so review first. `compare_godot` (a second binary, or `next` for $GODOT_NEXT) runs the same check on a temporary copy and returns only the errors and warnings that differ, e.g. what breaks in a 4.8 beta. To drive input use godot_play; for unit tests godot_test.",
+        "Run Godot 4.7 headless on the project: import, load and instantiate every script and scene, compile every .gdshader, and optionally run the main scene (or `scene`) for `run_frames` frames and return what it printed (put print() calls in the code you test). Returns the errors and warnings as res://file:line, the totals and the printed output; an error result when Godot reports an error or is not installed. `shaders: true` also draws every shader on the GPU (needs a display or xvfb-run), for what only the driver rejects. Scenes and scripts are not changed: Godot updates its cache in .godot/, where the checker script also goes. Sends progress when the client asks for it; cancelling the call stops Godot. Slower than godot_review, so review first. `compare_godot` (a second Godot binary, or `next` for $GODOT_NEXT) runs the same check on a temporary copy and returns only the errors and warnings that differ, e.g. what breaks in a 4.8 beta. To drive input use godot_play; for unit tests godot_test.",
       inputSchema: {
         path: pathParam,
         run_frames: z
@@ -1346,6 +1351,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe('second Godot binary to diff against, or "next" for $GODOT_NEXT'),
+        shaders: z
+          .boolean()
+          .optional()
+          .describe("also draw every shader on the Compatibility renderer, for what only the GPU driver rejects (needs a display or xvfb-run)"),
       },
       outputSchema: CheckOutput,
       annotations: {
@@ -1355,7 +1364,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, run_frames, scene, timeout_seconds, compare_godot }) => {
+    async ({ path, run_frames, scene, timeout_seconds, compare_godot, shaders }) => {
       try {
         if (compare_godot) {
           const compared = await compareGodot(where(path), {
@@ -1373,12 +1382,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
           godot: options.godot,
           runFrames: run_frames ?? (scene ? 120 : 0),
           ...(scene ? { scene } : {}),
+          ...(shaders ? { shaders: true } : {}),
           timeoutMs: (timeout_seconds ?? 600) * 1000,
         });
         const lines = checked.diagnostics.map(formatDiagnostic);
         lines.push(
-          `${checked.errors} errors, ${checked.warnings} warnings (Godot ${checked.godotVersion}, ${checked.scripts} scripts, ${checked.scenes} scenes${checked.shaders ? `, ${checked.shaders} shaders` : ""})`,
+          `${checked.errors} errors, ${checked.warnings} warnings (Godot ${checked.godotVersion}, ${checked.scripts} scripts, ${checked.scenes} scenes${checked.shaderFiles ? `, ${checked.shaderFiles} shaders` : ""})`,
         );
+        if (checked.shaders) lines.push(shaderSummary(checked.shaders));
         lines.push(...lessonHintsForMessages(checked.diagnostics.map((d) => d.message)));
         if (checked.output !== undefined)
           lines.push(
@@ -1397,11 +1408,59 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   tool(
+    "godot_code",
+    {
+      title: "Ask Godot's GDScript language server",
+      description:
+        "Engine-exact answers from Godot 4.7's own GDScript language server (kept warm for 10 minutes; the first call takes a few seconds). op `diagnostics`: errors and warnings at the project's warning levels, as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column). op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow there (members after a dot, node paths after $), up to `limit`. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot. Like opening the editor, Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset and a missing .uid file next to each script. A new class_name, a changed project.godot or a new asset restarts the server. Without Godot use godot_review; to load scenes too use godot_check.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition or completion"),
+        file: z.string().optional().describe("the .gd file: res:// path or a path (diagnostics without it: every script)"),
+        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, completion)"),
+        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, completion)"),
+        code: z.string().optional().describe("unsaved GDScript to analyse as `file` instead of the file on disk; nothing is written"),
+        limit: z.number().int().min(1).max(200).optional().describe("completion: most items shown (default 40)"),
+      },
+      // Not read-only: the headless editor imports the project and adds .import and .uid files next to its files, as
+      // godot_check does.
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ path, op, file, line, column, code, limit }) => {
+      try {
+        // res:// names a file in the project of `path`; a plain path starts at the server's folder like `path` does.
+        const target = file === undefined || file.startsWith("res://") || isAbsolute(file) ? file : resolve(base, file);
+        const dir = path === undefined && target && !target.startsWith("res://") ? target : where(path);
+        const result = await codeIntel(dir, {
+          op,
+          ...(target ? { file: target } : {}),
+          ...(line !== undefined ? { line } : {}),
+          ...(column !== undefined ? { column } : {}),
+          ...(code !== undefined ? { code } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(options.godot ? { godot: options.godot } : {}),
+        });
+        const body = formatCode(result);
+        return result.diagnostics?.some((d) => d.severity === "error") ? failure(body) : text(body);
+      } catch (error) {
+        if (error instanceof GodotNotFoundError) return failure(`${error.message}\nUse godot_review for checks without Godot.`);
+        if (error instanceof CodeError || error instanceof LanguageServerError || error instanceof ProjectNotFoundError) return failure(error.message);
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  tool(
     "godot_screenshot",
     {
       title: "Screenshot a scene or model",
       description:
-        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer; works on software OpenGL and uses xvfb-run on Linux without a display). Returns the picture and how much of each view is drawn and where, and warns when it is blank (black, transparent, one colour). Model views: front (from +Z, where models face), back, side, top, iso; several make a grid. The PNG goes next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. `baseline` (a name) compares with .godotwright/baselines/<name>.png (made when missing; its scene, size, views and frames are reused): changed pixels, boxes of change and how far a box moved, pass/fail by `tolerance` and `max_changed`; a change returns the diff picture (changed pixels magenta) and is not an error; `update: true` replaces the baseline. Runs are deterministic; Forward+-only effects differ from the game. An error result when Godot is missing or the scene cannot run. Without Godot, godot_model_view shows a model as text; to check behaviour, use godot_play.",
+        "Render a scene, or a .glb/.gltf model framed by a camera and lit, to a PNG with Godot 4.7 (Compatibility renderer, works on software OpenGL; on Linux without a display it uses xvfb-run). Returns the picture and a short text: how much of each view is drawn and where, so you can tell an empty or off-screen picture even without reading the image, and a warning when it is blank (black, transparent, one colour). For a model, views front (from +Z, where models face), back, side, top and iso; several make a grid. `width` and `height` are per view; `frames` lets the scene settle before the picture. The PNG is written next to the model (car.glb gives car.png) or, for a scene, to .godot/godotwright/screenshot.png. An error result when Godot is missing or the scene cannot run. Use it to look at what you built. As a visual test: `baseline: \"auto\"` keeps the first picture in .godotwright/baselines/ (named after the scene or model, size and views; Godot does not import it, so commit it) and compares every later picture with it, pixel by pixel (renders are deterministic: fixed fps and fixed random seeds). Unchanged (not one pixel) gives text only (saves tokens). Any change gives the percent, the box of the largest change, the mean shift, up to five areas of change (and how far an area moved), where in the picture and a brightness shift, the diff picture (changed pixels in red, kept in .godot/godotwright/) and the new picture; beyond `threshold` (percent of pixels, default 0.5) it is an error result, within it a warning to look at the diff. `tolerance` (0-255, default 3) is how far a colour may move before a pixel counts as changed. `baseline` may also be a .png path inside the project, or a name (`hud`): .godotwright/baselines/hud.png (or in `baseline_dir`) with hud.json beside it, which keeps the scene, size, views and frames, so later calls need only the name and godotwright ci compares it on every pull request. `update_baseline: true` accepts the new picture as the baseline. Without Godot, godot_model_view shows a model as text; to check behaviour rather than looks, use godot_play.",
       inputSchema: {
         path: pathParam,
         scene: z
@@ -1442,27 +1501,33 @@ export function createServer(options: ServerOptions = {}): McpServer {
         baseline: z
           .string()
           .optional()
-          .describe("compare with the baseline of this name (made when missing)"),
-        update: z
-          .boolean()
+          .describe(
+            'compare with a baseline: "auto" (in .godotwright/baselines/, saved on the first run), a .png path inside the project, or a name (.godotwright/baselines/<name>.png with its settings in <name>.json)',
+          ),
+        threshold: z
+          .number()
+          .min(0)
+          .max(100)
           .optional()
-          .describe("with baseline: replace it with this picture"),
+          .describe(
+            "percent of pixels that may change before the picture counts as changed (default 0.5, or the named baseline's)",
+          ),
         tolerance: z
           .number()
           .min(0)
           .max(255)
           .optional()
-          .describe("per-channel difference still the same pixel (default 16)"),
-        max_changed: z
-          .number()
-          .min(0)
-          .max(100)
+          .describe("how far (0-255) a pixel's colour may move before it counts as changed (default 3, or the named baseline's)"),
+        update_baseline: z
+          .boolean()
           .optional()
-          .describe("% of pixels that may change and still pass (default 0.1)"),
+          .describe(
+            "save the new picture as the baseline instead of comparing (baseline defaults to auto)",
+          ),
         baseline_dir: z
           .string()
           .optional()
-          .describe("baseline folder inside the project (default .godotwright/baselines; godotwright ci needs --baseline-dir for another one)"),
+          .describe("folder of named baselines inside the project (default .godotwright/baselines; godotwright ci needs --baseline-dir for another one)"),
       },
       annotations: {
         readOnlyHint: false,
@@ -1471,7 +1536,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, scene, model, views, width, height, frames, baseline, update, tolerance, max_changed, baseline_dir }) => {
+    async ({
+      path,
+      scene,
+      model,
+      views,
+      width,
+      height,
+      frames,
+      baseline,
+      threshold,
+      tolerance,
+      update_baseline,
+      baseline_dir,
+    }) => {
       try {
         const report = await takeScreenshot(where(path), {
           godot: options.godot,
@@ -1481,35 +1559,34 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(width ? { width } : {}),
           ...(height ? { height } : {}),
           ...(frames ? { frames } : {}),
-          ...(baseline ? { baseline } : {}),
-          ...(update ? { update } : {}),
+          ...(baseline
+            ? { baseline: baseline === "auto" || !/\.png$/i.test(baseline) ? baseline : output(baseline) }
+            : {}),
+          ...(threshold !== undefined ? { threshold } : {}),
           ...(tolerance !== undefined ? { tolerance } : {}),
-          ...(max_changed !== undefined ? { maxChanged: max_changed } : {}),
+          ...(update_baseline ? { updateBaseline: true } : {}),
           // The baseline folder is written to, so it must stay inside the project like every other output.
           ...(baseline_dir ? { baselineDir: output(baseline_dir) } : {}),
         });
-        // A baseline that did not change needs no picture; a changed one shows the diff, not the render.
+        const png = (file: string) => ({
+          type: "image" as const,
+          data: readFileSync(file).toString("base64"),
+          mimeType: "image/png",
+        });
         const status = report.baseline?.status;
-        const picture =
-          status === "same"
-            ? undefined
-            : status === "changed" && report.baseline?.diffPath
-              ? report.baseline.diffPath
-              : report.file;
-        return {
-          content: [
-            { type: "text" as const, text: formatScreenshot(report) },
-            ...(picture
-              ? [
-                  {
-                    type: "image" as const,
-                    data: readFileSync(picture).toString("base64"),
-                    mimeType: "image/png",
-                  },
-                ]
-              : []),
-          ],
-        };
+        const content = [
+          { type: "text" as const, text: formatScreenshot(report) },
+          // Unchanged (not one pixel): the text says it all. Any change, also within the threshold: the diff first,
+          // then the new picture.
+          ...(status === "unchanged"
+            ? []
+            : report.baseline?.diff
+              ? [png(report.baseline.diff), png(report.file)]
+              : [png(report.file)]),
+        ];
+        return status === "changed" || status === "size-mismatch"
+          ? { content, isError: true }
+          : { content };
       } catch (error) {
         if (error instanceof GodotNotFoundError) return failure(error.message);
         if (

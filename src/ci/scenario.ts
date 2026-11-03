@@ -4,6 +4,7 @@ import { JournalWriter } from "../journal/journal.js";
 import { parseCondition, parseTimeline, playScene, type PlayReport } from "../play/play.js";
 import { findProjectRoot } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { DEFAULT_THRESHOLD, DEFAULT_TOLERANCE } from "../screenshot/diff.js";
 import { BaselineError, baselineFiles, baselineName, compareBaseline, formatBaseline, readBaselineMeta, type BaselineResult } from "../screenshot/baseline.js";
 
 export const SCENARIO_DIR = ".godotwright/scenarios";
@@ -48,7 +49,8 @@ export interface ScreenshotStep {
   name: string;
   frame: number;
   tolerance?: number;
-  maxChanged?: number;
+  /** Percent of pixels that may change (default 0.5). */
+  threshold?: number;
 }
 
 export interface ExpectationResult {
@@ -166,7 +168,7 @@ export function scenarioJson(s: Scenario): Record<string, unknown> {
     ...(s.signals?.length ? { signals: s.signals } : {}),
     expect: s.expect.map((e) => e.text),
     ...(s.screenshots.length
-      ? { screenshots: s.screenshots.map((x) => (x.tolerance === undefined && x.maxChanged === undefined ? `${x.name} @ ${x.frame}` : x)) }
+      ? { screenshots: s.screenshots.map((x) => (x.tolerance === undefined && x.threshold === undefined ? `${x.name} @ ${x.frame}` : x)) }
       : {}),
     ...(s.size ? { size: `${s.size.width}x${s.size.height}` } : {}),
   };
@@ -179,7 +181,7 @@ export function pickScenarios<T extends { scenario: Scenario }>(list: T[], name?
   return exact.length ? exact : list.filter((s) => s.scenario.name.includes(name));
 }
 
-/** "hud @ 60" or {"name": "hud", "frame": 60, "tolerance": 24, "maxChanged": 0.5}. */
+/** "hud @ 60" or {"name": "hud", "frame": 60, "tolerance": 8, "threshold": 1}. */
 function parseScreenshots(value: unknown): ScreenshotStep[] {
   if (value === undefined) return [];
   if (!Array.isArray(value)) throw new ScenarioError('"screenshots" must be a list');
@@ -199,8 +201,8 @@ function parseScreenshots(value: unknown): ScreenshotStep[] {
       return n;
     };
     const tolerance = num("tolerance", 255);
-    const maxChanged = num("maxChanged", 100);
-    return { name: o.name, frame: o.frame as number, ...(tolerance !== undefined ? { tolerance } : {}), ...(maxChanged !== undefined ? { maxChanged } : {}) };
+    const threshold = num("threshold", 100);
+    return { name: o.name, frame: o.frame as number, ...(tolerance !== undefined ? { tolerance } : {}), ...(threshold !== undefined ? { threshold } : {}) };
   });
   const names = new Set<string>();
   for (const s of steps) {
@@ -317,14 +319,23 @@ export async function runScenario(root: string, file: string, scenario: Scenario
   const screenshots = shots.map((s): BaselineResult & { frame: number } => {
     const files = baselineFiles(root, s.name);
     const taken = report.captures?.find((c) => c.frame === s.frame);
-    const missing = (why: string): BaselineResult & { frame: number } => ({ name: s.name, frame: s.frame, status: "failed", ok: false, baseline: `.godotwright/baselines/${s.name}.png`, actual: "", notes: [why] });
+    const missing = (why: string): BaselineResult & { frame: number } => ({
+      name: s.name,
+      frame: s.frame,
+      status: "failed",
+      ok: false,
+      file: files.png,
+      threshold: s.threshold ?? DEFAULT_THRESHOLD,
+      tolerance: s.tolerance ?? DEFAULT_TOLERANCE,
+      notes: [why],
+    });
     if (!taken) return missing(s.frame >= frames ? `frame ${s.frame} is after the last frame (${frames - 1})` : `no picture of frame ${s.frame}: the run ended before it`);
     try {
       const r = compareBaseline(root, s.name, taken.file, {
         ...(options.update ? { update: true } : {}),
         ...(options.createMissing === false ? { createMissing: false } : {}),
         ...(s.tolerance !== undefined ? { tolerance: s.tolerance } : {}),
-        ...(s.maxChanged !== undefined ? { maxChanged: s.maxChanged } : {}),
+        ...(s.threshold !== undefined ? { threshold: s.threshold } : {}),
         meta: {
           ...(report.scene ? { scene: report.scene } : {}),
           width: size.width,
@@ -375,10 +386,10 @@ export function formatScenario(r: ScenarioResult, options: { screenshots?: boole
   return out.join("\n");
 }
 
-/** A screenshot step as scenario lines: "ok   screenshot hud @ 60 (same)", then the diff when it changed. */
-export function formatShot(s: BaselineResult & { frame: number }, accept = "run again with --update"): string[] {
+/** A screenshot step as scenario lines: "ok   screenshot hud @ 60 (unchanged)", then the diff when it changed. */
+export function formatShot(s: BaselineResult & { frame: number }, accept = "run the scenario again with update (--update)"): string[] {
   const [head = "", ...rest] = formatBaseline(s, accept);
-  const verdict = head.replace(/^baseline \S+: /, "");
+  const verdict = head.replace(/^baseline \S+ /, "").replace(/:.*$/, "");
   return [`  ${s.ok ? "ok  " : "FAIL"} screenshot ${s.name} @ ${s.frame} (${verdict})`, ...rest.map((l) => `  ${l}`)];
 }
 

@@ -1,0 +1,62 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+
+GODOTWRIGHT_SHADERS_FILE	res://fx/fogbad.gdshader
+GODOTWRIGHT_SHADERS_SHADER	4	Shader	res://fx/fogbad.gdshader	res://fx/fogbad.gdshader
+GODOTWRIGHT_SHADERS_FILE	res://fx/uses.gdshader
+GODOTWRIGHT_SHADERS_SHADER	1	Shader	res://fx/uses.gdshader	res://fx/uses.gdshader
+--res://fx/uses.gdshader--
+    1 | shader_type canvas_item;
+E   2-> #include "res://inc/common.gdshaderinc"
+    3 | 
+    4 | void fragment() {
+--res://inc/common.gdshaderinc--
+    3 |  return x * 2.0;
+    4 | }
+E   5-> float broken() { return vec3(1.0); }
+    6 | 
+SHADER ERROR: Expected return with an expression of type 'float'.
+          at: (null) (res://inc/common.gdshaderinc:5)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:130)
+              [1] _walk (res://.godot/godotwright/shaders.gd:89)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:31)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:2695)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:130)
+       [1] _walk (res://.godot/godotwright/shaders.gd:89)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:31)
+GODOTWRIGHT_SHADERS_FILE	res://fx/uses2.gdshader
+GODOTWRIGHT_SHADERS_SHADER	0	Shader	res://fx/uses2.gdshader	res://fx/uses2.gdshader
+--res://fx/uses2.gdshader--
+    1 | shader_type spatial;
+    2 | 
+E   3-> #include "res://inc/common.gdshaderinc"
+    4 | 
+    5 | void fragment() {
+--res://inc/common.gdshaderinc--
+    3 |  return x * 2.0;
+    4 | }
+E   5-> float broken() { return vec3(1.0); }
+    6 | 
+SHADER ERROR: Expected return with an expression of type 'float'.
+          at: (null) (res://inc/common.gdshaderinc:5)
+          GDScript backtrace (most recent call first):
+              [0] _found (res://.godot/godotwright/shaders.gd:130)
+              [1] _walk (res://.godot/godotwright/shaders.gd:89)
+              [2] _initialize (res://.godot/godotwright/shaders.gd:31)
+ERROR: Shader compilation failed.
+   at: set_code (drivers/gles3/storage/material_storage.cpp:3119)
+   GDScript backtrace (most recent call first):
+       [0] _found (res://.godot/godotwright/shaders.gd:130)
+       [1] _walk (res://.godot/godotwright/shaders.gd:89)
+       [2] _initialize (res://.godot/godotwright/shaders.gd:31)
+GODOTWRIGHT_SHADERS_PARSED	2
+GODOTWRIGHT_SHADERS_DRAW	res://fx/uses.gdshader
+GODOTWRIGHT_SHADERS_MS	9.9	res://fx/uses.gdshader
+GODOTWRIGHT_SHADERS_DRAW	res://fx/uses2.gdshader
+GODOTWRIGHT_SHADERS_MS	43.2	res://fx/uses2.gdshader
+GODOTWRIGHT_SHADERS_DONE	2	opengl3	gl_compatibility	llvmpipe (LLVM 20.1.2, 256 bits)

@@ -51,7 +51,8 @@ describe("tool sets", () => {
     await close();
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOLSETS.core].sort());
     const size = JSON.stringify(tools).length;
-    expect(size).toBeLessThan(22_000);
+    // Core holds the everyday tools, godot_code (Godot's language server) included.
+    expect(size).toBeLessThan(25_000);
     expect(size * 3).toBeLessThan(allSize);
   });
 

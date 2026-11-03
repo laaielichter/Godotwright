@@ -1,12 +1,13 @@
 import { VERSION } from "../version.js";
 import type { ReviewReport } from "./review.js";
 import { RULES, type Severity } from "./rules.js";
+import { withoutSubResource } from "../project/files.js";
 
 const LEVEL: Record<Severity, "error" | "warning" | "note"> = { error: "error", warning: "warning", info: "note" };
 
 /** A `res://` path as a path relative to the project root; a built-in script (`scene.tscn::Id`) points at its scene. */
 export function sarifUri(file: string): string {
-  return file.replace(/^res:\/\//, "").replace(/::.*$/, "");
+  return withoutSubResource(file).replace(/^res:\/\//, "");
 }
 
 /**
