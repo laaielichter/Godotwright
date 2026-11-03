@@ -54,10 +54,15 @@ describe.skipIf(!GODOT || !SCREEN)("shader compile check in Godot", () => {
     expect(formatShaderCheck(result)).toMatch(/^4 shaders compiled, 2 errors, 1 include; renderer opengl3 gl_compatibility/m);
   });
 
-  it("is part of godot_check with shaders, which headless loading alone misses", { timeout: 300_000 }, async () => {
+  it("is part of godot_check: every run compiles shaders headless, shaders adds the GPU pass, each error once", { timeout: 300_000 }, async () => {
     const root = project();
+    // Headless loading alone missed these in 0.5.0; since 0.6.0 every check compiles each .gdshader headless.
     const plain = await checkProject(root, { godot: GODOT });
-    expect(plain.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(plain.diagnostics.filter((d) => d.severity === "error").map((d) => `${d.source} ${d.file}:${d.line} ${d.message.slice(0, 40)}`)).toEqual([
+      "shader res://fx/downwash.gdshader:6 SCREEN_TEXTURE has been removed in favor",
+      "shader res://fx/hull.gdshader:6 Invalid assignment of 'vec3' to 'float'.",
+    ]);
+    expect(plain.errors).toBe(2);
     const result = await checkProject(root, { godot: GODOT, shaders: true });
     for (const d of result.diagnostics) console.log(formatDiagnostic(d));
     expect(result.shaders).toMatchObject({ compiled: 4, parsed: 0, errors: 2 });
