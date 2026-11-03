@@ -25,6 +25,7 @@ export interface ScriptMigration {
   code: string;
   changes: Change[];
   left: Leftover[];
+  notes?: string[];
 }
 
 export interface FileMigration extends ScriptMigration {
@@ -156,6 +157,7 @@ const quoted = (s: string): string | undefined => (/^&?"[^"]*"$/.test(s) || /^&?
 class Migrator {
   private readonly changes: Change[] = [];
   private readonly left: Leftover[] = [];
+  private readonly notes: string[] = [];
   private line = 0;
   private readonly godot4: Set<string>;
   private readonly defined: Set<string>;
@@ -183,7 +185,12 @@ class Migrator {
       if (before.triple) return line;
       return this.migrateLine(line);
     });
-    return { code: out.join("\n"), changes: this.changes, left: this.left };
+    return {
+      code: out.join("\n"),
+      changes: this.changes,
+      left: this.left,
+      ...(this.notes.length > 0 ? { notes: this.notes } : {}),
+    };
   }
 
   private note(rule: string, from: string, to: string): void {
@@ -233,6 +240,18 @@ class Migrator {
     line = this.sub(line, /^(\s*)slave\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc ${m[2]}`);
     line = this.sub(line, /^(\s*)\.(\w+)\s*\(/g, "super", (m) => `${m[1]}super.${m[2]}(`);
     line = this.sub(line, /\.instance\(\s*\)/g, "rename", () => ".instantiate()");
+
+    line = this.sub(line, /\s*\bsetget\b(?:\s+([a-zA-Z0-9_]+))?(?:\s*,\s*([a-zA-Z0-9_]+))?/g, "property", (m) => {
+      const setter = m[1];
+      const getter = m[2];
+      if (!setter && !getter) return undefined;
+      const parts: string[] = [];
+      if (setter) parts.push(`set = ${setter}`);
+      if (getter) parts.push(`get = ${getter}`);
+      const noteMsg = "setters in Godot 4 run on assignment inside the script (in Godot 3 they required self.)";
+      if (!this.notes.includes(noteMsg)) this.notes.push(noteMsg);
+      return `: ${parts.join(", ")}`;
+    });
 
     line = this.calls(line);
 
@@ -464,6 +483,7 @@ export function formatMigration(m: ProjectMigration, detail: "brief" | "full" = 
     for (const c of f.changes.slice(0, limit)) out.push(`  ${String(c.line).padStart(4)}: ${c.from.trim()}  ->  ${c.to.trim()}`);
     if (f.changes.length > limit) out.push(`  +${f.changes.length - limit} more changes (use --detail full)`);
     for (const l of f.left) out.push(`  ${String(l.line).padStart(4)}: TO DO: ${l.message}`);
+    for (const n of f.notes ?? []) out.push(`  note: ${n}`);
   }
   if (m.files.length === 0) out.push("Nothing to migrate: no Godot 3 code found.");
   else out.push("", "Next: run `godotwright review` for what is still wrong, then `godotwright check` with Godot 4. Scenes and project settings are not migrated here; Godot's own `--convert-3to4` does those.");
