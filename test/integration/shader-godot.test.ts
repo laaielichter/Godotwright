@@ -333,4 +333,40 @@ describe.skipIf(!GODOT || !SCREEN)("godot_shader gpu: the headless compile and t
     expect(gpu.errors).toBe(4);
     expect(formatShaderReport(gpu)).toMatch(/drew \d+ on the GPU \(opengl3 gl_compatibility/);
   });
+  it("puts each language error at its line once, per shader type, in an include and in a scene, with the GPU pass on", { timeout: 600_000 }, async () => {
+    const root = project({
+      "fx/spatial.gdshader": "shader_type spatial;\nvoid fragment() {\n\tfloat a = vec3(1.0).x + vec2(1.0);\n\tALBEDO = vec3(a);\n}\n",
+      "fx/canvas.gdshader": "shader_type canvas_item;\n\nvoid fragment() {\n\tCOLOR = vec3(1.0);\n}\n",
+      "fx/particles.gdshader": "shader_type particles;\nvoid process() {\n\tVELOCITY = vec2(1.0);\n}\n",
+      "fx/sky.gdshader": "shader_type sky;\n\n\nvoid sky() {\n\tCOLOR = vec2(1.0);\n}\n",
+      "fx/fog.gdshader": "shader_type fog;\nvoid fog() {\n\tDENSITY = vec2(1.0);\n}\n",
+      "inc/lib.gdshaderinc": "float ok_fn() {\n\treturn 1.0;\n}\nfloat bad_fn() {\n\treturn vec3(1.0);\n}\n",
+      "fx/uses_inc.gdshader": 'shader_type spatial;\n#include "res://inc/lib.gdshaderinc"\nvoid fragment() {\n\tALBEDO = vec3(ok_fn());\n}\n',
+      "level.tscn":
+        '[gd_scene format=3]\n\n[sub_resource type="Shader" id="Shader_e1"]\ncode = "shader_type canvas_item;\n\nvoid fragment() {\n\tCOLOR = vec2(0.0);\n}\n"\n\n[sub_resource type="ShaderMaterial" id="M"]\nshader = SubResource("Shader_e1")\n\n[node name="R" type="ColorRect"]\nmaterial = SubResource("M")\n',
+    });
+    const errorsOf = (text: string) => text.split("\n").filter((l) => / error \[/.test(l)).map((l) => l.slice(0, l.indexOf(" error")));
+    const gpu = await shaderReport(root, { godot: GODOT, gpu: true });
+    const text = formatShaderReport(gpu);
+    console.log(text);
+    // Line 4 of the scene's Shader code is line 7 of level.tscn; the include's error is named at the include.
+    const expected = [
+      "res://fx/canvas.gdshader:4:",
+      "res://fx/fog.gdshader:3:",
+      "res://fx/particles.gdshader:3:",
+      "res://fx/sky.gdshader:5:",
+      "res://fx/spatial.gdshader:3:",
+      "res://inc/lib.gdshaderinc:5:",
+      "res://level.tscn::Shader_e1:7:",
+    ];
+    expect(errorsOf(text)).toEqual(expected);
+    expect(text).not.toContain("error [gpu]");
+    expect(gpu.errors).toBe(7);
+    expect(text).toMatch(/drew \d+ on the GPU/);
+    // godot_check with shaders: the headless compile and the GPU pass, each error once.
+    const check = await checkProject(root, { godot: GODOT, shaders: true });
+    const at = check.diagnostics.filter((d) => d.source === "shader" && d.severity === "error").map((d) => `${d.file}:${d.line}:`).sort();
+    // godot_check names the scene file itself, at the same line.
+    expect(at).toEqual(expected.map((e) => e.replace("::Shader_e1", "")));
+  });
 });
