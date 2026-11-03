@@ -100,11 +100,11 @@
     50
    ],
    "width": [
-    3.0,
+    3,
     40
    ],
    "height": [
-    0.0,
+    0,
     0.3
    ],
    "source": "lane width about 2.75-3.75 m (general knowledge: design guides differ per country); a segment is as long as you choose",
@@ -265,7 +265,7 @@
     50
    ],
    "width": [
-    3.0,
+    3,
     4.5
    ],
    "height": [
@@ -721,7 +721,7 @@
    ],
    "height": [
     1.5,
-    4.0
+    4
    ],
    "source": "general knowledge: round signs of about 0.6, 0.7 or 0.9 m; the lower edge of the plate about 2.2 m above a footpath in built-up areas and lower (about 1.5-1.8 m) along rural roads; rules differ per country",
    "confidence": "C"
@@ -2031,6 +2031,147 @@
   "pitfalls": [
    "Red is always at the top and green at the bottom.",
    "Give each lamp its own node, so a script can switch them without swapping materials on one mesh."
+  ]
+ },
+ {
+  "id": "infrastructure.fire-hydrant",
+  "name": "fire hydrant",
+  "description": "An above-ground fire hydrant with a barrel, outlets and operating cap.",
+  "aliases": [
+   "fire hydrant",
+   "hydrant",
+   "brandkraan",
+   "bovengrondse brandkraan"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Barrel",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "barrel",
+     "body",
+     "standpipe"
+    ]
+   },
+   {
+    "name": "Outlet",
+    "role": "outlet",
+    "required": true,
+    "aliases": [
+     "outlet",
+     "nozzle",
+     "aansluiting"
+    ],
+    "count": [
+     1,
+     4
+    ]
+   },
+   {
+    "name": "Cap",
+    "role": "cap",
+    "required": true,
+    "aliases": [
+     "cap",
+     "operating nut",
+     "dop"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.25,
+    0.7
+   ],
+   "length": [
+    0.25,
+    0.7
+   ],
+   "height": [
+    0.5,
+    1.2
+   ],
+   "source": "General knowledge of above-ground pillar hydrants; size and outlet arrangement vary by jurisdiction, not a standard.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Do not scale every outlet into the body; capped hose connections must remain visible and accessible."
+  ]
+ },
+ {
+  "id": "infrastructure.bus-stop",
+  "name": "bus stop",
+  "description": "A fixed bus stop with a shelter, roof, bench and sign, rather than a bus vehicle.",
+  "aliases": [
+   "bus stop",
+   "bus shelter",
+   "busstop",
+   "bushalte",
+   "bushokje",
+   "haltehokje"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Shelter",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "shelter",
+     "frame",
+     "hokje"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak"
+    ]
+   },
+   {
+    "name": "Bench",
+    "role": "seat",
+    "required": true,
+    "aliases": [
+     "bench",
+     "seat",
+     "bank"
+    ]
+   },
+   {
+    "name": "Sign",
+    "role": "sign",
+    "required": true,
+    "aliases": [
+     "sign",
+     "stop sign",
+     "haltebord"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    1.5,
+    6
+   ],
+   "length": [
+    0.8,
+    2.5
+   ],
+   "height": [
+    2,
+    3.5
+   ],
+   "source": "General knowledge of compact roadside passenger shelters; local accessibility and road rules differ, not a standard.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Leave the boarding side open; the shelter is roadside infrastructure and must not be classified as a bus vehicle."
   ]
  }
 ]
