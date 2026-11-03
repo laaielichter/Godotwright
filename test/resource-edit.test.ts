@@ -1,10 +1,10 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { typedValue } from "../src/godot/typed-value.js";
 import { undoJournal } from "../src/journal/journal.js";
 import { lineDiff } from "../src/resource/diff.js";
-import { ResourceEditError, editResource, formatResourcePlan } from "../src/resource/edit.js";
+import { ResourceEditError, editResource, formatResourcePlan, markChanged } from "../src/resource/edit.js";
 import { toOps } from "../src/resource/types.js";
 import { makeProject, runCli } from "./helpers.js";
 
@@ -354,5 +354,19 @@ describe("resource CLI", () => {
     expect(bad.exitCode).toBe(1);
     const many = await runCli(["resource", "apply", join(root, "theme.tres"), '[{"op":"set","key":"default_font_size","value":24}]', "--write"]);
     expect(many.output).toMatch(/resource set default_font_size = 24 \(written, journal #1/);
+  });
+});
+
+describe("markChanged", () => {
+  it("moves a .import to a later whole second, since Godot compares the time in seconds", async () => {
+    const root = makeProject({ "beep.wav.import": "[remap]\n" });
+    const file = join(root, "beep.wav.import");
+    // Written in the same second Godot last saw it.
+    const seen = new Date(Math.floor(Date.now() / 1000) * 1000 + 300);
+    utimesSync(file, seen, seen);
+    await markChanged(file);
+    expect(Math.floor(statSync(file).mtimeMs / 1000)).toBeGreaterThan(Math.floor(seen.getTime() / 1000));
+    expect(readFileSync(file, "utf8")).toBe("[remap]\n");
+    await expect(markChanged(join(root, "missing.import"))).resolves.toBeUndefined();
   });
 });

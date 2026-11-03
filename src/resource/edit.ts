@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync, utimesSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { cleanup } from "../check/check.js";
 import { GodotNotFoundError, findGodot, runGodot } from "../check/godot.js";
@@ -121,6 +121,20 @@ function insideProject(root: string, full: string): boolean {
   return target === undefined || isInside(realRoot, target);
 }
 
+/**
+ * Godot notices a changed .import by its modification time in whole seconds: an edit in the same second as Godot's
+ * own last write of the file is not reimported (seen with Godot 4.7.2; a fast machine, such as a CI runner, edits
+ * within that second). Before an import the file gets a modification time in a later second than its last write,
+ * which is never earlier than Godot's, waiting for that second when needed.
+ */
+export async function markChanged(file: string): Promise<void> {
+  if (!existsSync(file)) return;
+  const wait = (Math.floor(statSync(file).mtimeMs / 1000) + 1) * 1000 - Date.now();
+  if (wait > 0) await new Promise((done) => setTimeout(done, wait + 10));
+  const now = new Date();
+  utimesSync(file, now, now);
+}
+
 /** Runs `godot --headless --import` and checks what became of the edit. */
 async function reimport(root: string, importFull: string, expect: Expectation[], options: ResourceEditOptions, before: ReturnType<typeof destMd5>): Promise<ReimportResult> {
   let bin: string;
@@ -132,6 +146,7 @@ async function reimport(root: string, importFull: string, expect: Expectation[],
     }
     throw error;
   }
+  await markChanged(importFull);
   const run = await runGodot(bin, ["--headless", "--path", root, "--import"], { cwd: root, timeoutMs: options.timeoutMs ?? 600_000 });
   const asset = toResPath(root, importFull).replace(/\.import$/, "");
   const name = asset.slice(asset.lastIndexOf("/") + 1);
