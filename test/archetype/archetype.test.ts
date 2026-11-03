@@ -402,6 +402,41 @@ describe("the alias rules compare words the way identify does", () => {
   });
 
   it("keeps the shared aliases to the ones that really have two meanings", () => {
-    expect([...SHARED_ALIASES].sort()).toEqual(["bike", "motor", "windmolen"]);
+    expect([...SHARED_ALIASES].sort()).toEqual(["bank", "bike", "motor", "windmolen"]);
+  });
+});
+
+describe("indoor and street furniture", () => {
+  it.each([
+    ["bed", "prop.bed"], ["eenpersoonsbed", "prop.bed"],
+    ["sofa", "prop.sofa"], ["bankstel", "prop.sofa"],
+    ["bookshelf", "prop.bookcase"], ["boekenkast", "prop.bookcase"],
+    ["cupboard", "prop.cupboard"], ["kledingkast", "prop.cupboard"],
+    ["park bench", "prop.bench"], ["parkbank", "prop.bench"],
+    ["bin", "prop.bin"], ["prullenbak", "prop.bin"],
+    ["mailbox", "prop.mailbox"], ["brievenbus", "prop.mailbox"],
+    ["fire hydrant", "infrastructure.fire-hydrant"], ["brandkraan", "infrastructure.fire-hydrant"],
+    ["bus stop", "infrastructure.bus-stop"], ["bushalte", "infrastructure.bus-stop"],
+  ])("identifies %s as %s", (name, expected) => {
+    expect(best(name)).toBe(expected);
+  });
+
+  it("keeps the shared Dutch word bank ambiguous between a bench and a sofa", () => {
+    expect(SHARED_ALIASES.has("bank")).toBe(true);
+    const matches = identify("bank", library).matches.map((match) => match.id);
+    expect(matches).toEqual(expect.arrayContaining(["prop.bench", "prop.sofa"]));
+    expect(matches).not.toContain("prop.chair");
+  });
+
+  it("keeps ordinary chairs, tables and buses distinct from the new objects", () => {
+    expect(best("chair")).toBe("prop.chair");
+    expect(best("table")).toBe("prop.table");
+    expect(best("bus")).toBe("vehicle.wheeled.bus");
+  });
+
+  it("puts the cupboard door pivot on the hinge edge", () => {
+    const door = library.resolve("prop.cupboard").parts.find((part) => part.name === "Door")!;
+    expect(door.pivot).toBe("hinge");
+    expect(door.moves).toEqual([{ kind: "hinge", axis: "y" }]);
   });
 });
