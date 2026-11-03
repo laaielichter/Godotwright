@@ -165,7 +165,7 @@ class Migrator {
 
   constructor(
     private readonly api: GodotApi,
-    private readonly source: string,
+    source: string,
   ) {
     this.godot4 = new Set<string>();
     for (const cls of api.classes.values()) {
@@ -199,14 +199,6 @@ class Migrator {
 
   private todo(message: string): void {
     if (!this.left.some((l) => l.line === this.line && l.message === message)) this.left.push({ line: this.line, message });
-  }
-
-  private setterLoops(setter: string, varName: string): boolean {
-    const funcRe = new RegExp(`^\\s*(?:static\\s+)?func\\s+${setter}\\s*\\([^)]*\\)[^:]*:(?:[ \\t]*#[^\\n]*)?\\n([\\s\\S]*?)(?=^\\s*(?:func|static\\s+func|var|const|signal|enum|class)\\b|$)`, "m");
-    const funcMatch = funcRe.exec(this.source);
-    if (!funcMatch) return false;
-    const codeOnly = funcMatch[1]!.split("\n").map((l) => l.split("#")[0]).join("\n");
-    return new RegExp(`\\b${varName}\\s*[-+*/%&|^]?=(?!=)`).test(codeOnly);
   }
 
   /** Replaces every match of `re` that starts in code; `fn` returns the replacement or undefined to keep the match. */
@@ -250,12 +242,6 @@ class Migrator {
       const parts: string[] = [];
       if (setter) parts.push(`set = ${setter}`);
       if (getter) parts.push(`get = ${getter}`);
-      const before = line.slice(0, m.index);
-      const varMatch = /\bvar\s+([a-zA-Z0-9_]+)/.exec(before);
-      const varName = varMatch?.[1];
-      if (setter && varName && this.setterLoops(setter, varName)) {
-        this.todo(`setter ${setter}() assigns ${varName}: in Godot 4 this calls the setter again and causes an infinite loop`);
-      }
       const noteMsg = "setters in Godot 4 run on assignment inside the script (in Godot 3 they required self.)";
       if (!this.notes.includes(noteMsg)) this.notes.push(noteMsg);
       return `: ${parts.join(", ")}`;
