@@ -282,18 +282,26 @@ function demoProjects(dir: string, depth = 0): string[] {
 
 describe.skipIf(!GODOT || !DEMOS)("godot_shader on every official demo project", () => {
   it("compiles every demo shader without an error, and the review reports no shader error", { timeout: 1_800_000 }, async () => {
+    // CI checks out only some demo folders (a sparse checkout), so the count follows the folders that are there: every
+    // shader of every project that has one must compile, not a fixed total.
     let compiled = 0;
     const problems: string[] = [];
+    const counts: string[] = [];
     for (const dir of demoProjects(DEMOS!)) {
       const report = await shaderReport(dir, { godot: GODOT, compile: undefined, includeAddons: false });
       if (report.shaders.length === 0) continue;
-      compiled += report.compile?.compiled ?? 0;
       const rel = dir.slice(DEMOS!.length + 1);
+      const expected = report.shaders.filter((s) => !s.include).length;
+      const got = report.compile?.compiled ?? 0;
+      compiled += got;
+      counts.push(`${rel} ${got}/${expected}`);
+      if (got !== expected) problems.push(`${rel}: Godot compiled ${got} of ${expected} shaders${report.compileSkipped ? ` (${report.compileSkipped})` : ""}`);
       for (const d of report.compile?.diagnostics ?? []) if (d.severity === "error") problems.push(`${rel}: godot ${formatDiagnostic(d)}`);
       for (const f of report.findings) if (f.severity === "error") problems.push(`${rel}: review ${formatFinding(f)}`);
     }
-    console.log(`${compiled} demo shaders compiled`);
-    expect(compiled).toBeGreaterThan(50);
+    console.log(`${compiled} demo shaders compiled: ${counts.join(", ")}`);
+    expect(counts.length).toBeGreaterThan(0);
     expect(problems).toEqual([]);
   });
+
 });
