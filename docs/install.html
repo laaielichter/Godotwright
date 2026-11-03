@@ -288,12 +288,14 @@ startup_timeout_sec = 30 # the first npx run downloads the package</code></pre><
   <div class="tabs" aria-hidden="true"><span class="tab on">opencode</span></div>
   <div class="body">
     <h2>opencode</h2>
-    <p>Add it to <code>~/.config/opencode/opencode.json</code> (all projects) or <code>opencode.json</code> (this project), see the <a href="https://opencode.ai/docs/mcp">opencode MCP docs</a>:</p>
+    <p>Add it to <code>~/.config/opencode/opencode.json</code> (all projects) or <code>opencode.json</code> (this project), see the <a href="https://opencode.ai/docs/mcp-servers/">opencode MCP docs</a>:</p>
 <div class="cmd"><pre><code>{
-  &quot;mcpServers&quot;: {
+  &quot;$schema&quot;: &quot;https://opencode.ai/config.json&quot;,
+  &quot;mcp&quot;: {
     &quot;godotwright&quot;: {
-      &quot;command&quot;: &quot;npx&quot;,
-      &quot;args&quot;: [&quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;]
+      &quot;type&quot;: &quot;local&quot;,
+      &quot;command&quot;: [&quot;npx&quot;, &quot;-y&quot;, &quot;godotwright&quot;, &quot;mcp&quot;, &quot;--tier&quot;, &quot;premium&quot;],
+      &quot;enabled&quot;: true
     }
   }
 }</code></pre><button class="copy" type="button">Copy</button></div>
