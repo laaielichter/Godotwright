@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "godotwright@0.5.0",
+        "godotwright@0.6.0",
         "mcp",
         "--tier",
         "premium"
