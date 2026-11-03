@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runGodot } from "../../src/check/godot.js";
@@ -113,8 +113,13 @@ describe.skipIf(!GODOT)("resource and import edits checked by Godot", () => {
     expect(readFileSync(join(root, "beep.wav.import"), "utf8")).toContain("edit/loop_mode=0");
 
     // A key the importer does not read is dropped by Godot, and that is detected.
+    // The edit keeps the modification time Godot saw last, as an edit in the same second does on a fast machine (CI):
+    // Godot compares it in whole seconds and would skip the reimport, unless the reimport marks the file changed.
     const wavImport = join(root, "beep.wav.import");
+    await editResource(join(root, "beep.wav"), [{ op: "reimport" }], { godot: GODOT });
+    const seen = statSync(wavImport);
     writeFileSync(wavImport, readFileSync(wavImport, "utf8").replace("edit/trim=false", "edit/trim=false\nedit/trimm=true"));
+    utimesSync(wavImport, seen.atime, seen.mtime);
     await editResource(join(root, "beep.wav"), [{ op: "reimport" }], { godot: GODOT });
     expect(unmet(readFileSync(wavImport, "utf8"), [{ what: "param", key: "edit/trimm", value: "true" }])).toEqual(["edit/trimm=true (now gone)"]);
 
