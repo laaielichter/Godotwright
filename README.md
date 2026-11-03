@@ -79,6 +79,7 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
 | **Codex** | `codex mcp add godotwright -- npx -y godotwright mcp --tier premium` |
 | **Gemini CLI** | `gemini extensions install https://github.com/laaielichter/Godotwright` |
+| **opencode** | [Add to `opencode.json`](https://laaielichter.github.io/Godotwright/install.html#opencode) |
 | **Windsurf, Zed, others** | [JSON for your client](https://laaielichter.github.io/Godotwright/install.html#other) |
 
 Run the agent from the Godot project folder, or pass `--project <path>`. `--tier premium` gives full detail for large
