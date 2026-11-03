@@ -12,18 +12,23 @@ export interface ExitLeaks {
 
 /** "N17RendererSceneCull8InstanceE" as "RendererSceneCull::Instance"; other names as they are. */
 export function demangle(name: string): string {
-  const m = /^N((?:\d+[A-Za-z_]\w*?)+)E$/.exec(name);
-  if (!m) return name;
+  // A scanner, not a regex: `N`, then length-prefixed identifiers, then `E`. Linear in the length of the name.
+  const end = name.length - 1;
+  if (end < 1 || name[0] !== "N" || name[end] !== "E") return name;
   const parts: string[] = [];
-  let rest = m[1]!;
-  while (rest) {
-    const len = /^(\d+)/.exec(rest);
-    if (!len) return name;
-    const n = Number(len[1]);
-    parts.push(rest.slice(len[1]!.length, len[1]!.length + n));
-    rest = rest.slice(len[1]!.length + n);
+  let i = 1;
+  while (i < end) {
+    let j = i;
+    while (j < end && name.charCodeAt(j) >= 48 && name.charCodeAt(j) <= 57) j++;
+    if (j === i) return name;
+    const n = Number(name.slice(i, j));
+    if (n < 1 || j + n > end) return name;
+    const part = name.slice(j, j + n);
+    if (!/^[A-Za-z_]\w*$/.test(part)) return name;
+    parts.push(part);
+    i = j + n;
   }
-  return parts.join("::");
+  return parts.length ? parts.join("::") : name;
 }
 
 /** What Godot lists at exit (the class list needs --verbose): leaked instances per class, resources still in use, leaked RIDs. */
