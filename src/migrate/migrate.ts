@@ -165,7 +165,7 @@ class Migrator {
 
   constructor(
     private readonly api: GodotApi,
-    private readonly source: string,
+    source: string,
   ) {
     this.godot4 = new Set<string>();
     for (const cls of api.classes.values()) {
@@ -201,14 +201,6 @@ class Migrator {
     if (!this.left.some((l) => l.line === this.line && l.message === message)) this.left.push({ line: this.line, message });
   }
 
-  private setterLoops(setter: string, varName: string): boolean {
-    const funcRe = new RegExp(`^\\s*(?:static\\s+)?func\\s+${setter}\\s*\\([^)]*\\)[^:]*:(?:[ \\t]*#[^\\n]*)?\\n([\\s\\S]*?)(?=^\\s*(?:func|static\\s+func|var|const|signal|enum|class)\\b|$)`, "m");
-    const funcMatch = funcRe.exec(this.source);
-    if (!funcMatch) return false;
-    const codeOnly = funcMatch[1]!.split("\n").map((l) => l.split("#")[0]).join("\n");
-    return new RegExp(`\\b${varName}\\s*[-+*/%&|^]?=(?!=)`).test(codeOnly);
-  }
-
   /** Replaces every match of `re` that starts in code; `fn` returns the replacement or undefined to keep the match. */
   private sub(line: string, re: RegExp, rule: string, fn: (m: RegExpExecArray, mask: boolean[]) => string | undefined): string {
     let from = 0;
@@ -240,6 +232,12 @@ class Migrator {
     line = this.sub(line, /^(\s*)onready\s+var\b/g, "annotation", (m) => `${m[1]}@onready var`);
     line = this.sub(line, /^(\s*)export\s*\(([^)]*)\)\s*var\s+(\w+)(\s*:\s*[\w[\]]+)?/g, "annotation", (m) => this.exportHint(m[1] as string, m[2] as string, m[3] as string, m[4]));
     line = this.sub(line, /^(\s*)export\s+var\b/g, "annotation", (m) => `${m[1]}@export var`);
+    line = this.sub(line, /^(\s*)remotesync\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("any_peer", "call_local") ${m[2]}`);
+    line = this.sub(line, /^(\s*)remote\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("any_peer") ${m[2]}`);
+    line = this.sub(line, /^(\s*)puppetsync\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("call_local") ${m[2]}`);
+    line = this.sub(line, /^(\s*)puppet\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc ${m[2]}`);
+    line = this.sub(line, /^(\s*)sync\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc("any_peer", "call_local") ${m[2]}`);
+    line = this.sub(line, /^(\s*)slave\s+(func|var)\b/g, "annotation", (m) => `${m[1]}@rpc ${m[2]}`);
     line = this.sub(line, /^(\s*)\.(\w+)\s*\(/g, "super", (m) => `${m[1]}super.${m[2]}(`);
     line = this.sub(line, /\.instance\(\s*\)/g, "rename", () => ".instantiate()");
 
@@ -250,12 +248,6 @@ class Migrator {
       const parts: string[] = [];
       if (setter) parts.push(`set = ${setter}`);
       if (getter) parts.push(`get = ${getter}`);
-      const before = line.slice(0, m.index);
-      const varMatch = /\bvar\s+([a-zA-Z0-9_]+)/.exec(before);
-      const varName = varMatch?.[1];
-      if (setter && varName && this.setterLoops(setter, varName)) {
-        this.todo(`setter ${setter}() assigns ${varName}: in Godot 4 this calls the setter again and causes an infinite loop`);
-      }
       const noteMsg = "setters in Godot 4 run on assignment inside the script (in Godot 3 they required self.)";
       if (!this.notes.includes(noteMsg)) this.notes.push(noteMsg);
       return `: ${parts.join(", ")}`;
@@ -415,7 +407,7 @@ class Migrator {
     const slide = at(/\bmove_and_slide\s*\(\s*[^)\s]/g);
     if (slide) this.todo("move_and_slide() takes no arguments in Godot 4: set `velocity` first, call move_and_slide(), and read `velocity` back");
     if (at(/\bmove_and_slide_with_snap\s*\(/g)) this.todo("move_and_slide_with_snap() is gone: set `floor_snap_length` and call move_and_slide()");
-    if (at(/^\s*(remote|master|puppet|remotesync|mastersync|puppetsync|sync|slave)\s+(func|var)\b/g)) this.todo("network keywords are @rpc annotations in Godot 4: @rpc(\"any_peer\") for remote, @rpc(\"authority\") for master/puppet, add \"call_local\" for the sync variants");
+    if (at(/^\s*(master|mastersync)\s+(func|var)\b/g)) this.todo("master and mastersync ran on the master when called by others in Godot 3: in Godot 4 use @rpc(\"any_peer\") (with \"call_local\" for mastersync) and check if not is_multiplayer_authority()");
     if (at(/\byield\s*\(\s*\)/g)) this.todo("yield() with no arguments (a resumable function) has no direct Godot 4 form: use await on a signal");
     if (at(/\bOS\.window_(fullscreen|size|borderless)\b/g) || at(/\bOS\.vsync_enabled\b/g)) this.todo("window settings moved to DisplayServer.window_set_mode() / window_set_size() / window_set_vsync_mode(), or get_window()");
     if (at(/\bget_tree\(\)\.set_input_as_handled\(/g)) this.todo("set_input_as_handled() is on the Viewport in Godot 4: get_viewport().set_input_as_handled()");

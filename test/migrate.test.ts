@@ -93,10 +93,27 @@ describe("migrate a script", () => {
     expect(code("class_name Spatial\nvar a = Spatial.new()")).toBe("class_name Spatial\nvar a = Spatial.new()");
   });
 
+  it("rewrites Godot 3 network keywords to @rpc annotations (#115)", () => {
+    expect(code("remote func hit(damage):\n\tpass")).toBe('@rpc("any_peer") func hit(damage):\n\tpass');
+    expect(code("remotesync func chat(text):\n\tpass")).toBe('@rpc("any_peer", "call_local") func chat(text):\n\tpass');
+    expect(code("puppet func set_position(p):\n\tpass")).toBe("@rpc func set_position(p):\n\tpass");
+    expect(code("puppetsync func update(val):\n\tpass")).toBe('@rpc("call_local") func update(val):\n\tpass');
+    expect(code("sync func chime():\n\tpass")).toBe('@rpc("any_peer", "call_local") func chime():\n\tpass');
+    expect(code("slave func dance():\n\tpass")).toBe("@rpc func dance():\n\tpass");
+
+    const m = migrateScript("remote func hit():\n\tpass\npuppet func p():\n\tpass\nremotesync func c():\n\tpass\npuppetsync func u():\n\tpass", api);
+    expect(m.left).toEqual([]);
+  });
+
   it("lists what it cannot do by hand, once per line", () => {
-    const m = migrateScript("var hp = 1 setget\nremote func ping():\n\tpass\nfunc f():\n\tmove_and_slide(v, Vector3.UP)\n\tyield()", api);
+    const m = migrateScript("var hp = 1 setget
+master func ping():
+	pass
+func f():
+	move_and_slide(v, Vector3.UP)
+	yield()", api);
     const msgs = m.left.map((l) => `${l.line}:${l.message.split(":")[0]}`);
-    expect(msgs).toEqual(["1:setget is gone in Godot 4", "2:network keywords are @rpc annotations in Godot 4", "5:move_and_slide() takes no arguments in Godot 4", "6:yield() with no arguments (a resumable function) has no direct Godot 4 form"]);
+    expect(msgs).toEqual(["1:setget is gone in Godot 4", "2:master and mastersync ran on the master when called by others in Godot 3", "5:move_and_slide() takes no arguments in Godot 4", "6:yield() with no arguments (a resumable function) has no direct Godot 4 form"]);
   });
   it("rewrites simple setget declarations to Godot 4 property syntax", () => {
     expect(code("var hp = 10 setget set_hp, get_hp")).toBe("var hp = 10: set = set_hp, get = get_hp");
@@ -117,12 +134,10 @@ describe("migrate a script", () => {
     expect(formatted).toContain("note: setters in Godot 4 run on assignment inside the script");
   });
 
-  it("detects recursive assignment loops in setters and leaves a TO DO", () => {
-    const looping = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
-    expect(looping.left.some((l) => l.message.includes("setter set_hp() assigns hp") && l.message.includes("infinite loop"))).toBe(true);
-
-    const safe = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\t_hp = val", api);
-    expect(safe.left).toEqual([]);
+  it("does not warn when a setter assigns its own property (#116)", () => {
+    // Godot 4 sets the underlying member directly inside the property's own setter, so this does not recurse.
+    const own = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
+    expect(own.left).toEqual([]);
   });
 });
 
