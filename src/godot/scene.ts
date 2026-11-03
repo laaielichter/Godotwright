@@ -160,15 +160,75 @@ export function parseResourceText(text: string): ResourceFile {
  * Every `ExtResource(...)` and `SubResource(...)` outside string literals, with its line. Read from the text rather than
  * the parsed values, because a typed array's element type (`Array[ExtResource("2_x")]([...])`) is a reference too.
  */
-function resourceRefs(text: string): ResourceRef[] {
+export function resourceRefs(text: string): ResourceRef[] {
+  // A scanner, not a regex: one pass over the text, so a long or broken file stays linear. A string that is never
+  // closed runs to the end of the text, as Godot reads it.
   const out: ResourceRef[] = [];
+  const n = text.length;
   let line = 1;
-  let last = 0;
-  for (const m of text.matchAll(/"(?:[^"\\]|\\.)*"|\b(ExtResource|SubResource)\(\s*(?:"((?:[^"\\]|\\.)*)"|([^\s)]+))\s*\)/g)) {
-    if (!m[1]) continue;
-    for (let i = last; i < m.index; i++) if (text.charCodeAt(i) === 10) line++;
-    last = m.index;
-    out.push({ kind: m[1] as ResourceRef["kind"], id: m[2] ?? m[3] ?? "", line });
+  let i = 0;
+  const isSpace = (c: number) => c === 32 || c === 9 || c === 10 || c === 13 || c === 11 || c === 12;
+  const isWord = (c: number) => (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95;
+  // Index of the closing quote of the string that opens at `start`, or -1.
+  const closeQuote = (start: number) => {
+    for (let k = start + 1; k < n; k++) {
+      const c = text.charCodeAt(k);
+      if (c === 92) k++;
+      else if (c === 34) return k;
+    }
+    return -1;
+  };
+  const countLines = (from: number, to: number) => {
+    for (let k = from; k < to; k++) if (text.charCodeAt(k) === 10) line++;
+  };
+  while (i < n) {
+    const c = text.charCodeAt(i);
+    if (c === 34) {
+      const end = closeQuote(i);
+      if (end < 0) break;
+      countLines(i, end);
+      i = end + 1;
+      continue;
+    }
+    const kind = c === 69 && text.startsWith("ExtResource(", i) ? "ExtResource" : c === 83 && text.startsWith("SubResource(", i) ? "SubResource" : undefined;
+    if (!kind || (i > 0 && isWord(text.charCodeAt(i - 1)))) {
+      if (c === 10) line++;
+      i++;
+      continue;
+    }
+    let j = i + kind.length + 1;
+    while (j < n && isSpace(text.charCodeAt(j))) j++;
+    let id: string | undefined;
+    let runEnd = -1;
+    if (text.charCodeAt(j) === 34) {
+      const end = closeQuote(j);
+      if (end >= 0) {
+        id = text.slice(j + 1, end);
+        j = end + 1;
+      }
+    } else {
+      const from = j;
+      while (j < n && !isSpace(text.charCodeAt(j)) && text.charCodeAt(j) !== 41) j++;
+      if (j > from) id = text.slice(from, j);
+      runEnd = j;
+    }
+    if (id !== undefined) {
+      while (j < n && isSpace(text.charCodeAt(j))) j++;
+      if (text.charCodeAt(j) === 41) {
+        out.push({ kind, id, line });
+        countLines(i, j);
+        i = j + 1;
+        continue;
+      }
+    }
+    // Not a reference after all. A reference that starts later in the same unquoted run would end at the same place
+    // and fail the same way, so skip to the end of the run or to the next quote in it, whichever comes first.
+    let next = i + 1;
+    if (runEnd > 0) {
+      while (next < runEnd && text.charCodeAt(next) !== 34) next++;
+      countLines(i, next);
+    }
+    i = next;
   }
   return out;
 }
