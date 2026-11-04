@@ -13,10 +13,13 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **Recipe `traffic-light`:** a three-aspect signal with separately named red, amber and green lenses (#136).
 - **Archetypes for indoor and street furniture:** bed, sofa, bookcase, cupboard, bench, waste bin, mailbox, fire
   hydrant and bus stop, with English and Dutch aliases. The Dutch `bank` matches both sofa and bench on purpose (#137).
+- **Review: no `performance/print-per-frame` for debug-only prints.** A `print()` under `if OS.is_debug_build():`,
+  `if debug:` or another `if` that tests a debug flag is no longer reported (#148).
 
 ### Thanks
 
 - @ANO3457 for #127, #129, #130, #136 and #137.
+- @bfs2021 for the debug-guarded print fix (#148).
 - In 0.6.0: @Vamsi-2581 for the duplicate `funcref` fix (#83) and @bfs2021 for the Packed-type hint on Godot 3 Pool
   arrays (#91).
 
