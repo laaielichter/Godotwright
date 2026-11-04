@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
 import { GodotApi } from "../api/api.js";
+import type { ApiMethod } from "../api/types.js";
 import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
@@ -256,11 +257,7 @@ class Migrator {
     line = this.calls(line);
 
     // Members that moved to another class: OS.get_ticks_msec() is Time.get_ticks_msec().
-    for (const [from, to] of Object.entries(MOVED)) {
-      if (!/^[\w.()]+$/.test(to)) continue;
-      const [cls, name] = from.split(".") as [string, string];
-      line = this.sub(line, new RegExp(`\\b${cls}\\.${name}\\b(\\s*\\(\\s*\\))?`, "g"), "moved", () => to);
-    }
+    line = this.movedMembers(line);
 
     // Renamed classes and built-in types, only when the Godot 3 name does not exist in Godot 4 or this script.
     line = this.sub(line, /(?<![$/%.\w])[A-Z]\w*\b/g, "class", (m) => {
@@ -285,6 +282,59 @@ class Migrator {
 
     this.leftovers(line);
     return line;
+  }
+
+  /** Members that moved to another class (the MOVED table): the Godot 4 name replaces the old
+   * one. A call keeps its arguments inside the Godot 4 call (OS.get_datetime(true) is
+   * Time.get_datetime_dict_from_system(true)); a property whose Godot 4 form is a method with a
+   * required parameter is left alone, so leftovers() explains it (#142). */
+  private movedMembers(line: string): string {
+    for (const [from, to] of Object.entries(MOVED)) {
+      if (!/^[\w.()]+$/.test(to)) continue;
+      // DisplayServer.window_set_mode() and friends take an argument no property use can give
+      // them: writing the method form would produce code that does not parse or lies.
+      if (to.endsWith("()") && this.needsArgument(to)) continue;
+      const [cls, name] = from.split(".") as [string, string];
+      const re = new RegExp(`\\b${cls}\\.${name}\\b(\\s*\\(\\s*\\))?`, "g");
+      let at = 0;
+      for (;;) {
+        const mask = codeMask(line, {});
+        re.lastIndex = at;
+        const m = re.exec(line);
+        if (!m) break;
+        if (!mask[m.index]) {
+          at = m.index + Math.max(1, m[0].length);
+          continue;
+        }
+        let toText = to;
+        let end = m.index + m[0].length;
+        if (to.endsWith("()")) {
+          const open = line.indexOf("(", end);
+          if (open >= end && /^\s*$/.test(line.slice(end, open))) {
+            const close = closeParen(line, open, mask);
+            if (close > open) {
+              toText = `${to.slice(0, -2)}(${line.slice(open + 1, close)})`;
+              end = close + 1;
+            }
+          }
+        }
+        this.note("moved", m[0], toText);
+        line = line.slice(0, m.index) + toText + line.slice(end);
+        at = m.index + toText.length;
+      }
+    }
+    return line;
+  }
+
+  /** True when the Godot 4 member behind a `Class.method()` form has a parameter with no default. */
+  private needsArgument(to: string): boolean {
+    const [cls, name] = to.slice(0, -2).split(".");
+    for (const e of this.api.member(cls as string, name as string)) {
+      if (e.kind !== "method") continue;
+      const params = (e.item as ApiMethod).params ?? [];
+      if (params.some((p) => p.default === undefined)) return true;
+    }
+    return false;
   }
 
   private exportHint(indent: string, hint: string, name: string, typed: string | undefined): string {

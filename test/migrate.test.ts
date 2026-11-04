@@ -105,6 +105,24 @@ describe("migrate a script", () => {
     expect(m.left).toEqual([]);
   });
 
+  it("moves members with their call arguments, and leaves property forms that need one", () => {
+    // A call keeps its arguments inside the Godot 4 call.
+    expect(code("var d = OS.get_datetime(true)")).toBe("var d = Time.get_datetime_dict_from_system(true)");
+    expect(code("var s = OS.get_screen_size(1)")).toBe("var s = DisplayServer.screen_get_size(1)");
+    // A property whose Godot 4 form is a method with a required parameter stays, and the window
+    // TO DO fires instead of writing code that does not parse or calls the wrong thing.
+    const fullscreen = migrateScript("OS.window_fullscreen = true", api);
+    expect(fullscreen.code).toBe("OS.window_fullscreen = true");
+    expect(fullscreen.left.map((l) => l.message).join(" ")).toContain("window_set_mode");
+    const vsync = migrateScript("if OS.vsync_enabled:", api);
+    expect(vsync.code).toBe("if OS.vsync_enabled:");
+    expect(vsync.left.map((l) => l.message).join(" ")).toContain("window_set_vsync_mode");
+    // Rewrites that already worked stay as they are.
+    expect(code("var t = OS.get_ticks_msec()")).toBe("var t = Time.get_ticks_msec()");
+    expect(code("if Engine.editor_hint:")).toBe("if Engine.is_editor_hint():");
+    expect(code("OS.window_position = Vector2(10, 10)")).toBe("get_window().position = Vector2(10, 10)");
+  });
+
   it("lists what it cannot do by hand, once per line", () => {
     const m = migrateScript("var hp = 1 setget\nmaster func ping():\n\tpass\nfunc f():\n\tmove_and_slide(v, Vector3.UP)\n\tyield()", api);
     const msgs = m.left.map((l) => `${l.line}:${l.message.split(":")[0]}`);
