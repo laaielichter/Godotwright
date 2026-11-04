@@ -15,11 +15,14 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   hydrant and bus stop, with English and Dutch aliases. The Dutch `bank` matches both sofa and bench on purpose (#137).
 - **Review: no `performance/print-per-frame` for debug-only prints.** A `print()` under `if OS.is_debug_build():`,
   `if debug:` or another `if` that tests a debug flag is no longer reported (#148).
+- **`godotwright migrate`: moved members keep their call arguments.** `OS.get_datetime(true)` becomes
+  `Time.get_datetime_dict_from_system(true)` instead of `...()(true)`. A property such as `OS.window_fullscreen`,
+  whose Godot 4 form needs an argument, is left for a TODO instead of becoming code that does not parse (#153).
 
 ### Thanks
 
 - @ANO3457 for #127, #129, #130, #136 and #137.
-- @bfs2021 for the debug-guarded print fix (#148).
+- @bfs2021 for the debug-guarded print fix (#148) and the moved-member arguments in migrate (#153).
 - In 0.6.0: @Vamsi-2581 for the duplicate `funcref` fix (#83) and @bfs2021 for the Packed-type hint on Godot 3 Pool
   arrays (#91).
 
