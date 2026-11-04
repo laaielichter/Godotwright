@@ -3,6 +3,7 @@ import { kb } from "../export/contents.js";
 import { runExport, type ExportRun } from "../export/run.js";
 import { findProjectRoot } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
+import { ciAnnotations } from "../review/annotations.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { DIFF_DIR, formatBaseline, loadBaselines, type BaselineResult } from "../screenshot/baseline.js";
@@ -27,6 +28,8 @@ export interface CiReport {
   steps: CiStep[];
   /** The full results behind the test and scenario steps (only with keepResults), e.g. for JUnit XML. */
   results?: { tests?: TestReport; scenarios?: ScenarioResult[] };
+  /** GitHub Actions workflow commands, separate from the markdown receipt. */
+  annotations?: string[];
 }
 
 export interface CiOptions {
@@ -43,6 +46,8 @@ export interface CiOptions {
   maxDetails?: number;
   /** Keep the full test and scenario results in the report (`results`), with the framework's JUnit XML. */
   keepResults?: boolean;
+  /** Include GitHub Actions workflow-command annotations for review findings and Godot diagnostics. */
+  keepAnnotations?: boolean;
   /** The real steps, replaceable in tests. */
   deps?: Partial<CiDeps>;
 }
@@ -147,16 +152,21 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
   const deps = { ...REAL, ...options.deps };
   const max = options.maxDetails ?? 10;
   const steps: CiStep[] = [];
+  const annotationLines: string[] = [];
   const kept: NonNullable<CiReport["results"]> = {};
 
-  steps.push(reviewStep(deps.review(root, { includeAddons: options.includeAddons }), max));
+  const review = deps.review(root, { includeAddons: options.includeAddons });
+  steps.push(reviewStep(review, max));
+  if (options.keepAnnotations) annotationLines.push(...ciAnnotations(review, [], root));
 
   const skip = (name: CiStep["name"], why: string): CiStep => ({ name, status: "skip", summary: why, details: [] });
   if (options.noGodot) {
     for (const name of ["check", "test", "scenarios", "visual"] as const) steps.push(skip(name, "skipped (--no-godot-checks)"));
     if (options.exportPreset) steps.push(skip("export", "skipped (--no-godot-checks)"));
   } else {
-    steps.push(checkStep(await deps.check(root, { godot: options.godot, includeAddons: options.includeAddons }), max));
+    const checked = await deps.check(root, { godot: options.godot, includeAddons: options.includeAddons });
+    steps.push(checkStep(checked, max));
+    if (options.keepAnnotations) annotationLines.push(...ciAnnotations(undefined, checked.diagnostics, root));
     if (detectFramework(root)) {
       const tests = await deps.test(root, { godot: options.godot, import: false, ...(options.keepResults ? { keepXml: true } : {}) });
       kept.tests = tests;
@@ -187,7 +197,7 @@ export async function runCi(path: string, options: CiOptions = {}): Promise<CiRe
     steps.push(visuals.length ? visualStep(visuals, max) : skip("visual", `no baselines in ${dir ?? ".godotwright/baselines"}`));
     if (options.exportPreset) steps.push(exportStep(await deps.export(root, { preset: options.exportPreset, mode: "pack", import: false, ...(options.godot ? { godot: options.godot } : {}) }), max));
   }
-  return { project: root, ok: steps.every((s) => s.status !== "fail"), steps, ...(options.keepResults ? { results: kept } : {}) };
+  return { project: root, ok: steps.every((s) => s.status !== "fail"), steps, ...(options.keepResults ? { results: kept } : {}), ...(options.keepAnnotations ? { annotations: annotationLines } : {}) };
 }
 
 const MARK: Record<StepStatus, string> = { pass: "✅", fail: "❌", skip: "➖" };

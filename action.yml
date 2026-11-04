@@ -25,6 +25,9 @@ inputs:
   junit:
     description: "Also write the results as JUnit XML to this file (relative to the workspace), for a test-report step such as GitLab's, Jenkins' or a JUnit report action. Empty: no file."
     default: ""
+  annotations:
+    description: Print review findings and Godot diagnostics as GitHub Actions annotations on their file and line.
+    default: "true"
   token:
     description: Token used to post the comment.
     default: ${{ github.token }}
@@ -80,18 +83,22 @@ runs:
         EXPORT_PRESET: ${{ inputs.export-preset }}
         BASELINE_DIR: ${{ inputs.baseline-dir }}
         JUNIT: ${{ inputs.junit }}
+        ANNOTATIONS: ${{ inputs.annotations }}
       run: |
         flags=()
         if [ -n "$BASELINE_DIR" ]; then flags+=(--baseline-dir "$BASELINE_DIR"); fi
         if [ "$REVIEW_ONLY" = "true" ]; then flags+=(--no-godot-checks); else export GODOT="$HOME/godot/godot"; fi
         if [ -n "$EXPORT_PRESET" ]; then flags+=(--export-preset "$EXPORT_PRESET"); fi
         if [ -n "$JUNIT" ]; then flags+=(--junit "$JUNIT"); echo "junit=$JUNIT" >> "$GITHUB_OUTPUT"; fi
+        annotations="$RUNNER_TEMP/godotwright-annotations.txt"
+        if [ "$ANNOTATIONS" = "true" ]; then flags+=(--annotations "$annotations"); fi
         receipt="$RUNNER_TEMP/godotwright-receipt.md"
         set +e
         $GODOTWRIGHT ci "$PROJECT" "${flags[@]}" > "$receipt"
         code=$?
         set -e
         cat "$receipt"
+        if [ "$ANNOTATIONS" = "true" ] && [ -f "$annotations" ]; then cat "$annotations"; fi
         cat "$receipt" >> "$GITHUB_STEP_SUMMARY"
         echo "receipt=$receipt" >> "$GITHUB_OUTPUT"
         echo "code=$code" >> "$GITHUB_OUTPUT"
