@@ -48,7 +48,7 @@ export function checkScriptPerformance(pm: ProjectModel, path: string): Finding[
         if (LOAD.test(code) && !isLazyInit(body, ll)) {
           out.push(finding("performance/load-per-frame", path, ll.line, `load() in ${where} runs every frame; use preload() or load once.`));
         }
-        if (PRINT.test(code)) {
+        if (PRINT.test(code) && !isDebugGuarded(body, ll)) {
           out.push(finding("performance/print-per-frame", path, ll.line, `print() in ${where} prints every frame and slows the game.`));
         }
         if (fn.name === "_process" && PHYSICS.test(code)) {
@@ -95,6 +95,17 @@ function isLazyInit(body: LogicalLine[], ll: LogicalLine): boolean {
   if (!assign) return false;
   const parent = [...body].reverse().find((l) => l.line < ll.line && l.indent < ll.indent);
   return parent !== undefined && new RegExp(`^if\\s+(not\\s+${assign[1]}|${assign[1]}\\s*==\\s*null)\\s*:$`).test(parent.text);
+}
+
+/** True when the statement sits under an `if` that tests a debug flag, e.g. `if OS.is_debug_build():`. */
+function isDebugGuarded(body: LogicalLine[], ll: LogicalLine): boolean {
+  let current = ll;
+  while (true) {
+    const parent = [...body].reverse().find((l) => l.line < current.line && l.indent < current.indent);
+    if (parent === undefined) return false;
+    if (/^if\b/.test(parent.code) && /debug/i.test(parent.code)) return true;
+    current = parent;
+  }
 }
 
 /** The statement after the colon that ends the `func` header, as its own line; undefined when the body is below. */

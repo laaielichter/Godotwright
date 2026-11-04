@@ -377,6 +377,30 @@ describe("review robustness", () => {
     });
   });
 
+  it("does not flag a print guarded by a debug check in a per-frame function", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": [
+        "extends Node",
+        "",
+        "func _process(_delta: float) -> void:",
+        "\tif OS.is_debug_build():",
+        "\t\tprint(position)",
+        "\tif debug:",
+        "\t\tprint(position)",
+        "\tif _debug_enabled and visible:",
+        "\t\tprint(position)",
+        "\tif speed > 10.0:",
+        "\t\tprint(position)",
+        "",
+      ].join("\n"),
+    });
+    const performance = reviewProject(root).findings.filter((f) => f.category === "performance").map(formatFinding);
+    expect(performance).toEqual([
+      "res://main.gd:11: info [performance/print-per-frame] print() in _process() prints every frame and slows the game.",
+    ]);
+  });
+
   it("does not flag a lazily cached load or lookup in a per-frame function", () => {
     const root = makeProject({
       "project.godot": PROJECT,
