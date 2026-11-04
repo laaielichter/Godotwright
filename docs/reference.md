@@ -289,14 +289,15 @@ godotwright review                  # what is still wrong, with line numbers
 ```
 
 `migrate` rewrites the mechanical part of a port: `export`, `onready` and `tool` become annotations (with `@export_range`,
-`@export_enum`, `@export_file` and typed arrays where the hint is clear), renamed classes, functions, properties and
-constants get their Godot 4 names (only when the old name no longer exists in Godot 4 and is not defined in the script),
-`yield(x, "sig")` becomes `await x.sig`, `connect("sig", target, "method", [binds])` becomes
+`@export_enum`, `@export_file`, `@export_flags`, `@export_color_no_alpha`, `@export_exp_easing` and typed arrays where the hint is clear),
+network keywords become `@rpc(...)` annotations, simple `setget` becomes Godot 4 property syntax (`set = ...`, `get = ...`),
+renamed classes, functions, properties and constants get their Godot 4 names (only when the old name no longer exists in Godot 4 and
+is not defined in the script), `yield(x, "sig")` becomes `await x.sig`, `connect("sig", target, "method", [binds])` becomes
 `sig.connect(target.method.bind(...))`, `emit_signal` and `funcref` become signals and callables, and members that moved
 (`OS.get_ticks_msec()`) move to their new class. Strings, comments and node paths are left alone. What it cannot do safely
-it lists with the line: `setget`, `move_and_slide(velocity)`, `remote func`, export hints it does not know. Scenes and
-project settings are not touched; Godot's own `--convert-3to4` does those. Commit first; a second run makes no further
-changes.
+it lists with the line: a `setget` it cannot convert, `move_and_slide(velocity)`, `master`/`mastersync`, `yield()` without
+arguments, export hints it does not know. Scenes and project settings are not touched; Godot's own `--convert-3to4` does those.
+Commit first; a second run makes no further changes.
 
 `migrate` also ports `.gdshader` and `.gdshaderinc` files: the names in Godot's own shader rename table (`hint_albedo` and
 `hint_color` to `source_color`, `hint_black_albedo` to `source_color, hint_default_black`, `WORLD_MATRIX` to
