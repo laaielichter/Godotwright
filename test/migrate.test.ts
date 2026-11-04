@@ -68,6 +68,20 @@ describe("migrate a script", () => {
     expect(m.left[0]?.message).toContain("export hint");
   });
 
+  it("converts GLOBAL file and dir hints, String enums and one-number ranges", () => {
+    expect(code('export(String, FILE, GLOBAL, "*.png") var p')).toBe('@export_global_file("*.png") var p: String');
+    expect(code("export(String, FILE, GLOBAL) var p")).toBe("@export_global_file var p: String");
+    expect(code("export(String, DIR, GLOBAL) var d")).toBe("@export_global_dir var d: String");
+    expect(code('export(String, "Rebecca", "Mary", "Leah") var n')).toBe('@export_enum("Rebecca", "Mary", "Leah") var n: String');
+    expect(code("export(int, 20) var i")).toBe("@export_range(0, 20) var i: int");
+    expect(code("export(float, 1.5) var f")).toBe("@export_range(0, 1.5) var f: float");
+    // The project-scoped and already-working forms stay as they are.
+    expect(code('export(String, FILE, "*.png") var icon')).toBe('@export_file("*.png") var icon: String');
+    expect(code("export(String, DIR) var d")).toBe("@export_dir var d: String");
+    expect(code('export(int, "A", "B") var mode = 0')).toBe('@export_enum("A", "B") var mode: int = 0');
+    expect(code("export(int, 0, 10) var speed = 5")).toBe("@export_range(0, 10) var speed: int = 5");
+  });
+
   it("rewrites signals and callables with their arguments", () => {
     expect(code('timer.connect("timeout", self, "_on_timeout")')).toBe("timer.timeout.connect(self._on_timeout)");
     expect(code('connect("hit", self, "_on_hit", [1, "a"])')).toBe('hit.connect(self._on_hit.bind(1, "a"))');

@@ -346,7 +346,10 @@ class Migrator {
     const suffix = typed ?? (known ? `: ${renamed}` : "");
     if (rest.length === 0) return `${indent}@export var ${name}${suffix}`;
     if ((renamed === "int" || renamed === "float") && rest.length >= 2 && rest.every((a) => /^-?[\d.]+$/.test(a))) return `${indent}@export_range(${rest.join(", ")}) var ${name}${suffix}`;
+    // In Godot 3 a range hint with one number meant 0 to that number.
+    if ((renamed === "int" || renamed === "float") && rest.length === 1 && /^-?[\d.]+$/.test(rest[0] as string)) return `${indent}@export_range(0, ${rest[0]}) var ${name}${suffix}`;
     if (renamed === "int" && rest.every((a) => quoted(a) !== undefined)) return `${indent}@export_enum(${rest.join(", ")}) var ${name}${suffix}`;
+    if (renamed === "String" && rest.every((a) => quoted(a) !== undefined)) return `${indent}@export_enum(${rest.join(", ")}) var ${name}${suffix}`;
     if (renamed === "int" && rest[0] === "FLAGS" && rest.slice(1).every((a) => quoted(a) !== undefined)) return `${indent}@export_flags(${rest.slice(1).join(", ")}) var ${name}${suffix}`;
     if (renamed === "Color" && rest.length === 1 && rest[0] === "RGB") return `${indent}@export_color_no_alpha var ${name}${suffix}`;
     if (renamed === "Color" && rest.length === 1 && rest[0] === "RGBA") return `${indent}@export var ${name}${suffix}`;
@@ -356,8 +359,15 @@ class Migrator {
       return `${indent}@export_range(${rest.slice(1).join(", ")}, "exp") var ${name}${suffix}`;
     }
     if (renamed === "float" && rest.length === 1 && rest[0] === "EASE") return `${indent}@export_exp_easing var ${name}${suffix}`;
-    if (renamed === "String" && rest[0] === "FILE") return `${indent}@export_file${rest[1] ? `(${rest[1]})` : ""} var ${name}${suffix}`;
-    if (renamed === "String" && rest[0] === "DIR") return `${indent}@export_dir var ${name}${suffix}`;
+    if (renamed === "String" && rest[0] === "FILE") {
+      // FILE GLOBAL is the machine-wide file picker; Godot 4 gives it its own annotation.
+      if (rest[1] === "GLOBAL") return `${indent}@export_global_file${rest[2] ? `(${rest[2]})` : ""} var ${name}${suffix}`;
+      return `${indent}@export_file${rest[1] ? `(${rest[1]})` : ""} var ${name}${suffix}`;
+    }
+    if (renamed === "String" && rest[0] === "DIR") {
+      if (rest[1] === "GLOBAL") return `${indent}@export_global_dir var ${name}${suffix}`;
+      return `${indent}@export_dir var ${name}${suffix}`;
+    }
     if (renamed === "String" && rest[0] === "MULTILINE") return `${indent}@export_multiline var ${name}${suffix}`;
     if (renamed === "Array" && rest.length === 1 && this.api.classes.has(this.api.data.renames.classes?.[rest[0] as string] ?? (rest[0] as string))) {
       return `${indent}@export var ${name}: Array[${this.api.data.renames.classes?.[rest[0] as string] ?? rest[0]}]`;
