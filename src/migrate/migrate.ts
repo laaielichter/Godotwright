@@ -366,9 +366,9 @@ class Migrator {
     return `${indent}@export var ${name}${suffix}`;
   }
 
-  /** yield(), connect(), disconnect(), is_connected(), emit_signal() and funcref() calls, rewritten with their arguments. */
+  /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN and polar2cartesian calls. */
   private calls(line: string): string {
-    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref)\s*\(/g;
+    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian)\s*\(/g;
     let from = 0;
     for (;;) {
       const mask = codeMask(line, {});
@@ -392,13 +392,34 @@ class Migrator {
         from = open + 1;
         continue;
       }
-      this.note(name === "yield" ? "await" : "signal", whole, to);
+      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian") ? "rename" : "signal";
+      this.note(rule, whole, to);
       line = line.slice(0, receiverStart) + to + line.slice(close + 1);
       from = receiverStart + to.length;
     }
   }
 
   private call(name: string, receiver: string, args: string[], whole: string): string | undefined {
+    if (name === "to_json") {
+      if (receiver || this.defined.has("to_json")) return undefined;
+      if (args.length === 1) return `JSON.stringify(${args[0]}, "", false)`;
+      return undefined;
+    }
+    if (name === "parse_json") {
+      if (receiver || this.defined.has("parse_json")) return undefined;
+      if (args.length === 1) return `JSON.parse_string(${args[0]})`;
+      return undefined;
+    }
+    if (name === "ColorN") {
+      if (receiver || this.defined.has("ColorN")) return undefined;
+      if (args.length >= 1 && args.length <= 2) return `Color(${args.join(", ")})`;
+      return undefined;
+    }
+    if (name === "polar2cartesian") {
+      if (receiver || this.defined.has("polar2cartesian")) return undefined;
+      if (args.length === 2) return `(Vector2.from_angle(${args[1]}) * ${args[0]})`;
+      return undefined;
+    }
     const r = this.api.data.renames.signals ?? {};
     const sig = (s: string | undefined) => {
       const q = s === undefined ? undefined : quoted(s);
@@ -462,6 +483,7 @@ class Migrator {
     if (at(/\bOS\.window_(fullscreen|size|borderless)\b/g) || at(/\bOS\.vsync_enabled\b/g)) this.todo("window settings moved to DisplayServer.window_set_mode() / window_set_size() / window_set_vsync_mode(), or get_window()");
     if (at(/\bget_tree\(\)\.set_input_as_handled\(/g)) this.todo("set_input_as_handled() is on the Viewport in Godot 4: get_viewport().set_input_as_handled()");
     if (at(/\.rotate\s*\(\s*Vector3\.(UP|RIGHT|FORWARD|BACK|LEFT|DOWN)/g)) this.todo("rotate(axis, angle) is unchanged, but Vector3 constants are the same; check rotation order if the result differs");
+    if (at(/\bcartesian2polar\s*\(/g) && !this.defined.has("cartesian2polar")) this.todo("cartesian2polar(x, y) is gone in Godot 4: use Vector2(x, y).length() for radius and Vector2(x, y).angle() for angle");
   }
 }
 

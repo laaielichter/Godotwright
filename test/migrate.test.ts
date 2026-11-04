@@ -83,6 +83,30 @@ describe("migrate a script", () => {
     expect(dynamic.left[0]?.message).toContain("dynamic");
   });
 
+  it("rewrites to_json, parse_json, ColorN and polar2cartesian (#144)", () => {
+    expect(code("var text = to_json(data)")).toBe('var text = JSON.stringify(data, "", false)');
+    expect(code("var val = parse_json(text)")).toBe("var val = JSON.parse_string(text)");
+    expect(code('var c1 = ColorN("red")')).toBe('var c1 = Color("red")');
+    expect(code('var c2 = ColorN("red", 0.5)')).toBe('var c2 = Color("red", 0.5)');
+    expect(code("var v = polar2cartesian(10, PI)")).toBe("var v = (Vector2.from_angle(PI) * 10)");
+
+    // Look-alikes left alone:
+    expect(code("var t = data.to_json()")).toBe("var t = data.to_json()");
+    expect(code("func to_json():\n\treturn {}\nfunc go():\n\tvar x = to_json()")).toBe("func to_json():\n\treturn {}\nfunc go():\n\tvar x = to_json()");
+
+    // cartesian2polar gets a TO DO:
+    const polar = migrateScript("var p = cartesian2polar(1, 2)", api);
+    expect(polar.code).toBe("var p = cartesian2polar(1, 2)");
+    expect(polar.left[0]?.message).toContain("cartesian2polar(x, y) is gone in Godot 4");
+
+    // Reviewing migrated code gives no api/unknown-function for rewritten functions
+    const script = `extends Node\nfunc test():\n\tvar text = to_json({"a": 1})\n\tvar val = parse_json(text)\n\tvar c = ColorN("red", 0.5)\n\tvar v = polar2cartesian(10.0, 1.0)\n`;
+    const migrated = migrateScript(script, api);
+    const root = makeProject({ "project.godot": PROJECT, "test.gd": migrated.code });
+    const findings = reviewProject(root).findings.filter((f) => f.rule === "api/unknown-function");
+    expect(findings).toEqual([]);
+  });
+
   it("renames only Godot 3 names that do not exist in Godot 4 or in the script", () => {
     expect(code("var r = rand_range(1, 2)\nvar s = stepify(x, 0.5)\nvar b = BUTTON_LEFT")).toBe("var r = randf_range(1, 2)\nvar s = snapped(x, 0.5)\nvar b = MOUSE_BUTTON_LEFT");
     // `empty` is this script's own function: it stays.
