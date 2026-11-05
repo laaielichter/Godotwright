@@ -272,6 +272,7 @@ class Migrator {
     });
 
     line = this.calls(line);
+    line = this.jsonParseResult(line);
 
     // Members that moved to another class: OS.get_ticks_msec() is Time.get_ticks_msec().
     line = this.movedMembers(line);
@@ -307,7 +308,7 @@ class Migrator {
    * required parameter is left alone, so leftovers() explains it (#142). */
   private movedMembers(line: string): string {
     for (const [from, to] of Object.entries(MOVED)) {
-      if (!/^[\w.()]+$/.test(to)) continue;
+      if (!/^[\w.()]+$/.test(to) || from === "JSON.print") continue;
       // DisplayServer.window_set_mode() and friends take an argument no property use can give
       // them: writing the method form would produce code that does not parse or lies.
       if (to.endsWith("()") && this.needsArgument(to)) continue;
@@ -393,9 +394,42 @@ class Migrator {
     return `${indent}@export var ${name}${suffix}`;
   }
 
-  /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN, polar2cartesian and update calls. */
+  /** Rewrites JSON.parse(x).result to JSON.parse_string(x). */
+  private jsonParseResult(line: string): string {
+    const re = /\bJSON\.parse\s*\(/g;
+    let from = 0;
+    for (;;) {
+      const mask = codeMask(line, {});
+      re.lastIndex = from;
+      const m = re.exec(line);
+      if (!m) return line;
+      const open = m.index + m[0].length - 1;
+      const close = closeParen(line, open, mask);
+      if (!mask[m.index] || close < 0) {
+        from = open + 1;
+        continue;
+      }
+      const tail = line.slice(close + 1);
+      const dotResult = /^\s*\.\s*result\b/.exec(tail);
+      if (dotResult) {
+        const args = splitArgs(line.slice(open + 1, close));
+        if (args.length === 1) {
+          const end = close + 1 + dotResult[0].length;
+          const whole = line.slice(m.index, end);
+          const to = `JSON.parse_string(${args[0]})`;
+          this.note("rename", whole, to);
+          line = line.slice(0, m.index) + to + line.slice(end);
+          from = m.index + to.length;
+          continue;
+        }
+      }
+      from = close + 1;
+    }
+  }
+
+  /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN, polar2cartesian, update and print calls. */
   private calls(line: string): string {
-    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian|update)\s*\(/g;
+    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian|update|print)\s*\(/g;
     let from = 0;
     for (;;) {
       const mask = codeMask(line, {});
@@ -419,7 +453,7 @@ class Migrator {
         from = open + 1;
         continue;
       }
-      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian" || name === "update") ? "rename" : "signal";
+      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian" || name === "update" || name === "print") ? "rename" : "signal";
       this.note(rule, whole, to);
       line = line.slice(0, receiverStart) + to + line.slice(close + 1);
       from = receiverStart + to.length;
@@ -427,6 +461,13 @@ class Migrator {
   }
 
   private call(name: string, receiver: string, args: string[], whole: string): string | undefined {
+    if (name === "print") {
+      if (receiver !== "JSON") return undefined;
+      if (args.length === 1) return `JSON.stringify(${args[0]}, "", false)`;
+      if (args.length === 2) return `JSON.stringify(${args[0]}, ${args[1]}, false)`;
+      if (args.length === 3) return `JSON.stringify(${args[0]}, ${args[1]}, ${args[2]})`;
+      return undefined;
+    }
     if (name === "to_json") {
       if (receiver || this.defined.has("to_json")) return undefined;
       if (args.length === 1) return `JSON.stringify(${args[0]}, "", false)`;
@@ -518,6 +559,9 @@ class Migrator {
     if (at(/\bcartesian2polar\s*\(/g) && !this.defined.has("cartesian2polar")) this.todo("cartesian2polar(x, y) is gone in Godot 4: use Vector2(x, y).length() for radius and Vector2(x, y).angle() for angle");
     if (this.baseIsPath && at(/(?<!\.)\bupdate\s*\(\s*\)/g) && !this.defined.has("update")) {
       this.todo("update() is queue_redraw() in CanvasItem scripts: check whether this script's base class is a CanvasItem");
+    }
+    if (at(/\bJSON\.parse\s*\(/g)) {
+      this.todo("JSON.parse() returns an Error in Godot 4: use JSON.parse_string(x) (null on error), or var json = JSON.new(); json.parse(x) with json.data and json.get_error_message()");
     }
   }
 }

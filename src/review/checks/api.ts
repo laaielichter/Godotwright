@@ -44,6 +44,7 @@ export const MOVED: Record<string, string> = {
   "OS.get_screen_size": "DisplayServer.screen_get_size()",
   "OS.vsync_enabled": "DisplayServer.window_set_vsync_mode()",
   "Engine.editor_hint": "Engine.is_editor_hint()",
+  "JSON.print": "JSON.stringify()",
 };
 
 /**
