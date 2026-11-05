@@ -24,6 +24,27 @@ describe("GitHub Actions annotations", () => {
     expect(annotationFile("res://main.gd", project, cwd, elsewhere)).toBe("game/main.gd");
   });
 
+  it("omits file locations outside both the workspace and current directory", () => {
+    const project = makeProject({ "project.godot": "", "main.gd": "" });
+    const cwd = makeProject({ "repo/project.godot": "" });
+    const workspace = makeProject({ "checkout/project.godot": "" });
+    const report = {
+      findings: [
+        { severity: "error", message: "external", file: "res://main.gd", line: 7, rule: "path/external" },
+      ],
+    } as never;
+
+    expect(annotationFile("res://main.gd", project, cwd, workspace)).toBeUndefined();
+    expect(reviewAnnotations(report, { projectRoot: project, cwd, workspace })).toEqual([
+      "::error line=7,title=path/external::external",
+    ]);
+    expect(ciAnnotations(undefined, [
+      { severity: "warning", message: "external", file: "res://main.gd", line: 8, source: "engine" },
+    ], project, { cwd, workspace })).toEqual([
+      "::warning line=8,title=engine::external",
+    ]);
+  });
+
   it("emits safe annotations and includes infos only in full detail", () => {
     const root = makeProject({ "project.godot": "", "main.gd": "", "a,b.gd": "" });
     const report = {
@@ -32,12 +53,12 @@ describe("GitHub Actions annotations", () => {
         { severity: "info", message: "extra", file: "res://missing.gd", rule: "quality/info" },
       ],
     } as never;
-    const brief = reviewAnnotations(report, { projectRoot: root });
+    const brief = reviewAnnotations(report, { projectRoot: root, cwd: root, workspace: root });
     expect(brief).toEqual(["::error file=main.gd,line=7,title=api/bad%2Crule::bad %25%0A::warning::injected"]);
-    expect(reviewAnnotations(report, { detailFull: true, projectRoot: root })).toHaveLength(2);
+    expect(reviewAnnotations(report, { detailFull: true, projectRoot: root, cwd: root, workspace: root })).toHaveLength(2);
     expect(annotationFile("res://a,b.gd", root, root, root)).toBe("a,b.gd");
     const comma = { findings: [{ severity: "warning", message: "comma, colon: and %", file: "res://a,b.gd", line: 8, rule: "rule:comma" }] } as never;
-    expect(reviewAnnotations(comma, { projectRoot: root })).toEqual(["::warning file=a%2Cb.gd,line=8,title=rule%3Acomma::comma,%3A and %25"]);
+    expect(reviewAnnotations(comma, { projectRoot: root, cwd: root, workspace: root })).toEqual(["::warning file=a%2Cb.gd,line=8,title=rule%3Acomma::comma,%3A and %25"]);
   });
 
   it("includes Godot diagnostics and omits the file property for missing files", () => {
@@ -45,7 +66,7 @@ describe("GitHub Actions annotations", () => {
     const lines = ciAnnotations(undefined, [
       { severity: "error", message: "bad", file: "res://main.gd", line: 4, source: "script" },
       { severity: "warning", message: "missing", file: "res://absent.gd", line: 2, source: "engine" },
-    ], root);
+    ], root, { cwd: root, workspace: root });
     expect(lines).toEqual(["::error file=main.gd,line=4,title=script::bad", "::warning line=2,title=engine::missing"]);
   });
 });
