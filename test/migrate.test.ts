@@ -189,6 +189,34 @@ describe("migrate a script", () => {
     const script = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
     expect(script.left).toEqual([]);
   });
+
+  it("rewrites update() to queue_redraw() in scripts that extend a CanvasItem (#162)", () => {
+    // Control, Node2D, Sprite (renamed to Sprite2D) are CanvasItem
+    expect(code("extends Control\nfunc _on_val():\n\tupdate()")).toBe("extends Control\nfunc _on_val():\n\tqueue_redraw()");
+    expect(code("extends Node2D\nfunc f():\n\tupdate()")).toBe("extends Node2D\nfunc f():\n\tqueue_redraw()");
+    expect(code("extends Sprite\nfunc f():\n\tupdate()")).toBe("extends Sprite2D\nfunc f():\n\tqueue_redraw()");
+
+    // Node, Node3D, Spatial (renamed to Node3D) are not CanvasItem
+    expect(code("extends Node\nfunc f():\n\tupdate()")).toBe("extends Node\nfunc f():\n\tupdate()");
+    expect(code("extends Node3D\nfunc f():\n\tupdate()")).toBe("extends Node3D\nfunc f():\n\tupdate()");
+    expect(code("extends Spatial\nfunc f():\n\tupdate()")).toBe("extends Node3D\nfunc f():\n\tupdate()");
+
+    // Own func update() or receiver calls are left alone
+    expect(code("extends Control\nfunc update():\n\tpass\nfunc f():\n\tupdate()")).toBe("extends Control\nfunc update():\n\tpass\nfunc f():\n\tupdate()");
+    expect(code("extends Control\nfunc f():\n\tother.update()")).toBe("extends Control\nfunc f():\n\tother.update()");
+
+    // Path base gets a TO DO instead of rewrite
+    const pathBase = migrateScript('extends "res://base.gd"\nfunc f():\n\tupdate()', api);
+    expect(pathBase.code).toBe('extends "res://base.gd"\nfunc f():\n\tupdate()');
+    expect(pathBase.left[0]?.message).toContain("update() is queue_redraw() in CanvasItem scripts");
+
+    // Idempotent: migrating again makes no changes
+    const migrated = migrateScript("extends Control\nfunc f():\n\tupdate()", api);
+    const again = migrateScript(migrated.code, api);
+    expect(again.code).toBe("extends Control\nfunc f():\n\tqueue_redraw()");
+    expect(again.changes).toEqual([]);
+    expect(again.left).toEqual([]);
+  });
 });
 
 describe("migrate a project", () => {

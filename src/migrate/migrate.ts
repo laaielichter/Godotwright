@@ -163,6 +163,8 @@ class Migrator {
   private readonly godot4: Set<string>;
   private readonly defined: Set<string>;
   private readonly classNames: Set<string>;
+  private readonly isCanvasItem: boolean;
+  private readonly baseIsPath: boolean;
 
   constructor(
     private readonly api: GodotApi,
@@ -174,6 +176,21 @@ class Migrator {
     }
     this.defined = new Set([...source.matchAll(/^\s*(?:static\s+)?func\s+(\w+)/gm)].map((m) => m[1] as string));
     this.classNames = new Set([...source.matchAll(/^class(?:_name)?\s+(\w+)/gm)].map((m) => m[1] as string));
+    const extMatch = /^\s*extends\s+(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_.]+))/m.exec(source);
+    if (extMatch) {
+      if (extMatch[1] !== undefined || extMatch[2] !== undefined) {
+        this.baseIsPath = true;
+        this.isCanvasItem = false;
+      } else {
+        this.baseIsPath = false;
+        const rawBase = (extMatch[3] as string).split(".")[0] as string;
+        const renamed = this.api.renamedClass(rawBase)?.to ?? rawBase;
+        this.isCanvasItem = this.api.inheritsFrom(renamed, "CanvasItem");
+      }
+    } else {
+      this.baseIsPath = false;
+      this.isCanvasItem = false;
+    }
   }
 
   migrate(source: string): ScriptMigration {
@@ -376,9 +393,9 @@ class Migrator {
     return `${indent}@export var ${name}${suffix}`;
   }
 
-  /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN and polar2cartesian calls. */
+  /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN, polar2cartesian and update calls. */
   private calls(line: string): string {
-    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian)\s*\(/g;
+    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian|update)\s*\(/g;
     let from = 0;
     for (;;) {
       const mask = codeMask(line, {});
@@ -402,7 +419,7 @@ class Migrator {
         from = open + 1;
         continue;
       }
-      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian") ? "rename" : "signal";
+      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian" || name === "update") ? "rename" : "signal";
       this.note(rule, whole, to);
       line = line.slice(0, receiverStart) + to + line.slice(close + 1);
       from = receiverStart + to.length;
@@ -428,6 +445,11 @@ class Migrator {
     if (name === "polar2cartesian") {
       if (receiver || this.defined.has("polar2cartesian")) return undefined;
       if (args.length === 2) return `(Vector2.from_angle(${args[1]}) * ${args[0]})`;
+      return undefined;
+    }
+    if (name === "update") {
+      if (receiver || this.defined.has("update") || args.length > 0) return undefined;
+      if (this.isCanvasItem) return "queue_redraw()";
       return undefined;
     }
     const r = this.api.data.renames.signals ?? {};
@@ -494,6 +516,9 @@ class Migrator {
     if (at(/\bget_tree\(\)\.set_input_as_handled\(/g)) this.todo("set_input_as_handled() is on the Viewport in Godot 4: get_viewport().set_input_as_handled()");
     if (at(/\.rotate\s*\(\s*Vector3\.(UP|RIGHT|FORWARD|BACK|LEFT|DOWN)/g)) this.todo("rotate(axis, angle) is unchanged, but Vector3 constants are the same; check rotation order if the result differs");
     if (at(/\bcartesian2polar\s*\(/g) && !this.defined.has("cartesian2polar")) this.todo("cartesian2polar(x, y) is gone in Godot 4: use Vector2(x, y).length() for radius and Vector2(x, y).angle() for angle");
+    if (this.baseIsPath && at(/(?<!\.)\bupdate\s*\(\s*\)/g) && !this.defined.has("update")) {
+      this.todo("update() is queue_redraw() in CanvasItem scripts: check whether this script's base class is a CanvasItem");
+    }
   }
 }
 
