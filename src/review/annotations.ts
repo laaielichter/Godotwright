@@ -17,7 +17,7 @@ function inside(parent: string, child: string): boolean {
   return path === "" || (!path.startsWith(`..${sep}`) && path !== ".." && !isAbsolute(path));
 }
 
-/** Resolve a Godot res:// path to a workspace-relative path; missing files remain unlocated. */
+/** Resolve a Godot res:// path to a workspace-relative path; missing or external files remain unlocated. */
 export function annotationFile(file: string | undefined, projectRoot: string, cwd = process.cwd(), workspace = process.env.GITHUB_WORKSPACE): string | undefined {
   if (!file) return undefined;
   const path = withoutSubResource(file).replace(/^res:\/\//, "");
@@ -27,6 +27,7 @@ export function annotationFile(file: string | undefined, projectRoot: string, cw
   const base = workspace ? resolve(workspace) : resolve(cwd);
   const root = resolve(projectRoot);
   const relativeTo = workspace && inside(base, root) ? base : resolve(cwd);
+  if (!inside(relativeTo, absolute)) return undefined;
   return relative(relativeTo, absolute).split(sep).join("/");
 }
 
@@ -38,24 +39,29 @@ function command(level: "error" | "warning" | "notice", message: string, file?: 
   return `::${level}${properties.length ? ` ${properties.join(",")}` : ""}::${escapeAnnotationData(message)}`;
 }
 
-export function reviewAnnotations(report: ReviewReport, options: { detailFull?: boolean; projectRoot?: string } = {}): string[] {
+interface AnnotationPathOptions {
+  cwd?: string;
+  workspace?: string;
+}
+
+export function reviewAnnotations(report: ReviewReport, options: { detailFull?: boolean; projectRoot?: string } & AnnotationPathOptions = {}): string[] {
   return report.findings
     .filter((finding) => finding.severity !== "info" || options.detailFull)
     .map((finding) => command(
       finding.severity === "error" ? "error" : finding.severity === "warning" ? "warning" : "notice",
       finding.message,
-      options.projectRoot ? annotationFile(finding.file, options.projectRoot) : undefined,
+      options.projectRoot ? annotationFile(finding.file, options.projectRoot, options.cwd, options.workspace) : undefined,
       finding.line,
       finding.rule,
     ));
 }
 
-export function ciAnnotations(review: ReviewReport | undefined, diagnostics: Diagnostic[], projectRoot: string): string[] {
-  const findings = review ? reviewAnnotations(review, { projectRoot }) : [];
+export function ciAnnotations(review: ReviewReport | undefined, diagnostics: Diagnostic[], projectRoot: string, options: AnnotationPathOptions = {}): string[] {
+  const findings = review ? reviewAnnotations(review, { projectRoot, ...options }) : [];
   const checks = diagnostics.map((diagnostic) => command(
     diagnostic.severity === "error" ? "error" : "warning",
     diagnostic.message,
-    annotationFile(diagnostic.file, projectRoot),
+    annotationFile(diagnostic.file, projectRoot, options.cwd, options.workspace),
     diagnostic.line,
     diagnostic.source,
   ));
