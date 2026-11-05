@@ -190,6 +190,23 @@ describe("migrate a script", () => {
     expect(code("OS.window_position = Vector2(10, 10)")).toBe("get_window().position = Vector2(10, 10)");
   });
 
+  it("leaves File.new() and Directory.new() alone and adds TO DOs naming FileAccess and DirAccess (#158)", () => {
+    const src = "var f = File.new()\nvar d = Directory.new()\n";
+    const m = migrateScript(src, api);
+    expect(m.code).toBe(src);
+    expect(m.changes).toEqual([]);
+    expect(m.left).toHaveLength(2);
+    expect(m.left[0]?.line).toBe(1);
+    expect(m.left[0]?.message).toContain("FileAccess.open(path, mode)");
+    expect(m.left[1]?.line).toBe(2);
+    expect(m.left[1]?.message).toContain("DirAccess.open(path)");
+    expect(m.code).not.toContain("DirAccess.new()");
+    expect(m.code).not.toContain("FileAccess.new()");
+
+    // Directory without .new is still renamed to DirAccess
+    expect(code("var d: Directory")).toBe("var d: DirAccess");
+  });
+
   it("lists what it cannot do by hand, once per line", () => {
     const m = migrateScript("var hp = 1 setget\nmaster func ping():\n\tpass\nfunc f():\n\tmove_and_slide(v, Vector3.UP)\n\tyield()", api);
     const msgs = m.left.map((l) => `${l.line}:${l.message.split(":")[0]}`);

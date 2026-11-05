@@ -349,6 +349,18 @@ describe("review robustness", () => {
     expect(unknown.map(formatFinding)[0]).toContain('Type "Foo" does not exist');
   });
 
+  it("suggests FileAccess.open() and DirAccess.open() for File.new() and Directory.new() (#158)", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.gd": "extends Node\n\nfunc _ready() -> void:\n\tvar f = File.new()\n\tvar d = Directory.new()\n",
+    });
+    const report = reviewProject(root);
+    const unknown = report.findings.filter((f) => f.rule === "api/unknown-type" && f.file === "res://main.gd");
+    const msgs = unknown.map((f) => f.message);
+    expect(msgs.some((m) => m.includes("FileAccess.open"))).toBe(true);
+    expect(msgs.some((m) => m.includes("DirAccess.open"))).toBe(true);
+  });
+
   describe("GDExtension node types in scene connections", () => {
     const scene = [
       '[gd_scene load_steps=2 format=3]',

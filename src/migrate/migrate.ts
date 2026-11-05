@@ -279,6 +279,7 @@ class Migrator {
 
     // Renamed classes and built-in types, only when the Godot 3 name does not exist in Godot 4 or this script.
     line = this.sub(line, /(?<![$/%.\w])[A-Z]\w*\b/g, "class", (m) => {
+      if (m[0] === "Directory" && /^\s*\.\s*new\s*\(/.test(m.input.slice(m.index + m[0].length))) return undefined;
       const to = r.classes?.[m[0]] ?? r.builtinTypes?.[m[0]];
       return to && !api.classes.has(m[0]) && !this.classNames.has(m[0]) ? to : undefined;
     });
@@ -563,6 +564,10 @@ class Migrator {
     if (at(/\bJSON\.parse\s*\(/g)) {
       this.todo("JSON.parse() returns an Error in Godot 4: use JSON.parse_string(x) (null on error), or var json = JSON.new(); json.parse(x) with json.data and json.get_error_message()");
     }
+    if (at(/\bFile\.new\s*\(/g)) this.todo("File.new() is gone in Godot 4: FileAccess is abstract, use FileAccess.open(path, mode)");
+    if (at(/\bDirectory\.new\s*\(/g)) this.todo("Directory.new() is gone in Godot 4: DirAccess is abstract, use DirAccess.open(path)");
+    if (at(/\bFileAccess\.new\s*\(/g)) this.todo("FileAccess is abstract in Godot 4: use FileAccess.open(path, mode)");
+    if (at(/\bDirAccess\.new\s*\(/g)) this.todo("DirAccess is abstract in Godot 4: use DirAccess.open(path)");
   }
 }
 
