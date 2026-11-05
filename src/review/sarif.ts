@@ -6,15 +6,17 @@ import { withoutSubResource } from "../project/files.js";
 const LEVEL: Record<Severity, "error" | "warning" | "note"> = { error: "error", warning: "warning", info: "note" };
 
 /** A `res://` path as a path relative to the project root; a built-in script (`scene.tscn::Id`) points at its scene. */
-export function sarifUri(file: string): string {
-  return withoutSubResource(file).replace(/^res:\/\//, "");
+export function sarifUri(file: string, prefix = ""): string {
+  const uri = withoutSubResource(file).replace(/^res:\/\//, "");
+  const base = prefix.replace(/\/+$/, "");
+  return base ? `${base}/${uri}` : uri;
 }
 
 /**
  * The review as SARIF 2.1.0, the format GitHub code scanning reads: every finding becomes a result with its rule,
  * level, message and location, so it shows inline on a pull request.
  */
-export function toSarif(report: ReviewReport): object {
+export function toSarif(report: ReviewReport, options: { prefix?: string } = {}): object {
   const used = [...new Set(report.findings.map((f) => f.rule))].sort();
   const rules = used.map((id) => {
     const rule = RULES[id];
@@ -36,7 +38,7 @@ export function toSarif(report: ReviewReport): object {
     locations: [
       {
         physicalLocation: {
-          artifactLocation: { uri: sarifUri(f.file), uriBaseId: "%SRCROOT%" },
+          artifactLocation: { uri: sarifUri(f.file, options.prefix), uriBaseId: "%SRCROOT%" },
           ...(f.line ? { region: { startLine: f.line } } : {}),
         },
       },
