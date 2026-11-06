@@ -74,6 +74,13 @@ describe("MCP server (cheap profile)", () => {
     ).toEqual(["query"]);
   });
 
+  it("documents setget and @rpc rewrites in the godot_migrate tool description", async () => {
+    const { tools } = await client.listTools();
+    const migrate = tools.find((t) => t.name === "godot_migrate");
+    expect(migrate?.description).toMatch(/network keywords to @rpc\(\.\.\.\)/);
+    expect(migrate?.description).toMatch(/setget to property syntax/);
+  });
+
   it("edits import settings through godot_resource_edit, and refuses an unknown option", async () => {
     const root = makeProject({
       "project.godot": "config_version=5\n",

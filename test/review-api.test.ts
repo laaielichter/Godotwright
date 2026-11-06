@@ -270,3 +270,33 @@ describe("type tests that can never be true", () => {
     expect(out).toEqual([]);
   });
 });
+
+describe("api/export-without-type", () => {
+  it("flags @export var without type or default value", () => {
+    const script = [
+      "extends Node",
+      "",
+      "@export var speed",
+      "@export",
+      "var count",
+    ].join("\n");
+    expect(findings(script).filter((f) => f.includes("[api/export-without-type]"))).toEqual([
+      'res://main.gd:3: error [api/export-without-type] "@export var speed" needs a type or a default value: Godot 4 cannot infer an export\'s type without an initializer.',
+      'res://main.gd:5: error [api/export-without-type] "@export var count" needs a type or a default value: Godot 4 cannot infer an export\'s type without an initializer.',
+    ]);
+  });
+
+  it("stays quiet for typed, initialized or non-export variables", () => {
+    const script = [
+      "extends Node",
+      "",
+      "@export var speed: float",
+      "@export var count = 200",
+      "@export var ratio := 1.5",
+      "@export_range(0, 10) var power",
+      "var unexported",
+    ].join("\n");
+    expect(findings(script).filter((f) => f.includes("[api/export-without-type]"))).toEqual([]);
+  });
+});
+

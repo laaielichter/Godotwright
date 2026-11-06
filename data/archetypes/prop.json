@@ -1413,5 +1413,293 @@
   "pitfalls": [
    "A wall-mounted box needs a flat mounting face; a freestanding box needs a supporting post."
   ]
+ },
+ {
+  "id": "prop.fountain",
+  "name": "fountain",
+  "description": "A decorative water fountain in a park, square or courtyard.",
+  "aliases": [
+   "fountain",
+   "fountains",
+   "drinking fountain",
+   "water fountain",
+   "park fountain",
+   "fontein",
+   "fonteinen",
+   "drinkfontein",
+   "waterfontein"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Basin",
+    "role": "basin",
+    "required": true,
+    "aliases": [
+     "basin",
+     "bekken",
+     "bassin",
+     "pool",
+     "bowl"
+    ]
+   },
+   {
+    "name": "Column",
+    "role": "column",
+    "required": false,
+    "aliases": [
+     "column",
+     "zuil",
+     "pillar",
+     "pedestal"
+    ]
+   },
+   {
+    "name": "Spout",
+    "role": "spout",
+    "required": true,
+    "aliases": [
+     "spout",
+     "sproeier",
+     "nozzle",
+     "jet"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.8,
+    6.0
+   ],
+   "length": [
+    0.8,
+    6.0
+   ],
+   "height": [
+    0.6,
+    4.0
+   ],
+   "source": "General knowledge of park, garden and plaza fountains, from small drinking fountains to decorative multi-tier basins.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A fountain needs an open basin or ground pool beneath its spout to capture falling water."
+  ]
+ },
+ {
+  "id": "prop.statue",
+  "name": "statue",
+  "description": "A sculptural statue or monument, typically mounted on a plinth.",
+  "aliases": [
+   "statue",
+   "statues",
+   "standbeeld",
+   "standbeelden",
+   "monument",
+   "monumenten",
+   "sculpture",
+   "sculptuur",
+   "beeld"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Plinth",
+    "role": "pedestal",
+    "required": true,
+    "aliases": [
+     "plinth",
+     "pedestal",
+     "base",
+     "sokkel",
+     "voetstuk"
+    ]
+   },
+   {
+    "name": "Figure",
+    "role": "sculpture",
+    "required": true,
+    "aliases": [
+     "figure",
+     "statue",
+     "figuur",
+     "beeld",
+     "sculpture"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.5,
+    3.0
+   ],
+   "length": [
+    0.5,
+    3.0
+   ],
+   "height": [
+    1.0,
+    6.0
+   ],
+   "source": "General knowledge of public monuments and decorative figures on pedestals.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A statue without a plinth or base often looks ungrounded on pavement or grass."
+  ]
+ },
+ {
+  "id": "prop.swing",
+  "name": "swing",
+  "description": "A playground swing set with seats suspended from an overhead frame.",
+  "aliases": [
+   "swing",
+   "swings",
+   "schommel",
+   "schommels",
+   "swing set",
+   "schommelset",
+   "playground swing"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "structure",
+    "required": true,
+    "aliases": [
+     "frame",
+     "posts",
+     "beam",
+     "raamwerk",
+     "staanders"
+    ]
+   },
+   {
+    "name": "Chain",
+    "role": "suspension",
+    "required": true,
+    "aliases": [
+     "chain",
+     "rope",
+     "ketting",
+     "touw"
+    ],
+    "count": [
+     1,
+     4
+    ]
+   },
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": true,
+    "aliases": [
+     "seat",
+     "zitje",
+     "plankje"
+    ],
+    "count": [
+     1,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge",
+    "note": "The seat and chain swing from the crossbeam; place the pivot at the top attachment point."
+   }
+  ],
+  "scale": {
+   "width": [
+    1.2,
+    5.0
+   ],
+   "length": [
+    1.5,
+    3.5
+   ],
+   "height": [
+    2.0,
+    3.5
+   ],
+   "source": "General knowledge of park and playground swing sets.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A swing seat whose pivot is in its middle cannot swing realistically; attach the pivot to the crossbeam."
+  ]
+ },
+ {
+  "id": "prop.slide",
+  "name": "slide",
+  "description": "A playground slide with an access ladder, top platform, and inclined sliding chute.",
+  "aliases": [
+   "slide",
+   "slides",
+   "glijbaan",
+   "glijbanen",
+   "playground slide",
+   "kinderglijbaan"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Ladder",
+    "role": "access",
+    "required": true,
+    "aliases": [
+     "ladder",
+     "steps",
+     "trap",
+     "treden"
+    ]
+   },
+   {
+    "name": "Platform",
+    "role": "platform",
+    "required": false,
+    "aliases": [
+     "platform",
+     "deck",
+     "plateau",
+     "bordes"
+    ]
+   },
+   {
+    "name": "Chute",
+    "role": "chute",
+    "required": true,
+    "aliases": [
+     "chute",
+     "slide",
+     "ramp",
+     "glijgoot",
+     "glijbaan"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.6,
+    2.0
+   ],
+   "length": [
+    2.0,
+    6.0
+   ],
+   "height": [
+    1.5,
+    4.0
+   ],
+   "source": "General knowledge of park and playground slides for children.",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "The chute must incline downward from the ladder platform to ground level."
+  ]
  }
 ]

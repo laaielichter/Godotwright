@@ -188,6 +188,22 @@ describe("identify", () => {
     expect(leaf.pivot).toBe("hinge");
   });
 
+  it("knows park and playground things (fountain, statue, swing, slide), in English and Dutch", () => {
+    const cases: [string, string][] = [
+      ["fountain", "prop.fountain"], ["fontein", "prop.fountain"],
+      ["drinking fountain", "prop.fountain"], ["water fountain", "prop.fountain"],
+      ["statue", "prop.statue"], ["standbeeld", "prop.statue"],
+      ["monument", "prop.statue"],
+      ["swing", "prop.swing"], ["schommel", "prop.swing"],
+      ["swing set", "prop.swing"],
+      ["slide", "prop.slide"], ["glijbaan", "prop.slide"],
+    ];
+    for (const [name, id] of cases) expect(identify(name, library).best.id, name).toBe(id);
+    const seat = library.resolve("prop.swing").parts.find((p) => p.name === "Seat")!;
+    expect(seat.pivot).toBe("hinge");
+    expect(seat.moves).toEqual([{ kind: "hinge", axis: "x" }]);
+  });
+
   it("reads Dutch compounds by their last word, but an exact name wins", () => {
     const r = identify("vrachtauto", library);
     expect(r.best.id).toBe("vehicle.wheeled.truck");

@@ -68,6 +68,20 @@ describe("migrate a script", () => {
     expect(m.left[0]?.message).toContain("export hint");
   });
 
+  it("converts GLOBAL file and dir hints, String enums and one-number ranges", () => {
+    expect(code('export(String, FILE, GLOBAL, "*.png") var p')).toBe('@export_global_file("*.png") var p: String');
+    expect(code("export(String, FILE, GLOBAL) var p")).toBe("@export_global_file var p: String");
+    expect(code("export(String, DIR, GLOBAL) var d")).toBe("@export_global_dir var d: String");
+    expect(code('export(String, "Rebecca", "Mary", "Leah") var n')).toBe('@export_enum("Rebecca", "Mary", "Leah") var n: String');
+    expect(code("export(int, 20) var i")).toBe("@export_range(0, 20) var i: int");
+    expect(code("export(float, 1.5) var f")).toBe("@export_range(0, 1.5) var f: float");
+    // The project-scoped and already-working forms stay as they are.
+    expect(code('export(String, FILE, "*.png") var icon')).toBe('@export_file("*.png") var icon: String');
+    expect(code("export(String, DIR) var d")).toBe("@export_dir var d: String");
+    expect(code('export(int, "A", "B") var mode = 0')).toBe('@export_enum("A", "B") var mode: int = 0');
+    expect(code("export(int, 0, 10) var speed = 5")).toBe("@export_range(0, 10) var speed: int = 5");
+  });
+
   it("rewrites signals and callables with their arguments", () => {
     expect(code('timer.connect("timeout", self, "_on_timeout")')).toBe("timer.timeout.connect(self._on_timeout)");
     expect(code('connect("hit", self, "_on_hit", [1, "a"])')).toBe('hit.connect(self._on_hit.bind(1, "a"))');
@@ -81,6 +95,30 @@ describe("migrate a script", () => {
     const dynamic = migrateScript("connect(sig_name, self, method_name)", api);
     expect(dynamic.code).toBe("connect(sig_name, self, method_name)");
     expect(dynamic.left[0]?.message).toContain("dynamic");
+  });
+
+  it("rewrites to_json, parse_json, ColorN and polar2cartesian (#144)", () => {
+    expect(code("var text = to_json(data)")).toBe('var text = JSON.stringify(data, "", false)');
+    expect(code("var val = parse_json(text)")).toBe("var val = JSON.parse_string(text)");
+    expect(code('var c1 = ColorN("red")')).toBe('var c1 = Color("red")');
+    expect(code('var c2 = ColorN("red", 0.5)')).toBe('var c2 = Color("red", 0.5)');
+    expect(code("var v = polar2cartesian(10, PI)")).toBe("var v = (Vector2.from_angle(PI) * 10)");
+
+    // Look-alikes left alone:
+    expect(code("var t = data.to_json()")).toBe("var t = data.to_json()");
+    expect(code("func to_json():\n\treturn {}\nfunc go():\n\tvar x = to_json()")).toBe("func to_json():\n\treturn {}\nfunc go():\n\tvar x = to_json()");
+
+    // cartesian2polar gets a TO DO:
+    const polar = migrateScript("var p = cartesian2polar(1, 2)", api);
+    expect(polar.code).toBe("var p = cartesian2polar(1, 2)");
+    expect(polar.left[0]?.message).toContain("cartesian2polar(x, y) is gone in Godot 4");
+
+    // Reviewing migrated code gives no api/unknown-function for rewritten functions
+    const script = `extends Node\nfunc test():\n\tvar text = to_json({"a": 1})\n\tvar val = parse_json(text)\n\tvar c = ColorN("red", 0.5)\n\tvar v = polar2cartesian(10.0, 1.0)\n`;
+    const migrated = migrateScript(script, api);
+    const root = makeProject({ "project.godot": PROJECT, "test.gd": migrated.code });
+    const findings = reviewProject(root).findings.filter((f) => f.rule === "api/unknown-function");
+    expect(findings).toEqual([]);
   });
 
   it("renames only Godot 3 names that do not exist in Godot 4 or in the script", () => {
@@ -150,6 +188,34 @@ describe("migrate a script", () => {
   it("leaves no TO DO when setter assigns its property directly (Godot 4 accesses the underlying member)", () => {
     const script = migrateScript("var hp = 10 setget set_hp\nfunc set_hp(val):\n\thp = val", api);
     expect(script.left).toEqual([]);
+  });
+
+  it("rewrites update() to queue_redraw() in scripts that extend a CanvasItem (#162)", () => {
+    // Control, Node2D, Sprite (renamed to Sprite2D) are CanvasItem
+    expect(code("extends Control\nfunc _on_val():\n\tupdate()")).toBe("extends Control\nfunc _on_val():\n\tqueue_redraw()");
+    expect(code("extends Node2D\nfunc f():\n\tupdate()")).toBe("extends Node2D\nfunc f():\n\tqueue_redraw()");
+    expect(code("extends Sprite\nfunc f():\n\tupdate()")).toBe("extends Sprite2D\nfunc f():\n\tqueue_redraw()");
+
+    // Node, Node3D, Spatial (renamed to Node3D) are not CanvasItem
+    expect(code("extends Node\nfunc f():\n\tupdate()")).toBe("extends Node\nfunc f():\n\tupdate()");
+    expect(code("extends Node3D\nfunc f():\n\tupdate()")).toBe("extends Node3D\nfunc f():\n\tupdate()");
+    expect(code("extends Spatial\nfunc f():\n\tupdate()")).toBe("extends Node3D\nfunc f():\n\tupdate()");
+
+    // Own func update() or receiver calls are left alone
+    expect(code("extends Control\nfunc update():\n\tpass\nfunc f():\n\tupdate()")).toBe("extends Control\nfunc update():\n\tpass\nfunc f():\n\tupdate()");
+    expect(code("extends Control\nfunc f():\n\tother.update()")).toBe("extends Control\nfunc f():\n\tother.update()");
+
+    // Path base gets a TO DO instead of rewrite
+    const pathBase = migrateScript('extends "res://base.gd"\nfunc f():\n\tupdate()', api);
+    expect(pathBase.code).toBe('extends "res://base.gd"\nfunc f():\n\tupdate()');
+    expect(pathBase.left[0]?.message).toContain("update() is queue_redraw() in CanvasItem scripts");
+
+    // Idempotent: migrating again makes no changes
+    const migrated = migrateScript("extends Control\nfunc f():\n\tupdate()", api);
+    const again = migrateScript(migrated.code, api);
+    expect(again.code).toBe("extends Control\nfunc f():\n\tqueue_redraw()");
+    expect(again.changes).toEqual([]);
+    expect(again.left).toEqual([]);
   });
 });
 

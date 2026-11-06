@@ -38,13 +38,20 @@ export function reviewCommand(): Command {
       // SARIF paths are relative to the repository root. Running from the repository root with the project in a
       // subfolder passes that folder as the path; keep today's project-relative output when run inside the project.
       const relativeRoot = relative(process.cwd(), root);
-      const sarifPrefix = relativeRoot && !relativeRoot.startsWith("..") && !isAbsolute(relativeRoot) ? relativeRoot.split(sep).join("/") : "";
-      if (options.github) {
-        const lines = reviewAnnotations(report, { detailFull: options.detail === "full", projectRoot: root });
-        writeOut(command, lines.length ? `${lines.join("\n")}\n` : "");
-      }
-      else if (options.sarif) writeOut(command, `${JSON.stringify(toSarif(report, { prefix: sarifPrefix }), null, 2)}\n`);
-      else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);
+const sarifPrefix = relativeRoot && !relativeRoot.startsWith("..") && !isAbsolute(relativeRoot)
+  ? relativeRoot.split(sep).join("/")
+  : "";
+
+if (options.github) {
+  const lines = reviewAnnotations(report, {
+    detailFull: options.detail === "full",
+    projectRoot: root,
+  });
+  writeOut(command, lines.length ? `${lines.join("\n")}\n` : "");
+} else if (options.sarif) {
+  writeOut(command, `${JSON.stringify(toSarif(report, { prefix: sarifPrefix }), null, 2)}\n`);
+}
+    else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);
       else if (options.onlyNew) writeOut(command, `${formatReviewSummary(report)}\n${formatDelta(delta, { noInfos: options.detail !== "full" })}`);
       else writeOut(command, formatReview(report, options.detail));
       const errors = report.categories.reduce((n, c) => n + c.errors, 0);

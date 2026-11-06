@@ -183,7 +183,16 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       for (const p of fn.params) checkTypeName(p.type, fn.line, model);
       checkTypeName(fn.returnType, fn.line, model);
     }
-    for (const v of model.outline.variables) checkTypeName(v.type, v.line, model);
+    for (const v of model.outline.variables) {
+      checkTypeName(v.type, v.line, model);
+      if (v.exportAnnotation === "@export" && !v.type && !v.hasDefault && !v.inferred) {
+        report(
+          "api/export-without-type",
+          v.line,
+          `"@export var ${v.name}" needs a type or a default value: Godot 4 cannot infer an export's type without an initializer.`,
+        );
+      }
+    }
     for (const c of model.outline.constants) checkTypeName(c.type, c.line, model);
     for (const s of model.outline.signals) for (const p of s.params) checkTypeName(p.type, s.line, model);
   }

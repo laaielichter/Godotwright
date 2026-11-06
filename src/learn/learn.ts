@@ -19,6 +19,7 @@ export const GODOT_CHECKED_RULES = new Set([
   "api/unknown-function",
   "api/unknown-member",
   "api/wrong-arguments",
+  "api/export-without-type",
   "api/duplicate-declaration",
   "api/override-signature",
 ]);

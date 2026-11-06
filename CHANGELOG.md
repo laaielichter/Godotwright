@@ -18,11 +18,26 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **`godotwright migrate`: moved members keep their call arguments.** `OS.get_datetime(true)` becomes
   `Time.get_datetime_dict_from_system(true)` instead of `...()(true)`. A property such as `OS.window_fullscreen`,
   whose Godot 4 form needs an argument, is left for a TODO instead of becoming code that does not parse (#153).
+- **`godotwright migrate`: JSON, `ColorN` and `polar2cartesian`.** `to_json(v)` becomes `JSON.stringify(v, "", false)`,
+  `parse_json(s)` becomes `JSON.parse_string(s)`, `ColorN(...)` becomes `Color(...)` and `polar2cartesian(r, a)` becomes
+  `Vector2.from_angle(a) * r`; `cartesian2polar` gets a TODO (#157).
+- **`godotwright migrate`: more export hints.** `FILE, GLOBAL` and `DIR, GLOBAL` become `@export_global_file` and
+  `@export_global_dir`, String enums become `@export_enum`, and a one-number range becomes `@export_range(0, n)` (#154).
+- **Docs and the `godot_migrate` description** now say that `setget` and network keywords are rewritten (#156).
+- **`review --sarif`: paths relative to the repository root.** With the project in a subfolder
+  (`godotwright review game --sarif`), findings now point at `game/player.gd`, so code scanning can place them (#164).
+- **Archetypes for parks and playgrounds:** fountain, statue, swing and slide, with English and Dutch aliases; the swing
+  seat hinges from the crossbeam (#165).
+- **`godotwright migrate`: `update()` becomes `queue_redraw()`** in scripts that extend a CanvasItem; a script with a
+  path base gets a TODO instead (#166).
+- **Review: `api/export-without-type`.** `@export var speed` with no type and no default value, which Godot 4 does not
+  load, is now an error with the fix (#169).
 
 ### Thanks
 
-- @ANO3457 for #127, #129, #130, #136 and #137.
-- @bfs2021 for the debug-guarded print fix (#148) and the moved-member arguments in migrate (#153).
+- @ANO3457 for #127, #129, #130, #136, #137, #156, #157, #165, #166 and #169.
+- @bfs2021 for the debug-guarded print fix (#148), the moved-member arguments in migrate (#153), the export hints (#154) and the SARIF
+  repository paths (#164).
 - In 0.6.0: @Vamsi-2581 for the duplicate `funcref` fix (#83) and @bfs2021 for the Packed-type hint on Godot 3 Pool
   arrays (#91).
 

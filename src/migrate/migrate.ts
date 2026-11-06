@@ -163,6 +163,8 @@ class Migrator {
   private readonly godot4: Set<string>;
   private readonly defined: Set<string>;
   private readonly classNames: Set<string>;
+  private readonly isCanvasItem: boolean;
+  private readonly baseIsPath: boolean;
 
   constructor(
     private readonly api: GodotApi,
@@ -174,6 +176,21 @@ class Migrator {
     }
     this.defined = new Set([...source.matchAll(/^\s*(?:static\s+)?func\s+(\w+)/gm)].map((m) => m[1] as string));
     this.classNames = new Set([...source.matchAll(/^class(?:_name)?\s+(\w+)/gm)].map((m) => m[1] as string));
+    const extMatch = /^\s*extends\s+(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_.]+))/m.exec(source);
+    if (extMatch) {
+      if (extMatch[1] !== undefined || extMatch[2] !== undefined) {
+        this.baseIsPath = true;
+        this.isCanvasItem = false;
+      } else {
+        this.baseIsPath = false;
+        const rawBase = (extMatch[3] as string).split(".")[0] as string;
+        const renamed = this.api.renamedClass(rawBase)?.to ?? rawBase;
+        this.isCanvasItem = this.api.inheritsFrom(renamed, "CanvasItem");
+      }
+    } else {
+      this.baseIsPath = false;
+      this.isCanvasItem = false;
+    }
   }
 
   migrate(source: string): ScriptMigration {
@@ -346,7 +363,10 @@ class Migrator {
     const suffix = typed ?? (known ? `: ${renamed}` : "");
     if (rest.length === 0) return `${indent}@export var ${name}${suffix}`;
     if ((renamed === "int" || renamed === "float") && rest.length >= 2 && rest.every((a) => /^-?[\d.]+$/.test(a))) return `${indent}@export_range(${rest.join(", ")}) var ${name}${suffix}`;
+    // In Godot 3 a range hint with one number meant 0 to that number.
+    if ((renamed === "int" || renamed === "float") && rest.length === 1 && /^-?[\d.]+$/.test(rest[0] as string)) return `${indent}@export_range(0, ${rest[0]}) var ${name}${suffix}`;
     if (renamed === "int" && rest.every((a) => quoted(a) !== undefined)) return `${indent}@export_enum(${rest.join(", ")}) var ${name}${suffix}`;
+    if (renamed === "String" && rest.every((a) => quoted(a) !== undefined)) return `${indent}@export_enum(${rest.join(", ")}) var ${name}${suffix}`;
     if (renamed === "int" && rest[0] === "FLAGS" && rest.slice(1).every((a) => quoted(a) !== undefined)) return `${indent}@export_flags(${rest.slice(1).join(", ")}) var ${name}${suffix}`;
     if (renamed === "Color" && rest.length === 1 && rest[0] === "RGB") return `${indent}@export_color_no_alpha var ${name}${suffix}`;
     if (renamed === "Color" && rest.length === 1 && rest[0] === "RGBA") return `${indent}@export var ${name}${suffix}`;
@@ -356,8 +376,15 @@ class Migrator {
       return `${indent}@export_range(${rest.slice(1).join(", ")}, "exp") var ${name}${suffix}`;
     }
     if (renamed === "float" && rest.length === 1 && rest[0] === "EASE") return `${indent}@export_exp_easing var ${name}${suffix}`;
-    if (renamed === "String" && rest[0] === "FILE") return `${indent}@export_file${rest[1] ? `(${rest[1]})` : ""} var ${name}${suffix}`;
-    if (renamed === "String" && rest[0] === "DIR") return `${indent}@export_dir var ${name}${suffix}`;
+    if (renamed === "String" && rest[0] === "FILE") {
+      // FILE GLOBAL is the machine-wide file picker; Godot 4 gives it its own annotation.
+      if (rest[1] === "GLOBAL") return `${indent}@export_global_file${rest[2] ? `(${rest[2]})` : ""} var ${name}${suffix}`;
+      return `${indent}@export_file${rest[1] ? `(${rest[1]})` : ""} var ${name}${suffix}`;
+    }
+    if (renamed === "String" && rest[0] === "DIR") {
+      if (rest[1] === "GLOBAL") return `${indent}@export_global_dir var ${name}${suffix}`;
+      return `${indent}@export_dir var ${name}${suffix}`;
+    }
     if (renamed === "String" && rest[0] === "MULTILINE") return `${indent}@export_multiline var ${name}${suffix}`;
     if (renamed === "Array" && rest.length === 1 && this.api.classes.has(this.api.data.renames.classes?.[rest[0] as string] ?? (rest[0] as string))) {
       return `${indent}@export var ${name}: Array[${this.api.data.renames.classes?.[rest[0] as string] ?? rest[0]}]`;
@@ -366,9 +393,9 @@ class Migrator {
     return `${indent}@export var ${name}${suffix}`;
   }
 
-  /** yield(), connect(), disconnect(), is_connected(), emit_signal() and funcref() calls, rewritten with their arguments. */
+  /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN, polar2cartesian and update calls. */
   private calls(line: string): string {
-    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref)\s*\(/g;
+    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian|update)\s*\(/g;
     let from = 0;
     for (;;) {
       const mask = codeMask(line, {});
@@ -392,13 +419,39 @@ class Migrator {
         from = open + 1;
         continue;
       }
-      this.note(name === "yield" ? "await" : "signal", whole, to);
+      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian" || name === "update") ? "rename" : "signal";
+      this.note(rule, whole, to);
       line = line.slice(0, receiverStart) + to + line.slice(close + 1);
       from = receiverStart + to.length;
     }
   }
 
   private call(name: string, receiver: string, args: string[], whole: string): string | undefined {
+    if (name === "to_json") {
+      if (receiver || this.defined.has("to_json")) return undefined;
+      if (args.length === 1) return `JSON.stringify(${args[0]}, "", false)`;
+      return undefined;
+    }
+    if (name === "parse_json") {
+      if (receiver || this.defined.has("parse_json")) return undefined;
+      if (args.length === 1) return `JSON.parse_string(${args[0]})`;
+      return undefined;
+    }
+    if (name === "ColorN") {
+      if (receiver || this.defined.has("ColorN")) return undefined;
+      if (args.length >= 1 && args.length <= 2) return `Color(${args.join(", ")})`;
+      return undefined;
+    }
+    if (name === "polar2cartesian") {
+      if (receiver || this.defined.has("polar2cartesian")) return undefined;
+      if (args.length === 2) return `(Vector2.from_angle(${args[1]}) * ${args[0]})`;
+      return undefined;
+    }
+    if (name === "update") {
+      if (receiver || this.defined.has("update") || args.length > 0) return undefined;
+      if (this.isCanvasItem) return "queue_redraw()";
+      return undefined;
+    }
     const r = this.api.data.renames.signals ?? {};
     const sig = (s: string | undefined) => {
       const q = s === undefined ? undefined : quoted(s);
@@ -462,6 +515,10 @@ class Migrator {
     if (at(/\bOS\.window_(fullscreen|size|borderless)\b/g) || at(/\bOS\.vsync_enabled\b/g)) this.todo("window settings moved to DisplayServer.window_set_mode() / window_set_size() / window_set_vsync_mode(), or get_window()");
     if (at(/\bget_tree\(\)\.set_input_as_handled\(/g)) this.todo("set_input_as_handled() is on the Viewport in Godot 4: get_viewport().set_input_as_handled()");
     if (at(/\.rotate\s*\(\s*Vector3\.(UP|RIGHT|FORWARD|BACK|LEFT|DOWN)/g)) this.todo("rotate(axis, angle) is unchanged, but Vector3 constants are the same; check rotation order if the result differs");
+    if (at(/\bcartesian2polar\s*\(/g) && !this.defined.has("cartesian2polar")) this.todo("cartesian2polar(x, y) is gone in Godot 4: use Vector2(x, y).length() for radius and Vector2(x, y).angle() for angle");
+    if (this.baseIsPath && at(/(?<!\.)\bupdate\s*\(\s*\)/g) && !this.defined.has("update")) {
+      this.todo("update() is queue_redraw() in CanvasItem scripts: check whether this script's base class is a CanvasItem");
+    }
   }
 }
 
