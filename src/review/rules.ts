@@ -32,6 +32,7 @@ const list: Rule[] = [
   { id: "api/unsafe-member", category: "api", severity: "warning", title: "Member not on the static type", fix: "Give the variable the right type (or cast with `as`) so the member can be checked." },
   { id: "api/unknown-input-action", category: "api", severity: "error", title: "Unknown input action", fix: "Add the action to Project Settings > Input Map, or fix the name." },
   { id: "api/unknown-signal", category: "api", severity: "error", title: "Unknown signal", fix: "Declare the signal, or use one that exists on this class." },
+  { id: "api/export-without-type", category: "api", severity: "error", title: "Export without type or default", fix: "Give it a type (`@export var speed: float`) or a default value (`@export var speed := 200.0`)." },
   { id: "api/duplicate-declaration", category: "api", severity: "error", title: "Declared twice", fix: "Remove the second declaration (a merge or a patch often adds the same code twice), or rename one." },
   // Runtime pitfalls from real projects (see data/lessons.json and `godotwright lessons`).
   { id: "api/override-signature", category: "api", severity: "error", title: "Override does not match its parent", fix: "Give the override the parent's parameters; parameters it adds need a default value." },
