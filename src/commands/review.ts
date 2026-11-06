@@ -46,7 +46,7 @@ export function reviewCommand(): Command {
           detailFull: options.detail === "full",
           projectRoot: root,
         });
-        writeOut(command, lines.length ? `${lines.join("\\n")}\n` : "");
+        writeOut(command, lines.length ? `${lines.join("\n")}\n` : "");
       } else if (options.sarif) {
         writeOut(command, `${JSON.stringify(toSarif(report, { prefix: sarifPrefix }), null, 2)}\n`);
       } else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);
