@@ -1,5 +1,5 @@
 import { existsSync, statSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { Command, Option } from "commander";
 import { findProjectRoot, toResPath } from "../project/files.js";
 import { toSarif } from "../review/sarif.js";
@@ -35,8 +35,15 @@ export function reviewCommand(): Command {
       const report = focus.length ? { ...full, findings: full.findings.filter((f) => focus.includes(f.file)) } : full;
       if (focus.length && !options.json && !options.sarif && !options.github) writeOut(command, `findings shown only for: ${focus.join(", ")} (scores are for the whole project)\n`);
       const delta = reviewDelta(path, report);
-      if (options.github) { const lines = reviewAnnotations(report, { detailFull: options.detail === "full", projectRoot: root }); writeOut(command, lines.length ? `${lines.join("\n")}\n` : ""); }
-      else if (options.sarif) writeOut(command, `${JSON.stringify(toSarif(report), null, 2)}\n`);
+      // SARIF paths are relative to the repository root. Running from the repository root with the project in a
+      // subfolder passes that folder as the path; keep today's project-relative output when run inside the project.
+      const relativeRoot = relative(process.cwd(), root);
+      const sarifPrefix = relativeRoot && !relativeRoot.startsWith("..") && !isAbsolute(relativeRoot) ? relativeRoot.split(sep).join("/") : "";
+      if (options.github) {
+        const lines = reviewAnnotations(report, { detailFull: options.detail === "full", projectRoot: root });
+        writeOut(command, lines.length ? `${lines.join("\n")}\n` : "");
+      }
+      else if (options.sarif) writeOut(command, `${JSON.stringify(toSarif(report, { prefix: sarifPrefix }), null, 2)}\n`);
       else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);
       else if (options.onlyNew) writeOut(command, `${formatReviewSummary(report)}\n${formatDelta(delta, { noInfos: options.detail !== "full" })}`);
       else writeOut(command, formatReview(report, options.detail));
