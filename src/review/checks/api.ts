@@ -60,6 +60,14 @@ export const REMOVED_FUNCTIONS: Record<string, { to: string; canvas?: boolean }>
   update: { to: "queue_redraw()", canvas: true },
 };
 
+/**
+ * Godot 3 classes removed without a simple one-to-one rename, or whose replacement is abstract.
+ */
+export const REMOVED_CLASSES: Record<string, { to: string; onlyNew?: boolean }> = {
+  File: { to: "FileAccess.open(path, mode)" },
+  Directory: { to: "DirAccess.open(path)", onlyNew: true },
+};
+
 /** `.instance()` is Godot 3's PackedScene call. Scripts may define their own `instance()`, so see checkScriptApi. */
 const PACKED_INSTANCE = /\.instance\(\s*\)/;
 
@@ -489,7 +497,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
         value = selfCall(t0, tokens, k, base);
         j = close;
       } else {
-        value = resolveName(t0, tokens[k + 1]?.t === ".");
+        value = resolveName(t0, tokens[k + 1]?.t === ".", tokens[k + 2]?.t === "new");
         if (!locals.has(t0) && !KEYWORDS.has(t0)) afterProperty({ type: selfType, exact: false }, t0, tokens, k, k);
       }
 
@@ -700,7 +708,7 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       return undefined;
     }
 
-    function resolveName(name: string, followedByDot: boolean): Value | undefined {
+    function resolveName(name: string, followedByDot: boolean, isNew = false): Value | undefined {
       if (locals.has(name)) return { type: locals.get(name), exact: false };
       const own = pm.memberOf(selfType, name) ?? outerMember(name);
       if (own) {
@@ -716,7 +724,9 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       // `Variant` is the namespace of the dotted global enums (`Variant.Type`, `Variant.Operator`), not a missing class.
       const enumNamespace = [...pm.globalEnums].some((e) => e.startsWith(`${name}.`));
       if (followedByDot && /^[A-Z]/.test(name) && !options.foreignClasses && !enumNamespace) {
-        const hint = renameHint(name, "type");
+        const removed = REMOVED_CLASSES[name];
+        const removedHint = removed && (!removed.onlyNew || isNew) ? ` In Godot 4 use \`${removed.to}\`.` : "";
+        const hint = removedHint || renameHint(name, "type");
         // A constant or inner class of a base that does not resolve, or a const alias of a broken preload.
         if (!hint && (unresolvedBase(model) || isConstAlias(name, model))) return undefined;
         report(
