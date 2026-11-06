@@ -38,12 +38,22 @@ describe("SARIF output", () => {
     const info = run.results.find((r) => r.level === "note");
     expect(info).toBeDefined();
     expect(sarifUri("res://scenes/Main.tscn::GDScript_abc")).toBe("scenes/Main.tscn");
+    expect(sarifUri("res://scenes/Main.tscn::GDScript_abc", "game")).toBe("game/scenes/Main.tscn");
   });
 
-  it("prints from the CLI with --sarif", async () => {
+  it("prefixes every path when the Godot project is a subfolder of the repository", () => {
+    const prefixed = toSarif(report, { prefix: "game" }) as Sarif;
+    const godot3 = prefixed.runs[0]!.results.find((r) => r.ruleId === "api/godot3-syntax")!;
+    expect(godot3.locations[0]!.physicalLocation.artifactLocation).toEqual({ uri: "game/scripts/old_player.gd", uriBaseId: "%SRCROOT%" });
+    expect(prefixed.runs[0]!.results).toHaveLength(report.findings.length);
+  });
+
+  it("prints from the CLI with --sarif, with paths relative to the repository root", async () => {
     const out = await runCli(["review", `${FIXTURES}/messy`, "--sarif"]);
     const parsed = JSON.parse(out.output) as Sarif;
     expect(parsed.runs[0]!.results.length).toBe(report.findings.length);
+    const godot3 = parsed.runs[0]!.results.find((r) => r.ruleId === "api/godot3-syntax")!;
+    expect(godot3.locations[0]!.physicalLocation.artifactLocation.uri).toBe("test/fixtures/messy/scripts/old_player.gd");
     expect(out.exitCode).toBe(1);
     process.exitCode = undefined;
   });

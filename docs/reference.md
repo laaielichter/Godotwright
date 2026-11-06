@@ -582,6 +582,10 @@ jobs:
           sarif_file: godotwright.sarif
 ```
 
+Run this from the repository root and point `review` at the project folder
+(for example `review game --sarif`): SARIF paths are relative to the repository
+root, so code scanning can place the findings on the right files.
+
 ## Export, check and run a build
 
 "Works in the editor, broken in the build" is found before anyone ships. `godotwright export` (MCP `godot_export`)
