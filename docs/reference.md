@@ -293,10 +293,11 @@ godotwright review                  # what is still wrong, with line numbers
 network keywords become `@rpc(...)` annotations, simple `setget` becomes Godot 4 property syntax (`set = ...`, `get = ...`),
 renamed classes, functions, properties and constants get their Godot 4 names (only when the old name no longer exists in Godot 4 and
 is not defined in the script), `yield(x, "sig")` becomes `await x.sig`, `connect("sig", target, "method", [binds])` becomes
-`sig.connect(target.method.bind(...))`, `emit_signal` and `funcref` become signals and callables, and members that moved
-(`OS.get_ticks_msec()`) move to their new class. Strings, comments and node paths are left alone. What it cannot do safely
-it lists with the line: a `setget` it cannot convert, `move_and_slide(velocity)`, `master`/`mastersync`, `yield()` without
-arguments, export hints it does not know. Scenes and project settings are not touched; Godot's own `--convert-3to4` does those.
+`sig.connect(target.method.bind(...))`, `emit_signal` and `funcref` become signals and callables, `update()` becomes
+`queue_redraw()` in CanvasItem scripts, and members that moved (`OS.get_ticks_msec()`) move to their new class. Strings,
+comments and node paths are left alone. What it cannot do safely it lists with the line: a `setget` it cannot convert,
+`move_and_slide(velocity)`, `master`/`mastersync`, `yield()` without arguments, `update()` in scripts with a path base,
+export hints it does not know. Scenes and project settings are not touched; Godot's own `--convert-3to4` does those.
 Commit first; a second run makes no further changes.
 
 `migrate` also ports `.gdshader` and `.gdshaderinc` files: the names in Godot's own shader rename table (`hint_albedo` and
