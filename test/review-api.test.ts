@@ -300,3 +300,46 @@ describe("api/export-without-type", () => {
   });
 });
 
+describe("api/node-only-member", () => {
+  it("flags @onready in Resource, plain RefCounted and inner classes", () => {
+    const scriptResource = ["extends Resource", "", "@onready var x = 1"].join("\n");
+    expect(findings(scriptResource).filter((f) => f.includes("[api/node-only-member]"))).toEqual([
+      'res://main.gd:3: error [api/node-only-member] "@onready" can only be used in classes that inherit "Node".',
+    ]);
+
+    const scriptNoExtends = ["@onready var x = 1"].join("\n");
+    expect(findings(scriptNoExtends).filter((f) => f.includes("[api/node-only-member]"))).toEqual([
+      'res://main.gd:1: error [api/node-only-member] "@onready" can only be used in classes that inherit "Node".',
+    ]);
+
+    const scriptInner = [
+      "extends Node",
+      "",
+      "class Helper:",
+      "\t@onready var x = 1",
+    ].join("\n");
+    expect(findings(scriptInner).filter((f) => f.includes("[api/node-only-member]"))).toEqual([
+      'res://main.gd:4: error [api/node-only-member] "@onready" can only be used in classes that inherit "Node".',
+    ]);
+  });
+
+  it("flags node export in a script that extends Resource", () => {
+    const script = ["extends Resource", "", "@export var target: Node3D"].join("\n");
+    expect(findings(script).filter((f) => f.includes("[api/node-only-member]"))).toEqual([
+      'res://main.gd:3: error [api/node-only-member] Node export is only supported in Node-derived classes, but the current class inherits "Resource".',
+    ]);
+  });
+
+  it("stays quiet for Node scripts, non-Node exports in Resource, and unresolved bases", () => {
+    const nodeScripts = [
+      ["extends Node2D", "", "@onready var a = 1", "@export var target: Node3D"].join("\n"),
+      ["extends CharacterBody3D", "", "@onready var b = 2"].join("\n"),
+      ["extends Resource", "", "@export var tex: Texture2D"].join("\n"),
+      ["extends MissingBase", "", "@onready var c = 3", "@export var target: Node3D"].join("\n"),
+    ];
+    for (const s of nodeScripts) {
+      expect(findings(s).filter((f) => f.includes("[api/node-only-member]"))).toEqual([]);
+    }
+  });
+});
+
