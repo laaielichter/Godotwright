@@ -343,3 +343,53 @@ describe("api/node-only-member", () => {
   });
 });
 
+describe("api/redefines-native-member", () => {
+  it("flags variables, constants and signals that redefine inherited native members", () => {
+    const script = [
+      "extends CharacterBody2D",
+      "",
+      "var velocity = Vector2.ZERO",
+      "const MOTION_MODE_GROUNDED = 0",
+    ].join("\n");
+    expect(findings(script).filter((f) => f.includes("[api/redefines-native-member]"))).toEqual([
+      "res://main.gd:3: error [api/redefines-native-member] Member \"velocity\" redefined (original in native class 'CharacterBody2D'): remove it to use the inherited property, or rename it.",
+      "res://main.gd:4: error [api/redefines-native-member] Member \"MOTION_MODE_GROUNDED\" redefined (original in native class 'CharacterBody2D'): remove it to use the inherited constant, or rename it.",
+    ]);
+
+    const scriptSprite = ["extends Sprite2D", "", "var position = Vector2.ZERO"].join("\n");
+    expect(findings(scriptSprite).filter((f) => f.includes("[api/redefines-native-member]"))).toEqual([
+      "res://main.gd:3: error [api/redefines-native-member] Member \"position\" redefined (original in native class 'Node2D'): remove it to use the inherited property, or rename it.",
+    ]);
+
+    const scriptSignal = ["extends Node", "", "signal ready"].join("\n");
+    expect(findings(scriptSignal).filter((f) => f.includes("[api/redefines-native-member]"))).toEqual([
+      "res://main.gd:3: error [api/redefines-native-member] Member \"ready\" redefined (original in native class 'Node'): remove it to use the inherited signal, or rename it.",
+    ]);
+  });
+
+  it("stays quiet for inner classes, functions with same name, and unresolved bases", () => {
+    const scriptInner = [
+      "extends CharacterBody2D",
+      "",
+      "class Data:",
+      "\tvar velocity = Vector2.ZERO",
+    ].join("\n");
+    expect(findings(scriptInner).filter((f) => f.includes("[api/redefines-native-member]"))).toEqual([]);
+
+    const scriptFunc = [
+      "extends CharacterBody2D",
+      "",
+      "func velocity() -> void:",
+      "\tpass",
+    ].join("\n");
+    expect(findings(scriptFunc).filter((f) => f.includes("[api/redefines-native-member]"))).toEqual([]);
+
+    const scriptUnresolved = [
+      "extends UnresolvedCustomClass",
+      "",
+      "var velocity = Vector2.ZERO",
+    ].join("\n");
+    expect(findings(scriptUnresolved).filter((f) => f.includes("[api/redefines-native-member]"))).toEqual([]);
+  });
+});
+

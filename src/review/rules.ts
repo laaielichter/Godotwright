@@ -35,6 +35,7 @@ const list: Rule[] = [
   { id: "api/export-without-type", category: "api", severity: "error", title: "Export without type or default", fix: "Give it a type (`@export var speed: float`) or a default value (`@export var speed := 200.0`)." },
   { id: "api/node-only-member", category: "api", severity: "error", title: "@onready or node export outside a Node", fix: "Remove @onready or the node export: only classes that inherit Node can use them." },
   { id: "api/duplicate-declaration", category: "api", severity: "error", title: "Declared twice", fix: "Remove the second declaration (a merge or a patch often adds the same code twice), or rename one." },
+  { id: "api/redefines-native-member", category: "api", severity: "error", title: "Member already defined in native class", fix: "Remove the declaration to use the inherited member, or rename it." },
   // Runtime pitfalls from real projects (see data/lessons.json and `godotwright lessons`).
   { id: "api/override-signature", category: "api", severity: "error", title: "Override does not match its parent", fix: "Give the override the parent's parameters; parameters it adds need a default value." },
   { id: "api/freed-check-order", category: "api", severity: "warning", title: "Type test before the freed check", fix: "Check is_instance_valid(x) first and test `x is T` after it: a type test on a freed object is itself an error." },
