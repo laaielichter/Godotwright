@@ -121,6 +121,35 @@ describe("migrate a script", () => {
     expect(findings).toEqual([]);
   });
 
+  it("rewrites JSON.print and JSON.parse(s).result (#161)", () => {
+    expect(code("var text = JSON.print(data)")).toBe('var text = JSON.stringify(data, "", false)');
+    expect(code('var text2 = JSON.print(data, "\\t")')).toBe('var text2 = JSON.stringify(data, "\\t", false)');
+    expect(code('var text3 = JSON.print(data, "\\t", true)')).toBe('var text3 = JSON.stringify(data, "\\t", true)');
+    expect(code("var text4 = JSON.print(data, indent, sort)")).toBe("var text4 = JSON.stringify(data, indent, sort)");
+
+    expect(code("var value = JSON.parse(text).result")).toBe("var value = JSON.parse_string(text)");
+
+    // Look-alikes left alone:
+    expect(code('print("hello")')).toBe('print("hello")');
+    expect(code('logger.print("hello")')).toBe('logger.print("hello")');
+
+    // JSON.parse(x) without .result gets a TO DO:
+    const parseOnly = migrateScript("var res = JSON.parse(text)", api);
+    expect(parseOnly.code).toBe("var res = JSON.parse(text)");
+    expect(parseOnly.left[0]?.message).toContain("JSON.parse() returns an Error in Godot 4");
+
+    // Idempotent:
+    const once = migrateScript('var s = JSON.print(d)\nvar v = JSON.parse(t).result', api);
+    const twice = migrateScript(once.code, api);
+    expect(twice.changes).toEqual([]);
+    expect(twice.code).toBe(once.code);
+
+    // Review hint for JSON.print:
+    const unmigrated = makeProject({ "project.godot": PROJECT, "test.gd": "extends Node\nfunc f():\n\tJSON.print({})\n" });
+    const review = reviewProject(unmigrated).findings.filter((f) => f.message.includes("JSON.stringify"));
+    expect(review.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("renames only Godot 3 names that do not exist in Godot 4 or in the script", () => {
     expect(code("var r = rand_range(1, 2)\nvar s = stepify(x, 0.5)\nvar b = BUTTON_LEFT")).toBe("var r = randf_range(1, 2)\nvar s = snapped(x, 0.5)\nvar b = MOUSE_BUTTON_LEFT");
     // `empty` is this script's own function: it stays.
