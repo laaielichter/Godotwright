@@ -58,7 +58,7 @@ describe("GitHub Actions annotations", () => {
     expect(reviewAnnotations(report, { detailFull: true, projectRoot: root, cwd: root, workspace: root })).toHaveLength(2);
     expect(annotationFile("res://a,b.gd", root, root, root)).toBe("a,b.gd");
     const comma = { findings: [{ severity: "warning", message: "comma, colon: and %", file: "res://a,b.gd", line: 8, rule: "rule:comma" }] } as never;
-    expect(reviewAnnotations(comma, { projectRoot: root, cwd: root, workspace: root })).toEqual(["::warning file=a%2Cb.gd,line=8,title=rule%3Acomma::comma,%3A and %25"]);
+    expect(reviewAnnotations(comma, { projectRoot: root, cwd: root, workspace: root })).toEqual(["::warning file=a%2Cb.gd,line=8,title=rule%3Acomma::comma, colon: and %25"]);
   });
 
   it("includes Godot diagnostics and omits the file property for missing files", () => {
