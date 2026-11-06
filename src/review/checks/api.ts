@@ -192,6 +192,10 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       for (const p of fn.params) checkTypeName(p.type, fn.line, model);
       checkTypeName(fn.returnType, fn.line, model);
     }
+    const checkNodeMembers = !options.foreignClasses && !unresolvedBase(model);
+    const nativeBase = pm.nativeOf(model);
+    const isNodeClass = api.inheritsFrom(nativeBase, "Node");
+
     for (const v of model.outline.variables) {
       checkTypeName(v.type, v.line, model);
       if (v.exportAnnotation === "@export" && !v.type && !v.hasDefault && !v.inferred) {
@@ -200,6 +204,27 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
           v.line,
           `"@export var ${v.name}" needs a type or a default value: Godot 4 cannot infer an export's type without an initializer.`,
         );
+      }
+      if (checkNodeMembers && !isNodeClass) {
+        if (v.onready) {
+          report("api/node-only-member", v.line, '"@onready" can only be used in classes that inherit "Node".');
+        }
+        if (v.exportAnnotation && v.type) {
+          const resolved = pm.resolveTypeName(v.type, model);
+          const typeIsNode =
+            resolved?.kind === "native"
+              ? api.inheritsFrom(resolved.name, "Node")
+              : resolved?.kind === "script"
+                ? api.inheritsFrom(pm.nativeOf(resolved.model), "Node")
+                : false;
+          if (typeIsNode) {
+            report(
+              "api/node-only-member",
+              v.line,
+              `Node export is only supported in Node-derived classes, but the current class inherits "${nativeBase}".`,
+            );
+          }
+        }
       }
     }
     for (const c of model.outline.constants) checkTypeName(c.type, c.line, model);
