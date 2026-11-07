@@ -4373,7 +4373,7 @@
                         "title":  "A speed-limit look-ahead must reach further than the braking distance from top speed",
                         "symptom":  "A very fast train got an emergency brake intervention before a curve, dropping from about 600 to 290 km/h.",
                         "cause":  "The protection system looked 2.5 km ahead, but at that speed the train needed about 3.5 km to slow down for the curve, so the limit appeared too late to brake normally.",
-                        "fix":  "Lower the allowed speed gradually before each restriction at the planned deceleration (a braking curve of 1.4 m/s┬▓ here), or make the look-ahead at least the braking distance from maximum speed.",
+                        "fix":  "Lower the allowed speed gradually before each restriction at the planned deceleration (a braking curve of 1.4 m/sâ”¬â–“ here), or make the look-ahead at least the braking distance from maximum speed.",
                         "test":  "Drive at full speed into every curve on every line and count interventions (expect zero).",
                         "tags":  [
                                      "train",
@@ -6001,6 +6001,270 @@
                                      "jitter",
                                      "high speed",
                                      "stabilise"
+                                 ]
+                    },
+                    {
+                        "id":  "rendering/weather-transition-snapshot-from",
+                        "topic":  "rendering",
+                        "title":  "Snapshot the current visual state before starting a weather transition, not the target profile",
+                        "symptom":  "Switching weather mid-transition caused a hard jump: the sky, fog and lighting popped to the new start state.",
+                        "cause":  "The transition started from the stored profile instead of from what was actually on screen. Mid-transition, the screen was a blend of two profiles.",
+                        "fix":  "Snapshot every blended value (fog density, ambient colour, sun energy, sky parameters) into a dictionary before starting the new transition. Use smoothstep instead of linear interpolation to avoid a visible acceleration at the start.",
+                        "test":  "Switch weather three times rapidly. There must be no visual jump between any two states.",
+                        "tags":  [
+                                     "weather",
+                                     "transition",
+                                     "lerp",
+                                     "smoothstep",
+                                     "fog",
+                                     "environment",
+                                     "sky"
+                                 ]
+                    },
+                    {
+                        "id":  "world/floating-origin-must-preserve-velocity",
+                        "topic":  "world",
+                        "title":  "A floating origin rebase must preserve velocity, mission distance and authoritative coordinates",
+                        "symptom":  "After a rebase the helicopter\u0027s speed jumped, mission distances changed, and the authoritative geo position drifted.",
+                        "cause":  "The rebase shifted the position but did not verify that velocity, mission targets and the geo reference round-tripped correctly.",
+                        "fix":  "After every rebase, assert that the authoritative coordinates (geo position), the velocity and the distance to every mission target are unchanged within a tolerance of about 1 cm. Snap the shift to a round grid (e.g. 2 km) so the accumulated translation stays exact.",
+                        "test":  "Fly 40 km and count rebases. After each one, the authoritative position must differ by less than 1 cm and the velocity must be bit-equal.",
+                        "tags":  [
+                                     "floating origin",
+                                     "rebase",
+                                     "large world",
+                                     "precision",
+                                     "velocity",
+                                     "coordinate system"
+                                 ]
+                    },
+                    {
+                        "id":  "world/chunk-streamer-cancels-stale-requests",
+                        "topic":  "world",
+                        "title":  "A chunk streaming scheduler must cancel stale requests or a fast camera loads the whole world",
+                        "symptom":  "Flying fast queued hundreds of chunk loads. By the time they finished, the camera was kilometres away and the chunks were immediately unloaded.",
+                        "cause":  "The scheduler never cancelled pending requests for chunks the camera had already passed.",
+                        "fix":  "Keep a cancelled set keyed by request id. Before a worker starts decoding, check if the request is cancelled. On the main thread, drain completed payloads and skip cancelled ones. Sort pending requests by priority so the nearest chunk loads first.",
+                        "test":  "Fly at top speed across the map. The pending request count must stay under the ring size, not grow unbounded.",
+                        "tags":  [
+                                     "streaming",
+                                     "chunk",
+                                     "scheduler",
+                                     "cancel",
+                                     "priority",
+                                     "worker thread",
+                                     "Mutex"
+                                 ]
+                    },
+                    {
+                        "id":  "rendering/shared-material-across-chunks",
+                        "topic":  "rendering",
+                        "title":  "Share one material resource across all streaming chunks or each chunk breaks the draw batch",
+                        "symptom":  "Each 2 km chunk had its own copy of the grass material. Draw calls scaled with chunk count instead of staying constant.",
+                        "cause":  "Each chunk created a new StandardMaterial3D or ShaderMaterial with the same settings. Godot cannot batch draw calls across different material objects even when their properties are identical.",
+                        "fix":  "Create shared materials once (foliage, terrain, water, trunk) and assign the same object to every chunk\u0027s meshes. Use set_instance_shader_parameter for per-instance variation instead of per-material changes.",
+                        "test":  "Count draw calls with 25 chunks loaded. They should not increase when more chunks load if the materials are shared.",
+                        "tags":  [
+                                     "material",
+                                     "draw calls",
+                                     "batching",
+                                     "streaming",
+                                     "chunks",
+                                     "shared resource"
+                                 ]
+                    },
+                    {
+                        "id":  "performance/multimesh-per-chunk-not-per-tree",
+                        "topic":  "performance",
+                        "title":  "Build one MultiMesh per chunk for each foliage type instead of one node per tree",
+                        "symptom":  "17,000 trees as individual MeshInstance3D nodes caused 120+ ms hitches when streaming.",
+                        "cause":  "Each tree was a separate node with its own transform update. The main thread spent all its time on tree node management.",
+                        "fix":  "Collect all transforms for each foliage type (crown, trunk, shrub) into a MultiMeshInstance3D per chunk. Use a shared ShaderMaterial with vertex wind animation so trees sway without any per-tree script cost.",
+                        "test":  "Load a chunk with 2000+ trees. The frame time must stay under 16 ms.",
+                        "tags":  [
+                                     "MultiMesh",
+                                     "foliage",
+                                     "trees",
+                                     "streaming",
+                                     "vertex shader",
+                                     "wind animation",
+                                     "per-instance"
+                                 ]
+                    },
+                    {
+                        "id":  "rendering/procedural-field-material-world-space",
+                        "topic":  "rendering",
+                        "title":  "Use world-space UVs for shared procedural terrain materials so chunk seams disappear",
+                        "symptom":  "Each 2 km chunk had visible colour edges where it met its neighbour because each chunk\u0027s material tiled from its own origin.",
+                        "cause":  "The procedural field shader used local UVs. At chunk borders the pattern jumped by the chunk offset.",
+                        "fix":  "Sample noise and detail textures using world-space coordinates (VERTEX.xz in the vertex shader, passed as a varying). All chunks that share the material then tile seamlessly.",
+                        "test":  "Fly over a chunk border at low altitude. There must be no visible line.",
+                        "tags":  [
+                                     "terrain",
+                                     "shader",
+                                     "world space UV",
+                                     "chunk border",
+                                     "seam",
+                                     "tiling",
+                                     "procedural"
+                                 ]
+                    },
+                    {
+                        "id":  "rendering/atmospheric-ring-cards-fade-range",
+                        "topic":  "rendering",
+                        "title":  "Distant billboard cards must fade in before the camera\u0027s far plane or they pop into view",
+                        "symptom":  "Distant village and city silhouette cards popped into existence at 6-7 km when the camera moved.",
+                        "cause":  "The cards had no visibility_range_begin fade, so they switched from invisible to fully drawn in one frame.",
+                        "fix":  "Set visibility_range_begin well inside the camera\u0027s far plane with a fade margin. Use VISIBILITY_RANGE_FADE_SELF for a smooth alpha blend. Place the cards\u0027 visibility_range_end before the atmospheric ring where they would be too small to see anyway.",
+                        "test":  "Fly towards distant cards at cruise speed. They must fade in smoothly over at least 500 m.",
+                        "tags":  [
+                                     "visibility range",
+                                     "billboard",
+                                     "fade",
+                                     "pop-in",
+                                     "far plane",
+                                     "silhouette",
+                                     "LOD"
+                                 ]
+                    },
+                    {
+                        "id":  "audio/procedural-audio-generator-buffer",
+                        "topic":  "audio",
+                        "title":  "A procedural audio generator must fill its buffer ahead of the playback cursor or it clicks",
+                        "symptom":  "The rotor blade and fenestron tones had audible clicks and dropouts during frame hitches.",
+                        "cause":  "The AudioStreamGenerator buffer was only filled from _process. A long frame left gaps in the audio buffer.",
+                        "fix":  "Fill the buffer in _process but write enough frames to cover at least two process cycles. Check get_frames_available() and write at least that many. Use a buffer_length of 0.05 to 0.1 seconds. Generate samples from a phase accumulator, not from Time, so the tone never jumps.",
+                        "test":  "Cause a 100 ms frame hitch while the tone plays. There must be no click.",
+                        "tags":  [
+                                     "AudioStreamGenerator",
+                                     "buffer",
+                                     "clicks",
+                                     "procedural audio",
+                                     "phase accumulator",
+                                     "underrun"
+                                 ]
+                    },
+                    {
+                        "id":  "gameplay/weather-affects-gameplay-through-signals",
+                        "topic":  "gameplay",
+                        "title":  "Weather must affect gameplay through signals and values, not by directly writing to physics or controls",
+                        "symptom":  "Adding night lighting to the weather engine accidentally changed the helicopter\u0027s flight characteristics.",
+                        "cause":  "The weather script directly set physics parameters. A lighting change accidentally touched a flight coupling value.",
+                        "fix":  "Weather emits signals (wind_changed, visibility_changed, turbulence_warning) and sets public properties (current_wind, current_turbulence). The flight model reads them but the weather engine never writes to the helicopter\u0027s controls, forces, collision or camera. Document each value\u0027s ownership in a comment.",
+                        "test":  "Change only the lighting scenario. The helicopter\u0027s velocity after 60 frames must be identical to before the change.",
+                        "tags":  [
+                                     "weather",
+                                     "signals",
+                                     "ownership",
+                                     "coupling",
+                                     "flight model",
+                                     "separation of concerns"
+                                 ]
+                    },
+                    {
+                        "id":  "process/headless-visual-qa-capture",
+                        "topic":  "process",
+                        "title":  "Capture reference screenshots headlessly and compare them automatically after every change",
+                        "symptom":  "Visual regressions survived for weeks because nobody looked at the game from fixed viewpoints.",
+                        "cause":  "Visual checks were manual and ran only before a release.",
+                        "fix":  "Write a headless test that loads the scene, waits for streaming to settle, moves the camera to each fixed viewpoint, and saves a PNG. Compare each PNG with a baseline using pixel difference. Flag regressions above a threshold. Keep the baselines in version control.",
+                        "test":  "Break one material colour and run the capture. It must flag the changed view.",
+                        "tags":  [
+                                     "headless",
+                                     "screenshot",
+                                     "visual QA",
+                                     "baseline",
+                                     "regression",
+                                     "capture",
+                                     "PNG",
+                                     "automated test"
+                                 ]
+                    },
+                    {
+                        "id":  "world/streaming-process-mode-always",
+                        "topic":  "world",
+                        "title":  "A terrain streamer must keep loading behind a paused menu or the world is empty when play starts",
+                        "symptom":  "After the pre-flight menu the world was bare for several seconds because the streamer was paused along with the game.",
+                        "cause":  "The streamer node had the default PROCESS_MODE_INHERIT, so it paused when the game paused for the pre-flight menu.",
+                        "fix":  "Set the streamer to PROCESS_MODE_ALWAYS so it keeps loading terrain behind menus and pause screens. The streamer only writes to its own nodes and never touches gameplay state.",
+                        "test":  "Open the pre-flight menu for 10 seconds, then dismiss it. The terrain ring must already be loaded.",
+                        "tags":  [
+                                     "streaming",
+                                     "process mode",
+                                     "pause",
+                                     "menu",
+                                     "PROCESS_MODE_ALWAYS",
+                                     "loading"
+                                 ]
+                    },
+                    {
+                        "id":  "physics/floating-origin-rebase-snaps-to-grid",
+                        "topic":  "physics",
+                        "title":  "Snap floating origin rebases to a fixed grid to keep accumulated shifts exact",
+                        "symptom":  "After many rebases the world position drifted by several metres from the authoritative geo coordinate.",
+                        "cause":  "Each rebase shifted by the exact camera offset, accumulating float rounding at every step.",
+                        "fix":  "Round the shift to a fixed grid (e.g. 2 km) with roundf(offset / grid) * grid. The accumulated translation stays an exact multiple of the grid, so there is no drift. Verify with an assertion after each rebase.",
+                        "test":  "Fly 80 km in a circle and check the authoritative geo position. Drift must be under 1 cm.",
+                        "tags":  [
+                                     "floating origin",
+                                     "rebase",
+                                     "grid",
+                                     "drift",
+                                     "precision",
+                                     "large world"
+                                 ]
+                    },
+                    {
+                        "id":  "rendering/cockpit-interpolation-lag",
+                        "topic":  "rendering",
+                        "title":  "A cockpit shell must not inherit CharacterBody3D physics interpolation or it lags the camera by a fraction of a tick",
+                        "symptom":  "The cockpit interior wobbled against the camera at speed, especially in turns.",
+                        "cause":  "The cockpit was a child of the CharacterBody3D and inherited its physics interpolation. The camera was set from the non-interpolated pose in _process, so the cabin lagged or led by up to one tick.",
+                        "fix":  "Set the cockpit shell to top_level = true and copy the aircraft\u0027s current (non-interpolated) transform every _process frame. The camera and the cabin then use the same pose.",
+                        "test":  "Fly at cruise speed and compare the cockpit position with the camera position. The difference must be zero.",
+                        "tags":  [
+                                     "cockpit",
+                                     "physics interpolation",
+                                     "CharacterBody3D",
+                                     "top_level",
+                                     "camera",
+                                     "lag",
+                                     "jitter"
+                                 ]
+                    },
+                    {
+                        "id":  "ui/strategic-map-draw-primitive",
+                        "topic":  "ui",
+                        "title":  "draw_primitive with individual triangles is faster than draw_polygon for a dynamic map",
+                        "symptom":  "A strategic map with 800+ polygons took 12 ms to redraw using draw_polygon.",
+                        "cause":  "draw_polygon triangulates the polygon every call. For a map of triangulated regions, this re-triangulates what is already triangulated.",
+                        "fix":  "Pre-triangulate the regions once and draw them with draw_primitive (3 points per call). draw_primitive skips triangulation and is much faster for pre-triangulated data.",
+                        "test":  "Redraw the full map and compare frame time. draw_primitive should be at least 3x faster.",
+                        "tags":  [
+                                     "draw_primitive",
+                                     "draw_polygon",
+                                     "_draw",
+                                     "map",
+                                     "triangulation",
+                                     "2D",
+                                     "performance"
+                                 ]
+                    },
+                    {
+                        "id":  "gameplay/mission-state-survives-scene-change",
+                        "topic":  "gameplay",
+                        "title":  "Mission state must survive a floating origin rebase and a scene reload",
+                        "symptom":  "After a rebase, mission waypoints shifted position and distances changed.",
+                        "cause":  "Mission targets were stored as local Vector3 positions. The rebase shifted the world but not the mission targets.",
+                        "fix":  "Store mission targets in authoritative coordinates (geo coordinates or a fixed reference frame). After every rebase, apply the world translation to all mission positions. Assert that the distance from the helicopter to each target is unchanged.",
+                        "test":  "Start a mission, fly until a rebase triggers, and check that the mission distance display does not jump.",
+                        "tags":  [
+                                     "mission",
+                                     "rebase",
+                                     "floating origin",
+                                     "waypoint",
+                                     "coordinate transform",
+                                     "state"
                                  ]
                     }
                 ]
