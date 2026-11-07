@@ -142,7 +142,8 @@ Godotwright gets better with every use, without collecting anything personal.
 25. **Agents in the loop.** Hooks for coding agents (`godotwright hook`, wired in the Claude Code plugin): the review
     after every edit of a Godot file, lessons under Godot errors in command output, a last look at open errors before
     the agent stops, and a short project brief at the start. Task skills (debug, perf, vehicles, world, model, patch)
-    and subagents (reviewer, debugger) in the plugin.
+    and seven subagents (reviewer, debugger, migrator, performance, shader specialist, model builder and test engineer)
+    in the plugin.
     *Done when:* an agent that edits a broken script gets the errors back without calling a tool, every hook stays
     silent when it has nothing to add, and no hook can block the agent by failing.
 

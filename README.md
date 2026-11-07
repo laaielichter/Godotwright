@@ -73,7 +73,7 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 
 | Client | How |
 | --- | --- |
-| **Claude Code** | `/plugin install godotwright --marketplace laaielichter/Godotwright` (MCP server, hooks, ten skills, two subagents) |
+| **Claude Code** | `/plugin install godotwright --marketplace laaielichter/Godotwright` (MCP server, hooks, ten skills, seven subagents) |
 | **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it |
 | **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
