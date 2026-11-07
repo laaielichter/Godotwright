@@ -2,7 +2,7 @@
   <img src="docs/logo.svg" alt="Godotwright logo" width="72" height="72">
 </p>
 <h1 align="center">Godotwright</h1>
-<p align="center"><b>Checks the Godot code your coding agent writes, and gives it the tools to fix it.</b><br>
+<p align="center"><b>Big worlds. Better code. Keep creating.</b><br>
 MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Codex, Cursor, VS Code, Gemini CLI and any MCP client. No editor needed.</p>
 <p align="center">
   <a href="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml"><img src="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -19,6 +19,10 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <a href="https://laaielichter.github.io/Godotwright/models.html">3D models</a> ·
   <a href="bench/RESULTS.md">Benchmark</a> ·
   <a href="CHANGELOG.md">Changelog</a>
+</p>
+<p align="center">
+  <a href="https://laaielichter.github.io/Godotwright/"><img src="docs/assets/social.jpg" alt="Godotwright: big worlds, better code, keep creating" width="1000"></a><br>
+  <sub>Concept artwork. Explore the toolkit, real demo and model gallery on the <a href="https://laaielichter.github.io/Godotwright/">website</a>.</sub>
 </p>
 <p align="center">
   <img src="docs/demo.gif" alt="Demo: godotwright review gives a Godot 3 player script 74/100, godotwright migrate rewrites KinematicBody2D, export var, onready var and yield, and after the last fix by hand the review gives 100/100" width="860"><br>

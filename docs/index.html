@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -7,20 +7,20 @@
 <meta name="description" content="Godotwright checks the Godot code your coding agent writes. MCP server, CLI and Claude Code plugin for Godot 4.7: offline API, scored GDScript review, headless checks and tests, safe edits, Godot 3 to 4 migration and 3D models from code.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#1d2229">
+<meta name="theme-color" content="#080f17">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
 <meta property="og:title" content="Godotwright: make any coding agent better at Godot 4">
 <meta property="og:description" content="Checks the Godot code your coding agent writes: offline Godot 4.7 API, scored GDScript review, headless checks and tests, safe edits. MCP server, CLI and Claude Code plugin. MIT.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/">
-<meta property="og:image" content="https://laaielichter.github.io/Godotwright/og.png">
+<meta property="og:image" content="https://laaielichter.github.io/Godotwright/assets/social.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="Godotwright: make any coding agent better at Godot 4">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Godotwright: make any coding agent better at Godot 4">
 <meta name="twitter:description" content="Checks the Godot code your coding agent writes: offline Godot 4.7 API, scored review, headless checks, safe edits.">
-<meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/og.png">
+<meta name="twitter:image" content="https://laaielichter.github.io/Godotwright/assets/social.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -236,51 +236,43 @@ footer { border-top: 1px solid var(--line); padding-block: 2rem 3rem; color: var
 footer .wrap { display: flex; gap: 1rem 2rem; flex-wrap: wrap; justify-content: space-between; }
 footer a { color: var(--muted); }
 </style>
+<link rel="stylesheet" href="assets/site.css">
 </head>
-<body>
+<body class="home">
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="bar">
   <div class="wrap">
     <a class="brand" href="./"><img src="logo.svg" alt="" width="28" height="28">Godotwright</a>
-    <nav aria-label="Main">
-      <a href="#install">Install</a>
-      <a href="claude-code.html">Claude Code</a>
-      <a href="#tools">Tools</a>
-      <a href="models.html">3D models</a>
-      <a href="#benchmark">Benchmark</a>
-      <a href="#faq">FAQ</a>
-      <a href="godot-3-to-4.html">Godot 3 to 4</a>
-      <a href="ci.html">CI</a>
-      <a href="https://github.com/laaielichter/Godotwright">GitHub</a>
-    </nav>
+    <nav aria-label="Main"><a href="#tools">Toolkit</a><a href="#models">3D models</a><a href="install.html">Docs</a><a href="https://github.com/laaielichter/Godotwright">GitHub <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a><a class="nav-cta" href="#install">Get started</a></nav>
   </div>
 </header>
 
-<main>
-  <div class="wrap hero">
-    <a class="new" href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md"><b>New in 0.6.0</b> Shader review and compile, the real build, scene integrity, regression proof →</a>
-    <p class="eyebrow">MCP server · CLI · Claude Code plugin · Godot 4.7</p>
-    <h1>Make any coding agent <em>fluent in Godot&nbsp;4</em>.</h1>
-    <p class="lede">Claude Code, Codex and other agents write Godot 3 code, invent methods and miss broken node paths. Godotwright checks what they write: the real Godot 4.7 API offline, a scored review of every script, headless Godot runs and safe edits. No editor needed, MIT licensed.</p>
-    <div class="cta">
-      <a class="btn primary" href="install.html">Install in 1 minute</a>
-      <a class="btn" href="https://github.com/laaielichter/Godotwright">Star on GitHub</a>
-    </div>
-
-    <div class="dock demo">
-      <div class="tabs" aria-hidden="true"><span class="tab on">Output</span><span class="tab">Debugger</span><span class="tab">Audio</span><span class="tab">Animation</span></div>
-      <div class="body">
-        <video src="demo.mp4" poster="demo-poster.jpg" width="1920" height="1080" autoplay muted loop playsinline controls aria-label="Demo: godotwright review gives a Godot 3 player script 74 out of 100, godotwright migrate rewrites the Godot 3 parts, and after the last fix by hand the review gives 100 out of 100."></video>
+<main id="main">
+  <section class="launch" aria-labelledby="hero-title">
+    <div class="wrap launch-inner">
+      <div class="launch-copy">
+        <a class="release" href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md"><span></span> v0.6.0 · Built for Godot 4.7 <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
+        <p class="eyebrow">Your agent. Your game. Real checks.</p>
+        <h1 id="hero-title">Big worlds.<br>Better code.<br><em>Keep creating.</em></h1>
+        <p class="launch-lede">Give your coding agent the Godot knowledge it needs. Catch invented APIs, check what actually runs, and build 3D models from code.</p>
+        <div class="cta"><a class="btn primary" href="#install">Start building <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a><a class="btn ghost" href="#demo">Watch it work <svg class="ui-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m6 3 11 7-11 7Z"/></svg></a></div>
+        <p class="launch-note">Open source · MIT · CLI + MCP + Claude Code plugin</p>
       </div>
+      <figure class="world"><img src="assets/world.webp" width="1280" height="853" alt="Illustration of a floating castle island with turquoise waterfalls and a small airship" fetchpriority="high"><figcaption>Concept artwork · see real model output below</figcaption></figure>
+      <a class="world-label" href="#models"><span class="orbit-dot"></span> From an idea to a clean .glb <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
     </div>
-    <p class="caption">Real output of godotwright 0.1.0: <code>review</code> scores a Godot 3 script 74/100, <code>migrate</code> rewrites the mechanical parts, and after one fix by hand <code>review</code> gives 100/100.</p>
-    <div class="strip"><a href="models.html"><img src="gallery/car.jpg" width="400" height="300" alt="A car with doors, hood and trunk on hinges, built by godotwright model build"></a><a href="models.html"><img src="gallery/helicopter.jpg" width="400" height="300" alt="A helicopter with a glass cockpit, built by godotwright model build"></a><a href="models.html"><img src="gallery/windmill.jpg" width="400" height="300" alt="A brick windmill with a stage, built by godotwright model build"></a><a href="models.html"><img src="gallery/castle.jpg" width="400" height="300" alt="A castle with a moat and drawbridge, built by godotwright model build"></a></div>
-    <p class="caption">And 3D models from code: <code>godotwright model build car</code> and 58 more kinds, no Blender. <a href="models.html">See all 59</a>.</p>
-  </div>
+  </section>
+  <div class="compat wrap" aria-label="Supported workflows"><span>Works where you build</span><b>Claude Code</b><b>Codex</b><b>Cursor</b><b>VS Code</b><a href="install.html">Any MCP client <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a></div>
+  <section class="proof" id="demo"><div class="wrap">
+    <div class="section-heading"><div><p class="eyebrow">Less guessing. More making.</p><h2>From “looks right”<br>to running right.</h2></div><p class="sub">An API reference, a code reviewer and a headless Godot toolkit. Right inside your agent’s workflow.</p></div>
+    <div class="demo-layout"><div class="demo-story"><span class="chapter">01 / THE FEEDBACK LOOP</span><h3>Write. Check.<br>Fix. Repeat.</h3><p>Get the actual file, line and Godot 4 fix. Migrate the mechanical parts, then check again.</p><a href="#example">See what it catches <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a><p class="caption">Real output · v0.1.0<br>74 → 100 after migration and one manual fix.</p></div><div class="dock demo"><div class="tabs"><span class="tab on">godotwright review</span><span class="terminal-lights" aria-hidden="true">● ● ●</span></div><div class="body"><video src="demo.mp4" poster="demo-poster.jpg" width="1920" height="1080" preload="none" controls playsinline aria-label="Real Godotwright 0.1.0 review and migration demo"></video></div></div></div>
+    <div class="feature-trio"><article><span class="feature-number">01</span><h3>Know the API</h3><p>The bundled Godot 4.7 reference replaces invented methods with real signatures. Offline.</p></article><article><span class="feature-number">02</span><h3>Check the game</h3><p>Review scripts, run Godot headless, test behavior and inspect screenshots.</p></article><article><span class="feature-number">03</span><h3>Make the pieces</h3><p>Build and lint clean .glb models, with a node per part and pivots where they belong.</p></article></div>
+  </div></section>
 
   <section id="with">
     <div class="wrap">
-      <h2>Your agent, without and with Godotwright</h2>
+      <p class="eyebrow">A better building companion</p><h2>Give your agent a reality check.</h2>
       <div class="table">
         <table>
           <thead><tr><th>Your agent…</th><th>On its own</th><th>With Godotwright</th></tr></thead>
@@ -299,28 +291,19 @@ footer a { color: var(--muted); }
 
   <section id="install">
     <div class="wrap">
-      <h2>Install</h2>
+      <p class="eyebrow">One minute to your first check</p><h2>Meet your agent’s new toolkit.</h2>
       <p class="sub">One command, no clone: <code>npx</code> runs it straight from npm. Needs Node.js 22.12 or newer. <code>scan</code>, <code>api</code> and <code>review</code> need no Godot install; <code>check</code> runs Godot 4.7 headless.</p>
-      <div class="steps">
-        <div>
-          <div class="step-h">1. Review your game</div>
-          <div class="cmd"><pre><code>npx -y godotwright review ~/games/my-game</code></pre><button class="copy" type="button">Copy</button></div>
+      <div class="install-box">
+        <div class="install-tabs" role="tablist" aria-label="Choose your setup">
+          <button type="button" role="tab" id="setup-cli" aria-selected="true" aria-controls="setup-panel" tabindex="0" data-setup="cli">CLI</button>
+          <button type="button" role="tab" id="setup-codex" aria-selected="false" aria-controls="setup-panel" tabindex="-1" data-setup="codex">Codex</button>
+          <button type="button" role="tab" id="setup-claude" aria-selected="false" aria-controls="setup-panel" tabindex="-1" data-setup="claude">Claude Code</button>
+          <button type="button" role="tab" id="setup-mcp" aria-selected="false" aria-controls="setup-panel" tabindex="-1" data-setup="mcp">Other MCP clients</button>
         </div>
-        <div>
-          <div class="step-h">2. Map the project</div>
-          <div class="cmd"><pre><code>npx -y godotwright scan ~/games/my-game</code></pre><button class="copy" type="button">Copy</button></div>
-        </div>
-        <div>
-          <div class="step-h">3a. Add to Claude Code</div>
-          <div class="cmd"><pre><code>claude mcp add godotwright -- npx -y godotwright mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
-        </div>
-        <div>
-          <div class="step-h">3b. Add to Codex</div>
-          <div class="cmd"><pre><code>codex mcp add godotwright -- npx -y godotwright mcp --tier premium</code></pre><button class="copy" type="button">Copy</button></div>
-        </div>
+        <div id="setup-panel" role="tabpanel" aria-labelledby="setup-cli" tabindex="0"><p id="setup-description">Review a project straight from npm. No clone needed.</p><div class="cmd"><pre><code id="setup-command">npx -y godotwright review ~/games/my-game</code></pre><button class="copy" type="button">Copy</button></div></div>
       </div>
+      <p class="sub"><a href="install.html">Full install guide for every client <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a> · <a href="https://www.npmjs.com/package/godotwright">View on npm</a></p>
       <p class="sub">Run the agent from your Godot project folder, or pass <code>--project &lt;path&gt;</code>. Use <code>--tier cheap</code> for small models: shorter output and step-by-step instructions.</p>
-      <div class="cta"><a class="btn primary" href="install.html">All clients and one-click installs</a><span class="sub">Claude Code plugin, Claude Desktop, Cursor, VS Code, Codex, Gemini CLI, Windsurf, Zed</span></div>
     </div>
   </section>
 
@@ -389,7 +372,7 @@ footer a { color: var(--muted); }
     <div class="wrap">
       <h2>38 MCP tools, one CLI</h2>
       <p class="sub">Most of the 38 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
-      <ul class="tree">
+      <details class="tool-inventory"><summary>Explore the complete tool inventory <span aria-hidden="true">+</span></summary>      <ul class="tree">
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scan</span><p>Map the project without starting Godot: scenes and node trees, scripts with signals and exports, autoloads, input map, broken references.</p><code>godotwright scan</code></li>
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>godot_api</span><p>Exact Godot 4.7 lookup from the bundled class reference (1078 classes): signatures, inheritance, Godot 3 names.</p><code>godotwright api Node2D.look_at</code></li>
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>godot_api_search</span><p>Search the reference in plain words, so the agent finds <code>is_on_floor()</code> instead of guessing.</p><code>godotwright api --search "is on floor"</code></li>
@@ -426,22 +409,20 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_model_inspect</span><p>What is in a <code>.glb</code>: nodes, triangles, textures and size.</p><code>godotwright model inspect car.glb</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>Mods and patches</span><p>Review a mod against the game it patches, from its source folder or a <code>.pck</code> file list.</p><code>godotwright review mod/ --base game/</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>Local learning</span><p>Rules real Godot keeps contradicting turn into hints. Nothing leaves your machine unless you opt in.</p><code>godotwright learn</code></li>
-      </ul>
+      </ul></details>
     </div>
   </section>
 
-  <section id="models">
-    <div class="wrap">
-      <h2>It builds 3D models too</h2>
-      <p class="sub">Agents can make, look at and check 3D models for Godot without Blender. <code>model identify</code> says what a thing is (parts, sizes, pivots), <code>model build</code> makes a clean <code>.glb</code> from one of 59 ready-made kinds or your own JSON spec, <code>model view</code> draws it as text for agents that cannot see pictures, and <code>model lint</code> scores it and checks it is what it should be. It is set up to work with small, cheap models as well (<a href="https://github.com/laaielichter/Godotwright/blob/main/docs/cheap-models.md">what we tested</a>).</p>
-      <a href="models.html"><img src="gallery/overview.jpg" width="1200" height="600" loading="lazy" alt="Cars, aircraft, boats, buildings, trees and terrain built by Godotwright" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)"></a>
-      <div class="cta"><a class="btn primary" href="models.html">See all 59 models</a></div>
-    </div>
-  </section>
+  <section id="models"><div class="wrap">
+    <div class="section-heading"><div><p class="eyebrow">Small pieces. Bigger possibilities.</p><h2>Build a world.<br>One model at a time.</h2></div><p class="sub">59 ready-made kinds. Clean .glb files. Parts, pivots, UVs and tangents included. These are actual Godotwright renders.</p></div>
+    <div class="gallery-controls" role="group" aria-label="Filter model previews"><button type="button" aria-pressed="true" data-filter="all">All models</button><button type="button" aria-pressed="false" data-filter="worlds">Worldbuilding</button><button type="button" aria-pressed="false" data-filter="vehicles">Vehicles</button><button type="button" aria-pressed="false" data-filter="creatures">Creatures</button><span id="gallery-count" role="status">6 model previews</span></div>
+    <div class="model-grid"><a class="model-card" data-category="worlds" href="models.html"><div class="model-image"><img src="gallery/castle.jpg" width="400" height="300" loading="lazy" alt="Castle built by Godotwright model build"><span class="model-arrow"><svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></span></div><div class="model-info"><span>Worldbuilding</span><h3>Castle</h3><p>Stone walls. Moving drawbridge.</p><code>model build castle</code></div></a><a class="model-card" data-category="vehicles" href="models.html"><div class="model-image"><img src="gallery/helicopter.jpg" width="400" height="300" loading="lazy" alt="Helicopter built by Godotwright model build"><span class="model-arrow"><svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></span></div><div class="model-info"><span>Vehicles</span><h3>Helicopter</h3><p>A cockpit with a proper view.</p><code>model build helicopter</code></div></a><a class="model-card" data-category="vehicles" href="models.html"><div class="model-image"><img src="gallery/car.jpg" width="400" height="300" loading="lazy" alt="Car built by Godotwright model build"><span class="model-arrow"><svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></span></div><div class="model-info"><span>Vehicles</span><h3>Car</h3><p>Doors with real hinge pivots.</p><code>model build car</code></div></a><a class="model-card" data-category="worlds" href="models.html"><div class="model-image"><img src="gallery/windmill.jpg" width="400" height="300" loading="lazy" alt="Windmill built by Godotwright model build"><span class="model-arrow"><svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></span></div><div class="model-info"><span>Worldbuilding</span><h3>Windmill</h3><p>Build a little atmosphere.</p><code>model build windmill</code></div></a><a class="model-card" data-category="creatures" href="models.html"><div class="model-image"><img src="gallery/dragon.jpg" width="400" height="300" loading="lazy" alt="Dragon built by Godotwright model build"><span class="model-arrow"><svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></span></div><div class="model-info"><span>Creatures</span><h3>Dragon</h3><p>A new creature takes shape.</p><code>model build dragon</code></div></a><a class="model-card" data-category="creatures" href="models.html"><div class="model-image"><img src="gallery/horse.jpg" width="400" height="300" loading="lazy" alt="Horse built by Godotwright model build"><span class="model-arrow"><svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></span></div><div class="model-info"><span>Creatures</span><h3>Horse</h3><p>Give your world some life.</p><code>model build horse</code></div></a></div>
+    <div class="cta"><a class="btn primary" href="models.html">Explore all 59 models <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a><span class="sub">No Blender required. Refine the results in your own workflow.</span></div>
+  </div></section>
 
   <section id="benchmark">
     <div class="wrap">
-      <h2>Measured, with the limits stated</h2>
+      <p class="eyebrow">Evidence, in the open</p><h2>Real tests. Honest results.</h2>
       <p class="sub">168 runs of Claude Haiku, Sonnet and Opus on 12 Godot tasks, each with and without Godotwright, judged by real Godot 4.7.2 behavior tests in CI. Every run passed in both modes, so these tasks do not separate the setups on correctness. Code quality did differ.</p>
       <div class="stats">
         <div class="stat good"><span class="n">84 / 84</span><span class="l">runs fully statically typed with Godotwright</span></div>
@@ -453,7 +434,7 @@ footer a { color: var(--muted); }
     </div>
   </section>
 
-  <section id="compare">
+  <section id="compare" class="comparison">
     <div class="wrap">
       <h2>How it compares</h2>
       <div class="table">
@@ -476,7 +457,7 @@ footer a { color: var(--muted); }
 
   <section id="faq">
     <div class="wrap">
-      <h2>FAQ</h2>
+      <p class="eyebrow">Before you jump in</p><h2>A few good questions.</h2>
       <div class="faq">
         <details><summary>Does it need Godot installed?</summary><p>No for <code>scan</code>, <code>api</code>, <code>review</code>, <code>migrate</code> and the edits: they read your project files and the bundled Godot 4.7 class reference. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> run Godot 4.7 headless (<code>--godot &lt;path&gt;</code>, <code>$GODOT</code>, <code>godot</code> on your PATH, or a Godot 4 download it finds in the usual folders, Steam or Downloads).</p></details>
         <details><summary>Which agents does it work with?</summary><p>Any agent that speaks MCP over stdio. CI connects Claude Code and Codex to the server on every push. The CLI works from any shell, so agents without MCP can call it too.</p></details>
@@ -489,6 +470,7 @@ footer a { color: var(--muted); }
       </div>
     </div>
   </section>
+  <section class="closing"><div class="wrap"><p class="eyebrow">Made by laaielichter. Built in the open.</p><h2>Your next world<br>starts with an idea.</h2><p>Bring your agent. Godotwright brings the checks.</p><div class="cta"><a class="btn primary" href="#install">Let’s build something <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a><a class="btn" href="https://github.com/laaielichter/Godotwright">Star on GitHub <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="m10 2 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4L2.2 7.7l5.4-.8Z"/></svg></a></div><p class="caption">Find it useful? A GitHub star is always welcome.</p></div></section>
 </main>
 
 <footer>
@@ -498,18 +480,6 @@ footer a { color: var(--muted); }
   </div>
 </footer>
 
-<script>
-document.querySelectorAll(".cmd .copy").forEach(function (btn) {
-  btn.addEventListener("click", function () {
-    var text = btn.parentElement.querySelector("code").innerText;
-    var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(done, function () { window.getSelection().selectAllChildren(btn.parentElement.querySelector("code")); });
-    } else {
-      window.getSelection().selectAllChildren(btn.parentElement.querySelector("code"));
-    }
-  });
-});
-</script>
+<script src="assets/site.js" defer></script>
 </body>
 </html>
