@@ -279,6 +279,13 @@ Gifts go to new model credits to keep building and improving Godotwright, and to
 wellbeing for large language models, neural networks and agents. In the future they will also go to a better
 environment for AI.
 
+## Sister tools
+
+From the same author, local and open source: [ReversePort](https://github.com/laaielichter/Reverseport)
+(reverse engineer and port games between engines), [Threesmith](https://github.com/laaielichter/Threesmith)
+(check the three.js code your agent writes), [Stashpad](https://github.com/laaielichter/Stashpad)
+(agent memory you can trust) and [agentdisk](https://github.com/laaielichter/Agentdisk) (clean up after agents).
+
 ## License
 
 [MIT](LICENSE)
