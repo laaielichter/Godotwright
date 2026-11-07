@@ -1,4 +1,4 @@
-{
+﻿{
     "version":  1,
     "lessons":  [
                     {
@@ -6266,6 +6266,314 @@
                                      "coordinate transform",
                                      "state"
                                  ]
+                    },
+                    {
+                        "id":  "rendering/box-sides-visible-at-distance",
+                        "topic":  "rendering",
+                        "title":  "A BoxMesh used as a flat surface exposes its side faces at distance",
+                        "symptom":  "A stepped blue wall appeared at the horizon in cruise captures: sea tiles showed their vertical side faces from an oblique camera angle.",
+                        "cause":  "A BoxMesh for a kilometre-wide water or terrain tile has vertical faces that become visible from a camera far above or at the side. PlaneMesh has none.",
+                        "fix":  "Use PlaneMesh for ground, water and terrain surfaces that should look flat. Reserve BoxMesh for objects that really have volume.",
+                        "test":  "Fly the chase camera at cruise altitude across the streaming boundary and check that no vertical edges appear at the far ring.",
+                        "tags":  [
+                                     "BoxMesh",
+                                     "PlaneMesh",
+                                     "water",
+                                     "terrain",
+                                     "horizon",
+                                     "side face",
+                                     "streaming"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/multimesh-custom-aabb",
+                        "topic":  "performance",
+                        "title":  "A MultiMesh with a custom mesh needs an explicit custom_aabb",
+                        "symptom":  "Pooled tree crowns and irregular field parcels disappeared when the camera moved away from the chunk origin, although their transforms were valid.",
+                        "cause":  "Godot computes the MultiMesh bounding box from the mesh AABB, which for a unit-sized custom mesh is small. When instance transforms spread across a 2 km chunk, the bounding box stays near the origin and the GPU culls the whole batch.",
+                        "fix":  "After populating the MultiMesh, compute the union of every instance\u0027s transformed AABB and assign it to custom_aabb with a small margin. This is metadata only and adds no nodes or collision.",
+                        "test":  "Move the camera to the far corner of a chunk that uses pooled custom meshes. All instances must remain visible within their visibility range.",
+                        "tags":  [
+                                     "MultiMesh",
+                                     "custom_aabb",
+                                     "culling",
+                                     "AABB",
+                                     "tree",
+                                     "pooling"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "plant"
+                                       ]
+                    },
+                    {
+                        "id":  "world/collision-only-gameplay-ring",
+                        "topic":  "world",
+                        "title":  "Only add collision shapes to the gameplay ring, not the visual-only LOD ring",
+                        "symptom":  "Invisible walls and floors appeared kilometres away from the player, where far LOD chunks had collision shapes the player could never see.",
+                        "cause":  "The chunk generator added collision to every chunk, including the low-detail 9x9 prefetch ring that exists only for visual continuity at the horizon.",
+                        "fix":  "Gate collision creation on a detailed flag or a distance check. Far LOD chunks remain render-only. Only the active gameplay ring gets StaticBody3D and CollisionShape3D nodes.",
+                        "test":  "With the player at the centre of the map, check that chunks beyond the active radius have no physics bodies.",
+                        "tags":  [
+                                     "collision",
+                                     "streaming",
+                                     "LOD",
+                                     "StaticBody3D",
+                                     "gameplay ring",
+                                     "physics"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "gameplay/one-way-visual-feedback",
+                        "topic":  "gameplay",
+                        "title":  "Visual feedback from simulation must flow in one direction only",
+                        "symptom":  "Wind turbines that read the helicopter\u0027s downwash fed a value back that changed the flight model, creating a feedback loop that made the helicopter uncontrollable near wind farms.",
+                        "cause":  "The visual scenery system both read and wrote to the same shared state. Rotor wash bent scenery, and the bent scenery\u0027s new state was read by the flight model.",
+                        "fix":  "Make visual feedback strictly one-way: the simulation writes a snapshot, and the presentation reads it. The presentation must never write a value that any simulation, control, collision or mission system reads.",
+                        "test":  "Search for every variable the visual system writes and verify that no simulation, physics or input system reads it.",
+                        "tags":  [
+                                     "feedback loop",
+                                     "one-way",
+                                     "presentation",
+                                     "simulation",
+                                     "wind",
+                                     "downwash",
+                                     "data flow"
+                                 ],
+                        "archetypes":  [
+                                           "aircraft.rotorcraft",
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "world/replace-before-free",
+                        "topic":  "world",
+                        "title":  "Build the replacement chunk before freeing the old one",
+                        "symptom":  "A visible ground hole appeared for one to three frames when the player crossed into a new chunk.",
+                        "cause":  "The old chunk was freed before the new one was built and added to the tree, leaving a gap.",
+                        "fix":  "Generate the replacement chunk first, add it to the scene, store it in the loaded dictionary, and only then call queue_free on the old chunk.",
+                        "test":  "Cross a chunk boundary at maximum speed and check for any frame where the ground is missing.",
+                        "tags":  [
+                                     "streaming",
+                                     "chunk",
+                                     "swap",
+                                     "hole",
+                                     "queue_free",
+                                     "loading"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "rendering/quad-silhouette-not-box",
+                        "topic":  "rendering",
+                        "title":  "Use a vertical QuadMesh for distant silhouettes, not a thin BoxMesh",
+                        "symptom":  "Horizon silhouettes showed a horizontal top face from a high or downward camera, making them read as a curved blue wall instead of transparent landmarks.",
+                        "cause":  "A thin BoxMesh still has a visible top face. From above, all those top faces combine into a solid horizontal band at the horizon distance.",
+                        "fix":  "Replace thin BoxMesh silhouettes with QuadMesh, which is a genuinely flat vertical plane with no volume. Only set the Y rotation for azimuth; do not rotate around X or the card lies flat.",
+                        "tags":  [
+                                     "QuadMesh",
+                                     "BoxMesh",
+                                     "silhouette",
+                                     "horizon",
+                                     "top face",
+                                     "billboard"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/shared-primitive-meshes",
+                        "topic":  "performance",
+                        "title":  "Share primitive mesh resources across all instances",
+                        "symptom":  "Video memory grew by 8 MB per streamed chunk because each chunk allocated its own BoxMesh, CylinderMesh and QuadMesh.",
+                        "cause":  "Meshes were created inside the per-chunk generator instead of once at initialization. Godot uploads each mesh resource separately.",
+                        "fix":  "Create BoxMesh, CylinderMesh, SphereMesh, QuadMesh and PlaneMesh once during initialization and store them as class members. Every chunk reuses the same mesh resource with different transforms via MultiMesh or scale.",
+                        "test":  "After streaming ten chunks, check that the total mesh resource count has not increased by more than the number of unique mesh types.",
+                        "tags":  [
+                                     "mesh",
+                                     "BoxMesh",
+                                     "resource",
+                                     "VRAM",
+                                     "pooling",
+                                     "streaming",
+                                     "MultiMesh"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "rendering/world-space-uv-no-seams",
+                        "topic":  "rendering",
+                        "title":  "World-space UVs in a shader prevent seams at chunk boundaries",
+                        "symptom":  "Terrain, roads and water showed a visible seam at every 2 km chunk border where adjacent tiles used object-space UVs that did not align.",
+                        "cause":  "Each chunk\u0027s mesh starts at its own local origin, so object-space UVs start at zero on every tile. Adjacent tiles\u0027 textures do not line up.",
+                        "fix":  "Sample textures using world-space coordinates in the vertex or fragment shader: compute the world position with MODEL_MATRIX * vec4(VERTEX, 1.0) and use the xz components as UV. This is continuous across all chunks.",
+                        "test":  "Place the camera exactly on a chunk boundary and verify that the texture pattern continues without a seam.",
+                        "tags":  [
+                                     "world space",
+                                     "UV",
+                                     "shader",
+                                     "seam",
+                                     "terrain",
+                                     "chunk",
+                                     "MODEL_MATRIX"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "rendering/visibility-fade-before-far-plane",
+                        "topic":  "rendering",
+                        "title":  "Start visibility fade well before the camera far plane",
+                        "symptom":  "The streaming boundary was visible as a hard line where chunks popped in or out at the camera\u0027s far plane distance.",
+                        "cause":  "visibility_range_end was set close to or beyond the camera far plane, so chunks appeared or disappeared abruptly at the render distance.",
+                        "fix":  "Set visibility_range_end inside the far plane and use visibility_range_end_margin to start the fade even earlier. For atmospheric layers, also add a shader-based alpha fade over the last kilometres so the geometry dissolves into the sky before the hard cull.",
+                        "test":  "Fly at cruise altitude and verify that no hard pop-in or pop-out line is visible at any distance.",
+                        "tags":  [
+                                     "visibility_range",
+                                     "fade",
+                                     "far plane",
+                                     "pop-in",
+                                     "streaming",
+                                     "LOD"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/material-cache-key-params",
+                        "topic":  "performance",
+                        "title":  "A material cache key must contain exactly the parameters that change its appearance",
+                        "symptom":  "Two bugs from one cause: a material cache keyed on too little produced wrong colours, and one keyed on too much created thousands of duplicate materials.",
+                        "cause":  "The cache key did not include the detail texture path, so different surfaces shared a material. In another case the key included the chunk coordinate, so every chunk got its own copy.",
+                        "fix":  "Build the cache key from the visual parameters only: colour, texture path, roughness, tile size and blend strength. Never include chunk coordinate, region name or frame number.",
+                        "test":  "After streaming the full map, the material cache size must equal the number of visually distinct combinations, not the number of chunks.",
+                        "tags":  [
+                                     "cache",
+                                     "material",
+                                     "key",
+                                     "ShaderMaterial",
+                                     "duplicate",
+                                     "streaming"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/pooled-collision-single-body",
+                        "topic":  "performance",
+                        "title":  "Use one StaticBody3D per chunk with many CollisionShape3D children",
+                        "symptom":  "Physics step time doubled after adding per-building collision: each building got its own StaticBody3D, creating hundreds of physics bodies per chunk.",
+                        "cause":  "Every call to the collision helper created a new StaticBody3D. The physics engine tracks each body separately.",
+                        "fix":  "Create one StaticBody3D per chunk and cache it in metadata. Add every building, bridge and landmark as a CollisionShape3D child of that single body. This is one broadphase entry instead of hundreds.",
+                        "test":  "After generating a detail chunk, count the StaticBody3D children. There should be at most two (terrain proxy plus scenery).",
+                        "tags":  [
+                                     "StaticBody3D",
+                                     "CollisionShape3D",
+                                     "pooling",
+                                     "physics",
+                                     "broadphase",
+                                     "chunk"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "gdscript/idempotent-resource-init",
+                        "topic":  "gdscript",
+                        "title":  "Make resource initialization idempotent with a ready flag",
+                        "symptom":  "A chunk was requested before the material pool was set up, causing null material errors on the first frame.",
+                        "cause":  "The streamer was added to the tree by a test harness that immediately called update_streaming before _ready had run. The materials and meshes were not yet created.",
+                        "fix":  "Guard initialization with a boolean flag and call it at the top of every public entry point. The flag ensures it runs exactly once, even if called before _ready or called multiple times.",
+                        "test":  "Call update_streaming on a freshly created streamer before adding it to the tree. It must not error.",
+                        "tags":  [
+                                     "initialization",
+                                     "idempotent",
+                                     "ready",
+                                     "flag",
+                                     "materials",
+                                     "startup"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "rendering/shader-noise-octave-budget",
+                        "topic":  "rendering",
+                        "title":  "Keep procedural noise in a shader to four octaves or fewer",
+                        "symptom":  "Shader compilation took over 12 seconds on integrated GPUs. Players saw a black screen for the first chunk while the driver compiled the terrain shader.",
+                        "cause":  "The terrain shader used 8 octaves of FBM noise with multiple domain-warped layers. Each octave doubles the texture lookups and ALU operations.",
+                        "fix":  "Limit FBM to 3 or 4 octaves. Get additional variation from a second noise field with different scale and direction rather than more octaves. Pre-bake complex noise into a lookup texture if the pattern is static.",
+                        "test":  "Measure shader compilation time on the lowest supported GPU. It should be under 2 seconds.",
+                        "tags":  [
+                                     "shader",
+                                     "noise",
+                                     "FBM",
+                                     "octaves",
+                                     "compile time",
+                                     "procedural",
+                                     "terrain"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "world/clip-routes-to-chunk",
+                        "topic":  "world",
+                        "title":  "Clip national routes to the chunk before building geometry",
+                        "symptom":  "An 80 km road mesh was duplicated in every one of the forty chunks it crossed, producing four hundred thousand triangles of invisible geometry.",
+                        "cause":  "The road builder took the full route polyline and built geometry for the entire length inside every chunk\u0027s generator.",
+                        "fix":  "Clip each route segment to the chunk\u0027s bounding rectangle before generating geometry. Only segments that cross or lie within the chunk produce meshes. Joins at chunk borders are handled by overlapping the clip rect by a small margin.",
+                        "test":  "Sum the triangle count of all road meshes across all chunks. It should be close to the total route length divided by segment length, not multiplied by chunk count.",
+                        "tags":  [
+                                     "clipping",
+                                     "route",
+                                     "road",
+                                     "chunk",
+                                     "polyline",
+                                     "geometry",
+                                     "streaming"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/spread-detail-chunks-over-frames",
+                        "topic":  "performance",
+                        "title":  "Build detailed chunks one per frame, not all at once",
+                        "symptom":  "The first frame after loading took 1.8 seconds because all 25 active chunks were generated synchronously before the first render.",
+                        "cause":  "The 5x5 gameplay ring was generated in a tight loop inside update_streaming, blocking the main thread.",
+                        "fix":  "Queue detailed chunk coordinates and build at most one or two per _process frame, using a pending list. The low-detail versions can exist first so the ground is never missing, and each frame upgrades one to full detail.",
+                        "test":  "Measure the first frame after a teleport. It should be under 100 ms.",
+                        "tags":  [
+                                     "streaming",
+                                     "chunk",
+                                     "frame budget",
+                                     "hitch",
+                                     "_process",
+                                     "queue",
+                                     "loading"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
                     }
                 ]
 }
