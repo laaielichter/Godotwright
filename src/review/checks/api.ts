@@ -196,6 +196,18 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
     const nativeBase = pm.nativeOf(model);
     const isNodeClass = api.inheritsFrom(nativeBase, "Node");
 
+    const checkRedefine = (name: string, line: number) => {
+      if (!checkNodeMembers) return;
+      const entry = api.member(nativeBase, name).find((e) => e.kind === "property" || e.kind === "signal" || e.kind === "constant");
+      if (entry) {
+        report(
+          "api/redefines-native-member",
+          line,
+          `Member "${name}" redefined (original in native class '${entry.owner}'): remove it to use the inherited ${entry.kind}, or rename it.`,
+        );
+      }
+    };
+
     for (const v of model.outline.variables) {
       checkTypeName(v.type, v.line, model);
       if (v.exportAnnotation === "@export" && !v.type && !v.hasDefault && !v.inferred) {
@@ -226,9 +238,16 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
           }
         }
       }
+      checkRedefine(v.name, v.line);
     }
-    for (const c of model.outline.constants) checkTypeName(c.type, c.line, model);
-    for (const s of model.outline.signals) for (const p of s.params) checkTypeName(p.type, s.line, model);
+    for (const c of model.outline.constants) {
+      checkTypeName(c.type, c.line, model);
+      checkRedefine(c.name, c.line);
+    }
+    for (const s of model.outline.signals) {
+      for (const p of s.params) checkTypeName(p.type, s.line, model);
+      checkRedefine(s.name, s.line);
+    }
   }
 
   const source = pm.data.sources.get(path) ?? "";
