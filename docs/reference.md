@@ -30,6 +30,7 @@ godotwright test [path]               # run the GUT or GdUnit4 tests headless; p
 godotwright play --input "10 tap jump; 20 hold right 30" --watch Player.position   # play input into a scene, see the values per frame
 godotwright ci                                     # one receipt: review, check, tests, scenarios and screenshot baselines (markdown, exit 1 on a failure)
 godotwright ci --junit godotwright.xml             # the same, plus JUnit XML for a CI test tab (tests, scenarios, review, check)
+godotwright ci --annotations annotations.txt      # GitHub Actions annotations for review findings and Godot diagnostics
 godotwright scenario --save jump --input "10 tap jump" --expect "Hero.velocity.y == -400 @ 10"   # run once, keep it as a test when it passes
 godotwright scenario --list                        # the kept scenarios and their claims; `scenario` alone runs them all
 godotwright doctor --symptom "falls through the floor"   # what is wrong and in which order to fix it: review and Godot grouped by cause, with lessons
@@ -78,6 +79,7 @@ godotwright migrate --write         # port Godot 3 scripts and shaders to Godot 
 godotwright shader                  # review every shader against Godot 4.7's shader tables and compile it headless; file:line
 godotwright api shader:spatial.fragment   # the built-ins of a shader type and function; `api ALBEDO` says where one exists
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
+godotwright review --github                # GitHub Actions annotations, no code-scanning permission needed
 godotwright review --only-new       # in a fix loop: only what changed since the last review, the rest as one line each
 godotwright review --from 4.5 --target 4.6   # moving between 4.x releases: what changes on the way (default: saved version -> 4.7)
 godotwright check --compare-godot ~/Godot_v4.8-beta2   # the same check with a second Godot on a copy: only new and gone errors

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { Command, Option } from "commander";
 import { findProjectRoot, toResPath } from "../project/files.js";
 import { toSarif } from "../review/sarif.js";
+import { reviewAnnotations } from "../review/annotations.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import { formatReview, formatReviewSummary } from "../review/format.js";
 import { reviewLearning } from "../learn/hooks.js";
@@ -23,7 +24,8 @@ export function reviewCommand(): Command {
     .option("--min-score <score>", "exit with code 1 when the overall score is lower", parseNumber)
     .option("--json", "print the report as JSON")
     .option("--sarif", "print the report as SARIF 2.1.0, for GitHub code scanning (findings inline on pull requests)")
-    .action((paths: string[], options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; target?: string; from?: string; minScore?: number; json?: boolean; sarif?: boolean }, command: Command) => {
+    .option("--github", "print findings as GitHub Actions workflow annotations (no code-scanning permission needed)")
+    .action((paths: string[], options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; target?: string; from?: string; minScore?: number; json?: boolean; sarif?: boolean; github?: boolean }, command: Command) => {
       const files = paths.filter((p) => existsSync(p) && statSync(p).isFile());
       const path = paths.find((p) => !files.includes(p)) ?? (files[0] ? dirname(resolve(files[0])) : ".");
       const full = reviewLearning(path, { includeAddons: options.includeAddons, base: options.base, baseFiles: options.baseFiles, target: options.target, from: options.from });
@@ -31,14 +33,23 @@ export function reviewCommand(): Command {
       const root = findProjectRoot(path) ?? path;
       const focus = files.map((f) => toResPath(root, resolve(f)));
       const report = focus.length ? { ...full, findings: full.findings.filter((f) => focus.includes(f.file)) } : full;
-      if (focus.length && !options.json && !options.sarif) writeOut(command, `findings shown only for: ${focus.join(", ")} (scores are for the whole project)\n`);
+      if (focus.length && !options.json && !options.sarif && !options.github) writeOut(command, `findings shown only for: ${focus.join(", ")} (scores are for the whole project)\n`);
       const delta = reviewDelta(path, report);
       // SARIF paths are relative to the repository root. Running from the repository root with the project in a
       // subfolder passes that folder as the path; keep today's project-relative output when run inside the project.
       const relativeRoot = relative(process.cwd(), root);
-      const sarifPrefix = relativeRoot && !relativeRoot.startsWith("..") && !isAbsolute(relativeRoot) ? relativeRoot.split(sep).join("/") : "";
-      if (options.sarif) writeOut(command, `${JSON.stringify(toSarif(report, { prefix: sarifPrefix }), null, 2)}\n`);
-      else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);
+      const sarifPrefix = relativeRoot && !relativeRoot.startsWith("..") && !isAbsolute(relativeRoot)
+        ? relativeRoot.split(sep).join("/")
+        : "";
+      if (options.github) {
+        const lines = reviewAnnotations(report, {
+          detailFull: options.detail === "full",
+          projectRoot: root,
+        });
+        writeOut(command, lines.length ? `${lines.join("\n")}\n` : "");
+      } else if (options.sarif) {
+        writeOut(command, `${JSON.stringify(toSarif(report, { prefix: sarifPrefix }), null, 2)}\n`);
+      } else if (options.json) writeOut(command, `${JSON.stringify(options.onlyNew ? { ...report, delta: { new: delta.fresh, stillOpen: delta.open, fixed: delta.fixed, previous: delta.previous, first: delta.first } } : report, null, 2)}\n`);
       else if (options.onlyNew) writeOut(command, `${formatReviewSummary(report)}\n${formatDelta(delta, { noInfos: options.detail !== "full" })}`);
       else writeOut(command, formatReview(report, options.detail));
       const errors = report.categories.reduce((n, c) => n + c.errors, 0);

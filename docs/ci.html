@@ -311,6 +311,7 @@ res://scripts/old_player.gd:11: <span class="e">error</span> [api/godot3-syntax]
             <tr><td><code>path</code></td><td><code>.</code></td><td>The project folder, or any path inside it</td></tr>
             <tr><td><code>godot-version</code></td><td><code>4.7.2</code></td><td>The Godot version to download for the checks that need it</td></tr>
             <tr><td><code>review-only</code></td><td><code>false</code></td><td>Only the review: no Godot download, no check, tests or scenarios</td></tr>
+            <tr><td><code>annotations</code></td><td><code>true</code></td><td>Print review findings and Godot diagnostics as inline workflow annotations; set to <code>false</code> to disable</td></tr>
             <tr><td><code>comment</code></td><td><code>false</code></td><td>Post the receipt as a comment on the pull request (needs <code>pull-requests: write</code>)</td></tr>
             <tr><td><code>token</code></td><td><code>github.token</code></td><td>The token that posts the comment</td></tr>
             <tr><td><code>command</code></td><td><code>npx -y godotwright@latest</code></td><td>How to run Godotwright; pin a version here, for example <code>npx -y godotwright@0.4.0</code></td></tr>
@@ -324,7 +325,8 @@ res://scripts/old_player.gd:11: <span class="e">error</span> [api/godot3-syntax]
   <section id="other">
     <div class="wrap">
       <h2>Findings inline, or a plain review</h2>
-      <p class="sub">To see each finding on its line in the pull request, upload the review as SARIF to GitHub code scanning (needs <code>security-events: write</code> and code scanning turned on):</p>
+      <p class="sub">The action prints review findings and Godot check diagnostics as GitHub Actions annotations by default. They appear on the changed file and line without code-scanning permissions. Set <code>annotations: "false"</code> to turn them off. For the CLI, use <code>godotwright review --github</code> or <code>godotwright ci --annotations annotations.txt</code> and print the file in a workflow step.</p>
+      <p class="sub">You can also upload the review as SARIF to GitHub code scanning (needs <code>security-events: write</code> and code scanning turned on):</p>
       <div class="cmd"><pre><code>- run: npx --yes godotwright@0.5.0 review . --sarif &gt; godotwright.sarif || true
 - uses: github/codeql-action/upload-sarif@v4
   with:

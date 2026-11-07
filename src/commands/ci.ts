@@ -28,6 +28,7 @@ interface CiOptions {
   baselineDir?: string;
   json?: boolean;
   junit?: string;
+  annotations?: string;
 }
 
 /** Writes JUnit XML to a file (relative to the working directory). */
@@ -79,11 +80,17 @@ export function ciCommand(): Command {
     .option("--baseline-dir <dir>", "folder of the screenshot baselines (default .godotwright/baselines)")
     .option("--json", "print the result as JSON")
     .option("--junit <file>", "also write the results as JUnit XML (tests, scenarios, review and check) for a CI test tab")
+    .option("--annotations <file>", "write GitHub Actions workflow-command annotations for review findings and Godot diagnostics")
     .addHelpText("after", SCENARIO_HELP)
     .action(async (path: string, options: CiOptions, command: Command) => {
       try {
-        const { results, ...report } = await runCi(path, { godot: options.godot, noGodot: !options.godotChecks, includeAddons: options.includeAddons, ...(options.exportPreset ? { exportPreset: options.exportPreset } : {}), ...(options.baselineDir ? { baselineDir: options.baselineDir } : {}), keepResults: !!options.junit });
+        const { results, ...report } = await runCi(path, { godot: options.godot, noGodot: !options.godotChecks, includeAddons: options.includeAddons, ...(options.exportPreset ? { exportPreset: options.exportPreset } : {}), ...(options.baselineDir ? { baselineDir: options.baselineDir } : {}), keepResults: !!options.junit, keepAnnotations: !!options.annotations });
         if (options.junit) writeJUnit(options.junit, { steps: report.steps, ...results });
+        if (options.annotations) {
+          const file = resolve(options.annotations);
+          mkdirSync(dirname(file), { recursive: true });
+          writeFileSync(file, report.annotations?.length ? `${report.annotations.join("\n")}\n` : "");
+        }
         writeOut(command, options.json ? `${JSON.stringify(report, null, 2)}\n` : formatCi(report));
         if (!report.ok) process.exitCode = 1;
       } catch (error) {
