@@ -40,8 +40,12 @@ In Claude Code:
   - `patch`: changes to a shipped game (mods, overlays, installers) with preflight, receipts and rollback.
 - **Skills you start yourself:** `/godotwright:review` (review and fix, errors first), `/godotwright:port` (Godot 3 to 4)
   and `/godotwright:learn` (teach Godotwright what this session learned, anonymously; nothing is sent).
-- **Two subagents** for work that would flood the conversation: `godot-reviewer` (a verified review of a change, with
-  Godot when installed) and `godot-debugger` (the root cause of an error or wrong behaviour, proven with a headless run).
+- **Seven subagents** for work that would flood the conversation: `godot-reviewer` (a verified review of a change, with
+  Godot when installed), `godot-debugger` (root cause), `godot-migrator` (Godot 3 to 4), `godot-performance`
+  (measured optimization), `godot-shader-specialist` (shaders and materials), `godot-model-builder` (3D assets) and
+  `godot-test-engineer` (unit, gameplay and visual regression checks).
+  Delegate a focused task to the matching agent; editing requires an implementation task, and missing engine or
+  renderer checks are reported explicitly.
 
 Settings (all optional): the Godot project, the Godot 4.7 program, protected paths (comma separated), tool sets
 (`core`, `edit`, `run`, `game`, `export`, `model`; empty means all, fewer tools cost less context) and read-only.
