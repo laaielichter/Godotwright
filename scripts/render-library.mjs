@@ -18,8 +18,9 @@ import { buildSpec } from "../dist/build/spec.js";
 import { findGodot } from "../dist/check/godot.js";
 import { loadAssetLibrary } from "../dist/library/library.js";
 
-/** Pixels per asset on the site's sheets; keep in step with CELL in scripts/build-library-site.mjs. */
-const SITE_CELL = 192;
+/** Pixels per asset on the site's sheets (4:3, like the cards of the site); keep in step with scripts/build-library-site.mjs. */
+const SITE_CELL = 320;
+const SITE_CELL_HEIGHT = 240;
 
 const args = process.argv.slice(2);
 const option = (name) => {
@@ -63,7 +64,7 @@ console.log(`built ${n} assets into ${project}`);
 execFileSync(godot, ["--headless", "--path", project, "--import"], { stdio: "ignore" });
 const headless = process.platform === "linux" && !process.env["DISPLAY"];
 const [bin, pre] = headless ? ["xvfb-run", ["-a", "-s", "-screen 0 1280x1024x24", godot]] : [godot, []];
-execFileSync(bin, [...pre, "--path", project, "--script", "res://render_sheets.gd", "--", String(cell), gallery ? "12" : "6", site ? "jpg" : "png"], { stdio: ["ignore", "inherit", "ignore"] });
+execFileSync(bin, [...pre, "--path", project, "--script", "res://render_sheets.gd", "--", String(cell), gallery ? "12" : "6", site ? "jpg" : "png", String(site ? SITE_CELL_HEIGHT : cell)], { stdio: ["ignore", "inherit", "ignore"] });
 
 mkdirSync(out, { recursive: true });
 for (const f of readdirSync(join(project, "sheets"))) copyFileSync(join(project, "sheets", f), join(out, f));

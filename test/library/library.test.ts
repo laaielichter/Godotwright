@@ -148,7 +148,7 @@ describe("the catalogue", () => {
   it("the site page docs/library.html shows every asset (regenerate with: npm run render:library)", () => {
     const html = readFileSync(new URL("../../docs/library.html", import.meta.url), "utf8");
     expect(html).toContain(`${library.size} base models`);
-    for (const id of library.keys()) expect(html, id).toContain(`<code>${id}</code>`);
+    for (const id of library.keys()) expect(html, id).toContain(`data-id="${id}"`);
   });
 
   it("LIBRARY.md lists every asset and is up to date (regenerate with: npm run build:library)", () => {
