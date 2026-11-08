@@ -17,12 +17,18 @@ const FINISHES: Record<Style, Finish[]> = {
  * One drawer: its node sits at the centre of the drawer (front plus tray), so it can slide out along +z. `fw` and `fh`
  * are the front's width and height; the handles hang on the front face.
  */
-function drawer(name: string, at: [Num, Num, Num], fw: string, fh: string, handles: SpecNode[], f: Finish, o: { mirror?: string; repeat?: { count: Num; step: [Num, Num, Num] } } = {}): SpecNode {
+function drawer(name: string, at: [Num, Num, Num], fw: string, fh: string, handles: SpecNode[], f: Finish, o: { mirror?: string; repeat?: { count: Num; step: [Num, Num, Num] }; proud?: number } = {}): SpecNode {
+  // The parts span from the back of the tray (-D/2 + 0.027) to the front face (D/2 - 0.015) plus the handles; the
+  // node moves to the middle of that, and the parts move back by the same amount, so nothing moves in the world.
+  const c = Math.round(((0.012 + (o.proud ?? 0.03)) / 2) * 10000) / 10000;
+  const { proud: _p, ...rest } = o;
   return group(name, [
-    box("Front", [`${fw} - 0.004`, `${fh} - 0.004`, 0.02], { at: [0, 0, "$fz"], bevel: 0.004, material: f.front }),
-    box("Tray", [`${fw} - 0.05`, `${fh} - 0.04`, "$D - 0.06"], { at: [0, -0.008, "$fz - ($D - 0.06) / 2 - 0.008"] }),
-    ...handles,
-  ], { at, ...o });
+    group("Parts", [
+      box("Front", [`${fw} - 0.004`, `${fh} - 0.004`, 0.02], { at: [0, 0, "$fz"], bevel: 0.004, material: f.front }),
+      box("Tray", [`${fw} - 0.05`, `${fh} - 0.04`, "$D - 0.06"], { at: [0, -0.008, "$fz - ($D - 0.06) / 2 - 0.008"] }),
+      ...handles,
+    ], { at: [0, 0, -c] }),
+  ], { at: [at[0], at[1], `${at[2]} + ${c}`], ...rest });
 }
 
 /** Front plane of the carcass is z = D/2; a drawer's centre is halfway between its front face and its back. */
@@ -40,8 +46,8 @@ function dresser(f: Finish): SpecNode[] {
       box("Foot_FL", [0.07, 0.075, 0.07], { at: ["$W / 2 - 0.03", 0, "$D / 2 - 0.03"], anchor: "bottom", bevel: 0.012, mirror: "Foot_FR" }),
       box("Foot_BL", [0.07, 0.075, 0.07], { at: ["$W / 2 - 0.03", 0, "-$D / 2 + 0.03"], anchor: "bottom", bevel: 0.012, mirror: "Foot_BR" }),
     ]),
-    drawer("Drawer_{i}", [0, "0.1 + $s + $rh / 2", "$zc"], "$W - 2 * $s", "$rh", [k("Knob_L", "-$W / 4"), k("Knob_R", "$W / 4")], f, { repeat: { count: "$r - 1", step: [0, "$rh", 0] } }),
-    drawer("Drawer_TL", ["$W / 4 - $s / 4", "0.1 + $s + $rh * ($r - 0.5)", "$zc"], "$W / 2 - $s", "$rh", [k("Knob", 0)], f, { mirror: "Drawer_TR" }),
+    drawer("Drawer_{i}", [0, "0.1 + $s + $rh / 2", "$zc"], "$W - 2 * $s", "$rh", [k("Knob_L", "-$W / 4"), k("Knob_R", "$W / 4")], f, { proud: 0.033, repeat: { count: "$r - 1", step: [0, "$rh", 0] } }),
+    drawer("Drawer_TL", ["$W / 4 - $s / 4", "0.1 + $s + $rh * ($r - 0.5)", "$zc"], "$W / 2 - $s", "$rh", [k("Knob", 0)], f, { mirror: "Drawer_TR", proud: 0.033 }),
   ];
 }
 
@@ -88,7 +94,7 @@ function tallboy(f: Finish): SpecNode[] {
       foot("Foot_FL", "$D / 2 - 0.05", "Foot_FR"),
       foot("Foot_BL", "-$D / 2 + 0.05", "Foot_BR"),
     ]),
-    drawer("Drawer_{i}", [0, "0.125 + $rh / 2", "$zc"], "$W - 2 * $s", "$rh", pulls, f, { repeat: { count: "$r", step: [0, "$rh", 0] } }),
+    drawer("Drawer_{i}", [0, "0.125 + $rh / 2", "$zc"], "$W - 2 * $s", "$rh", pulls, f, { proud: 0.036, repeat: { count: "$r", step: [0, "$rh", 0] } }),
   ];
 }
 
