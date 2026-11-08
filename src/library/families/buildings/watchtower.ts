@@ -108,11 +108,11 @@ function lattice(style: "timber" | "fire", f: (typeof FINISHES)["timber"][number
   const leg = steel ? 0.09 : 0.14;
   // a(y): half the spread of the legs at height y; legs run from a0 at the ground to a1 at the platform.
   const a = (y: string): string => `($a0 + ($a1 - $a0) * (${y}) / $top)`;
-  const yi = "$i * $top / $levels";
-  const yj = "($i + 1) * $top / $levels";
+  const yi = "0.1 + $i * ($top - 0.1) / $levels";
+  const yj = "0.1 + ($i + 1) * ($top - 0.1) / $levels";
   const kids: SpecNode[] = [
     group("Shaft", [
-      tube("Leg_{i}", [[`$a0`, 0, `$a0`], [`$a1`, "$top + 0.05", `$a1`]], leg, { repeat: { count: 4, around: "y" }, segments: 10, material: f.main }),
+      tube("Leg_{i}", [[`$a0`, 0.08, `$a0`], [`$a1`, "$top + 0.05", `$a1`]], leg, { repeat: { count: 4, around: "y" }, segments: 10, material: f.main }),
       group("Face_{i}", [
         tube("BraceA_{i}", [[`-${a(yi)}`, yi, a(yi)], [a(yj), yj, a(yj)]], leg * 0.5, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 8, material: f.main }),
         tube("BraceB_{i}", [[a(yi), yi, a(yi)], [`-${a(yj)}`, yj, a(yj)]], leg * 0.5, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 8, material: f.main }),
@@ -141,7 +141,7 @@ function lattice(style: "timber" | "fire", f: (typeof FINISHES)["timber"][number
       roof("Roof", { x0: "-$a1 - 0.5", x1: "$a1 + 0.5", z0: "-$a1 - 0.5", z1: "$a1 + 0.5", y: "$top + 2.55", rise: 0.9, kind: "hip" }, { material: f.roof }),
       group("Antenna", [cyl("Rod", 0.03, 2.5, { anchor: "base", at: [0, "$top + 3.4", 0], segments: 8, material: "galvanised" })]),
       group("Stairs", [
-        tube("Flight_{i}", [["-$a0 * 0.4 * pow(-1, $i)", "$i * $top / $levels", "0"], ["$a0 * 0.4 * pow(-1, $i)", "($i + 1) * $top / $levels", "0"]], 0.05, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 6, material: "galvanised" }),
+        tube("Flight_{i}", [["-$a0 * 0.4 * pow(-1, $i)", "0.1 + $i * ($top - 0.1) / $levels", "0"], ["$a0 * 0.4 * pow(-1, $i)", "($i + 1) * $top / $levels", "0"]], 0.05, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 6, material: "galvanised" }),
         box("Landing_{i}", [0.9, 0.06, 0.9], { at: ["$a0 * 0.4 * pow(-1, $i)", "($i + 1) * $top / $levels", 0], repeat: { count: "$levels - 1", step: [0, 0, 0] }, material: "galvanised" }),
       ]),
       group("Door", [box("Hatch", [0.8, 0.06, 0.8], { at: [0, "$top + 0.2", 0], material: f.main })]),

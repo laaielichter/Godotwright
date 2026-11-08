@@ -78,7 +78,7 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     const ks = [-1, -0.85, -0.6, -0.3, 0, 0.3, 0.6, 0.85, 1];
     kids.push(group("Canvas", [
       loft("Fly", ks.map((k) => ({ z: `$hl * ${k}`, points: archPoints("$hw", "$h", Math.sqrt(1 - 0.9 * k * k)) })), { material: f.a, rotate: [0, 90, 0] }),
-      box("Groundsheet", ["2 * $hl - 0.1", 0.01, "2 * $hw - 0.1"], { at: [0, 0.005, 0], material: f.b }),
+      box("Groundsheet", ["2 * $hl * 0.72", 0.01, "2 * $hw * 0.68"], { at: [0, 0.005, 0], material: f.b }),
     ]));
     kids.push(group("Poles", [
       tube("Pole_A", [-1, -0.7, -0.35, 0, 0.35, 0.7, 1].map((t) => [`$hl * 0.62 * ${t}`, `0.01 + ($h + 0.02) * ${Math.pow(1 - t * t * 0.995, 0.5).toFixed(5)}`, `$hw * 0.92 * ${t}`] as [string, string, string]), 0.008, { mirror: "Pole_B", segments: 6, material: "aluminium" }),
@@ -130,8 +130,9 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       tube("Pole_{i}", [["$r * 0.95", 0.01, 0], ["-$r * 0.12", "$h * 1.08", 0]], 0.025, { repeat: { count: 10, around: "y", phase: 18 }, segments: 6, material: "rough_timber" }),
     ]));
     kids.push(group("Entrance", [
-      lathe("Flap", [["0.42", 0.02], ["0.42", 0.06], ["0.3", 1.0], ["0.05", 1.12]], { segments: 12, material: f.b }),
-    ], { at: [0, 0, "$r * 0.85"] }));
+      box("Flap", [0.75, 1.05, 0.03], { at: [0, 0.6, "$r - 0.6 * $r / $h + 0.03"], rotate: ["-deg(atan($r / $h))", 0, 0], material: f.b }),
+      box("Pin_{i}", [0.02, 0.02, 0.08], { at: [0, "1.25 + $i * 0.15", "$r - (1.25 + $i * 0.15) * $r / $h + 0.02"], repeat: { count: 3, step: [0, 0, 0] }, material: "oak" }),
+    ]));
     kids.push(group("GuyRopes", [
       peg("Peg_{i}", [0, 0, "$r + 0.06"], { repeat: { count: 12, around: "y", phase: 15 } }),
       tube("Line_{i}", [[0, 0.03, "$r - 0.02"], [0, 0.03, "$r + 0.06"]], 0.006, { repeat: { count: 12, around: "y", phase: 15 }, segments: 5, material: "rope" }),

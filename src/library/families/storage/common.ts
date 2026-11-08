@@ -23,6 +23,7 @@ export const EXTRA: Record<string, MaterialDef> = {
   container_teal: { color: [0.02, 0.2, 0.22], metallic: 0.3, roughness: 0.5 },
   container_yellow: { color: [0.7, 0.45, 0.02], metallic: 0.3, roughness: 0.5 },
   rope: { color: [0.5, 0.4, 0.24], metallic: 0, roughness: 0.95 },
+  sand: { color: [0.62, 0.5, 0.32], metallic: 0, roughness: 1, texture: "sand" },
   cardboard: { color: [0.46, 0.3, 0.15], metallic: 0, roughness: 0.95 },
   shrink_wrap: { color: [0.75, 0.8, 0.85, 0.45], metallic: 0, roughness: 0.2, alpha: "BLEND" },
   cable_black: { color: [0.02, 0.02, 0.022], metallic: 0, roughness: 0.55 },

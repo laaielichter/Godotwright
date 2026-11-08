@@ -155,7 +155,7 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
       break;
     case "fruit":
       if (v.fruit) {
-        crown.push(ellipsoid("Fruit_{i}", ["$cr * 0.035 + 0.02", "$cr * 0.035 + 0.02", "$cr * 0.035 + 0.02"], {
+        crown.push(ellipsoid("Fruit_{i}", ["$cr * 0.045 + 0.03", "$cr * 0.045 + 0.03", "$cr * 0.045 + 0.03"], {
           at: [`$cr * (0.68 + 0.05 * sin($i * 2.3))`, `$yc - $ry * (0.08 - 0.25 * sin($i * 1.7 + ${s}))`, 0],
           segments: 8,
           material: v.fruit,

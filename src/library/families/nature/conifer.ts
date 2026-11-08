@@ -65,7 +65,7 @@ function bough(c: Conifer): SpecNode {
   const us = [0.06, 0.3, 0.55, 0.8, 1.02];
   const sections = us.map((u) => {
     const y = `$D * ${n4(-droop * u * u + up * Math.pow(u, 4))}`;
-    const half = `($R * 0.13 + $D * ${n4(w)}) * ${n4(1 - 0.75 * u)} + 0.02`;
+    const half = `(($R * 0.13 + $D * ${n4(w)}) * ${n4(1 - 0.75 * u)} + 0.02)`;
     return {
       z: `$R * ${n4(u)}`,
       points: [
