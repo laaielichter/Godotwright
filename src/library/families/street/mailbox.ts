@@ -1,5 +1,5 @@
 import { box, cyl, group, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "pillar" | "collection" | "residential" | "parcel" | "post-mounted";
 
@@ -31,6 +31,7 @@ function nodes(style: Style, body: string): SpecNode[] {
         ]),
         box("Slot", ["$r * 0.9", 0.035, 0.04], { at: [0, "$height - 0.37", "$r - 0.01"], material: "opening_dark" }),
         door(["-$r * 0.45", "$height * 0.25", "$r - 0.003"], "$r * 0.9", "$height * 0.3", [box("Plaque", ["$r * 0.5", 0.07, 0.006], { at: ["$r * 0.45", "$height * 0.12", 0.01], bevel: 0.002, material: "paint_white" })]),
+        ...grimeProfile("Grime", [["$r + 0.03", 0.1], ["$r + 0.03", 0.14], ["$r", 0.17], ["$r", 0.3]], { segments: 28 }),
       ];
     case "collection":
       return [
@@ -47,6 +48,10 @@ function nodes(style: Style, body: string): SpecNode[] {
           box("Pull", ["$width * 0.3", 0.02, 0.03], { at: [0, 0.02, 0.03], bevel: 0.006, material: "steel" }),
         ], { at: [0, "$height - $width / 2 - 0.1", 0.24] }),
         door(["-$width / 2 + 0.04", 0.24, 0.245], "$width - 0.08", "$height * 0.35"),
+        ...grimeBox("Grime_FL", 0.05, 0.05, 0.12, ["$width / 2 - 0.04", 0, 0.2], 0.006),
+        ...grimeBox("Grime_FR", 0.05, 0.05, 0.12, ["-$width / 2 + 0.04", 0, 0.2], 0.006),
+        ...grimeBox("Grime_BL", 0.05, 0.05, 0.12, ["$width / 2 - 0.04", 0, -0.2], 0.006),
+        ...grimeBox("Grime_BR", 0.05, 0.05, 0.12, ["-$width / 2 + 0.04", 0, -0.2], 0.006),
       ];
     case "residential":
       return [
@@ -70,6 +75,7 @@ function nodes(style: Style, body: string): SpecNode[] {
           box("Arm", [0.012, 0.03, 0.22], { at: [0, 0, 0], bevel: 0.003 }),
           box("Banner", [0.008, 0.08, 0.1], { at: [0, 0.04, 0.12], bevel: 0.002 }),
         ], { at: ["$width / 2 + 0.006", "$height - $width * 1.1 + 0.04 + $width * 0.45", 0], material: "paint_red" }),
+        ...grimeBox("Grime", 0.09, 0.09, 0.3, [0, 0, 0], 0.008),
       ];
     case "parcel":
       return [
@@ -85,6 +91,7 @@ function nodes(style: Style, body: string): SpecNode[] {
           box("Lip", ["$width * 0.6", 0.015, 0.03], { at: [0, 0.025, 0.006], bevel: 0.004, material: "brushed_steel" }),
         ], { at: [0, "$height - 0.15", 0.25] }),
         door(["-$width / 2 + 0.03", 0.14, 0.255], "$width - 0.06", "$height - 0.75", [box("Handle", [0.03, 0.18, 0.03], { at: ["$width / 2 - 0.03", "($height - 0.75) / 2", 0.02], bevel: 0.008, material: "brushed_steel" })]),
+        ...grimeBox("Grime", "$width", 0.5, 0.18, [0, 0.07, 0], 0.015),
       ];
     case "post-mounted":
       return [
@@ -102,6 +109,7 @@ function nodes(style: Style, body: string): SpecNode[] {
           box("Flap", ["$width * 0.66", 0.05, 0.015], { at: [0, 0.035, 0.012], rotate: [-20, 0, 0], bevel: 0.004 }),
         ], { at: [0, "$height - 0.13", 0.13] }),
         door(["-$width / 2 + 0.03", "$height - 0.54", 0.163], "$width - 0.06", "0.2"),
+        ...grimeProfile("Grime", [[0.06, 0.001], [0.06, 0.04], [0.04, 0.045], [0.04, 0.3]], { segments: 16 }),
       ];
   }
 }
@@ -130,7 +138,7 @@ function makeMailbox(style: Style, body: string): AssetDraft {
     description: `A ${b} ${s.title}: ${s.text}. It faces +z.`,
     tags: [style, b, "brievenbus", "postbus", "post box", "letter box", ...(style === "parcel" ? ["pakketbus", "parcel"] : [])],
     params: params(style),
-    materials: useMats(body, "opening_dark", "brass", "steel", "paint_white", "paint_black", "paint_red", "weathered_wood", "galvanised", "brushed_steel", "screen_cyan"),
+    materials: { ...useMats(body, "opening_dark", "brass", "steel", "paint_white", "paint_black", "paint_red", "weathered_wood", "galvanised", "brushed_steel", "screen_cyan"), ...GRIME(style === "residential" ? "weathered_wood" : style === "post-mounted" ? "galvanised" : body) },
     nodes: [group("Mailbox", nodes(style, body), { material: body })],
   };
 }

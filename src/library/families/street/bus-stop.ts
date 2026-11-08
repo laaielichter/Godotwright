@@ -1,5 +1,5 @@
 import { box, cyl, group, int, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "glass" | "cantilever" | "wooden" | "canopy";
 interface Finish { frame: string; accent: string }
@@ -43,6 +43,10 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         group("Shelter", [
           box("Post_FL", [0.08, "$height", 0.08], { at: ["$width / 2 - 0.04", 0, "$depth / 2 - 0.04"], anchor: "bottom", bevel: 0.008, mirror: "Post_FR" }),
           box("Post_BL", [0.08, "$height", 0.08], { at: ["$width / 2 - 0.04", 0, "-$depth / 2 + 0.04"], anchor: "bottom", bevel: 0.008, mirror: "Post_BR" }),
+          ...grimeBox("Grime_FL", 0.08, 0.08, 0.25, ["$width / 2 - 0.04", 0.03, "$depth / 2 - 0.04"], 0.008),
+          ...grimeBox("Grime_FR", 0.08, 0.08, 0.25, ["-$width / 2 + 0.04", 0.03, "$depth / 2 - 0.04"], 0.008),
+          ...grimeBox("Grime_BL", 0.08, 0.08, 0.25, ["$width / 2 - 0.04", 0.03, "-$depth / 2 + 0.04"], 0.008),
+          ...grimeBox("Grime_BR", 0.08, 0.08, 0.25, ["-$width / 2 + 0.04", 0.03, "-$depth / 2 + 0.04"], 0.008),
           ...backBays("-$depth / 2 + 0.04", 0.15, "$height - 0.3"),
           box("SideGlass_L", [0.012, "$height - 0.45", "$depth * 0.5"], { at: ["$width / 2 - 0.04", 0.15, "-$depth / 2 + $depth * 0.25 + 0.04"], anchor: "bottom", material: "glass_clear", mirror: "SideGlass_R" }),
           box("SideRail_L", [0.05, 0.06, "$depth - 0.08"], { at: ["$width / 2 - 0.04", "$height - 0.3", 0], bevel: 0.006, mirror: "SideRail_R" }),
@@ -74,6 +78,10 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         group("Shelter", [
           box("Post_FL", [0.12, "$height", 0.12], { at: ["$width / 2 - 0.06", 0, "$depth / 2 - 0.06"], anchor: "bottom", bevel: 0.01, mirror: "Post_FR" }),
           box("Post_BL", [0.12, "$height", 0.12], { at: ["$width / 2 - 0.06", 0, "-$depth / 2 + 0.06"], anchor: "bottom", bevel: 0.01, mirror: "Post_BR" }),
+          ...grimeBox("Grime_FL", 0.12, 0.12, 0.25, ["$width / 2 - 0.06", 0.03, "$depth / 2 - 0.06"], 0.008),
+          ...grimeBox("Grime_FR", 0.12, 0.12, 0.25, ["-$width / 2 + 0.06", 0.03, "$depth / 2 - 0.06"], 0.008),
+          ...grimeBox("Grime_BL", 0.12, 0.12, 0.25, ["$width / 2 - 0.06", 0.03, "-$depth / 2 + 0.06"], 0.008),
+          ...grimeBox("Grime_BR", 0.12, 0.12, 0.25, ["-$width / 2 + 0.06", 0.03, "-$depth / 2 + 0.06"], 0.008),
           box("Weatherboard_{i}", ["$width - 0.1", 0.15, 0.025], { at: [0, 0.1, "-$depth / 2 + 0.05"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } }),
           group("Side_L", [box("Weatherboard_{i}", [0.025, 0.15, "$depth * 0.5"], { at: [0, 0.1, "-$depth / 4 + 0.06"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } })], { at: ["$width / 2 - 0.05", 0, 0], mirror: "Side_R" }),
           box("Plate_F", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "$depth / 2 - 0.06"], bevel: 0.01 }),
@@ -92,6 +100,8 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         group("Shelter", [
           cyl("Post_L", 0.06, "$height + 0.03", { at: ["$width * 0.3", 0, "-$depth / 2 + 0.12"], anchor: "base", segments: 16, mirror: "Post_R" }),
           cyl("Base_L", 0.12, 0.03, { at: ["$width * 0.3", 0, "-$depth / 2 + 0.12"], anchor: "base", segments: 16, mirror: "Base_R" }),
+          ...grimeProfile("Grime_L", [[0.06, 0.031], [0.06, 0.12], [0.06, 0.3]], { at: ["$width * 0.3", 0, "-$depth / 2 + 0.12"], segments: 16 }),
+          ...grimeProfile("Grime_R", [[0.06, 0.031], [0.06, 0.12], [0.06, 0.3]], { at: ["-$width * 0.3", 0, "-$depth / 2 + 0.12"], segments: 16 }),
           box("Screen", ["$width * 0.6 - 0.1", "$height - 0.7", 0.012], { at: [0, 0.35, "-$depth / 2 + 0.12"], anchor: "bottom", material: "galvanised" }),
           box("ScreenFrame", ["$width * 0.6", 0.05, 0.04], { at: [0, "$height - 0.33", "-$depth / 2 + 0.12"], bevel: 0.005 }),
         ]),
@@ -122,7 +132,7 @@ function makeStop(style: Style, f: Finish): AssetDraft {
     description: `A ${fr} ${s.title}: ${s.text}, with a bus stop sign and timetable on a mast to its right. The open boarding side faces +z.`,
     tags: [style, fr, ac, "bushalte", "abri", "wachthuisje", "shelter", "halte"],
     params: params(style),
-    materials: useMats(f.frame, f.accent, "galvanised", "paint_yellow", "paint_black", "paint_white", "glass_clear", "glass_frosted", "bulb_cool", "light_oak", "teak", "concrete"),
+    materials: { ...useMats(f.frame, f.accent, "galvanised", "paint_yellow", "paint_black", "paint_white", "glass_clear", "glass_frosted", "bulb_cool", "light_oak", "teak", "concrete"), ...GRIME(f.frame), ...(f.accent === "terracotta" ? { terracotta: { ...LOCAL["terracotta"]!, color: [0.25, 0.075, 0.035] as [number, number, number], texture: "roof_tile" } } : {}) },
     nodes: [group("BusStop", [...nodes(style, f), box("Platform", ["$width + 1.2", 0.03, "$depth + 0.5"], { at: [0.3, 0, 0.05], anchor: "bottom", bevel: 0.01, material: "concrete" })], { material: f.frame })],
   };
 }

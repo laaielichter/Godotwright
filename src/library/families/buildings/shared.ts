@@ -3,40 +3,95 @@
  * expression ("$width / 2"), so the parts follow the asset's parameters. Local frames: a window or door is built on a
  * wall surface at z = 0 and faces +z; turn its group to put it on another wall.
  */
-import { box, cyl, extrude, group, roof, type Num, type SpecNode, type Vec } from "../../kit.js";
+import { box, cyl, extrude, group, roof, type Family, type Num, type SpecNode, type Vec } from "../../kit.js";
 import type { MaterialDef } from "../../palette.js";
 
-/** Building materials the palette does not have (roofing, glazing, render). */
+/**
+ * Building materials the palette does not have (roofing, glazing, render), in real-world linear albedos: Dutch clay
+ * tiles and slate are dark, render is off-white (never paper white), brick is a deep red-brown with mortar joints.
+ */
 export const BMATS: Record<string, MaterialDef> = {
-  tile_red: { color: [0.34, 0.085, 0.045], metallic: 0, roughness: 0.8, texture: "roof_tile" },
-  tile_brown: { color: [0.2, 0.09, 0.05], metallic: 0, roughness: 0.82, texture: "roof_tile" },
-  tile_black: { color: [0.045, 0.045, 0.05], metallic: 0, roughness: 0.6, texture: "roof_tile" },
-  tile_orange: { color: [0.5, 0.18, 0.06], metallic: 0, roughness: 0.82, texture: "roof_tile" },
-  slate_grey: { color: [0.11, 0.115, 0.13], metallic: 0, roughness: 0.65, texture: "roof_slate" },
-  slate_blue: { color: [0.08, 0.1, 0.14], metallic: 0, roughness: 0.6, texture: "roof_slate" },
-  shingle_wood: { color: [0.28, 0.17, 0.09], metallic: 0, roughness: 0.9, texture: "roof_slate" },
-  shingle_green: { color: [0.06, 0.13, 0.08], metallic: 0, roughness: 0.85, texture: "roof_slate" },
-  thatch: { color: [0.42, 0.32, 0.15], metallic: 0, roughness: 1, texture: "grass" },
+  tile_red: { color: [0.2, 0.052, 0.028], metallic: 0, roughness: 0.72, texture: "roof_tile" },
+  tile_brown: { color: [0.085, 0.042, 0.028], metallic: 0, roughness: 0.75, texture: "roof_tile" },
+  tile_black: { color: [0.03, 0.03, 0.033], metallic: 0, roughness: 0.42, texture: "roof_tile" },
+  tile_orange: { color: [0.28, 0.085, 0.036], metallic: 0, roughness: 0.75, texture: "roof_tile" },
+  slate_grey: { color: [0.042, 0.046, 0.052], metallic: 0, roughness: 0.62, texture: "roof_slate" },
+  slate_blue: { color: [0.036, 0.043, 0.058], metallic: 0, roughness: 0.58, texture: "roof_slate" },
+  shingle_wood: { color: [0.14, 0.1, 0.068], metallic: 0, roughness: 0.9, texture: "roof_slate" },
+  shingle_green: { color: [0.032, 0.065, 0.042], metallic: 0, roughness: 0.85, texture: "roof_slate" },
+  thatch: { color: [0.2, 0.15, 0.08], metallic: 0, roughness: 1, texture: "grass" },
   felt_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "asphalt" },
-  zinc: { color: [0.45, 0.47, 0.48], metallic: 0.7, roughness: 0.45 },
-  corrugated: { color: [0.5, 0.52, 0.53], metallic: 0.8, roughness: 0.5 },
-  corrugated_red: { color: [0.32, 0.05, 0.03], metallic: 0.4, roughness: 0.55 },
-  corrugated_green: { color: [0.05, 0.16, 0.08], metallic: 0.4, roughness: 0.55 },
-  window_glass: { color: [0.025, 0.035, 0.045], metallic: 0.15, roughness: 0.06 },
-  render_white: { color: [0.82, 0.8, 0.75], metallic: 0, roughness: 0.92, texture: "plaster" },
-  render_cream: { color: [0.78, 0.7, 0.52], metallic: 0, roughness: 0.92, texture: "plaster" },
-  render_grey: { color: [0.42, 0.43, 0.43], metallic: 0, roughness: 0.92, texture: "plaster" },
-  render_pink: { color: [0.75, 0.48, 0.42], metallic: 0, roughness: 0.92, texture: "plaster" },
-  render_blue: { color: [0.45, 0.55, 0.62], metallic: 0, roughness: 0.92, texture: "plaster" },
+  zinc: { color: [0.4, 0.42, 0.43], metallic: 0.55, roughness: 0.5, texture: "brushed" },
+  zinc_quartz: { color: [0.11, 0.115, 0.12], metallic: 0.3, roughness: 0.5, texture: "brushed" },
+  corrugated: { color: [0.36, 0.37, 0.38], metallic: 0.5, roughness: 0.6, texture: "brushed" },
+  corrugated_red: { color: [0.19, 0.035, 0.025], metallic: 0.25, roughness: 0.55, texture: "painted" },
+  corrugated_green: { color: [0.03, 0.085, 0.045], metallic: 0.25, roughness: 0.55, texture: "painted" },
+  window_glass: { color: [0.028, 0.036, 0.046], metallic: 0.4, roughness: 0.04 },
+  reveal_dark: { color: [0.045, 0.043, 0.04], metallic: 0, roughness: 0.9, texture: "plaster" },
+  render_white: { color: [0.5, 0.49, 0.45], metallic: 0, roughness: 0.92, texture: "plaster" },
+  render_cream: { color: [0.52, 0.45, 0.32], metallic: 0, roughness: 0.92, texture: "plaster" },
+  render_grey: { color: [0.28, 0.28, 0.27], metallic: 0, roughness: 0.92, texture: "plaster" },
+  render_pink: { color: [0.46, 0.27, 0.21], metallic: 0, roughness: 0.92, texture: "plaster" },
+  render_blue: { color: [0.22, 0.29, 0.34], metallic: 0, roughness: 0.92, texture: "plaster" },
   cladding_black: { color: [0.03, 0.03, 0.03], metallic: 0, roughness: 0.75, texture: "wood" },
-  cladding_red: { color: [0.32, 0.05, 0.035], metallic: 0, roughness: 0.82, texture: "wood" },
-  cladding_grey: { color: [0.32, 0.33, 0.33], metallic: 0, roughness: 0.8, texture: "wood" },
-  cladding_green: { color: [0.08, 0.2, 0.12], metallic: 0, roughness: 0.8, texture: "wood" },
-  cladding_blue: { color: [0.12, 0.2, 0.32], metallic: 0, roughness: 0.8, texture: "wood" },
-  cladding_cream: { color: [0.75, 0.68, 0.52], metallic: 0, roughness: 0.8, texture: "wood" },
-  log: { color: [0.4, 0.24, 0.11], metallic: 0, roughness: 0.85, texture: "wood" },
-  log_dark: { color: [0.18, 0.1, 0.05], metallic: 0, roughness: 0.85, texture: "wood" },
+  cladding_red: { color: [0.19, 0.032, 0.022], metallic: 0, roughness: 0.82, texture: "wood" },
+  cladding_grey: { color: [0.19, 0.2, 0.2], metallic: 0, roughness: 0.8, texture: "wood" },
+  cladding_green: { color: [0.035, 0.09, 0.055], metallic: 0, roughness: 0.8, texture: "wood" },
+  cladding_blue: { color: [0.05, 0.1, 0.17], metallic: 0, roughness: 0.8, texture: "wood" },
+  cladding_cream: { color: [0.5, 0.45, 0.34], metallic: 0, roughness: 0.8, texture: "wood" },
+  log: { color: [0.26, 0.16, 0.075], metallic: 0, roughness: 0.85, texture: "wood" },
+  log_dark: { color: [0.13, 0.075, 0.04], metallic: 0, roughness: 0.85, texture: "wood" },
 };
+
+/**
+ * Palette finishes recalibrated for buildings seen from a distance under a sun: the palette's bricks, stones, pale
+ * woods and whites are tuned for furniture-scale props and read pink, chalky or paper white on a facade. The buildings
+ * index applies these to every asset of the category (see `tuneBuildings`).
+ */
+export const BUILDING_OVERRIDES: Record<string, MaterialDef> = {
+  brick_red: { color: [0.19, 0.058, 0.034], metallic: 0, roughness: 0.88, texture: "brick" },
+  brick_brown: { color: [0.095, 0.045, 0.028], metallic: 0, roughness: 0.88, texture: "brick" },
+  brick_yellow: { color: [0.38, 0.28, 0.14], metallic: 0, roughness: 0.88, texture: "brick" },
+  limestone: { color: [0.4, 0.385, 0.34], metallic: 0, roughness: 0.85, texture: "stone" },
+  sandstone: { color: [0.34, 0.24, 0.13], metallic: 0, roughness: 0.9, texture: "stone" },
+  granite: { color: [0.19, 0.185, 0.18], metallic: 0, roughness: 0.8, texture: "stone" },
+  slate: { color: [0.06, 0.065, 0.075], metallic: 0, roughness: 0.7, texture: "stone" },
+  plaster_white: { color: [0.5, 0.49, 0.45], metallic: 0, roughness: 0.92, texture: "plaster" },
+  terracotta: { color: [0.26, 0.08, 0.04], metallic: 0, roughness: 0.85, texture: "plaster" },
+  concrete: { color: [0.32, 0.31, 0.29], metallic: 0, roughness: 0.9, texture: "concrete" },
+  concrete_dark: { color: [0.16, 0.16, 0.155], metallic: 0, roughness: 0.9, texture: "concrete" },
+  paint_white: { color: [0.6, 0.6, 0.57], metallic: 0, roughness: 0.45, texture: "painted" },
+  paint_cream: { color: [0.55, 0.49, 0.36], metallic: 0, roughness: 0.5, texture: "painted" },
+  paint_orange: { color: [0.45, 0.12, 0.02], metallic: 0, roughness: 0.45, texture: "painted" },
+  paint_teal: { color: [0.02, 0.15, 0.15], metallic: 0, roughness: 0.45, texture: "painted" },
+  paint_red: { color: [0.36, 0.03, 0.025], metallic: 0, roughness: 0.45, texture: "painted" },
+  paint_green: { color: [0.03, 0.12, 0.045], metallic: 0, roughness: 0.45, texture: "painted" },
+  pine: { color: [0.42, 0.28, 0.14], metallic: 0, roughness: 0.75, texture: "wood" },
+  light_oak: { color: [0.38, 0.25, 0.12], metallic: 0, roughness: 0.7, texture: "wood" },
+  oak: { color: [0.28, 0.16, 0.07], metallic: 0, roughness: 0.7, texture: "wood" },
+  teak: { color: [0.26, 0.14, 0.06], metallic: 0, roughness: 0.75, texture: "wood" },
+  aged_copper: { color: [0.075, 0.17, 0.13], metallic: 0.15, roughness: 0.75, texture: "rust" },
+  aluminium: { color: [0.62, 0.63, 0.64], metallic: 0.8, roughness: 0.42, texture: "brushed" },
+  galvanised: { color: [0.48, 0.49, 0.5], metallic: 0.65, roughness: 0.55, texture: "brushed" },
+  glass_frosted: { color: [0.35, 0.42, 0.45, 0.45], metallic: 0, roughness: 0.15, alpha: "BLEND" },
+  glass_clear: { color: [0.3, 0.38, 0.42, 0.3], metallic: 0, roughness: 0.05, alpha: "BLEND" },
+  plastic_white: { color: [0.58, 0.58, 0.56], metallic: 0, roughness: 0.5, texture: "plastic" },
+};
+
+/** Applies BUILDING_OVERRIDES to the materials of every asset of a family. */
+export function tuneBuildings(family: Family): Family {
+  return {
+    ...family,
+    assets: () => family.assets().map((a) => {
+      const materials = Object.fromEntries(Object.entries(a.materials).map(([k, m]) => [k, BUILDING_OVERRIDES[k] ?? m]));
+      // The shared builders (window reveals, ...) may use building materials the family did not list.
+      for (const [, name] of JSON.stringify(a.nodes).matchAll(/"material":"([a-z0-9_]+)"/g)) {
+        if (name && !materials[name] && BMATS[name]) materials[name] = BMATS[name];
+      }
+      return { ...a, materials };
+    }),
+  };
+}
 
 /** Picks materials from BMATS by name. */
 export function bmats(...names: string[]): Record<string, MaterialDef> {
@@ -151,11 +206,13 @@ export interface WindowOpts {
 /** A framed window on a wall surface (z = 0, facing +z), centred on its node: pane, frame, bars, sill and lintel. */
 export function windowUnit(name: string, o: WindowOpts): SpecNode {
   const kids: SpecNode[] = [
+    box("Reveal", ["$ww + 0.24", "$wh + 0.2", 0.02], { at: [0, 0, 0.006], material: "reveal_dark" }),
     box("Pane", ["$ww", "$wh", 0.04], { at: [0, 0, 0.01], material: o.glass }),
     box("Jamb_L", [0.07, "$wh + 0.02", 0.11], { at: ["-$ww / 2 - 0.03", 0, 0.045], material: o.frame, bevel: 0.006 }),
     box("Jamb_R", [0.07, "$wh + 0.02", 0.11], { at: ["$ww / 2 + 0.03", 0, 0.045], material: o.frame, bevel: 0.006 }),
     box("Head", ["$ww + 0.14", 0.07, 0.11], { at: [0, "$wh / 2 + 0.03", 0.045], material: o.frame, bevel: 0.006 }),
     box("Sill", ["$ww + 0.26", 0.06, 0.2], { at: [0, "-$wh / 2 - 0.03", 0.09], material: o.sill, bevel: 0.008 }),
+    box("SillFrame", ["$ww + 0.14", 0.06, 0.11], { at: [0, "-$wh / 2 + 0.01", 0.045], material: o.frame, bevel: 0.006 }),
   ];
   const bars = o.bars ?? "mullion";
   if (bars === "mullion" || bars === "cross") kids.push(box("Mullion", [0.05, "$wh", 0.06], { at: [0, 0, 0.03], material: o.frame }));
@@ -209,6 +266,10 @@ export function hingedDoor(o: DoorOpts, name = "Door", framed = true): SpecNode[
     leaf.push(box("Strap_{i}", ["$dw * 0.55", 0.04, 0.012], { at: ["$dw * 0.275", "$dh * 0.15", 0.09], repeat: { count: 2, step: [0, "$dh * 0.7", 0] }, material: o.metal }));
   } else {
     leaf.push(box("Strip", [0.08, "$dh * 0.7", 0.02], { at: ["$dw * 0.25", "$dh * 0.5", 0.06], material: o.glass ?? o.metal }));
+  }
+  if (kind !== "plank") {
+    leaf.push(box("LetterPlate", [0.3, 0.07, 0.012], { at: ["$dw / 2", "$dh * 0.38", 0.062], material: o.metal, bevel: 0.003 }));
+    leaf.push(box("KickPlate", ["$dw - 0.1", 0.16, 0.008], { at: ["$dw / 2", 0.1, 0.059], material: o.metal }));
   }
   leaf.push(
     cyl("Rose", 0.03, 0.02, { axis: "z", at: ["$dw - 0.08", "$dh * 0.47", 0.065], segments: 12, material: o.metal }),

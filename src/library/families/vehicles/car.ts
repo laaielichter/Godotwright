@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { carPaint, f, L, ladd, lerpL, lev, ls, lscale, ringProfile, VMATS, wheel, type Lin, type WheelStyle } from "./parts.js";
+import { carPaint, f, L, ladd, lerpL, lev, ls, lscale, ringProfile, VMATS, wheel, WHEEL_MATS, type Lin, type WheelStyle } from "./parts.js";
 
 /** A point of the side silhouette: z as a fraction of the half length, y as a fraction of the roof height. */
 type Pt = [number, number, string?];
@@ -113,19 +113,28 @@ const STYLES: Record<string, CarStyle> = {
   },
 };
 
-type Finish = { name: string; paint: MaterialDef; wheel: WheelStyle; spokes?: number; roof?: string; nl: string };
-const P = (name: string, nl: string, rgb: [number, number, number], wheel: WheelStyle, spokes?: number, roof?: string, metallic = 0.55): Finish => ({ name, nl, paint: carPaint(...rgb, metallic), wheel, ...(spokes ? { spokes } : {}), ...(roof ? { roof } : {}) });
+type Finish = { name: string; paint: MaterialDef; wheel: WheelStyle; spokes?: number; roof?: string; rim?: string; nl: string };
+/** Solid colours get a little flake (0.2), metallic paints more (0.35); both under a clear coat (roughness 0.22-0.28). */
+const P = (name: string, nl: string, rgb: [number, number, number], wheel: WheelStyle, spokes?: number, roof?: string, metallic = 0.35, rim?: string): Finish => ({ name, nl, paint: carPaint(...rgb, metallic, metallic > 0.3 ? 0.24 : 0.27), wheel, ...(spokes ? { spokes } : {}), ...(roof ? { roof } : {}), ...(rim ? { rim } : {}) });
+
+// Real car colours (linear RGB): solid reds and yellows like the RAL cards, metallic greys, silvers and blues.
+const RED: [number, number, number] = [0.33, 0.022, 0.02];
+const WHITE: [number, number, number] = [0.62, 0.62, 0.6];
+const SILVER: [number, number, number] = [0.42, 0.43, 0.44];
+const BLACK: [number, number, number] = [0.018, 0.018, 0.02];
+const GREY: [number, number, number] = [0.1, 0.105, 0.11];
+const SOLID = 0.2;
 
 const FINISHES: Record<string, Finish[]> = {
-  hatchback: [P("red", "rood", [0.5, 0.02, 0.02], "alloy", 5), P("white", "wit", [0.82, 0.82, 0.8], "steel", undefined, undefined, 0.1), P("sky blue", "lichtblauw", [0.3, 0.5, 0.75], "alloy", 10, "trim_black"), P("yellow", "geel", [0.8, 0.5, 0.02], "alloy", 6, "trim_black")],
-  sedan: [P("silver", "zilver", [0.6, 0.62, 0.64], "alloy", 5), P("black", "zwart", [0.015, 0.015, 0.017], "alloy", 10), P("blue", "blauw", [0.02, 0.08, 0.35], "alloy", 6), P("burgundy", "bordeaux", [0.2, 0.01, 0.03], "steel")],
-  estate: [P("grey", "grijs", [0.18, 0.19, 0.2], "alloy", 5), P("green", "groen", [0.02, 0.12, 0.06], "alloy", 10), P("white", "wit", [0.82, 0.82, 0.8], "steel", undefined, undefined, 0.1)],
-  suv: [P("black", "zwart", [0.015, 0.015, 0.017], "alloy", 6), P("white", "wit", [0.82, 0.82, 0.8], "alloy", 5, "trim_black", 0.1), P("sand", "zand", [0.5, 0.42, 0.28], "steel"), P("blue", "blauw", [0.03, 0.1, 0.3], "alloy", 10)],
-  pickup: [P("red", "rood", [0.45, 0.02, 0.02], "steel"), P("silver", "zilver", [0.6, 0.62, 0.64], "alloy", 6), P("olive", "olijfgroen", [0.17, 0.18, 0.06], "steel", undefined, undefined, 0.2)],
-  coupe: [P("orange", "oranje", [0.85, 0.2, 0.01], "alloy", 5), P("silver", "zilver", [0.6, 0.62, 0.64], "alloy", 10), P("black", "zwart", [0.015, 0.015, 0.017], "alloy", 6)],
-  mpv: [P("white", "wit", [0.82, 0.82, 0.8], "alloy", 5, undefined, 0.1), P("grey", "grijs", [0.18, 0.19, 0.2], "steel"), P("blue", "blauw", [0.03, 0.12, 0.4], "alloy", 10)],
-  sports: [P("red", "rood", [0.55, 0.01, 0.01], "alloy", 5), P("yellow", "geel", [0.85, 0.55, 0.01], "alloy", 10), P("white", "wit", [0.82, 0.82, 0.8], "alloy", 6, "carbon", 0.1)],
-  vintage: [P("cream", "crème", [0.75, 0.65, 0.45], "chrome", undefined, undefined, 0.2), P("teal", "petrol", [0.04, 0.3, 0.3], "chrome", undefined, "whitewall", 0.3), P("burgundy", "bordeaux", [0.22, 0.015, 0.03], "wire", 24, undefined, 0.4)],
+  hatchback: [P("red", "rood", RED, "alloy", 5, undefined, SOLID), P("white", "wit", WHITE, "steel", undefined, undefined, SOLID), P("sky blue", "lichtblauw", [0.16, 0.28, 0.42], "alloy", 10, "gloss_black"), P("yellow", "geel", [0.58, 0.36, 0.02], "alloy", 6, "gloss_black", SOLID, "alloy_dark")],
+  sedan: [P("silver", "zilver", SILVER, "alloy", 5), P("black", "zwart", BLACK, "alloy", 10), P("blue", "blauw", [0.018, 0.05, 0.17], "alloy", 6), P("burgundy", "bordeaux", [0.13, 0.012, 0.02], "steel")],
+  estate: [P("grey", "grijs", GREY, "alloy", 5), P("green", "groen", [0.018, 0.065, 0.035], "alloy", 10), P("white", "wit", WHITE, "steel", undefined, undefined, SOLID)],
+  suv: [P("black", "zwart", BLACK, "alloy", 6, undefined, 0.35, "alloy_dark"), P("white", "wit", WHITE, "alloy", 5, "gloss_black", SOLID), P("sand", "zand", [0.33, 0.27, 0.17], "steel"), P("blue", "blauw", [0.025, 0.07, 0.18], "alloy", 10)],
+  pickup: [P("red", "rood", [0.3, 0.02, 0.018], "steel", undefined, undefined, SOLID), P("silver", "zilver", SILVER, "alloy", 6), P("olive", "olijfgroen", [0.1, 0.1, 0.045], "steel", undefined, undefined, SOLID)],
+  coupe: [P("orange", "oranje", [0.5, 0.11, 0.01], "alloy", 5, undefined, SOLID, "alloy_dark"), P("silver", "zilver", SILVER, "alloy", 10), P("black", "zwart", BLACK, "alloy", 6)],
+  mpv: [P("white", "wit", WHITE, "alloy", 5, undefined, SOLID), P("grey", "grijs", GREY, "steel"), P("blue", "blauw", [0.03, 0.08, 0.24], "alloy", 10)],
+  sports: [P("red", "rood", [0.4, 0.02, 0.016], "alloy", 5, undefined, SOLID, "alloy_dark"), P("yellow", "geel", [0.62, 0.4, 0.015], "alloy", 10, "carbon", SOLID, "alloy_dark"), P("white", "wit", WHITE, "alloy", 6, "carbon", SOLID)],
+  vintage: [P("cream", "crème", [0.52, 0.45, 0.31], "chrome", undefined, undefined, SOLID), P("teal", "petrol", [0.03, 0.16, 0.16], "chrome", undefined, "whitewall"), P("burgundy", "bordeaux", [0.14, 0.012, 0.022], "wire", 24)],
 };
 
 /** Body sections across the width: [distance in from the side, inset of the silhouette]; the shoulders round off. */
@@ -231,7 +240,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   const za = st.roof[0], zc = st.roof[1];
   kids.push(tube("PillarA_L", [[`$wb - 0.02`, `$yb - 0.01`, `${f(zws)} * $L2 - 0.02`], [`$wtop - 0.02`, `$H - 0.045`, `${f(za)} * $L2`]], 0.032, { material: roofMat, segments: 10, mirror: "PillarA_R" }));
   kids.push(tube("PillarC_L", [[`$wtop - 0.02`, `$H - 0.045`, `${f(zc)} * $L2`], [`$wb - 0.02`, `$yb - 0.01`, `${f(zgr)} * $L2 + 0.02`]], st.trunk === "lid" ? 0.06 : 0.045, { material: roofMat, segments: 10, mirror: "PillarC_R" }));
-  kids.push(tube("Seal_L", [[`$wb + 0.004`, `$yb + 0.004`, `${f(zws)} * $L2 - 0.04`], [`$wb + 0.004`, `$yb + 0.004`, `${f(zgr)} * $L2 + 0.04`]], 0.012, { material: st.bumper === "chrome" ? "chrome" : "trim_black", segments: 8, mirror: "Seal_R" }));
+  kids.push(tube("Seal_L", [[`$wb + 0.004`, `$yb + 0.004`, `${f(zws)} * $L2 - 0.04`], [`$wb + 0.004`, `$yb + 0.004`, `${f(zgr)} * $L2 + 0.04`]], 0.012, { material: st.bumper === "chrome" ? "chrome" : "rubber_seal", segments: 8, mirror: "Seal_R" }));
   const zB = st.doorZ[1];
   kids.push(box("PillarB_L", [0.05, `$H - 0.04 - $yb`, 0.08], { at: [`($wb + $wtop) / 2 - 0.012`, `($H - 0.04 + $yb) / 2`, `${f(zB)} * $L2 - 0.02`], rotate: [0, 0, 12.4], material: "trim_black", mirror: "PillarB_R" }));
   if (st.rails) {
@@ -243,6 +252,10 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   const door = (name: string, z0: Num, z1: Num, mirror: string): SpecNode =>
     group(name, [
       box("Skin", [0.028, `${doorTop} - (${doorBot})`, `${z0} - (${z1}) - 0.012`], { at: [-0.01, `(${doorTop} - (${doorBot})) / 2`, `-(${z0} - (${z1}) - 0.012) / 2`], bevel: 0.006, material: "body_paint" }),
+      box("Gap", [0.026, `${doorTop} - (${doorBot}) + 0.01`, `${z0} - (${z1}) - 0.002`], { at: [-0.0115, `(${doorTop} - (${doorBot})) / 2`, `-(${z0} - (${z1}) - 0.012) / 2`], material: "panel_gap" }),
+      // Shut lines at the leading and trailing edges, where the door meets the wing and the next panel.
+      box("Seam_{i}", [0.008, `${doorTop} - (${doorBot}) - 0.03`, 0.005], { at: [0.007, `(${doorTop} - (${doorBot})) / 2 + 0.01`, 0.0], repeat: { count: 2, step: [0, 0, `-(${z0} - (${z1}) - 0.006)`] }, material: "panel_gap" }),
+      box("Seal", [0.02, 0.012, `${z0} - (${z1}) - 0.03`], { at: [-0.012, `${doorTop} - (${doorBot}) + 0.012`, `-(${z0} - (${z1}) - 0.012) / 2`], material: st.bumper === "chrome" ? "chrome" : "rubber_seal" }),
       box("Handle", [0.03, 0.03, 0.17], { at: [0.008, `${doorTop} - (${doorBot}) - 0.12`, `-(${z0} - (${z1})) + 0.16`], bevel: 0.01, material: st.bumper === "chrome" ? "chrome" : "satin_black" }),
     ], { at: ["$W2 - 0.006", doorBot, z0], mirror });
   const frontEdge = `min(${f(st.doorZ[0])} * $L2, ${f(st.ff)} * $L2 - $Ra - 0.06)`;
@@ -260,6 +273,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
     const len = `hypot(${ls(dz)}, ${ls(dy)})`;
     return group(name, [
       box("Panel", [width, 0.024, len], { at: [0, f(sgn * 0.004), `${len} / 2`], bevel: 0.008, material: "body_paint" }),
+      box("Gap", [`${width} + 0.012`, 0.024, `${len} + 0.006`], { at: [0, f(sgn * 0.0015), `${len} / 2`], material: "panel_gap" }),
       ...extra,
     ], { at: [0, ls(a[1]), ls(a[0])], rotate: [`deg(atan2(-(${ls(dy)}), ${ls(dz)}))`, 0, 0] });
   };
@@ -284,11 +298,12 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   // Lights.
   const [lfz, lfy] = tag("lampF");
   const [lrz, lry] = tag("lampR");
+  // Headlamps: a dark housing, a chrome reflector bowl with a projector, a clear outer lens, and a DRL strip.
   const lampF: SpecNode[] = st.lamps === "round"
-    ? [cyl("Bezel", 0.095, 0.08, { axis: "z", segments: 24, material: "chrome", bevel: 0.01 }), ellipsoid("Lens", [0.08, 0.08, 0.035], { at: [0, 0, 0.035], segments: 18, material: "lamp_lens" })]
+    ? [cyl("Bezel", 0.095, 0.08, { axis: "z", segments: 24, material: "chrome", bevel: 0.01 }), ellipsoid("Bowl", [0.078, 0.078, 0.03], { at: [0, 0, 0.03], segments: 18, material: "reflector" }), cyl("Bulb", 0.02, 0.04, { axis: "z", at: [0, 0, 0.045], segments: 12, material: "lamp_lens" }), ellipsoid("Lens", [0.082, 0.082, 0.035], { at: [0, 0, 0.042], segments: 18, material: "lamp_glass" })]
     : st.lamps === "square"
-      ? [box("Housing", [0.32, 0.12, 0.1], { bevel: 0.02, material: "trim_black" }), box("Lens", [0.3, 0.1, 0.04], { at: [0, 0, 0.04], bevel: 0.015, material: "lamp_lens" }), box("Drl", [0.28, 0.015, 0.03], { at: [0, -0.06, 0.04], material: "lamp_lens" })]
-      : [ellipsoid("Housing", [0.17, 0.055, 0.07], { segments: 16, material: "trim_black" }), ellipsoid("Lens", [0.15, 0.045, 0.055], { at: [0, 0, 0.022], segments: 16, material: "lamp_lens" }), box("Signal", [0.07, 0.025, 0.03], { at: [0.1, -0.01, 0.03], material: "lamp_amber" })];
+      ? [box("Housing", [0.32, 0.12, 0.1], { bevel: 0.02, material: "gloss_black" }), box("Bowl_{i}", [0.12, 0.08, 0.03], { at: [-0.07, 0.008, 0.04], repeat: { count: 2, step: [0.14, 0, 0] }, bevel: 0.012, material: "reflector" }), cyl("Bulb_{i}", 0.025, 0.03, { axis: "z", at: [-0.07, 0.008, 0.055], repeat: { count: 2, step: [0.14, 0, 0] }, segments: 12, material: "lamp_lens" }), box("Lens", [0.3, 0.1, 0.03], { at: [0, 0, 0.05], bevel: 0.012, material: "lamp_glass" }), box("Drl", [0.28, 0.012, 0.02], { at: [0, -0.05, 0.05], material: "lamp_lens" })]
+      : [ellipsoid("Housing", [0.17, 0.055, 0.07], { segments: 16, material: "gloss_black" }), ellipsoid("Bowl", [0.11, 0.04, 0.05], { at: [-0.03, 0.002, 0.02], segments: 14, material: "reflector" }), cyl("Bulb", 0.022, 0.05, { axis: "z", at: [-0.03, 0.002, 0.04], segments: 12, material: "lamp_lens" }), box("Drl", [0.22, 0.01, 0.03], { at: [0, -0.034, 0.04], rotate: [0, 0, 0], material: "lamp_lens" }), ellipsoid("Lens", [0.165, 0.05, 0.06], { at: [0, 0, 0.022], segments: 16, material: "lamp_glass" }), box("Signal", [0.06, 0.02, 0.03], { at: [0.11, -0.012, 0.03], material: "lamp_amber" })];
   kids.push(group("Headlight_L", lampF, { at: ["$W2 * 0.66", ls(lfy), `${ls(lfz)} - 0.04`], rotate: [0, st.lamps === "round" ? 0 : 12, 0], mirror: "Headlight_R" }));
   const tail: SpecNode[] = st.tails === "round"
     ? [cyl("Lens", 0.06, 0.08, { axis: "z", segments: 20, material: "lamp_red", bevel: 0.01 }), cyl("Ring", 0.07, 0.05, { axis: "z", segments: 20, material: "chrome" })]
@@ -347,7 +362,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   kids.push(box("Wiper_L", ["$W2 * 0.5", 0.012, 0.02], { at: ["$W2 * 0.3", "$yb + 0.02", `${f(zws)} * $L2 - 0.04`], rotate: [0, -6, 3], material: "trim_black", mirror: "Wiper_R" }));
 
   // Interior: seats and a dashboard behind the glass, the steering wheel on the left (+x).
-  const up = "upholstery";
+  const up = key === "vintage" || (key === "sports" && fin.name === "white") || (key === "coupe" && fin.name === "silver") ? "upholstery_tan" : "upholstery";
   const seat = (name: string, x: Num, z: Num, mirror?: string): SpecNode => group(name, [
     box("Cushion", [0.5, 0.14, 0.5], { at: [0, 0, 0.22], bevel: 0.04 }),
     box("Back", [0.48, 0.6, 0.13], { at: [0, 0.3, -0.04], rotate: [-14, 0, 0], bevel: 0.04 }),
@@ -372,12 +387,18 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
 
   // Wheels at the hubs, outer face out.
   const tw = st.tyreW;
-  const wo = { r: "$wr", w: f(tw), style: fin.wheel, rim: fin.wheel === "steel" ? "satin_black" : fin.wheel === "chrome" ? "chrome" : fin.wheel === "wire" ? "chrome" : "aluminium", hub: fin.wheel === "steel" ? "chrome" : "trim_black", ...(fin.spokes ? { spokes: fin.spokes } : {}), ...(fin.roof === "whitewall" || key === "vintage" ? { whitewall: "whitewall" } : {}) } as const;
+  const wo = { r: "$wr", w: f(tw), style: fin.wheel, rim: fin.rim ?? (fin.wheel === "steel" ? "steel_wheel" : fin.wheel === "chrome" || fin.wheel === "wire" ? "chrome" : "alloy"), hub: fin.wheel === "alloy" ? "gloss_black" : fin.wheel === "chrome" ? "alloy" : "chrome", ...(fin.spokes ? { spokes: fin.spokes } : {}), ...(fin.roof === "whitewall" || key === "vintage" ? { whitewall: "whitewall" } : {}) } as const;
   const wx = `$W2 - ${f(tw / 2 + 0.035)}`;
   kids.push(group("Wheels", [
     wheel("Wheel_FL", [wx, "$wr", `${f(st.ff)} * $L2`], wo, { mirror: "Wheel_FR" }),
     wheel("Wheel_RL", [wx, "$wr", `-${f(st.fr)} * $L2`], wo, { mirror: "Wheel_RR" }),
   ]));
+  if (fin.wheel === "alloy") {
+    const cal = key === "sports" || key === "coupe" ? "caliper" : "alloy_dark";
+    for (const [n, z] of [["Caliper_FL", st.ff], ["Caliper_RL", -st.fr]] as [string, number][]) {
+      kids.push(box(n, [0.045, "$wr * 0.2", "$wr * 0.34"], { at: [`${wx} - ${f(tw * 0.1)}`, "$wr * 1.4", `${f(z)} * $L2 - $wr * 0.12`], rotate: [-18, 0, 0], bevel: 0.012, material: cal, mirror: n.replace("L", "R") }));
+    }
+  }
   nodes.push(group("Car", kids, {
     vars: {
       L2: "$length / 2", W2: "$width / 2", H: "$height", wr: "$wheelRadius", Ra: raExpr,
@@ -387,9 +408,9 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
     },
   }));
 
-  const roofText = fin.roof === "trim_black" || fin.roof === "carbon" ? `, a contrasting ${fin.roof === "carbon" ? "carbon" : "black"} roof` : "";
-  const mats2: Record<string, MaterialDef> = { body_paint: fin.paint, ...mats("aluminium", "chrome") };
-  for (const k of ["tinted_glass", "trim_black", "satin_black", "tyre", "lamp_lens", "lamp_red", "lamp_amber", "plate", "upholstery", "carbon", "whitewall"]) mats2[k] = VMATS[k]!;
+  const roofText = fin.roof === "gloss_black" || fin.roof === "carbon" ? `, a contrasting ${fin.roof === "carbon" ? "carbon" : "black"} roof` : "";
+  const mats2: Record<string, MaterialDef> = { body_paint: fin.paint, ...mats("aluminium", "chrome"), ...WHEEL_MATS() };
+  for (const k of ["tinted_glass", "trim_black", "satin_black", "gloss_black", "rubber_seal", "panel_gap", "lamp_lens", "lamp_glass", "reflector", "lamp_red", "lamp_amber", "plate", "upholstery", "upholstery_tan", "carbon", "whitewall", "caliper", "alloy_dark"]) mats2[k] = VMATS[k]!;
   void idx;
   return {
     slug: slugify("car", st.name, fin.name),

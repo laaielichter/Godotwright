@@ -4,7 +4,7 @@
  * and a few finishes the palette does not have.
  */
 import { box, cyl, group, lathe, type Num, type SpecNode, type Vec } from "../../kit.js";
-import type { MaterialDef } from "../../palette.js";
+import { mats, type MaterialDef } from "../../palette.js";
 
 /** Rounds to 4 decimals and prints without trailing zeros. */
 export const f = (n: number): string => String(Math.round(n * 10000) / 10000);
@@ -46,27 +46,55 @@ export function ls(l: Lin): Num {
 /** Wraps an expression in brackets when it has more than one term. */
 export const br = (e: Num): string => (typeof e === "number" ? f(e) : /^[$\w.]+$/.test(e) ? e : `(${e})`);
 
-/** Extra finishes for vehicles (linear RGB). */
+/** Extra finishes for vehicles (linear RGB), calibrated for Godot: dark parts are painted, moulded or anodised. */
 export const VMATS: Record<string, MaterialDef> = {
-  tinted_glass: { color: [0.08, 0.1, 0.12, 0.42], metallic: 0, roughness: 0.04, alpha: "BLEND" },
-  clear_glass: { color: [0.55, 0.65, 0.72, 0.28], metallic: 0, roughness: 0.04, alpha: "BLEND" },
-  dark_glass: { color: [0.025, 0.032, 0.04], metallic: 0.3, roughness: 0.05 },
-  trim_black: { color: [0.018, 0.018, 0.02], metallic: 0.1, roughness: 0.5 },
-  satin_black: { color: [0.03, 0.03, 0.032], metallic: 0.4, roughness: 0.35 },
-  tyre: { color: [0.022, 0.022, 0.024], metallic: 0, roughness: 0.9 },
-  lamp_lens: { color: [0.85, 0.88, 0.9], metallic: 0.2, roughness: 0.05, emissive: [0.6, 0.62, 0.65] },
-  lamp_red: { color: [0.55, 0.02, 0.02], metallic: 0.1, roughness: 0.1, emissive: [0.5, 0.01, 0.01] },
-  lamp_amber: { color: [0.9, 0.4, 0.02], metallic: 0.1, roughness: 0.1, emissive: [0.6, 0.25, 0.01] },
-  plate: { color: [0.82, 0.8, 0.72], metallic: 0, roughness: 0.4 },
-  plate_yellow: { color: [0.85, 0.6, 0.02], metallic: 0, roughness: 0.4 },
-  upholstery: { color: [0.04, 0.038, 0.04], metallic: 0, roughness: 0.92 },
-  upholstery_tan: { color: [0.38, 0.22, 0.1], metallic: 0, roughness: 0.6 },
-  carbon: { color: [0.03, 0.03, 0.035], metallic: 0.5, roughness: 0.3 },
-  whitewall: { color: [0.82, 0.82, 0.78], metallic: 0, roughness: 0.6 },
+  tinted_glass: { color: [0.018, 0.024, 0.03, 0.8], metallic: 0.1, roughness: 0.03, alpha: "BLEND" },
+  clear_glass: { color: [0.3, 0.35, 0.38, 0.32], metallic: 0, roughness: 0.03, alpha: "BLEND" },
+  dark_glass: { color: [0.022, 0.028, 0.034], metallic: 0.3, roughness: 0.05 },
+  trim_black: { color: [0.028, 0.028, 0.03], metallic: 0, roughness: 0.55, texture: "plastic" },
+  satin_black: { color: [0.035, 0.035, 0.038], metallic: 0.3, roughness: 0.4, texture: "painted" },
+  gloss_black: { color: [0.022, 0.022, 0.024], metallic: 0.2, roughness: 0.12 },
+  tyre: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.86 },
+  tyre_wall: { color: [0.038, 0.038, 0.04], metallic: 0, roughness: 0.68, texture: "plastic" },
+  rubber_seal: { color: [0.026, 0.026, 0.028], metallic: 0, roughness: 0.72 },
+  panel_gap: { color: [0.012, 0.012, 0.013], metallic: 0, roughness: 0.9 },
+  lamp_lens: { color: [0.8, 0.83, 0.85], metallic: 0.2, roughness: 0.05, emissive: [0.5, 0.52, 0.55] },
+  lamp_glass: { color: [0.55, 0.6, 0.62, 0.3], metallic: 0, roughness: 0.02, alpha: "BLEND" },
+  reflector: { color: [0.86, 0.86, 0.87], metallic: 1, roughness: 0.12 },
+  lamp_red: { color: [0.42, 0.02, 0.018], metallic: 0.1, roughness: 0.08, emissive: [0.3, 0.005, 0.004] },
+  lamp_amber: { color: [0.7, 0.32, 0.02], metallic: 0.1, roughness: 0.08, emissive: [0.4, 0.15, 0.005] },
+  plate: { color: [0.68, 0.68, 0.64], metallic: 0, roughness: 0.4, texture: "plastic" },
+  plate_yellow: { color: [0.66, 0.45, 0.02], metallic: 0, roughness: 0.4, texture: "plastic" },
+  upholstery: { color: [0.04, 0.038, 0.04], metallic: 0, roughness: 0.92, texture: "fabric" },
+  upholstery_tan: { color: [0.32, 0.17, 0.08], metallic: 0, roughness: 0.6, texture: "leather" },
+  carbon: { color: [0.035, 0.037, 0.042], metallic: 0, roughness: 0.32, texture: "fabric" },
+  whitewall: { color: [0.64, 0.63, 0.59], metallic: 0, roughness: 0.6 },
+  /** Wheels and running gear. */
+  alloy: { color: [0.74, 0.75, 0.77], metallic: 1, roughness: 0.26, texture: "brushed" },
+  alloy_dark: { color: [0.26, 0.27, 0.29], metallic: 1, roughness: 0.34, texture: "brushed" },
+  steel_wheel: { color: [0.42, 0.43, 0.44], metallic: 0.35, roughness: 0.42, texture: "painted" },
+  brake_disc: { color: [0.42, 0.42, 0.43], metallic: 1, roughness: 0.5, texture: "brushed" },
+  caliper: { color: [0.38, 0.03, 0.02], metallic: 0.2, roughness: 0.4, texture: "painted" },
+  chassis_black: { color: [0.032, 0.032, 0.034], metallic: 0.25, roughness: 0.6, texture: "painted" },
+  powder_black: { color: [0.035, 0.035, 0.038], metallic: 0.25, roughness: 0.5, texture: "painted" },
+  anodised_black: { color: [0.04, 0.04, 0.044], metallic: 0.35, roughness: 0.42, texture: "brushed" },
+  stainless: { color: [0.64, 0.65, 0.66], metallic: 1, roughness: 0.24, texture: "brushed" },
+  gelcoat_white: { color: [0.66, 0.66, 0.63], metallic: 0, roughness: 0.2 },
 };
 
-/** A car-like paint (a little metallic, a clear coat). */
-export const carPaint = (r: number, g: number, b: number, metallic = 0.55, roughness = 0.24): MaterialDef => ({ color: [r, g, b], metallic, roughness });
+/** The finishes wheel() uses inside (spread into an asset's materials next to its rim and hub materials). */
+export const WHEEL_MATS = (): Record<string, MaterialDef> =>
+  ({ ...mats("chrome"), ...Object.fromEntries(["tyre", "tyre_wall", "brake_disc", "satin_black", "trim_black", "alloy", "alloy_dark", "steel_wheel", "chassis_black"].map((k) => [k, VMATS[k]!])) });
+
+/**
+ * A clear-coated car paint, "painted" (orange peel) texture: a little metallic flake (0.2-0.35) under a glossy clear
+ * coat. Colours are kept to real paint: the strongest channel at most 0.7, and never darker than black paint.
+ */
+export const carPaint = (r: number, g: number, b: number, metallic = 0.3, roughness = 0.25): MaterialDef => {
+  const k = Math.max(r, g, b) > 0.7 ? 0.7 / Math.max(r, g, b) : 1;
+  const c = [r, g, b].map((v) => Math.max(0.014, Math.round(v * k * 1000) / 1000)) as [number, number, number];
+  return { color: c, metallic: Math.min(0.35, Math.max(0.2, metallic)), roughness: Math.min(0.35, Math.max(0.2, roughness)), texture: "painted" };
+};
 
 export type WheelStyle = "alloy" | "steel" | "wire" | "truck" | "disc" | "chrome";
 
@@ -113,6 +141,8 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
     [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
   ];
   kids.push(lathe("Tyre", prof, { material: tyre, rotate: [0, 0, -90], segments: seg, caps: false }));
+  // A moulded sidewall band on the outer face (lettering ring), a touch glossier than the tread.
+  if (!o.whitewall) kids.push(lathe("Sidewall", [P(rf + 0.28 * (1 - rf), 0.46), P(rf + 0.5 * (1 - rf), 0.518), P(rf + 0.8 * (1 - rf), 0.494), P(rf + 0.6 * (1 - rf), 0.47), P(rf + 0.28 * (1 - rf), 0.46)], { material: "tyre_wall", rotate: [0, 0, -90], segments: seg, caps: false }));
   if (o.whitewall) {
     kids.push(lathe("Whitewall", [P(rf + 0.04, 0.43), P(rf + 0.3 * (1 - rf), 0.52), P(rf + 0.6 * (1 - rf), 0.51), P(rf + 0.04, 0.43)], { material: o.whitewall, rotate: [0, 0, -90], segments: seg, caps: false }));
   }
@@ -125,7 +155,11 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
   switch (o.style) {
     case "alloy": {
       const n = o.spokes ?? 5;
-      kids.push(cyl("Disc", `${f(rf - 0.04)} * $r`, "0.06 * $w", { axis: "x", at: [X(0.05), 0, 0], segments: seg, material: "satin_black" }));
+      // Behind the open spokes: the dark inner barrel, the brake disc on its hat, and the lug nuts on the boss.
+      kids.push(cyl("Disc", `${f(rf - 0.04)} * $r`, "0.06 * $w", { axis: "x", at: [X(-0.3), 0, 0], segments: seg, material: "trim_black" }));
+      kids.push(cyl("Rotor", `${f(rf - 0.13)} * $r`, "0.07 * $w", { axis: "x", at: [X(-0.05), 0, 0], segments: seg, material: "brake_disc" }));
+      kids.push(cyl("Hat", "0.26 * $r", "0.3 * $w", { axis: "x", at: [X(0.1), 0, 0], segments: 20, material: "alloy_dark" }));
+      kids.push(cyl("Nut_{i}", "0.022 * $r", "0.08 * $w", { axis: "x", at: [X(0.43), "0.13 * $r", 0], repeat: { count: 5, around: "x", phase: 36 }, segments: 6, material: "chrome" }));
       kids.push(box("Spoke_{i}", ["0.1 * $w", `${f((rf - 0.2) * 1.05)} * $r`, `${f(n > 6 ? 0.07 : 0.12)} * $r`], { at: [X(0.34), `${f(0.2 + (rf - 0.2) / 2)} * $r`, 0], repeat: { count: n, around: "x" }, bevel: 0.006, material: o.rim }));
       kids.push(cyl("Boss", "0.2 * $r", "0.16 * $w", { axis: "x", at: [X(0.34), 0, 0], segments: 20, material: o.rim, bevel: 0.008 }));
       kids.push(cyl("Cap", "0.09 * $r", "0.04 * $w", { axis: "x", at: [X(0.43), 0, 0], segments: 16, material: hub }));

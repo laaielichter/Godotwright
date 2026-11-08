@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, loft, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { carPaint, f, VMATS, wheel } from "./parts.js";
+import { carPaint, f, VMATS, wheel, WHEEL_MATS } from "./parts.js";
 
 type Kind = "city" | "coach" | "school" | "midi" | "decker";
 
@@ -20,17 +20,17 @@ interface BusDef {
   axles: [number, boolean][];
 }
 
-const P = (r: number, g: number, b: number): MaterialDef => carPaint(r, g, b, 0.3, 0.3);
+const P = (r: number, g: number, b: number, m = 0.2): MaterialDef => carPaint(r, g, b, m, 0.3);
 
 const BUSES: BusDef[] = [
-  { kind: "city", name: "city bus", length: [12, 10.5, 13.5], height: [3.05, 2.95, 3.3], wheel: 0.5, paint: P(0.8, 0.8, 0.78), stripe: P(0.02, 0.2, 0.55), colour: "white and blue", nl: "wit blauw", doors: [[0.86, 1.2], [0.12, 1.25], [-0.6, 1.2]], axles: [[0.58, false], [-0.48, true]] },
-  { kind: "city", name: "city bus", length: [10.8, 10.0, 12.0], height: [3.05, 2.95, 3.3], wheel: 0.5, paint: P(0.8, 0.55, 0.02), stripe: P(0.02, 0.02, 0.022), colour: "yellow", nl: "geel", doors: [[0.85, 1.2], [0.05, 1.25]], axles: [[0.55, false], [-0.5, true]] },
-  { kind: "coach", name: "coach", length: [12.8, 12.0, 13.8], height: [3.6, 3.4, 3.8], wheel: 0.52, paint: P(0.8, 0.8, 0.78), stripe: P(0.5, 0.02, 0.02), colour: "white and red", nl: "wit rood", doors: [[0.88, 1.0], [-0.02, 0.9]], axles: [[0.65, false], [-0.44, true], [-0.66, false]] },
-  { kind: "coach", name: "coach", length: [12.2, 11.5, 13.2], height: [3.55, 3.4, 3.8], wheel: 0.52, paint: P(0.02, 0.03, 0.08), stripe: P(0.6, 0.62, 0.64), colour: "navy", nl: "donkerblauw", doors: [[0.88, 1.0]], axles: [[0.64, false], [-0.48, true]] },
-  { kind: "school", name: "school bus", length: [11.0, 10.0, 12.0], height: [3.2, 3.05, 3.3], wheel: 0.5, paint: P(0.85, 0.55, 0.01), stripe: P(0.02, 0.02, 0.022), colour: "yellow", nl: "geel", doors: [[0.66, 0.85]], axles: [[0.8, false], [-0.5, true]] },
-  { kind: "school", name: "school bus", length: [9.0, 8.5, 10.0], height: [3.15, 3.05, 3.3], wheel: 0.48, paint: P(0.85, 0.5, 0.01), stripe: P(0.02, 0.02, 0.022), colour: "orange-yellow", nl: "oranjegeel", doors: [[0.6, 0.85]], axles: [[0.76, false], [-0.48, false]] },
-  { kind: "midi", name: "midibus", length: [8.6, 8.0, 9.5], height: [2.95, 2.9, 3.1], wheel: 0.42, paint: P(0.03, 0.25, 0.1), stripe: P(0.8, 0.8, 0.78), colour: "green", nl: "groen", doors: [[0.86, 1.0], [-0.1, 1.0]], axles: [[0.56, false], [-0.5, false]] },
-  { kind: "decker", name: "double-decker bus", length: [10.8, 10.0, 11.5], height: [4.1, 3.95, 4.2], wheel: 0.5, paint: P(0.5, 0.02, 0.02), stripe: P(0.75, 0.65, 0.45), colour: "red", nl: "rood", doors: [[0.86, 1.1], [0.0, 1.2]], axles: [[0.58, false], [-0.5, true]] },
+  { kind: "city", name: "city bus", length: [12, 10.5, 13.5], height: [3.05, 2.95, 3.3], wheel: 0.5, paint: P(0.62, 0.62, 0.6), stripe: P(0.02, 0.1, 0.3), colour: "white and blue", nl: "wit blauw", doors: [[0.86, 1.2], [0.12, 1.25], [-0.6, 1.2]], axles: [[0.58, false], [-0.48, true]] },
+  { kind: "city", name: "city bus", length: [10.8, 10.0, 12.0], height: [3.05, 2.95, 3.3], wheel: 0.5, paint: P(0.6, 0.38, 0.02), stripe: P(0.02, 0.02, 0.022), colour: "yellow", nl: "geel", doors: [[0.85, 1.2], [0.05, 1.25]], axles: [[0.55, false], [-0.5, true]] },
+  { kind: "coach", name: "coach", length: [12.8, 12.0, 13.8], height: [3.6, 3.4, 3.8], wheel: 0.52, paint: P(0.62, 0.62, 0.6), stripe: P(0.34, 0.022, 0.02), colour: "white and red", nl: "wit rood", doors: [[0.88, 1.0], [-0.02, 0.9]], axles: [[0.65, false], [-0.44, true], [-0.66, false]] },
+  { kind: "coach", name: "coach", length: [12.2, 11.5, 13.2], height: [3.55, 3.4, 3.8], wheel: 0.52, paint: P(0.016, 0.025, 0.07, 0.35), stripe: P(0.42, 0.43, 0.44, 0.35), colour: "navy", nl: "donkerblauw", doors: [[0.88, 1.0]], axles: [[0.64, false], [-0.48, true]] },
+  { kind: "school", name: "school bus", length: [11.0, 10.0, 12.0], height: [3.2, 3.05, 3.3], wheel: 0.5, paint: P(0.62, 0.38, 0.012), stripe: P(0.02, 0.02, 0.022), colour: "yellow", nl: "geel", doors: [[0.66, 0.85]], axles: [[0.8, false], [-0.5, true]] },
+  { kind: "school", name: "school bus", length: [9.0, 8.5, 10.0], height: [3.15, 3.05, 3.3], wheel: 0.48, paint: P(0.6, 0.32, 0.01), stripe: P(0.02, 0.02, 0.022), colour: "orange-yellow", nl: "oranjegeel", doors: [[0.6, 0.85]], axles: [[0.76, false], [-0.48, false]] },
+  { kind: "midi", name: "midibus", length: [8.6, 8.0, 9.5], height: [2.95, 2.9, 3.1], wheel: 0.42, paint: P(0.02, 0.12, 0.05), stripe: P(0.62, 0.62, 0.6), colour: "green", nl: "groen", doors: [[0.86, 1.0], [-0.1, 1.0]], axles: [[0.56, false], [-0.5, false]] },
+  { kind: "decker", name: "double-decker bus", length: [10.8, 10.0, 11.5], height: [4.1, 3.95, 4.2], wheel: 0.5, paint: P(0.34, 0.022, 0.02), stripe: P(0.52, 0.45, 0.3), colour: "red", nl: "rood", doors: [[0.86, 1.1], [0.0, 1.2]], axles: [[0.58, false], [-0.5, true]] },
 ];
 
 const EDGE: [number, number][] = [[0, 0.06], [0.015, 0.034], [0.045, 0.012], [0.09, 0.002], [0.15, 0]];
@@ -161,10 +161,11 @@ function buildBus(b: BusDef, idx: number): AssetDraft {
     ],
     materials: {
       body_paint: b.paint, stripe_paint: b.stripe,
-      door_frame: { color: [0.06, 0.06, 0.065], metallic: 0.6, roughness: 0.4 },
-      roof_grey: { color: [0.55, 0.56, 0.57], metallic: 0.3, roughness: 0.5 },
-      rim_grey: { color: [0.55, 0.56, 0.57], metallic: 0.6, roughness: 0.4 },
-      stop_red: { color: [0.6, 0.02, 0.02], metallic: 0, roughness: 0.4 },
+      ...WHEEL_MATS(),
+      door_frame: { color: [0.05, 0.05, 0.055], metallic: 0.3, roughness: 0.45, texture: "painted" },
+      roof_grey: { color: [0.36, 0.37, 0.38], metallic: 0.1, roughness: 0.55, texture: "plastic" },
+      rim_grey: { color: [0.5, 0.51, 0.52], metallic: 0.4, roughness: 0.45, texture: "painted" },
+      stop_red: { color: [0.4, 0.02, 0.018], metallic: 0, roughness: 0.4, texture: "painted" },
       ...mats("chrome"),
       dark_glass: VMATS["dark_glass"]!, trim_black: VMATS["trim_black"]!, tyre: VMATS["tyre"]!, lamp_lens: VMATS["lamp_lens"]!, lamp_red: VMATS["lamp_red"]!, lamp_amber: VMATS["lamp_amber"]!, plate_yellow: VMATS["plate_yellow"]!,
     },

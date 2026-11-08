@@ -33,8 +33,8 @@ const SHAPES: Record<Shape, RowShape> = {
 };
 
 const FINISHES: { name: string; nl: string; hull: MaterialDef; inner: MaterialDef; wood: boolean }[] = [
-  { name: "varnished wood", nl: "gelakt hout", hull: { color: [0.45, 0.24, 0.09], metallic: 0, roughness: 0.35, texture: "wood" }, inner: { color: [0.5, 0.3, 0.13], metallic: 0, roughness: 0.4, texture: "wood" }, wood: true },
-  { name: "white and green", nl: "wit groen", hull: { color: [0.8, 0.8, 0.77], metallic: 0, roughness: 0.35 }, inner: { color: [0.06, 0.22, 0.12], metallic: 0, roughness: 0.5 }, wood: false },
+  { name: "varnished wood", nl: "gelakt hout", hull: { color: [0.3, 0.15, 0.06], metallic: 0, roughness: 0.3, texture: "wood" }, inner: { color: [0.36, 0.21, 0.09], metallic: 0, roughness: 0.4, texture: "wood" }, wood: true },
+  { name: "white and green", nl: "wit groen", hull: { color: [0.62, 0.62, 0.58], metallic: 0, roughness: 0.35, texture: "painted" }, inner: { color: [0.035, 0.11, 0.06], metallic: 0, roughness: 0.5, texture: "painted" }, wood: false },
 ];
 
 const zs = (s: number): string => `-$L2 + ${f(2 * s)} * $L2`;
@@ -127,12 +127,12 @@ function rowboat(shape: Shape, fi: number): AssetDraft {
     ],
     materials: {
       hull_paint: F.hull,
-      trim_wood: { color: [0.32, 0.17, 0.06], metallic: 0, roughness: 0.4, texture: "wood" },
-      rib_wood: { color: [0.4, 0.24, 0.1], metallic: 0, roughness: 0.6, texture: "wood" },
-      seat_wood: F.wood ? { color: [0.55, 0.36, 0.16], metallic: 0, roughness: 0.45, texture: "wood" } : { color: [0.06, 0.22, 0.12], metallic: 0, roughness: 0.5 },
-      oar_wood: { color: [0.62, 0.45, 0.24], metallic: 0, roughness: 0.5, texture: "wood" },
-      oar_tip: { color: [0.06, 0.22, 0.12], metallic: 0, roughness: 0.4 },
-      leather: { color: [0.3, 0.17, 0.07], metallic: 0, roughness: 0.6 },
+      trim_wood: { color: [0.2, 0.1, 0.04], metallic: 0, roughness: 0.4, texture: "wood" },
+      rib_wood: { color: [0.3, 0.17, 0.07], metallic: 0, roughness: 0.6, texture: "wood" },
+      seat_wood: F.wood ? { color: [0.42, 0.27, 0.12], metallic: 0, roughness: 0.45, texture: "wood" } : { color: [0.035, 0.11, 0.06], metallic: 0, roughness: 0.5, texture: "painted" },
+      oar_wood: { color: [0.45, 0.31, 0.15], metallic: 0, roughness: 0.55, texture: "wood" },
+      oar_tip: F.wood ? { color: [0.34, 0.022, 0.02], metallic: 0, roughness: 0.4, texture: "painted" } : { color: [0.035, 0.11, 0.06], metallic: 0, roughness: 0.4, texture: "painted" },
+      leather: { color: [0.22, 0.11, 0.045], metallic: 0, roughness: 0.6, texture: "leather" },
       ...mats("brass"),
     },
     nodes: [group("RowingBoat", kids, { vars: { L2: "$length / 2", B2: "$beam / 2", fb: "$freeboard", d: "0.1 + $beam * 0.04", oar: `min(2.9, $beam * ${shape === "pram" ? 1.2 : 1.6} + ${shape === "pram" ? 0.1 : 0.15})`, inb: `$beam * ${f(0.42 * beamAt(h, so))}` } })],

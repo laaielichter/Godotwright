@@ -1,5 +1,5 @@
 import { box, cyl, group, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, grimeRound, nice, up, useMats } from "./common.js";
 
 type Style = "cone" | "lamp-cone" | "delineator" | "drum";
 
@@ -27,6 +27,9 @@ function nodes(style: Style): SpecNode[] {
           lathe("Rim", [["$r + 0.01", 0.02], ["$r + 0.01", 0.045], ["$r - 0.005", 0.05]], { segments: 24 }),
         ], { material: "rubber" }),
         lathe("Cone", [["$r", 0.035], ["0.022", "$height - 0.01"], [0.012, "$height"]], { segments: 24 }),
+        // Scuffs and road dirt on the lower cone: two see-through films that follow its taper.
+        lathe("Grime_1", [[`${rc("0.036")} + 0.003`, 0.036], [`${rc("$height * 0.2")} + 0.003`, "$height * 0.2"]], { segments: 24, material: "grime" }),
+        lathe("Grime_2", [[`${rc("0.036")} + 0.0045`, 0.036], [`${rc("0.036 + $height * 0.06")} + 0.0045`, "0.036 + $height * 0.06"]], { segments: 24, material: "grime_heavy" }),
         ...(lamp
           ? [collar("Band", "$height * 0.45", "$height * 0.6"),
               group("Lamp", [
@@ -47,6 +50,7 @@ function nodes(style: Style): SpecNode[] {
         cyl("Body", "$r", "$height - 0.07", { at: [0, 0.04, 0], anchor: "base", segments: 20, bevel: 0.01 }),
         cyl("Band_{i}", "$r + 0.003", 0.08, { at: [0, "$height - 0.32", 0], anchor: "base", segments: 20, repeat: { count: 3, step: [0, -0.18, 0] }, material: "reflector_white" }),
         lathe("Grip", [["$r * 0.5", "$height - 0.04"], ["$r * 0.9", "$height - 0.02"], ["$r * 0.9", "$height"], ["$r * 0.4", "$height + 0.005"]], { segments: 20 }),
+        ...grimeRound("Grime", "$r", "$r", 0.22, [0, 0.12, 0], 20),
       ];
     case "drum": {
       const prof: [string, string | number][] = [["$r * 0.9", 0.06]];
@@ -62,6 +66,7 @@ function nodes(style: Style): SpecNode[] {
         cyl("Band_{i}", "$r + 0.003", "($height - 0.12) / 12", { at: [0, "0.06 + ($height - 0.12) * 0.25 / 6", 0], anchor: "base", segments: 24, repeat: { count: 2, step: [0, "($height - 0.12) * 2 / 6", 0] }, material: "reflector_white" }),
         cyl("Band_Top", "$r + 0.003", "($height - 0.12) / 12", { at: [0, "0.06 + ($height - 0.12) * 4.25 / 6", 0], anchor: "base", segments: 24, material: "reflector_white" }),
         box("Handle", ["$r * 0.8", 0.04, 0.05], { at: [0, "$height - 0.02", 0], anchor: "bottom", bevel: 0.015 }),
+        ...grimeRound("Grime", "$r + 0.002", "$r + 0.002", 0.24, [0, 0.07, 0]),
       ];
     }
   }
@@ -89,7 +94,7 @@ function makeCone(style: Style, colour: string): AssetDraft {
     description: `A ${c} ${s.title}: ${s.text}. It is round and faces +z.`,
     tags: [style, c, "pylon", "verkeerskegel", "pion", "pylon", "wegafzetting", ...(style === "drum" ? ["vat", "barrel"] : []), ...(style === "delineator" ? ["bakenpaal", "markeringspaal"] : [])],
     params: params(style),
-    materials: useMats(colour, "rubber", "reflector_white", "plastic_black", "bulb_amber"),
+    materials: { ...useMats(colour, "rubber", "reflector_white", "plastic_black", "bulb_amber"), ...GRIME(colour) },
     nodes: [group("TrafficCone", nodes(style), { material: colour })],
   };
 }

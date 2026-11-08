@@ -1,11 +1,13 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, grimeBox, grimeProfile, grimeRound, nice, up, useMats } from "./common.js";
 
 type Style = "cast-iron" | "steel" | "concrete" | "amsterdam";
 
 interface Finish {
   body: string;
   band: string;
+  /** Old iron: the paint has gone and rust breaks through. */
+  worn?: boolean;
 }
 
 const STYLES: Record<Style, { title: string; text: string; finishes: Finish[] }> = {
@@ -13,7 +15,7 @@ const STYLES: Record<Style, { title: string; text: string; finishes: Finish[] }>
     title: "cast iron cannon bollard",
     text: "a flared cannon-shaped body with a moulded collar, a waist ring and a ball cap",
     finishes: [
-      { body: "cast_iron", band: "cast_iron" },
+      { body: "cast_iron", band: "cast_iron", worn: true },
       { body: "paint_black", band: "gold" },
       { body: "paint_forest", band: "brass" },
       { body: "paint_navy", band: "paint_white" },
@@ -45,7 +47,7 @@ const STYLES: Record<Style, { title: string; text: string; finishes: Finish[] }>
     finishes: [
       { body: "amsterdam_brown", band: "amsterdam_brown" },
       { body: "paint_burgundy", band: "paint_burgundy" },
-      { body: "cast_iron", band: "cast_iron" },
+      { body: "cast_iron", band: "cast_iron", worn: true },
       { body: "paint_black", band: "reflector_white" },
     ],
   },
@@ -64,6 +66,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
           cyl("Neck", "$r * 0.35", 0.04, { at: [0, "$height - 0.06", 0], anchor: "base", segments: 16 }),
           ellipsoid("Ball", ["$r * 0.6", "$r * 0.6", "$r * 0.6"], { at: [0, "$height - 0.02 + $r * 0.5", 0], segments: 16 }),
         ]),
+        ...grimeProfile("Grime", [["$r * 1.35", 0.001], ["$r * 1.35", 0.04], ["$r * 1.15", 0.07], ["$r * 1.05", 0.14], ["$r * 1.03", 0.2]], { segments: 20 }),
       ];
     case "steel":
       return [
@@ -72,6 +75,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         cyl("Bolt_{i}", 0.01, 0.02, { at: [0, 0.01, "$r + 0.03"], anchor: "base", segments: 8, repeat: { count: 4, around: "y", phase: 45 }, material: "steel" }),
         lathe("Cap", [["$r + 0.004", "$height - 0.03"], ["$r + 0.004", "$height - 0.015"], ["$r * 0.7", "$height - 0.002"], [0.01, "$height"]], { segments: 24, material: "steel" }),
         cyl("Band_{i}", "$r + 0.002", 0.05, { at: [0, "$height - 0.16", 0], anchor: "base", segments: 24, repeat: { count: "$bands", step: [0, -0.09, 0] }, material: f.band }),
+        ...grimeRound("Grime", "$r", "$r", 0.15, [0, 0.012, 0]),
       ];
     case "concrete": {
       const sq = (r: string): string => `${r} * ${R2}`;
@@ -82,6 +86,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         box("Plinth", ["$r * 2 + 0.1", 0.03, "$r * 2 + 0.1"], { anchor: "bottom", bevel: 0.01, material: "concrete_dark" }),
         box("Plate", ["$r * 0.8", 0.06, 0.01], { at: [0, "$height * 0.3", "$r * 0.92"], rotate: ["-deg(atan($r * 0.15 / ($height - 0.13)))", 0, 0], bevel: 0.003, material: "steel" }),
         cyl("Anchor", 0.012, 0.012, { at: [0, "$height - 0.002", 0], anchor: "base", segments: 10, material: "steel" }),
+        ...grimeProfile("Grime", [[sq("($r + 0.002)"), 0.03], [sq("($r - $r * 0.15 * 0.08 / ($height - 0.13) + 0.002)"), 0.11], [sq("($r - $r * 0.15 * 0.2 / ($height - 0.13) + 0.002)"), 0.23]], { segments: 4, rotate: [0, 45, 0] }),
       ];
     }
     case "amsterdam": {
@@ -101,6 +106,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         lathe("Cap", [["$r * 0.74", "$height - 0.095"], ["$r * 0.78", "$height - 0.07"], ["$r * 0.7", "$height - 0.035"], ["$r * 0.45", "$height - 0.01"], [0.01, "$height"]], { segments: 20 }),
         group("Crest_F", crest),
         group("Crest_B", crest, { rotate: [0, 180, 0] }),
+        ...grimeProfile("Grime", [["$r * 1.15", 0.001], ["$r * 1.15", 0.03], ["$r", 0.06], ["$r * 0.95", 0.1], ["$r * 0.94", 0.16]], { segments: 20 }),
       ];
     }
   }
@@ -128,7 +134,7 @@ function makeBollard(style: Style, f: Finish): AssetDraft {
     description: `A ${b} ${s.title}: ${s.text}${f.band !== f.body ? ` in ${band}` : ""}. It is round or square and faces +z.`,
     tags: [style, b, ...(f.band.startsWith("reflector") ? ["reflective", "reflecterend"] : []), ...(style === "amsterdam" ? ["amsterdammertje", "paaltje", "xxx"] : [])],
     params: params(style),
-    materials: useMats(f.body, f.band, "steel", "concrete_dark"),
+    materials: { ...useMats(f.body, f.band, "steel", "concrete_dark"), ...(f.worn ? { cast_iron: LOCAL["iron_worn"]! } : {}), ...GRIME(f.worn ? "iron_worn" : f.body) },
     nodes: [group("Bollard", nodes(style, f), { material: f.body })],
   };
 }

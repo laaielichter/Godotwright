@@ -32,7 +32,10 @@ function palletRack(f: Finish): SpecNode[] {
         box("Channel_{i}", [0.04, 0.04, "$D - 0.05"], { at: ["-$W / 3", 0.035, 0], repeat: { count: 3, step: ["$W / 3", 0, 0] }, material: "galvanised" }),
       ], { at: [0, "($H - 0.25) / $levels", 0], repeat: { count: "$levels - 1", step: [0, "($H - 0.25) / $levels", 0] } }),
       group("Load_{i}", [
-        box("Carton_{i}", ["$W * 0.42", "min(0.6, ($H - 0.25) / $levels - 0.25)", "$D * 0.8"], { at: ["-$W * 0.23", "0.075 + min(0.6, ($H - 0.25) / $levels - 0.25) / 2", 0], repeat: { count: 2, step: ["$W * 0.46", 0, 0] }, bevel: 0.01 }),
+        box("Carton_{i}", ["$W * 0.42", "min(0.6, ($H - 0.25) / $levels - 0.25)", "$D * 0.8"], { at: ["-$W * 0.23", "0.075 + min(0.6, ($H - 0.25) / $levels - 0.25) / 2", 0], repeat: { count: 2, step: ["$W * 0.46", 0, 0] }, bevel: 0.01, children: f.load === "cardboard" ? [
+          box("Tape", [0.06, 0.004, "$D * 0.8 - 0.01"], { at: [0, "min(0.6, ($H - 0.25) / $levels - 0.25) / 2", 0], material: "tape" }),
+          box("Label", [0.14, 0.09, 0.003], { at: ["$W * 0.1", 0, "$D * 0.4"], material: "label_white" }),
+        ] : [] }),
       ], { at: [0, "($H - 0.25) / $levels", 0], repeat: { count: "$levels - 1", step: [0, "($H - 0.25) / $levels", 0] }, material: f.load }),
     ], { material: f.main, vars: { W: "$width", D: "$depth", H: "$height" } }),
   ];
@@ -138,7 +141,7 @@ function rack(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. Its open front faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params: style.params,
-    materials: useMats(f.main, f.shelf, f.load, "hole", "galvanised", "rubber"),
+    materials: useMats(f.main, f.shelf, f.load, "hole", "galvanised", "rubber", "tape", "label_white"),
     nodes: style.build(f),
   };
 }

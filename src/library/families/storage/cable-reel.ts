@@ -1,6 +1,6 @@
 import { box, cap, cyl, group, num, slugify, tube, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, useMats } from "./common.js";
+import { an, finishName, finishTags, stencil, useMats } from "./common.js";
 
 type Finish = { main: string; cable: string; trim: string };
 interface Style {
@@ -64,7 +64,8 @@ function flatSpool(f: Finish): SpecNode[] {
         cyl("Disc", "$R", 0.04, { anchor: "base", segments: 36, bevel: 0.006 }),
         cyl("Bore", 0.05, 0.004, { at: [0, 0.04, 0], segments: 16, material: "hole" }),
         cyl("Bolt_{i}", 0.014, 0.008, { at: ["$R * 0.25", 0.042, 0], repeat: { count: 4, around: "y", phase: 45 }, segments: 8, material: f.trim }),
-        box("Stencil", ["$R * 0.7", 0.003, "$R * 0.2"], { at: [0, 0.04, "$R * 0.55"], material: f.trim }),
+        stencil("Stencil", "CABLE", "top", [0, 0.041, "$R * 0.55"], 0.016, f.trim, 0.003),
+        stencil("Size", "500 M", "top", [0, 0.041, "-$R * 0.55"], 0.012, f.trim, 0.003),
       ], { at: [0, "$height - 0.04", 0] }),
     ], { material: f.main, vars: { R: "$diameter / 2" } }),
   ];

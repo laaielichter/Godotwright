@@ -1,6 +1,6 @@
 import { box, cap, cyl, extrude, group, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, useMats } from "./common.js";
+import { an, finishName, finishTags, useMats, worn } from "./common.js";
 
 type Finish = { main: string; trim: string };
 interface Style {
@@ -31,7 +31,7 @@ function nato(f: Finish): SpecNode[] {
   return [
     group("Jerrycan", [
       group("Body", [
-        box("Shell", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.02 }),
+        box("Shell", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.02, material: worn(f.main) }),
         box("Seam", ["$W + 0.008", "$bh + 0.006", 0.012], { at: [0, "$bh / 2", 0], bevel: 0.004 }),
         emboss("F", 1),
         emboss("B", -1),
@@ -117,7 +117,7 @@ function can(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. Its broad face looks towards +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params: style.params,
-    materials: useMats(f.main, f.trim, "hole", "plastic_black"),
+    materials: useMats(f.main, f.trim, "hole", "plastic_black", worn(f.main)),
     nodes: style.build(f),
   };
 }

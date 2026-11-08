@@ -1,6 +1,6 @@
 import { box, cyl, group, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { carPaint, f, VMATS, wheel } from "./parts.js";
+import { carPaint, f, VMATS, wheel, WHEEL_MATS } from "./parts.js";
 
 type Cargo = "box" | "flatbed" | "tipper" | "tanker";
 type CabKind = "cabover" | "bonnet";
@@ -21,36 +21,36 @@ interface TruckDef {
   roofSpoiler?: boolean;
 }
 
-const C = (r: number, g: number, b: number): MaterialDef => carPaint(r, g, b, 0.3, 0.35);
+const C = (r: number, g: number, b: number, m = 0.2): MaterialDef => carPaint(r, g, b, m, 0.3);
 
 const TRUCKS: TruckDef[] = [
-  { cargo: "box", cab: "cabover", rear: 1, front: 1, length: [8.2, 7.2, 9.4], cargoH: [2.45, 2.1, 2.65], cab_: C(0.8, 0.8, 0.78), cabName: "white", nl: "wit", body: "box_white", bodyName: "white box", roofSpoiler: true },
-  { cargo: "box", cab: "cabover", rear: 1, front: 1, length: [7.4, 6.6, 8.6], cargoH: [2.3, 2.0, 2.6], cab_: C(0.5, 0.02, 0.02), cabName: "red", nl: "rood", body: "box_blue", bodyName: "blue box" },
-  { cargo: "box", cab: "cabover", rear: 2, front: 1, length: [10.0, 9.0, 11.5], cargoH: [2.55, 2.2, 2.7], cab_: C(0.03, 0.08, 0.3), cabName: "blue", nl: "blauw", body: "box_white", bodyName: "white box", roofSpoiler: true },
-  { cargo: "box", cab: "bonnet", rear: 2, front: 1, length: [10.5, 9.5, 11.8], cargoH: [2.5, 2.2, 2.65], cab_: C(0.02, 0.02, 0.022), cabName: "black", nl: "zwart", body: "box_grey", bodyName: "aluminium box" },
-  { cargo: "flatbed", cab: "cabover", rear: 1, front: 1, length: [8.0, 7.0, 9.2], cargoH: [1.0, 0.5, 1.4], cab_: C(0.8, 0.5, 0.02), cabName: "yellow", nl: "geel", body: "deck_wood", bodyName: "timber deck" },
-  { cargo: "flatbed", cab: "cabover", rear: 2, front: 1, length: [10.0, 9.0, 11.5], cargoH: [1.2, 0.6, 1.6], cab_: C(0.02, 0.15, 0.06), cabName: "green", nl: "groen", body: "deck_steel", bodyName: "steel deck" },
-  { cargo: "flatbed", cab: "bonnet", rear: 2, front: 1, length: [10.2, 9.4, 11.6], cargoH: [1.1, 0.6, 1.5], cab_: C(0.4, 0.02, 0.02), cabName: "red", nl: "rood", body: "deck_wood", bodyName: "timber deck" },
-  { cargo: "tipper", cab: "cabover", rear: 1, front: 1, length: [7.0, 6.4, 7.8], cargoH: [1.0, 0.8, 1.3], cab_: C(0.85, 0.25, 0.02), cabName: "orange", nl: "oranje", body: "tip_grey", bodyName: "grey tipper body" },
-  { cargo: "tipper", cab: "cabover", rear: 2, front: 1, length: [8.6, 7.8, 9.4], cargoH: [1.1, 0.9, 1.4], cab_: C(0.8, 0.8, 0.78), cabName: "white", nl: "wit", body: "tip_orange", bodyName: "orange tipper body" },
-  { cargo: "tipper", cab: "cabover", rear: 2, front: 2, length: [9.6, 8.8, 10.4], cargoH: [1.3, 1.0, 1.6], cab_: C(0.8, 0.55, 0.02), cabName: "yellow", nl: "geel", body: "tip_yellow", bodyName: "yellow eight-wheel tipper body" },
-  { cargo: "tipper", cab: "bonnet", rear: 2, front: 1, length: [9.0, 8.2, 9.8], cargoH: [1.1, 0.9, 1.4], cab_: C(0.03, 0.12, 0.35), cabName: "blue", nl: "blauw", body: "tip_grey", bodyName: "grey tipper body" },
-  { cargo: "tanker", cab: "cabover", rear: 1, front: 1, length: [8.0, 7.2, 9.0], cargoH: [1.9, 1.6, 2.1], cab_: C(0.8, 0.8, 0.78), cabName: "white", nl: "wit", body: "tank_steel", bodyName: "stainless tank" },
-  { cargo: "tanker", cab: "cabover", rear: 2, front: 1, length: [10.0, 9.0, 11.2], cargoH: [2.0, 1.7, 2.2], cab_: C(0.4, 0.02, 0.02), cabName: "red", nl: "rood", body: "tank_white", bodyName: "white tank" },
-  { cargo: "tanker", cab: "bonnet", rear: 2, front: 1, length: [10.4, 9.6, 11.6], cargoH: [1.95, 1.7, 2.15], cab_: C(0.6, 0.62, 0.64), cabName: "silver", nl: "zilver", body: "tank_steel", bodyName: "stainless tank" },
+  { cargo: "box", cab: "cabover", rear: 1, front: 1, length: [8.2, 7.2, 9.4], cargoH: [2.45, 2.1, 2.65], cab_: C(0.62, 0.62, 0.6), cabName: "white", nl: "wit", body: "box_white", bodyName: "white box", roofSpoiler: true },
+  { cargo: "box", cab: "cabover", rear: 1, front: 1, length: [7.4, 6.6, 8.6], cargoH: [2.3, 2.0, 2.6], cab_: C(0.34, 0.022, 0.02), cabName: "red", nl: "rood", body: "box_blue", bodyName: "blue box" },
+  { cargo: "box", cab: "cabover", rear: 2, front: 1, length: [10.0, 9.0, 11.5], cargoH: [2.55, 2.2, 2.7], cab_: C(0.022, 0.06, 0.2, 0.3), cabName: "blue", nl: "blauw", body: "box_white", bodyName: "white box", roofSpoiler: true },
+  { cargo: "box", cab: "bonnet", rear: 2, front: 1, length: [10.5, 9.5, 11.8], cargoH: [2.5, 2.2, 2.65], cab_: C(0.02, 0.02, 0.022, 0.3), cabName: "black", nl: "zwart", body: "box_grey", bodyName: "aluminium box" },
+  { cargo: "flatbed", cab: "cabover", rear: 1, front: 1, length: [8.0, 7.0, 9.2], cargoH: [1.0, 0.5, 1.4], cab_: C(0.6, 0.38, 0.02), cabName: "yellow", nl: "geel", body: "deck_wood", bodyName: "timber deck" },
+  { cargo: "flatbed", cab: "cabover", rear: 2, front: 1, length: [10.0, 9.0, 11.5], cargoH: [1.2, 0.6, 1.6], cab_: C(0.02, 0.09, 0.04), cabName: "green", nl: "groen", body: "deck_steel", bodyName: "steel deck" },
+  { cargo: "flatbed", cab: "bonnet", rear: 2, front: 1, length: [10.2, 9.4, 11.6], cargoH: [1.1, 0.6, 1.5], cab_: C(0.3, 0.02, 0.018), cabName: "red", nl: "rood", body: "deck_wood", bodyName: "timber deck" },
+  { cargo: "tipper", cab: "cabover", rear: 1, front: 1, length: [7.0, 6.4, 7.8], cargoH: [1.0, 0.8, 1.3], cab_: C(0.55, 0.14, 0.012), cabName: "orange", nl: "oranje", body: "tip_grey", bodyName: "grey tipper body" },
+  { cargo: "tipper", cab: "cabover", rear: 2, front: 1, length: [8.6, 7.8, 9.4], cargoH: [1.1, 0.9, 1.4], cab_: C(0.62, 0.62, 0.6), cabName: "white", nl: "wit", body: "tip_orange", bodyName: "orange tipper body" },
+  { cargo: "tipper", cab: "cabover", rear: 2, front: 2, length: [9.6, 8.8, 10.4], cargoH: [1.3, 1.0, 1.6], cab_: C(0.6, 0.4, 0.02), cabName: "yellow", nl: "geel", body: "tip_yellow", bodyName: "yellow eight-wheel tipper body" },
+  { cargo: "tipper", cab: "bonnet", rear: 2, front: 1, length: [9.0, 8.2, 9.8], cargoH: [1.1, 0.9, 1.4], cab_: C(0.025, 0.08, 0.24, 0.3), cabName: "blue", nl: "blauw", body: "tip_grey", bodyName: "grey tipper body" },
+  { cargo: "tanker", cab: "cabover", rear: 1, front: 1, length: [8.0, 7.2, 9.0], cargoH: [1.9, 1.6, 2.1], cab_: C(0.62, 0.62, 0.6), cabName: "white", nl: "wit", body: "tank_steel", bodyName: "stainless tank" },
+  { cargo: "tanker", cab: "cabover", rear: 2, front: 1, length: [10.0, 9.0, 11.2], cargoH: [2.0, 1.7, 2.2], cab_: C(0.3, 0.02, 0.018), cabName: "red", nl: "rood", body: "tank_white", bodyName: "white tank" },
+  { cargo: "tanker", cab: "bonnet", rear: 2, front: 1, length: [10.4, 9.6, 11.6], cargoH: [1.95, 1.7, 2.15], cab_: C(0.42, 0.43, 0.44, 0.35), cabName: "silver", nl: "zilver", body: "tank_steel", bodyName: "stainless tank" },
 ];
 
 const BODY_MATS: Record<string, MaterialDef> = {
-  box_white: { color: [0.82, 0.82, 0.8], metallic: 0.1, roughness: 0.45 },
-  box_blue: { color: [0.04, 0.16, 0.45], metallic: 0.2, roughness: 0.4 },
-  box_grey: { color: [0.62, 0.63, 0.64], metallic: 0.8, roughness: 0.35 },
-  deck_wood: { color: [0.36, 0.22, 0.1], metallic: 0, roughness: 0.8, texture: "wood" },
-  deck_steel: { color: [0.25, 0.26, 0.27], metallic: 0.7, roughness: 0.55 },
-  tip_grey: { color: [0.3, 0.31, 0.32], metallic: 0.5, roughness: 0.6 },
-  tip_orange: { color: [0.8, 0.25, 0.02], metallic: 0.2, roughness: 0.5 },
-  tip_yellow: { color: [0.8, 0.55, 0.02], metallic: 0.2, roughness: 0.5 },
-  tank_steel: { color: [0.75, 0.76, 0.78], metallic: 1, roughness: 0.18 },
-  tank_white: { color: [0.82, 0.82, 0.8], metallic: 0.1, roughness: 0.35 },
+  box_white: { color: [0.6, 0.6, 0.58], metallic: 0.1, roughness: 0.4, texture: "painted" },
+  box_blue: { color: [0.025, 0.07, 0.22], metallic: 0.15, roughness: 0.38, texture: "painted" },
+  box_grey: { color: [0.7, 0.71, 0.72], metallic: 0.85, roughness: 0.38, texture: "brushed" },
+  deck_wood: { color: [0.24, 0.15, 0.07], metallic: 0, roughness: 0.85, texture: "wood" },
+  deck_steel: { color: [0.22, 0.23, 0.24], metallic: 0.3, roughness: 0.6, texture: "painted" },
+  tip_grey: { color: [0.2, 0.21, 0.22], metallic: 0.3, roughness: 0.6, texture: "painted" },
+  tip_orange: { color: [0.5, 0.13, 0.012], metallic: 0.15, roughness: 0.5, texture: "painted" },
+  tip_yellow: { color: [0.58, 0.37, 0.02], metallic: 0.15, roughness: 0.5, texture: "painted" },
+  tank_steel: { color: [0.66, 0.67, 0.68], metallic: 1, roughness: 0.22, texture: "brushed" },
+  tank_white: { color: [0.6, 0.6, 0.58], metallic: 0.1, roughness: 0.3, texture: "painted" },
 };
 
 const CARGO_TEXT: Record<Cargo, string> = {
@@ -238,7 +238,7 @@ function buildTruck(t: TruckDef): AssetDraft {
   kids.push(group("Cargo", cargo));
 
   // Wheels: front steering axle(s) with singles, rear axle(s) with twin wheels.
-  const wo = { r: "$wr", w: f(tw), style: "truck" as const, rim: "rim_grey", hub: "chassis_black", segments: 24, rimFrac: 0.58 };
+  const wo = { r: "$wr", w: f(tw), style: "truck" as const, rim: t.cab === "bonnet" ? "alloy" : "rim_grey", hub: t.cab === "bonnet" ? "chrome" : "chassis_black", segments: 24, rimFrac: 0.58 };
   const wheels: SpecNode[] = [wheel("Wheel_F1L", ["$width / 2 - 0.2", "$wr", "$zf"], wo, { mirror: "Wheel_F1R" })];
   if (t.front === 2) wheels.push(wheel("Wheel_F2L", ["$width / 2 - 0.2", "$wr", "$zf - 1.9"], wo, { mirror: "Wheel_F2R" }));
   const rearZ = t.rear === 2 ? ["$zr + 0.68", "$zr - 0.68"] : ["$zr"];
@@ -279,11 +279,11 @@ function buildTruck(t: TruckDef): AssetDraft {
     ],
     materials: {
       cab_paint: t.cab_, body_paint: BODY_MATS[t.body]!, deck_wood: BODY_MATS["deck_wood"]!,
-      chassis_black: { color: [0.025, 0.025, 0.027], metallic: 0.4, roughness: 0.6 },
-      rim_grey: { color: [0.55, 0.56, 0.57], metallic: 0.6, roughness: 0.4 },
-      wrap: { color: [0.6, 0.62, 0.65, 1], metallic: 0, roughness: 0.3 },
-      strap: { color: [0.8, 0.4, 0.02], metallic: 0, roughness: 0.7 },
-      spoil: { color: [0.32, 0.24, 0.16], metallic: 0, roughness: 1, texture: "ground" },
+      ...WHEEL_MATS(),
+      rim_grey: { color: [0.5, 0.51, 0.52], metallic: 0.4, roughness: 0.45, texture: "painted" },
+      wrap: { color: [0.42, 0.44, 0.46], metallic: 0, roughness: 0.25, texture: "plastic" },
+      strap: { color: [0.5, 0.2, 0.012], metallic: 0, roughness: 0.75, texture: "fabric" },
+      spoil: { color: [0.2, 0.15, 0.1], metallic: 0, roughness: 1, texture: "ground" },
       ...mats("chrome", "aluminium"),
       dark_glass: VMATS["dark_glass"]!, trim_black: VMATS["trim_black"]!, tyre: VMATS["tyre"]!, lamp_lens: VMATS["lamp_lens"]!, lamp_red: VMATS["lamp_red"]!, lamp_amber: VMATS["lamp_amber"]!, plate_yellow: VMATS["plate_yellow"]!,
     },

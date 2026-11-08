@@ -3,10 +3,10 @@ import { mats, type MaterialDef } from "../../palette.js";
 import { BMATS } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
-  flag_red: { color: [0.6, 0.04, 0.03], metallic: 0, roughness: 0.8, doubleSided: true },
-  flag_blue: { color: [0.03, 0.1, 0.45], metallic: 0, roughness: 0.8, doubleSided: true },
-  flag_yellow: { color: [0.8, 0.55, 0.03], metallic: 0, roughness: 0.8, doubleSided: true },
-  flag_green: { color: [0.04, 0.3, 0.08], metallic: 0, roughness: 0.8, doubleSided: true },
+  flag_red: { color: [0.4, 0.03, 0.025], metallic: 0, roughness: 0.8, texture: "fabric", doubleSided: true },
+  flag_blue: { color: [0.03, 0.07, 0.28], metallic: 0, roughness: 0.8, texture: "fabric", doubleSided: true },
+  flag_yellow: { color: [0.6, 0.4, 0.03], metallic: 0, roughness: 0.8, texture: "fabric", doubleSided: true },
+  flag_green: { color: [0.03, 0.15, 0.05], metallic: 0, roughness: 0.8, texture: "fabric", doubleSided: true },
 };
 
 const STYLES = {

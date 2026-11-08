@@ -1,6 +1,6 @@
 import { box, cap, cyl, group, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, useMats } from "./common.js";
+import { an, finishName, finishTags, stencil, useMats, worn } from "./common.js";
 
 type Finish = { main: string; trim: string; accent: string };
 interface Style {
@@ -139,7 +139,7 @@ function footlocker(f: Finish): SpecNode[] {
   return [
     group("Footlocker", [
       group("Body", [
-        box("Case", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.004 }),
+        box("Case", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.004, material: worn(f.main) }),
         box("Edge_FL", [0.03, "$bh", 0.03], { at: ["$W / 2 - 0.012", "$bh / 2", "$D / 2 - 0.012"], material: f.trim, mirror: "Edge_FR" }),
         box("Edge_BL", [0.03, "$bh", 0.03], { at: ["$W / 2 - 0.012", "$bh / 2", "-$D / 2 + 0.012"], material: f.trim, mirror: "Edge_BR" }),
         ...caps,
@@ -161,7 +161,7 @@ function footlocker(f: Finish): SpecNode[] {
         box("Trim_F", ["$W + 0.006", 0.03, 0.01], { at: [0, 0.015, "$D + 0.002"], material: f.trim }),
         box("Cap_L", [0.055, "$lt", 0.055], { at: ["$W / 2 - 0.025", "$lt / 2", "$D - 0.025"], material: f.trim, bevel: 0.008, mirror: "Cap_R" }),
         box("Cap_BL", [0.055, "$lt", 0.055], { at: ["$W / 2 - 0.025", "$lt / 2", 0.025], material: f.trim, bevel: 0.008, mirror: "Cap_BR" }),
-        box("Stencil", ["$W * 0.45", 0.002, "$D * 0.25"], { at: [0, "$lt + 0.001", "$D * 0.55"], material: f.accent }),
+        stencil("Stencil", "SUPPLY", "top", [0, "$lt + 0.001", "$D * 0.55"], 0.014, f.accent, 0.003),
       ], { at: [0, "$bh", "-$D / 2"] }),
     ], { material: f.main, vars: { W: "$width", D: "$depth", lt: "$height * 0.2", bh: "$height * 0.8" } }),
   ];
@@ -198,7 +198,7 @@ function chest(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. The lid hinges about x on its back top edge, and the lock faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params: style.params,
-    materials: useMats(f.main, f.trim, f.accent, "hole", "rubber", "rope", "leather_brown"),
+    materials: useMats(f.main, f.trim, f.accent, "hole", "rubber", "rope", "leather_brown", worn(f.main)),
     nodes: style.build(f),
   };
 }

@@ -21,28 +21,28 @@ interface MotoStyle {
   colours: [string, string, MaterialDef][];
 }
 
-const P = (r: number, g: number, b: number, m = 0.5): MaterialDef => carPaint(r, g, b, m, 0.22);
+const P = (r: number, g: number, b: number, m = 0.3): MaterialDef => carPaint(r, g, b, m, 0.24);
 
 const STYLES: Record<Style, MotoStyle> = {
   cruiser: {
     name: "cruiser", text: "a long, low cruiser with a teardrop tank, a V-twin engine, wide pulled-back bars, chrome pipes and wire wheels",
     wheel: [0.33, 0.32, 0.35], kr: 0.98, wb: [1.65, 1.55, 1.75], seat: [0.68, 0.64, 0.74], rake: 32, fork: 0.82, tf: 0.06, tr: 0.085, spokes: "wire",
-    colours: [["black", "zwart", P(0.015, 0.015, 0.017)], ["burgundy", "bordeaux", P(0.25, 0.015, 0.03)], ["cream", "crème", P(0.72, 0.62, 0.42, 0.2)]],
+    colours: [["black", "zwart", P(0.018, 0.018, 0.02, 0.35)], ["burgundy", "bordeaux", P(0.14, 0.012, 0.022, 0.35)], ["cream", "crème", P(0.54, 0.47, 0.32, 0.2)]],
   },
   sport: {
     name: "sport bike", text: "a sport bike with a full fairing and screen, clip-on bars, a high tail and cast wheels",
     wheel: [0.3, 0.29, 0.31], kr: 1.02, wb: [1.42, 1.36, 1.48], seat: [0.82, 0.78, 0.86], rake: 24, fork: 0.72, tf: 0.058, tr: 0.09, spokes: "cast",
-    colours: [["red", "rood", P(0.55, 0.01, 0.01)], ["blue", "blauw", P(0.02, 0.1, 0.5)], ["lime green", "limoengroen", P(0.25, 0.55, 0.02)]],
+    colours: [["red", "rood", P(0.38, 0.02, 0.018, 0.2)], ["blue", "blauw", P(0.02, 0.07, 0.26, 0.3)], ["lime green", "limoengroen", P(0.12, 0.34, 0.02, 0.2)]],
   },
   scooter: {
     name: "scooter", text: "a step-through scooter with a leg shield, a flat floorboard, a covered engine under the seat and small disc wheels",
     wheel: [0.23, 0.21, 0.25], kr: 1, wb: [1.32, 1.26, 1.4], seat: [0.78, 0.74, 0.82], rake: 28, fork: 0.62, tf: 0.05, tr: 0.055, spokes: "disc",
-    colours: [["mint", "mintgroen", P(0.35, 0.6, 0.45, 0.2)], ["white", "wit", P(0.8, 0.8, 0.78, 0.1)], ["yellow", "geel", P(0.8, 0.5, 0.02, 0.3)]],
+    colours: [["mint", "mintgroen", P(0.3, 0.45, 0.34, 0.2)], ["white", "wit", P(0.62, 0.62, 0.6, 0.2)], ["yellow", "geel", P(0.6, 0.38, 0.02, 0.2)]],
   },
   dirt: {
     name: "dirt bike", text: "a tall off-road dirt bike with long-travel suspension, a high front fender, a slim seat, number boards and knobbly tyres",
     wheel: [0.36, 0.35, 0.37], kr: 0.92, wb: [1.48, 1.42, 1.54], seat: [0.95, 0.9, 0.98], rake: 27, fork: 0.98, tf: 0.045, tr: 0.06, spokes: "wire",
-    colours: [["orange", "oranje", P(0.85, 0.25, 0.01, 0.1)], ["white", "wit", P(0.82, 0.82, 0.8, 0.05)], ["green", "groen", P(0.08, 0.45, 0.06, 0.1)]],
+    colours: [["orange", "oranje", P(0.55, 0.14, 0.01, 0.2)], ["white", "wit", P(0.62, 0.62, 0.6, 0.2)], ["green", "groen", P(0.05, 0.25, 0.04, 0.2)]],
   },
 };
 
@@ -250,13 +250,16 @@ function moto(st: Style, ci: number): AssetDraft {
     ],
     materials: {
       paint, carbon: VMATS["carbon"]!, tyre: VMATS["tyre"]!, lamp_lens: VMATS["lamp_lens"]!, lamp_red: VMATS["lamp_red"]!,
-      frame_metal: st === "cruiser" ? { color: [0.02, 0.02, 0.022], metallic: 0.6, roughness: 0.35 } : st === "dirt" ? { color: [0.5, 0.52, 0.55], metallic: 0.9, roughness: 0.3 } : { color: [0.1, 0.1, 0.11], metallic: 0.7, roughness: 0.4 },
-      engine_black: { color: [0.03, 0.03, 0.032], metallic: 0.6, roughness: 0.45 },
-      rim_black: { color: [0.03, 0.03, 0.032], metallic: 0.5, roughness: 0.35 },
-      leather: { color: [0.025, 0.022, 0.02], metallic: 0, roughness: 0.55 },
-      spring_yellow: { color: [0.8, 0.55, 0.02], metallic: 0.4, roughness: 0.4 },
-      screen_glass: { color: [0.2, 0.25, 0.3, 0.45], metallic: 0, roughness: 0.05, alpha: "BLEND" },
-      ...mats("aluminium", "steel", "chrome", "gold", "rubber", "plastic_white"),
+      // Gloss powder-coated frames (black, or bare brushed alloy on the dirt bike), wrinkle-black engine paint, black rims.
+      frame_metal: st === "dirt" ? VMATS["alloy"]! : st === "sport" ? VMATS["alloy_dark"]! : { color: [0.03, 0.03, 0.033], metallic: 0.3, roughness: 0.3, texture: "painted" },
+      engine_black: { color: [0.04, 0.04, 0.043], metallic: 0.3, roughness: 0.55, texture: "painted" },
+      rim_black: VMATS["anodised_black"]!,
+      leather: st === "cruiser" ? { color: [0.07, 0.035, 0.018], metallic: 0, roughness: 0.55, texture: "leather" } : { color: [0.03, 0.028, 0.028], metallic: 0, roughness: 0.6, texture: "leather" },
+      spring_yellow: { color: [0.62, 0.4, 0.02], metallic: 0.3, roughness: 0.35, texture: "painted" },
+      screen_glass: { color: [0.12, 0.15, 0.18, 0.5], metallic: 0, roughness: 0.03, alpha: "BLEND" },
+      aluminium: VMATS["alloy"]!, steel: VMATS["brake_disc"]!,
+      plastic_white: { color: [0.6, 0.6, 0.58], metallic: 0, roughness: 0.45, texture: "plastic" },
+      ...mats("chrome", "gold", "rubber"),
     },
     nodes,
   };

@@ -1,5 +1,5 @@
 import { box, cyl, group, int, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "victorian" | "concrete" | "modern" | "rustic" | "tubular";
 
@@ -81,6 +81,8 @@ function nodes(style: Style, metal: string): SpecNode[] {
           tube("Scroll", [[0, "$seatHeight * 0.5 + 0.04", 0.03], [0, "$seatHeight * 0.5 + 0.1", 0.1], [0, "$seatHeight - 0.05", 0.04], [0, "$seatHeight - 0.05", -0.06], [0, "$seatHeight * 0.5 + 0.1", -0.13], [0, "$seatHeight * 0.5 + 0.04", -0.05]], 0.012, { segments: 8 }),
           box("Paw_F", [0.06, 0.03, 0.08], { at: [0, 0, 0.25], anchor: "bottom", bevel: 0.01 }),
           box("Paw_B", [0.06, 0.03, 0.08], { at: [0, 0, -0.29], anchor: "bottom", bevel: 0.01 }),
+          ...grimeBox("Grime_F", 0.06, 0.08, 0.03, [0, 0, 0.25], 0.01),
+          ...grimeBox("Grime_B", 0.06, 0.08, 0.03, [0, 0, -0.29], 0.01),
         ], { at: ["$sx", 0, 0], ...(mirror ? { mirror } : {}) });
       return [
         side("Support_L", "Support_R"),
@@ -101,6 +103,9 @@ function nodes(style: Style, metal: string): SpecNode[] {
       return [
         box("Support_L", [0.16, "$seatHeight - 0.047", 0.5], { at: ["$sx", 0, 0], anchor: "bottom", bevel: 0.015, material: metal, mirror: "Support_R" }),
         box("Support_M", [0.16, "$seatHeight - 0.047", 0.5], { at: [0, 0, 0], anchor: "bottom", bevel: 0.015, material: metal }),
+        ...grimeBox("Grime_L", 0.16, 0.5, 0.16, ["$sx", 0, 0], 0.015),
+        ...grimeBox("Grime_R", 0.16, 0.5, 0.16, ["-$sx", 0, 0], 0.015),
+        ...grimeBox("Grime_M", 0.16, 0.5, 0.16, [0, 0, 0], 0.015),
         group("Bearers", [
           box("SeatBearer_L", [0.08, 0.014, 0.46], { at: ["$sx", "$seatHeight - 0.048", 0], anchor: "bottom", bevel: 0.002, mirror: "SeatBearer_R" }),
           box("SeatBearer_M", [0.08, 0.014, 0.46], { at: [0, "$seatHeight - 0.048", 0], anchor: "bottom", bevel: 0.002 }),
@@ -138,6 +143,7 @@ function nodes(style: Style, metal: string): SpecNode[] {
         group("Support_L", [
           cyl("Stump", "$stump", "$seatHeight - $thick + 0.005", { anchor: "base", segments: 18, bevel: 0.01, material: metal }),
           cyl("Root", "$stump + 0.025", 0.06, { anchor: "base", segments: 18, bevel: 0.02, material: metal }),
+          ...grimeProfile("Grime", [["$stump + 0.025", 0.001], ["$stump + 0.025", 0.045], ["$stump + 0.004", 0.065], ["$stump", 0.18]], { segments: 18 }),
         ], { at: ["$sx", 0, 0], mirror: "Support_R" }),
       ];
     case "tubular": {
@@ -189,7 +195,12 @@ function bench(style: Style, f: { wood: string; metal: string }): AssetDraft {
     description: `A ${woodName} park bench with ${s.text}${rustic ? "" : `, in ${metalName}`}. The seat runs along x and the bench faces +z.`,
     tags: [style, woodName, metalName, ...(style === "concrete" || rustic ? ["backless", "zonder rugleuning"] : ["backrest", "rugleuning"]), "parkbank", "zitbank"],
     params,
-    materials: useMats(f.wood, f.metal, "steel", "galvanised", "rubber", "dark_stain"),
+    materials: {
+      ...useMats(f.wood, f.metal, "steel", "galvanised", "rubber", "dark_stain"),
+      // The cast iron Victorian frames are old: rust shows through the paint.
+      ...(style === "victorian" && f.metal === "cast_iron" ? { cast_iron: LOCAL["iron_worn"]! } : {}),
+      ...GRIME(style === "victorian" && f.metal === "cast_iron" ? "iron_worn" : f.metal),
+    },
     nodes: [group("ParkBench", nodes(style, f.metal), { material: rustic ? f.wood : f.metal, vars: { sx } })].map((g) => fixWood(g, f.wood, style)),
   };
 }

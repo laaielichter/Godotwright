@@ -3,8 +3,8 @@ import { mats, type MaterialDef } from "../../palette.js";
 import { BMATS, gableRoof, slab } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
-  stained_glass: { color: [0.08, 0.06, 0.2], metallic: 0.1, roughness: 0.1, emissive: [0.06, 0.03, 0.12] },
-  clock_face: { color: [0.85, 0.83, 0.75], metallic: 0, roughness: 0.4 },
+  stained_glass: { color: [0.035, 0.032, 0.055], metallic: 0.3, roughness: 0.08, emissive: [0.018, 0.012, 0.03] },
+  clock_face: { color: [0.6, 0.58, 0.52], metallic: 0, roughness: 0.4, texture: "painted" },
   bell_bronze: { color: [0.55, 0.36, 0.17], metallic: 1, roughness: 0.35 },
 };
 
@@ -30,7 +30,7 @@ const FINISHES: Record<Style, { id: string; wall: string; dress: string; roof: s
     { id: "tuff", wall: "render_grey", dress: "basalt", roof: "slate_blue", spire: "aged_copper", text: "grey tuff", nl: "tufsteen" },
   ],
   modern: [
-    { id: "concrete", wall: "concrete", dress: "brushed_steel", roof: "zinc", spire: "concrete", text: "concrete and zinc", nl: "beton" },
+    { id: "concrete", wall: "concrete", dress: "brushed_steel", roof: "zinc_quartz", spire: "concrete", text: "concrete and zinc", nl: "beton" },
     { id: "brick", wall: "brick_brown", dress: "aged_copper", roof: "aged_copper", spire: "brick_brown", text: "brick and copper", nl: "baksteen en koper" },
   ],
 };

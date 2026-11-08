@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, lathe, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode, type Vec } from "../../kit.js";
-import { nice, useMats } from "./common.js";
+import { GRIME, LOCAL, grimeProfile, nice, useMats } from "./common.js";
 
 type Style = "lantern" | "led" | "double" | "globe" | "crook";
 
@@ -65,6 +65,7 @@ function classicPole(top: Num, extra: SpecNode[] = []): SpecNode {
     box("Flute", [0.02, 0.22, 0.02], { at: [0.12, 0.48, 0], repeat: { count: 8, around: "y" }, bevel: 0.006 }),
     lathe("Shaft", [[0.062, 0.93], [0.05, `${top} - 0.2`], [0.062, `${top} - 0.16`], [0.062, `${top} - 0.1`], [0.045, top]], { segments: 16 }),
     cyl("Collar", 0.075, 0.04, { at: [0, 0.97, 0], segments: 16, bevel: 0.01 }),
+    ...grimeProfile("Grime", [[0.2, 0.001], [0.2, 0.05], [0.17, 0.08], [0.165, 0.2], [0.162, 0.3]], { segments: 16 }),
     ...extra,
   ]);
 }
@@ -76,6 +77,7 @@ function steelPole(extra: SpecNode[]): SpecNode {
     lathe("Flange", [[0.17, 0.04], [0.17, 0.065], [0.11, 0.08], [0.1, 0.35]], { segments: 20 }),
     lathe("Shaft", [[0.095, 0.3], [0.06, "$height"], [0.04, "$height + 0.02"]], { segments: 20 }),
     box("Door", [0.08, 0.32, 0.02], { at: [0, 0.75, 0.085], bevel: 0.006 }),
+    ...grimeProfile("Grime", [[0.17, 0.05], [0.17, 0.065], [0.11, 0.08], [0.105, 0.22], [0.1, 0.35]], { segments: 20 }),
     ...extra,
   ]);
 }
@@ -134,6 +136,7 @@ function lamp(style: Style, metal: string, glow: string): SpecNode[] {
           lathe("Shaft", [[0.052, 0.58], [0.045, "$height - 0.1"], [0.06, "$height - 0.05"], [0.04, "$height"]], { segments: 16 }),
           cyl("Collar_1", 0.065, 0.035, { at: [0, 0.62, 0], segments: 16, bevel: 0.01 }),
           cyl("Collar_2", 0.06, 0.03, { at: [0, "$height * 0.6", 0], segments: 16, bevel: 0.01 }),
+          ...grimeProfile("Grime", [[0.15, 0.001], [0.15, 0.04], [0.12, 0.07], [0.11, 0.2], [0.1, 0.35]], { segments: 16 }),
         ]),
         group("Lamp", [
           lathe("Fitter", [[0.035, -0.01], [0.07, 0.04], [0.1, 0.08], [0.1, 0.11]], { segments: 16 }),
@@ -187,7 +190,12 @@ function makeLamp(style: Style, f: { metal: string; glow: string }): AssetDraft 
     description: `A ${m} street lamp with ${s.text}. The light glows; the lamp faces +z.`,
     tags: [style, m, "lantaarn", "lantaarnpaal", "straatverlichting", ...(style === "led" ? ["led"] : []), ...(style === "lantern" || style === "crook" ? ["historic", "historisch", "heritage"] : [])],
     params: params(style),
-    materials: useMats(f.metal, f.glow, "bulb_warm", "concrete", "plastic_white"),
+    materials: {
+      ...useMats(f.metal, f.glow, "bulb_warm", "concrete", "plastic_white"),
+      // The cast iron lantern column is old: rust shows through the paint.
+      ...(style === "lantern" && f.metal === "cast_iron" ? { cast_iron: LOCAL["iron_worn"]! } : {}),
+      ...GRIME(style === "lantern" && f.metal === "cast_iron" ? "iron_worn" : f.metal),
+    },
     nodes: [group("StreetLamp", lamp(style, f.metal, f.glow), { material: f.metal })],
   };
 }

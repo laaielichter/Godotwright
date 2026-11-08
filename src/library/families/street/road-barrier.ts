@@ -1,5 +1,5 @@
 import { box, cyl, group, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, nice, up, useMats } from "./common.js";
 
 type Style = "jersey" | "water" | "crowd" | "works";
 interface Finish { main: string; second: string }
@@ -20,21 +20,37 @@ function nodes(style: Style, f: Finish): SpecNode[] {
   switch (style) {
     case "jersey": {
       const sec = (z: string, k: number, ht: string) => ({ z, points: jerseyProfile(ht, k) });
+      /** The safety shape up to y = top (above the 0.075 kerb, below 0.33), pushed out by d. */
+      const gsec = (z: string, k: number, d: number, top: number) => {
+        const x = (0.3 - 0.1 * (top - 0.075) / 0.255) * k + d;
+        return { z, points: [[-0.3 * k - d, 0.001], [0.3 * k + d, 0.001], [0.3 * k + d, 0.075], [x, top], [-x, top], [-0.3 * k - d, 0.075]] };
+      };
       return [
         loft("Body", [sec("-$width / 2", 0.95, "$height - 0.02"), sec("-$width / 2 + 0.03", 1, "$height"), sec("$width / 2 - 0.03", 1, "$height"), sec("$width / 2", 0.95, "$height - 0.02")], { rotate: [0, 90, 0] }),
         box("Slot", [0.4, 0.06, 0.64], { at: [0, 0.035, 0], bevel: 0.01, material: "opening_dark" }),
         group("Loop_L", [tube("Bar", [[0, "$height - 0.25", 0.05], [0.06, "$height - 0.25", 0.05], [0.06, "$height - 0.25", -0.05], [0, "$height - 0.25", -0.05]], 0.012, { segments: 8 })], { at: ["$width / 2 - 0.01", 0, 0], material: "rust", mirror: "Loop_R" }),
         box("Reflector_{i}", [0.08, 0.02, 0.06], { at: ["-$width / 2 + 0.4", "$height", 0], repeat: { count: 2, step: ["$width - 0.8", 0, 0] }, bevel: 0.005, material: f.second }),
+        // Road spray and tyre scuffs along the foot: two see-through films that follow the safety shape.
+        loft("Grime_1", [gsec("-$width / 2 - 0.002", 0.95, 0.003, 0.26), gsec("-$width / 2 + 0.03", 1, 0.003, 0.26), gsec("$width / 2 - 0.03", 1, 0.003, 0.26), gsec("$width / 2 + 0.002", 0.95, 0.003, 0.26)], { rotate: [0, 90, 0], material: "grime" }),
+        loft("Grime_2", [gsec("-$width / 2 - 0.003", 0.95, 0.0045, 0.14), gsec("-$width / 2 + 0.03", 1, 0.0045, 0.14), gsec("$width / 2 - 0.03", 1, 0.0045, 0.14), gsec("$width / 2 + 0.003", 0.95, 0.0045, 0.14)], { rotate: [0, 90, 0], material: "grime_heavy" }),
       ];
     }
     case "water": {
       const prof: [string | number, string | number][] = [[-0.26, 0], [0.26, 0], [0.26, 0.1], [0.15, 0.26], [0.12, "$height - 0.06"], [0.07, "$height"], [-0.07, "$height"], [-0.12, "$height - 0.06"], [-0.15, 0.26], [-0.26, 0.1]];
+      /** The foot of the profile up to y = top, pushed out by d. */
+      const gprof = (d: number, top: number): [number, number][] => {
+        if (top <= 0.1) return [[-0.26 - d, 0.001], [0.26 + d, 0.001], [0.26 + d, top], [-0.26 - d, top]];
+        const x = 0.26 - 0.11 * (top - 0.1) / 0.16 + d;
+        return [[-0.26 - d, 0.001], [0.26 + d, 0.001], [0.26 + d, 0.1], [x, top], [-x, top], [-0.26 - d, 0.1]];
+      };
       return [
         loft("Body", [{ z: "-$width / 2", points: prof }, { z: "$width / 2", points: prof }], { rotate: [0, 90, 0] }),
         cyl("FillCap", 0.06, 0.03, { at: [0, "$height", 0], segments: 18, bevel: 0.008, material: f.second }),
         box("ForkSlot_{i}", [0.25, 0.07, 0.53], { at: ["-$width / 4", 0.05, 0], repeat: { count: 2, step: ["$width / 2", 0, 0] }, bevel: 0.01, material: "opening_dark" }),
         cyl("Lug_L", 0.05, 0.16, { at: ["$width / 2 + 0.02", "$height * 0.75", 0], segments: 16, bevel: 0.01, material: f.second, mirror: "Lug_R" }),
         cyl("LugLow_L", 0.05, 0.16, { at: ["$width / 2 + 0.02", 0.18, 0], segments: 16, bevel: 0.01, material: f.second, mirror: "LugLow_R" }),
+        loft("Grime_1", [{ z: "-$width / 2 - 0.003", points: gprof(0.003, 0.22) }, { z: "$width / 2 + 0.003", points: gprof(0.003, 0.22) }], { rotate: [0, 90, 0], material: "grime" }),
+        loft("Grime_2", [{ z: "-$width / 2 - 0.004", points: gprof(0.0045, 0.09) }, { z: "$width / 2 + 0.004", points: gprof(0.0045, 0.09) }], { rotate: [0, 90, 0], material: "grime_heavy" }),
       ];
     }
     case "crowd":
@@ -89,7 +105,12 @@ function makeBarrier(style: Style, f: Finish): AssetDraft {
     description: `A ${a} ${s.title}: ${s.text}. It runs along x and faces +z.`,
     tags: [style, a, b, "wegafzetting", "afzethek", "barrier", "hek", ...(style === "jersey" ? ["new jersey", "betonblok", "geleideblok"] : []), ...(style === "crowd" ? ["dranghek", "nadar"] : []), ...(style === "water" ? ["waterbarrier"] : [])],
     params: params(style),
-    materials: useMats(f.main, f.second, "opening_dark", "rust", "galvanised", "rubber"),
+    materials: {
+      ...useMats(f.main, f.second, "opening_dark", "rust", "galvanised", "rubber"),
+      // Roadworks boards carry retroreflective sheeting, not paint.
+      ...(style === "works" ? { [f.main]: LOCAL[f.main.replace("paint_", "sheet_")]!, [f.second]: LOCAL[f.second.replace("paint_", "sheet_")]! } : {}),
+      ...(style === "jersey" || style === "water" ? GRIME(f.main) : {}),
+    },
     nodes: [group("RoadBarrier", nodes(style, f), { material: f.main })],
   };
 }

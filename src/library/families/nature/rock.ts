@@ -82,16 +82,22 @@ const FINISHES: Record<Style, Finish[]> = {
  * One stone: a lumpy ellipsoid with radii in terms of $size and $height, lifted so its lowest point is exactly y = 0
  * (the lumps scale every direction by a factor that does not depend on the radii, so the depth is ry * low).
  */
-function stone(name: string, rx: string, ryRaw: string, rz: string, x: string, z: string, seed: number, segments: number, lumps: number, moss: boolean, extra: { turn?: string; repeat?: SpecNode["repeat"]; flat?: number } = {}): SpecNode {
+function stone(name: string, rx: string, ryRaw: string, rz: string, x: string, z: string, seed: number, segments: number, lumps: number, moss: boolean, extra: { turn?: string; repeat?: SpecNode["repeat"]; flat?: number; material?: string } = {}): SpecNode {
   const e = lumpExtent(segments, lumps, seed);
   // Very flat or very tall lumpy shapes fold over themselves: keep the height within reach of the width.
   const ry = `min(max(${ryRaw}, (${rx}) * ${n4(extra.flat ?? 0.3)}), (${rx}) * 3)`;
+  // Moss grows in ragged cushions over the top and down the shaded (-z) side, not as a neat cap.
   const children: SpecNode[] = moss
-    ? [ellipsoid("Moss", [`(${rx}) * 0.78`, `max((${ry}) * 0.28, (${rx}) * 0.13)`, `(${rz}) * 0.78`], { at: [0, `(${ry}) * ${n4(e.high * 0.72)}`, 0], segments: 14, lumps: 0.15, seed: seed + 1, material: "moss" })]
+    ? [
+        ellipsoid("Moss", [`(${rx}) * 0.72`, `max((${ry}) * 0.26, (${rx}) * 0.17)`, `(${rz}) * 0.66`], { at: [`(${rx}) * 0.08`, `(${ry}) * ${n4(e.high * 0.74)}`, `-(${rz}) * 0.1`], segments: 16, lumps: 0.32, seed: seed + 1, material: "moss" }),
+        ellipsoid("Moss_Light", [`(${rx}) * 0.34`, `max((${ry}) * 0.16, (${rx}) * 0.12)`, `(${rz}) * 0.3`], { at: [`(${rx}) * 0.22`, `(${ry}) * ${n4(e.high * 0.86)}`, `(${rz}) * 0.12`], segments: 12, lumps: 0.3, seed: seed + 2, material: "moss_light" }),
+        ellipsoid("Moss_Side", [`(${rx}) * 0.5`, `(${ry}) * 0.42`, `(${rz}) * 0.36`], { at: [`-(${rx}) * 0.1`, `(${ry}) * ${n4(e.high * 0.3)}`, `-(${rz}) * 0.62`], segments: 14, lumps: 0.45, seed: seed + 3, material: "moss" }),
+      ]
     : [];
   return ellipsoid(name, [rx, ry, rz], {
     at: [x, `(${ry}) * ${n4(e.low)}`, z],
     rotate: extra.turn ? [0, extra.turn, 0] : undefined,
+    ...(extra.material ? { material: extra.material } : {}),
     segments,
     lumps,
     seed,
@@ -100,14 +106,36 @@ function stone(name: string, rx: string, ryRaw: string, rz: string, x: string, z
   });
 }
 
-/** Natural rock: a speckled surface (the palette's "stone" pattern is dressed masonry), pale colours toned to grey-beige. */
-function weathered(m: MaterialDef): MaterialDef {
-  const [r, g, b] = m.color;
-  const top = Math.max(r, g, b);
-  const k = top > 0.26 ? 0.26 / top : 1;
-  // A touch of warm grey mixed in, so a white stone does not render as flat white.
-  const mix = (c: number, warm: number): number => Math.round((c * k * 0.85 + warm * 0.15) * 1000) / 1000;
-  return { ...m, color: [mix(r, 0.24), mix(g, 0.21), mix(b, 0.17)], roughness: Math.max(m.roughness, 0.92), texture: "concrete" };
+/**
+ * Natural rock in real albedos: granite is a speckled mid grey (light feldspar and dark mica grains, the "asphalt"
+ * pattern), basalt and slate are near black, limestone and chalk a weathered grey-beige well below white. Fine-grained
+ * stones get the pitted "concrete" surface. Every stone has a second, dirtier tone for the smaller blocks.
+ */
+const ROCK: Record<string, { color: [number, number, number]; texture: string; roughness: number }> = {
+  granite: { color: [0.11, 0.106, 0.1], texture: "asphalt", roughness: 0.9 },
+  basalt: { color: [0.04, 0.039, 0.039], texture: "asphalt", roughness: 0.9 },
+  sandstone: { color: [0.165, 0.115, 0.064], texture: "asphalt", roughness: 0.95 },
+  limestone: { color: [0.135, 0.128, 0.11], texture: "asphalt", roughness: 0.92 },
+  slate: { color: [0.045, 0.049, 0.055], texture: "concrete", roughness: 0.85 },
+  red_rock: { color: [0.14, 0.06, 0.032], texture: "asphalt", roughness: 0.95 },
+  mossy_rock: { color: [0.075, 0.078, 0.062], texture: "asphalt", roughness: 0.95 },
+  lichen: { color: [0.1, 0.104, 0.082], texture: "asphalt", roughness: 0.97 },
+  sandstone_red: { color: [0.15, 0.066, 0.034], texture: "asphalt", roughness: 0.95 },
+  chalk: { color: [0.19, 0.185, 0.165], texture: "concrete", roughness: 0.92 },
+  quartz: { color: [0.2, 0.195, 0.185], texture: "concrete", roughness: 0.55 },
+};
+
+function rockMaterials(stone: string, fine: boolean): Record<string, MaterialDef> {
+  const base = ROCK[stone] ?? ROCK.granite!;
+  // Small pebbles are worn smooth: no coarse crystal speckle.
+  const r = fine ? { ...base, texture: "concrete" } : base;
+  const [cr, cg, cb] = r.color;
+  const q = (v: number): number => Math.round(v * 1000) / 1000;
+  return {
+    [stone]: { color: r.color, metallic: 0, roughness: r.roughness, texture: r.texture },
+    // Smaller, lower stones: a little darker and browner, with soil and grime.
+    [`${stone}_dirty`]: { color: [q(cr * 0.8 + 0.008), q(cg * 0.76 + 0.005), q(cb * 0.7 + 0.002)], metallic: 0, roughness: Math.min(1, r.roughness + 0.04), texture: r.texture },
+  };
 }
 
 function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
@@ -117,6 +145,7 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
   const turn = (): string => n4(Math.round(r() * 360));
   const { segments: seg, lumps } = st;
   const moss = f.moss;
+  const dirty = `${f.stone}_dirty`;
   const nodes: SpecNode[] = [];
   const params = [
     num("size", st.size[0], st.size[1], st.size[2], "Width of the whole rock group across, in metres."),
@@ -126,8 +155,8 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
     case "boulder":
       nodes.push(
         stone("Rock_1", "$size * 0.38", "$height * 0.48", "$size * 0.32", "0", "0", seed(), seg, lumps, moss, { turn: turn() }),
-        stone("Rock_2", "$size * 0.12", "$height * 0.14", "$size * 0.1", "$size * 0.36", "$size * 0.16", seed(), 12, 0.45, false, { turn: turn() }),
-        stone("Rock_3", "$size * 0.08", "$height * 0.09", "$size * 0.07", "-$size * 0.22", "$size * 0.28", seed(), 10, 0.45, false, { turn: turn() }),
+        stone("Rock_2", "$size * 0.12", "$height * 0.14", "$size * 0.1", "$size * 0.36", "$size * 0.16", seed(), 12, 0.45, false, { turn: turn(), material: dirty }),
+        stone("Rock_3", "$size * 0.08", "$height * 0.09", "$size * 0.07", "-$size * 0.22", "$size * 0.28", seed(), 10, 0.45, false, { turn: turn(), material: dirty }),
       );
       break;
     case "pile": {
@@ -136,6 +165,7 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
         stone("Rock_Main", "$size * 0.24", "$height * 0.5", "$size * 0.2", "0", "0", seed(), seg, lumps, moss, { turn: turn() }),
         stone("Rock_{i}", "$size * (0.13 + 0.04 * sin($i * 2.3))", "$height * (0.26 + 0.1 * sin($i * 1.7 + 1))", "$size * (0.11 + 0.03 * cos($i * 1.9))", "$size * 0.27", "0", ring, 12, 0.5, moss, {
           turn: "$i * 67",
+          material: dirty,
           repeat: { count: "$stones", around: "y", phase: Math.round(r() * 40) },
         }),
       );
@@ -145,15 +175,15 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
     case "slab":
       nodes.push(
         stone("Rock_1", "$size * 0.4", "$height * 0.5", "$size * 0.3", "0", "0", seed(), seg, lumps, moss, { turn: turn(), flat: 0.12 }),
-        stone("Rock_2", "$size * 0.2", "$height * 0.32", "$size * 0.16", "$size * 0.34", "$size * 0.12", seed(), 12, lumps, false, { turn: turn(), flat: 0.12 }),
-        stone("Rock_3", "$size * 0.15", "$height * 0.26", "$size * 0.12", "-$size * 0.3", "-$size * 0.16", seed(), 12, lumps, false, { turn: turn(), flat: 0.12 }),
+        stone("Rock_2", "$size * 0.2", "$height * 0.32", "$size * 0.16", "$size * 0.34", "$size * 0.12", seed(), 12, lumps, false, { turn: turn(), flat: 0.12, material: dirty }),
+        stone("Rock_3", "$size * 0.15", "$height * 0.26", "$size * 0.12", "-$size * 0.3", "-$size * 0.16", seed(), 12, lumps, false, { turn: turn(), flat: 0.12, material: dirty }),
       );
       break;
     case "cliff":
       nodes.push(
         stone("Rock_1", "$size * 0.32", "$height * 0.5", "$size * 0.26", "0", "0", seed(), seg, lumps, moss, { turn: turn() }),
-        stone("Rock_2", "$size * 0.18", "$height * 0.2", "$size * 0.16", "$size * 0.3", "$size * 0.12", seed(), 9, 0.5, false, { turn: turn() }),
-        stone("Rock_3", "$size * 0.14", "$height * 0.14", "$size * 0.12", "-$size * 0.24", "$size * 0.2", seed(), 8, 0.5, false, { turn: turn() }),
+        stone("Rock_2", "$size * 0.18", "$height * 0.2", "$size * 0.16", "$size * 0.3", "$size * 0.12", seed(), 9, 0.5, false, { turn: turn(), material: dirty }),
+        stone("Rock_3", "$size * 0.14", "$height * 0.14", "$size * 0.12", "-$size * 0.24", "$size * 0.2", seed(), 8, 0.5, false, { turn: turn(), material: dirty }),
       );
       break;
     case "pebbles": {
@@ -161,7 +191,7 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
       nodes.push(
         stone("Rock_Cobble", "$size * 0.17", "$height * 0.5", "$size * 0.14", "0", "0", seed(), 14, lumps, moss, { turn: turn() }),
         stone("Rock_{i}", "$size * (0.1 + 0.02 * sin($i * 2.1))", "$height * (0.3 + 0.08 * sin($i * 1.3))", "$size * 0.08", "$size * 0.2", "0", inner, seg, lumps, false, { turn: "$i * 53", repeat: { count: 5, around: "y", phase: 10 } }),
-        stone("Rock_Outer_{i}", "$size * (0.075 + 0.02 * sin($i * 1.7))", "$height * (0.22 + 0.06 * cos($i * 2.2))", "$size * 0.06", "$size * 0.33", "0", outer, seg, lumps, false, { turn: "$i * 41", repeat: { count: "$pebbles", around: "y", phase: 25 } }),
+        stone("Rock_Outer_{i}", "$size * (0.075 + 0.02 * sin($i * 1.7))", "$height * (0.22 + 0.06 * cos($i * 2.2))", "$size * 0.06", "$size * 0.33", "0", outer, seg, lumps, false, { turn: "$i * 41", repeat: { count: "$pebbles", around: "y", phase: 25 }, material: dirty }),
       );
       params.push(int("pebbles", 10, 6, 14, "Number of pebbles in the outer ring."));
       break;
@@ -170,7 +200,7 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
       nodes.push(
         stone("Rock_1", "$size * 0.2", "$height * 0.48", "$size * 0.3", "$size * 0.19", "0", seed(), seg, lumps, moss, { turn: "6" }),
         stone("Rock_2", "$size * 0.19", "$height * 0.45", "$size * 0.29", "-$size * 0.19", "0", seed(), seg, lumps, moss, { turn: "-8" }),
-        stone("Rock_3", "$size * 0.09", "$height * 0.12", "$size * 0.08", "$size * 0.02", "$size * 0.33", seed(), 10, 0.45, false, { turn: turn() }),
+        stone("Rock_3", "$size * 0.09", "$height * 0.12", "$size * 0.08", "$size * 0.02", "$size * 0.33", seed(), 10, 0.45, false, { turn: turn(), material: dirty }),
       );
       break;
   }
@@ -181,9 +211,7 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
     description: `${st.text.charAt(0).toUpperCase()}${st.text.slice(1)}, in ${f.stone.replace(/_/g, " ")}${moss ? ", with moss growing over the top" : ""}. Every stone is its own node and rests on y = 0; the group faces +z.`,
     tags: [style, st.dutch, f.key, f.dutch, f.stone.replace(/_/g, " "), ...(moss ? ["moss", "mos"] : []), ...(count > 2 ? ["rocks", "stenen"] : [])],
     params,
-    // Natural rock: the palette colour with a weathered, speckled surface (the "stone" pattern is dressed masonry).
-    // Pale stones (chalk, limestone, quartz) are toned down a little so they read as weathered rock, not plaster.
-    materials: Object.fromEntries(Object.entries(natureMats(mats, f.stone, ...(moss ? ["moss"] : []))).map(([k, v]) => [k, k === f.stone ? weathered(v) : v])),
+    materials: { ...rockMaterials(f.stone, style === "pebbles"), ...(moss ? natureMats(mats, "moss", "moss_light") : {}) },
     nodes: [group("Rocks", nodes, { material: f.stone })],
   };
 }

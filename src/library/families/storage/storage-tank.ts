@@ -44,6 +44,10 @@ function vertical(f: Finish): SpecNode[] {
     group("Tank", [
       cyl("Support", "$R + 0.4", 0.3, { anchor: "base", segments: 48, material: f.base }),
       cyl("Shell", "$R", "$height - 0.28", { anchor: "base", at: [0, 0.28, 0], segments: 48 }),
+      group("Streaks", [
+        box("Run_{i}", [0.16, 1.8, 0.008], { at: [0, "$height - 1.0", "$R + 0.003"], repeat: { count: 7, around: "y", phase: 31 }, material: "rust_streak" }),
+        box("Drip_{i}", [0.07, 0.9, 0.008], { at: [0, "($height - 0.28) / $courses + 0.2", "$R + 0.003"], repeat: { count: 5, around: "y", phase: 77 }, material: "rust_streak" }),
+      ]),
       lathe("Seam_{i}", [["$R - 0.01", -0.02], ["$R + 0.012", -0.02], ["$R + 0.012", 0.02], ["$R - 0.01", 0.02]], { at: [0, "0.28 + ($height - 0.28) / $courses", 0], repeat: { count: "$courses - 1", step: [0, "($height - 0.28) / $courses", 0] }, segments: 48, material: f.trim }),
       lathe("Roof", [["$R + 0.12", "$height - 0.06"], ["$R + 0.12", "$height + 0.04"], [0.6, "$height + $R * 0.2"], [0.55, "$height + $R * 0.2 + 0.04"]], { segments: 48 }),
       group("Vent", [
@@ -176,7 +180,7 @@ function tank(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. Its ladder faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params: style.params,
-    materials: useMats(f.main, f.trim, f.base),
+    materials: useMats(f.main, f.trim, f.base, "rust_streak"),
     nodes: style.build(f),
   };
 }

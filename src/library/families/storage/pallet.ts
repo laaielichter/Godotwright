@@ -1,4 +1,4 @@
-import { box, cap, ellipsoid, extrude, group, int, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
+import { box, cap, extrude, group, int, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
 import { an, finishName, finishTags, useMats } from "./common.js";
 
@@ -98,11 +98,17 @@ function load(kind: Load, top: string, f: Finish): SpecNode[] {
     group("Load", [
       group("Layer_{i}", [
         group("Row_{i}", [
-          box("Carton_{i}", ["$W / 3 - 0.012", 0.24, "$L / 4 - 0.012"], { at: ["-$W / 3", 0.12, 0], repeat: { count: 3, step: ["$W / 3", 0, 0] }, bevel: 0.006, material: "cardboard", children: [box("Tape", [0.05, 0.004, "$L / 4 - 0.02"], { at: [0, 0.12, 0], material: "paint_cream" })] }),
+          box("Carton_{i}", ["$W / 3 - 0.012", 0.24, "$L / 4 - 0.012"], { at: ["-$W / 3", 0.12, 0], repeat: { count: 3, step: ["$W / 3", 0, 0] }, bevel: 0.006, material: "cardboard", children: [
+          box("Tape", [0.05, 0.004, "$L / 4 - 0.02"], { at: [0, 0.12, 0], material: "tape" }),
+          box("Label", ["min(0.1, $W / 3 - 0.06)", 0.07, 0.003], { at: [0, 0.03, "$L / 8 - 0.0065"], material: "label_white" }),
+        ] }),
         ], { at: [0, 0, "-$L * 3 / 8"], repeat: { count: 4, step: [0, 0, "$L / 4"] } }),
       ], { at: [0, `${top} - 0.002`, 0], repeat: { count: "$layers", step: [0, 0.242, 0] } }),
       ...(wrap
-        ? [box("Wrap", ["$W + 0.01", "$layers * 0.242 + 0.006", "$L + 0.01"], { at: [0, `${top} - 0.002`, 0], anchor: "bottom", material: "shrink_wrap" })]
+        ? [group("Wrap", [
+            // Stretch film wound in overlapping bands: Godot shadows a see-through film like a solid, so leave gaps.
+            box("Band_{i}", ["$W + 0.01", 0.16, "$L + 0.01"], { at: [0, `${top} + 0.03`, 0], anchor: "bottom", repeat: { count: "$layers + 1", step: [0, "($layers * 0.242 - 0.2) / $layers", 0] } }),
+          ], { material: "shrink_wrap" })]
         : [box("Strap_{i}", ["$W + 0.008", "$layers * 0.242 + 0.008", 0.016], { at: [0, `${top} - 0.004`, "-$L / 4"], anchor: "bottom", repeat: { count: 2, step: [0, 0, "$L / 2"] }, material: f.trim })]),
     ]),
   ];
@@ -118,7 +124,7 @@ function load(kind: Load, top: string, f: Finish): SpecNode[] {
         group("Load", [
           group("Layer_{i}", [
             group("Row_{i}", [
-              ellipsoid("Sack_{i}", ["$W / 4 - 0.008", 0.075, "$L / 6 - 0.008"], { at: ["-$W / 4", 0.07, 0], repeat: { count: 2, step: ["$W / 2", 0, 0] }, segments: 14, lumps: 0.08, seed: 3, material: f.trim }),
+              box("Sack_{i}", ["$W / 2 - 0.02", 0.14, "$L / 3 - 0.02"], { at: ["-$W / 4", 0.068, 0], repeat: { count: 2, step: ["$W / 2", 0, 0] }, bevel: 0.055, material: f.trim }),
             ], { at: [0, 0, "-$L / 3"], repeat: { count: 3, step: [0, 0, "$L / 3"] } }),
           ], { at: [0, top, 0], repeat: { count: "$layers", step: [0, 0.135, 0] } }),
         ]),
@@ -159,7 +165,7 @@ function pallet(v: (typeof VARIANTS)[number], f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${b.title}: ${b.text}${LOAD_TEXT[v.load]}. Its length runs along z.`,
     tags: [...finishTags(f.main), ...(loaded ? ["loaded", "beladen", v.load === "sacks" ? "zakken" : "dozen"] : []), b.name],
     params,
-    materials: useMats(f.main, f.trim, "hole", ...(loaded ? ["cardboard", "paint_cream", "shrink_wrap"] : [])),
+    materials: useMats(f.main, f.trim, "hole", ...(loaded ? ["cardboard", "tape", "label_white", "shrink_wrap"] : [])),
     nodes: [group("Pallet", [...b.nodes, ...load(v.load, b.top, f)], { vars: { W: "$width", L: "$length" } })],
   };
 }

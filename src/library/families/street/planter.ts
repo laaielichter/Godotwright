@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, rng, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "pot" | "square" | "trough" | "wooden";
 type PlantKind = "shrub" | "flowers" | "grass" | "topiary";
@@ -76,6 +76,7 @@ function makePlanter(style: Style, finish: string, idx: number): AssetDraft {
       body = [
         lathe("Body", [["$r * 0.7", 0.03], ["$r * 0.72", 0.05], ["$r", "$height - 0.06"], ["$r + 0.03", "$height - 0.05"], ["$r + 0.035", "$height - 0.01"], ["$r + 0.01", "$height"], ["$r - 0.025", "$height"], ["$r - 0.03", "$height - 0.05"], [0.05, "$height - 0.05"]], { segments: 24 }),
         lathe("Foot", [["$r * 0.6", 0], ["$r * 0.72", 0], ["$r * 0.73", 0.04], ["$r * 0.6", 0.04]], { segments: 24 }),
+        ...grimeProfile("Grime", [["$r * 0.72", 0.001], ["$r * 0.73", 0.04], ["$r * 0.72", 0.05], ["$r * 0.72 + $r * 0.28 * 0.1 / ($height - 0.11)", 0.15]]),
       ];
       soil = cyl("Soil", "$r - 0.031", 0.02, { at: [0, "$height - 0.05", 0], anchor: "base", segments: 24, material: "soil" });
       plants = group("Plant", plant(kind, "($r - 0.04)", "($r - 0.04)", "$plantHeight", "$height - 0.035", seed, bloom));
@@ -89,7 +90,7 @@ function makePlanter(style: Style, finish: string, idx: number): AssetDraft {
         box("Rim_B", ["$width + 0.03", 0.04, 0.05], { at: [0, "$height - 0.02", "-$width / 2 + 0.01"], bevel: 0.008 }),
         box("Rim_L", [0.05, 0.04, "$width - 0.04"], { at: ["$width / 2 - 0.01", "$height - 0.02", 0], bevel: 0.008, mirror: "Rim_R" }),
         box("Seam_{i}", [0.012, "$height - 0.12", 0.012], { at: ["$width / 2", "$height / 2", "$width / 2"], repeat: { count: 4, around: "y", phase: 0 }, bevel: 0.003 }),
-      ])];
+      ]), ...grimeBox("Grime", "$width", "$width", 0.16, [0, 0.04, 0], 0.012)];
       soil = box("Soil", ["$width - 0.06", 0.02, "$width - 0.06"], { at: [0, "$height - 0.04", 0], material: "soil" });
       plants = group("Plant", plant(kind, "($width / 2 - 0.05)", "($width / 2 - 0.05)", "$plantHeight", "$height - 0.03", seed, bloom));
       break;
@@ -101,7 +102,7 @@ function makePlanter(style: Style, finish: string, idx: number): AssetDraft {
         box("Wall_B", ["$length", 0.1, 0.08], { at: [0, "$height - 0.1", "-$width / 2 + 0.04"], anchor: "bottom", bevel: 0.02 }),
         box("Wall_L", [0.08, 0.1, "$width - 0.1"], { at: ["$length / 2 - 0.04", "$height - 0.1", 0], anchor: "bottom", bevel: 0.02, mirror: "Wall_R" }),
         box("Block_L", [0.2, 0.05, "$width - 0.1"], { at: ["$length / 2 - 0.25", 0, 0], anchor: "bottom", bevel: 0.01, mirror: "Block_R" }),
-      ])];
+      ]), ...grimeBox("Grime", "$length", "$width", 0.15, [0, 0.04, 0], 0.025)];
       soil = box("Soil", ["$length - 0.14", 0.03, "$width - 0.14"], { at: [0, "$height - 0.07", 0], material: "soil" });
       plants = group("Plant", [group("Cell_{i}", plant(kind, "(($length - 0.16) / (2 * $plants))", "($width / 2 - 0.08)", "$plantHeight", "$height - 0.055", seed, bloom), {
         at: ["-($length - 0.16) / 2 + ($length - 0.16) / (2 * $plants)", 0, 0],
@@ -120,7 +121,11 @@ function makePlanter(style: Style, finish: string, idx: number): AssetDraft {
         box("Cap_F", ["$width + 0.02", 0.025, 0.09], { at: [0, "$height", "$depth / 2 - 0.035"], bevel: 0.006 }),
         box("Cap_B", ["$width + 0.02", 0.025, 0.09], { at: [0, "$height", "-$depth / 2 + 0.035"], bevel: 0.006 }),
         box("Cap_L", [0.09, 0.025, "$depth - 0.16"], { at: ["$width / 2 - 0.035", "$height", 0], bevel: 0.006, mirror: "Cap_R" }),
-      ], { vars: { bh: "($height - 0.07) / $boards - 0.004" } })];
+      ], { vars: { bh: "($height - 0.07) / $boards - 0.004" } }),
+      ...grimeBox("Grime_FL", 0.07, 0.07, 0.14, ["$width / 2 - 0.035", 0, "$depth / 2 - 0.035"], 0.006),
+      ...grimeBox("Grime_FR", 0.07, 0.07, 0.14, ["-$width / 2 + 0.035", 0, "$depth / 2 - 0.035"], 0.006),
+      ...grimeBox("Grime_BL", 0.07, 0.07, 0.14, ["$width / 2 - 0.035", 0, "-$depth / 2 + 0.035"], 0.006),
+      ...grimeBox("Grime_BR", 0.07, 0.07, 0.14, ["-$width / 2 + 0.035", 0, "-$depth / 2 + 0.035"], 0.006)];
       soil = box("Soil", ["$width - 0.1", 0.03, "$depth - 0.1"], { at: [0, "$height - 0.035", 0], material: "soil" });
       plants = group("Plant", plant(kind, "($width / 2 - 0.07)", "($depth / 2 - 0.07)", "$plantHeight", "$height - 0.02", seed, bloom), { vars: { plantHeight: "$height * 1.1" } });
       break;
@@ -134,7 +139,7 @@ function makePlanter(style: Style, finish: string, idx: number): AssetDraft {
     description: `A ${f} ${s.title}: ${s.text}, filled with soil and ${plantText[kind]}. It faces +z.`,
     tags: [style, f, kind, "bloembak", "plantenbak", ...(kind === "flowers" ? ["bloemen", "flowers"] : kind === "shrub" ? ["struik"] : kind === "grass" ? ["siergras"] : ["buxus", "bol"])],
     params,
-    materials: useMats(finish, "soil", "rubber", "leaf_dark", "leaf_green", "leaf_light", "grass_dry", "moss", "bark_brown", bloom, "petal_yellow"),
+    materials: { ...useMats(finish, "soil", "rubber", "leaf_dark", "leaf_green", "leaf_light", "grass_dry", "moss", "bark_brown", bloom, "petal_yellow"), ...GRIME(finish) },
     nodes: [group("Planter", [...body, soil, plants], { material: finish })],
   };
 }

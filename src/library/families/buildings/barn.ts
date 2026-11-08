@@ -3,10 +3,10 @@ import { mats, type MaterialDef } from "../../palette.js";
 import { BMATS, gableRoof, hipRoof, slab, windowUnit } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
-  barn_red: { color: [0.3, 0.05, 0.032], metallic: 0, roughness: 0.85, texture: "wood" },
+  barn_red: { color: [0.2, 0.034, 0.022], metallic: 0, roughness: 0.85, texture: "wood" },
   barn_tar: { color: [0.025, 0.022, 0.02], metallic: 0, roughness: 0.8, texture: "wood" },
-  barn_brown: { color: [0.2, 0.1, 0.05], metallic: 0, roughness: 0.85, texture: "wood" },
-  steel_blue: { color: [0.08, 0.16, 0.3], metallic: 0.5, roughness: 0.5 },
+  barn_brown: { color: [0.12, 0.062, 0.032], metallic: 0, roughness: 0.85, texture: "wood" },
+  steel_blue: { color: [0.045, 0.09, 0.17], metallic: 0.25, roughness: 0.5, texture: "painted" },
 };
 
 const STYLES = {

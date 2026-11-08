@@ -1,5 +1,5 @@
 import { box, cyl, group, int, lathe, loft, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, grimeBox, grimeRound, nice, up, useMats } from "./common.js";
 
 type Style = "round" | "wheelie" | "recycling" | "park";
 
@@ -50,6 +50,8 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         lathe("Plinth", [["$r - 0.02", 0], ["$r + 0.01", 0], ["$r + 0.01", 0.035], ["$r - 0.02", 0.04]], { segments: 24, material: f.trim }),
         box("Rib_{i}", [0.012, "$height - 0.14", 0.02], { at: ["$r", "($height - 0.14) / 2 + 0.05", 0], repeat: { count: "$ribs", around: "y", phase: "180 / $ribs" }, bevel: 0.004, material: f.trim }),
         box("Label", ["$r * 0.6", 0.08, 0.008], { at: [0, "$height * 0.62", "$r + 0.006"], bevel: 0.002, material: "paint_white" }),
+        box("LabelText_{i}", ["$r * 0.4", 0.012, 0.003], { at: [0, "$height * 0.62 + 0.02", "$r + 0.0105"], repeat: { count: 3, step: [0, -0.02, 0] }, material: "paint_black" }),
+        ...grimeRound("Grime", "$r + 0.012", "$r + 0.002", 0.16),
       ];
     case "wheelie": {
       const sec = (z: string, w: string, d: string, cy: string): Record<string, unknown> => ({ z, superellipse: { width: w, height: d, n: 5, count: 32, cy } });
@@ -74,6 +76,16 @@ function nodes(style: Style, f: Finish): SpecNode[] {
           cyl("Hub", 0.05, 0.056, { axis: "x", segments: 16, material: "plastic_grey" }),
         ], { at: ["$width / 2 + 0.02", 0.1, "-$depth / 2 + 0.01"], mirror: "Wheel_R" }),
         box("Foot", ["$width * 0.6", 0.06, 0.05], { at: [0, 0, "$depth * 0.18"], anchor: "bottom", bevel: 0.01 }),
+        box("Number", ["$width * 0.32", 0.07, 0.006], { at: [0, "$height * 0.62", "$depth * 0.47"], rotate: [-1.5, 0, 0], bevel: 0.002, material: "paint_white" }),
+        // Road dirt on the lower body: two thin lofts that follow its taper, 4 mm proud.
+        ...([["Grime_1", 0.26, "grime"], ["Grime_2", 0.15, "grime_heavy"]] as const).map(([n, top, material]) => {
+          const k = `((${top} - 0.12) / ($height - 0.24))`;
+          return loft(n, [
+            sec("0.051", "$width * 0.86 + 0.008", "$depth * 0.8 + 0.008", "$depth * 0.1"),
+            sec("0.12", "$width * 0.88 + 0.008", "$depth * 0.83 + 0.008", "$depth * 0.085"),
+            sec(`${top}`, `$width * (0.88 + 0.12 * ${k}) + 0.008`, `$depth * (0.83 + 0.17 * ${k}) + 0.008`, `$depth * 0.085 * (1 - ${k})`),
+          ], { rotate: [-90, 0, 0], material });
+        }),
       ];
     }
     case "recycling": {
@@ -94,6 +106,8 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         box("Plinth", ["$width - 0.04", 0.06, "$depth - 0.04"], { anchor: "bottom", bevel: 0.01, material: "rubber" }),
         box("Band", ["$width + 0.006", 0.12, "$depth + 0.006"], { at: [0, "$height * 0.55", 0], bevel: 0.01, material: f.trim }),
         box("Sticker", ["$width * 0.5", "$width * 0.5", 0.006], { at: [0, "$height * 0.35", "$depth / 2 + 0.002"], bevel: 0.002, material: "paint_white" }),
+        box("Pictogram", ["$width * 0.3", "$width * 0.3", 0.004], { at: [0, "$height * 0.35", "$depth / 2 + 0.005"], rotate: [0, 0, 45], material: f.trim }),
+        ...grimeBox("Grime", "$width", "$depth", 0.22, [0, 0, 0], 0.02),
         group("Lid", [
           box("Top", ["$width + 0.02", 0.06, "$depth + 0.02"], { at: [0, 0.03, "$depth / 2 + 0.01"], bevel: 0.02, material: f.trim }),
           group("Mouth", mouth, { at: [0, 0, "$depth / 2 + 0.01"] }),
@@ -112,6 +126,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         lathe("Liner", [["$r - 0.03", 0.05], ["$r - 0.03", "$height + 0.01"], ["$r - 0.005", "$height + 0.01"], ["$r - 0.005", "$height + 0.03"], ["$r - 0.045", "$height + 0.03"], ["$r - 0.045", "$height - 0.12"], [0.05, "$height - 0.12"]], { segments: 24, material: "galvanised" }),
         cyl("Opening", "$r - 0.046", 0.01, { at: [0, "$height - 0.12", 0], anchor: "base", segments: 24, material: "opening_dark" }),
         cyl("Foot_{i}", 0.03, 0.02, { at: [0, 0, "$r * 0.7"], anchor: "base", segments: 12, repeat: { count: 3, around: "y", phase: 0 }, material: "rubber" }),
+        ...grimeRound("Grime", "$r + 0.016", "$r + 0.016", 0.14, [0, 0.02, 0], 32),
       ];
   }
 }
@@ -146,7 +161,7 @@ function makeBin(style: Style, f: Finish): AssetDraft {
     description: `A ${b} ${what}${TITLES[style]}: ${TEXT[style]}. It faces +z.`,
     tags: [style, b, t, ...(f.stream ? [f.stream, "recycling", "recycle", "afvalscheiding"] : []), ...(style === "wheelie" ? ["kliko", "container", "minicontainer"] : [])],
     params: params(style),
-    materials: useMats(f.body, f.trim, "opening_dark", "rubber", "steel", "galvanised", "plastic_grey", "paint_white"),
+    materials: { ...useMats(f.body, f.trim, "opening_dark", "rubber", "steel", "galvanised", "plastic_grey", "paint_white", "paint_black"), ...GRIME(f.body) },
     nodes: [group("Bin", nodes(style, f), { material: f.body })],
   };
 }

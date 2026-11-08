@@ -8,6 +8,7 @@ import { houseFamily } from "./house.js";
 import { marketStallFamily } from "./market-stall.js";
 import { shedFamily } from "./shed.js";
 import { tentFamily } from "./tent.js";
+import { tuneBuildings } from "./shared.js";
 
 /** The buildings families of the asset library. */
-export const BUILDINGS: Family[] = [houseFamily, shedFamily, barnFamily, apartmentFamily, watchtowerFamily, gazeboFamily, churchFamily, marketStallFamily, tentFamily];
+export const BUILDINGS: Family[] = [houseFamily, shedFamily, barnFamily, apartmentFamily, watchtowerFamily, gazeboFamily, churchFamily, marketStallFamily, tentFamily].map(tuneBuildings);

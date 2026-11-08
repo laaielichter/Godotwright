@@ -1,5 +1,5 @@
 import { box, cyl, group, lathe, loft, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { useMats } from "./common.js";
+import { GRIME, grimeProfile, useMats } from "./common.js";
 
 type Kind = "round" | "tri-up" | "tri-down" | "square" | "diamond" | "octagon";
 
@@ -43,21 +43,21 @@ interface Sign {
 }
 
 const SIGNS: Sign[] = [
-  { id: "no-entry", title: "No entry sign", text: "a red disc with a white horizontal bar and a thin white rim", kind: "round", border: "paint_white", face: "paint_red", bw: 0.03, symbols: [bar("Bar", 0.62, 0.15, 0, 0, "paint_white")], tags: ["no entry", "verboden in te rijden", "eenrichtingsverkeer"] },
-  { id: "closed-to-vehicles", title: "Closed to all vehicles sign", text: "a white disc inside a broad red ring", kind: "round", border: "paint_red", face: "paint_white", bw: 0.11, symbols: [], tags: ["closed", "gesloten", "verboden voor voertuigen"] },
-  { id: "no-parking", title: "No parking sign", text: "a blue disc in a red ring, crossed by one red diagonal", kind: "round", border: "paint_red", face: "paint_blue", bw: 0.1, symbols: [bar("Slash", 0.78, 0.1, 0, 0, "paint_red", 45)], tags: ["no parking", "parkeerverbod", "niet parkeren"] },
-  { id: "no-stopping", title: "No stopping sign", text: "a blue disc in a red ring, crossed by a red X", kind: "round", border: "paint_red", face: "paint_blue", bw: 0.1, symbols: [bar("Slash_A", 0.78, 0.1, 0, 0, "paint_red", 45), bar("Slash_B", 0.78, 0.1, 0, 0, "paint_red", -45)], tags: ["no stopping", "stopverbod"] },
-  { id: "ahead-only", title: "Ahead only sign", text: "a blue disc with a white rim and a white arrow pointing up", kind: "round", border: "paint_white", face: "paint_blue", bw: 0.03, symbols: [bar("Shaft", 0.12, 0.42, 0, -0.1, "paint_white"), head("Arrowhead", 0.17, 0, 0.17, "paint_white")], tags: ["ahead only", "rechtdoor", "gebodsbord"] },
-  { id: "keep-right", title: "Keep right sign", text: "a blue disc with a white rim and a white arrow pointing down to the right", kind: "round", border: "paint_white", face: "paint_blue", bw: 0.03, symbols: [bar("Shaft", 0.12, 0.42, -0.05, 0.05, "paint_white", 45), head("Arrowhead", 0.17, 0.12, -0.12, "paint_white", -135)], tags: ["keep right", "rechts aanhouden", "gebodsbord"] },
-  { id: "end-of-restrictions", title: "End of restrictions sign", text: "a white disc with a thin black rim crossed by three grey diagonal stripes", kind: "round", border: "paint_black", face: "paint_white", bw: 0.02, symbols: [bar("Stripe_1", 0.72, 0.035, -0.06, -0.06, "paint_grey", 45), bar("Stripe_2", 0.86, 0.035, 0, 0, "paint_grey", 45), bar("Stripe_3", 0.72, 0.035, 0.06, 0.06, "paint_grey", 45)], tags: ["end of restrictions", "einde verbod"] },
-  { id: "danger", title: "General danger sign", text: "a white triangle in a red border pointing up, with a black exclamation mark", kind: "tri-up", border: "paint_red", face: "paint_white", bw: 0.08, symbols: [bar("Mark", 0.07, 0.3, 0, 0.04, "paint_black"), cyl("Dot", "$size * 0.045", 0.003, { axis: "z", segments: 16, at: [0, "$size * -0.17", Z.sym], material: "paint_black" })], tags: ["warning", "danger", "gevaar", "waarschuwing", "driehoek"] },
-  { id: "give-way", title: "Give way sign", text: "a white triangle in a red border pointing down", kind: "tri-down", border: "paint_red", face: "paint_white", bw: 0.08, symbols: [], tags: ["give way", "yield", "voorrang verlenen", "haaientanden"] },
-  { id: "temporary-warning", title: "Temporary warning sign", text: "a yellow triangle in a red border pointing up, with a black exclamation mark", kind: "tri-up", border: "paint_red", face: "paint_yellow", bw: 0.08, symbols: [bar("Mark", 0.07, 0.3, 0, 0.04, "paint_black"), cyl("Dot", "$size * 0.045", 0.003, { axis: "z", segments: 16, at: [0, "$size * -0.17", Z.sym], material: "paint_black" })], tags: ["roadworks", "werk in uitvoering", "tijdelijk", "geel"] },
-  { id: "priority-road", title: "Priority road sign", text: "a yellow diamond in a white border with a thin black edge line", kind: "diamond", border: "paint_white", face: "paint_yellow", bw: 0.1, symbols: [], tags: ["priority road", "voorrangsweg", "ruit"] },
-  { id: "stop", title: "Stop sign", text: "a red octagon in a white border with a white four-letter legend", kind: "octagon", border: "paint_white", face: "paint_red", bw: 0.035, symbols: [bar("Letter_1", 0.12, 0.24, -0.27, 0, "paint_white"), bar("Letter_2", 0.12, 0.24, -0.09, 0, "paint_white"), bar("Letter_3", 0.12, 0.24, 0.09, 0, "paint_white"), bar("Letter_4", 0.12, 0.24, 0.27, 0, "paint_white")], tags: ["stop", "stopbord", "achthoek"] },
-  { id: "parking", title: "Parking sign", text: "a blue square in a white border with a white letter P", kind: "square", border: "paint_white", face: "paint_blue", bw: 0.04, symbols: [bar("Stem", 0.1, 0.56, -0.12, 0, "paint_white"), bar("Bowl_T", 0.3, 0.09, 0, 0.235, "paint_white"), bar("Bowl_M", 0.3, 0.09, 0, 0.0, "paint_white"), bar("Bowl_R", 0.09, 0.32, 0.13, 0.115, "paint_white")], tags: ["parking", "parkeren", "parkeerplaats", "p"] },
-  { id: "pedestrian-crossing", title: "Pedestrian crossing sign", text: "a blue square in a white border holding a white triangle with black zebra stripes", kind: "square", border: "paint_white", face: "paint_blue", bw: 0.04, symbols: [head("Triangle", 0.4, 0, 0.03, "paint_white"), box("Zebra_{i}", ["$size * 0.05", "$size * 0.12", 0.003], { at: ["$size * -0.12", "$size * -0.08", Z.sym + 0.002], repeat: { count: 4, step: ["$size * 0.08", 0, 0] }, material: "paint_black" })], tags: ["pedestrian crossing", "zebrapad", "oversteekplaats"] },
-  { id: "dead-end", title: "Dead end sign", text: "a blue square in a white border with a white upright closed off by a red bar", kind: "square", border: "paint_white", face: "paint_blue", bw: 0.04, symbols: [bar("Stem", 0.16, 0.5, 0, -0.08, "paint_white"), bar("Cross", 0.46, 0.13, 0, 0.22, "paint_red")], tags: ["dead end", "doodlopende weg", "no through road"] },
+  { id: "no-entry", title: "No entry sign", text: "a red disc with a white horizontal bar and a thin white rim", kind: "round", border: "sheet_white", face: "sheet_red", bw: 0.03, symbols: [bar("Bar", 0.62, 0.15, 0, 0, "sheet_white")], tags: ["no entry", "verboden in te rijden", "eenrichtingsverkeer"] },
+  { id: "closed-to-vehicles", title: "Closed to all vehicles sign", text: "a white disc inside a broad red ring", kind: "round", border: "sheet_red", face: "sheet_white", bw: 0.11, symbols: [], tags: ["closed", "gesloten", "verboden voor voertuigen"] },
+  { id: "no-parking", title: "No parking sign", text: "a blue disc in a red ring, crossed by one red diagonal", kind: "round", border: "sheet_red", face: "sheet_blue", bw: 0.1, symbols: [bar("Slash", 0.78, 0.1, 0, 0, "sheet_red", 45)], tags: ["no parking", "parkeerverbod", "niet parkeren"] },
+  { id: "no-stopping", title: "No stopping sign", text: "a blue disc in a red ring, crossed by a red X", kind: "round", border: "sheet_red", face: "sheet_blue", bw: 0.1, symbols: [bar("Slash_A", 0.78, 0.1, 0, 0, "sheet_red", 45), bar("Slash_B", 0.78, 0.1, 0, 0, "sheet_red", -45)], tags: ["no stopping", "stopverbod"] },
+  { id: "ahead-only", title: "Ahead only sign", text: "a blue disc with a white rim and a white arrow pointing up", kind: "round", border: "sheet_white", face: "sheet_blue", bw: 0.03, symbols: [bar("Shaft", 0.12, 0.42, 0, -0.1, "sheet_white"), head("Arrowhead", 0.17, 0, 0.17, "sheet_white")], tags: ["ahead only", "rechtdoor", "gebodsbord"] },
+  { id: "keep-right", title: "Keep right sign", text: "a blue disc with a white rim and a white arrow pointing down to the right", kind: "round", border: "sheet_white", face: "sheet_blue", bw: 0.03, symbols: [bar("Shaft", 0.12, 0.42, -0.05, 0.05, "sheet_white", 45), head("Arrowhead", 0.17, 0.12, -0.12, "sheet_white", -135)], tags: ["keep right", "rechts aanhouden", "gebodsbord"] },
+  { id: "end-of-restrictions", title: "End of restrictions sign", text: "a white disc with a thin black rim crossed by three grey diagonal stripes", kind: "round", border: "sheet_black", face: "sheet_white", bw: 0.02, symbols: [bar("Stripe_1", 0.72, 0.035, -0.06, -0.06, "sheet_grey", 45), bar("Stripe_2", 0.86, 0.035, 0, 0, "sheet_grey", 45), bar("Stripe_3", 0.72, 0.035, 0.06, 0.06, "sheet_grey", 45)], tags: ["end of restrictions", "einde verbod"] },
+  { id: "danger", title: "General danger sign", text: "a white triangle in a red border pointing up, with a black exclamation mark", kind: "tri-up", border: "sheet_red", face: "sheet_white", bw: 0.08, symbols: [bar("Mark", 0.07, 0.3, 0, 0.04, "sheet_black"), cyl("Dot", "$size * 0.045", 0.003, { axis: "z", segments: 16, at: [0, "$size * -0.17", Z.sym], material: "sheet_black" })], tags: ["warning", "danger", "gevaar", "waarschuwing", "driehoek"] },
+  { id: "give-way", title: "Give way sign", text: "a white triangle in a red border pointing down", kind: "tri-down", border: "sheet_red", face: "sheet_white", bw: 0.08, symbols: [], tags: ["give way", "yield", "voorrang verlenen", "haaientanden"] },
+  { id: "temporary-warning", title: "Temporary warning sign", text: "a yellow triangle in a red border pointing up, with a black exclamation mark", kind: "tri-up", border: "sheet_red", face: "sheet_yellow", bw: 0.08, symbols: [bar("Mark", 0.07, 0.3, 0, 0.04, "sheet_black"), cyl("Dot", "$size * 0.045", 0.003, { axis: "z", segments: 16, at: [0, "$size * -0.17", Z.sym], material: "sheet_black" })], tags: ["roadworks", "werk in uitvoering", "tijdelijk", "geel"] },
+  { id: "priority-road", title: "Priority road sign", text: "a yellow diamond in a white border with a thin black edge line", kind: "diamond", border: "sheet_white", face: "sheet_yellow", bw: 0.1, symbols: [], tags: ["priority road", "voorrangsweg", "ruit"] },
+  { id: "stop", title: "Stop sign", text: "a red octagon in a white border with a white four-letter legend", kind: "octagon", border: "sheet_white", face: "sheet_red", bw: 0.035, symbols: [bar("Letter_1", 0.12, 0.24, -0.27, 0, "sheet_white"), bar("Letter_2", 0.12, 0.24, -0.09, 0, "sheet_white"), bar("Letter_3", 0.12, 0.24, 0.09, 0, "sheet_white"), bar("Letter_4", 0.12, 0.24, 0.27, 0, "sheet_white")], tags: ["stop", "stopbord", "achthoek"] },
+  { id: "parking", title: "Parking sign", text: "a blue square in a white border with a white letter P", kind: "square", border: "sheet_white", face: "sheet_blue", bw: 0.04, symbols: [bar("Stem", 0.1, 0.56, -0.12, 0, "sheet_white"), bar("Bowl_T", 0.3, 0.09, 0, 0.235, "sheet_white"), bar("Bowl_M", 0.3, 0.09, 0, 0.0, "sheet_white"), bar("Bowl_R", 0.09, 0.32, 0.13, 0.115, "sheet_white")], tags: ["parking", "parkeren", "parkeerplaats", "p"] },
+  { id: "pedestrian-crossing", title: "Pedestrian crossing sign", text: "a blue square in a white border holding a white triangle with black zebra stripes", kind: "square", border: "sheet_white", face: "sheet_blue", bw: 0.04, symbols: [head("Triangle", 0.4, 0, 0.03, "sheet_white"), box("Zebra_{i}", ["$size * 0.05", "$size * 0.12", 0.003], { at: ["$size * -0.12", "$size * -0.08", Z.sym + 0.002], repeat: { count: 4, step: ["$size * 0.08", 0, 0] }, material: "sheet_black" })], tags: ["pedestrian crossing", "zebrapad", "oversteekplaats"] },
+  { id: "dead-end", title: "Dead end sign", text: "a blue square in a white border with a white upright closed off by a red bar", kind: "square", border: "sheet_white", face: "sheet_blue", bw: 0.04, symbols: [bar("Stem", 0.16, 0.5, 0, -0.08, "sheet_white"), bar("Cross", 0.46, 0.13, 0, 0.22, "sheet_red")], tags: ["dead end", "doodlopende weg", "no through road"] },
 ];
 
 function pole(top: string, clamps: string[]): SpecNode {
@@ -65,6 +65,7 @@ function pole(top: string, clamps: string[]): SpecNode {
     cyl("Shaft", 0.03, top, { anchor: "base", segments: 16 }),
     lathe("Cap", [[0.032, `${top} - 0.01`], [0.032, top], [0.02, `${top} + 0.015`], [0.005, `${top} + 0.02`]], { segments: 16, material: "plastic_black" }),
     lathe("Collar", [[0.05, 0], [0.05, 0.03], [0.034, 0.06], [0.031, 0.08]], { segments: 16 }),
+    ...grimeProfile("Grime", [[0.05, 0.001], [0.05, 0.03], [0.034, 0.06], [0.031, 0.08], [0.03, 0.3]], { segments: 16 }),
     ...clamps.map((y, i) =>
       group(`Clamp_${i + 1}`, [
         cyl("Ring", 0.037, 0.04, { segments: 16, material: "steel" }),
@@ -89,7 +90,7 @@ function shapedSign(s: Sign): AssetDraft {
     description: `A traffic sign on a galvanised pole: ${s.text}, as separate border, face and symbol layers on an aluminium backing. The sign faces +z.`,
     tags: [...s.tags, s.kind.replace("tri-", "triangle-")],
     params: [num("height", 2.2, 1.6, 2.8, "Height of the plate centre above the ground in metres."), num("size", 0.65, 0.4, 0.9, "Width of the plate in metres.")],
-    materials: useMats("galvanised", "steel", "plastic_black", "sign_grey", s.border, s.face, "paint_white", "paint_black", "paint_red", "paint_grey"),
+    materials: { ...GRIME("galvanised"), ...useMats("galvanised", "steel", "plastic_black", "sign_grey", s.border, s.face, "sheet_white", "sheet_black", "sheet_red", "sheet_grey") },
     nodes: [group("TrafficSign", [pole(`$height + ${o.top} + 0.02`, [`$height + ${half} * 0.55`, `$height - ${half} * 0.55`]), plate], { material: "galvanised" })],
   };
 }
@@ -127,7 +128,7 @@ function directionSign(id: "single" | "double" | "triple", face: string, border:
     description: `A fingerpost direction sign on a galvanised pole with ${count}, each a ${colourName} face in a border on an aluminium backing with two legend lines. The faces look along +z.`,
     tags: ["direction", "richting", "wegwijzer", "fingerpost", "handwijzer", "arrow", "pijl", colourName],
     params: [num("height", 2.4, 2.0, 3.0, "Height of the top arm in metres."), num("armLength", 1.0, 0.6, 1.4, "Length of each arrow plate in metres."), num("ph", 0.12, 0.09, 0.16, "Half the height of each arrow plate in metres.")],
-    materials: useMats("galvanised", "steel", "plastic_black", "sign_grey", face, border),
+    materials: { ...GRIME("galvanised"), ...useMats("galvanised", "steel", "plastic_black", "sign_grey", face, border) },
     nodes: [group("TrafficSign", [pole("$height + $ph + 0.05", []), ...arms], { material: "galvanised" })],
   };
 }
@@ -139,15 +140,15 @@ function streetName(): AssetDraft {
     description: "A wide rectangular street name sign on a galvanised pole: a blue face in a white border on an aluminium backing, with white legend lines and two clamps. It faces +z.",
     tags: ["street name", "straatnaambord", "straatnaam", "rectangle", "blauw"],
     params: [num("height", 2.4, 2.0, 2.8, "Height of the plate centre in metres."), num("width", 0.9, 0.5, 1.4, "Width of the plate along x in metres."), num("plateHeight", 0.22, 0.15, 0.32, "Height of the plate in metres.")],
-    materials: useMats("galvanised", "steel", "plastic_black", "sign_grey", "paint_blue", "paint_white"),
+    materials: { ...GRIME("galvanised"), ...useMats("galvanised", "steel", "plastic_black", "sign_grey", "sheet_blue", "sheet_white") },
     nodes: [group("TrafficSign", [
       pole("$height + $plateHeight / 2 + 0.03", ["$height + $plateHeight * 0.25", "$height - $plateHeight * 0.25"]),
       group("Plate", [
         box("Backing", ["$width", "$plateHeight", 0.006], { at: [0, 0, Z.back], bevel: 0.002, material: "sign_grey" }),
-        box("Border", ["$width - 0.004", "$plateHeight - 0.004", 0.004], { at: [0, 0, Z.border], material: "paint_white" }),
-        box("Face", ["$width - 0.03", "$plateHeight - 0.03", 0.004], { at: [0, 0, Z.face], material: "paint_blue" }),
-        box("Legend_1", ["$width * 0.7", "$plateHeight * 0.32", 0.003], { at: [0, "$plateHeight * 0.08", Z.sym], material: "paint_white" }),
-        box("Legend_2", ["$width * 0.3", "$plateHeight * 0.14", 0.003], { at: [0, "-$plateHeight * 0.26", Z.sym], material: "paint_white" }),
+        box("Border", ["$width - 0.004", "$plateHeight - 0.004", 0.004], { at: [0, 0, Z.border], material: "sheet_white" }),
+        box("Face", ["$width - 0.03", "$plateHeight - 0.03", 0.004], { at: [0, 0, Z.face], material: "sheet_blue" }),
+        box("Legend_1", ["$width * 0.7", "$plateHeight * 0.32", 0.003], { at: [0, "$plateHeight * 0.08", Z.sym], material: "sheet_white" }),
+        box("Legend_2", ["$width * 0.3", "$plateHeight * 0.14", 0.003], { at: [0, "-$plateHeight * 0.26", Z.sym], material: "sheet_white" }),
       ], { at: [0, "$height", 0.052] }),
     ], { material: "galvanised" })],
   };
@@ -160,8 +161,8 @@ export const trafficSign: Family = {
   tags: ["traffic sign", "road sign", "sign", "verkeersbord", "bord", "verkeersteken", "street sign"],
   assets: () => [
     ...SIGNS.map(shapedSign),
-    directionSign("single", "paint_white", "paint_black", "white"),
-    directionSign("double", "paint_blue", "paint_white", "blue"),
+    directionSign("single", "sheet_white", "sheet_black", "white"),
+    directionSign("double", "sheet_blue", "sheet_white", "blue"),
     streetName(),
   ],
 };

@@ -1,5 +1,5 @@
 import { box, cap, cyl, group, int, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { an, finishName, finishTags, frontBack, useMats } from "./common.js";
+import { an, finishName, finishTags, frontBack, stencil, useMats, worn } from "./common.js";
 
 /** One crate: its shape style and four finishes. */
 type Finish = { main: string; trim: string; accent: string };
@@ -81,7 +81,8 @@ function framedCrate(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof 
       group("Lid", [
         box("Panel", ["$W", "$lt * 0.55", "$D"], { at: [0, "$lt * 0.275", 0], bevel: 0.004 }),
         box("Batten_{i}", ["$W - 0.02", "$lt * 0.5", "$cw"], { at: [0, "$lt * 0.7", "-$D / 2 + $cw"], repeat: { count: 3, step: [0, 0, "($D - 2 * $cw) / 2"] }, bevel: 0.004 }),
-        box("Stencil", ["$W * 0.4", 0.003, "($D - 4 * $cw) / 2 * 0.6"], { at: [0, "$lt * 0.55 + 0.001", "($D - 2 * $cw) / 4"], material: f.accent }),
+        stencil("Stencil", "FRAGILE", "top", [0, "$lt * 0.55 + 0.001", "($D - 2 * $cw) / 4"], 0.014, f.accent, 0.003),
+        stencil("Lot", "LOT 2417", "top", [0, "$lt * 0.55 + 0.001", "-($D - 2 * $cw) / 4"], 0.01, f.accent, 0.003),
       ], { at: [0, "$s + $bh - 0.002", 0] }),
     ], { material: f.main, vars: { W, D, H, s: 0.09, lt: 0.045, ct: 0.022, cw: 0.085, bt: 0.018, bh: `${H} - 0.09 - 0.045`, nb: "max(2, round(($height - 0.135) / 0.14))" } }),
   ];
@@ -240,10 +241,11 @@ function ammoBox(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof num>
   const nodes = [
     group("AmmoBox", [
       group("Body", [
-        box("Case", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.008 }),
+        box("Case", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.008, material: worn(f.main) }),
         box("Frame_{i}", ["$W + 0.006", 0.012, "$D + 0.006"], { at: [0, "$bh * 0.25", 0], repeat: { count: 2, step: [0, "$bh * 0.4", 0] }, bevel: 0.004 }),
         box("Band", ["$W + 0.004", 0.022, "$D + 0.004"], { at: [0, "$bh * 0.45", 0], material: f.accent }),
-        box("Stencil", ["$W * 0.4", "$bh * 0.18", 0.003], { at: [0, "$bh * 0.72", "$D / 2"], material: f.accent }),
+        stencil("Stencil", "AMMO", "+z", [0, "$bh * 0.72", "$D / 2 + 0.001"], 0.012, f.accent, 0.003),
+        stencil("Lot", "LOT 58-1", "+z", [0, "$bh * 0.72 - 0.05", "$D / 2 + 0.001"], 0.006, f.accent, 0.003),
         group("Clamp_L", [
           box("Base", [0.012, 0.07, 0.07], { at: [0, 0, 0], bevel: 0.003 }),
           box("Lever", [0.012, 0.11, 0.045], { at: [0.008, 0.03, 0], rotate: [12, 0, 0], bevel: 0.004 }),
@@ -305,7 +307,7 @@ function crate(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. Its front faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params,
-    materials: useMats(f.main, f.trim, f.accent, "hole", "rubber"),
+    materials: useMats(f.main, f.trim, f.accent, "hole", "rubber", worn(f.main)),
     nodes,
   };
 }

@@ -59,6 +59,12 @@ const CONIFERS: Conifer[] = [
   W({ species: "larch", variant: "japanese", dutch: "japanse lariks", bark: "bark_red", needles: "needles_blue", inner: "needles", height: [20, 12, 35], crown: [4, 2.5, 6], trunk: [0.3, 0.16, 0.5], count: [10, 7, 14], boughs: 7, droop: 0.2, upturn: 0.45, width: 0.3, base: 0.12, core: 0.4, text: "a Japanese larch: wide, blue-green whorls that rise steeply at their tips" }),
 ];
 
+/** Light new growth at the tips over each needle colour, and the dark, shaded inside of the crown. */
+const TIP: Record<string, string> = { needles: "needles_tip", needles_blue: "needles_blue_tip", leaf_dark: "needles_light", needles_light: "needles_tip", larch_gold: "leaf_yellow", leaf_yellow: "larch_gold", cypress_green: "needles_light" };
+const SHADE: Record<string, string> = { needles: "needles_shade", leaf_dark: "needles_shade", needles_blue: "needles", needles_light: "needles", leaf_green: "leaf_dark", leaf_light: "leaf_green", leaf_yellow: "leaf_autumn" };
+const tipOf = (c: Conifer): string => TIP[c.needles] ?? c.needles;
+const shadeOf = (c: Conifer): string => SHADE[c.inner] ?? c.inner;
+
 /** One drooping, upturning bough along +z in terms of $R (its length) and $L (the whorl spacing). */
 function bough(c: Conifer): SpecNode {
   const droop = c.droop ?? 0.3, up = c.upturn ?? 0, w = c.width ?? 0.35;
@@ -76,7 +82,13 @@ function bough(c: Conifer): SpecNode {
       ],
     };
   });
-  const children: SpecNode[] = [];
+  // A fluffy spray of needles on the bough and a tuft of light new growth at its tip break the flat, smooth blade.
+  const yAt = (u: number): string => `$D * ${n4(-droop * u * u + up * Math.pow(u, 4))}`;
+  const halfAt = (u: number): string => `(($R * 0.13 + $D * ${n4(w)}) * ${n4(1 - 0.75 * u)} + 0.02)`;
+  const children: SpecNode[] = [
+    ellipsoid("Spray", [`${halfAt(0.45)} * 0.95`, `${halfAt(0.45)} * 0.32 + 0.02`, "$R * 0.26"], { at: [0, `${yAt(0.45)} + ${halfAt(0.45)} * 0.18`, "$R * 0.45"], segments: 8, lumps: 0.55, seed: "$i * 7 + 2" }),
+    ellipsoid("Tip", [`${halfAt(0.85)} * 1.2`, `${halfAt(0.85)} * 0.4 + 0.02`, "$R * 0.16"], { at: [0, `${yAt(0.88)} + ${halfAt(0.88)} * 0.15`, "$R * 0.86"], segments: 8, lumps: 0.55, seed: "$i * 5 + 1", material: tipOf(c) }),
+  ];
   if (c.snow) {
     const u = 0.5;
     const y = `$D * ${n4(-droop * u * u + up * Math.pow(u, 4))}`;
@@ -95,7 +107,7 @@ function whorled(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string
       [`$R * ${n4(core * 0.85)}`, "$L * 0.25"],
       [`$R * ${n4(core * 0.35)}`, "$L * 1.1"],
       ["$R * 0.08", "$L * 1.45"],
-    ], { segments: 12, material: c.inner }));
+    ], { segments: 12, material: shadeOf(c) }));
   }
   const nodes: SpecNode[] = [
     lathe("Trunk", [["$trunkRadius * 1.4", 0], ["$trunkRadius * 1.05", "$height * 0.04"], ["$trunkRadius * 0.75", "$height * 0.35"], ["$trunkRadius * 0.35", "$height * 0.75"], ["0.02", "$height * 0.97"]], { segments: 12, material: c.bark }),
@@ -122,6 +134,7 @@ function pine(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string[] 
   const yLo = n4(0.55 + 0.25 * u - (c.variant === "black" ? 0.12 : 0));
   const yTop = n4(0.88 + 0.02 * u);
   const s = n4(r() * 5);
+  const cPhase = Math.round(r() * 60);
   const nodes: SpecNode[] = [
     tube("Trunk", [
       ["0", "0", "0"],
@@ -143,7 +156,17 @@ function pine(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string[] 
         segments: 16,
         lumps: 0.45,
         seed: `$i * 17 + ${Math.floor(r() * 900)}`,
-        repeat: { count: "$clusters", around: "y", phase: Math.round(r() * 60) },
+        repeat: { count: "$clusters", around: "y", phase: cPhase },
+      }),
+      ellipsoid("Tuft_{i}", ["$crownRadius * 0.2", "$crownRadius * 0.09 + 0.1", "$crownRadius * 0.18"], {
+        at: [`$crownRadius * (0.78 + 0.12 * sin($i * 1.7 + ${s}))`, `$height * (${yLo} + (${yTop} - ${yLo}) * (0.45 + 0.35 * sin($i * 2.9 + ${s}) * ${n4(1 - u)})) + $crownRadius * 0.2 + 0.1`, "$crownRadius * 0.12"],
+        segments: 10, lumps: 0.6, seed: `$i * 13 + 5`, material: tipOf(c),
+        repeat: { count: "$clusters", around: "y", phase: cPhase },
+      }),
+      ellipsoid("Under_{i}", ["$crownRadius * 0.34", "$crownRadius * 0.08 + 0.08", "$crownRadius * 0.3"], {
+        at: [`$crownRadius * (0.55 + 0.12 * sin($i * 1.7 + ${s}))`, `$height * (${yLo} + (${yTop} - ${yLo}) * (0.45 + 0.35 * sin($i * 2.9 + ${s}) * ${n4(1 - u)})) - $crownRadius * 0.04`, "-$crownRadius * 0.05"],
+        segments: 10, lumps: 0.55, seed: `$i * 11 + 7`, material: shadeOf(c),
+        repeat: { count: "$clusters", around: "y", phase: cPhase },
       }),
       ellipsoid("Top", ["$crownRadius * 0.48", `$crownRadius * ${n4(0.24 - 0.08 * u)} + 0.25`, "$crownRadius * 0.45"], { at: [0, `$height * ${yTop}`, 0], segments: 18, lumps: 0.4, seed: Math.floor(r() * 900), material: c.inner }),
     ], { material: c.needles }),
@@ -157,6 +180,8 @@ function column(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string[
   const e = lumpExtent(20, lumps, seed);
   // The column spans from 4 % of the height to 96 %: its radii are chosen so its real lowest point sits there.
   const span = n4(0.92 / (e.low + e.high));
+  const sx = n4(r() * 4);
+  const sPhase = Math.round(r() * 60);
   const nodes: SpecNode[] = [
     lathe("Trunk", [["$trunkRadius * 1.3", 0], ["$trunkRadius", "$height * 0.06"], ["$trunkRadius * 0.7", "$height * 0.3"], ["$trunkRadius * 0.3", "$height * 0.6"]], { segments: 10, material: c.bark }),
     group("Branches", [
@@ -165,11 +190,20 @@ function column(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string[
     group("Crown", [
       ellipsoid("Column", ["$crownRadius", `$height * ${span}`, "$crownRadius"], { at: [0, `$height * (0.04 + ${span} * ${n4(e.low)})`, 0], segments: 22, lumps, seed, material: c.inner }),
       ellipsoid("Spray_{i}", ["$crownRadius * 0.5", "min($height * 0.16, $crownRadius * 2.4)", "$crownRadius * 0.45"], {
-        at: [`$crownRadius * 0.62`, `$height * (0.4 + 0.22 * sin($i * 2.3 + ${n4(r() * 4)}))`, 0],
+        at: [`$crownRadius * 0.62`, `$height * (0.4 + 0.22 * sin($i * 2.3 + ${sx}))`, 0],
         segments: 12,
         lumps: lumps + 0.1,
         seed: `$i * 9 + ${seed + 1}`,
-        repeat: { count: "$sprays", around: "y", phase: Math.round(r() * 60) },
+        repeat: { count: "$sprays", around: "y", phase: sPhase },
+      }),
+      // Light new growth on the outer, upper face of every spray.
+      ellipsoid("SprayTip_{i}", ["$crownRadius * 0.26", "min($height * 0.07, $crownRadius * 1.1)", "$crownRadius * 0.24"], {
+        at: [`$crownRadius * 0.86`, `$height * (0.4 + 0.22 * sin($i * 2.3 + ${sx})) + min($height * 0.08, $crownRadius * 1.2)`, "$crownRadius * 0.08"],
+        segments: 10,
+        lumps: 0.55,
+        seed: `$i * 7 + ${seed + 3}`,
+        material: tipOf(c),
+        repeat: { count: "$sprays", around: "y", phase: sPhase },
       }),
       ellipsoid("Tip", ["$crownRadius * 0.35", "$height * 0.08", "$crownRadius * 0.35"], { at: [0, "$height * 0.9", 0], segments: 12, lumps: 0.2, seed: seed + 2 }),
     ], { material: c.needles }),
@@ -196,7 +230,7 @@ function conifer(c: Conifer, index: number): AssetDraft {
       num("trunkRadius", c.trunk[0], c.trunk[1], c.trunk[2], "Trunk radius near the ground in metres."),
       countParam,
     ],
-    materials: { ...mats(c.bark), ...natureMats(mats, c.needles, c.inner, ...built.mats) },
+    materials: natureMats(mats, c.bark, c.needles, c.inner, tipOf(c), ...(c.kind !== "column" ? [shadeOf(c)] : []), ...built.mats),
     nodes: [group("Conifer", built.nodes, { vars })],
   };
 }

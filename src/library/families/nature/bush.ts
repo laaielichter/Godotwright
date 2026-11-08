@@ -52,6 +52,12 @@ const BUSHES: Bush[] = [
   { style: "berry", key: "snowberry", title: "Snowberry bush", dutch: "sneeuwbes", leaf: "leaf_green", sun: "leaf_dark", accent: "flower_white", width: [1.3, 0.7, 2], height: [1.2, 0.6, 1.8], count: [11, 6, 14], lumps: 0.4, text: "an arching snowberry bush with clusters of white berries" },
 ];
 
+/** The shaded tone under each leaf colour, and the light new growth over each sunlit one. */
+const SHADE: Record<string, string> = { leaf_green: "leaf_shade", leaf_light: "leaf_green", leaf_dark: "leaf_shade", leaf_purple: "leaf_red_dark", leaf_variegated: "leaf_green", leaf_box: "leaf_shade", leaf_silver: "leaf_dark", leaf_autumn: "leaf_autumn_dark" };
+const TIP: Record<string, string> = { leaf_light: "leaf_tip", leaf_green: "leaf_light", leaf_dark: "leaf_green", leaf_red: "leaf_autumn", leaf_box: "leaf_light", leaf_silver: "leaf_silver" };
+/** Every leaf tone a bush uses: its two own colours plus the shade and tip tones the dome adds. */
+const tones = (b: Bush): string[] => [SHADE[b.leaf] ?? b.leaf, TIP[b.sun] ?? b.sun];
+
 /** Deepest point below the centre over a run of seeds, so every copy of a ring stays above the ground. */
 function maxLow(segments: number, lumps: number, base: number, mult: number, count: number): number {
   let m = 0;
@@ -66,6 +72,7 @@ function dome(b: Bush, r: () => number, ringCount: string, maxCount: number): Sp
   const coreLow = lumpExtent(18, lumps, s0).low;
   const ringLow = maxLow(14, lumps, s0 + 1, 11, maxCount);
   const phase = Math.round(r() * 60);
+  const shadeLow = maxLow(12, lumps, s0 + 4, 5, 5);
   return [
     ellipsoid("Core", ["$width * 0.4", "$height * 0.45", "$width * 0.4"], { at: [0, `max($height * 0.5, $height * 0.45 * ${n4(coreLow)} + 0.02)`, 0], segments: 18, lumps, seed: s0 }),
     ellipsoid("Mass_{i}", ["$width * 0.27", "$height * 0.3", "$width * 0.25"], {
@@ -76,6 +83,9 @@ function dome(b: Bush, r: () => number, ringCount: string, maxCount: number): Sp
       repeat: { count: ringCount, around: "y", phase },
     }),
     ellipsoid("Top_{i}", ["$width * 0.24", "$height * 0.24", "$width * 0.22"], { at: ["$width * 0.12", "$height * 0.7", 0], segments: 14, lumps, seed: `$i * 7 + ${s0 + 2}`, material: b.sun, repeat: { count: 3, around: "y", phase: phase + 50 } }),
+    // Small, ragged tufts of light new growth on the upper shoulder, and dark, shaded masses low down.
+    ellipsoid("Tuft_{i}", ["$width * 0.11", "$height * 0.1", "$width * 0.1"], { at: ["$width * 0.3", `$height * (0.66 + 0.08 * sin($i * 2.3))`, 0], segments: 10, lumps: 0.6, seed: `$i * 13 + ${s0 + 3}`, material: TIP[b.sun] ?? b.sun, repeat: { count: 7, around: "y", phase: phase + 20 } }),
+    ellipsoid("Shade_{i}", ["$width * 0.24", "$height * 0.2", "$width * 0.22"], { at: ["$width * 0.2", `max($height * 0.24, $height * 0.2 * ${n4(shadeLow)} + 0.02)`, 0], segments: 12, lumps, seed: `$i * 5 + ${s0 + 4}`, material: SHADE[b.leaf] ?? b.leaf, repeat: { count: 5, around: "y", phase: phase + 35 } }),
   ];
 }
 
@@ -113,7 +123,7 @@ function bushAsset(b: Bush, index: number): AssetDraft {
       const lumps = b.lumps ?? 0.3;
       const s0 = Math.floor(r() * 3000);
       nodes.push(group("Foliage", [
-        box("Body", ["$width * 0.9", "$height * 0.84", "$length"], { at: [0, "$height * 0.1", 0], anchor: "bottom", bevel: "min($width, $height) * 0.2" }),
+        box("Body", ["$width * 0.9", "$height * 0.84", "$length"], { at: [0, "$height * 0.1", 0], anchor: "bottom", bevel: "min($width, $height) * 0.2", material: SHADE[b.leaf] ?? b.leaf }),
         ellipsoid("Bulge_{i}", ["$width * 0.18", "$height * 0.2", "min($length / $bulges * 0.6, $width * 0.6)"], {
           at: ["$width * 0.37", `$height * (0.5 + 0.18 * sin($i * 2.3 + ${n4(r() * 3)}))`, "-$length / 2 + $length / $bulges * ($i + 0.5)"],
           segments: 12, lumps, seed: `$i * 5 + ${s0}`,
@@ -241,7 +251,7 @@ function bushAsset(b: Bush, index: number): AssetDraft {
     description: `${b.text.charAt(0).toUpperCase()}${b.text.slice(1)}.${countText} It stands on y = 0; the front faces +z.`,
     tags: [b.key.replace("-", " "), b.dutch, b.style, ...(b.style === "hedge" ? ["hedge", "haag", "heg"] : []), ...(b.style === "topiary" ? ["topiary", "vormsnoei", "pot", "pot plant", "potplant"] : [])],
     params,
-    materials: natureMats(mats, ...m),
+    materials: natureMats(mats, ...m, ...(b.style === "round" || b.style === "flowering" || b.style === "berry" ? tones(b) : b.style === "hedge" ? [SHADE[b.leaf] ?? b.leaf] : [])),
     nodes: [group("Shrub", nodes)],
   };
 }

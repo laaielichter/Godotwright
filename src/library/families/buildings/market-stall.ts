@@ -3,22 +3,22 @@ import { mats, type MaterialDef } from "../../palette.js";
 import { BMATS } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
-  stripe_white: { color: [0.85, 0.84, 0.8], metallic: 0, roughness: 0.92 },
-  stripe_red: { color: [0.6, 0.03, 0.03], metallic: 0, roughness: 0.92 },
-  stripe_green: { color: [0.03, 0.3, 0.1], metallic: 0, roughness: 0.92 },
-  stripe_blue: { color: [0.03, 0.12, 0.45], metallic: 0, roughness: 0.92 },
-  stripe_yellow: { color: [0.85, 0.6, 0.05], metallic: 0, roughness: 0.92 },
-  stripe_orange: { color: [0.85, 0.3, 0.03], metallic: 0, roughness: 0.92 },
-  tarp_white: { color: [0.82, 0.82, 0.8], metallic: 0, roughness: 0.8 },
-  tarp_blue: { color: [0.04, 0.15, 0.45], metallic: 0, roughness: 0.75 },
-  tarp_green: { color: [0.04, 0.25, 0.12], metallic: 0, roughness: 0.75 },
-  tarp_red: { color: [0.5, 0.04, 0.04], metallic: 0, roughness: 0.75 },
-  apple_red: { color: [0.5, 0.03, 0.03], metallic: 0, roughness: 0.4 },
-  orange_fruit: { color: [0.85, 0.35, 0.02], metallic: 0, roughness: 0.6 },
-  lemon: { color: [0.85, 0.7, 0.05], metallic: 0, roughness: 0.55 },
-  lime: { color: [0.25, 0.5, 0.05], metallic: 0, roughness: 0.55 },
-  menu_board: { color: [0.02, 0.025, 0.025], metallic: 0, roughness: 0.9 },
-  plywood_top: { color: [0.55, 0.42, 0.25], metallic: 0, roughness: 0.75, texture: "wood" },
+  stripe_white: { color: [0.6, 0.585, 0.54], metallic: 0, roughness: 0.92, texture: "fabric" },
+  stripe_red: { color: [0.36, 0.03, 0.028], metallic: 0, roughness: 0.92, texture: "fabric" },
+  stripe_green: { color: [0.03, 0.14, 0.06], metallic: 0, roughness: 0.92, texture: "fabric" },
+  stripe_blue: { color: [0.03, 0.07, 0.22], metallic: 0, roughness: 0.92, texture: "fabric" },
+  stripe_yellow: { color: [0.56, 0.38, 0.03], metallic: 0, roughness: 0.92, texture: "fabric" },
+  stripe_orange: { color: [0.5, 0.15, 0.02], metallic: 0, roughness: 0.92, texture: "fabric" },
+  tarp_white: { color: [0.56, 0.56, 0.53], metallic: 0, roughness: 0.6, texture: "plastic" },
+  tarp_blue: { color: [0.03, 0.08, 0.22], metallic: 0, roughness: 0.6, texture: "plastic" },
+  tarp_green: { color: [0.03, 0.12, 0.06], metallic: 0, roughness: 0.6, texture: "plastic" },
+  tarp_red: { color: [0.32, 0.03, 0.03], metallic: 0, roughness: 0.6, texture: "plastic" },
+  apple_red: { color: [0.36, 0.03, 0.03], metallic: 0, roughness: 0.4 },
+  orange_fruit: { color: [0.6, 0.2, 0.02], metallic: 0, roughness: 0.6 },
+  lemon: { color: [0.62, 0.48, 0.04], metallic: 0, roughness: 0.55 },
+  lime: { color: [0.16, 0.32, 0.04], metallic: 0, roughness: 0.55 },
+  menu_board: { color: [0.025, 0.03, 0.03], metallic: 0, roughness: 0.9 },
+  plywood_top: { color: [0.42, 0.31, 0.18], metallic: 0, roughness: 0.75, texture: "wood" },
 };
 
 const STYLES = {

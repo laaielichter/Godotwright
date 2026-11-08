@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, grimeBox, grimeRound, nice, up, useMats } from "./common.js";
 
 type Style = "picket" | "post-and-rail" | "mesh" | "railing";
 
@@ -22,6 +22,7 @@ function nodes(style: Style, mat: string): SpecNode[] {
       return [
         group("Post_L", [
           box("Shaft", [0.08, "$height", 0.08], { anchor: "bottom", bevel: 0.006 }),
+          ...grimeBox("Grime", 0.08, 0.08, 0.2, [0, 0, 0], 0.006),
           lathe("Cap", [[0.065 * R2, "$height"], [0.065 * R2, "$height + 0.015"], [0.01, "$height + 0.06"], [0.006, "$height + 0.062"]], { segments: 4, rotate: [0, 45, 0] }),
         ], { at: ["$length / 2 - 0.04", 0, 0], mirror: "Post_R" }),
         box("Rail_Top", ["$length - 0.06", 0.07, 0.03], { at: [0, "$height * 0.78", -0.035], bevel: 0.004 }),
@@ -35,6 +36,7 @@ function nodes(style: Style, mat: string): SpecNode[] {
       return [
         group("Post_L", [
           cyl("Shaft", 0.065, "$height - 0.04", { anchor: "base", segments: 14, bevel: 0.005 }),
+          ...grimeRound("Grime", 0.065, 0.065, 0.22, [0, 0, 0], 14),
           lathe("Top", [[0.065, "$height - 0.045"], [0.065, "$height - 0.03"], [0.035, "$height"]], { segments: 14 }),
         ], { at: ["$length / 2 - 0.06", 0, 0], mirror: "Post_R" }),
         box("Rail_{i}", ["$length - 0.06", 0.1, 0.045], { at: [0, "$height - 0.18", 0], repeat: { count: "$rails", step: [0, "-($height - 0.35) / max($rails - 1, 1)", 0] }, bevel: 0.008 }),
@@ -43,6 +45,7 @@ function nodes(style: Style, mat: string): SpecNode[] {
       return [
         group("Post_L", [
           box("Shaft", [0.06, "$height + 0.05", 0.06], { anchor: "bottom", bevel: 0.004 }),
+          ...grimeBox("Grime", 0.06, 0.06, 0.2, [0, 0, 0], 0.004),
           box("Cap", [0.07, 0.015, 0.07], { at: [0, "$height + 0.05", 0], anchor: "bottom", bevel: 0.004, material: "plastic_black" }),
           box("Clip_{i}", [0.03, 0.04, 0.08], { at: [-0.03, 0.3, 0], repeat: { count: 3, step: [0, "($height - 0.5) / 2", 0] }, bevel: 0.004 }),
         ], { at: ["$length / 2 - 0.03", 0, 0], mirror: "Post_R" }),
@@ -58,6 +61,7 @@ function nodes(style: Style, mat: string): SpecNode[] {
           box("Collar", [0.09, 0.03, 0.09], { at: [0, "$height", 0], anchor: "bottom", bevel: 0.006 }),
           ellipsoid("Finial", [0.035, 0.035, 0.035], { at: [0, "$height + 0.055", 0], segments: 14 }),
           box("Plinth", [0.1, 0.06, 0.1], { anchor: "bottom", bevel: 0.008 }),
+          ...grimeBox("Grime", 0.1, 0.1, 0.06, [0, 0, 0], 0.008),
         ], { at: ["$length / 2 - 0.035", 0, 0], mirror: "Post_R" }),
         box("Rail_Top", ["$length - 0.06", 0.04, 0.012], { at: [0, "$height - 0.18", 0], bevel: 0.003 }),
         box("Rail_Low", ["$length - 0.06", 0.04, 0.012], { at: [0, 0.12, 0], bevel: 0.003 }),
@@ -93,7 +97,13 @@ function makeFence(style: Style, mat: string): AssetDraft {
     description: `A ${m} ${s.title} section: ${s.text}. It runs along z (as the fence archetype expects) with a post at each end, and its face looks towards +x.`,
     tags: [style, m, "hek", "schutting", "omheining", ...(style === "picket" ? ["tuinhek", "paaltjeshek"] : style === "railing" ? ["spijlenhek", "smeedijzer"] : style === "mesh" ? ["gaashek", "bouwhek"] : ["weidehek", "paal"])],
     params: params(style),
-    materials: { ...useMats(textured ? undefined : mat, "plastic_black"), ...(textured ? { [finish]: { ...useMats(mat)[mat]!, texture: "wood" } } : {}) },
+    materials: {
+      ...useMats(textured ? undefined : mat, "plastic_black"),
+      ...(textured ? { [finish]: { ...useMats(mat)[mat]!, metallic: 0, texture: "wood" } } : {}),
+      // Old cast iron railings: rust shows through the paint.
+      ...(style === "railing" && mat === "cast_iron" ? { cast_iron: LOCAL["iron_worn"]! } : {}),
+      ...GRIME(style === "railing" && mat === "cast_iron" ? "iron_worn" : mat),
+    },
     nodes: [group("Fence", nodes(style, finish), {
       material: finish,
       rotate: [0, 90, 0],

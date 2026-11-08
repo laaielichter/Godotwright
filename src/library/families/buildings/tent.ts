@@ -2,20 +2,22 @@ import { box, cyl, extrude, group, lathe, loft, num, slugify, tube, type AssetDr
 import { mats, type MaterialDef } from "../../palette.js";
 
 const LOCAL: Record<string, MaterialDef> = {
-  nylon_orange: { color: [0.85, 0.28, 0.03], metallic: 0, roughness: 0.55 },
-  nylon_green: { color: [0.08, 0.3, 0.1], metallic: 0, roughness: 0.55 },
-  nylon_blue: { color: [0.04, 0.18, 0.55], metallic: 0, roughness: 0.55 },
-  nylon_red: { color: [0.6, 0.05, 0.04], metallic: 0, roughness: 0.55 },
-  nylon_grey: { color: [0.3, 0.32, 0.33], metallic: 0, roughness: 0.55 },
-  nylon_yellow: { color: [0.85, 0.65, 0.05], metallic: 0, roughness: 0.55 },
-  cotton_canvas: { color: [0.72, 0.66, 0.52], metallic: 0, roughness: 0.95 },
-  canvas_olive: { color: [0.2, 0.22, 0.1], metallic: 0, roughness: 0.95 },
-  canvas_white: { color: [0.86, 0.84, 0.78], metallic: 0, roughness: 0.95 },
-  canvas_khaki: { color: [0.45, 0.4, 0.26], metallic: 0, roughness: 0.95 },
-  hide: { color: [0.62, 0.48, 0.32], metallic: 0, roughness: 0.95 },
-  rope: { color: [0.6, 0.55, 0.42], metallic: 0, roughness: 0.95 },
-  painted_ochre: { color: [0.55, 0.22, 0.05], metallic: 0, roughness: 0.95 },
-  painted_black: { color: [0.04, 0.035, 0.03], metallic: 0, roughness: 0.95 },
+  nylon_orange: { color: [0.45, 0.12, 0.022], metallic: 0, roughness: 0.6, texture: "fabric" },
+  nylon_green: { color: [0.045, 0.12, 0.05], metallic: 0, roughness: 0.6, texture: "fabric" },
+  nylon_blue: { color: [0.03, 0.075, 0.22], metallic: 0, roughness: 0.6, texture: "fabric" },
+  nylon_red: { color: [0.33, 0.035, 0.03], metallic: 0, roughness: 0.6, texture: "fabric" },
+  nylon_grey: { color: [0.11, 0.115, 0.125], metallic: 0, roughness: 0.65, texture: "fabric" },
+  nylon_yellow: { color: [0.5, 0.33, 0.025], metallic: 0, roughness: 0.6, texture: "fabric" },
+  cotton_canvas: { color: [0.5, 0.45, 0.34], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_olive: { color: [0.1, 0.105, 0.05], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_white: { color: [0.52, 0.5, 0.44], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_khaki: { color: [0.3, 0.26, 0.16], metallic: 0, roughness: 0.95, texture: "fabric" },
+  hide: { color: [0.4, 0.29, 0.18], metallic: 0, roughness: 0.9, texture: "leather" },
+  rope: { color: [0.4, 0.36, 0.27], metallic: 0, roughness: 0.95, texture: "fabric" },
+  painted_ochre: { color: [0.34, 0.12, 0.03], metallic: 0, roughness: 0.95, texture: "fabric" },
+  painted_black: { color: [0.04, 0.035, 0.03], metallic: 0, roughness: 0.95, texture: "fabric" },
+  pole_black: { color: [0.045, 0.045, 0.05], metallic: 0.3, roughness: 0.4, texture: "painted" },
+  mesh_dark: { color: [0.03, 0.03, 0.034], metallic: 0, roughness: 0.9, texture: "fabric" },
 };
 
 const STYLES = {
@@ -76,23 +78,31 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   const kids: SpecNode[] = [];
   if (style === "dome") {
     const ks = [-1, -0.85, -0.6, -0.3, 0, 0.3, 0.6, 0.85, 1];
+    const front = "$hw + 0.5";
     kids.push(group("Canvas", [
-      loft("Fly", ks.map((k) => ({ z: `$hl * ${k}`, points: archPoints("$hw", "$h", Math.sqrt(1 - 0.9 * k * k)) })), { material: f.a, rotate: [0, 90, 0] }),
+      loft("Fly", ks.map((k) => ({ z: `$hl * ${k}`, points: archPoints("$hw", "$h", Math.sqrt(1 - 0.9 * k * k), 10) })), { material: f.a, rotate: [0, 90, 0] }),
+      // The darker bathtub groundsheet and skirt showing as a band round the foot of the fly.
+      loft("Skirt", ks.map((k) => ({ z: `$hl * ${(k * 1.015).toFixed(4)}`, points: archPoints("$hw * 1.015", "0.16", Math.sqrt(1 - 0.9 * k * k), 10) })), { material: f.b, rotate: [0, 90, 0] }),
       box("Groundsheet", ["2 * $hl * 0.72", 0.01, "2 * $hw * 0.68"], { at: [0, 0.005, 0], material: f.b }),
+      cyl("Vent_{i}", 0.09, 0.05, { axis: "z", at: ["$hl * 0.42", "$h * 0.78", "$hw * 0.42"], rotate: [-38, 0, 0], repeat: { count: 2, around: "y" }, segments: 10, material: f.b }),
     ]));
     kids.push(group("Poles", [
-      tube("Pole_A", [-1, -0.7, -0.35, 0, 0.35, 0.7, 1].map((t) => [`$hl * 0.62 * ${t}`, `0.01 + ($h + 0.02) * ${Math.pow(1 - t * t * 0.995, 0.5).toFixed(5)}`, `$hw * 0.92 * ${t}`] as [string, string, string]), 0.008, { mirror: "Pole_B", segments: 6, material: "aluminium" }),
+      tube("Pole_A", [-1, -0.7, -0.35, 0, 0.35, 0.7, 1].map((t) => [`$hl * 0.62 * ${t}`, `0.01 + ($h + 0.03) * ${Math.pow(1 - t * t * 0.995, 0.5).toFixed(5)}`, `$hw * 0.92 * ${t}`] as [string, string, string]), 0.011, { mirror: "Pole_B", segments: 8, material: "pole_black" }),
+      cyl("Hub", 0.035, 0.03, { anchor: "base", at: [0, "$h + 0.03", 0], segments: 10, material: "pole_black" }),
     ]));
     kids.push(group("Entrance", [
-      loft("Porch", [0, 0.3, 0.6, 0.85, 1].map((t) => ({ z: `$hw * 0.6 + 0.55 * ${t}`, points: archPoints("0.45", "$h * 0.82", Math.sqrt(1 - 0.92 * t * t)) })), { material: f.a }),
-      box("Zip", [0.02, "$h * 0.6", 0.02], { at: [0, "$h * 0.3", "$hw * 0.6 + 0.47"], rotate: [-28, 0, 0], material: f.b }),
+      // A vestibule over the door: a smaller arch that ends in a near-upright D-shaped front with a zipped door.
+      loft("Porch", [0, 0.35, 0.7, 1].map((t, j) => ({ z: `$hw * 0.55 + (${front} - $hw * 0.55) * ${t}`, points: archPoints("0.55", "$h * 0.86", [1, 0.96, 0.87, 0.74][j] as number, 10) })), { material: f.a }),
+      extrude("DoorPanel", archPoints("0.33", "$h * 0.86 * 0.74 * 0.86", 1, 10), `-(${front}) - 0.012`, `-(${front}) + 0.004`, { rotate: [-90, 0, 0], material: "mesh_dark" }),
+      box("Zip", [0.018, "$h * 0.86 * 0.74 * 0.82", 0.012], { anchor: "bottom", at: [0, 0.02, `${front} + 0.014`], material: f.b }),
+      box("Toggle", [0.12, 0.03, 0.02], { at: [0, "$h * 0.86 * 0.74 * 0.62", `${front} + 0.016`], material: "rope" }),
     ]));
     kids.push(group("GuyRopes", [
       tube("GuyRope_{i}", [["$hl * 0.8", "$h * 0.55", 0], ["$hl + 0.7", 0.01, 0]], 0.005, { repeat: { count: 2, around: "y" }, segments: 5, material: "rope" }),
       tube("GuyRopeBack", [[0, "$h * 0.5", "-$hw * 0.85"], [0, 0.01, "-$hw - 0.6"]], 0.005, { segments: 5, material: "rope" }),
       peg("Peg_{i}", ["$hl + 0.7", 0, 0], { repeat: { count: 2, around: "y" } }),
       peg("PegBack", [0, 0, "-$hw - 0.6"]),
-      peg("PegPorch", [0, 0, "$hw * 0.6 + 0.58"]),
+      peg("PegPorch", [0, 0, `${front} + 0.1`]),
     ]));
   } else if (style === "ridge") {
     kids.push(group("Canvas", [
@@ -173,7 +183,7 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       num("height", s.h[2], s.h[0], s.h[1], "Height of the top in metres."),
     ];
   const vars: Record<string, string> = round ? { r: "$diameter / 2", h: "$height", ...(style === "bell" ? { wall: "$wallHeight" } : {}) } : { hl: "$length / 2", hw: "$width / 2", h: "$height" };
-  const names = [f.a, f.b, "rope", "aluminium", "oak", "rough_timber", "galvanised"];
+  const names = [f.a, f.b, "rope", "aluminium", "oak", "rough_timber", "galvanised", ...(style === "dome" ? ["pole_black", "mesh_dark"] : [])];
   const materials: Record<string, MaterialDef> = {};
   for (const n of names) materials[n] = LOCAL[n] ?? (mats(n)[n] as MaterialDef);
   const title = { dome: "dome tent", ridge: "ridge tent", tipi: "tipi", bell: "bell tent" }[style];

@@ -19,17 +19,18 @@ interface DroneDef {
   accent: MaterialDef;
 }
 
-const P = (r: number, g: number, b: number, m = 0.1, rough = 0.35): MaterialDef => ({ color: [r, g, b], metallic: m, roughness: rough });
+/** Matte moulded plastic (the "plastic" texture); with metallic set, a satin anodised trim instead. */
+const P = (r: number, g: number, b: number, m = 0, rough = 0.5): MaterialDef => ({ color: [r, g, b], metallic: m, roughness: m > 0 ? 0.35 : rough, texture: m > 0 ? "brushed" : "plastic" });
 
 const DRONES: DroneDef[] = [
-  { kind: "camera", name: "camera quadcopter", text: "a compact camera quadcopter with a streamlined shell, four arms with motors, two-blade props, landing feet and a gimbal camera under the nose", arms: 4, blades: 2, span: [0.42, 0.34, 0.5], prop: [0.12, 0.1, 0.14], leg: [0.06, 0.045, 0.09], colour: "light grey", nl: "lichtgrijs", shell: P(0.55, 0.56, 0.58), accent: P(0.8, 0.45, 0.02) },
-  { kind: "camera", name: "camera quadcopter", text: "a compact camera quadcopter with a streamlined shell, four arms with motors, two-blade props, landing feet and a gimbal camera under the nose", arms: 4, blades: 2, span: [0.5, 0.42, 0.6], prop: [0.14, 0.12, 0.17], leg: [0.12, 0.09, 0.16], colour: "white", nl: "wit", shell: P(0.82, 0.82, 0.8, 0, 0.3), accent: P(0.5, 0.45, 0.1, 0.8) },
-  { kind: "racer", name: "FPV racing quad", text: "an FPV racing quad on a bare carbon X frame with three-blade props, a tilted FPV camera, a strapped battery and an antenna", arms: 4, blades: 3, span: [0.22, 0.18, 0.28], prop: [0.064, 0.05, 0.08], leg: [0.02, 0.012, 0.03], colour: "red", nl: "rood", shell: P(0.55, 0.02, 0.02), accent: P(0.85, 0.3, 0.02) },
-  { kind: "racer", name: "FPV racing quad", text: "an FPV racing quad on a bare carbon X frame with three-blade props, a tilted FPV camera, a strapped battery and an antenna", arms: 4, blades: 3, span: [0.25, 0.2, 0.3], prop: [0.076, 0.06, 0.09], leg: [0.02, 0.012, 0.03], colour: "lime", nl: "limoengroen", shell: P(0.3, 0.6, 0.02), accent: P(0.02, 0.1, 0.5) },
-  { kind: "hexa", name: "hexacopter", text: "a hexacopter with a round domed body, six tube arms with motors, a landing skid and a payload box", arms: 6, blades: 2, span: [0.9, 0.75, 1.05], prop: [0.2, 0.17, 0.24], leg: [0.2, 0.16, 0.26], colour: "black", nl: "zwart", shell: P(0.03, 0.03, 0.035, 0.3), accent: P(0.85, 0.3, 0.02) },
-  { kind: "hexa", name: "hexacopter", text: "a hexacopter with a round domed body, six tube arms with motors, a landing skid and a payload box", arms: 6, blades: 2, span: [0.8, 0.7, 0.95], prop: [0.18, 0.15, 0.21], leg: [0.18, 0.14, 0.24], colour: "red", nl: "rood", shell: P(0.55, 0.02, 0.02), accent: P(0.8, 0.8, 0.78) },
-  { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.2, 1.0, 1.35], prop: [0.24, 0.2, 0.27], leg: [0.28, 0.22, 0.34], colour: "carbon", nl: "carbon", shell: P(0.04, 0.04, 0.045, 0.5, 0.3), accent: P(0.8, 0.5, 0.02) },
-  { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.1, 0.95, 1.3], prop: [0.22, 0.19, 0.25], leg: [0.26, 0.2, 0.32], colour: "white", nl: "wit", shell: P(0.82, 0.82, 0.8, 0, 0.3), accent: P(0.02, 0.1, 0.45) },
+  { kind: "camera", name: "camera quadcopter", text: "a compact camera quadcopter with a streamlined shell, four arms with motors, two-blade props, landing feet and a gimbal camera under the nose", arms: 4, blades: 2, span: [0.42, 0.34, 0.5], prop: [0.12, 0.1, 0.14], leg: [0.06, 0.045, 0.09], colour: "light grey", nl: "lichtgrijs", shell: P(0.34, 0.35, 0.36), accent: P(0.55, 0.15, 0.012) },
+  { kind: "camera", name: "camera quadcopter", text: "a compact camera quadcopter with a streamlined shell, four arms with motors, two-blade props, landing feet and a gimbal camera under the nose", arms: 4, blades: 2, span: [0.5, 0.42, 0.6], prop: [0.14, 0.12, 0.17], leg: [0.12, 0.09, 0.16], colour: "white", nl: "wit", shell: P(0.6, 0.6, 0.58, 0, 0.42), accent: P(0.62, 0.52, 0.32, 0.8) },
+  { kind: "racer", name: "FPV racing quad", text: "an FPV racing quad on a bare carbon X frame with three-blade props, a tilted FPV camera, a strapped battery and an antenna", arms: 4, blades: 3, span: [0.22, 0.18, 0.28], prop: [0.064, 0.05, 0.08], leg: [0.02, 0.012, 0.03], colour: "red", nl: "rood", shell: P(0.36, 0.022, 0.02), accent: P(0.55, 0.15, 0.012) },
+  { kind: "racer", name: "FPV racing quad", text: "an FPV racing quad on a bare carbon X frame with three-blade props, a tilted FPV camera, a strapped battery and an antenna", arms: 4, blades: 3, span: [0.25, 0.2, 0.3], prop: [0.076, 0.06, 0.09], leg: [0.02, 0.012, 0.03], colour: "lime", nl: "limoengroen", shell: P(0.14, 0.36, 0.02), accent: P(0.02, 0.07, 0.25) },
+  { kind: "hexa", name: "hexacopter", text: "a hexacopter with a round domed body, six tube arms with motors, a landing skid and a payload box", arms: 6, blades: 2, span: [0.9, 0.75, 1.05], prop: [0.2, 0.17, 0.24], leg: [0.2, 0.16, 0.26], colour: "black", nl: "zwart", shell: P(0.035, 0.035, 0.04), accent: P(0.55, 0.15, 0.012) },
+  { kind: "hexa", name: "hexacopter", text: "a hexacopter with a round domed body, six tube arms with motors, a landing skid and a payload box", arms: 6, blades: 2, span: [0.8, 0.7, 0.95], prop: [0.18, 0.15, 0.21], leg: [0.18, 0.14, 0.24], colour: "red", nl: "rood", shell: P(0.36, 0.022, 0.02), accent: P(0.6, 0.6, 0.58) },
+  { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.2, 1.0, 1.35], prop: [0.24, 0.2, 0.27], leg: [0.28, 0.22, 0.34], colour: "carbon", nl: "carbon", shell: { color: [0.035, 0.037, 0.042], metallic: 0, roughness: 0.32, texture: "fabric" }, accent: P(0.6, 0.38, 0.02) },
+  { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.1, 0.95, 1.3], prop: [0.22, 0.19, 0.25], leg: [0.26, 0.2, 0.32], colour: "white", nl: "wit", shell: P(0.6, 0.6, 0.58, 0, 0.42), accent: P(0.02, 0.07, 0.25) },
 ];
 
 function buildDrone(d: DroneDef): AssetDraft {
@@ -117,12 +118,14 @@ function buildDrone(d: DroneDef): AssetDraft {
     ],
     materials: {
       shell: d.shell, accent: d.accent, carbon: VMATS["carbon"]!, dark_glass: VMATS["dark_glass"]!,
-      plastic_dark: { color: [0.04, 0.04, 0.045], metallic: 0, roughness: 0.5 },
-      motor: { color: [0.08, 0.08, 0.09], metallic: 0.8, roughness: 0.35 },
-      prop: d.kind === "racer" ? { color: [0.85, 0.3, 0.02, 0.85], metallic: 0, roughness: 0.3, alpha: "BLEND" } : { color: [0.05, 0.05, 0.055], metallic: 0, roughness: 0.4 },
-      pcb_green: { color: [0.02, 0.2, 0.06], metallic: 0.2, roughness: 0.5 },
+      plastic_dark: { color: [0.04, 0.04, 0.045], metallic: 0, roughness: 0.5, texture: "plastic" },
+      // Motor bells are anodised aluminium (dark grey, not a black mirror).
+      motor: VMATS["alloy_dark"]!,
+      prop: d.kind === "racer" ? { color: [0.55, 0.15, 0.012, 0.85], metallic: 0, roughness: 0.3, alpha: "BLEND" } : { color: [0.035, 0.035, 0.04], metallic: 0, roughness: 0.4, texture: "plastic" },
+      pcb_green: { color: [0.02, 0.12, 0.045], metallic: 0, roughness: 0.45, texture: "plastic" },
       led: { color: [0.6, 0.02, 0.02], metallic: 0, roughness: 0.2, emissive: [0.8, 0.02, 0.01] },
-      ...mats("aluminium", "rubber"),
+      aluminium: VMATS["alloy"]!,
+      ...mats("rubber"),
     },
     nodes: [group("Drone", kids, {
       vars: {

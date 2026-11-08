@@ -1,6 +1,6 @@
 import { box, cap, cyl, group, lathe, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, useMats, wrapLabel } from "./common.js";
+import { an, finishName, finishTags, useMats, worn, wrapLabel } from "./common.js";
 
 type Finish = { main: string; trim: string; accent: string };
 interface Style {
@@ -107,8 +107,9 @@ function steelDrum(f: Finish): { nodes: SpecNode[]; params: ParamDef[] } {
   return {
     nodes: [
       group("SteelDrum", [
-        lathe("Body", drumProfile(), { segments: 40 }),
+        lathe("Body", drumProfile(), { segments: 40, material: worn(f.main) }),
         wrapLabel("Label", "$R", 32, "$H * 0.4", "$H * 0.6", f.accent),
+        box("Run_{i}", [0.03, "$H * 0.28", 0.006], { at: [0, "$H * 0.8", "$R + 0.003"], repeat: { count: 3, around: "y", phase: 110 }, material: "rust_streak" }),
         group("Lid", [
           cyl("Head", "$R - 0.013", 0.006, { anchor: "base", segments: 40 }),
           lathe("Emboss", [["$R * 0.7", 0.004], ["$R * 0.72", 0.009], ["$R * 0.76", 0.009], ["$R * 0.78", 0.004]], { segments: 40 }),
@@ -129,8 +130,9 @@ function openDrum(f: Finish): { nodes: SpecNode[]; params: ParamDef[] } {
   return {
     nodes: [
       group("OpenDrum", [
-        lathe("Body", side, { segments: 40 }),
+        lathe("Body", side, { segments: 40, material: worn(f.main) }),
         wrapLabel("Stencil", "$R", 44, "$H * 0.44", "$H * 0.56", f.accent),
+        box("Run_{i}", [0.03, "$H * 0.25", 0.008], { at: [0, "$H * 0.8", "$R + 0.004"], repeat: { count: 2, around: "y", phase: 130 }, material: "rust_streak" }),
         group("Lid", [
           lathe("Cover", [["$R + 0.004", 0], ["$R + 0.008", 0.01], ["$R + 0.004", 0.022], ["$R - 0.02", 0.024], ["$R * $bungs", 0.03], ["$R * $bungs - 0.01", 0.024]], { segments: 40 }),
           lathe("Clamp", [["$R + 0.004", -0.006], ["$R + 0.014", -0.004], ["$R + 0.018", 0.012], ["$R + 0.014", 0.028], ["$R + 0.004", 0.03]], { segments: 40, material: f.trim }),
@@ -242,7 +244,7 @@ function barrel(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. It stands upright on y = 0 and its label or tap faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params,
-    materials: useMats(f.main, f.trim, f.accent, "hole"),
+    materials: useMats(f.main, f.trim, f.accent, "hole", worn(f.main), "rust_streak"),
     nodes,
   };
 }

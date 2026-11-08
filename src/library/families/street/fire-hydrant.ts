@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { nice, up, useMats } from "./common.js";
+import { GRIME, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "american" | "column" | "post" | "standpipe";
 interface Finish { body: string; cap: string }
@@ -40,7 +40,8 @@ function nodes(style: Style, f: Finish): SpecNode[] {
     case "american":
       return [
         lathe("Barrel", [["$r + 0.07", 0], ["$r + 0.07", 0.035], ["$r + 0.03", 0.05], ["$r", 0.09], ["$r", "$height - 0.2"], ["$r + 0.03", "$height - 0.19"], ["$r + 0.03", "$height - 0.155"], ["$r", "$height - 0.15"]], { segments: 24 }),
-        cyl("Bolt_{i}", 0.012, 0.02, { at: ["$r + 0.05", 0.035, 0], anchor: "base", segments: 6, repeat: { count: 8, around: "y", phase: 22.5 }, material: "steel" }),
+        cyl("Bolt_{i}", 0.012, 0.02, { at: ["$r + 0.05", 0.035, 0], anchor: "base", segments: 6, repeat: { count: 8, around: "y", phase: 22.5 }, material: "rust" }),
+        ...grimeProfile("Grime", [["$r + 0.07", 0.001], ["$r + 0.07", 0.035], ["$r + 0.03", 0.05], ["$r", 0.09], ["$r", 0.22]]),
         outlet("Outlet_L", "$out", 0.08, { at: ["$r - 0.01", "$height * 0.58", 0], mirror: "Outlet_R" }, f.cap),
         outlet("Outlet_F", "$out * 1.5", 0.08, { at: [0, "$height * 0.48", "$r - 0.01"], rotate: [0, -90, 0] }, f.cap),
         group("Cap", [
@@ -52,6 +53,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
       return [
         lathe("Barrel", [["$r * 2", 0], ["$r * 2", 0.03], ["$r * 1.5", 0.07], ["$r * 1.1", 0.2], ["$r", 0.3], ["$r", "$height * 0.55"], ["$r * 1.25", "$height * 0.6"], ["$r * 1.25", "$height * 0.75"], ["$r", "$height * 0.8"], ["$r", "$height - 0.08"]], { segments: 24 }),
         cyl("Band", "$r + 0.003", 0.06, { at: [0, "$height * 0.86", 0], segments: 24, material: "reflector_white" }),
+        ...grimeProfile("Grime", [["$r * 2", 0.001], ["$r * 2", 0.03], ["$r * 1.5", 0.07], ["$r * 1.1", 0.2], ["$r", 0.3]]),
         outlet("Outlet_L", "$out", 0.09, { at: ["$r * 1.15", "$height * 0.66", 0], rotate: [0, 0, -30], mirror: "Outlet_R" }, f.cap),
         group("Cap", [
           lathe("Dome", [["$r + 0.015", "$height - 0.09"], ["$r + 0.015", "$height - 0.07"], ["$r * 0.75", "$height - 0.03"], [0.03, "$height - 0.02"]], { segments: 24 }),
@@ -62,6 +64,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
       return [
         lathe("Barrel", [["$r * 1.6", 0], ["$r * 1.6", 0.025], ["$r * 1.1", 0.06], ["$r", 0.1], ["$r", "$height * 0.45"], ["$r * 1.2", "$height * 0.48"], ["$r * 1.2", "$height * 0.52"], ["$r", "$height * 0.55"], ["$r", "$height - 0.06"]], { segments: 20 }),
         outlet("Outlet_F", "$out", 0.07, { at: [0, "$height * 0.7", "$r - 0.01"], rotate: [0, -90, 0] }, f.cap),
+        ...grimeProfile("Grime", [["$r * 1.6", 0.001], ["$r * 1.6", 0.025], ["$r * 1.1", 0.06], ["$r", 0.1], ["$r", 0.2]], { segments: 20 }),
         box("Plate", ["$r * 1.2", 0.08, 0.008], { at: [0, "$height * 0.3", "$r - 0.002"], bevel: 0.002, material: "paint_white" }),
         group("Cap", [
           ellipsoid("Dome", ["$r + 0.01", 0.05, "$r + 0.01"], { at: [0, "$height - 0.06", 0], segments: 20 }),
@@ -71,7 +74,8 @@ function nodes(style: Style, f: Finish): SpecNode[] {
     case "standpipe":
       return [
         lathe("Barrel", [["$r + 0.08", 0], ["$r + 0.08", 0.05], ["$r + 0.02", 0.07], ["$r", 0.1], ["$r", "$height - 0.1"], ["$r + 0.03", "$height - 0.09"], ["$r + 0.03", "$height - 0.06"]], { segments: 24 }),
-        cyl("Bolt_{i}", 0.014, 0.02, { at: ["$r + 0.06", 0.05, 0], anchor: "base", segments: 6, repeat: { count: 8, around: "y", phase: 22.5 }, material: "steel" }),
+        cyl("Bolt_{i}", 0.014, 0.02, { at: ["$r + 0.06", 0.05, 0], anchor: "base", segments: 6, repeat: { count: 8, around: "y", phase: 22.5 }, material: "rust" }),
+        ...grimeProfile("Grime", [["$r + 0.08", 0.001], ["$r + 0.08", 0.05], ["$r + 0.02", 0.07], ["$r", 0.1], ["$r", 0.2]]),
         outlet("Outlet_{i}", "$out", 0.08, { at: ["$r - 0.01", "$height * 0.55", 0], repeat: { count: 4, around: "y", phase: 0 } }, f.cap),
         group("Cap", [
           cyl("Bonnet", "$r + 0.01", 0.05, { at: [0, "$height - 0.065", 0], anchor: "base", segments: 24, bevel: 0.01 }),
@@ -103,7 +107,7 @@ function makeHydrant(style: Style, f: Finish): AssetDraft {
     description: `A ${b} ${s.title}: ${s.text}. It faces +z.`,
     tags: [style, b, "brandkraan", "hydrant", "bovengrondse brandkraan"],
     params: params(style),
-    materials: useMats(f.body, f.cap, "steel", "reflector_white", "paint_white"),
+    materials: { ...useMats(f.body, f.cap, "steel", "rust", "reflector_white", "paint_white"), ...GRIME(f.body) },
     nodes: [group("FireHydrant", nodes(style, f), { material: f.body })],
   };
 }

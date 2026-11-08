@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
-import { mats, type MaterialDef } from "../../palette.js";
+import type { MaterialDef } from "../../palette.js";
 import { f, VMATS } from "./parts.js";
 import { beamAt, keelAt, sheerAt, shellSection, solidSection, type HullShape } from "./hull.js";
 
@@ -21,20 +21,21 @@ interface BoatDef {
   accent: MaterialDef;
 }
 
-const P = (r: number, g: number, b: number, m = 0.15): MaterialDef => ({ color: [r, g, b], metallic: m, roughness: 0.25 });
-const WHITE = P(0.82, 0.82, 0.8, 0.05);
+/** Polyester gelcoat: a glossy non-metal; a metallic flake gelcoat gets a little metallic and the "painted" texture. */
+const P = (r: number, g: number, b: number, m = 0): MaterialDef => ({ color: [r, g, b], metallic: m, roughness: m > 0 ? 0.25 : 0.2, ...(m > 0 ? { texture: "painted" } : {}) });
+const WHITE = P(0.64, 0.64, 0.61);
 
 const BOATS: BoatDef[] = [
-  { kind: "runabout", name: "bowrider runabout", text: "a sporty open runabout with a wrap-around windscreen, two helm seats, a rear bench and an outboard", length: [5.6, 4.8, 6.4], beam: [2.25, 2.0, 2.45], freeboard: [0.75, 0.65, 0.85], hull: { transom: 0.92, sheerRise: 0.35, stemRise: 1.0, vee: 1 }, deck: 0.66, colour: "white and red", nl: "wit rood", paint: WHITE, accent: P(0.55, 0.02, 0.02) },
-  { kind: "runabout", name: "bowrider runabout", text: "a sporty open runabout with a wrap-around windscreen, two helm seats, a rear bench and an outboard", length: [5.2, 4.6, 6.0], beam: [2.15, 1.95, 2.35], freeboard: [0.72, 0.62, 0.82], hull: { transom: 0.9, sheerRise: 0.35, stemRise: 1.0, vee: 1 }, deck: 0.66, colour: "navy", nl: "donkerblauw", paint: P(0.015, 0.03, 0.1, 0.3), accent: WHITE },
-  { kind: "cruiser", name: "sports cruiser", text: "a speedboat with a cuddy cabin under a raised foredeck with portholes, a raked windscreen, a sun pad, a swim platform and a stern drive", length: [7.6, 6.6, 8.6], beam: [2.55, 2.4, 2.8], freeboard: [0.95, 0.85, 1.05], hull: { transom: 0.94, sheerRise: 0.3, stemRise: 0.9, vee: 1 }, deck: 0.52, colour: "white", nl: "wit", paint: WHITE, accent: P(0.02, 0.02, 0.022) },
-  { kind: "cruiser", name: "sports cruiser", text: "a speedboat with a cuddy cabin under a raised foredeck with portholes, a raked windscreen, a sun pad, a swim platform and a stern drive", length: [8.2, 7.2, 9.2], beam: [2.7, 2.5, 2.9], freeboard: [1.0, 0.9, 1.1], hull: { transom: 0.94, sheerRise: 0.3, stemRise: 0.9, vee: 1 }, deck: 0.52, colour: "silver", nl: "zilver", paint: P(0.55, 0.57, 0.6, 0.6), accent: P(0.02, 0.08, 0.3) },
-  { kind: "fishing", name: "fishing boat", text: "a workboat with a wheelhouse forward, an open aft deck with rod holders, a mast with lights and a guard rail", length: [7.0, 6.2, 8.4], beam: [2.6, 2.4, 2.9], freeboard: [0.95, 0.85, 1.1], hull: { transom: 0.86, sheerRise: 0.45, stemRise: 1.0, vee: 0.6 }, deck: 0.62, colour: "blue", nl: "blauw", paint: P(0.04, 0.15, 0.4), accent: WHITE },
-  { kind: "fishing", name: "fishing boat", text: "a workboat with a wheelhouse forward, an open aft deck with rod holders, a mast with lights and a guard rail", length: [6.4, 5.8, 7.4], beam: [2.4, 2.2, 2.7], freeboard: [0.9, 0.8, 1.05], hull: { transom: 0.86, sheerRise: 0.45, stemRise: 1.0, vee: 0.6 }, deck: 0.62, colour: "green", nl: "groen", paint: P(0.04, 0.2, 0.08), accent: P(0.8, 0.5, 0.02) },
-  { kind: "console", name: "centre-console boat", text: "a centre-console fishing boat with a T-top over the helm, a leaning-post seat, a bow seat and a big outboard", length: [6.2, 5.4, 7.2], beam: [2.4, 2.2, 2.6], freeboard: [0.8, 0.7, 0.9], hull: { transom: 0.9, sheerRise: 0.4, stemRise: 1.0, vee: 1 }, deck: 0.78, colour: "sand", nl: "zandkleur", paint: P(0.7, 0.62, 0.48), accent: P(0.02, 0.02, 0.022) },
-  { kind: "console", name: "centre-console boat", text: "a centre-console fishing boat with a T-top over the helm, a leaning-post seat, a bow seat and a big outboard", length: [6.8, 6.0, 7.6], beam: [2.5, 2.3, 2.7], freeboard: [0.85, 0.75, 0.95], hull: { transom: 0.9, sheerRise: 0.4, stemRise: 1.0, vee: 1 }, deck: 0.78, colour: "grey", nl: "grijs", paint: P(0.3, 0.32, 0.34, 0.2), accent: P(0.0, 0.25, 0.3) },
-  { kind: "dinghy", name: "aluminium dinghy", text: "a small open aluminium dinghy with two thwart seats, a rubbing strake and a small outboard", length: [3.4, 3.0, 4.0], beam: [1.45, 1.35, 1.6], freeboard: [0.45, 0.4, 0.52], hull: { transom: 0.82, sheerRise: 0.3, stemRise: 0.8, vee: 0.3, stem: 0.3 }, deck: 0.88, colour: "aluminium", nl: "aluminium", paint: { color: [0.7, 0.72, 0.74], metallic: 0.9, roughness: 0.4 }, accent: P(0.02, 0.15, 0.06) },
-  { kind: "rib", name: "rigid inflatable boat", text: "a RIB with grey inflatable tubes round a deep-V hull, a small console with a seat and an outboard", length: [4.8, 4.0, 5.6], beam: [2.05, 1.9, 2.25], freeboard: [0.5, 0.45, 0.6], hull: { transom: 0.8, sheerRise: 0.25, stemRise: 1.0, vee: 1, stem: 0.12 }, deck: 0.82, colour: "grey and orange", nl: "grijs oranje", paint: P(0.03, 0.03, 0.035, 0.1), accent: P(0.85, 0.3, 0.02) },
+  { kind: "runabout", name: "bowrider runabout", text: "a sporty open runabout with a wrap-around windscreen, two helm seats, a rear bench and an outboard", length: [5.6, 4.8, 6.4], beam: [2.25, 2.0, 2.45], freeboard: [0.75, 0.65, 0.85], hull: { transom: 0.92, sheerRise: 0.35, stemRise: 1.0, vee: 1 }, deck: 0.66, colour: "white and red", nl: "wit rood", paint: WHITE, accent: P(0.34, 0.022, 0.02) },
+  { kind: "runabout", name: "bowrider runabout", text: "a sporty open runabout with a wrap-around windscreen, two helm seats, a rear bench and an outboard", length: [5.2, 4.6, 6.0], beam: [2.15, 1.95, 2.35], freeboard: [0.72, 0.62, 0.82], hull: { transom: 0.9, sheerRise: 0.35, stemRise: 1.0, vee: 1 }, deck: 0.66, colour: "navy", nl: "donkerblauw", paint: P(0.016, 0.028, 0.08, 0.3), accent: WHITE },
+  { kind: "cruiser", name: "sports cruiser", text: "a speedboat with a cuddy cabin under a raised foredeck with portholes, a raked windscreen, a sun pad, a swim platform and a stern drive", length: [7.6, 6.6, 8.6], beam: [2.55, 2.4, 2.8], freeboard: [0.95, 0.85, 1.05], hull: { transom: 0.94, sheerRise: 0.3, stemRise: 0.9, vee: 1 }, deck: 0.52, colour: "white", nl: "wit", paint: WHITE, accent: P(0.022, 0.022, 0.024) },
+  { kind: "cruiser", name: "sports cruiser", text: "a speedboat with a cuddy cabin under a raised foredeck with portholes, a raked windscreen, a sun pad, a swim platform and a stern drive", length: [8.2, 7.2, 9.2], beam: [2.7, 2.5, 2.9], freeboard: [1.0, 0.9, 1.1], hull: { transom: 0.94, sheerRise: 0.3, stemRise: 0.9, vee: 1 }, deck: 0.52, colour: "silver", nl: "zilver", paint: P(0.38, 0.39, 0.4, 0.35), accent: P(0.02, 0.06, 0.2) },
+  { kind: "fishing", name: "fishing boat", text: "a workboat with a wheelhouse forward, an open aft deck with rod holders, a mast with lights and a guard rail", length: [7.0, 6.2, 8.4], beam: [2.6, 2.4, 2.9], freeboard: [0.95, 0.85, 1.1], hull: { transom: 0.86, sheerRise: 0.45, stemRise: 1.0, vee: 0.6 }, deck: 0.62, colour: "blue", nl: "blauw", paint: P(0.03, 0.09, 0.25), accent: WHITE },
+  { kind: "fishing", name: "fishing boat", text: "a workboat with a wheelhouse forward, an open aft deck with rod holders, a mast with lights and a guard rail", length: [6.4, 5.8, 7.4], beam: [2.4, 2.2, 2.7], freeboard: [0.9, 0.8, 1.05], hull: { transom: 0.86, sheerRise: 0.45, stemRise: 1.0, vee: 0.6 }, deck: 0.62, colour: "green", nl: "groen", paint: P(0.025, 0.1, 0.045), accent: P(0.6, 0.38, 0.02) },
+  { kind: "console", name: "centre-console boat", text: "a centre-console fishing boat with a T-top over the helm, a leaning-post seat, a bow seat and a big outboard", length: [6.2, 5.4, 7.2], beam: [2.4, 2.2, 2.6], freeboard: [0.8, 0.7, 0.9], hull: { transom: 0.9, sheerRise: 0.4, stemRise: 1.0, vee: 1 }, deck: 0.78, colour: "sand", nl: "zandkleur", paint: P(0.45, 0.4, 0.3), accent: P(0.022, 0.022, 0.024) },
+  { kind: "console", name: "centre-console boat", text: "a centre-console fishing boat with a T-top over the helm, a leaning-post seat, a bow seat and a big outboard", length: [6.8, 6.0, 7.6], beam: [2.5, 2.3, 2.7], freeboard: [0.85, 0.75, 0.95], hull: { transom: 0.9, sheerRise: 0.4, stemRise: 1.0, vee: 1 }, deck: 0.78, colour: "grey", nl: "grijs", paint: P(0.2, 0.21, 0.22), accent: P(0.02, 0.14, 0.15) },
+  { kind: "dinghy", name: "aluminium dinghy", text: "a small open aluminium dinghy with two thwart seats, a rubbing strake and a small outboard", length: [3.4, 3.0, 4.0], beam: [1.45, 1.35, 1.6], freeboard: [0.45, 0.4, 0.52], hull: { transom: 0.82, sheerRise: 0.3, stemRise: 0.8, vee: 0.3, stem: 0.3 }, deck: 0.88, colour: "aluminium", nl: "aluminium", paint: { color: [0.62, 0.63, 0.64], metallic: 0.85, roughness: 0.5, texture: "brushed" }, accent: P(0.02, 0.08, 0.035) },
+  { kind: "rib", name: "rigid inflatable boat", text: "a RIB with grey inflatable tubes round a deep-V hull, a small console with a seat and an outboard", length: [4.8, 4.0, 5.6], beam: [2.05, 1.9, 2.25], freeboard: [0.5, 0.45, 0.6], hull: { transom: 0.8, sheerRise: 0.25, stemRise: 1.0, vee: 1, stem: 0.12 }, deck: 0.82, colour: "grey and orange", nl: "grijs oranje", paint: P(0.035, 0.035, 0.04), accent: P(0.55, 0.15, 0.012) },
 ];
 
 const zs = (s: number): string => `-$L2 + ${f(2 * s)} * $L2`;
@@ -247,17 +248,18 @@ function buildBoat(b: BoatDef): AssetDraft {
       num("freeboard", b.freeboard[0], b.freeboard[1], b.freeboard[2], "Height of the sheer above the waterline at the transom, in metres."),
     ],
     materials: {
-      hull_paint: b.paint, accent: b.accent, deck_white: WHITE,
-      teak: { color: [0.4, 0.22, 0.09], metallic: 0, roughness: 0.7, texture: "wood" },
-      upholstery: { color: [0.75, 0.72, 0.65], metallic: 0, roughness: 0.6 },
+      // Gelcoat hull, a non-skid moulded deck, marine vinyl, teak and stainless fittings.
+      hull_paint: b.paint, accent: b.accent, deck_white: { color: [0.58, 0.58, 0.55], metallic: 0, roughness: 0.6, texture: "plastic" },
+      teak: { color: [0.3, 0.17, 0.07], metallic: 0, roughness: 0.75, texture: "wood" },
+      upholstery: { color: [0.58, 0.56, 0.5], metallic: 0, roughness: 0.5, texture: "leather" },
       rub_black: VMATS["trim_black"]!, dark_glass: VMATS["dark_glass"]!, lamp_lens: VMATS["lamp_lens"]!, lamp_red: VMATS["lamp_red"]!,
       lamp_green: { color: [0.02, 0.5, 0.1], metallic: 0.1, roughness: 0.1, emissive: [0.01, 0.5, 0.08] },
       screen_glass: { color: [0.3, 0.38, 0.42, 0.35], metallic: 0, roughness: 0.04, alpha: "BLEND", doubleSided: true },
-      engine_black: { color: [0.03, 0.03, 0.032], metallic: 0.3, roughness: 0.4 },
-      cowl_white: { color: [0.8, 0.8, 0.78], metallic: 0.2, roughness: 0.25 },
-      cowl_black: { color: [0.025, 0.025, 0.028], metallic: 0.3, roughness: 0.25 },
-      tube_grey: { color: [0.22, 0.23, 0.24], metallic: 0, roughness: 0.65 },
-      ...mats("steel"),
+      engine_black: { color: [0.035, 0.035, 0.038], metallic: 0.25, roughness: 0.45, texture: "painted" },
+      cowl_white: { color: [0.62, 0.62, 0.6], metallic: 0.2, roughness: 0.25, texture: "painted" },
+      cowl_black: { color: [0.025, 0.025, 0.028], metallic: 0.3, roughness: 0.25, texture: "painted" },
+      tube_grey: { color: [0.16, 0.17, 0.18], metallic: 0, roughness: 0.7, texture: "fabric" },
+      steel: VMATS["stainless"]!,
     },
     nodes: [group("Boat", kids, { vars: { L2: "$length / 2", B2: "$beam / 2", fb: "$freeboard", d: "0.1 + $beam * 0.1", ytr: transomTop } })],
   };

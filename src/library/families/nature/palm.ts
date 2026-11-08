@@ -92,7 +92,7 @@ function fanFrond(name: string, material: string, tilt: string, count: string | 
   return group(name, [group("Arch", [
     tube("Stalk", [[0, 0, 0], [0, "$fl * 0.04", "$fl * 0.3"], [0, "$fl * 0.03", "$fl * 0.56"]], ["$fl * 0.02", "$fl * 0.016", "$fl * 0.012"], { segments: 6, material: "palm_rachis" }),
     // The fan stands up from the end of its stalk, facing outward, so the head reads as a round ball of fans.
-    group("Fan", [ellipsoid("Blade", ["$fl * 0.5", "$fl * 0.025", "$fl * 0.45"], { at: [0, 0, "$fl * 0.46"], segments: 18 }), ...ribs], { at: [0, "$fl * 0.03", "$fl * 0.52"], rotate: ["-40 - 15 * sin($i * 1.3)", 0, 0] }),
+    group("Fan", [ellipsoid("Blade", ["$fl * 0.5", "$fl * 0.025", "$fl * 0.45"], { at: [0, 0, "$fl * 0.46"], segments: 18 }), ...ribs], { at: [0, "$fl * 0.03", "$fl * 0.52"], rotate: ["-22 - 12 * sin($i * 1.3)", 0, 0] }),
   ], { vars: { fl: "$frondLength * (0.92 + 0.08 * sin($i * 1.7))" } })], {
     material,
     rotate: [tilt, `9 * sin($i * 2.3)`, 0],

@@ -63,6 +63,36 @@ const VARIANTS: Variant[] = [
   { key: "veteran", label: "veteran", dutch: "oude", leaves: { default: ["leaf_dark", "leaf_green"], fruit: ["leaf_dark", "leaf_green"] }, scale: 1.25, more: 1, seed: 59, fruit: "cherry_fruit", fruitName: "cherries" },
 ];
 
+/** The shaded tone under each leaf colour, and the light tip tone over each sunlit colour. */
+const SHADE: Record<string, string> = { leaf_green: "leaf_shade", leaf_light: "leaf_dark", leaf_dark: "leaf_shade", leaf_autumn: "leaf_autumn_dark", leaf_red: "leaf_red_dark", leaf_yellow: "leaf_autumn", leaf_blossom: "leaf_green" };
+const TIP: Record<string, string> = { leaf_light: "leaf_tip", leaf_green: "leaf_light", leaf_dark: "leaf_green", leaf_yellow: "leaf_yellow", leaf_autumn: "leaf_yellow", leaf_red: "leaf_autumn", leaf_blossom: "leaf_blossom" };
+
+/**
+ * Small, very lumpy leaf tufts round a cluster centred on (x, y, z), in terms of $c: they break the smooth outline of
+ * the cluster into a ragged, many-lobed silhouette, light on the upper, outer side and dark underneath.
+ */
+function tufts(prefix: string, x: string, y: string, z: string, seed: string, tones: { up: string; out: string; low: string }, scale = 1): SpecNode[] {
+  const k = n4(scale);
+  const spots: [string, string, string, string, number][] = [
+    // [dx, dy, dz, size, tone 0 up / 1 out / 2 low] in cluster radii
+    ["0.72", "0.42", "0.38", "0.44", 1],
+    ["0.25", "0.78", "-0.36", "0.42", 0],
+    ["-0.3", "0.66", "0.5", "0.4", 0],
+    ["0.6", "0.05", "-0.66", "0.42", 1],
+    ["0.18", "-0.36", "0.62", "0.4", 2],
+    ["-0.55", "0.2", "-0.45", "0.38", 1],
+  ];
+  return spots.map(([dx, dy, dz, size, tone], n) =>
+    ellipsoid(`${prefix}_${n + 1}`, [`$c * ${size} * ${k}`, `$c * ${size} * 0.82 * ${k}`, `$c * ${size} * 0.9 * ${k}`], {
+      at: [`${x} + $c * ${dx} * ${k}`, `${y} + $c * ${dy} * ${k}`, `${z} + $c * ${dz} * ${k}`],
+      segments: 12,
+      lumps: 0.6,
+      seed: `${seed} + ${n * 31 + 3}`,
+      material: tone === 0 ? tones.up : tone === 1 ? tones.out : tones.low,
+    }),
+  );
+}
+
 const clampRange = (v: number, r: [number, number, number]): number => Math.min(r[2], Math.max(r[1], Math.round(v * 100) / 100));
 
 function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
@@ -70,6 +100,9 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
   const j = (): number => r() * 2 - 1;
   const seedBase = Math.floor(r() * 5000);
   const [leaf, sun] = v.leaves[key] ?? v.leaves.default;
+  // Four tones per crown: shaded inside and underside, the main mass, sunlit tops and the light new growth at the tips.
+  const shade = SHADE[leaf] ?? "leaf_shade";
+  const tip = TIP[sun] ?? sun;
   const phase = Math.round(r() * 60);
   const s = n4(r() * 6);
   const vet = v.key === "veteran";
@@ -104,7 +137,10 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
     tube("TwigLow", [["$L * 0.45", "$ys + ($ye - $ys) * 0.6", "0"], ["$L * 0.75", "$ys + ($ye - $ys) * 0.7", "-$L * 0.3"]], ["$tr * 0.14", "$tr * 0.06"], { segments: 6 }),
     ellipsoid("Leaves", ["$c", "$c * $sq", "$c * 0.9"], { at: ["$L", "$ye + $c * 0.2", 0], segments: 18, lumps, seed: `$i * 13 + ${seedBase + 1}`, material: leaf }),
     ellipsoid("LeavesMid", ["$c * 0.72", "$c * 0.72 * $sq", "$c * 0.7"], { at: ["$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32"], segments: 16, lumps, seed: `$i * 7 + ${seedBase + 2}`, material: sun }),
-    ellipsoid("LeavesSide", ["$c * 0.62", "$c * 0.6 * $sq", "$c * 0.6"], { at: ["$L * 0.8", "$ys + ($ye - $ys) * 0.75", "-$L * 0.32"], segments: 14, lumps, seed: `$i * 5 + ${seedBase + 3}`, material: leaf }),
+    ellipsoid("LeavesSide", ["$c * 0.62", "$c * 0.6 * $sq", "$c * 0.6"], { at: ["$L * 0.8", "$ys + ($ye - $ys) * 0.75", "-$L * 0.32"], segments: 14, lumps, seed: `$i * 5 + ${seedBase + 3}`, material: shade }),
+    ellipsoid("LeavesUnder", ["$c * 0.8", "$c * 0.42 * $sq", "$c * 0.72"], { at: ["$L * 0.9", "$ye - $c * 0.22", 0], segments: 14, lumps: lumps + 0.1, seed: `$i * 3 + ${seedBase + 9}`, material: shade }),
+    ...tufts("LeavesTuft", "$L", "$ye + $c * 0.2", "0", `$i * 17 + ${seedBase + 11}`, { up: tip, out: sun, low: shade }),
+    ...tufts("LeavesMidTuft", "$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32", `$i * 19 + ${seedBase + 12}`, { up: tip, out: leaf, low: shade }, 0.7).slice(0, 4),
   ];
   const extraMats: string[] = [];
   let extraText = "";
@@ -114,7 +150,14 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
   }
   if (sp.extra === "weep") {
     for (const [k, dz] of [[1, -0.3], [2, 0], [3, 0.3]] as const) {
-      armChildren.push(tube(`Drape_${k}`, [["$L * 0.95", "$ye", `$L * ${dz}`], ["$L * 1.1", "$ye - ($ye - $db) * 0.35", `$L * ${dz * 1.1}`], ["$L * 1.14", `$db + ($ye - $db) * ${n4(0.05 + 0.08 * k)}`, `$L * ${dz * 1.15}`]], ["$c * 0.36", "$c * 0.26", "$c * 0.1"], { segments: 7, material: sun }));
+      // A curtain of hanging leaf clumps, narrowing toward its ragged lower end.
+      const bottom = `($db + ($ye - $db) * ${n4(0.05 + 0.08 * k)})`;
+      [0.12, 0.36, 0.6, 0.84].forEach((t, n) => {
+        armChildren.push(ellipsoid(`Drape_${k}_${n + 1}`, [`$c * ${n4(0.34 - 0.13 * t)}`, `($ye - ${bottom}) * 0.16`, `$c * ${n4(0.3 - 0.12 * t)}`], {
+          at: [`$L * ${n4(0.95 + 0.19 * t)}`, `$ye - ($ye - ${bottom}) * ${n4(t)}`, `$L * ${n4(dz * (1 + 0.15 * t))}`],
+          segments: 10, lumps: 0.55, seed: `$i * 23 + ${k * 7 + n}`, material: n % 2 ? leaf : sun,
+        }));
+      });
     }
     extraText = " Three long curtains of leaves hang from every limb end.";
   }
@@ -138,7 +181,8 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
   // The top of the crown, closing the silhouette above the limbs (the lower crown stays open, so the limbs show).
   const crown: SpecNode[] = [
     ellipsoid("Leaves_Top", ["$c * 1.05", "$c * $sq", "$c"], { at: [0, "$height - $c * $sq * 0.95", 0], segments: 18, lumps, seed: seedBase + 5, material: sun }),
-    ellipsoid("Leaves_Fill_{i}", ["$c * 0.85", "$c * 0.8 * $sq", "$c * 0.8"], { at: [`$cr * ${n4(sp.spread * 0.42)}`, "$yc + $ry * 0.32", 0], segments: 16, lumps, seed: `$i * 11 + ${seedBase + 6}`, repeat: { count: 3, around: "y", phase: phase + 60 } }),
+    ...tufts("Leaves_TopTuft", "0", "$height - $c * $sq * 0.95", "0", String(seedBase + 13), { up: tip, out: sun, low: leaf }, 1.1),
+    ellipsoid("Leaves_Fill_{i}", ["$c * 0.85", "$c * 0.8 * $sq", "$c * 0.8"], { at: [`$cr * ${n4(sp.spread * 0.42)}`, "$yc + $ry * 0.32", 0], segments: 16, lumps, seed: `$i * 11 + ${seedBase + 6}`, material: shade, repeat: { count: 3, around: "y", phase: phase + 60 } }),
   ];
   const branchNodes: SpecNode[] = [limbs];
   if (sp.extra === "airy") {
@@ -149,7 +193,12 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
     extraText = " A second, leaning stem carries its own leaf cluster.";
   }
   if (sp.extra === "weep") {
-    crown.push(tube("Drape_Top_{i}", [["$cr * 0.45", "$yc + $ry * 0.3", 0], ["$cr * 0.62", "$yc - ($yc - $db) * 0.3", "$cr * 0.05"], ["$cr * 0.66", "$db + ($yc - $db) * 0.25", "$cr * 0.08"]], ["$c * 0.34", "$c * 0.24", "$c * 0.1"], { segments: 7, material: sun, repeat: { count: 6, around: "y", phase: phase + 30 } }));
+    [0.15, 0.42, 0.7].forEach((t, n) => {
+      crown.push(ellipsoid(`Drape_Top_${n + 1}_{i}`, [`$c * ${n4(0.34 - 0.12 * t)}`, "($yc - $db) * 0.2", `$c * ${n4(0.3 - 0.1 * t)}`], {
+        at: [`$cr * ${n4(0.5 + 0.16 * t)}`, `$yc + $ry * 0.2 - ($yc + $ry * 0.2 - $db) * ${n4(t)}`, `$cr * ${n4(0.08 * t)}`],
+        segments: 10, lumps: 0.55, seed: `$i * 29 + ${n + 3}`, material: n % 2 ? shade : leaf, repeat: { count: 6, around: "y", phase: phase + 30 },
+      }));
+    });
   }
 
   const height = clampRange(sp.height[0] * v.scale, sp.height);
@@ -184,7 +233,7 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
       num("trunkRadius", trunkR, sp.trunk[1], sp.trunk[2], "Trunk radius just above the root flare, in metres."),
       int("branches", branches, sp.limbs[1], sp.limbs[2], "Number of main limbs, each ending in leaf clusters."),
     ],
-    materials: { ...mats(sp.bark, leaf, sun), ...natureMats(mats, ...extraMats) },
+    materials: natureMats(mats, sp.bark, leaf, sun, shade, tip, ...extraMats),
     nodes,
   };
 }

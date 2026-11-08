@@ -1,49 +1,134 @@
 /** Small helpers and extra finishes shared by the storage families. */
 import type { MaterialDef } from "../../palette.js";
-import { mats } from "../../palette.js";
-import type { SpecNode } from "../../kit.js";
+import { mats, PALETTE } from "../../palette.js";
+import { box, group, type SpecNode } from "../../kit.js";
 
 /** A dark recess: holes, slots, apertures, the inside of an opening. */
 export const HOLE: MaterialDef = { color: [0.015, 0.014, 0.013], metallic: 0, roughness: 0.95 };
 
-/** Extra finishes the palette lacks, by name. */
+const paintFin = (r: number, g: number, b: number, roughness = 0.5, metallic = 0.15): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
+const plasticFin = (r: number, g: number, b: number, roughness = 0.55): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "plastic" });
+const woodFin = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
+/** Container paint: satin marine paint on steel; the weathering comes from darker oxidised valleys and rust run-offs. */
+const weatheredFin = (r: number, g: number, b: number, roughness = 0.6): MaterialDef => ({ color: [r, g, b], metallic: 0.2, roughness, texture: "painted" });
+
+/**
+ * Finishes for a warehouse or a dock, by name. Names the palette also has (paint_red, pine, ...) are recalibrated here
+ * for storage: muted industrial RAL-like paints instead of toy primaries, real plastics, darker real woods, kraft
+ * cardboard. Asset ids keep their finish names; only the look changes.
+ */
 export const EXTRA: Record<string, MaterialDef> = {
   hole: HOLE,
-  hdpe_blue: { color: [0.02, 0.12, 0.42], metallic: 0, roughness: 0.55 },
-  hdpe_white: { color: [0.72, 0.72, 0.68], metallic: 0, roughness: 0.6 },
-  hdpe_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.6 },
-  hdpe_grey: { color: [0.32, 0.33, 0.33], metallic: 0, roughness: 0.6 },
-  corten: { color: [0.26, 0.07, 0.03], metallic: 0.35, roughness: 0.75, texture: "concrete" },
-  container_red: { color: [0.29, 0.048, 0.027], metallic: 0.3, roughness: 0.55 },
-  container_blue: { color: [0.02, 0.08, 0.25], metallic: 0.3, roughness: 0.5 },
-  container_green: { color: [0.03, 0.16, 0.06], metallic: 0.3, roughness: 0.55 },
-  container_grey: { color: [0.3, 0.31, 0.31], metallic: 0.3, roughness: 0.55 },
-  container_orange: { color: [0.62, 0.18, 0.03], metallic: 0.3, roughness: 0.5 },
-  container_white: { color: [0.72, 0.72, 0.7], metallic: 0.2, roughness: 0.5 },
-  container_teal: { color: [0.02, 0.2, 0.22], metallic: 0.3, roughness: 0.5 },
-  container_yellow: { color: [0.7, 0.45, 0.02], metallic: 0.3, roughness: 0.5 },
-  rope: { color: [0.5, 0.4, 0.24], metallic: 0, roughness: 0.95 },
-  sand: { color: [0.62, 0.5, 0.32], metallic: 0, roughness: 1, texture: "sand" },
-  cardboard: { color: [0.46, 0.3, 0.15], metallic: 0, roughness: 0.95 },
-  shrink_wrap: { color: [0.75, 0.8, 0.85, 0.45], metallic: 0, roughness: 0.2, alpha: "BLEND" },
-  cable_black: { color: [0.02, 0.02, 0.022], metallic: 0, roughness: 0.55 },
-  cable_orange: { color: [0.75, 0.2, 0.02], metallic: 0, roughness: 0.5 },
-  cable_yellow: { color: [0.75, 0.55, 0.03], metallic: 0, roughness: 0.5 },
-  cable_blue: { color: [0.03, 0.12, 0.45], metallic: 0, roughness: 0.5 },
-  cable_green: { color: [0.05, 0.3, 0.08], metallic: 0, roughness: 0.5 },
-  copper_wire: { color: [0.85, 0.48, 0.32], metallic: 1, roughness: 0.3 },
-  tank_white: { color: [0.75, 0.75, 0.72], metallic: 0.2, roughness: 0.45 },
-  tank_silver: { color: [0.62, 0.63, 0.64], metallic: 0.8, roughness: 0.35 },
-  gas_green: { color: [0.03, 0.22, 0.08], metallic: 0.2, roughness: 0.4 },
-  gas_maroon: { color: [0.25, 0.03, 0.04], metallic: 0.2, roughness: 0.4 },
+  // Painted steel and wood (RAL-like, semi-gloss with an orange-peel ripple).
+  paint_red: paintFin(0.28, 0.035, 0.028),
+  paint_blue: paintFin(0.03, 0.065, 0.17),
+  paint_navy: paintFin(0.018, 0.032, 0.075),
+  paint_green: paintFin(0.035, 0.1, 0.048),
+  paint_forest: paintFin(0.028, 0.065, 0.034, 0.6),
+  paint_yellow: paintFin(0.45, 0.3, 0.028),
+  paint_orange: paintFin(0.42, 0.13, 0.024),
+  paint_white: paintFin(0.52, 0.52, 0.49, 0.5, 0.05),
+  paint_cream: paintFin(0.46, 0.41, 0.31, 0.55, 0),
+  paint_black: paintFin(0.03, 0.03, 0.032, 0.5),
+  paint_grey: paintFin(0.16, 0.17, 0.17, 0.55),
+  paint_anthracite: paintFin(0.05, 0.055, 0.06, 0.55),
+  paint_olive: paintFin(0.08, 0.088, 0.04, 0.7, 0.1),
+  paint_sand: paintFin(0.34, 0.27, 0.16, 0.7, 0.1),
+  paint_sky: paintFin(0.11, 0.21, 0.3, 0.5, 0.1),
+  // Moulded plastics: muted, satin, spark-eroded.
+  plastic_red: plasticFin(0.27, 0.035, 0.03),
+  plastic_blue: plasticFin(0.03, 0.065, 0.17),
+  plastic_green: plasticFin(0.035, 0.1, 0.042),
+  plastic_yellow: plasticFin(0.45, 0.3, 0.028),
+  plastic_orange: plasticFin(0.42, 0.13, 0.024),
+  plastic_grey: plasticFin(0.14, 0.15, 0.15, 0.6),
+  plastic_white: plasticFin(0.47, 0.47, 0.44, 0.5),
+  plastic_black: plasticFin(0.03, 0.03, 0.032, 0.6),
+  hdpe_blue: plasticFin(0.02, 0.05, 0.155, 0.6),
+  hdpe_white: plasticFin(0.45, 0.44, 0.39, 0.62),
+  hdpe_black: plasticFin(0.035, 0.035, 0.037, 0.62),
+  hdpe_grey: plasticFin(0.14, 0.145, 0.145, 0.62),
+  // Woods as they really are (the palette's are a little pale for rough warehouse timber).
+  pine: woodFin(0.36, 0.23, 0.11),
+  birch: woodFin(0.42, 0.32, 0.19, 0.7),
+  light_oak: woodFin(0.32, 0.2, 0.09, 0.7),
+  oak: woodFin(0.26, 0.15, 0.065, 0.7),
+  rough_timber: woodFin(0.26, 0.17, 0.085, 0.9),
+  weathered_wood: woodFin(0.22, 0.19, 0.155, 0.92),
+  whitewash_wood: woodFin(0.42, 0.4, 0.35, 0.85),
+  // Corten and ISO container paints: weathered steel, mottled with oxide.
+  corten: { color: [0.22, 0.075, 0.03], metallic: 0.15, roughness: 0.85, texture: "rust" },
+  container_red: weatheredFin(0.17, 0.042, 0.03),
+  container_blue: weatheredFin(0.028, 0.055, 0.125),
+  container_green: weatheredFin(0.032, 0.075, 0.042),
+  container_grey: weatheredFin(0.17, 0.18, 0.18),
+  container_orange: weatheredFin(0.33, 0.105, 0.03),
+  container_white: weatheredFin(0.44, 0.44, 0.41, 0.55),
+  container_teal: weatheredFin(0.022, 0.08, 0.085),
+  container_yellow: weatheredFin(0.38, 0.26, 0.03),
+  rope: { color: [0.3, 0.22, 0.12], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_beige: { color: [0.36, 0.31, 0.22], metallic: 0, roughness: 0.95, texture: "fabric" },
+  sand: { color: [0.5, 0.4, 0.25], metallic: 0, roughness: 1, texture: "sand" },
+  /** Kraft corrugated board, a little mottled. */
+  cardboard: { color: [0.3, 0.19, 0.095], metallic: 0, roughness: 0.92, texture: "painted" },
+  /** Brown packing tape, a touch glossier and lighter than the board. */
+  tape: { color: [0.36, 0.22, 0.09], metallic: 0, roughness: 0.4 },
+  /** A white printed shipping label. */
+  label_white: { color: [0.62, 0.62, 0.6], metallic: 0, roughness: 0.6 },
+  shrink_wrap: { color: [0.8, 0.82, 0.85, 0.12], metallic: 0, roughness: 0.3, alpha: "BLEND" },
+  cable_black: plasticFin(0.03, 0.03, 0.032, 0.5),
+  cable_orange: plasticFin(0.42, 0.12, 0.022, 0.45),
+  cable_yellow: plasticFin(0.45, 0.31, 0.03, 0.45),
+  cable_blue: plasticFin(0.03, 0.065, 0.18, 0.45),
+  cable_green: plasticFin(0.035, 0.11, 0.045, 0.45),
+  copper_wire: { color: [0.85, 0.48, 0.32], metallic: 1, roughness: 0.35, texture: "brushed" },
+  tank_white: paintFin(0.5, 0.5, 0.47, 0.5, 0.1),
+  tank_silver: { color: [0.55, 0.56, 0.57], metallic: 0.6, roughness: 0.5, texture: "brushed" },
+  /** Site concrete, weathered grey. */
+  concrete: { color: [0.3, 0.295, 0.28], metallic: 0, roughness: 0.92, texture: "concrete" },
+  concrete_dark: { color: [0.17, 0.17, 0.165], metallic: 0, roughness: 0.92, texture: "concrete" },
+  gas_green: paintFin(0.03, 0.15, 0.06, 0.45),
+  gas_maroon: paintFin(0.2, 0.03, 0.035, 0.45),
+  /** Hot-dip galvanised steel: a dull spangled grey. */
+  galvanised: { color: [0.52, 0.54, 0.55], metallic: 0.75, roughness: 0.5, texture: "plastic" },
+  /** Oil, dust and grime: a dark smudge at the foot of things. */
+  grime: { color: [0.05, 0.045, 0.04], metallic: 0, roughness: 0.9, texture: "rust" },
+  /** A translucent film of road dust and grime over the lower part of a wall. */
+  grime_film: { color: [0.07, 0.055, 0.04, 0.35], metallic: 0, roughness: 0.95, alpha: "BLEND" },
+  /** Fresh orange-brown rust, for streaks and patches. */
+  rust_streak: { color: [0.2, 0.075, 0.03], metallic: 0, roughness: 0.92, texture: "rust" },
 };
 
-/** Palette finishes and the extra ones above, ready for an asset's "materials". */
+/** A finish by name: the storage table, the palette, or a derived one ("<name>_worn", "<name>_dark"). */
+function resolve(n: string): MaterialDef {
+  const direct = EXTRA[n] ?? PALETTE[n];
+  if (direct) return direct;
+  const m = /^(.+)_(worn|dark|grime)$/.exec(n);
+  const base = m ? (EXTRA[m[1] as string] ?? PALETTE[m[1] as string]) : undefined;
+  if (!m || !base) return mats(n)[n] as MaterialDef;
+  const [r, g, b] = base.color;
+  const k = m[2] === "worn" ? 0.95 : m[2] === "dark" ? 0.7 : 0.5;
+  return {
+    color: [r * k, g * k, b * k],
+    metallic: Math.min(base.metallic, m[2] === "worn" ? 0.2 : base.metallic),
+    roughness: Math.min(0.95, base.roughness + (m[2] === "dark" ? 0.05 : 0.15)),
+    texture: "rust",
+  };
+}
+
+/** The weathered version of a finish: the same colour mottled with oxide and wear (resolved by useMats). */
+export const worn = (name: string): string => `${name}_worn`;
+/** A darker shade of a finish, for recesses and valleys (resolved by useMats). */
+export const dark = (name: string): string => `${name}_dark`;
+/** A grimy, half-dark version of a finish, for the base of a thing (resolved by useMats). */
+export const grimy = (name: string): string => `${name}_grime`;
+
+/** Storage finishes, palette finishes and derived ones, ready for an asset's "materials". */
 export function useMats(...names: (string | undefined)[]): Record<string, MaterialDef> {
   const out: Record<string, MaterialDef> = {};
   for (const n of names) {
     if (!n || out[n]) continue;
-    out[n] = EXTRA[n] ?? (mats(n)[n] as MaterialDef);
+    out[n] = resolve(n);
   }
   return out;
 }
@@ -82,16 +167,19 @@ export function finishTags(name: string): string[] {
  * `deg` degrees wide from y0 to y1, `t` metres thick, standing proud of the surface by 2 mm.
  */
 export function wrapLabel(name: string, r: string, deg: number, y0: string | number, y1: string | number, material: string, t = 0.004): SpecNode {
-  const steps = 8;
-  const outer: [string, string][] = [];
-  const inner: [string, string][] = [];
-  for (let k = 0; k <= steps; k++) {
-    const a = ((-deg / 2 + (deg * k) / steps) * Math.PI) / 180;
+  // Facets tangent to the surface: robust in any renderer, unlike a concave extruded arc.
+  const steps = Math.max(4, Math.round(deg / 5));
+  const da = (deg / steps) * Math.PI / 180;
+  const facets: SpecNode[] = [];
+  for (let k = 0; k < steps; k++) {
+    const a = ((-deg / 2 + (deg * (k + 0.5)) / steps) * Math.PI) / 180;
     const s = Math.sin(a).toFixed(5), c = Math.cos(a).toFixed(5);
-    outer.push([`(${r} + 0.002) * ${s}`, `(${r} + 0.002) * ${c}`]);
-    inner.push([`(${r} - ${t}) * ${s}`, `(${r} - ${t}) * ${c}`]);
+    facets.push(box(`Facet_${k + 1}`, [`2 * (${r} + 0.002) * ${Math.tan(da / 2).toFixed(5)} + 0.001`, `(${y1}) - (${y0})`, t + 0.002], {
+      at: [`(${r} + 0.002 - ${(t / 2 + 0.001).toFixed(4)}) * ${s}`, `((${y0}) + (${y1})) / 2`, `(${r} + 0.002 - ${(t / 2 + 0.001).toFixed(4)}) * ${c}`],
+      rotate: [0, +(a * 180 / Math.PI).toFixed(3), 0],
+    }));
   }
-  return { name, shape: "extrude", material, plan: [...outer, ...inner.reverse()], y0, y1 };
+  return group(name, facets, { material });
 }
 
 /**
@@ -104,4 +192,63 @@ export function ring(name: string, r0: string | number, r1: string | number, y0:
     profile: [[r0, y0], [r1, y0], [r1, y1], [r0, y1], [r0, y0]],
     ...(o.material ? { material: o.material } : {}), ...(o.at ? { at: o.at } : {}), ...(o.repeat ? { repeat: o.repeat } : {}),
   };
+}
+
+/** A blocky stencil font on a 3 x 5 grid: each glyph is a list of strokes [x0, y0, x1, y1]. */
+export const GLYPHS: Record<string, [number, number, number, number][]> = {
+  A: [[0, 0, 1, 4], [2, 0, 3, 4], [0, 4, 3, 5], [1, 2, 2, 3]],
+  B: [[0, 0, 1, 5], [1, 4, 2.4, 5], [1, 2, 2.4, 3], [1, 0, 2.4, 1], [2.2, 3, 3, 4.4], [2.2, 0.6, 3, 2]],
+  C: [[0, 0, 1, 5], [1, 4, 3, 5], [1, 0, 3, 1]],
+  D: [[0, 0, 1, 5], [1, 4, 2, 5], [1, 0, 2, 1], [2, 1, 3, 4]],
+  E: [[0, 0, 1, 5], [1, 4, 3, 5], [1, 2, 2.5, 3], [1, 0, 3, 1]],
+  F: [[0, 0, 1, 5], [1, 4, 3, 5], [1, 2, 2.5, 3]],
+  G: [[0, 0, 1, 5], [1, 4, 3, 5], [1, 0, 3, 1], [2, 1, 3, 2.5], [1.6, 2, 2, 2.5]],
+  H: [[0, 0, 1, 5], [2, 0, 3, 5], [1, 2, 2, 3]],
+  I: [[1, 0, 2, 5]],
+  K: [[0, 0, 1, 5], [1, 2, 2, 3], [2, 3, 3, 5], [2, 0, 3, 2]],
+  L: [[0, 0, 1, 5], [1, 0, 3, 1]],
+  M: [[0, 0, 0.9, 5], [2.1, 0, 3, 5], [0.9, 4, 2.1, 5], [1.25, 2.5, 1.75, 4]],
+  N: [[0, 0, 1, 5], [2, 0, 3, 5], [1, 3, 1.6, 4.4], [1.4, 2, 2, 3.4]],
+  O: [[0, 0, 1, 5], [2, 0, 3, 5], [1, 4, 2, 5], [1, 0, 2, 1]],
+  P: [[0, 0, 1, 5], [1, 4, 3, 5], [2, 2.5, 3, 4], [1, 2, 3, 3]],
+  R: [[0, 0, 1, 5], [1, 4, 3, 5], [2, 2.5, 3, 4], [1, 2, 2.4, 3], [2, 0, 3, 2]],
+  S: [[0, 2, 1, 5], [1, 4, 3, 5], [1, 2, 3, 3], [2, 0, 3, 2], [0, 0, 2, 1]],
+  T: [[0, 4, 3, 5], [1, 0, 2, 4]],
+  U: [[0, 0, 1, 5], [2, 0, 3, 5], [1, 0, 2, 1]],
+  X: [[0, 3, 1, 5], [2, 3, 3, 5], [0.8, 2, 2.2, 3], [0, 0, 1, 2], [2, 0, 3, 2]],
+  Y: [[0, 3, 1, 5], [2, 3, 3, 5], [0.8, 2, 2.2, 3], [1, 0, 2, 2]],
+  "0": [[0, 0, 1, 5], [2, 0, 3, 5], [1, 4, 2, 5], [1, 0, 2, 1]],
+  "1": [[1, 0, 2, 5], [0.3, 3.8, 1, 4.6]],
+  "2": [[0, 4, 3, 5], [2, 2, 3, 4], [0, 2, 2, 3], [0, 0, 1, 2], [1, 0, 3, 1]],
+  "3": [[0, 4, 2, 5], [0.6, 2, 2, 3], [0, 0, 2, 1], [2, 0, 3, 5]],
+  "4": [[0, 2, 1, 5], [1, 2, 2, 3], [2, 0, 3, 5]],
+  "5": [[0, 4, 3, 5], [0, 2, 1, 4], [1, 2, 3, 3], [2, 0, 3, 2], [0, 0, 2, 1]],
+  "7": [[0, 4, 3, 5], [2, 0, 3, 4]],
+  "8": [[0, 0, 1, 5], [2, 0, 3, 5], [1, 4, 2, 5], [1, 2, 2, 3], [1, 0, 2, 1]],
+  "-": [[0.3, 2, 2.7, 3]],
+};
+
+/**
+ * A stencilled word, its strokes standing `t` metres proud of a face. `face`: "+z"/"-z"/"+x"/"-x" walls read from
+ * outside, "top" read from +z. `at` is the centre of the text on the face; `u` the stroke width (a letter is 3u by 5u).
+ */
+export function stencil(name: string, word: string, face: "+z" | "-z" | "+x" | "-x" | "top", at: [string | number, string | number, string | number], u: number, material: string, t = 0.004): SpecNode {
+  const adv = 4 * u;
+  const half = (word.length * adv - u) / 2;
+  const strokes: SpecNode[] = [];
+  [...word.toUpperCase()].forEach((ch, li) => {
+    (GLYPHS[ch] ?? []).forEach(([x0, y0, x1, y1], k) => {
+      const a = +(li * adv + ((x0 + x1) / 2) * u - half).toFixed(4); // along the reading direction
+      const b = +(((y0 + y1) / 2 - 2.5) * u).toFixed(4); // up the letter
+      const w = +((x1 - x0) * u).toFixed(4), h = +((y1 - y0) * u).toFixed(4);
+      const [size, pos]: [[number, number, number], [number, number, number]] =
+        face === "+z" ? [[w, h, t], [a, b, 0]]
+          : face === "-z" ? [[w, h, t], [-a, b, 0]]
+            : face === "+x" ? [[t, h, w], [0, b, -a]]
+              : face === "-x" ? [[t, h, w], [0, b, a]]
+                : [[w, t, h], [a, 0, -b]];
+      strokes.push(box(`S${li + 1}_${k + 1}`, size, { at: pos }));
+    });
+  });
+  return group(name, strokes, { at, material });
 }

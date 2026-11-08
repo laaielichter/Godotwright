@@ -17,28 +17,28 @@ interface BikeStyle {
   colours: [string, string, MaterialDef][];
 }
 
-const P = (r: number, g: number, b: number, m = 0.4): MaterialDef => carPaint(r, g, b, m, 0.3);
+const P = (r: number, g: number, b: number, m = 0.3): MaterialDef => carPaint(r, g, b, m, 0.28);
 
 const STYLES: Record<Style, BikeStyle> = {
   dutch: {
     name: "Dutch omafiets", text: "an upright Dutch step-through bike with a swooping low frame tube, swept-back bars, full mudguards, a closed chain guard, a rear rack, a skirt guard and a headlamp",
     t: 0.022, wheel: [0.35, 0.34, 0.36], frame: [0.55, 0.5, 0.6], wb: [1.12, 1.08, 1.18], fork: 0.42, head: 0.2,
-    colours: [["black", "zwart", P(0.015, 0.015, 0.017)], ["dark green", "donkergroen", P(0.02, 0.1, 0.05)], ["cream", "crème", P(0.72, 0.64, 0.46, 0.1)]],
+    colours: [["black", "zwart", P(0.018, 0.018, 0.02, 0.2)], ["dark green", "donkergroen", P(0.018, 0.06, 0.032, 0.3)], ["cream", "crème", P(0.56, 0.5, 0.36, 0.2)]],
   },
   road: {
     name: "road bike", text: "a light road racing bike with a diamond frame, drop handlebars, skinny tyres and deep rims",
     t: 0.013, wheel: [0.34, 0.335, 0.345], frame: [0.55, 0.49, 0.6], wb: [0.99, 0.96, 1.03], fork: 0.38, head: 0.15,
-    colours: [["red", "rood", P(0.55, 0.02, 0.02, 0.6)], ["white", "wit", P(0.8, 0.8, 0.78, 0.1)], ["blue", "blauw", P(0.02, 0.1, 0.45, 0.6)]],
+    colours: [["red", "rood", P(0.36, 0.02, 0.018, 0.3)], ["white", "wit", P(0.62, 0.62, 0.6, 0.2)], ["blue", "blauw", P(0.02, 0.07, 0.25, 0.35)]],
   },
   mtb: {
     name: "mountain bike", text: "a hardtail mountain bike with a sloping top tube, a suspension fork, a wide flat bar, disc brakes and knobbly tyres",
     t: 0.03, wheel: [0.36, 0.34, 0.37], frame: [0.45, 0.4, 0.5], wb: [1.12, 1.08, 1.18], fork: 0.5, head: 0.12,
-    colours: [["orange", "oranje", P(0.85, 0.22, 0.01, 0.5)], ["matte black", "mat zwart", { color: [0.02, 0.02, 0.022], metallic: 0.2, roughness: 0.7 }], ["lime green", "limoengroen", P(0.3, 0.6, 0.02, 0.4)]],
+    colours: [["orange", "oranje", P(0.52, 0.13, 0.01, 0.2)], ["matte black", "mat zwart", { color: [0.03, 0.03, 0.033], metallic: 0.2, roughness: 0.6, texture: "painted" }], ["lime green", "limoengroen", P(0.14, 0.36, 0.02, 0.2)]],
   },
   city: {
     name: "city bike", text: "a gentleman's city bike with a diamond frame, flat bars, mudguards, a rear rack and lights",
     t: 0.02, wheel: [0.35, 0.34, 0.36], frame: [0.56, 0.5, 0.62], wb: [1.08, 1.04, 1.14], fork: 0.41, head: 0.17,
-    colours: [["grey", "grijs", P(0.2, 0.21, 0.22, 0.5)], ["navy", "donkerblauw", P(0.015, 0.03, 0.1)], ["burgundy", "bordeaux", P(0.22, 0.02, 0.04)]],
+    colours: [["grey", "grijs", P(0.13, 0.135, 0.14, 0.35)], ["navy", "donkerblauw", P(0.016, 0.028, 0.08, 0.35)], ["burgundy", "bordeaux", P(0.14, 0.014, 0.024, 0.35)]],
   },
 };
 
@@ -210,12 +210,14 @@ function bike(st: Style, ci: number): AssetDraft {
     ],
     materials: {
       paint, carbon: VMATS["carbon"]!, tyre: VMATS["tyre"]!, lamp_lens: VMATS["lamp_lens"]!, lamp_red: VMATS["lamp_red"]!,
-      tyre_cream: { color: [0.55, 0.45, 0.3], metallic: 0, roughness: 0.85 },
-      saddle: st === "dutch" ? { color: [0.25, 0.12, 0.05], metallic: 0, roughness: 0.55 } : { color: [0.02, 0.02, 0.022], metallic: 0, roughness: 0.6 },
-      bar_tape: { color: st === "road" && ci === 1 ? [0.8, 0.8, 0.78] : [0.02, 0.02, 0.022], metallic: 0, roughness: 0.8 },
-      grip_brown: { color: [0.25, 0.12, 0.05], metallic: 0, roughness: 0.6 },
-      fork_black: { color: [0.02, 0.02, 0.022], metallic: 0.3, roughness: 0.45 },
-      ...mats("aluminium", "steel", "chrome", "plastic_black"),
+      tyre_cream: { color: [0.36, 0.29, 0.19], metallic: 0, roughness: 0.85 },
+      saddle: st === "dutch" ? { color: [0.2, 0.09, 0.035], metallic: 0, roughness: 0.55, texture: "leather" } : { color: [0.03, 0.028, 0.028], metallic: 0, roughness: 0.6, texture: "leather" },
+      bar_tape: { color: st === "road" && ci === 1 ? [0.6, 0.6, 0.58] : [0.03, 0.03, 0.032], metallic: 0, roughness: 0.8, texture: "fabric" },
+      grip_brown: { color: [0.2, 0.09, 0.035], metallic: 0, roughness: 0.6, texture: "leather" },
+      fork_black: VMATS["powder_black"]!,
+      aluminium: VMATS["alloy"]!, steel: VMATS["stainless"]!,
+      plastic_black: VMATS["trim_black"]!,
+      ...mats("chrome"),
     },
     nodes: [group("Bicycle", kids, {
       vars: {
