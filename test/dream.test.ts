@@ -25,7 +25,7 @@ import { dreamNotice } from "../src/hooks/agent-hooks.js";
 import { JournalWriter, readJournal, undoJournal } from "../src/journal/journal.js";
 import { fingerprint } from "../src/learn/learn.js";
 import { readLearning, resetLearning, saveLearning, type LearningData } from "../src/learn/store.js";
-import { addLocalLesson } from "../src/lessons/local.js";
+import { addLocalLesson, projectKey } from "../src/lessons/local.js";
 import { errorTemplate } from "../src/lessons/search.js";
 import { createServer } from "../src/mcp/server.js";
 import { makeProject, runCli, tempFolder } from "./helpers.js";
@@ -58,7 +58,10 @@ describe("dream proposals", () => {
     const r = dream(project());
     const drafts = r.proposals.filter((p) => p.kind === "draft-lesson");
     expect(drafts).toHaveLength(1);
-    expect(drafts[0]).toMatchObject({ n: 1, auto: true, detail: { template }, evidence: { "missed by the review": 3 } });
+    expect(drafts[0]).toMatchObject({ n: 1, auto: true, detail: { template }, evidence: { "missed by the review (all projects on this machine)": 3 } });
+    // The learning file counts for the whole machine: the reason does not claim it was this project.
+    expect(drafts[0]!.reason).toMatch(/on this machine \(any project\)/);
+    expect(drafts[0]!.reason).not.toMatch(/in this project/);
     expect(drafts[0]!.key).toMatch(/^[0-9a-f]{8}$/);
     // The template is kept as is, so the lesson it becomes matches the message again.
     expect(errorTemplate(template)).toBe(template);
@@ -386,15 +389,43 @@ describe("the agents-file block", () => {
   });
 
   it("lists recurring mistakes with their fix and the project hints, without drafts, and stays short", () => {
+    const root = project();
     const template = errorTemplate("Cannot call method 'add_child' on a null value.");
-    addLocalLesson({ title: "A node read before the scene is ready is null", fix: "Read the node in ready or later, with an onready variable.", error: "Cannot call method 'add_child' on a null value." });
-    addLocalLesson(draftLessonInput(errorTemplate(MESSAGE), { x: 2 }));
+    addLocalLesson({ title: "A node read before the scene is ready is null", fix: "Read the node in ready or later, with an onready variable.", error: "Cannot call method 'add_child' on a null value." }, { project: root });
+    addLocalLesson(draftLessonInput(errorTemplate(MESSAGE), { x: 2 }), { project: root });
     learn((d) => (d.missedByReview[template] = 3));
-    const block = agentsBlock(readLearning(), { version: 1, hints: [{ use: "Node2D.look_at", not: "Node2D.look_att", count: 2 }], acknowledged: {} });
+    const block = agentsBlock(readLearning(), { version: 1, hints: [{ use: "Node2D.look_at", not: "Node2D.look_att", count: 2 }], acknowledged: {} }, undefined, projectKey(root));
     expect(block).toContain("Recurring mistakes:\n- A node read before the scene is ready is null Fix: Read the node in ready or later");
     expect(block).toContain("Project hints:\n- Use `Node2D.look_at`, not `Node2D.look_att`.");
     expect(block).not.toContain("without a lesson yet");
     expect(block.split("\n").length).toBeLessThan(25);
+  });
+});
+
+describe("agents-file privacy", () => {
+  it("never writes local lessons of other projects, or without a project, into this project's agents file", () => {
+    const mine = project({ "AGENTS.md": "# Agents\n" });
+    const other = project();
+    addLocalLesson({ title: "Lanterns flicker when the tower generator overloads", fix: "Limit the lantern lights per room to eight." }, { project: other });
+    addLocalLesson({ title: "An old lesson kept before projects were tagged", fix: "Keep the old fix written down here somewhere." });
+    addLocalLesson({ title: "Moving decks need the deck speed on the body", fix: "Give the body the deck velocity when it lands." }, { project: mine });
+    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
+    applyDream(mine, "all");
+    const text = readFileSync(join(mine, "AGENTS.md"), "utf8");
+    expect(text).toContain("Moving decks need the deck speed");
+    expect(text).not.toContain("Lanterns");
+    expect(text).not.toContain("old lesson");
+    // The lessons hold a hash of their project, never its path.
+    expect(JSON.stringify(readLearning().localLessons)).not.toContain(mine);
+    expect(readLearning().localLessons.find((l) => l.title.startsWith("Moving"))!.projects).toEqual([projectKey(mine)]);
+  });
+
+  it("does not add a block to an agents file when an apply only marks suggestions as seen", () => {
+    const root = project({ "AGENTS.md": "# Agents\n" });
+    learn((d) => (d.rules["quality/magic-number"] = { reported: 30, confirmed: 0, contradicted: 0, dismissed: 3 }));
+    const r = applyDream(root, "all");
+    expect(r.seen).toHaveLength(1);
+    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe("# Agents\n");
   });
 });
 

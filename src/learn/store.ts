@@ -189,7 +189,8 @@ function localLessonsFrom(v: unknown): LocalLesson[] {
   for (const item of v) {
     const lesson = lessonFrom(item);
     const added = isRecord(item) && typeof item["added"] === "string" ? item["added"] : undefined;
-    if (lesson && lesson.id.startsWith("local/") && added) out.push({ ...lesson, added });
+    const projects = isRecord(item) && Array.isArray(item["projects"]) ? item["projects"].filter((p): p is string => typeof p === "string" && /^[0-9a-f]{16}$/.test(p)).slice(0, 20) : [];
+    if (lesson && lesson.id.startsWith("local/") && added) out.push({ ...lesson, added, ...(projects.length ? { projects } : {}) });
   }
   return out;
 }

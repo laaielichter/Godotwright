@@ -1080,7 +1080,11 @@ once its evidence doubles), a dated report `.godot/godotwright/dreams/<date>-<ti
 agents" block between `<!-- godotwright:dream:start -->` and `<!-- godotwright:dream:end -->` in `AGENTS.md` and
 `CLAUDE.md`: those in the project, else those at the repository root above it. Without either file, the block is only
 written with `--write-agents-file` (MCP `write_agents_file`), which creates `AGENTS.md` in the project. The block holds
-the top five recurring mistakes with their fix and up to eight project hints; drafts stay out of it.
+the top five recurring mistakes with their fix and up to eight project hints; drafts stay out of it. Only bundled
+lessons and local lessons learned in this project go in: a local lesson carries a hash of the project folder it was
+kept in (`godot_lesson_add`, `lessons add` and dream applies set it), and one from another project, or kept before this
+existed, never reaches the file. An apply that only marks suggestions as seen does not add a block. The learning file
+counts Godot errors for the whole machine, so a draft lesson says where its evidence came from.
 
 When it is due: the session-start hook counts sessions per project (a resumed session once) in Godotwright's state
 folder (`dreams.json`, next to the learning file). Once at least `minHours` passed and `minSessions` sessions started

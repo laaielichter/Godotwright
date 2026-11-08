@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import { GodotApi } from "../api/api.js";
 import { readUndone, JournalWriter } from "../journal/journal.js";
 import {
@@ -12,7 +12,7 @@ import {
   type LearningData,
   type LearningUndo,
 } from "../learn/store.js";
-import { addLocalLesson, LessonError, type LessonInput } from "../lessons/local.js";
+import { addLocalLesson, LessonError, projectKey, type LessonInput } from "../lessons/local.js";
 import { projectNames } from "../lessons/names.js";
 import { allLessons, errorTemplate } from "../lessons/search.js";
 import type { Lesson, LocalLesson } from "../lessons/types.js";
@@ -173,8 +173,6 @@ function machineFile(): string {
   return join(stateDir(), "dreams.json");
 }
 
-const projectKey = (root: string) => createHash("sha1").update(resolve(root)).digest("hex").slice(0, 16);
-
 function readMachine(): Record<string, MachineState> {
   try {
     const parsed = JSON.parse(readFileSync(machineFile(), "utf8")) as unknown;
@@ -327,11 +325,23 @@ function shortTemplate(template: string): string {
   return template.length > 110 ? `${template.slice(0, 107).trimEnd()}...` : template;
 }
 
+/** Evidence labels: the learning file counts for the whole machine; transcripts are this project's own. */
+const MACHINE = "missed by the review (all projects on this machine)";
+const PROJECT_SESSIONS = "in this project's session transcripts";
+
+/** Where an error was seen, said honestly: the learning file is for the whole machine, transcripts are this project's. */
+function seenText(evidence: Record<string, number>): string {
+  const machine = evidence[MACHINE] ?? 0;
+  const here = evidence[PROJECT_SESSIONS] ?? 0;
+  const parts = [machine ? `${plural(machine, "time")} in Godot checks on this machine (any project)` : "", here ? `${plural(here, "time")} in this project's sessions` : ""].filter(Boolean);
+  return `Godot printed it ${parts.join(" and ")}`;
+}
+
 /** The draft lesson for a recurring Godot error: symptom and message, the fix left for the agent or person. */
 export function draftLessonInput(template: string, evidence: Record<string, number>): LessonInput {
   return {
     title: `Godot error without a lesson yet: ${shortTemplate(template)}`,
-    symptom: `Godot printed this error ${total(evidence)} times in this project and no review rule or lesson explained it.`,
+    symptom: `${seenText(evidence)}, and no review rule or lesson explained it.`,
     fix: "Not written yet. Find the cause, fix it once, then rewrite this lesson with the cause, the fix and a test.",
     error: template,
     topic: "gdscript",
@@ -369,15 +379,15 @@ export function dream(path: string, options: DreamOptions = {}): DreamResult {
 
   // a. Recurring Godot errors that no rule predicted and no lesson explains.
   const errors = new Map<string, Record<string, number>>();
-  for (const [t, n] of Object.entries(learning.missedByReview)) errors.set(t, { ...errors.get(t), "missed by the review": n });
-  for (const [t, n] of Object.entries(facts.errors)) errors.set(t, { ...errors.get(t), "in session transcripts": n });
+  for (const [t, n] of Object.entries(learning.missedByReview)) errors.set(t, { ...errors.get(t), [MACHINE]: n });
+  for (const [t, n] of Object.entries(facts.errors)) errors.set(t, { ...errors.get(t), [PROJECT_SESSIONS]: n });
   for (const [template, evidence] of errors) {
     if (total(evidence) < MIN_REPEATS || explainedBy(template, learning, api).length) continue;
     raw.push({
       key: keyOf("draft-lesson", template),
       kind: "draft-lesson",
       title: `Godot error without a lesson yet: ${shortTemplate(template)}`,
-      reason: `Godot printed it ${plural(total(evidence), "time")}; no review rule predicted it and no lesson explains it.`,
+      reason: `${seenText(evidence)}; no review rule predicted it and no lesson explains it.`,
       evidence,
       apply: "keeps a draft local lesson with the symptom and the message; the cause and fix are left to write (godot_lesson_add with the same title)",
       auto: true,
@@ -638,7 +648,7 @@ export function applyDream(path: string, selection: string | string[], options: 
     if (!canLearn) return out.skipped.push({ proposal: p, why: "learning is off on this machine (godotwright learn on)" });
     try {
       const before = readLearning().localLessons;
-      const added = addLocalLesson(input, { projectNames: names, now });
+      const added = addLocalLesson(input, { projectNames: names, now, project: root });
       const old = before.find((l) => l.id === added.lesson.id);
       journal.recordLearning({ lessons: [{ id: added.lesson.id, ...(old ? { before: old } : {}), after: lessonHash(added.lesson) }] });
       out.applied.push({ proposal: p, result: `${added.updated ? "updated" : "kept"} ${added.lesson.id}` });
@@ -755,9 +765,11 @@ export function applyDream(path: string, selection: string | string[], options: 
     const stamp = now.toISOString().slice(0, 16).replace("T", "-").replace(":", "");
     write(join(dir, `${stamp}.md`), formatReport(result, out, now));
     const after = readLearning();
-    const block = agentsBlock(after, state, api);
+    const block = agentsBlock(after, state, api, projectKey(root));
     for (const file of agentsFiles(root, options.writeAgentsFile === true)) {
       const current = existsSync(file) ? readFileSync(file, "utf8") : "";
+      // Only marking suggestions as seen changes nothing an agent needs: an agents file gets a block only from a change.
+      if (!out.applied.length && !current.includes(BLOCK_START)) continue;
       write(file, withBlock(current, block), relative(root, file).startsWith(".."));
     }
   }
@@ -784,17 +796,23 @@ export function agentsFiles(root: string, create: boolean): string[] {
   return create ? [join(root, "AGENTS.md")] : [];
 }
 
-/** The block: the top recurring mistakes with their fix, and the project's API hints. Short on purpose. */
-export function agentsBlock(learning: LearningData, state: ProjectDreamState, api: GodotApi = GodotApi.load()): string {
+/**
+ * The block: the top recurring mistakes with their fix, and the project's API hints. Short on purpose. Only lessons that
+ * ship with Godotwright and local lessons learned in this project (`project`: its key) go in: local lessons from other
+ * projects on the machine, or without a project, never do.
+ */
+export function agentsBlock(learning: LearningData, state: ProjectDreamState, api: GodotApi = GodotApi.load(), project?: string): string {
   const mistakes: { lesson: Lesson; weight: number }[] = [];
-  const lessons = allLessons(learning);
+  const mine = learning.localLessons.filter((l) => project !== undefined && (l.projects ?? []).includes(project));
+  const scoped = { ...learning, localLessons: mine };
+  const lessons = allLessons(scoped);
   for (const [template, n] of Object.entries(learning.missedByReview)) {
-    for (const id of explainedBy(template, learning, api)) {
+    for (const id of explainedBy(template, scoped, api)) {
       const l = lessons.find((x) => x.lesson.id === id)?.lesson;
       if (l && !isDraft(l)) mistakes.push({ lesson: l, weight: n * 2 });
     }
   }
-  for (const l of learning.localLessons) {
+  for (const l of mine) {
     const s = learning.lessons[l.id];
     if (!isDraft(l) && !(s && s.wrong > s.helped)) mistakes.push({ lesson: l, weight: 1 + (s?.helped ?? 0) });
   }

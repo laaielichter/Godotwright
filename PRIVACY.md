@@ -24,7 +24,8 @@ The learning file (`godotwright learn` shows where it is) holds:
   the project (its title, classes, nodes, files, groups and input actions), paths, links, e-mail addresses, dates,
   codes, keys, long numbers, source code and other capitalised names are replaced by placeholders such as `<name>`;
   a lesson that is mostly placeholders is refused. The tool shows what was stored. Remove one with
-  `godotwright lessons remove <id>`.
+  `godotwright lessons remove <id>`. Each lesson keeps a hash of the project folder it was learned in (not the path),
+  so `godotwright dream` only writes a project's own lessons into that project's agents file.
 
 The hooks of the Claude Code plugin (`godotwright hook`) keep a small state file per agent session: the paths of the
 Godot files changed in that session that still had review errors, so the agent is reminded of them once before it

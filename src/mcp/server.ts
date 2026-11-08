@@ -1922,7 +1922,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     async (input) => {
       try {
-        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base) });
+        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base), project: base });
         const removed = Object.entries(replaced).map(([k, n]) => `${n} ${k}`).join(", ");
         return text(
           `${updated ? "Updated" : "Kept"} ${lesson.id} on this machine${removed ? ` (replaced: ${removed})` : ""}.\n` +
