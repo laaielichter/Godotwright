@@ -76,10 +76,10 @@ function extension(f: Finish): SpecNode[] {
   return [
     group("ExtensionLadder", [
       section("BaseSection", "Rail", "0", "$height * 0.58", 0, "$width"),
-      section("FlySection", "FlyRail", "$height * 0.42", "$height * 0.58", 0.075, "$width - 0.06"),
+      section("FlySection", "FlyRail", "$height * 0.42", "$height * 0.58", 0.075, "($width - 0.06)"),
       box("Shoe_L", ["$rt + 0.03", 0.06, "$rd + 0.05"], { at: ["$width / 2 + 0.006", 0, 0], anchor: "bottom", bevel: 0.012, material: f.trim, mirror: "Shoe_R" }),
       box("PawlLock_L", [0.04, 0.09, 0.05], { at: ["$width / 2 - 0.04", "$height * 0.42 + 0.3", 0.055], bevel: 0.006, material: "steel", mirror: "PawlLock_R" }),
-      tube("Rope", [[0, "$height * 0.58 - 0.04", 0.035], [0.02, "$height * 0.45", 0.04], [0.01, "$height * 0.42 + 0.2", 0.07]], 0.007, { segments: 8, material: "rope_hemp" }),
+      tube("Rope", [[0, "$height * 0.58 - 0.04", 0.035], [0, "$height * 0.45", 0.04], [0, "$height * 0.42 + 0.2", 0.07]], 0.007, { segments: 8, material: "rope_hemp" }),
     ], { material: f.rail, vars: { rt: 0.026, rd: 0.075 } }),
   ];
 }
