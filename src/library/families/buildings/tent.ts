@@ -78,9 +78,9 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   const s = STYLES[style];
   const kids: SpecNode[] = [];
   if (style === "dome") {
-    // A taut two-pole dome: the fly is a superellipse dome (n = 5), so the four panels between the crossing poles pull
+    // A taut two-pole dome: the fly is a superellipse dome (n = 8), so the four panels between the crossing poles pull
     // nearly straight across (flatter than a balloon) and the pole sleeves stand out as ridges along the diagonals.
-    const N = 5, C = Math.pow(Math.SQRT1_2, 2 / N);
+    const N = 8, C = Math.pow(Math.SQRT1_2, 2 / N);
     const g = (d: number): number => Math.pow(Math.max(0, 1 - d * d), 0.58);
     const y = (d: number, lift = 0): string => `${(0.05 + lift).toFixed(4)} + ($h - 0.05) * ${g(d).toFixed(5)}`;
     const ring = (d: number, k = 1, lift = 0) => ({ z: y(d, lift), superellipse: { width: `2 * $hl * ${(d * k).toFixed(5)}`, height: `2 * $hw * ${(d * k).toFixed(5)}`, n: N, count: 32 } });
@@ -112,18 +112,18 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     ]));
     kids.push(group("Entrance", [
       // A vestibule over the door: a hoop pole holds a short tunnel that ends in a near-upright D-shaped front.
-      loft("Porch", [0, 0.4, 0.75, 1].map((t, j) => ({ z: `$hw * 0.5 + (${front} - $hw * 0.5) * ${t}`, points: archPoints("0.55", "$h * 0.86", [1, 0.97, 0.9, 0.78][j] as number, 10) })), { material: f.a }),
-      tube("Hoop", [-1, -0.96, -0.82, -0.58, -0.3, 0, 0.3, 0.58, 0.82, 0.96, 1].map((c): Vec => [`0.507 * ${c}`, `0.012 + ($h * 0.774) * ${Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(c), 2.6))).toFixed(4)}`, `$hw * 0.5 + (${front} - $hw * 0.5) * 0.75`]), 0.016, { segments: 8, material: f.s ?? f.b }),
-      extrude("DoorPanel", archPoints("0.34", "$h * 0.86 * 0.78 * 0.86", 1, 10), `-(${front}) - 0.012`, `-(${front}) + 0.004`, { rotate: [-90, 0, 0], material: "mesh_dark" }),
-      box("Zip", [0.018, "$h * 0.86 * 0.78 * 0.82", 0.012], { anchor: "bottom", at: [0, 0.02, `${front} + 0.014`], material: f.b }),
-      box("Toggle", [0.12, 0.03, 0.02], { at: [0, "$h * 0.86 * 0.78 * 0.62", `${front} + 0.016`], material: "rope" }),
+      loft("Porch", [0, 0.4, 0.75, 1].map((t, j) => ({ z: `$hw * 0.55 + (${front} - $hw * 0.55) * ${t}`, points: archPoints("0.55", "$h * 0.74", [1, 0.97, 0.9, 0.78][j] as number, 10) })), { material: f.a }),
+      tube("Hoop", [-1, -0.96, -0.82, -0.58, -0.3, 0, 0.3, 0.58, 0.82, 0.96, 1].map((c): Vec => [`0.507 * ${c}`, `0.012 + ($h * 0.666) * ${Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(c), 2.6))).toFixed(4)}`, `$hw * 0.55 + (${front} - $hw * 0.55) * 0.75`]), 0.016, { segments: 8, material: f.s ?? f.b }),
+      extrude("DoorPanel", archPoints("0.34", "$h * 0.74 * 0.78 * 0.86", 1, 10), `-(${front}) - 0.012`, `-(${front}) + 0.004`, { rotate: [-90, 0, 0], material: "mesh_dark" }),
+      box("Zip", [0.018, "$h * 0.74 * 0.78 * 0.82", 0.012], { anchor: "bottom", at: [0, 0.02, `${front} + 0.014`], material: f.b }),
+      box("Toggle", [0.12, 0.03, 0.02], { at: [0, "$h * 0.74 * 0.78 * 0.62", `${front} + 0.016`], material: "rope" }),
     ]));
     const ext = 0.75;
     kids.push(group("GuyRopes", [
       tube("GuyCorner_{i}", [diag(0.6, 0.04), [`$hl * ${C.toFixed(5)} + ${ext}`, 0.01, `$hw * ${C.toFixed(5)} + ${ext}`]], 0.005, { repeat: { count: 2, around: "y" }, mirror: "GuyCornerB_{i}", segments: 5, material: "rope" }),
       tube("GuyEnd_{i}", [[`$hl * 0.66 + 0.04`, y(0.66), 0], ["$hl + 0.7", 0.01, 0]], 0.005, { repeat: { count: 2, around: "y" }, segments: 5, material: "rope" }),
       tube("GuyBack", [[0, y(0.66), "-$hw * 0.66 - 0.04"], [0, 0.01, "-$hw - 0.65"]], 0.005, { segments: 5, material: "rope" }),
-      tube("GuyPorch", [[0, "$h * 0.86 * 0.9 + 0.02", `$hw * 0.5 + (${front} - $hw * 0.5) * 0.75`], [0, 0.01, `${front} + 0.55`]], 0.005, { segments: 5, material: "rope" }),
+      tube("GuyPorch", [[0, "$h * 0.74 * 0.9 + 0.02", `$hw * 0.55 + (${front} - $hw * 0.55) * 0.75`], [0, 0.01, `${front} + 0.55`]], 0.005, { segments: 5, material: "rope" }),
       peg("PegCorner_{i}", [`$hl * ${C.toFixed(5)} + ${ext}`, 0, `$hw * ${C.toFixed(5)} + ${ext}`], { repeat: { count: 2, around: "y" } }),
       peg("PegCornerB_{i}", [`-$hl * ${C.toFixed(5)} - ${ext}`, 0, `$hw * ${C.toFixed(5)} + ${ext}`], { repeat: { count: 2, around: "y" } }),
       peg("Peg_{i}", ["$hl + 0.7", 0, 0], { repeat: { count: 2, around: "y" } }),

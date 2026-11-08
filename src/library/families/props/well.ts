@@ -53,13 +53,14 @@ const LOCAL: Record<string, MaterialDef> = {
  * two low, irregular cushions spreading along the foot where the damp collects, and a thin tuft tucked into the joint
  * under the coping. Cushions are flat lumpy ellipsoids half sunk into the wall, set down on their own lowest point.
  */
-const MOSS = { lumps: 0.35, segments: 14 };
+const MOSS = { lumps: 0.3, segments: 14 };
 const moss = (f: Finish, r: Num, n: number, h: Num, phase = 0): SpecNode[] =>
   f.moss
     ? [group("Moss_{i}", [
-        ellipsoid("Cushion_A", [0.05, 0.03, 0.18], { at: [r, `0.03 * ${sinkByIndex(n, (i) => i * 5 + 2, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, -0.07], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 2", material: "moss_green" }),
-        ellipsoid("Cushion_B", [0.04, 0.022, 0.12], { at: [r, `0.022 * ${sinkByIndex(n, (i) => i * 5 + 4, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, 0.13], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 4", material: "moss_dark" }),
-        ellipsoid("Tuft", [0.022, 0.012, 0.09], { at: [`${r} + 0.004`, `${h} - 0.088`, 0.02], segments: 10, lumps: 0.45, seed: "$i * 3 + 9", material: "moss_green" }),
+        ellipsoid("Cushion_A", [0.045, 0.026, 0.17], { at: [`${r} - 0.012`, `0.026 * ${sinkByIndex(n, (i) => i * 5 + 2, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, -0.06], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 2", material: "moss_green" }),
+        ellipsoid("Cushion_B", [0.045, 0.026, 0.11], { at: [`${r} - 0.016`, `0.026 * ${sinkByIndex(n, (i) => i * 5 + 4, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, 0.11], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 4", material: "moss_dark" }),
+        ellipsoid("Cushion_C", [0.035, 0.02, 0.07], { at: [`${r} - 0.012`, `0.02 * ${sinkByIndex(n, (i) => i * 3 + 13, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, -0.24], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 3 + 13", material: "moss_dark" }),
+        ellipsoid("Tuft", [0.022, 0.012, 0.09], { at: [`${r} + 0.004`, `${h} - 0.088`, 0.02], segments: 10, lumps: 0.3, seed: "$i * 3 + 9", material: "moss_green" }),
       ], { repeat: { count: n, around: "y", phase } })]
     : [];
 

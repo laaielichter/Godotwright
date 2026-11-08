@@ -192,6 +192,7 @@ function inside(poly: P2[], p: P2): boolean {
  */
 class Body {
   env: Record<string, number>;
+  envs: Record<string, number>[];
   sill: Lin;
   iF: number;
   iR: number;
@@ -199,6 +200,9 @@ class Body {
     const wr = st.wheel[0], H = st.height[0];
     const ra = wr + 0.035;
     this.env = { L2: st.length[0] / 2, W2: st.width[0] / 2, H, wr, Ra: ra };
+    // The parameter corners the shape decisions must also hold at: big wheels under a low roof, and the other way round.
+    const corner = (h: number, w: number, l: number) => ({ L2: l / 2, W2: st.width[0] / 2, H: h, wr: w, Ra: w + 0.035 });
+    this.envs = [this.env, corner(st.height[1], st.wheel[2], st.length[1]), corner(st.height[2], st.wheel[1], st.length[2]), corner(st.height[1], st.wheel[2], st.length[2]), corner(st.height[2], st.wheel[1], st.length[1])];
     this.sill = L(0, { wr: 1, Ra: -Math.sin(st.a0) });
     const zs = st.upper.map((p) => p[0]);
     this.iF = zs.indexOf(Math.max(...zs));
@@ -284,11 +288,16 @@ class Body {
     const sm = (v: number) => { const c = Math.max(0, Math.min(1, v)); return c * c * (3 - 2 * c); };
     const w = s < 1 ? sm(1 - (1 - s) / 0.8) : s <= 2 ? 1 : s < 3 ? Math.max(sm(1 - (s - 2) / 0.8), sm(1 - (3 - s) / 0.8)) : s <= 4 ? 1 : sm(1 - (s - 4) / 0.8);
     const wing = L(0.17, { wr: 1, Ra: 1 });
-    if (w > 0 && ev(wing) > ev(yE)) yE = lerpL(yE, wing, w);
+    const any = (f2: (e: Record<string, number>) => boolean) => this.envs.some(f2);
+    if (w > 0 && any((e) => lev(wing, e) > lev(yE, e))) yE = lerpL(yE, wing, w);
     // The shoulder crease runs level along the side, a little under the belt; at nose and tail it follows the top edge.
     const belt = L(-0.085 + 0.012 * (s - 2.5) / 2.5, { H: st.belt });
     const lim = ev(yE) - 0.05;
-    const yC = ev(belt) < lim ? belt : ev(yE) - 0.05 > ev(yB) + 0.07 ? ladd(yE, L(-0.05)) : lerpL(yB, yE, 0.58);
+    void lim;
+    let yC = !any((e) => lev(belt, e) > lev(yE, e) - 0.05) ? belt : ev(yE) - 0.05 > ev(yB) + 0.07 ? ladd(yE, L(-0.05)) : lerpL(yB, yE, 0.58);
+    // Over the arches the crease stays 7 cm above the arch at every parameter setting.
+    const archC = L(0.07, { wr: 1, Ra: 1 });
+    if (w > 0 && any((e) => lev(yC, e) < lev(archC, e))) yC = lerpL(yC, archC, w);
     const hs = ev(yC) - ev(yB);
     const hwm = L(0, { W2: this.hw(s) });
     const x = (d: number): Lin => ladd(hwm, L(-d));
@@ -408,9 +417,9 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
   const [rz0, rz1] = st.roof;
   const roofSec = (zf: number, dz: number, full: boolean) => {
     const g = glassAt(zf, 1);
-    return { z: `${ls(g.z)} ${dz < 0 ? "-" : "+"} ${f(Math.abs(dz))}`, superellipse: { width: `2 * (${ls(g.wt)}) + ${full ? 0.02 : -0.01}`, height: full ? 0.05 : 0.03, n: 3.5, count: 24, cy: `$H - ${full ? 0.027 : 0.022}` } };
+    return { z: `${ls(g.z)} ${dz < 0 ? "-" : "+"} ${f(Math.abs(dz))}`, superellipse: { width: `2 * (${ls(g.wt)}) + ${full ? 0.012 : -0.06}`, height: full ? 0.034 : 0.012, n: 2.6, count: 24, cy: `$H - ${full ? 0.018 : 0.03}` } };
   };
-  kids.push(loft("Roof", [roofSec(rz1, -0.04, false), roofSec(rz1, 0, true), roofSec((rz0 + rz1) / 2, 0, true), roofSec(rz0, 0, true), roofSec(rz0, 0.04, false)], { material: roofMat }));
+  kids.push(loft("Roof", [roofSec(rz1, -0.03, false), roofSec(rz1, 0, true), roofSec((rz0 + rz1) / 2, 0, true), roofSec(rz0, 0, true), roofSec(rz0, 0.03, false)], { material: roofMat }));
 
   // Pillars along the glass corners (A at the windscreen, C at the rear window), B on the side glass; window seals.
   const cornerPt = (g: ReturnType<typeof glassAt>, out: number): [Num, Num, Num] => [ls(ladd(g.half[3]![0], L(out))), ls(ladd(g.half[3]![1], L(out * 0.5))), ls(g.z)];
@@ -612,7 +621,9 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     ], { at: [0, ls(yl(yg)), `${ls(frontZ(0, yg))} - 0.02`] }));
   } else {
     const big = st.bumper === "black" || st.trunk === "bed";
-    const yg = lampFY - (big ? 0.06 : 0.02);
+    let yg = lampFY - (big ? 0.06 : 0.02);
+    // A low bonnet between raised wings (sports cars): the grille goes down into the nose.
+    while (B.surfaceS(0, yg + 0.05) > 0.5 && yg > lampFY0 - 0.25) yg -= 0.01;
     kids.push(group("Grille", [
       box("Frame", [`$W2 * ${big ? 0.95 : 0.62}`, big ? 0.24 : 0.09, 0.06], { bevel: 0.02, material: big && st.bumper === "chrome" ? "chrome" : "gloss_black" }),
       box("Mesh", [`$W2 * ${big ? 0.88 : 0.56}`, big ? 0.19 : 0.06, 0.03], { at: [0, 0, 0.012], material: "trim_black" }),

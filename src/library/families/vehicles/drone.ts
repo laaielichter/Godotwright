@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { VMATS } from "./parts.js";
+import { f, VMATS } from "./parts.js";
 
 type Kind = "camera" | "racer" | "hexa" | "octo";
 
@@ -32,6 +32,34 @@ const DRONES: DroneDef[] = [
   { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.2, 1.0, 1.35], prop: [0.24, 0.2, 0.27], leg: [0.28, 0.22, 0.34], colour: "carbon", nl: "carbon", shell: { color: [0.035, 0.037, 0.042], metallic: 0, roughness: 0.32, texture: "fabric" }, accent: P(0.6, 0.38, 0.02) },
   { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.1, 0.95, 1.3], prop: [0.22, 0.19, 0.25], leg: [0.26, 0.2, 0.32], colour: "white", nl: "wit", shell: P(0.6, 0.6, 0.58, 0, 0.42), accent: P(0.02, 0.07, 0.25) },
 ];
+
+/**
+ * A propeller blade as a loft from root to tip (local z, turned to +x): a thin cambered airfoil whose chord widens
+ * from the root, peaks at a third of the span and narrows to a rounded tip, with the pitch twisting from steep at the
+ * root to flat at the tip. Everything scales with $pr.
+ */
+function bladeSections(wide: boolean): Record<string, unknown>[] {
+  // [span fraction, chord fraction, twist degrees]
+  const rows: [number, number, number][] = wide
+    ? [[0.14, 0.1, 24], [0.22, 0.2, 22], [0.4, 0.26, 18], [0.6, 0.25, 14], [0.8, 0.21, 11], [0.93, 0.15, 9], [0.985, 0.08, 8], [1.0, 0.03, 8]]
+    : [[0.14, 0.07, 26], [0.22, 0.12, 24], [0.36, 0.15, 19], [0.55, 0.14, 14], [0.75, 0.115, 10], [0.9, 0.085, 8], [0.975, 0.05, 7], [1.0, 0.02, 7]];
+  const N = 10;
+  return rows.map(([r, c, tw]) => {
+    const t = (tw * Math.PI) / 180;
+    const pts: [string, string][] = [];
+    for (let k = 0; k < N; k++) {
+      // Around the airfoil: x from the leading edge (+0.5c) to the trailing edge (-0.5c); upper surface cambered.
+      const a = (k / N) * Math.PI * 2;
+      const x = 0.5 * Math.cos(a);
+      const th = Math.sin(a) >= 0 ? 0.11 * Math.sin(a) * (0.75 + 0.5 * Math.cos(a) * 0.5) : 0.035 * Math.sin(a);
+      const camber = 0.04 * (1 - 4 * x * x);
+      const lx = x * c, ly = (th + camber) * c;
+      const rx = lx * Math.cos(t) - ly * Math.sin(t), ry = lx * Math.sin(t) + ly * Math.cos(t);
+      pts.push([`${f(rx)} * $pr`, `${f(ry)} * $pr`]);
+    }
+    return { z: r < 0.15 ? "$mr * 0.3" : `${f(r)} * $pr`, points: pts };
+  });
+}
 
 function buildDrone(d: DroneDef): AssetDraft {
   const n = d.arms;
@@ -102,7 +130,8 @@ function buildDrone(d: DroneDef): AssetDraft {
   // Each propeller pivots on its motor shaft (spins about y).
   kids.push(group("Propeller_{i}", [
     cyl("Spinner", "$mr * 0.45", 0.012, { at: [0, 0.006, 0], segments: 12, material: "aluminium" }),
-    box("Blade_{i}", ["$pr", "max(0.002, $pr * 0.025)", "$pr * 0.16"], { at: ["$pr / 2", 0, 0], rotate: [10, 0, 0], repeat: { count: d.blades, around: "y" }, bevel: 0.001, material: "prop" }),
+    loft("Blade_{i}", bladeSections(d.kind === "racer"), { rotate: [0, 90, 0], repeat: { count: d.blades, around: "y" }, material: "prop" }),
+    cyl("Hub", "$mr * 0.5", 0.008, { at: [0, -0.002, 0], segments: 14, material: "prop" }),
   ], { at: ["$R", "$by + $ay + $mh", 0], repeat: { count: n, around: "y", phase } }));
 
   const bodyW = d.kind === "camera" ? "$span * 0.3" : d.kind === "racer" ? "$span * 0.28" : "$span * 0.24";

@@ -136,19 +136,21 @@ function splitHalf(start: number, cuts: number, faceTo: 1 | -1): { seed: number;
  * Natural rock in real albedos: granite is a speckled mid grey (light feldspar and dark mica grains, the "asphalt"
  * pattern), basalt and slate are near black, limestone and chalk a weathered grey-beige well below white. Fine-grained
  * stones get the pitted "concrete" surface. Every stone has a second, dirtier tone for the smaller blocks.
+ * Judged in the calibrated Godot light: sunlit faces of these stones already read light, so the values sit at or a
+ * little under the low end of the real ranges (real chalk at 0.4 renders near white there).
  */
 const ROCK: Record<string, { color: [number, number, number]; texture: string; roughness: number }> = {
-  granite: { color: [0.11, 0.106, 0.1], texture: "asphalt", roughness: 0.88 },
+  granite: { color: [0.095, 0.092, 0.087], texture: "asphalt", roughness: 0.88 },
   basalt: { color: [0.042, 0.041, 0.04], texture: "asphalt", roughness: 0.85 },
-  sandstone: { color: [0.18, 0.124, 0.068], texture: "asphalt", roughness: 0.95 },
-  limestone: { color: [0.165, 0.157, 0.137], texture: "asphalt", roughness: 0.9 },
+  sandstone: { color: [0.14, 0.097, 0.054], texture: "asphalt", roughness: 0.95 },
+  limestone: { color: [0.12, 0.114, 0.1], texture: "asphalt", roughness: 0.9 },
   slate: { color: [0.05, 0.054, 0.061], texture: "concrete", roughness: 0.8 },
-  red_rock: { color: [0.15, 0.064, 0.035], texture: "asphalt", roughness: 0.95 },
-  mossy_rock: { color: [0.078, 0.079, 0.066], texture: "asphalt", roughness: 0.95 },
-  lichen: { color: [0.105, 0.11, 0.088], texture: "asphalt", roughness: 0.97 },
-  sandstone_red: { color: [0.16, 0.074, 0.042], texture: "asphalt", roughness: 0.95 },
-  chalk: { color: [0.25, 0.24, 0.212], texture: "concrete", roughness: 0.92 },
-  quartz: { color: [0.21, 0.206, 0.196], texture: "concrete", roughness: 0.55 },
+  red_rock: { color: [0.12, 0.052, 0.03], texture: "asphalt", roughness: 0.95 },
+  mossy_rock: { color: [0.068, 0.07, 0.058], texture: "asphalt", roughness: 0.95 },
+  lichen: { color: [0.09, 0.094, 0.075], texture: "asphalt", roughness: 0.97 },
+  sandstone_red: { color: [0.13, 0.06, 0.034], texture: "asphalt", roughness: 0.95 },
+  chalk: { color: [0.17, 0.164, 0.146], texture: "concrete", roughness: 0.92 },
+  quartz: { color: [0.15, 0.148, 0.142], texture: "concrete", roughness: 0.55 },
 };
 
 function rockMaterials(stone: string, fine: boolean): Record<string, MaterialDef> {

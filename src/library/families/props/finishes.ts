@@ -31,7 +31,7 @@ export const FINISH: Record<string, MaterialDef> = {
   satin_alu: { color: [0.78, 0.79, 0.8], metallic: 0.85, roughness: 0.34, texture: "brushed" },
   gunmetal_satin: { color: [0.34, 0.35, 0.37], metallic: 0.7, roughness: 0.4, texture: "brushed" },
   anodised_dark: { color: [0.07, 0.075, 0.08], metallic: 0.35, roughness: 0.4, texture: "brushed" },
-  galvanised_steel: { color: [0.5, 0.52, 0.52], metallic: 0.75, roughness: 0.55, texture: "plastic" },
+  galvanised_steel: { color: [0.32, 0.33, 0.33], metallic: 0.6, roughness: 0.6, texture: "plastic" }, // thin bars catch the sky
   bright_chrome: { color: [0.85, 0.85, 0.86], metallic: 1, roughness: 0.1 },
   abs_black: { color: [0.035, 0.035, 0.038], metallic: 0, roughness: 0.5, texture: "plastic" },
   abs_grey: { color: [0.16, 0.165, 0.17], metallic: 0, roughness: 0.5, texture: "plastic" },
@@ -67,21 +67,23 @@ export const FINISH: Record<string, MaterialDef> = {
   glass_tint: { color: [0.12, 0.14, 0.15, 0.4], metallic: 0, roughness: 0.06, alpha: "BLEND" },
 
   // Stone: dressed blocks ("stone") for walls and plinths, carved stone ("concrete": weathered, blotchy) for figures.
-  limestone_block: stone(0.36, 0.34, 0.29),
-  limestone_carved: stone(0.36, 0.34, 0.29, "concrete", 0.85),
-  sandstone_block: stone(0.33, 0.23, 0.12),
-  sandstone_carved: stone(0.33, 0.23, 0.12, "concrete", 0.9),
-  granite_block: stone(0.19, 0.19, 0.18, "stone", 0.75),
-  granite_carved: stone(0.19, 0.19, 0.18, "concrete", 0.7),
+  // Tuned in the Godot sheets: the stone and brick textures keep the colour as their mean, and a plinth top or a
+  // sunlit face reads lighter than the albedo suggests, so these sit a little under the textbook values.
+  limestone_block: stone(0.27, 0.255, 0.215),
+  limestone_carved: stone(0.27, 0.255, 0.215, "concrete", 0.85),
+  sandstone_block: stone(0.25, 0.17, 0.09),
+  sandstone_carved: stone(0.25, 0.17, 0.09, "concrete", 0.9),
+  granite_block: stone(0.15, 0.15, 0.142, "stone", 0.75),
+  granite_carved: stone(0.15, 0.15, 0.142, "concrete", 0.7),
   granite_dark: stone(0.075, 0.075, 0.078, "concrete", 0.55),
   fieldstone: stone(0.16, 0.16, 0.13, "stone", 0.95),
-  marble_white: { color: [0.5, 0.49, 0.46], metallic: 0, roughness: 0.3, texture: "concrete" },
+  marble_white: { color: [0.42, 0.41, 0.385], metallic: 0, roughness: 0.3, texture: "concrete" },
   marble_dark: { color: [0.03, 0.03, 0.034], metallic: 0, roughness: 0.22, texture: "concrete" },
-  concrete_cast: stone(0.3, 0.3, 0.28, "concrete", 0.9),
-  concrete_weathered: stone(0.22, 0.22, 0.2, "concrete", 0.95),
+  concrete_cast: stone(0.2, 0.2, 0.188, "concrete", 0.9),
+  concrete_weathered: stone(0.16, 0.16, 0.148, "concrete", 0.95),
   brick_old: { color: [0.18, 0.055, 0.035], metallic: 0, roughness: 0.88, texture: "brick" },
-  brick_yellow_old: { color: [0.38, 0.27, 0.13], metallic: 0, roughness: 0.88, texture: "brick" },
-  mortar_grey: stone(0.22, 0.21, 0.19, "concrete", 0.95),
+  brick_yellow_old: { color: [0.3, 0.21, 0.1], metallic: 0, roughness: 0.88, texture: "brick" },
+  mortar_grey: stone(0.17, 0.165, 0.15, "concrete", 0.95),
 
   // Metals that have weathered outdoors.
   bronze_weathered: { color: [0.13, 0.15, 0.09], metallic: 0.35, roughness: 0.55, texture: "rust" },
@@ -102,7 +104,7 @@ export const FINISH: Record<string, MaterialDef> = {
   wet_stain: stone(0.07, 0.075, 0.06, "concrete", 0.6),
 
   // Wood.
-  wood_pine: wood(0.45, 0.3, 0.15, 0.7),
+  wood_pine: wood(0.38, 0.25, 0.12, 0.7),
   wood_oak: wood(0.3, 0.17, 0.07, 0.72),
   wood_weathered: wood(0.25, 0.22, 0.18, 0.92),
   wood_dark: wood(0.1, 0.06, 0.035, 0.7),
@@ -115,14 +117,14 @@ export const FINISH: Record<string, MaterialDef> = {
   // Loose rocks (weathered, no block joints).
   rock_grey: stone(0.17, 0.17, 0.16, "concrete", 0.85),
   rock_mossy: stone(0.11, 0.12, 0.075, "concrete", 0.95),
-  rock_sand: stone(0.3, 0.22, 0.12, "concrete", 0.9),
+  rock_sand: stone(0.25, 0.18, 0.1, "concrete", 0.9),
   rock_dark: stone(0.065, 0.065, 0.068, "concrete", 0.8),
   rock_red: stone(0.22, 0.09, 0.05, "concrete", 0.9),
   rock_slate: stone(0.075, 0.08, 0.088, "concrete", 0.7),
 
   // Nature and fire.
-  moss_green: { color: [0.06, 0.1, 0.02], metallic: 0, roughness: 1, texture: "grass" },
-  moss_dark: { color: [0.035, 0.06, 0.016], metallic: 0, roughness: 1, texture: "grass" },
+  moss_green: { color: [0.04, 0.068, 0.016], metallic: 0, roughness: 1, texture: "grass" }, // cushion moss: dark, a sunlit top reads lighter
+  moss_dark: { color: [0.024, 0.042, 0.013], metallic: 0, roughness: 1, texture: "grass" },
   lichen: { color: [0.2, 0.21, 0.12], metallic: 0, roughness: 1, texture: "grass" },
   bark_pine: { color: [0.16, 0.1, 0.06], metallic: 0, roughness: 0.95, texture: "bark" },
   bark_oak: { color: [0.11, 0.09, 0.07], metallic: 0, roughness: 0.95, texture: "bark" },

@@ -20,12 +20,13 @@ export const BMATS: Record<string, MaterialDef> = {
   shingle_wood: { color: [0.14, 0.1, 0.068], metallic: 0, roughness: 0.9, texture: "roof_slate" },
   shingle_green: { color: [0.032, 0.065, 0.042], metallic: 0, roughness: 0.85, texture: "roof_slate" },
   // Combed reed thatch weathers to a dull grey-brown; the grain pattern gives straight stems running down the slope.
-  thatch: { color: [0.125, 0.09, 0.052], metallic: 0, roughness: 1, texture: "grain" },
+  thatch: { color: [0.13, 0.095, 0.055], metallic: 0, roughness: 1, texture: "grain" },
+  thatch_dark: { color: [0.085, 0.065, 0.042], metallic: 0, roughness: 1, texture: "grain" },
   felt_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "asphalt" },
   // Sheet metal: coated or weathered, matt enough that a low roof does not mirror the sky.
   zinc: { color: [0.2, 0.21, 0.22], metallic: 0.25, roughness: 0.72, texture: "painted" },
   zinc_quartz: { color: [0.09, 0.095, 0.1], metallic: 0.2, roughness: 0.72, texture: "painted" },
-  corrugated: { color: [0.14, 0.145, 0.15], metallic: 0.2, roughness: 0.78, texture: "painted" },
+  corrugated: { color: [0.11, 0.115, 0.12], metallic: 0.2, roughness: 0.82, texture: "painted" },
   roof_steel: { color: [0.07, 0.075, 0.08], metallic: 0.2, roughness: 0.75, texture: "painted" },
   corrugated_red: { color: [0.17, 0.032, 0.024], metallic: 0.15, roughness: 0.72, texture: "painted" },
   corrugated_green: { color: [0.03, 0.08, 0.045], metallic: 0.15, roughness: 0.72, texture: "painted" },
@@ -193,24 +194,30 @@ export function sheetRib(material: string): { w: number; h: number; sp: number }
  */
 export function thatchHip(name: string, o: { hw: Num; hd: Num; y: Num; rise: Num; oh?: Num; roof: string; at?: Vec }): SpecNode {
   const kids: SpecNode[] = [];
+  const roll = (n: string, r: number, len: string, at: Vec, axis: "x" | "z", m: string) => cyl(n, r, len, { axis, at, segments: 12, material: m });
   for (let k = 0; k < 4; k++) {
     const c = `${k} * $tc`;
+    // The lower courses are older reed and a shade darker; every course ends in a rounded, combed edge.
+    const m = k < 2 && o.roof === "thatch" ? "thatch_dark" : o.roof;
+    const yb = `$ty + ${c} * $tk + ${k} * 0.14`;
+    const r = k === 0 ? 0.2 : 0.12;
+    const ex = `$tw + $to - ${c} - ${k === 0 ? 0.08 : 0.04}`, ez = `$td + $to - ${c} - ${k === 0 ? 0.08 : 0.04}`;
     kids.push(roof(`Course_${k + 1}`, {
       x0: `-$tw - $to + ${c}`, x1: `$tw + $to - ${c}`, z0: `-$td - $to + ${c}`, z1: `$td + $to - ${c}`,
-      y: `$ty + ${c} * $tk + ${k} * 0.09`, rise: `$tr * (1 - ${c} / ($tw + $to))`, kind: "hip",
-    }, { material: o.roof }));
+      y: yb, rise: `$tr * (1 - ${c} / ($tw + $to))`, kind: "hip",
+    }, { material: m }));
+    kids.push(
+      roll(`Eave${k + 1}_L`, r, `2 * (${ez}) + ${r}`, [`-(${ex})`, `${yb} + ${k === 0 ? 0.02 : 0.03}`, 0], "z", m),
+      roll(`Eave${k + 1}_R`, r, `2 * (${ez}) + ${r}`, [ex, `${yb} + ${k === 0 ? 0.02 : 0.03}`, 0], "z", m),
+      roll(`Eave${k + 1}_F`, r, `2 * (${ex}) + ${r}`, [0, `${yb} + ${k === 0 ? 0.02 : 0.03}`, ez], "x", m),
+      roll(`Eave${k + 1}_B`, r, `2 * (${ex}) + ${r}`, [0, `${yb} + ${k === 0 ? 0.02 : 0.03}`, `-(${ez})`], "x", m),
+    );
   }
-  // The eaves roll and soffit: thatch ends in a thick, rounded edge, not a board.
-  const roll = (n: string, len: string, at: Vec, axis: "x" | "z") => cyl(n, 0.2, len, { axis, at, segments: 12, material: o.roof });
   kids.push(
-    roll("Eave_L", "2 * ($td + $to) + 0.2", ["-$tw - $to + 0.08", "$ty + 0.02", 0], "z"),
-    roll("Eave_R", "2 * ($td + $to) + 0.2", ["$tw + $to - 0.08", "$ty + 0.02", 0], "z"),
-    roll("Eave_F", "2 * ($tw + $to) + 0.2", [0, "$ty + 0.02", "$td + $to - 0.08"], "x"),
-    roll("Eave_B", "2 * ($tw + $to) + 0.2", [0, "$ty + 0.02", "-$td - $to + 0.08"], "x"),
     box("Soffit", ["2 * ($tw + $to) - 0.1", 0.06, "2 * ($td + $to) - 0.1"], { at: [0, "$ty - 0.1", 0], material: o.roof }),
-    cyl("Ridge", 0.3, "max(0.4, 2 * ($td - $tw) + 0.6)", { axis: "z", at: [0, "$ty + $tr + 0.12", 0], segments: 14, material: o.roof }),
+    cyl("Ridge", 0.3, "max(0.4, 2 * ($td - $tw) + 0.6)", { axis: "z", at: [0, "$ty + $tr + 0.27", 0], segments: 14, material: o.roof }),
     // Dutch reed roofs are capped with a row of dark ridge tiles.
-    cyl("RidgeCap", 0.17, "max(0.4, 2 * ($td - $tw) + 0.8)", { axis: "z", at: [0, "$ty + $tr + 0.36", 0], segments: 12, material: "tile_black" }),
+    cyl("RidgeCap", 0.17, "max(0.4, 2 * ($td - $tw) + 0.8)", { axis: "z", at: [0, "$ty + $tr + 0.51", 0], segments: 12, material: "tile_black" }),
   );
   return group(name, kids, { at: o.at, vars: { tw: o.hw, td: o.hd, ty: o.y, tr: o.rise, to: o.oh ?? 0.6, tk: "$tr / ($tw + $to)", tc: "($tw + $to) * 0.16" } });
 }
@@ -389,8 +396,8 @@ export function slab(name: string, a: [Num, Num], b: [Num, Num], t: Num, len: Nu
   ];
   const ribs = sheetRib(material);
   if (ribs) {
-    const up = `($st + ${ribs.h - 0.008})`;
-    kids.push(box("SheetRib_{i}", ["hypot($sbx - $sax, $sby - $say) + $sext", ribs.h, ribs.w], { at: [`($sax + $sbx) / 2 - ${up} / 2 * sin($sth)`, `($say + $sby) / 2 + ${up} / 2 * cos($sth)`, `${o.z ?? 0} - $slen / 2 + ${ribs.sp / 2}`], rotate: [0, 0, "deg($sth)"], repeat: { count: `floor($slen / ${ribs.sp})`, step: [0, 0, ribs.sp] }, material }));
+    const up = `($st + ${ribs.h / 2 - 0.004})`;
+    kids.push(box("SheetRib_{i}", ["hypot($sbx - $sax, $sby - $say) + $sext", ribs.h, ribs.w], { at: [`($sax + $sbx) / 2 - ${up} * sin($sth)`, `($say + $sby) / 2 + ${up} * cos($sth)`, `${o.z ?? 0} - $slen / 2 + ${ribs.sp / 2}`], rotate: [0, 0, "deg($sth)"], repeat: { count: `floor($slen / ${ribs.sp})`, step: [0, 0, ribs.sp] }, material }));
   }
   return group(name, kids, { mirror: o.mirror, vars: { sax: a[0], say: a[1], sbx: b[0], sby: b[1], st: t, slen: len, sext: o.ext ?? 0, sth: "atan2($sby - $say, $sbx - $sax)" } });
 }
