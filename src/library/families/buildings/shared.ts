@@ -24,7 +24,7 @@ export const BMATS: Record<string, MaterialDef> = {
   thatch_dark: { color: [0.085, 0.065, 0.042], metallic: 0, roughness: 1, texture: "grain" },
   felt_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "asphalt" },
   // Sheet metal: coated or weathered, matt enough that a low roof does not mirror the sky.
-  zinc: { color: [0.2, 0.21, 0.22], metallic: 0.25, roughness: 0.72, texture: "painted" },
+  zinc: { color: [0.13, 0.135, 0.14], metallic: 0.2, roughness: 0.76, texture: "painted" },
   zinc_quartz: { color: [0.09, 0.095, 0.1], metallic: 0.2, roughness: 0.72, texture: "painted" },
   corrugated: { color: [0.11, 0.115, 0.12], metallic: 0.2, roughness: 0.82, texture: "painted" },
   roof_steel: { color: [0.07, 0.075, 0.08], metallic: 0.2, roughness: 0.75, texture: "painted" },

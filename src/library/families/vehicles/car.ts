@@ -395,7 +395,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
   // Arch liners: black wells between the wheels, so the tunnel over each axle reads as a dark wheel arch.
   const tw = st.tyreW + 0.015;
   for (const [n, zc] of [["ArchLiner_F", st.ff], ["ArchLiner_R", -st.fr]] as [string, number][]) {
-    kids.push(box(n, [`2 * $W2 - ${f(2 * (st.tyreW + 0.075) - 0.012)}`, `$wr + $Ra - $ys`, "$Ra * 2"], { at: [0, `($wr + $Ra + $ys) / 2 - 0.004`, `${f(zc)} * $L2`], material: "trim_black" }));
+    kids.push(box(`${n}L`, [0.02, `$wr + $Ra - $ys`, "$Ra * 2"], { at: [`$W2 - ${f(st.tyreW + 0.075 + 0.002)}`, `($wr + $Ra + $ys) / 2 - 0.004`, `${f(zc)} * $L2`], material: "trim_black", mirror: `${n}R` }));
     void n;
   }
 
@@ -778,4 +778,3 @@ export const car: Family = {
   tags: ["car", "auto", "personenauto", "vehicle", "voertuig", "automobile", "wagen"],
   assets: () => Object.entries(STYLES).flatMap(([key, st]) => FINISHES[key]!.map((fin) => buildCar(key, st, fin))),
 };
-export const _debug = { Body, STYLES };

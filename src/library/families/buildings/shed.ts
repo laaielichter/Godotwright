@@ -40,7 +40,7 @@ const FINISHES: Record<Style, { id: string; wall: string; roof: string; trim: st
   workshop: [
     { id: "galvanised", wall: "corrugated", roof: "corrugated", trim: "paint_grey", door: "corrugated", text: "galvanised", nl: "gegalvaniseerd" },
     { id: "green", wall: "corrugated_green", roof: "roof_steel", trim: "paint_white", door: "corrugated_green", text: "green", nl: "groen" },
-    { id: "red", wall: "corrugated_red", roof: "corrugated", trim: "paint_cream", door: "corrugated_red", text: "rust red", nl: "roestrood" },
+    { id: "red", wall: "corrugated_red", roof: "roof_steel", trim: "paint_cream", door: "corrugated_red", text: "rust red", nl: "roestrood" },
   ],
 };
 

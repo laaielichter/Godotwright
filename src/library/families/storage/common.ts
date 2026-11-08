@@ -114,7 +114,8 @@ function resolve(n: string): MaterialDef {
   const k = m[2] === "worn" ? 0.95 : m[2] === "dark" ? 0.7 : 0.5;
   return {
     color: [r * k, g * k, b * k],
-    metallic: Math.min(base.metallic, m[2] === "worn" ? 0.2 : base.metallic),
+    // Oxide, dirt and shade are matte: a darkened metal kept fully metallic would read as a black mirror.
+    metallic: Math.min(base.metallic, m[2] === "worn" ? 0.2 : 0.3),
     roughness: Math.min(0.95, base.roughness + (m[2] === "dark" ? 0.05 : 0.15)),
     texture: "rust",
   };
