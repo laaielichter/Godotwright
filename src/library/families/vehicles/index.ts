@@ -6,6 +6,7 @@ import { bicycle } from "./bicycle.js";
 import { motorcycle } from "./motorcycle.js";
 import { boat } from "./boat.js";
 import { rowingBoat } from "./rowing-boat.js";
+import { drone } from "./drone.js";
 
 /** The vehicles families of the asset library. */
-export const VEHICLES: Family[] = [car, truck, bus, bicycle, motorcycle, boat, rowingBoat];
+export const VEHICLES: Family[] = [car, truck, bus, bicycle, motorcycle, boat, rowingBoat, drone];
