@@ -196,13 +196,15 @@ applies lesson and hint changes by itself, never a removal, and only after you a
 
 ## Asset library: a thousand base recipes
 
-![A sample of the asset library](docs/library.png)
+![One asset of every family in the library, rendered in Godot 4.7](docs/library.png)
+
+*One asset of every family, rendered in Godot 4.7 (Compatibility renderer, AgX).*
 
 `godotwright model library` (MCP `godot_model_library`) holds over a thousand ready-made base recipes in seven
 categories: furniture, street furniture, storage and industrial props, nature, buildings, vehicles and props. Each one
 is a model spec with parameters, made by a family of variants (styles, part layouts and finishes), and each one builds a
 clean `.glb` that passes the model lint and the check against its archetype, at its defaults and at the ends of its
-parameter ranges. An agent searches it in English or Dutch, builds an asset as it is, or copies its spec as the start of
+parameter ranges, and every one imports, loads and instantiates in Godot 4.7 (tested). An agent searches it in English or Dutch, builds an asset as it is, or copies its spec as the start of
 its own model instead of starting from nothing.
 
 ```sh
