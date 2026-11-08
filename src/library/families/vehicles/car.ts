@@ -208,6 +208,14 @@ class Body {
     this.iF = zs.indexOf(Math.max(...zs));
     this.iR = zs.lastIndexOf(Math.min(...zs));
   }
+  /** Stations are asked for again and again (by every panel, seal and light), and the answer never changes. */
+  private memo = new Map<string, unknown>();
+  private cached<T>(key: string, make: () => T): T {
+    if (this.memo.has(key)) return this.memo.get(key) as T;
+    const value = make();
+    this.memo.set(key, value);
+    return value;
+  }
   raExpr(): string { return "$wheelRadius + 0.035"; }
   ev(l: Lin): number { return lev(l, this.env); }
   /** Top centre line (fraction of H) at a z fraction. */
@@ -219,7 +227,8 @@ class Body {
     return interp(chain, -zf);
   }
   /** z of a station. */
-  Z(s: number): Lin {
+  Z(s: number): Lin { return this.cached(`Z${s}`, () => this.zRaw(s)); }
+  private zRaw(s: number): Lin {
     const st = this.st, c = Math.cos(st.a0);
     const edge = (zc: number, sgn: number): Lin => L(sgn * 0.008, { L2: zc, Ra: sgn });
     void c;
@@ -277,7 +286,8 @@ class Body {
    * The right half of the section at s, from the bottom (inboard) over the side and the shoulder to the top centre:
    * a rounded bottom corner, the tuck-under, the shoulder crease (widest point), the shoulder edge and the crowned top.
    */
-  section(s: number) {
+  section(s: number) { return this.cached(`s${s}`, () => this.sectionRaw(s)); }
+  private sectionRaw(s: number) {
     const st = this.st, ev = (l: Lin) => this.ev(l);
     const yB = this.bottom(s);
     const yT = this.top(s);
@@ -339,7 +349,8 @@ class Body {
     const under: LP[] = [[ladd(xin, L(-0.03)), floor], [xin, yB]];
     return { pts, under, yB, yT, yE, yC, xe, hwm, rb };
   }
-  ring(s: number): LP[] {
+  ring(s: number): LP[] { return this.cached(`r${s}`, () => this.ringRaw(s)); }
+  private ringRaw(s: number): LP[] {
     const S = this.section(s);
     const h = [...S.under, ...S.pts];
     return [...h, ...[...h].reverse().map(([x, y]): LP => [lscale(x, -1), y])];
@@ -366,8 +377,12 @@ class Body {
   }
 }
 
+/** The body model of each style, built once: it depends on the style only, not on the finish. */
+const BODIES = new Map<string, Body>();
+
 function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
-  const B = new Body(st);
+  const B = BODIES.get(key) ?? new Body(st);
+  BODIES.set(key, B);
   const env = B.env;
   const ev = (l: Lin) => B.ev(l);
   const Hd = env.H!;

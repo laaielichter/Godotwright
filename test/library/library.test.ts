@@ -89,6 +89,18 @@ describe("searching the library", () => {
   });
 });
 
+describe("lazy lookups", () => {
+  it("find an asset, and filtered searches, by building only the families they need, with the same result as a full load", () => {
+    // "bus-stop-glass-..." starts with the family "bus" too: the lookup must still find the bus stop.
+    const id = [...library.keys()].find((k) => k.startsWith("street/bus-stop-"))!;
+    expect(getAsset(id)).toEqual(library.get(id));
+    expect(getAsset("vehicles/car-sedan-silver")).toEqual(library.get("vehicles/car-sedan-silver"));
+    expect(getAsset("vehicles/car")).toBeUndefined();
+    expect(getAsset("nonsense")).toBeUndefined();
+    expect(searchAssets({ archetype: "prop.chair" }).map((a) => a.id)).toEqual([...library.values()].filter((a) => a.archetype === "prop.chair").map((a) => a.id).sort());
+  });
+});
+
 describe("using an asset", () => {
   it("builds as a kind, with parameters, and refuses an unknown id", () => {
     const scene = buildKind(CHAIR, { seatHeight: 0.5 });

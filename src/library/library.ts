@@ -69,8 +69,28 @@ export function loadAssetLibrary(): Map<string, LibraryAsset> {
   return cached;
 }
 
+/** The assets of one family, made once. A whole-library load takes seconds, so a lookup builds only the families it needs. */
+const familyCache = new Map<string, Map<string, LibraryAsset>>();
+function familyAssets(family: Family): Map<string, LibraryAsset> {
+  let assets = familyCache.get(family.id);
+  if (!assets) {
+    assets = cached ? new Map([...cached].filter(([, a]) => a.family === family.id)) : assetsOf([family]);
+    familyCache.set(family.id, assets);
+  }
+  return assets;
+}
+
+/** One asset by id. Only the families whose id starts the slug are built ("bus-stop-glass" tries bus, then bus-stop). */
 export function getAsset(id: string): LibraryAsset | undefined {
-  return loadAssetLibrary().get(id);
+  if (cached) return cached.get(id);
+  const [category, slug] = id.split("/");
+  if (!category || !slug) return undefined;
+  for (const family of FAMILIES) {
+    if (family.category !== category || !slug.startsWith(`${family.id}-`)) continue;
+    const found = familyAssets(family).get(id);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 export interface AssetQuery {
@@ -104,7 +124,11 @@ const DUTCH: Record<string, string[]> = {
 export function searchAssets(query: AssetQuery = {}): LibraryAsset[] {
   const words = query.text ? tokens(query.text).filter((w) => w.length > 1).map((w) => [...new Set([stem(w), ...(DUTCH[w] ?? []).map(stem)])]) : [];
   const scored: { asset: LibraryAsset; score: number }[] = [];
-  for (const asset of loadAssetLibrary().values()) {
+  // Filters name families, so only those are built; a search on words alone needs every family.
+  const inScope = (f: Family): boolean =>
+    (!query.category || f.category === query.category) && (!query.family || f.id === query.family) && (!query.archetype || f.archetype === query.archetype || f.archetype.startsWith(`${query.archetype}.`));
+  const assets = cached ? [...cached.values()] : FAMILIES.filter(inScope).flatMap((f) => [...familyAssets(f).values()]);
+  for (const asset of assets) {
     if (query.category && asset.category !== query.category) continue;
     if (query.family && asset.family !== query.family) continue;
     if (query.archetype && asset.archetype !== query.archetype && !asset.archetype.startsWith(`${query.archetype}.`)) continue;

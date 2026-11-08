@@ -14,19 +14,25 @@ export type Lin = Record<string, number>;
 
 export const L = (c: number, terms: Record<string, number> = {}): Lin => ({ "": c, ...terms });
 
+// These three run millions of times while a car is being shaped, so they walk the keys directly instead of building
+// arrays of entries; the results (and their order) are the same.
 export function ladd(...ls: Lin[]): Lin {
   const out: Lin = {};
-  for (const l of ls) for (const [k, v] of Object.entries(l)) out[k] = (out[k] ?? 0) + v;
+  for (const l of ls) for (const k in l) out[k] = (out[k] ?? 0) + (l[k] as number);
   return out;
 }
 
-export const lscale = (l: Lin, k: number): Lin => Object.fromEntries(Object.entries(l).map(([n, v]) => [n, v * k]));
+export function lscale(l: Lin, k: number): Lin {
+  const out: Lin = {};
+  for (const n in l) out[n] = (l[n] as number) * k;
+  return out;
+}
 export const lsub = (a: Lin, b: Lin): Lin => ladd(a, lscale(b, -1));
 export const lerpL = (a: Lin, b: Lin, t: number): Lin => ladd(lscale(a, 1 - t), lscale(b, t));
 
 export function lev(l: Lin, env: Record<string, number>): number {
   let s = 0;
-  for (const [k, v] of Object.entries(l)) s += k === "" ? v : v * (env[k] ?? NaN);
+  for (const k in l) s += k === "" ? (l[k] as number) : (l[k] as number) * (env[k] ?? NaN);
   return s;
 }
 
