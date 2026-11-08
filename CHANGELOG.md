@@ -16,7 +16,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   stone get flat faces with sharp edges while the rest stays smooth.
 - **Brick and stone textures keep their colour:** the mortar now follows the colour of the wall, a little lighter, instead
   of a fixed light grey that made dark brick and stone look up to 1.8 times as light as their colour.
-- **Six new texture patterns for finishes:** `fabric` (woven), `leather` (grain), `painted` (orange peel), `plastic`
+- **Seven new texture patterns for finishes:** `grain` (solid timber without plank joints), `fabric` (woven), `leather` (grain), `painted` (orange peel), `plastic`
   (moulded), `brushed` (metal streaks) and `rust`, for any material in a spec (`"texture": "fabric"`).
 
 - **Asset library: a thousand base recipes (`godotwright model library`, MCP `godot_model_library`).** Over a thousand

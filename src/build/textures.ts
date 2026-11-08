@@ -213,6 +213,19 @@ export const PATTERNS: Record<string, Pattern> = {
         return [scale(wood, 0.35 + 0.65 * gap), 0.3 + 0.6 * gap + 0.1 * rings * gap];
       }),
   },
+  grain: {
+    tile: 1.0,
+    relief: 0.9,
+    description: "solid timber: continuous grain along v, without plank joints (turned legs, posts, handles, single boards)",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const warp = fbm(u, v, 3, 1, 3, 37);
+        const streak = fbm(u, v, 40, 2, 4, 38);
+        const rings = 0.5 + 0.5 * Math.sin((u * 14 + warp * 2.2 + 0.4 * streak) * Math.PI * 2);
+        const tone = (0.86 + 0.18 * rings) * (0.95 + 0.1 * streak) * (0.96 + 0.08 * fbm(u, v, 2, 2, 2, 39));
+        return [blend(scale(c, tone), scale(c, 0.6), 0.12 * smooth(clamp01(fbm(u, v, 8, 1, 2, 40) * 2))), clamp01(0.45 + 0.35 * rings * 0.6 + 0.2 * streak)];
+      }),
+  },
   bark: {
     tile: 1.0,
     relief: 4,
