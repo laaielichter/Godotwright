@@ -75,3 +75,32 @@ export function finishTags(name: string): string[] {
   const last = plain.split(" ").pop() ?? plain;
   return [plain, ...(DUTCH[name] ? [DUTCH[name] as string] : []), ...(DUTCH[last] && last !== name ? [DUTCH[last] as string] : [])];
 }
+
+/**
+ * A label or band wrapped round a cylinder of radius `r` (an expression) about y, centred on +z: a curved strip
+ * `deg` degrees wide from y0 to y1, `t` metres thick, standing proud of the surface by 2 mm.
+ */
+export function wrapLabel(name: string, r: string, deg: number, y0: string | number, y1: string | number, material: string, t = 0.004): SpecNode {
+  const steps = 8;
+  const outer: [string, string][] = [];
+  const inner: [string, string][] = [];
+  for (let k = 0; k <= steps; k++) {
+    const a = ((-deg / 2 + (deg * k) / steps) * Math.PI) / 180;
+    const s = Math.sin(a).toFixed(5), c = Math.cos(a).toFixed(5);
+    outer.push([`(${r} + 0.002) * ${s}`, `(${r} + 0.002) * ${c}`]);
+    inner.push([`(${r} - ${t}) * ${s}`, `(${r} - ${t}) * ${c}`]);
+  }
+  return { name, shape: "extrude", material, plan: [...outer, ...inner.reverse()], y0, y1 };
+}
+
+/**
+ * An open ring (a washer, a rail, a band) about y: a closed rectangular section from radius r0 to r1 and height y0
+ * to y1, swept round without end caps, so the middle stays open.
+ */
+export function ring(name: string, r0: string | number, r1: string | number, y0: string | number, y1: string | number, o: { segments?: number; material?: string; at?: [string | number, string | number, string | number]; repeat?: Record<string, unknown> } = {}): SpecNode {
+  return {
+    name, shape: "lathe", caps: false, segments: o.segments ?? 32,
+    profile: [[r0, y0], [r1, y0], [r1, y1], [r0, y1], [r0, y0]],
+    ...(o.material ? { material: o.material } : {}), ...(o.at ? { at: o.at } : {}), ...(o.repeat ? { repeat: o.repeat } : {}),
+  };
+}

@@ -1,0 +1,175 @@
+/**
+ * Shared builders for the vehicle families: linear expressions that can be evaluated at the defaults (so a family can
+ * work out normals and directions in TypeScript while the spec keeps its `$param` expressions), wheels at their hub,
+ * and a few finishes the palette does not have.
+ */
+import { box, cyl, group, lathe, type Num, type SpecNode, type Vec } from "../../kit.js";
+import type { MaterialDef } from "../../palette.js";
+
+/** Rounds to 4 decimals and prints without trailing zeros. */
+export const f = (n: number): string => String(Math.round(n * 10000) / 10000);
+
+/** A linear expression: { "": constant, name: coefficient } over spec variables ($name). */
+export type Lin = Record<string, number>;
+
+export const L = (c: number, terms: Record<string, number> = {}): Lin => ({ "": c, ...terms });
+
+export function ladd(...ls: Lin[]): Lin {
+  const out: Lin = {};
+  for (const l of ls) for (const [k, v] of Object.entries(l)) out[k] = (out[k] ?? 0) + v;
+  return out;
+}
+
+export const lscale = (l: Lin, k: number): Lin => Object.fromEntries(Object.entries(l).map(([n, v]) => [n, v * k]));
+export const lsub = (a: Lin, b: Lin): Lin => ladd(a, lscale(b, -1));
+export const lerpL = (a: Lin, b: Lin, t: number): Lin => ladd(lscale(a, 1 - t), lscale(b, t));
+
+export function lev(l: Lin, env: Record<string, number>): number {
+  let s = 0;
+  for (const [k, v] of Object.entries(l)) s += k === "" ? v : v * (env[k] ?? NaN);
+  return s;
+}
+
+/** The expression for a linear expression: a plain number when it has no variables. */
+export function ls(l: Lin): Num {
+  const terms: string[] = [];
+  let c = 0;
+  for (const [k, v] of Object.entries(l)) {
+    if (k === "") c += v;
+    else if (Math.abs(v) > 1e-9) terms.push(`${terms.length ? (v < 0 ? "- " : "+ ") : v < 0 ? "-" : ""}${Math.abs(v - 1) < 1e-9 || Math.abs(v + 1) < 1e-9 ? "" : `${f(Math.abs(v))} * `}$${k}`);
+  }
+  if (terms.length === 0) return Math.round(c * 10000) / 10000;
+  if (Math.abs(c) > 1e-9) terms.push(`${c < 0 ? "-" : "+"} ${f(Math.abs(c))}`);
+  return terms.join(" ");
+}
+
+/** Wraps an expression in brackets when it has more than one term. */
+export const br = (e: Num): string => (typeof e === "number" ? f(e) : /^[$\w.]+$/.test(e) ? e : `(${e})`);
+
+/** Extra finishes for vehicles (linear RGB). */
+export const VMATS: Record<string, MaterialDef> = {
+  tinted_glass: { color: [0.08, 0.1, 0.12, 0.42], metallic: 0, roughness: 0.04, alpha: "BLEND" },
+  clear_glass: { color: [0.55, 0.65, 0.72, 0.28], metallic: 0, roughness: 0.04, alpha: "BLEND" },
+  dark_glass: { color: [0.025, 0.032, 0.04], metallic: 0.3, roughness: 0.05 },
+  trim_black: { color: [0.018, 0.018, 0.02], metallic: 0.1, roughness: 0.5 },
+  satin_black: { color: [0.03, 0.03, 0.032], metallic: 0.4, roughness: 0.35 },
+  tyre: { color: [0.022, 0.022, 0.024], metallic: 0, roughness: 0.9 },
+  lamp_lens: { color: [0.85, 0.88, 0.9], metallic: 0.2, roughness: 0.05, emissive: [0.6, 0.62, 0.65] },
+  lamp_red: { color: [0.55, 0.02, 0.02], metallic: 0.1, roughness: 0.1, emissive: [0.5, 0.01, 0.01] },
+  lamp_amber: { color: [0.9, 0.4, 0.02], metallic: 0.1, roughness: 0.1, emissive: [0.6, 0.25, 0.01] },
+  plate: { color: [0.82, 0.8, 0.72], metallic: 0, roughness: 0.4 },
+  plate_yellow: { color: [0.85, 0.6, 0.02], metallic: 0, roughness: 0.4 },
+  upholstery: { color: [0.04, 0.038, 0.04], metallic: 0, roughness: 0.92 },
+  upholstery_tan: { color: [0.38, 0.22, 0.1], metallic: 0, roughness: 0.6 },
+  carbon: { color: [0.03, 0.03, 0.035], metallic: 0.5, roughness: 0.3 },
+  whitewall: { color: [0.82, 0.82, 0.78], metallic: 0, roughness: 0.6 },
+};
+
+/** A car-like paint (a little metallic, a clear coat). */
+export const carPaint = (r: number, g: number, b: number, metallic = 0.55, roughness = 0.24): MaterialDef => ({ color: [r, g, b], metallic, roughness });
+
+export type WheelStyle = "alloy" | "steel" | "wire" | "truck" | "disc" | "chrome";
+
+export interface WheelOpts {
+  /** Tyre radius expression. */
+  r: Num;
+  /** Tyre width expression. */
+  w: Num;
+  style: WheelStyle;
+  rim: string;
+  tyre?: string;
+  hub?: string;
+  spokes?: number;
+  whitewall?: string;
+  segments?: number;
+  /** Rim radius as a fraction of the tyre radius. */
+  rimFrac?: number;
+  /** Which side faces out: 1 = +x (a left wheel), -1 = -x. */
+  side?: 1 | -1;
+}
+
+/**
+ * A road wheel as a node at its hub (spins about x): a tyre with rounded shoulders, a rim, and spokes, a dish or a
+ * hub cap on the outer face (+x, or -x with side -1). Uses the variables $r and $w inside.
+ */
+export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: string } = {}): SpecNode {
+  const seg = o.segments ?? 28;
+  const rf = o.rimFrac ?? 0.66;
+  const tyre = o.tyre ?? "tyre";
+  const s = o.side ?? 1;
+  const X = (k: number): string => `${f(k * s)} * $w`;
+  /** A profile point: radius as a fraction of $r, position along the axle as a fraction of $w (outer face +). */
+  const P = (a: number, b: number): [Num, Num] => [`${f(a)} * $r`, X(b)];
+  const kids: SpecNode[] = [];
+  const prof: [Num, Num][] = [
+    [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
+    [`${f(rf + 0.55 * (1 - rf))} * $r`, `${f(-0.505)} * $w`],
+    [`${f(0.965)} * $r`, `${f(-0.47)} * $w`],
+    ["$r", `${f(-0.36)} * $w`],
+    ["$r", `${f(0.36)} * $w`],
+    [`${f(0.965)} * $r`, `${f(0.47)} * $w`],
+    [`${f(rf + 0.55 * (1 - rf))} * $r`, `${f(0.505)} * $w`],
+    [`${f(rf)} * $r`, `${f(0.43)} * $w`],
+    [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
+  ];
+  kids.push(lathe("Tyre", prof, { material: tyre, rotate: [0, 0, -90], segments: seg, caps: false }));
+  if (o.whitewall) {
+    kids.push(lathe("Whitewall", [P(rf + 0.04, 0.43), P(rf + 0.3 * (1 - rf), 0.52), P(rf + 0.6 * (1 - rf), 0.51), P(rf + 0.04, 0.43)], { material: o.whitewall, rotate: [0, 0, -90], segments: seg, caps: false }));
+  }
+  // The rim barrel and its outer lip.
+  kids.push(lathe("Rim", [
+    [rf - 0.03, -0.42], [rf + 0.02, -0.45], [rf + 0.025, -0.4], [rf + 0.025, 0.4], [rf + 0.03, 0.47],
+    [rf - 0.005, 0.5], [rf - 0.05, 0.44], [rf - 0.05, -0.38], [rf - 0.03, -0.42],
+  ].map(([a, b]) => P(a!, b!)), { material: o.rim, rotate: [0, 0, -90], segments: seg, caps: false }));
+  const hub = o.hub ?? o.rim;
+  switch (o.style) {
+    case "alloy": {
+      const n = o.spokes ?? 5;
+      kids.push(cyl("Disc", `${f(rf - 0.04)} * $r`, "0.06 * $w", { axis: "x", at: [X(0.05), 0, 0], segments: seg, material: "satin_black" }));
+      kids.push(box("Spoke_{i}", ["0.1 * $w", `${f((rf - 0.2) * 1.05)} * $r`, `${f(n > 6 ? 0.07 : 0.12)} * $r`], { at: [X(0.34), `${f(0.2 + (rf - 0.2) / 2)} * $r`, 0], repeat: { count: n, around: "x" }, bevel: 0.006, material: o.rim }));
+      kids.push(cyl("Boss", "0.2 * $r", "0.16 * $w", { axis: "x", at: [X(0.34), 0, 0], segments: 20, material: o.rim, bevel: 0.008 }));
+      kids.push(cyl("Cap", "0.09 * $r", "0.04 * $w", { axis: "x", at: [X(0.43), 0, 0], segments: 16, material: hub }));
+      break;
+    }
+    case "steel": {
+      kids.push(lathe("Dish", [P(rf - 0.02, 0.3), P(rf * 0.75, 0.36), P(rf * 0.42, 0.28), P(rf * 0.4, 0.2), P(rf - 0.02, 0.2), P(rf - 0.02, 0.3)], { material: o.rim, rotate: [0, 0, -90], segments: seg, caps: false }));
+      kids.push(cyl("Vent_{i}", `${f(0.055)} * $r`, "0.12 * $w", { axis: "x", at: [X(0.3), `${f(rf * 0.6)} * $r`, 0], repeat: { count: 6, around: "x" }, segments: 10, material: "trim_black" }));
+      kids.push(cyl("Cap", `${f(rf * 0.42)} * $r`, "0.14 * $w", { axis: "x", at: [X(0.35), 0, 0], segments: 20, material: hub, bevel: 0.01 }));
+      break;
+    }
+    case "chrome": {
+      kids.push(lathe("Hubcap", [P(rf - 0.02, 0.36), P(rf * 0.8, 0.42), P(rf * 0.45, 0.48), P(0.08, 0.5), P(0.08, 0.3), P(rf - 0.02, 0.3), P(rf - 0.02, 0.36)], { material: hub, rotate: [0, 0, -90], segments: seg, caps: false }));
+      break;
+    }
+    case "wire": {
+      const n = o.spokes ?? 24;
+      kids.push(cyl("Spoke_{i}", `${f(0.012)} * $r`, `${f(rf - 0.12)} * $r`, { at: [X(0.1), `${f(0.08 + (rf - 0.12) / 2)} * $r`, 0], repeat: { count: n, around: "x" }, segments: 4, material: o.rim }));
+      kids.push(cyl("Spinner", "0.13 * $r", "0.5 * $w", { axis: "x", at: [X(0.2), 0, 0], segments: 12, material: hub, bevel: 0.01 }));
+      break;
+    }
+    case "truck": {
+      kids.push(cyl("Disc", `${f(rf - 0.04)} * $r`, "0.08 * $w", { axis: "x", at: [X(0.25), 0, 0], segments: seg, material: o.rim }));
+      kids.push(cyl("Hand_{i}", `${f(0.06)} * $r`, "0.1 * $w", { axis: "x", at: [X(0.27), `${f(rf * 0.62)} * $r`, 0], repeat: { count: 8, around: "x", phase: 22.5 }, segments: 10, material: "trim_black" }));
+      kids.push(cyl("Boss", `${f(0.26)} * $r`, "0.3 * $w", { axis: "x", at: [X(0.32), 0, 0], segments: 20, material: hub, bevel: 0.01 }));
+      kids.push(cyl("Nut_{i}", `${f(0.03)} * $r`, "0.36 * $w", { axis: "x", at: [X(0.33), `${f(0.18)} * $r`, 0], repeat: { count: 10, around: "x" }, segments: 6, material: "chrome" }));
+      break;
+    }
+    case "disc": {
+      kids.push(cyl("Disc", `${f(rf - 0.02)} * $r`, "0.12 * $w", { axis: "x", at: [X(0.36), 0, 0], segments: seg, material: o.rim, bevel: 0.01 }));
+      kids.push(cyl("Cap", "0.12 * $r", "0.08 * $w", { axis: "x", at: [X(0.44), 0, 0], segments: 16, material: hub }));
+      break;
+    }
+  }
+  return group(name, kids, { at, vars: { r: o.r, w: o.w }, ...(extra.mirror ? { mirror: extra.mirror } : {}) });
+}
+
+/** A closed ring (torus-like) about y, from a circle of `minor` radius at `major` radius. */
+export function ringProfile(major: Num, minor: number, steps = 8): [Num, Num][] {
+  const out: [Num, Num][] = [];
+  for (let k = 0; k <= steps; k++) {
+    const a = (k / steps) * Math.PI * 2;
+    const c = Math.cos(a) * minor, sn = Math.sin(a) * minor;
+    out.push([typeof major === "number" ? major + c : `${major} ${c < 0 ? "-" : "+"} ${f(Math.abs(c))}`, k === steps ? 0 : Math.round(sn * 10000) / 10000]);
+  }
+  return out;
+}
