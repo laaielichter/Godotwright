@@ -626,9 +626,9 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     ], { at: [0, ls(yl(yg)), `${ls(frontZ(0, yg))} - 0.02`] }));
   } else {
     const big = st.bumper === "black" || st.trunk === "bed";
-    let yg = lampFY - (big ? 0.06 : 0.02);
-    // A low bonnet between raised wings (sports cars): the grille goes down into the nose.
-    while (B.surfaceS(0, yg + 0.05) > 0.12 && yg > lampFY0 - 0.25) yg -= 0.01;
+    let yg = lampFY - (big ? 0.06 : 0.03);
+    // The grille stays in the face of the nose, under the bonnet's leading edge (lower on a low bonnet between wings).
+    while (B.surfaceS(0, yg + (big ? 0.13 : 0.055)) > 0.06 && yg > lampFY0 - 0.25) yg -= 0.01;
     kids.push(group("Grille", [
       box("Frame", [`$W2 * ${big ? 0.95 : 0.62}`, big ? 0.24 : 0.09, 0.06], { bevel: 0.02, material: big && st.bumper === "chrome" ? "chrome" : "gloss_black" }),
       box("Mesh", [`$W2 * ${big ? 0.88 : 0.56}`, big ? 0.19 : 0.06, 0.03], { at: [0, 0, 0.012], material: "trim_black" }),
