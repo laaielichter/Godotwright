@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, extname, join, relative } from "node:path";
+import { applyLearningUndo, saveLearning, type LearningUndo } from "../learn/store.js";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
 import { assertWritable } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
@@ -37,7 +38,22 @@ export interface JournalEntry {
   files: JournalFile[];
   /** What undo cannot put back by itself, said after undoing (e.g. a reimport is needed). */
   note?: string;
+  /** What the write changed in the local learning file (lessons kept or retired by `godotwright dream`). */
+  learning?: LearningUndo;
 }
+
+/** One undone write, as `godotwright dream` reads it back: which tool, which kinds of file, when. No names or paths. */
+export interface UndoneWrite {
+  tool: string;
+  /** File kinds by extension (".tscn", ".gd"; "project.godot" as itself). */
+  kinds: string[];
+  /** When the write was made, and when it was undone. */
+  date: string;
+  undoneAt: string;
+}
+
+/** Undone writes kept for `godotwright dream`. */
+const KEEP_UNDONE = 200;
 
 const hash = (data: Uint8Array | string) => createHash("sha1").update(data).digest("hex");
 
@@ -72,6 +88,9 @@ export class JournalWriter {
   private readonly before = new Map<string, { existed: boolean; data?: Buffer; notKept?: boolean }>();
   private dir: string | undefined;
   private id = 0;
+  private learning: LearningUndo | undefined;
+  /** Files outside the project this call may write and keep (an agents file at the repository root). */
+  private readonly outside = new Set<string>();
 
   constructor(root: string, tool: string, summary: string, note?: string) {
     this.root = root;
@@ -80,10 +99,25 @@ export class JournalWriter {
     this.note = note;
   }
 
+  /** Lets this call keep a file outside the project in the journal, such as AGENTS.md at the root of the repository. */
+  allowOutside(full: string): void {
+    this.outside.add(full);
+  }
+
+  /** Records what this call changed in the learning file, so undo can put it back. */
+  recordLearning(undo: LearningUndo): void {
+    if (!undo.lessons.length && !Object.keys(undo.dismissed ?? {}).length && !Object.keys(undo.verified ?? {}).length) return;
+    this.learning = {
+      lessons: [...(this.learning?.lessons ?? []), ...undo.lessons],
+      dismissed: { ...undo.dismissed, ...this.learning?.dismissed },
+      verified: { ...undo.verified, ...this.learning?.verified },
+    };
+  }
+
   /** Remember the file as it is now, the first time this call touches it (before a write made elsewhere). */
   remember(full: string): void {
     // Only files in the project: a model written elsewhere is the caller's own.
-    if (relative(this.root, full).startsWith("..")) return;
+    if (relative(this.root, full).startsWith("..") && !this.outside.has(full)) return;
     const res = toResPath(this.root, full);
     if (this.before.has(res)) return;
     // One open file for the size and the copy, so the copy is the file as it was measured.
@@ -131,7 +165,7 @@ export class JournalWriter {
 
   /** Stores the entry; returns its id, or undefined when nothing was written. */
   commit(): number | undefined {
-    if (!this.before.size) return undefined;
+    if (!this.before.size && !this.learning) return undefined;
     const ids = entryIds(this.root);
     this.id = (ids.at(-1) ?? 0) + 1;
     this.dir = join(journalDir(this.root), String(this.id));
@@ -149,7 +183,15 @@ export class JournalWriter {
       if (b.notKept) entry.notKept = true;
       files.push(entry);
     }
-    const entry: JournalEntry = { id: this.id, tool: this.tool, summary: this.summary, date: new Date().toISOString(), files, ...(this.note ? { note: this.note } : {}) };
+    const entry: JournalEntry = {
+      id: this.id,
+      tool: this.tool,
+      summary: this.summary,
+      date: new Date().toISOString(),
+      files,
+      ...(this.note ? { note: this.note } : {}),
+      ...(this.learning ? { learning: this.learning } : {}),
+    };
     writeFileSync(join(this.dir, "entry.json"), `${JSON.stringify(entry, null, 2)}\n`);
     for (const old of entryIds(this.root).slice(0, -KEEP)) rmSync(join(journalDir(this.root), String(old)), { recursive: true, force: true });
     return this.id;
@@ -164,7 +206,8 @@ export function readJournal(path: string): { root: string; entries: JournalEntry
 }
 
 export interface UndoResult {
-  undone: { entry: JournalEntry; restored: string[]; removed: string[] }[];
+  /** `lessons`: local lessons put back in the learning file; `kept`: lessons left alone because they changed since. */
+  undone: { entry: JournalEntry; restored: string[]; removed: string[]; lessons?: { restored: string[]; kept: string[] } }[];
   /** The entry that could not be undone, and why. */
   blocked?: { entry: JournalEntry; changed: string[]; notKept: string[] };
   left: number;
@@ -212,10 +255,61 @@ export function undoJournal(path: string, options: { steps?: number; force?: boo
         }
       }
     }
+    let lessons: { restored: string[]; kept: string[] } | undefined;
+    if (entry.learning) {
+      const undo = entry.learning;
+      saveLearning((data) => {
+        const r = applyLearningUndo(data, undo, options.force === true);
+        lessons = { restored: r.restored, kept: r.skipped };
+      });
+    }
     rmSync(dir, { recursive: true, force: true });
-    undone.push({ entry, restored, removed });
+    logUndone(root, entry);
+    undone.push({ entry, restored, removed, ...(lessons ? { lessons } : {}) });
   }
   return { undone, ...(blocked ? { blocked } : {}), left: entryIds(root).length };
+}
+
+/** The kind of a file, for the undone log: its extension, or the name for project.godot and files without one. */
+function fileKind(file: string): string {
+  const name = file.slice(file.lastIndexOf("/") + 1);
+  if (name === "project.godot") return name;
+  return extname(name).toLowerCase() || "(none)";
+}
+
+/** Keeps a short, anonymous record of an undone write (tool and file kinds only) for `godotwright dream`. */
+function logUndone(root: string, entry: JournalEntry): void {
+  try {
+    const file = join(journalDir(root), "undone.jsonl");
+    const line: UndoneWrite = { tool: entry.tool, kinds: [...new Set(entry.files.map((f) => fileKind(f.file)))].sort(), date: entry.date, undoneAt: new Date().toISOString() };
+    mkdirSync(dirname(file), { recursive: true });
+    appendFileSync(file, `${JSON.stringify(line)}\n`);
+    const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
+    if (lines.length > KEEP_UNDONE) writeFileSync(file, `${lines.slice(-KEEP_UNDONE).join("\n")}\n`);
+  } catch {
+    // The log only feeds `godotwright dream`; an undo never fails over it.
+  }
+}
+
+/** The undone writes of a project, oldest first (empty when there are none). */
+export function readUndone(root: string): UndoneWrite[] {
+  try {
+    const out: UndoneWrite[] = [];
+    for (const line of readFileSync(join(journalDir(root), "undone.jsonl"), "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const u = JSON.parse(line) as Partial<UndoneWrite>;
+        if (typeof u.tool === "string" && Array.isArray(u.kinds) && typeof u.date === "string" && typeof u.undoneAt === "string") {
+          out.push({ tool: u.tool, kinds: u.kinds.filter((k): k is string => typeof k === "string"), date: u.date, undoneAt: u.undoneAt });
+        }
+      } catch {
+        // A broken line is skipped.
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 const when = (iso: string) => iso.slice(0, 16).replace("T", " ");
@@ -235,8 +329,10 @@ export function formatUndo(r: UndoResult): string {
   const out: string[] = [];
   for (const u of r.undone) {
     const parts = [u.restored.length ? `${u.restored.length} file${u.restored.length === 1 ? "" : "s"} restored` : "", u.removed.length ? `${u.removed.length} new file${u.removed.length === 1 ? "" : "s"} removed` : ""].filter(Boolean);
+    if (u.lessons?.restored.length) parts.push(`${u.lessons.restored.length} lesson${u.lessons.restored.length === 1 ? "" : "s"} put back in the learning file`);
     out.push(`undone #${u.entry.id} ${u.entry.tool}: ${u.entry.summary}: ${parts.join(", ") || "nothing left to restore"}`);
     for (const f of [...u.restored, ...u.removed].slice(0, 12)) out.push(`  ${f}`);
+    if (u.lessons?.kept.length) out.push(`  left alone (changed since): ${u.lessons.kept.join(", ")}`);
     if (u.entry.note) out.push(`  note: ${u.entry.note}`);
   }
   if (r.blocked) {
