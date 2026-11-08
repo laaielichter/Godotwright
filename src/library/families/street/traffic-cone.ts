@@ -50,7 +50,7 @@ function nodes(style: Style): SpecNode[] {
         cyl("Body", "$r", "$height - 0.07", { at: [0, 0.04, 0], anchor: "base", segments: 20, bevel: 0.01 }),
         cyl("Band_{i}", "$r + 0.003", 0.08, { at: [0, "$height - 0.32", 0], anchor: "base", segments: 20, repeat: { count: 3, step: [0, -0.18, 0] }, material: "reflector_white" }),
         lathe("Grip", [["$r * 0.5", "$height - 0.04"], ["$r * 0.9", "$height - 0.02"], ["$r * 0.9", "$height"], ["$r * 0.4", "$height + 0.005"]], { segments: 20 }),
-        ...grimeRound("Grime", "$r", "$r", 0.22, [0, 0.12, 0], 20),
+        ...grimeRound("Grime", "$r + 0.004", "$r + 0.004", 0.22, [0, 0.12, 0], 20),
       ];
     case "drum": {
       const prof: [string, string | number][] = [["$r * 0.9", 0.06]];
@@ -66,7 +66,7 @@ function nodes(style: Style): SpecNode[] {
         cyl("Band_{i}", "$r + 0.003", "($height - 0.12) / 12", { at: [0, "0.06 + ($height - 0.12) * 0.25 / 6", 0], anchor: "base", segments: 24, repeat: { count: 2, step: [0, "($height - 0.12) * 2 / 6", 0] }, material: "reflector_white" }),
         cyl("Band_Top", "$r + 0.003", "($height - 0.12) / 12", { at: [0, "0.06 + ($height - 0.12) * 4.25 / 6", 0], anchor: "base", segments: 24, material: "reflector_white" }),
         box("Handle", ["$r * 0.8", 0.04, 0.05], { at: [0, "$height - 0.02", 0], anchor: "bottom", bevel: 0.015 }),
-        ...grimeRound("Grime", "$r + 0.002", "$r + 0.002", 0.24, [0, 0.07, 0]),
+        ...grimeRound("Grime", "$r + 0.004", "$r + 0.004", 0.24, [0, 0.07, 0]),
       ];
     }
   }
