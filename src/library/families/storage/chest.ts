@@ -1,6 +1,7 @@
 import { box, cap, cyl, group, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, stencil, useMats, worn } from "./common.js";
+import { an, finishName, finishTags, laid, stencil, useMats, worn } from "./common.js";
+import type { MaterialDef } from "../../palette.js";
 
 type Finish = { main: string; trim: string; accent: string };
 interface Style {
@@ -105,7 +106,7 @@ function trunk(f: Finish): SpecNode[] {
     group("Trunk", [
       group("Body", [
         box("Case", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.006 }),
-        box("Slat_F{i}", ["$W + 0.008", 0.05, "$D + 0.008"], { at: [0, 0.06, 0], repeat: { count: 3, step: [0, "($bh - 0.12) / 2", 0] }, material: f.trim, bevel: 0.004 }),
+        laid("x", box("Slat_F{i}", ["$W + 0.008", 0.05, "$D + 0.008"], { at: [0, 0.06, 0], repeat: { count: 3, step: [0, "($bh - 0.12) / 2", 0] }, material: f.trim, bevel: 0.004 })),
         box("Upright_L", [0.05, "$bh - 0.02", "$D + 0.012"], { at: ["$W / 2 - 0.08", "$bh / 2", 0], material: f.trim, mirror: "Upright_R" }),
         ...corners,
         box("Nail_F{i}", [0.012, 0.012, 0.01], { at: ["-$W / 2 + 0.12", "$bh - 0.02", "$D / 2 + 0.006"], repeat: { count: 9, step: ["($W - 0.24) / 8", 0, 0] }, material: f.accent, bevel: 0.004 }),
@@ -190,6 +191,12 @@ const STYLES: Style[] = [
   },
 ];
 
+/** A treasure chest is built of planks: its wood keeps the planked texture (the other woods here are single boards). */
+function planked(main: string | undefined, m: Record<string, MaterialDef>): Record<string, MaterialDef> {
+  const w = main ? m[main] : undefined;
+  return w && w.texture === "grain" ? { ...m, [main as string]: { ...w, texture: "wood" } } : m;
+}
+
 function chest(style: Style, f: Finish): AssetDraft {
   const fin = finishName(f.main);
   return {
@@ -198,7 +205,7 @@ function chest(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. The lid hinges about x on its back top edge, and the lock faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params: style.params,
-    materials: useMats(f.main, f.trim, f.accent, "hole", "rubber", "rope", "leather_brown", worn(f.main)),
+    materials: planked(style.name === "treasure" ? f.main : undefined, useMats(f.main, f.trim, f.accent, "hole", "rubber", "rope", "leather_brown", worn(f.main))),
     nodes: style.build(f),
   };
 }

@@ -1,6 +1,6 @@
-import { cyl, ellipsoid, group, int, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
+import { cyl, ellipsoid, group, int, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats } from "../../palette.js";
-import { natureMats } from "./common.js";
+import { n4, natureMats } from "./common.js";
 
 type Kind = "tulip" | "sunflower" | "daisy" | "rose" | "lily";
 
@@ -85,6 +85,24 @@ function head(f: Flower): SpecNode[] {
   }
 }
 
+/**
+ * A real leaf blade instead of a flat, smooth lens: it runs out from its base along +z (length `len`, widest `wide`
+ * across), folded along the midrib into a shallow V so the edges stand up, arched so the tip bows away, and lifted
+ * `lift` degrees from the ground (90: upright, against the stem). The blade is a closed, thin loft.
+ */
+function blade(name: string, len: string, wide: string, o: { lift: number; arch: number; fold: number; twist?: number; at?: [string | number, string | number, string | number]; repeat?: { count: string | number; around: "y"; phase: number } }): SpecNode {
+  const us = [0, 0.1, 0.28, 0.48, 0.68, 0.86, 1];
+  const ws = [0.42, 0.82, 1, 0.92, 0.7, 0.38, 0.06];
+  const sections = us.map((u, k) => {
+    const w = `(${wide}) * ${n4(ws[k]! / 2)}`;
+    // The tip bows away from the upper face; the fold flattens out toward the tip.
+    const d = `-(${len}) * ${n4(o.arch * u * u)}`;
+    const f = n4(o.fold * (1 - 0.6 * u));
+    return { z: `(${len}) * ${n4(u)}`, points: [[w, `${d} + ${w} * ${f}`], ["0", `${d} + ${w} * 0.08 + 0.0008`], [`-${w}`, `${d} + ${w} * ${f}`], ["0", d]] };
+  });
+  return loft(name, sections, { at: o.at, rotate: [-o.lift, o.twist ?? 0, 0], ...(o.repeat ? { repeat: o.repeat } : {}) });
+}
+
 /** Head tilt toward the front (+z), degrees. */
 const TILT: Record<Kind, number> = { tulip: 4, sunflower: 70, daisy: 30, rose: 12, lily: 55 };
 
@@ -96,13 +114,17 @@ function plant(f: Flower, leanX: string, leanZ: string): SpecNode[] {
   const leaves: SpecNode[] = [];
   switch (f.kind) {
     case "tulip":
-      leaves.push(ellipsoid("Leaf_{i}", ["$h * 0.06 + 0.005", "$h * 0.32", "$hr * 0.08 + 0.003"], { at: ["$h * 0.07", "$h * 0.3", 0], rotate: [0, 0, -16], segments: 12, repeat: { count: 2, around: "y", phase: 30 } }));
+      // Two broad, channelled leaves clasping the foot of the stem and arching out, and a narrower one higher up.
+      leaves.push(
+        group("Leaf_{i}", [blade("Blade", "$h * 0.62", "$h * 0.15 + 0.012", { lift: 76, arch: 0.32, fold: 0.55, twist: 8 })], { repeat: { count: 2, around: "y", phase: 30 } }),
+        group("LeafUpper", [blade("Blade", "$h * 0.4", "$h * 0.08 + 0.008", { lift: 70, arch: 0.4, fold: 0.6, twist: -10 })], { at: [0, "$h * 0.14", 0], rotate: [0, 120, 0] }),
+      );
       break;
     case "sunflower":
-      leaves.push(ellipsoid("Leaf_{i}", ["$hr * 0.7", "$hr * 0.03 + 0.002", "$hr * 0.55"], { at: ["$hr * 0.7", "$h * (0.25 + 0.14 * $i)", 0], rotate: [0, 0, -18], segments: 12, repeat: { count: 4, around: "y", phase: 20 } }));
+      leaves.push(group("Leaf_{i}", [blade("Blade", "$hr * 1.5", "$hr * 1.15", { lift: 28, arch: 0.35, fold: 0.3 })], { at: [0, "$h * (0.25 + 0.14 * $i)", 0], repeat: { count: 4, around: "y", phase: 20 } }));
       break;
     case "daisy":
-      leaves.push(ellipsoid("Leaf_{i}", ["$h * 0.12 + 0.01", "$h * 0.01 + 0.001", "$h * 0.035 + 0.004"], { at: ["$h * 0.1 + 0.008", "$h * 0.012 + 0.002", 0], rotate: [0, 0, 12], segments: 10, repeat: { count: 5, around: "y", phase: 10 } }));
+      leaves.push(group("Leaf_{i}", [blade("Blade", "$h * 0.24 + 0.02", "$h * 0.07 + 0.008", { lift: 22, arch: 0.3, fold: 0.45, twist: 6 })], { at: [0, 0.002, 0], repeat: { count: 5, around: "y", phase: 10 } }));
       break;
     case "rose":
       leaves.push(group("Leaf_{i}", [
@@ -113,7 +135,7 @@ function plant(f: Flower, leanX: string, leanZ: string): SpecNode[] {
       ], { at: [0, "$h * (0.3 + 0.18 * $i)", 0], repeat: { count: 3, around: "y", phase: 40 } }));
       break;
     case "lily":
-      leaves.push(ellipsoid("Leaf_{i}", ["$h * 0.07", "$h * 0.004 + 0.001", "$h * 0.012 + 0.002"], { at: ["$h * 0.06", "$h * (0.2 + 0.07 * $i)", 0], rotate: [0, 0, 30], segments: 10, repeat: { count: 8, around: "y", phase: 0 } }));
+      leaves.push(group("Leaf_{i}", [blade("Blade", "$h * 0.14", "$h * 0.026 + 0.003", { lift: 48, arch: 0.35, fold: 0.6 })], { at: [0, "$h * (0.2 + 0.07 * $i)", 0], repeat: { count: 8, around: "y", phase: 0 } }));
       break;
   }
   return [

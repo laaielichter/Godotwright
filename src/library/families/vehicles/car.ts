@@ -362,8 +362,10 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     extra[t] = s;
     sList.add(s);
   }
-  if (st.bed) { const s = B.sAt(st.bed[1] + 0.002); sList.add(s); extra["cab"] = s; sList.add(B.sAt(st.bed[1] - 0.012)); }
-  const stations = [...sList].sort((a, b) => a - b).filter((s, i, arr) => i === 0 || s - arr[i - 1]! > 0.006 || Object.values(extra).includes(s));
+  if (st.bed) { const s = B.sAt(st.bed[1] + 0.002); sList.add(s); extra["cab"] = s; const s2 = B.sAt(st.bed[1] - 0.012); sList.add(s2); extra["cab2"] = s2; }
+  // A regular station too close to a panel edge would make sliver quads: the edge station replaces it.
+  const ex = Object.values(extra);
+  const stations = [...sList].sort((a, b) => a - b).filter((s) => ex.includes(s) || Number.isInteger(s) || ex.every((e) => Math.abs(s - e) > 0.035));
   const sec = (s: number) => ({ z: ls(B.Z(s)), points: B.ring(s).map(([x, y]) => [ls(x), ls(y)]) });
   kids.push(loft("Body", stations.map(sec), { material: "body_paint" }));
 
@@ -450,6 +452,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     const yH = doorTopY - 0.1;
     const sH = B.sAt(z1 + 0.16 / env.L2!);
     const handle = box("Handle", [0.03, 0.028, 0.16], { at: [ls(lsub(ladd(B.sideX(sH, yH), L(0.012)), origin[0])), ls(lsub(L(yH - st.belt * Hd, { H: st.belt }), origin[1])), ls(lsub(B.Z(sH), origin[2]))], bevel: 0.01, material: st.bumper === "chrome" ? "chrome" : "satin_black" });
+    zs.reverse(); zg.reverse();
     return group(name, [
       loft("Skin", strip(zs, 0.0045, 0.006, 0, origin), { material: "body_paint" }),
       loft("Gap", strip(zg, 0.0018, 0.008, 0.005, origin), { material: "panel_gap" }),
@@ -472,7 +475,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
       const S = B.section(s);
       const top = S.pts.slice(12);
       const half = top.map(([x, y], i): LP => [i === 0 ? ladd(x, L(grow)) : x, y]);
-      const outer = [...half, ...[...half].reverse().map(([x, y]): LP => [lscale(x, -1), y])].reverse();
+      const outer = [...half, ...[...half].reverse().map(([x, y]): LP => [lscale(x, -1), y])];
       const o = outer.map(([x, y]): [Num, Num] => [ls(x), ls(lsub(ladd(y, L(up)), origin[0]))]);
       const inn = [...outer].reverse().map(([x, y]): [Num, Num] => [ls(x), ls(lsub(ladd(y, L(-down)), origin[0]))]);
       return { z: ls(lsub(B.Z(s), origin[1])), points: [...o, ...inn] };

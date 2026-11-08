@@ -31,7 +31,8 @@ function helix(turns: number): Vec[] {
 function woodenDrum(f: Finish): SpecNode[] {
   const flange = (name: string, mirror?: string): SpecNode =>
     group(name, [
-      cyl("Disc", "$R", 0.05, { axis: "x", segments: 40 }),
+      // Built facing z and turned to face x, so the grain on its faces runs up the planks (along the seams).
+      cyl("Disc", "$R", 0.05, { axis: "z", rotate: [0, 90, 0], segments: 40 }),
       box("Seam_{i}", [0.054, "$R * 1.7", 0.006], { at: [0, 0, "-$R * 0.6"], repeat: { count: 5, step: [0, 0, "$R * 0.3"] }, material: "hole" }),
       box("Batten_F", [0.035, "$R * 1.6", 0.09], { at: [0.035, 0, "$R * 0.42"] }),
       box("Batten_B", [0.035, "$R * 1.6", 0.09], { at: [0.035, 0, "-$R * 0.42"] }),

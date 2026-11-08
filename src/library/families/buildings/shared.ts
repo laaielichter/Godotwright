@@ -52,9 +52,10 @@ export const BMATS: Record<string, MaterialDef> = {
  * index applies these to every asset of the category (see `tuneBuildings`).
  */
 export const BUILDING_OVERRIDES: Record<string, MaterialDef> = {
-  brick_red: { color: [0.19, 0.058, 0.034], metallic: 0, roughness: 0.88, texture: "brick" },
-  brick_brown: { color: [0.095, 0.045, 0.028], metallic: 0, roughness: 0.88, texture: "brick" },
-  brick_yellow: { color: [0.38, 0.28, 0.14], metallic: 0, roughness: 0.88, texture: "brick" },
+  // The brick and stone textures keep the colour as their mean (the mortar follows it), so these are the real albedos.
+  brick_red: { color: [0.25, 0.075, 0.045], metallic: 0, roughness: 0.88, texture: "brick" },
+  brick_brown: { color: [0.15, 0.072, 0.045], metallic: 0, roughness: 0.88, texture: "brick" },
+  brick_yellow: { color: [0.36, 0.255, 0.115], metallic: 0, roughness: 0.88, texture: "brick" },
   limestone: { color: [0.4, 0.385, 0.34], metallic: 0, roughness: 0.85, texture: "stone" },
   sandstone: { color: [0.34, 0.24, 0.13], metallic: 0, roughness: 0.9, texture: "stone" },
   granite: { color: [0.19, 0.185, 0.18], metallic: 0, roughness: 0.8, texture: "stone" },

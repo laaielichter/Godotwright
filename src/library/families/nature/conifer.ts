@@ -87,7 +87,7 @@ function bough(c: Conifer): SpecNode {
   const halfAt = (u: number): string => `(($Rb * 0.13 + $D * ${n4(w)}) * ${n4(1 - 0.75 * u)} + 0.02)`;
   const children: SpecNode[] = [
     ellipsoid("Spray", [`${halfAt(0.45)} * (0.7 + 0.5 * (0.5 + 0.5 * sin($i * 4.1 + $t * 3)))`, `${halfAt(0.45)} * 0.32 + 0.02`, "$Rb * 0.26"], { at: [0, `${yAt(0.45)} + ${halfAt(0.45)} * 0.18`, "$Rb * 0.45"], segments: 8, lumps: 0.55, seed: "$i * 7 + 2" }),
-    ellipsoid("Tip", [`${halfAt(0.85)} * 1.2`, `${halfAt(0.85)} * 0.4 + 0.02`, "$Rb * 0.16"], { at: [0, `${yAt(0.88)} + ${halfAt(0.88)} * 0.15`, "$Rb * 0.86"], segments: 8, lumps: 0.55, seed: "$i * 5 + 1", material: tipOf(c) }),
+    ellipsoid("Tip", [`${halfAt(0.85)} * (0.55 + 0.9 * (0.5 + 0.5 * sin($i * 5.3 + $t * 2.1)))`, `${halfAt(0.85)} * 0.4 + 0.02`, "$Rb * (0.08 + 0.12 * (0.5 + 0.5 * sin($i * 5.3 + $t * 2.1)))"], { at: [0, `${yAt(0.88)} + ${halfAt(0.88)} * 0.15`, "$Rb * 0.86"], segments: 8, lumps: 0.55, seed: "$i * 5 + 1", material: tipOf(c) }),
   ];
   if (c.snow) {
     const u = 0.5;

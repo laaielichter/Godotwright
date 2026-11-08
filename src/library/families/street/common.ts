@@ -67,7 +67,7 @@ export const LOCAL: Record<string, MaterialDef> = {
   plastic_grey: pe(0.11, 0.115, 0.115),
   plastic_black: pe(0.035, 0.035, 0.037),
   plastic_white: pe(0.58, 0.58, 0.56, 0.5),
-  fibreglass_white: pe(0.56, 0.56, 0.54, 0.45),
+  fibreglass_white: pe(0.46, 0.46, 0.44, 0.45),
   water_barrier_red: pe(0.36, 0.03, 0.025, 0.65),
   water_barrier_white: pe(0.56, 0.56, 0.53, 0.65),
   rubber: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "plastic" },

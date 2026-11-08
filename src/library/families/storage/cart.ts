@@ -1,6 +1,6 @@
 import { box, cap, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, useMats } from "./common.js";
+import { an, finishName, finishTags, laid, useMats } from "./common.js";
 
 type Finish = { main: string; trim: string; load?: string };
 interface Style {
@@ -77,17 +77,17 @@ function handcart(f: Finish): SpecNode[] {
       wheel("Wheel_L", ["$W / 2 + 0.07", "$r", 0], "spoked", f, "Wheel_R"),
       cyl("Axle", 0.025, "$W + 0.22", { axis: "x", at: [0, "$r", 0], segments: 10, material: "black_steel" }),
       group("Body", [
-        box("Bed", ["$W", 0.04, "$L * 0.62"], { at: [0, "$r + 0.04", "-$L * 0.06"], bevel: 0.005 }),
+        laid("z", box("Bed", ["$W", 0.04, "$L * 0.62"], { at: [0, "$r + 0.04", "-$L * 0.06"], bevel: 0.005 })),
         box("Plank_{i}", [0.004, 0.041, "$L * 0.62"], { at: ["-$W / 2 + $W / 5", "$r + 0.04", "-$L * 0.06"], repeat: { count: 4, step: ["$W / 5", 0, 0] }, material: "hole" }),
-        box("Bolster", ["$W + 0.04", 0.08, 0.1], { at: [0, "$r + 0.0", 0], bevel: 0.005 }),
-        box("Side_L", [0.03, 0.18, "$L * 0.62"], { at: ["$W / 2 - 0.015", "$r + 0.15", "-$L * 0.06"], bevel: 0.005, mirror: "Side_R" }),
-        box("Tail", ["$W - 0.06", 0.18, 0.03], { at: [0, "$r + 0.15", "-$L * 0.37 + 0.015"], bevel: 0.005 }),
+        laid("x", box("Bolster", ["$W + 0.04", 0.08, 0.1], { at: [0, "$r + 0.0", 0], bevel: 0.005 })),
+        laid("z", box("Side_L", [0.03, 0.18, "$L * 0.62"], { at: ["$W / 2 - 0.015", "$r + 0.15", "-$L * 0.06"], bevel: 0.005, mirror: "Side_R" })),
+        laid("x", box("Tail", ["$W - 0.06", 0.18, 0.03], { at: [0, "$r + 0.15", "-$L * 0.37 + 0.015"], bevel: 0.005 })),
         box("Stake_L{i}", [0.04, 0.24, 0.04], { at: ["$W / 2 - 0.035", "$r + 0.14", "-$L * 0.33"], repeat: { count: 3, step: [0, 0, "$L * 0.27"] }, material: f.trim, mirror: "Stake_R{i}" }),
       ]),
       group("Handle_L", [
-        box("Shaft", [0.05, 0.06, "$L * 0.75"], { at: ["$W / 2 - 0.08", "$r", "$L * 0.125"], bevel: 0.008 }),
+        laid("z", box("Shaft", [0.05, 0.06, "$L * 0.75"], { at: ["$W / 2 - 0.08", "$r", "$L * 0.125"], bevel: 0.008 })),
       ], { mirror: "Handle_R" }),
-      box("Crossbar", ["$W - 0.1", 0.045, 0.045], { at: [0, "$r", "$L / 2 - 0.05"], bevel: 0.008 }),
+      laid("x", box("Crossbar", ["$W - 0.1", 0.045, 0.045], { at: [0, "$r", "$L / 2 - 0.05"], bevel: 0.008 })),
       box("Prop", [0.05, "$r", 0.05], { at: [0, "$r / 2", "$L / 2 - 0.05"], bevel: 0.005, material: f.trim }),
     ], { material: f.main, vars: { L: "$length", W: "$width", r: "$wheel", tw: 0.06 } }),
   ];
@@ -105,10 +105,10 @@ function wagon(f: Finish): SpecNode[] {
       box("Bracket_R", ["$W * 0.8", "$h0 - $r", 0.06], { at: [0, "($h0 + $r) / 2", "-$L * 0.33"], material: "black_steel" }),
       cyl("Turntable", 0.1, 0.02, { at: [0, "$h0 - 0.01", "$L * 0.33"], segments: 16, material: "black_steel" }),
       group("Body", [
-        box("Floor", ["$W", 0.03, "$L"], { at: [0, "$h0 + 0.015", 0], bevel: 0.004 }),
-        box("Board_L", [0.02, "$sh", "$L"], { at: ["$W / 2 - 0.01", "$h0 + $sh / 2", 0], bevel: 0.004, mirror: "Board_R" }),
-        box("Board_F", ["$W - 0.04", "$sh", 0.02], { at: [0, "$h0 + $sh / 2", "$L / 2 - 0.01"], bevel: 0.004 }),
-        box("Board_B", ["$W - 0.04", "$sh", 0.02], { at: [0, "$h0 + $sh / 2", "-$L / 2 + 0.01"], bevel: 0.004 }),
+        laid("z", box("Floor", ["$W", 0.03, "$L"], { at: [0, "$h0 + 0.015", 0], bevel: 0.004 })),
+        laid("z", box("Board_L", [0.02, "$sh", "$L"], { at: ["$W / 2 - 0.01", "$h0 + $sh / 2", 0], bevel: 0.004, mirror: "Board_R" })),
+        laid("x", box("Board_F", ["$W - 0.04", "$sh", 0.02], { at: [0, "$h0 + $sh / 2", "$L / 2 - 0.01"], bevel: 0.004 })),
+        laid("x", box("Board_B", ["$W - 0.04", "$sh", 0.02], { at: [0, "$h0 + $sh / 2", "-$L / 2 + 0.01"], bevel: 0.004 })),
         box("Cap_L", [0.04, 0.02, "$L + 0.02"], { at: ["$W / 2 - 0.01", "$h0 + $sh", 0], material: f.trim, bevel: 0.004, mirror: "Cap_R" }),
         box("Slot_L{i}", [0.022, "$sh * 0.3", 0.08], { at: ["$W / 2 - 0.01", "$h0 + $sh * 0.6", "-$L * 0.3"], repeat: { count: 3, step: [0, 0, "$L * 0.3"] }, material: "hole", mirror: "Slot_R{i}" }),
       ]),

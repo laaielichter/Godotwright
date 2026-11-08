@@ -8,7 +8,8 @@ export const HOLE: MaterialDef = { color: [0.015, 0.014, 0.013], metallic: 0, ro
 
 const paintFin = (r: number, g: number, b: number, roughness = 0.5, metallic = 0.15): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
 const plasticFin = (r: number, g: number, b: number, roughness = 0.55): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "plastic" });
-const woodFin = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
+/** Sawn timber: storage woods are single boards, slats, battens, staves and handles, so solid grain without plank joints. */
+const woodFin = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
 /** Container paint: satin marine paint on steel; the weathering comes from darker oxidised valleys and rust run-offs. */
 const weatheredFin = (r: number, g: number, b: number, roughness = 0.6): MaterialDef => ({ color: [r, g, b], metallic: 0.2, roughness, texture: "painted" });
 
@@ -49,13 +50,13 @@ export const EXTRA: Record<string, MaterialDef> = {
   hdpe_black: plasticFin(0.035, 0.035, 0.037, 0.62),
   hdpe_grey: plasticFin(0.14, 0.145, 0.145, 0.62),
   // Woods as they really are (the palette's are a little pale for rough warehouse timber).
-  pine: woodFin(0.36, 0.23, 0.11),
-  birch: woodFin(0.42, 0.32, 0.19, 0.7),
+  pine: woodFin(0.3, 0.19, 0.09), // fresh pine: the deck of a pallet in the sun reads pale, so keep it honest
+  birch: woodFin(0.34, 0.26, 0.15, 0.7),
   light_oak: woodFin(0.32, 0.2, 0.09, 0.7),
   oak: woodFin(0.26, 0.15, 0.065, 0.7),
   rough_timber: woodFin(0.26, 0.17, 0.085, 0.9),
   weathered_wood: woodFin(0.22, 0.19, 0.155, 0.92),
-  whitewash_wood: woodFin(0.42, 0.4, 0.35, 0.85),
+  whitewash_wood: woodFin(0.36, 0.34, 0.3, 0.85),
   // Corten and ISO container paints: weathered steel, mottled with oxide.
   corten: { color: [0.22, 0.075, 0.03], metallic: 0.15, roughness: 0.85, texture: "rust" },
   container_red: weatheredFin(0.17, 0.042, 0.03),
@@ -67,7 +68,7 @@ export const EXTRA: Record<string, MaterialDef> = {
   container_teal: weatheredFin(0.022, 0.08, 0.085),
   container_yellow: weatheredFin(0.38, 0.26, 0.03),
   rope: { color: [0.3, 0.22, 0.12], metallic: 0, roughness: 0.95, texture: "fabric" },
-  canvas_beige: { color: [0.36, 0.31, 0.22], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_beige: { color: [0.27, 0.23, 0.16], metallic: 0, roughness: 0.95, texture: "fabric" },
   sand: { color: [0.5, 0.4, 0.25], metallic: 0, roughness: 1, texture: "sand" },
   /** Kraft corrugated board, a little mottled. */
   cardboard: { color: [0.3, 0.19, 0.095], metallic: 0, roughness: 0.92, texture: "painted" },
@@ -82,15 +83,15 @@ export const EXTRA: Record<string, MaterialDef> = {
   cable_blue: plasticFin(0.03, 0.065, 0.18, 0.45),
   cable_green: plasticFin(0.035, 0.11, 0.045, 0.45),
   copper_wire: { color: [0.85, 0.48, 0.32], metallic: 1, roughness: 0.35, texture: "brushed" },
-  tank_white: paintFin(0.5, 0.5, 0.47, 0.5, 0.1),
+  tank_white: paintFin(0.42, 0.42, 0.395, 0.5, 0.1), // a tank roof faces the sun: keep the white off-white
   tank_silver: { color: [0.55, 0.56, 0.57], metallic: 0.6, roughness: 0.5, texture: "brushed" },
   /** Site concrete, weathered grey. */
-  concrete: { color: [0.3, 0.295, 0.28], metallic: 0, roughness: 0.92, texture: "concrete" },
-  concrete_dark: { color: [0.17, 0.17, 0.165], metallic: 0, roughness: 0.92, texture: "concrete" },
+  concrete: { color: [0.18, 0.177, 0.168], metallic: 0, roughness: 0.92, texture: "concrete" }, // plinth tops face the sun
+  concrete_dark: { color: [0.12, 0.12, 0.116], metallic: 0, roughness: 0.92, texture: "concrete" },
   gas_green: paintFin(0.03, 0.15, 0.06, 0.45),
   gas_maroon: paintFin(0.2, 0.03, 0.035, 0.45),
   /** Hot-dip galvanised steel: a dull spangled grey. */
-  galvanised: { color: [0.52, 0.54, 0.55], metallic: 0.75, roughness: 0.5, texture: "plastic" },
+  galvanised: { color: [0.3, 0.31, 0.315], metallic: 0.55, roughness: 0.62, texture: "plastic" },
   /** Oil, dust and grime: a dark smudge at the foot of things. */
   grime: { color: [0.05, 0.045, 0.04], metallic: 0, roughness: 0.9, texture: "rust" },
   /** A translucent film of road dust and grime over the lower part of a wall. */
@@ -102,7 +103,8 @@ export const EXTRA: Record<string, MaterialDef> = {
 /** A finish by name: the storage table, the palette, or a derived one ("<name>_worn", "<name>_dark"). */
 function resolve(n: string): MaterialDef {
   const direct = EXTRA[n] ?? PALETTE[n];
-  if (direct) return direct;
+  // Palette woods are planked ("wood"); storage timber is single boards and staves: solid grain.
+  if (direct) return direct.texture === "wood" ? { ...direct, texture: "grain" } : direct;
   const m = /^(.+)_(worn|dark|grime)$/.exec(n);
   const base = m ? (EXTRA[m[1] as string] ?? PALETTE[m[1] as string]) : undefined;
   if (!m || !base) return mats(n)[n] as MaterialDef;

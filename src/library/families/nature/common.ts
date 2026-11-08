@@ -157,15 +157,18 @@ export const LOCAL: Record<string, MaterialDef> = {
   // Bark and wood.
   bark_brown: barkOf(0.065, 0.047, 0.033),
   bark_grey: barkOf(0.072, 0.068, 0.061, 0.9),
-  bark_birch: barkOf(0.175, 0.17, 0.152, 0.85),
+  // Birch: chalky, warm white bark, smooth between the dark lenticel marks (which the families add as their own parts).
+  bark_birch: { color: [0.25, 0.24, 0.212], metallic: 0, roughness: 0.8, texture: "plaster" },
+  birch_mark: barkOf(0.032, 0.029, 0.026, 0.95),
   bark_red: barkOf(0.075, 0.043, 0.027, 0.92),
   bark_dark: barkOf(0.055, 0.042, 0.032),
   palm_bark: barkOf(0.1, 0.08, 0.058),
   palm_bark_grey: barkOf(0.12, 0.113, 0.1, 0.9),
-  heartwood: { color: [0.2, 0.115, 0.055], metallic: 0, roughness: 0.85, texture: "wood" },
-  sapwood: { color: [0.26, 0.18, 0.095], metallic: 0, roughness: 0.85, texture: "wood" },
-  rotten_wood: { color: [0.1, 0.065, 0.04], metallic: 0, roughness: 1, texture: "wood" },
-  weathered_wood: { color: [0.11, 0.1, 0.085], metallic: 0, roughness: 0.92, texture: "wood" },
+  // Solid timber: continuous grain without plank joints, for cut faces and sawn ends.
+  heartwood: { color: [0.2, 0.115, 0.055], metallic: 0, roughness: 0.85, texture: "grain" },
+  sapwood: { color: [0.26, 0.18, 0.095], metallic: 0, roughness: 0.85, texture: "grain" },
+  rotten_wood: { color: [0.1, 0.065, 0.04], metallic: 0, roughness: 1, texture: "grain" },
+  weathered_wood: { color: [0.11, 0.1, 0.085], metallic: 0, roughness: 0.92, texture: "grain" },
   fungus_shelf: plain(0.3, 0.19, 0.08, 0.75),
   soil: { color: [0.1, 0.066, 0.04], metallic: 0, roughness: 1, texture: "ground" },
   // Fruit and berries.

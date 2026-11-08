@@ -1,6 +1,6 @@
 import { box, cap, extrude, group, int, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
-import { an, finishName, finishTags, useMats } from "./common.js";
+import { an, finishName, finishTags, laid, useMats } from "./common.js";
 
 type Finish = { main: string; trim: string };
 type Load = "none" | "cartons" | "sacks" | "wrapped";
@@ -27,14 +27,14 @@ function eur(f: Finish): Base {
     extra: int("boards", 5, 3, 7, "Number of top deck boards."),
     nodes: [
       group("Base", [
-        box("Bottom_{i}", ["0.145", 0.022, "$L"], { at: ["-$W / 2 + 0.0725", 0.011, 0], repeat: { count: 3, step: ["$W / 2 - 0.0725", 0, 0] }, bevel: 0.003 }),
+        laid("z", box("Bottom_{i}", ["0.145", 0.022, "$L"], { at: ["-$W / 2 + 0.0725", 0.011, 0], repeat: { count: 3, step: ["$W / 2 - 0.0725", 0, 0] }, bevel: 0.003 })),
         ...blocks,
         box("Mark_{i}", [0.06, 0.035, 0.003], { at: ["-$W / 2 + 0.0725", 0.06, "$L / 2"], repeat: { count: 3, step: ["$W / 2 - 0.0725", 0, 0] }, material: "hole" }),
-        box("Chord_{i}", ["$W", 0.022, 0.145], { at: [0, 0.111, "-$L / 2 + 0.0725"], repeat: { count: 3, step: [0, 0, "$L / 2 - 0.0725"] }, bevel: 0.003 }),
+        laid("x", box("Chord_{i}", ["$W", 0.022, 0.145], { at: [0, 0.111, "-$L / 2 + 0.0725"], repeat: { count: 3, step: [0, 0, "$L / 2 - 0.0725"] }, bevel: 0.003 })),
       ]),
       group("Deck", [
-        box("Board_{i}", ["($W - 0.29) / ($boards - 2) - 0.035", 0.022, "$L"], { at: ["-$W / 2 + 0.145 + ($W - 0.29) / ($boards - 2) / 2", 0.133, 0], repeat: { count: "$boards - 2", step: ["($W - 0.29) / ($boards - 2)", 0, 0] }, bevel: 0.003 }),
-        box("Edge_L", [0.145, 0.022, "$L"], { at: ["$W / 2 - 0.0725", 0.133, 0], bevel: 0.003, mirror: "Edge_R" }),
+        laid("z", box("Board_{i}", ["($W - 0.29) / ($boards - 2) - 0.035", 0.022, "$L"], { at: ["-$W / 2 + 0.145 + ($W - 0.29) / ($boards - 2) / 2", 0.133, 0], repeat: { count: "$boards - 2", step: ["($W - 0.29) / ($boards - 2)", 0, 0] }, bevel: 0.003 })),
+        laid("z", box("Edge_L", [0.145, 0.022, "$L"], { at: ["$W / 2 - 0.0725", 0.133, 0], bevel: 0.003, mirror: "Edge_R" })),
       ]),
     ].map((n) => ({ ...n, material: f.main })),
   };
@@ -58,10 +58,10 @@ function gma(f: Finish): Base {
         stringer("Stringer_L", "$W / 2 - 0.02"),
         stringer("Stringer_M", "0"),
         stringer("Stringer_R", "-$W / 2 + 0.02"),
-        box("Bottom_{i}", ["$W", 0.016, 0.09], { at: [0, 0.008, "-$L / 2 + 0.045"], repeat: { count: 5, step: [0, 0, "($L - 0.09) / 4"] }, bevel: 0.003 }),
+        laid("x", box("Bottom_{i}", ["$W", 0.016, 0.09], { at: [0, 0.008, "-$L / 2 + 0.045"], repeat: { count: 5, step: [0, 0, "($L - 0.09) / 4"] }, bevel: 0.003 })),
       ]),
       group("Deck", [
-        box("Board_{i}", ["$W", 0.016, "min(0.14, ($L - 0.03 * ($boards - 1)) / $boards)"], { at: [0, 0.113, "-$L / 2 + min(0.14, ($L - 0.03 * ($boards - 1)) / $boards) / 2"], repeat: { count: "$boards", step: [0, 0, "($L - min(0.14, ($L - 0.03 * ($boards - 1)) / $boards)) / ($boards - 1)"] }, bevel: 0.003 }),
+        laid("x", box("Board_{i}", ["$W", 0.016, "min(0.14, ($L - 0.03 * ($boards - 1)) / $boards)"], { at: [0, 0.113, "-$L / 2 + min(0.14, ($L - 0.03 * ($boards - 1)) / $boards) / 2"], repeat: { count: "$boards", step: [0, 0, "($L - min(0.14, ($L - 0.03 * ($boards - 1)) / $boards)) / ($boards - 1)"] }, bevel: 0.003 })),
       ]),
     ].map((nd) => ({ ...nd, material: f.main })),
   };
