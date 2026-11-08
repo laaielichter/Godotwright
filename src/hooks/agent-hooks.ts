@@ -7,7 +7,7 @@ import { parseGodotLog } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
-import { emptyLearning } from "../learn/store.js";
+import { emptyLearning, learningAllowed, readLearning } from "../learn/store.js";
 import { lessonHintsForMessages, lessonHintsForRules } from "../lessons/hints.js";
 import { bundledLessons } from "../lessons/library.js";
 import { applyDream, dream, dreamDue, markDreamed, readDreamConfig, recordSession } from "../dream/dream.js";
@@ -301,7 +301,7 @@ export function sessionStart(input: HookInput, context: HookContext = {}): HookO
 export function dreamNotice(root: string, sessionId: string | undefined, now = new Date()): string | undefined {
   try {
     const config = readDreamConfig(root);
-    if (config.auto === "off") return undefined;
+    if (config.auto === "off" || !learningAllowed(readLearning())) return undefined;
     recordSession(root, sessionId, now);
     if (!dreamDue(root, config, now).due) return undefined;
     const { proposals } = dream(root, { now });

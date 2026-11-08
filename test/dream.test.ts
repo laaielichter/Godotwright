@@ -20,7 +20,7 @@ import {
   withBlock,
   type Proposal,
 } from "../src/dream/dream.js";
-import { claudeSlug, emptyFacts, readTranscript, readTranscripts } from "../src/dream/transcripts.js";
+import { claudeSlug, emptyFacts, readTranscript, readTranscripts, sessionFolders } from "../src/dream/transcripts.js";
 import { dreamNotice } from "../src/hooks/agent-hooks.js";
 import { JournalWriter, readJournal, undoJournal } from "../src/journal/journal.js";
 import { fingerprint } from "../src/learn/learn.js";
@@ -502,6 +502,26 @@ describe("dream due", () => {
     expect(dreamDue(root, readDreamConfig(root), later)).toMatchObject({ due: true, sessions: 5 });
     markDreamed(root, later);
     expect(dreamDue(root, readDreamConfig(root), new Date("2026-11-04T09:00:00Z"))).toMatchObject({ due: false, sessions: 0, hours: 48 });
+  });
+
+  it("counts nothing and says nothing while learning is off in the learning file", () => {
+    const root = project({ "godotwright.json": JSON.stringify({ dream: { auto: "apply", minHours: 0, minSessions: 1 } }) });
+    learn((d) => {
+      d.enabled = false;
+      d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } };
+    });
+    recordSession(root, "a");
+    expect(dreamDue(root, readDreamConfig(root)).sessions).toBe(0);
+    expect(dreamNotice(root, "b")).toBeUndefined();
+    expect(readProjectState(root).hints).toEqual([]);
+  });
+
+  it("finds the repository root four folders above the project", () => {
+    const repo = makeProject({ ".git/HEAD": "ref: refs/heads/main\n", "a/b/c/d/project.godot": PROJECT });
+    const root = join(repo, "a", "b", "c", "d");
+    expect(sessionFolders(root)).toEqual([root, join(repo, "a", "b", "c"), join(repo, "a", "b"), join(repo, "a"), repo]);
+    const deep = makeProject({ ".git/HEAD": "x\n", "a/b/c/d/e/project.godot": PROJECT });
+    expect(sessionFolders(join(deep, "a/b/c/d/e"))).toEqual([join(deep, "a/b/c/d/e")]);
   });
 
   it("reads its settings from godotwright.json", () => {

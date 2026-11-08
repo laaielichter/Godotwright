@@ -58,10 +58,11 @@ export function claudeSlug(dir: string): string {
 export function sessionFolders(root: string): string[] {
   const out = [resolve(root)];
   let at = resolve(root);
-  for (let i = 0; i < 4; i++) {
+  // The project folder and up to four folders above it, each checked for .git.
+  for (let i = 0; i <= 4; i++) {
     if (existsSync(join(at, ".git"))) return out;
     const up = dirname(at);
-    if (up === at) break;
+    if (up === at || i === 4) break;
     out.push(up);
     at = up;
   }

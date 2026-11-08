@@ -209,7 +209,8 @@ function writeMachine(change: (projects: Record<string, MachineState>) => void):
 
 /** Counts a session in the project (the session-start hook calls it). A session id already counted is not counted again. */
 export function recordSession(root: string, sessionId?: string, now = new Date()): void {
-  if (process.env["GODOTWRIGHT_LEARN"] === "0") return;
+  // Learning off (by the variable or `godotwright learn off`): nothing is counted.
+  if (!learningAllowed(readLearning())) return;
   writeMachine((projects) => {
     const key = projectKey(root);
     const s = (projects[key] ??= { firstSeen: now.toISOString(), sessions: 0, recent: [] });
