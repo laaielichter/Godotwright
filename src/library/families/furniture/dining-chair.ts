@@ -1,5 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
+import { label } from "../../palette.js";
+import { fmats } from "./parts.js";
 
 /** The back of the chair, from its rails to its filling. */
 const STYLES = {
@@ -92,7 +93,7 @@ function chair(style: keyof typeof STYLES, finish: (typeof FINISHES)[number]): A
       num("seatDepth", 0.44, 0.38, 0.52, "Seat depth along z."),
       num("backHeight", 0.46, 0.3, 0.56, "Height of the back above the seat."),
     ],
-    materials: mats(wood, ...(finish.cushion ? [finish.cushion] : [])),
+    materials: fmats(wood, ...(finish.cushion ? [finish.cushion] : [])),
     nodes,
   };
 }

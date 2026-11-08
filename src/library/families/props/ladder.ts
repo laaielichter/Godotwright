@@ -1,5 +1,6 @@
 import { box, combos, cyl, group, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats, type MaterialDef } from "../../palette.js";
+import type { MaterialDef } from "../../palette.js";
+import { FINISH } from "./finishes.js";
 
 /**
  * Ladders: a straight wooden ladder, an aluminium extension ladder with a fly section, an A-frame step ladder and a
@@ -19,32 +20,31 @@ interface Finish {
 
 const FINISHES: Record<Style, Finish[]> = {
   single: [
-    { key: "pine", rail: "pine", rung: "light_oak", trim: "galvanised", text: "pine rails with oak rungs" },
-    { key: "weathered", rail: "weathered_wood", rung: "weathered_wood", trim: "rust", text: "weathered grey timber with rusty tie rods" },
+    { key: "pine", rail: "wood_pine", rung: "wood_oak", trim: "galvanised_steel", text: "pine rails with oak rungs" },
+    { key: "weathered", rail: "wood_weathered", rung: "wood_weathered", trim: "iron_rusty", text: "weathered grey timber with rusty tie rods" },
   ],
   extension: [
-    { key: "aluminium", rail: "aluminium", rung: "brushed_steel", trim: "rubber", text: "aluminium rails and ribbed rungs" },
-    { key: "fibreglass", rail: "ladder_fibre_orange", rung: "aluminium", trim: "rubber", text: "orange fibreglass rails with aluminium rungs" },
+    { key: "aluminium", rail: "satin_alu", rung: "satin_alu", trim: "rubber_black", text: "satin aluminium rails and ribbed rungs" },
+    { key: "fibreglass", rail: "ladder_fibre_orange", rung: "satin_alu", trim: "rubber_black", text: "orange fibreglass rails with aluminium rungs" },
   ],
   step: [
-    { key: "aluminium", rail: "aluminium", rung: "aluminium", trim: "plastic_blue", text: "aluminium with blue plastic caps and feet" },
-    { key: "wooden", rail: "pine", rung: "pine", trim: "paint_red", text: "pine with a red-painted top and steel spreaders" },
+    { key: "aluminium", rail: "satin_alu", rung: "satin_alu", trim: "abs_blue", text: "aluminium with blue plastic caps and feet" },
+    { key: "wooden", rail: "wood_pine", rung: "wood_pine", trim: "powder_red", text: "pine with a red-painted top and steel spreaders" },
   ],
   fixed: [
-    { key: "galvanised", rail: "galvanised", rung: "galvanised", trim: "steel", text: "hot-dip galvanised steel" },
-    { key: "yellow", rail: "paint_yellow", rung: "galvanised", trim: "steel", text: "safety-yellow painted steel" },
+    { key: "galvanised", rail: "galvanised_steel", rung: "galvanised_steel", trim: "galvanised_steel", text: "hot-dip galvanised steel" },
+    { key: "yellow", rail: "powder_yellow", rung: "galvanised_steel", trim: "galvanised_steel", text: "safety-yellow powder-coated steel" },
   ],
 };
 
 const LOCAL: Record<string, MaterialDef> = {
-  ladder_fibre_orange: { color: [0.85, 0.28, 0.03], metallic: 0, roughness: 0.45 },
+  ladder_fibre_orange: { color: [0.5, 0.13, 0.02], metallic: 0, roughness: 0.45, texture: "plastic" },
+  ...FINISH,
 };
 
 function materials(f: Finish): Record<string, MaterialDef> {
-  const names = [...new Set([f.rail, f.rung, f.trim, "rubber", "steel"])];
-  const out: Record<string, MaterialDef> = {};
-  for (const n of names) Object.assign(out, LOCAL[n] ? { [n]: LOCAL[n] } : mats(n));
-  return out;
+  const names = [...new Set([f.rail, f.rung, f.trim, "rubber_black", "galvanised_steel", "rope_hemp"])];
+  return Object.fromEntries(names.map((n) => [n, LOCAL[n]!]));
 }
 
 /** A straight leaning ladder: rectangular rails, round rungs, tie rods with nuts and capped feet. */
@@ -59,7 +59,7 @@ function single(f: Finish): SpecNode[] {
         cyl("TieRod_{i}", 0.005, "$width + $rt + 0.02", { axis: "x", at: [0, "0.24 + $i * $spacing * (floor(($height - 0.36) / $spacing))", -0.022], segments: 8, repeat: { count: 2, step: [0, 0, 0] } }),
         cyl("Nut_{i}", 0.011, 0.012, { axis: "x", at: ["$x + $rt / 2 + 0.006", "0.24 + $i * $spacing * (floor(($height - 0.36) / $spacing))", -0.022], segments: 6, repeat: { count: 2, step: [0, 0, 0] }, mirror: "NutR_{i}" }),
       ], { material: f.trim }),
-      box("Foot_L", ["$rt + 0.008", 0.05, "$rd + 0.008"], { at: ["$x", 0, 0], anchor: "bottom", bevel: 0.004, material: f.trim === "rust" ? "steel" : f.trim, mirror: "Foot_R" }),
+      box("Foot_L", ["$rt + 0.008", 0.05, "$rd + 0.008"], { at: ["$x", 0, 0], anchor: "bottom", bevel: 0.004, material: f.trim === "iron_rusty" ? "galvanised_steel" : f.trim, mirror: "Foot_R" }),
     ], { material: f.rail, vars: { rt: 0.034, rd: 0.07, x: "$width / 2" } }),
   ];
 }
@@ -71,14 +71,14 @@ function extension(f: Finish): SpecNode[] {
       box(`${rail}Left`, ["$rt", len, "$rd"], { at: [`${w} / 2`, 0, 0], anchor: "bottom", bevel: 0.004, mirror: `${rail}Right` }),
       box(`${rail}Lip_L`, [0.006, len, "$rd + 0.012"], { at: [`${w} / 2 + $rt / 2`, 0, 0], anchor: "bottom", bevel: 0.002, mirror: `${rail}Lip_R` }),
       box(`${name === "BaseSection" ? "" : "Fly"}Rung_{i}`, [`${w} - $rt + 0.008`, 0.03, 0.036], { at: [0, `0.25 + $i * $spacing`, 0], bevel: 0.009, material: f.rung, repeat: { count: `floor((${len} - 0.4) / $spacing) + 1`, step: [0, 0, 0] } }),
-      box(`Guide_L`, [0.05, 0.07, 0.12], { at: [`${w} / 2 + 0.012`, `${len} - 0.06`, z < 0.01 ? 0.03 : -0.03], bevel: 0.006, material: "steel", mirror: "Guide_R" }),
+      box(`Guide_L`, [0.05, 0.07, 0.12], { at: [`${w} / 2 + 0.012`, `${len} - 0.06`, z < 0.01 ? 0.03 : -0.03], bevel: 0.006, material: "galvanised_steel", mirror: "Guide_R" }),
     ], { at: [0, y, z] });
   return [
     group("ExtensionLadder", [
       section("BaseSection", "Rail", "0", "$height * 0.58", 0, "$width"),
       section("FlySection", "FlyRail", "$height * 0.42", "$height * 0.58", 0.075, "($width - 0.06)"),
       box("Shoe_L", ["$rt + 0.03", 0.06, "$rd + 0.05"], { at: ["$width / 2 + 0.006", 0, 0], anchor: "bottom", bevel: 0.012, material: f.trim, mirror: "Shoe_R" }),
-      box("PawlLock_L", [0.04, 0.09, 0.05], { at: ["$width / 2 - 0.04", "$height * 0.42 + 0.3", 0.055], bevel: 0.006, material: "steel", mirror: "PawlLock_R" }),
+      box("PawlLock_L", [0.04, 0.09, 0.05], { at: ["$width / 2 - 0.04", "$height * 0.42 + 0.3", 0.055], bevel: 0.006, material: "galvanised_steel", mirror: "PawlLock_R" }),
       tube("Rope", [[0, "$height * 0.58 - 0.04", 0.035], [0, "$height * 0.45", 0.04], [0, "$height * 0.42 + 0.2", 0.07]], 0.007, { segments: 8, material: "rope_hemp" }),
     ], { material: f.rail, vars: { rt: 0.026, rd: 0.075 } }),
   ];
@@ -95,9 +95,9 @@ function step(f: Finish): SpecNode[] {
       box("TopCap", ["$width + 0.05", 0.06, 0.24], { at: [0, "$height", -0.01], bevel: 0.012, material: f.trim }),
       box("RearBrace", ["$width", 0.03, 0.02], { at: [0, "$height * 0.3", "-$zr + $height * 0.3 * tan($ar)"], bevel: 0.004 }),
       box("Shelf", ["$width - 0.06", 0.018, 0.2], { at: [0, "$height * 0.62", "-$zr * 0.38 + 0.04"], bevel: 0.004 }),
-      tube("Spreader_L", [["$width / 2 + 0.022", "$height * 0.45", "$zf - $height * 0.45 * tan($af)"], ["$width / 2 + 0.03", "$height * 0.43", 0], ["$width / 2 + 0.022", "$height * 0.45", "-$zr + $height * 0.45 * tan($ar)"]], 0.006, { segments: 8, material: "steel", mirror: "Spreader_R" }),
-      box("Foot_FL", ["$rt + 0.012", 0.035, "$rd + 0.012"], { at: ["$width / 2", 0, "$zf - 0.004"], anchor: "bottom", bevel: 0.008, material: f.trim === "paint_red" ? "rubber" : f.trim, mirror: "Foot_FR" }),
-      box("Foot_RL", ["$rt + 0.012", 0.035, "$rd * 0.8 + 0.012"], { at: ["$width / 2", 0, "-$zr + 0.004"], anchor: "bottom", bevel: 0.008, material: f.trim === "paint_red" ? "rubber" : f.trim, mirror: "Foot_RR" }),
+      tube("Spreader_L", [["$width / 2 + 0.022", "$height * 0.45", "$zf - $height * 0.45 * tan($af)"], ["$width / 2 + 0.03", "$height * 0.43", 0], ["$width / 2 + 0.022", "$height * 0.45", "-$zr + $height * 0.45 * tan($ar)"]], 0.006, { segments: 8, material: "galvanised_steel", mirror: "Spreader_R" }),
+      box("Foot_FL", ["$rt + 0.012", 0.035, "$rd + 0.012"], { at: ["$width / 2", 0, "$zf - 0.004"], anchor: "bottom", bevel: 0.008, material: f.trim === "powder_red" ? "rubber_black" : f.trim, mirror: "Foot_FR" }),
+      box("Foot_RL", ["$rt + 0.012", 0.035, "$rd * 0.8 + 0.012"], { at: ["$width / 2", 0, "-$zr + 0.004"], anchor: "bottom", bevel: 0.008, material: f.trim === "powder_red" ? "rubber_black" : f.trim, mirror: "Foot_RR" }),
     ], { material: f.rail, vars: { rt: 0.03, rd: 0.075, zf: "$depth * 0.55", zr: "$depth * 0.45", af: "atan($depth * 0.55 / $height)", ar: "atan($depth * 0.45 / $height)", sp: "($height - 0.06) / (floor(($height - 0.3) / 0.27) + 1)" } }),
   ];
 }
@@ -147,14 +147,14 @@ function makeLadder(style: Style, f: Finish): AssetDraft {
   ];
   if (style === "step") params.push(num("depth", 0.75, 0.55, 1, "Footprint depth from front feet to rear feet along z, in metres."));
   else params.push(num("spacing", 0.28, 0.25, 0.3, "Distance between the rungs in metres."));
-  const finish = label(f.rail === "ladder_fibre_orange" ? "fibreglass" : f.rail);
+  const finish = f.text.split(" ")[0]!;
   return {
     slug: slugify("ladder", f.key, style),
     title: `${f.key.charAt(0).toUpperCase()}${f.key.slice(1)} ${s.title}`,
     description: `${s.text}, in ${f.text}. Stands on y = 0 with the climbing side facing +z.`,
     tags: [style, f.key, finish, ...(style === "step" ? ["trap", "huishoudtrap", "a-frame"] : style === "extension" ? ["schuifladder", "uitschuifbaar"] : style === "fixed" ? ["kooiladder", "vaste ladder", "industrial"] : ["enkele ladder"])],
     params,
-    materials: { ...materials(f), ...(style === "extension" ? { rope_hemp: { color: [0.55, 0.45, 0.28], metallic: 0, roughness: 0.95 } as MaterialDef } : {}) },
+    materials: materials(f),
     nodes: s.build(f),
   };
 }

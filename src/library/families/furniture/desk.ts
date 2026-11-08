@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { barHandle, knob, squareLeg } from "./parts.js";
+import { label } from "../../palette.js";
+import { barHandle, fmats, knob, squareLeg } from "./parts.js";
 
 const STYLES = ["writing", "pedestal", "standing", "steel"] as const;
 type Style = (typeof STYLES)[number];
@@ -43,6 +43,7 @@ function pedestal(f: Finish): SpecNode[] {
       box("Kick", ["$pw - 0.04", 0.06, 0.02], { at: [0, 0.03, "($D - 0.04) / 2 - 0.02"], material: "paint_anthracite" }),
       group("Drawer_{i}", [
         box("Front", ["$pw - 0.03", "$dh - 0.008", 0.02], { bevel: 0.004 }),
+        box("Reveal", ["$pw - 0.022", "$dh", 0.004], { at: [0, 0, -0.012], material: "reveal" }),
         barHandle("Handle", 0.12, [0, "$dh / 2 - 0.04", 0.01], f.trim),
       ], { at: [0, "0.07 + $dh / 2", "($D - 0.04) / 2 + 0.008"], repeat: { count: 3, step: [0, "$dh", 0] } }),
     ], vars: { dh: "($H - $t - 0.075) / 3" } }),
@@ -118,7 +119,7 @@ function makeDesk(style: Style, f: Finish): AssetDraft {
       num("depth", 0.7, 0.58, 0.8, "Depth of the top along z in metres."),
       style === "standing" ? num("height", 0.74, 0.7, 1.2, "Height of the top surface; the columns telescope.") : num("height", 0.75, 0.72, 0.78, "Height of the top surface above the floor."),
     ],
-    materials: mats(...new Set([f.top, f.frame, f.trim, "brass", "rubber", "led_blue", "paint_anthracite"])),
+    materials: fmats(...new Set([f.top, f.frame, f.trim, "brass", "rubber", "led_blue", "paint_anthracite", "reveal"])),
     nodes: [group("Desk", { writing, pedestal, standing, steel }[style](f), { material: f.frame, vars })],
   };
 }

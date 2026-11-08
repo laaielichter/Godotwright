@@ -1,6 +1,6 @@
 import { box, combos, cyl, ellipsoid, group, lathe, num, roof, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { ring, shell } from "./parts.js";
+import { label } from "../../palette.js";
+import { fmats, ring, shell } from "./parts.js";
 
 const STYLES = ["floor", "table", "desk", "lantern"] as const;
 type Style = (typeof STYLES)[number];
@@ -153,8 +153,8 @@ function makeLamp(style: Style, f: Finish): AssetDraft {
     tags: [style, f.form, f.metal.replace(/^(paint|ceramic|glass)_/, ""), "light", "licht", "lamp", ...(style === "floor" ? ["staande lamp", "vloerlamp"] : style === "table" ? ["tafellamp", "schemerlamp"] : style === "desk" ? ["bureaulamp", "architect lamp"] : ["lantaarn", "lantern", "kaars", "candle"])],
     params: PARAMS[style](),
     materials: {
-      ...mats(...new Set([f.metal, f.shade, "brass", "chrome", "bulb_warm", "plastic_black", "walnut", "flame"])),
-      wax: { color: [0.85, 0.8, 0.68], metallic: 0, roughness: 0.6 },
+      ...fmats(...new Set([f.metal, f.shade, "brass", "chrome", "bulb_warm", "plastic_black", "walnut", "flame"])),
+      wax: { color: [0.66, 0.6, 0.47], metallic: 0, roughness: 0.55 },
     },
     nodes: [group("Lamp", { floor, table, desk, lantern }[style](f), { material: f.metal, vars: VARS[style] })],
   };

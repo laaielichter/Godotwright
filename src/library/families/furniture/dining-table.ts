@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { squareLeg } from "./parts.js";
+import { label } from "../../palette.js";
+import { fmats, squareLeg } from "./parts.js";
 
 const STYLES = ["apron", "pedestal", "trestle", "farmhouse", "extending"] as const;
 type Style = (typeof STYLES)[number];
@@ -136,7 +136,7 @@ function makeTable(style: Style, f: Finish): AssetDraft {
       num("height", 0.75, 0.72, 0.78, "Height of the top surface above the floor."),
       num("thickness", style === "farmhouse" || style === "trestle" ? 0.05 : 0.032, style === "farmhouse" || style === "trestle" ? 0.04 : 0.025, style === "farmhouse" || style === "trestle" ? 0.07 : 0.045, "Thickness of the top."),
     ],
-    materials: mats(...new Set([f.top, f.base, "brass", "rubber", "dark_stain", "brushed_steel"])),
+    materials: fmats(...new Set([f.top, f.base, "brass", "rubber", "dark_stain", "brushed_steel"])),
     nodes,
   };
 }

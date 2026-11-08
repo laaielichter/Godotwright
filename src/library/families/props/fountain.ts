@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
-import { label, mats, type MaterialDef } from "../../palette.js";
+import { finish } from "./finishes.js";
 
 /**
  * Fountains: tiered park fountains, drinking fountains, octagonal basins with arching jets, village pump troughs and
@@ -10,39 +10,42 @@ type Style = "tiered" | "drinking" | "octagon" | "trough" | "plaza";
 
 interface Finish {
   key: string;
+  /** Carved and turned stone (column, bowls, coping) or the column's finish. */
   stone: string;
+  /** Dressed blocks of the basin wall. */
+  wall: string;
   metal: string;
   text: string;
 }
 
 const FINISHES: Record<Style, [Finish, Finish]> = {
   tiered: [
-    { key: "limestone", stone: "limestone", metal: "bronze", text: "limestone with a bronze spout" },
-    { key: "marble", stone: "marble", metal: "brass", text: "white marble with a brass spout" },
+    { key: "limestone", stone: "limestone_carved", wall: "limestone_block", metal: "bronze_weathered", text: "weathered limestone with a bronze spout" },
+    { key: "marble", stone: "marble_white", wall: "marble_white", metal: "brass_worn", text: "white marble with a brass spout" },
   ],
   drinking: [
-    { key: "victorian", stone: "paint_forest", metal: "brass", text: "green-painted cast iron with a brass bubbler" },
-    { key: "modern", stone: "brushed_steel", metal: "chrome", text: "brushed stainless steel with a chrome bubbler" },
+    { key: "victorian", stone: "iron_painted_green", wall: "iron_painted_green", metal: "brass_worn", text: "green-painted cast iron with a brass bubbler" },
+    { key: "modern", stone: "stainless", wall: "stainless", metal: "bright_chrome", text: "brushed stainless steel with a chrome bubbler" },
   ],
   octagon: [
-    { key: "granite", stone: "granite", metal: "bronze", text: "granite with bronze nozzles" },
-    { key: "brick", stone: "brick_yellow", metal: "brass", text: "yellow brick with a sandstone coping and brass nozzles" },
+    { key: "granite", stone: "granite_carved", wall: "granite_block", metal: "bronze_weathered", text: "granite with bronze nozzles" },
+    { key: "brick", stone: "sandstone_carved", wall: "brick_yellow_old", metal: "brass_worn", text: "yellow brick with a sandstone coping and brass nozzles" },
   ],
   trough: [
-    { key: "sandstone", stone: "sandstone", metal: "cast_iron", text: "a sandstone trough and a black cast-iron pump" },
-    { key: "granite", stone: "granite", metal: "paint_forest", text: "a granite trough and a green-painted pump" },
+    { key: "sandstone", stone: "sandstone_block", wall: "sandstone_block", metal: "iron_painted_black", text: "a sandstone trough and a black cast-iron pump" },
+    { key: "granite", stone: "granite_block", wall: "granite_block", metal: "iron_painted_green", text: "a granite trough and a green-painted pump" },
   ],
   plaza: [
-    { key: "granite", stone: "granite", metal: "chrome", text: "a granite rim and a polished steel sphere" },
-    { key: "concrete", stone: "concrete", metal: "bronze", text: "a concrete rim and a bronze sphere" },
+    { key: "granite", stone: "granite_carved", wall: "granite_block", metal: "bright_chrome", text: "a granite rim and a polished steel sphere" },
+    { key: "concrete", stone: "concrete_cast", wall: "concrete_cast", metal: "bronze_polished", text: "a concrete rim and a bronze sphere" },
   ],
 };
 
-const WATER: Record<string, MaterialDef> = {
-  fountain_water: { color: [0.06, 0.22, 0.27, 0.72], metallic: 0, roughness: 0.04, texture: "water", alpha: "BLEND" },
-  fountain_spray: { color: [0.75, 0.88, 0.95, 0.45], metallic: 0, roughness: 0.1, alpha: "BLEND" },
-  basin_floor: { color: [0.12, 0.16, 0.16], metallic: 0, roughness: 0.9, texture: "concrete" },
-};
+/** A dark wet band on the inner wall at the waterline and a grime band round the outside foot of a round basin wall. */
+const stains = (rin: Num, rout: Num, y: Num, segments: number): SpecNode[] => [
+  lathe("WaterLine", [[`${rin} - 0.004`, `${y} - 0.03`], [`${rin} + 0.002`, `${y} - 0.03`], [`${rin} + 0.002`, `${y} + 0.07`], [`${rin} - 0.004`, `${y} + 0.07`], [`${rin} - 0.004`, `${y} - 0.03`]], { segments, caps: false, material: "wet_stain" }),
+  lathe("Grime", [[`${rout} - 0.002`, 0], [`${rout} + 0.004`, 0], [`${rout} + 0.004`, 0.08], [`${rout} - 0.002`, 0.08], [`${rout} - 0.002`, 0]], { segments, caps: false, material: "wet_stain" }),
+];
 
 /** A round (or, with 8 segments, octagonal) basin wall as a closed ring profile, with a moulded coping. */
 const ringWall = (name: string, rin: Num, rout: Num, h: Num, o: { segments?: number; material?: string } = {}): SpecNode =>
@@ -54,23 +57,24 @@ const ringWall = (name: string, rin: Num, rout: Num, h: Num, o: { segments?: num
 /** A dish of radius $r and depth $dd with a hollow top and water inside, its bottom at local y = 0. */
 const dish = (water: boolean): SpecNode[] => [
   lathe("Dish", [[0.02, 0], ["$r * 0.3", 0], ["$r * 0.8", "$dd * 0.55"], ["$r", "$dd"], ["$r - 0.03", "$dd"], ["$r * 0.3 - 0.02", 0.04], [0.02, 0.04]], { segments: 32 }),
-  ...(water ? [cyl("Water", "($r * 0.3 - 0.02) + ($r * 0.7 - 0.01) * 0.78 + 0.006", 0.012, { at: [0, "0.04 + ($dd - 0.04) * 0.78", 0], segments: 32, material: "fountain_water" })] : []),
+  ...(water ? [cyl("Water", "($r * 0.3 - 0.02) + ($r * 0.7 - 0.01) * 0.78 + 0.006", 0.012, { at: [0, "0.04 + ($dd - 0.04) * 0.78", 0], segments: 32, material: "pool_water" })] : []),
 ];
 
 function tiered(f: Finish): SpecNode[] {
   return [
     group("TieredFountain", [
       group("Basin", [
-        ringWall("Wall", "$R - 0.22", "$R", 0.5, { segments: 40 }),
-        cyl("Floor", "$R - 0.21", 0.06, { anchor: "base", segments: 40, material: "basin_floor" }),
-        cyl("Pool", "$R - 0.215", 0.014, { at: [0, 0.4, 0], segments: 40, material: "fountain_water" }),
+        ringWall("Wall", "$R - 0.22", "$R", 0.5, { segments: 40, material: f.wall }),
+        ...stains("$R - 0.22", "$R", 0.4, 40),
+        cyl("Floor", "$R - 0.21", 0.06, { anchor: "base", segments: 40, material: "algae_floor" }),
+        cyl("Pool", "$R - 0.215", 0.014, { at: [0, 0.4, 0], segments: 40, material: "pool_water" }),
       ]),
       lathe("Column", [[0.02, 0.05], ["$R * 0.16", 0.05], ["$R * 0.16", 0.2], ["$R * 0.11", 0.3], ["$R * 0.08", 0.5], ["$R * 0.07", "$height * 0.45"], ["$R * 0.06", "$ytop"], ["$R * 0.04", "$ytop + 0.12"], [0.02, "$ytop + 0.12"]], { segments: 24 }),
       group("Bowl_{i}", [group("Tier", dish(true), { vars: { r: "$R * 0.55 * pow(0.62, $i)", dd: "0.12 + $R * 0.1 * pow(0.62, $i)" } })], { at: [0, "$height * 0.52 + $i * $height * 0.2", 0], repeat: { count: "$tiers", step: [0, 0, 0] } }),
       group("Finial", [
         lathe("Knop", [[0.02, 0], ["$R * 0.05", 0.02], ["$R * 0.06", 0.08], ["$R * 0.03", 0.14], [0.02, 0.16]], { segments: 16 }),
         cyl("Spout", 0.022, 0.08, { at: [0, 0.18, 0], segments: 12, material: f.metal }),
-        tube("WaterJet", [[0, 0.2, 0], [0, 0.42, 0], [0, 0.5, 0]], [0.012, 0.02, 0.006], { segments: 10, material: "fountain_spray" }),
+        tube("WaterJet", [[0, 0.2, 0], [0, 0.42, 0], [0, 0.5, 0]], [0.012, 0.02, 0.006], { segments: 10, material: "spray_water" }),
       ], { at: [0, "$ytop + 0.1", 0] }),
     ], { material: f.stone, vars: { R: "$radius", ytop: "$height * 0.52 + ($tiers - 1) * $height * 0.2" } }),
   ];
@@ -82,8 +86,10 @@ function drinking(f: Finish, victorian: boolean): SpecNode[] {
     : box("Column", [0.2, "$height - 0.17", 0.22], { at: [0, 0.055, 0], anchor: "bottom", bevel: 0.015 });
   return [
     group("DrinkingFountain", [
-      box("Slab", ["$width + 0.2", 0.06, "$width + 0.2"], { anchor: "bottom", bevel: 0.01, material: "concrete" }),
-      box("Grate", [0.2, 0.012, 0.2], { at: [0, 0.055, "$width / 2 - 0.02"], bevel: 0.002, material: "cast_iron" }),
+      box("Slab", ["$width + 0.2", 0.06, "$width + 0.2"], { anchor: "bottom", bevel: 0.01, material: "concrete_cast" }),
+      box("WetPatch", ["$width * 0.7", 0.004, "$width * 0.5"], { at: [0, 0.06, "$width * 0.2"], material: "wet_stain" }),
+      box("Grate", [0.2, 0.012, 0.2], { at: [0, 0.055, "$width / 2 - 0.02"], bevel: 0.002, material: "iron_painted_black" }),
+      box("GrateSlot_{i}", [0.16, 0.004, 0.012], { at: [0, 0.061, "$width / 2 - 0.08 + $i * 0.03"], material: "gap_dark", repeat: { count: 5, step: [0, 0, 0] } }),
       column,
       group("Basin", [
         ...dish(true),
@@ -92,12 +98,12 @@ function drinking(f: Finish, victorian: boolean): SpecNode[] {
       group("Spout", [
         cyl("Riser", 0.018, 0.08, { anchor: "base", segments: 12 }),
         tube("Bubbler", [[0, 0.07, 0], [0, 0.1, 0.01], [0, 0.11, 0.04]], 0.014, { segments: 12 }),
-        tube("Arc", [[0, 0.115, 0.05], [0, 0.17, 0.1], [0, 0.12, 0.16]], [0.005, 0.006, 0.004], { segments: 8, material: "fountain_spray" }),
+        tube("Arc", [[0, 0.115, 0.05], [0, 0.17, 0.1], [0, 0.12, 0.16]], [0.005, 0.006, 0.004], { segments: 8, material: "spray_water" }),
       ], { at: [0, "$height - 0.1", -0.02], material: f.metal }),
       cyl("PushButton", 0.025, 0.03, { axis: "z", at: [0, "$height * 0.62", victorian ? 0.085 : 0.12], segments: 14, material: f.metal }),
       group("DogBowl", [
         lathe("Dish", [[0.02, 0], [0.13, 0], [0.15, 0.07], [0.13, 0.07], [0.11, 0.025], [0.02, 0.025]], { segments: 24 }),
-        cyl("Water", 0.125, 0.008, { at: [0, 0.05, 0], segments: 24, material: "fountain_water" }),
+        cyl("Water", 0.125, 0.008, { at: [0, 0.05, 0], segments: 24, material: "pool_water" }),
       ], { at: [0, 0.058, victorian ? 0.24 : 0.25] }),
     ], { material: f.stone }),
   ];
@@ -107,17 +113,18 @@ function octagon(f: Finish): SpecNode[] {
   return [
     group("OctagonFountain", [
       group("Basin", [
-        ringWall("Wall", "$R - 0.3", "$R", "$wallHeight", { segments: 8 }),
-        lathe("Coping", [["$R - 0.34", "$wallHeight - 0.01"], ["$R + 0.05", "$wallHeight - 0.01"], ["$R + 0.05", "$wallHeight + 0.06"], ["$R - 0.34", "$wallHeight + 0.06"], ["$R - 0.34", "$wallHeight - 0.01"]], { segments: 8, caps: false, material: f.key === "brick" ? "sandstone" : f.stone }),
-        cyl("Floor", "$R - 0.29", 0.06, { anchor: "base", segments: 8, material: "basin_floor" }),
-        cyl("Pool", "$R - 0.295", 0.014, { at: [0, "$wallHeight - 0.12", 0], segments: 8, material: "fountain_water" }),
+        ringWall("Wall", "$R - 0.3", "$R", "$wallHeight", { segments: 8, material: f.wall }),
+        ...stains("$R - 0.3", "$R", "$wallHeight - 0.12", 8),
+        lathe("Coping", [["$R - 0.34", "$wallHeight - 0.01"], ["$R + 0.05", "$wallHeight - 0.01"], ["$R + 0.05", "$wallHeight + 0.06"], ["$R - 0.34", "$wallHeight + 0.06"], ["$R - 0.34", "$wallHeight - 0.01"]], { segments: 8, caps: false, material: f.stone }),
+        cyl("Floor", "$R - 0.29", 0.06, { anchor: "base", segments: 8, material: "algae_floor" }),
+        cyl("Pool", "$R - 0.295", 0.014, { at: [0, "$wallHeight - 0.12", 0], segments: 8, material: "pool_water" }),
       ]),
-      lathe("Column", [[0.02, 0.05], [0.32, 0.05], [0.32, 0.18], [0.22, 0.26], [0.17, 0.4], [0.15, "$wallHeight + 0.5"], [0.22, "$wallHeight + 0.6"], [0.22, "$wallHeight + 0.66"], [0.02, "$wallHeight + 0.66"]], { segments: 20, material: f.key === "brick" ? "sandstone" : f.stone }),
+      lathe("Column", [[0.02, 0.05], [0.32, 0.05], [0.32, 0.18], [0.22, 0.26], [0.17, 0.4], [0.15, "$wallHeight + 0.5"], [0.22, "$wallHeight + 0.6"], [0.22, "$wallHeight + 0.66"], [0.02, "$wallHeight + 0.66"]], { segments: 20, material: f.stone }),
       group("Bowl", dish(true), { at: [0, "$wallHeight + 0.64", 0], vars: { r: 0.55, dd: 0.18 } }),
       cyl("Spout", 0.03, 0.2, { at: [0, "$wallHeight + 0.75", 0], segments: 12, material: f.metal }),
       group("Jet_{i}", [
         cyl("Nozzle", 0.025, 0.07, { at: [0, 0.03, 0], segments: 10, material: f.metal }),
-        tube("Arc", [[0, 0.06, 0], [0, 0.35, "-($R - 0.3) * 0.3"], [0, 0.42, "-($R - 0.3) * 0.55"], [0, 0.1, "-($R - 0.3) * 0.82"]], [0.012, 0.016, 0.016, 0.01], { segments: 8, material: "fountain_spray" }),
+        tube("Arc", [[0, 0.06, 0], [0, 0.35, "-($R - 0.3) * 0.3"], [0, 0.42, "-($R - 0.3) * 0.55"], [0, 0.1, "-($R - 0.3) * 0.82"]], [0.012, 0.016, 0.016, 0.01], { segments: 8, material: "spray_water" }),
       ], { at: [0, "$wallHeight + 0.06", "($R - 0.1) * 0.95"], repeat: { count: "$jets", around: "y", phase: 22.5 } }),
     ], { material: f.stone, vars: { R: "$radius" } }),
   ];
@@ -131,14 +138,16 @@ function trough(f: Finish): SpecNode[] {
         box("Back", ["$length", 0.6, 0.1], { at: [0, 0, "-$width / 2 + 0.05"], anchor: "bottom", bevel: 0.015 }),
         box("End_L", [0.1, 0.6, "$width - 0.16"], { at: ["$length / 2 - 0.05", 0, 0], anchor: "bottom", bevel: 0.015, mirror: "End_R" }),
         box("Bottom", ["$length - 0.16", 0.12, "$width - 0.16"], { anchor: "bottom", bevel: 0.005 }),
-        box("Water", ["$length - 0.185", 0.014, "$width - 0.185"], { at: [0, 0.48, 0], material: "fountain_water" }),
-      ], { material: f.stone }),
+        box("Water", ["$length - 0.185", 0.014, "$width - 0.185"], { at: [0, 0.48, 0], material: "pool_water" }),
+        box("Grime", ["$length + 0.006", 0.08, "$width + 0.006"], { anchor: "bottom", material: "wet_stain" }),
+        box("Overflow", [0.05, 0.004, 0.06], { at: ["$length / 2 - 0.2", 0.6, "$width / 2 - 0.03"], material: "wet_stain" }),
+      ], { material: f.wall }),
       group("Pump", [
-        box("Footing", [0.34, 0.12, 0.3], { anchor: "bottom", bevel: 0.01, material: f.stone }),
+        box("Footing", [0.34, 0.12, 0.3], { anchor: "bottom", bevel: 0.01, material: f.wall }),
         lathe("Column", [[0.02, 0.1], [0.1, 0.1], [0.1, 0.16], [0.075, 0.22], [0.065, "$height - 0.35"], [0.085, "$height - 0.3"], [0.085, "$height - 0.12"], [0.1, "$height - 0.1"], [0.03, "$height - 0.02"], [0.02, "$height - 0.02"]], { segments: 18 }),
         lathe("Cap", [[0.02, "$height - 0.04"], [0.04, "$height - 0.04"], [0.03, "$height + 0.04"], [0.02, "$height + 0.06"]], { segments: 12 }),
         tube("Spout", [[0, "$height - 0.45", 0.05], [0, "$height - 0.45", 0.22], [0, "$height - 0.5", 0.3]], [0.03, 0.025, 0.022], { segments: 12 }),
-        tube("Stream", [[0, "$height - 0.52", 0.3], [0, "$height - 0.75", 0.32], [0, 0.47, 0.34]], [0.014, 0.012, 0.016], { segments: 8, material: "fountain_spray" }),
+        tube("Stream", [[0, "$height - 0.52", 0.3], [0, "$height - 0.75", 0.32], [0, 0.47, 0.34]], [0.014, 0.012, 0.016], { segments: 8, material: "spray_water" }),
         group("Lever", [
           cyl("Pin", 0.015, 0.2, { axis: "x", segments: 10 }),
           tube("Handle", [[0, 0, 0], [0, 0.05, -0.2], [0, -0.05, -0.45]], 0.016, { segments: 10 }),
@@ -153,15 +162,16 @@ function plaza(f: Finish): SpecNode[] {
   return [
     group("PlazaFountain", [
       group("Basin", [
-        ringWall("Rim", "$R - 0.35", "$R", 0.4, { segments: 48 }),
-        cyl("Floor", "$R - 0.34", 0.05, { anchor: "base", segments: 48, material: "basin_floor" }),
-        cyl("Pool", "$R - 0.345", 0.014, { at: [0, 0.3, 0], segments: 48, material: "fountain_water" }),
+        ringWall("Rim", "$R - 0.35", "$R", 0.4, { segments: 48, material: f.wall }),
+        ...stains("$R - 0.35", "$R", 0.3, 48),
+        cyl("Floor", "$R - 0.34", 0.05, { anchor: "base", segments: 48, material: "algae_floor" }),
+        cyl("Pool", "$R - 0.345", 0.014, { at: [0, 0.3, 0], segments: 48, material: "pool_water" }),
       ]),
       lathe("Column", [[0.02, 0.04], ["$sr * 0.7", 0.04], ["$sr * 0.7", 0.36], ["$sr * 0.5", 0.42], ["$sr * 0.45", 0.48], [0.02, 0.48]], { segments: 24 }),
       ellipsoid("Sphere", ["$sr", "$sr", "$sr"], { at: [0, "0.46 + $sr * 0.96", 0], segments: 32, material: f.metal }),
       group("Spout_{i}", [
-        cyl("Nozzle", 0.03, 0.28, { anchor: "base", segments: 10, material: "brushed_steel" }),
-        tube("Jet", [[0, 0.3, 0], [0, 0.8, 0], [0, 1.0, 0]], [0.02, 0.025, 0.008], { segments: 8, material: "fountain_spray" }),
+        cyl("Nozzle", 0.03, 0.28, { anchor: "base", segments: 10, material: "stainless" }),
+        tube("Jet", [[0, 0.3, 0], [0, 0.8, 0], [0, 1.0, 0]], [0.02, 0.025, 0.008], { segments: 8, material: "spray_water" }),
       ], { at: [0, 0.04, "($R - 0.35 + $sr) / 2"], repeat: { count: "$jets", around: "y" } }),
     ], { material: f.stone, vars: { R: "$radius", sr: "$sphereRadius" } }),
   ];
@@ -219,9 +229,9 @@ function fountain(style: Style, f: Finish): AssetDraft {
     slug: slugify("fountain", f.key, s.name),
     title: `${f.key.charAt(0).toUpperCase()}${f.key.slice(1)} ${s.name}`,
     description: `${s.text}, in ${f.text}. It faces +z.`,
-    tags: [style, f.key, label(f.stone), "water", ...s.tags],
+    tags: [style, f.key, ...f.text.split(" ").filter((w) => w.length > 4), "water", ...s.tags],
     params: s.params(),
-    materials: { ...mats(...new Set([f.stone, f.metal, "concrete", "cast_iron", "sandstone", "brushed_steel"])), ...WATER },
+    materials: finish(...new Set([f.stone, f.wall, f.metal, "concrete_cast", "iron_painted_black", "stainless", "pool_water", "spray_water", "algae_floor", "wet_stain", "moss_green", "gap_dark"])),
     nodes: s.build(f),
   };
 }

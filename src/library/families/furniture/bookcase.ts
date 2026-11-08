@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, int, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { BOOK_MATERIALS, books, shell, squareLeg } from "./parts.js";
+import { label } from "../../palette.js";
+import { BOOK_MATERIALS, books, fmats, shell, squareLeg } from "./parts.js";
 
 const STYLES = ["open", "low", "ladder", "etagere"] as const;
 type Style = (typeof STYLES)[number];
@@ -120,7 +120,7 @@ function makeBookcase(style: Style, f: Finish): AssetDraft {
       num("depth", r.d[0], r.d[1], r.d[2], "Depth along z in metres."),
       int("shelves", r.n[0], r.n[1], r.n[2], "Number of shelves."),
     ],
-    materials: { ...mats(...new Set([f.wood, f.frame, "rubber", "ceramic_celadon"])), ...BOOK_MATERIALS },
+    materials: { ...fmats(...new Set([f.wood, f.frame, "rubber", "ceramic_celadon"])), ...BOOK_MATERIALS },
     nodes: [group("Bookcase", nodes, { material: f.frame, vars })],
   };
 }

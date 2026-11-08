@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { ring } from "./parts.js";
+import { label } from "../../palette.js";
+import { fmats, ring } from "./parts.js";
 
 const STYLES = ["bar", "kitchen", "milking", "swivel"] as const;
 type Style = (typeof STYLES)[number];
@@ -139,7 +139,7 @@ function makeStool(style: Style, f: Finish): AssetDraft {
     description: `${TEXT[style]}, in ${frame}${f.seat !== f.frame ? ` with a ${seat} seat` : ""}. It has no back and faces +z.`,
     tags: [style, f.frame.replace(/^paint_/, ""), f.seat.split("_").pop() ?? f.seat, ...(style === "bar" ? ["barkruk", "bar stool"] : style === "milking" ? ["melkkrukje", "milking stool"] : style === "swivel" ? ["draaikruk", "swivel"] : ["keukenkruk", "kitchen stool"])],
     params: PARAMS[style](),
-    materials: mats(...new Set([f.frame, f.seat, "rubber", "black_steel", "chrome", "dark_stain"])),
+    materials: fmats(...new Set([f.frame, f.seat, "rubber", "black_steel", "chrome", "dark_stain"])),
     nodes,
   };
 }

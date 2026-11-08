@@ -1,5 +1,6 @@
 import { box, combos, cyl, ellipsoid, group, lathe, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
+import { label } from "../../palette.js";
+import { fmats } from "./parts.js";
 
 const STYLES = ["platform", "panel", "upholstered", "iron"] as const;
 type Style = (typeof STYLES)[number];
@@ -144,9 +145,9 @@ function makeBed(style: Style, size: Size, f: Finish): AssetDraft {
       num("mattressThickness", 0.2, 0.14, 0.26, "Thickness of the mattress."),
     ],
     materials: {
-      ...mats(...new Set([f.frame, f.bedding, f.wood, "paint_anthracite", "rough_timber", "brass", "rubber"])),
-      mattress_ticking: { color: [0.72, 0.7, 0.66], metallic: 0, roughness: 0.9 },
-      fabric_white: { color: [0.82, 0.82, 0.8], metallic: 0, roughness: 0.92 },
+      ...fmats(...new Set([f.frame, f.bedding, f.wood, "paint_anthracite", "rough_timber", "brass", "rubber"])),
+      mattress_ticking: { color: [0.44, 0.42, 0.38], metallic: 0, roughness: 0.92, texture: "fabric" },
+      fabric_white: { color: [0.5, 0.49, 0.46], metallic: 0, roughness: 0.95, texture: "fabric" },
     },
     nodes: [group("Bed", { platform, panel, upholstered, iron }[style](f, size), {
       material: f.frame,

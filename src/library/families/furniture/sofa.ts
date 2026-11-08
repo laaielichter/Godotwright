@@ -1,5 +1,6 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
+import { label } from "../../palette.js";
+import { fmats } from "./parts.js";
 
 const STYLES = ["modern", "chesterfield", "midcentury", "lawson"] as const;
 type Style = (typeof STYLES)[number];
@@ -14,7 +15,10 @@ const FINISHES: Record<Style, Finish[]> = {
 
 /** Seat cushions in a row across the seat: n of them, each $sw wide, top at $sh, from the back depth $bt to the front. */
 const seats = (bevel = 0.05): SpecNode =>
-  box("Seat_{i}", ["$sw - 0.008", 0.15, "$D - $bt + 0.01"], { at: ["-($n - 1) * $sw / 2", "$sh - 0.075", "$bt / 2 + 0.005"], repeat: { count: "$n", step: ["$sw", 0, 0] }, bevel });
+  box("Seat_{i}", ["$sw - 0.008", 0.15, "$D - $bt + 0.01"], { at: ["-($n - 1) * $sw / 2", "$sh - 0.075", "$bt / 2 + 0.005"], repeat: { count: "$n", step: ["$sw", 0, 0] }, bevel, children: [
+    cyl("Piping_T", 0.0065, `$sw - 0.008 - ${2 * bevel}`, { axis: "x", at: [0, 0.075 - bevel * 0.3, `($D - $bt + 0.01) / 2 - ${bevel * 0.3}`], segments: 8 }),
+    cyl("Piping_B", 0.0065, `$sw - 0.008 - ${2 * bevel}`, { axis: "x", at: [0, -0.075 + bevel * 0.3, `($D - $bt + 0.01) / 2 - ${bevel * 0.3}`], segments: 8 }),
+  ] });
 
 /** Loose back cushions leaning on the back, one per seat. */
 const backs = (buttons: boolean): SpecNode =>
@@ -139,7 +143,7 @@ function makeSofa(style: Style, f: Finish): AssetDraft {
       num("seatHeight", r.sh[0], r.sh[1], r.sh[2], "Height of the seat top in metres."),
       num("backHeight", r.bh[0], r.bh[1], r.bh[2], "Height of the back above the floor in metres."),
     ],
-    materials: { ...mats(f.cover, f.wood), pillow_accent: { color: [0.55, 0.42, 0.18], metallic: 0, roughness: 0.92 } },
+    materials: { ...fmats(f.cover, f.wood), pillow_accent: { color: [0.42, 0.33, 0.2], metallic: 0, roughness: 0.94, texture: "fabric" } },
     nodes: [group("Sofa", { modern, chesterfield, midcentury, lawson }[style](f), {
       material: f.cover,
       vars: { n: "$seats", sw: "$seatWidth", aw: ARM[style], W: `$seats * $seatWidth + 2 * ${ARM[style]}`, D: "$depth", sh: "$seatHeight", bh: "$backHeight", lh: LEG[style], bt: BACK[style] },

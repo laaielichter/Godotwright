@@ -1,5 +1,6 @@
 import { box, combos, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
+import { label } from "../../palette.js";
+import { fmats } from "./parts.js";
 
 /** The silhouettes, each with its own parts and sizes. */
 const STYLES = ["club", "wingback", "lounge", "rocking"] as const;
@@ -63,9 +64,9 @@ function club(f: { cover: string; wood: string }): SpecNode[] {
 function wingback(f: { cover: string; wood: string }): SpecNode[] {
   const wing = (z0: string, z1: string, x: string): SpecNode =>
     loft("Wing_L", [
-      { z: z0, points: [[`${x} - 0.03`, "$ah - 0.06"], [`${x} + 0.03`, "$ah - 0.06"], [`${x} + 0.03`, "$bh - 0.07"], [`${x} - 0.03`, "$bh - 0.07"]] },
-      { z: `(${z0} + ${z1}) / 2`, points: [[`${x} - 0.025`, "$ah - 0.06"], [`${x} + 0.035`, "$ah - 0.06"], [`${x} + 0.035`, "$bh - 0.16"], [`${x} - 0.025`, "$bh - 0.16"]] },
-      { z: z1, points: [[`${x} - 0.02`, "$ah - 0.06"], [`${x} + 0.03`, "$ah - 0.06"], [`${x} + 0.03`, "$ah + 0.16"], [`${x} - 0.02`, "$ah + 0.16"]] },
+      { z: z0, points: [[`${x} - 0.05`, "$ah - 0.06"], [`${x} + 0.035`, "$ah - 0.06"], [`${x} + 0.035`, "$bh - 0.07"], [`${x} - 0.05`, "$bh - 0.07"]] },
+      { z: `(${z0} + ${z1}) / 2`, points: [[`${x} - 0.045`, "$ah - 0.06"], [`${x} + 0.035`, "$ah - 0.06"], [`${x} + 0.035`, "$bh - 0.16"], [`${x} - 0.045`, "$bh - 0.16"]] },
+      { z: z1, points: [[`${x} - 0.035`, "$ah - 0.06"], [`${x} + 0.03`, "$ah - 0.06"], [`${x} + 0.03`, "$ah + 0.16"], [`${x} - 0.035`, "$ah + 0.16"]] },
     ], { mirror: "Wing_R" });
   return [group("Armchair", [
     box("Body", ["$W - 0.02", "$sh - 0.12 - $lh", "$D - 0.02"], { at: [0, "$lh", 0], anchor: "bottom", bevel: 0.02 }),
@@ -158,7 +159,7 @@ function makeArmchair(style: Style, f: { cover: string; wood: string }): AssetDr
       num("seatHeight", r.sh[0], r.sh[1], r.sh[2], "Height of the seat top in metres."),
       num("backHeight", r.bh[0], r.bh[1], r.bh[2], "Height of the top of the back above the floor in metres."),
     ],
-    materials: mats(f.cover, f.wood, ...(style === "wingback" ? ["brass"] : [])),
+    materials: fmats(f.cover, f.wood, ...(style === "wingback" ? ["brass"] : [])),
     nodes: wrap,
   };
 }

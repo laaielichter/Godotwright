@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, int, num, slugify, cap, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { barHandle, knob, shell, squareLeg } from "./parts.js";
+import { label } from "../../palette.js";
+import { barHandle, fmats, knob, shell, squareLeg } from "./parts.js";
 
 const STYLES = ["wardrobe", "kitchen", "display", "sideboard"] as const;
 type Style = (typeof STYLES)[number];
@@ -65,6 +65,7 @@ function door(name: string, at: [Num, Num, Num], w: string, h: string, kind: Doo
       ] : [] }));
     }
   }
+  leaf.push(box("Reveal", [`${w} + 0.004`, `${h} + 0.006`, 0.004], { at: [`-(${w} + 0.004) / 2`, `(${h}) / 2`, -0.001], material: "reveal" }));
   const hx = `-(${w}) + 0.04`;
   if (handle === "vbar") leaf.push(barHandle("Handle", `min(0.3, (${h}) * 0.25)`, [hx, `(${h}) / 2`, 0.022], f.metal, { rotate: [0, 0, 90] }));
   else if (handle === "hbar") leaf.push(barHandle("Handle", 0.12, [`-(${w}) + 0.1`, `${h} - 0.06`, 0.022], f.metal));
@@ -187,7 +188,7 @@ function makeCupboard(style: Style, f: Finish): AssetDraft {
       num("depth", r.d[0], r.d[1], r.d[2], "Depth along z in metres."),
       int("shelves", r.n[0], r.n[1], r.n[2], "Number of shelves inside."),
     ],
-    materials: mats(...new Set([f.body, f.door, f.top, f.metal, "glass_clear", "paint_anthracite", "ceramic_white", "ceramic_blue"])),
+    materials: fmats(...new Set([f.body, f.door, f.top, f.metal, "glass_clear", "paint_anthracite", "ceramic_white", "ceramic_blue", "reveal"])),
     nodes: [group("Cupboard", { wardrobe, kitchen, display, sideboard }[style](f), { material: f.body, vars: { W: "$width", H: "$height", D: "$depth", n: "$shelves", s: 0.018 } })],
   };
 }

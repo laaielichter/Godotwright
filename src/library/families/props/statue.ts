@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, lathe, loft, num, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
+import { finish } from "./finishes.js";
 
 /**
  * Statues and monuments: a classical bust on a column, a stylised standing figure on a stepped plinth, an obelisk on
@@ -13,30 +13,42 @@ interface Finish {
   figure: string;
   plinth: string;
   accent: string;
+  /** Description words: "weathered bronze on a granite plinth". */
+  text: string;
+  /** Green run-off streaks of patina down the plinth under a copper-alloy figure. */
+  streaks?: boolean;
 }
 
 const FINISHES: Record<Style, [Finish, Finish]> = {
   bust: [
-    { key: "marble", figure: "marble", plinth: "marble_black", accent: "brass" },
-    { key: "bronze", figure: "bronze", plinth: "granite", accent: "bronze" },
+    { key: "marble", figure: "marble_white", plinth: "marble_dark", accent: "brass_worn", text: "white marble on a black marble column" },
+    { key: "bronze", figure: "bronze_weathered", plinth: "granite_carved", accent: "bronze_polished", text: "weathered bronze on a granite column", streaks: true },
   ],
   standing: [
-    { key: "bronze", figure: "aged_copper", plinth: "granite", accent: "bronze" },
-    { key: "limestone", figure: "limestone", plinth: "sandstone", accent: "bronze" },
+    { key: "bronze", figure: "verdigris", plinth: "granite_block", accent: "bronze_weathered", text: "green-patinated bronze on a granite plinth", streaks: true },
+    { key: "limestone", figure: "limestone_carved", plinth: "sandstone_block", accent: "bronze_weathered", text: "weathered limestone on a sandstone plinth" },
   ],
   obelisk: [
-    { key: "granite", figure: "granite", plinth: "granite", accent: "gold" },
-    { key: "sandstone", figure: "sandstone", plinth: "limestone", accent: "bronze" },
+    { key: "granite", figure: "granite_block", plinth: "granite_block", accent: "gilt", text: "grey granite blocks with a gilt tip" },
+    { key: "sandstone", figure: "sandstone_block", plinth: "limestone_block", accent: "bronze_weathered", text: "sandstone on a limestone base" },
   ],
   knot: [
-    { key: "steel", figure: "brushed_steel", plinth: "concrete", accent: "steel" },
-    { key: "copper", figure: "aged_copper", plinth: "basalt", accent: "bronze" },
+    { key: "steel", figure: "stainless", plinth: "concrete_cast", accent: "galvanised_steel", text: "brushed stainless steel on a concrete block" },
+    { key: "copper", figure: "verdigris", plinth: "granite_dark", accent: "bronze_weathered", text: "green-patinated copper on dark granite", streaks: true },
   ],
   hoop: [
-    { key: "corten", figure: "rust", plinth: "concrete", accent: "chrome" },
-    { key: "chrome", figure: "chrome", plinth: "marble_black", accent: "gold" },
+    { key: "corten", figure: "corten", plinth: "concrete_weathered", accent: "bright_chrome", text: "rusted corten steel with a polished sphere on concrete" },
+    { key: "chrome", figure: "bright_chrome", plinth: "marble_dark", accent: "gilt", text: "polished chrome with a gilt sphere on black marble" },
   ],
 };
+
+/** Weathering on a plinth face at z = zf: a dark grime band at the foot and (copper alloys) green run-off streaks. */
+const weather = (f: Finish, wx: Num, wz: Num, streak?: { w: Num; z: Num; top: Num; len: Num }): SpecNode[] => [
+  box("Grime", [`${wx} + 0.004`, 0.07, `${wz} + 0.004`], { anchor: "bottom", material: "wet_stain" }),
+  ...(f.streaks && streak
+    ? [box("Streak_{i}", [0.022, `(${streak.len}) * (0.45 + 0.4 * abs(sin($i * 2.1 + 0.3)))`, 0.004], { at: [`(${streak.w}) * (-0.33 + $i * 0.22)`, `${streak.top} - (${streak.len}) * (0.45 + 0.4 * abs(sin($i * 2.1 + 0.3))) / 2`, `${streak.z} + 0.001`], material: "verdigris", repeat: { count: 4, step: [0, 0, 0] } })]
+    : []),
+];
 
 /** A value scaled by the figure's scale $s. */
 const S = (v: number): string => `${v} * $s`;
@@ -49,6 +61,7 @@ function bust(f: Finish): SpecNode[] {
         lathe("Column", [[0.02, 0.07], ["$pr", 0.07], ["$pr", 0.13], ["$pr * 0.86", 0.16], ["$pr * 0.86", 0.2], ["$pr * 0.68", 0.25], ["$pr * 0.62", "$ph - 0.2"], ["$pr * 0.7", "$ph - 0.15"], ["$pr * 0.8", "$ph - 0.1"], ["$pr * 0.8", "$ph - 0.07"], [0.02, "$ph - 0.07"]], { segments: 24 }),
         box("Abacus", ["$pw * 0.86", 0.08, "$pw * 0.86"], { at: [0, "$ph - 0.08", 0], anchor: "bottom", bevel: 0.008 }),
         box("Plaque", ["$pr * 0.6", 0.1, 0.01], { at: [0, "$ph * 0.6", "$pr * 0.63"], bevel: 0.003, material: f.accent }),
+        ...weather(f, "$pw * 1.1", "$pw * 1.1"),
       ], { material: f.plinth }),
       group("Figure", [
         lathe("Socle", [[0.02, 0], [S(0.085), 0], [S(0.1), S(0.02)], [S(0.06), S(0.08)], [S(0.07), S(0.1)], [0.02, S(0.1)]], { segments: 20 }),
@@ -72,6 +85,7 @@ function standing(f: Finish): SpecNode[] {
         box("Die", ["$pw", "$ph - 0.3", "$pw"], { at: [0, 0.15, 0], anchor: "bottom", bevel: 0.01 }),
         box("Cornice", ["$pw + 0.12", 0.16, "$pw + 0.12"], { at: [0, "$ph - 0.16", 0], anchor: "bottom", bevel: 0.015 }),
         box("Plaque", ["$pw * 0.55", "min(0.3, $ph * 0.25)", 0.012], { at: [0, "$ph * 0.5", "$pw / 2"], bevel: 0.004, material: f.accent }),
+        ...weather(f, "$pw + 0.24", "$pw + 0.24", { w: "$pw", z: "$pw / 2", top: "$ph - 0.16", len: "($ph - 0.3) * 0.8" }),
       ], { material: f.plinth }),
       group("Figure", [
         box("Foot_L", [S(0.1), S(0.06), S(0.25)], { at: [S(0.1), 0, S(0.04)], anchor: "bottom", bevel: S(0.02), mirror: "Foot_R" }),
@@ -81,6 +95,12 @@ function standing(f: Finish): SpecNode[] {
           z: S(z),
           superellipse: { width: S([0.34, 0.31, 0.34, 0.42, 0.4, 0.2][k] as number), height: S([0.22, 0.2, 0.24, 0.24, 0.2, 0.12][k] as number), n: 2.4, count: 20 },
         })), { rotate: [-90, 0, 0] }),
+        loft("Coat", [0.5, 0.62, 0.8, 0.98, 1.18, 1.36, 1.44].map((z, k) => ({
+          z: S(z),
+          superellipse: { width: S([0.5, 0.46, 0.4, 0.37, 0.37, 0.43, 0.38][k] as number), height: S([0.34, 0.31, 0.27, 0.25, 0.25, 0.25, 0.2][k] as number), n: 2.2, count: 20 },
+        })), { rotate: [-90, 0, 0] }),
+        tube("Lapel_L", [[S(0.05), S(1.42), S(0.115)], [S(0.08), S(1.2), S(0.12)], [S(0.02), S(1.0), S(0.12)]], S(0.018), { segments: 8, mirror: "Lapel_R" }),
+        ellipsoid("Hair", [S(0.1), S(0.08), S(0.105)], { at: [0, S(1.72), S(-0.01)], segments: 16 }),
         tube("Arm_L", [[S(0.19), S(1.42), 0], [S(0.25), S(1.13), S(0.01)], [S(0.27), S(0.86), S(0.06)]], [S(0.055), S(0.045), S(0.034)], { segments: 12, mirror: "Arm_R" }),
         ellipsoid("Hand_L", [S(0.03), S(0.07), S(0.045)], { at: [S(0.272), S(0.8), S(0.065)], segments: 12, mirror: "Hand_R" }),
         cyl("Neck", S(0.055), S(0.14), { at: [0, S(1.55), 0], segments: 14 }),
@@ -101,6 +121,7 @@ function obelisk(f: Finish): SpecNode[] {
         box("Die", ["$pw * 0.62", "$ph * 0.45", "$pw * 0.62"], { at: [0, "$ph * 0.4 - 0.004", 0], anchor: "bottom", bevel: 0.008 }),
         box("Cap", ["$pw * 0.7", "$ph * 0.15", "$pw * 0.7"], { at: [0, "$ph * 0.85 - 0.006", 0], anchor: "bottom", bevel: 0.01 }),
         box("Inscription", ["$pw * 0.4", "$ph * 0.22", 0.01], { at: [0, "$ph * 0.62", "$pw * 0.31"], bevel: 0.003, material: f.accent }),
+        ...weather(f, "$pw", "$pw"),
       ], { material: f.plinth }),
       group("Figure", [
         loft("Shaft", [{ z: 0, points: sq("$b") }, { z: "$figureHeight", points: sq("$b * 0.66") }], { rotate: [-90, 0, 0] }),
@@ -125,8 +146,9 @@ function knot(f: Finish): SpecNode[] {
     group("Sculpture", [
       group("Plinth", [
         box("Block", ["$pw", "$ph", "$pw * 0.7"], { anchor: "bottom", bevel: 0.02 }),
-        box("Shadow", ["$pw + 0.04", 0.04, "$pw * 0.7 + 0.04"], { anchor: "bottom", bevel: 0.01, material: "basalt" }),
+        box("Shadow", ["$pw + 0.04", 0.04, "$pw * 0.7 + 0.04"], { anchor: "bottom", bevel: 0.01, material: "granite_dark" }),
         box("Label", [0.3, 0.08, 0.01], { at: [0, "$ph * 0.6", "$pw * 0.35"], bevel: 0.003, material: f.accent }),
+        ...weather(f, "$pw", "$pw * 0.7", { w: "$pw * 0.6", z: "$pw * 0.35", top: "$ph", len: "$ph * 0.4" }),
       ], { material: f.plinth }),
       group("Figure", [
         cyl("Stub", "$r * 0.7", "$r * 1.6", { anchor: "base", segments: 16, material: f.accent }),
@@ -147,6 +169,8 @@ function hoop(f: Finish): SpecNode[] {
       group("Plinth", [
         box("Slab", ["$figureHeight * 0.8", "$ph", "max(0.6, $t * 4)"], { anchor: "bottom", bevel: 0.015 }),
         box("Seat", ["$t * 1.4", 0.03, "$t * 1.4"], { at: [0, "$ph - 0.005", 0], anchor: "bottom", bevel: 0.005, material: f.accent }),
+        ...(f.key === "corten" ? [box("RustStain", ["$t * 2.2", 0.004, "$t * 1.6"], { at: [0, "$ph", 0], material: "corten" })] : []),
+        ...weather(f, "$figureHeight * 0.8", "max(0.6, $t * 4)"),
       ], { material: f.plinth }),
       group("Figure", [
         lathe("Hoop", ring, { at: [0, "$figureHeight / 2", 0], rotate: [90, 0, 0], segments: 40, caps: false }),
@@ -207,10 +231,10 @@ function statue(style: Style, f: Finish): AssetDraft {
   return {
     slug: slugify("statue", f.key, s.name),
     title: `${f.key.charAt(0).toUpperCase()}${f.key.slice(1)} ${s.name}`,
-    description: `${s.text}, in ${label(f.figure)} on ${label(f.plinth)}. It faces +z.`,
-    tags: [style, f.key, label(f.figure), label(f.plinth), ...s.tags],
+    description: `${s.text}, in ${f.text}, with a dark weathering band at its foot. It faces +z.`,
+    tags: [style, f.key, ...f.text.split(" ").filter((w) => w.length > 3), ...s.tags],
     params: s.params(),
-    materials: mats(...new Set([f.figure, f.plinth, f.accent, "basalt"])),
+    materials: finish(...new Set([f.figure, f.plinth, f.accent, "granite_dark", "wet_stain", "verdigris", "corten"])),
     nodes: s.build(f),
   };
 }

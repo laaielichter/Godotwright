@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { squareLeg } from "./parts.js";
+import { label } from "../../palette.js";
+import { fmats, squareLeg } from "./parts.js";
 
 const STYLES = ["shelf", "tripod", "sled", "hairpin"] as const;
 type Style = (typeof STYLES)[number];
@@ -97,7 +97,7 @@ function makeCoffeeTable(style: Style, f: Finish): AssetDraft {
       num("height", 0.42, 0.36, 0.48, "Height of the top surface above the floor."),
       num("thickness", thick[0], thick[1], thick[2], "Thickness of the top."),
     ],
-    materials: { ...mats(...new Set([f.top, f.base, "glass_clear"])), paper: { color: [0.7, 0.68, 0.62], metallic: 0, roughness: 0.6 } },
+    materials: { ...fmats(...new Set([f.top, f.base, "glass_clear"])), paper: { color: [0.6, 0.58, 0.53], metallic: 0, roughness: 0.6, texture: "plaster" } },
     nodes: [group("CoffeeTable", { shelf, tripod, sled, hairpin }[style](f), { material: f.base, vars })],
   };
 }

@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { label, mats } from "../../palette.js";
-import { knob, ring, squareLeg } from "./parts.js";
+import { label } from "../../palette.js";
+import { fmats, knob, ring, squareLeg } from "./parts.js";
 
 const STYLES = ["tripod", "square", "drum", "c-frame"] as const;
 type Style = (typeof STYLES)[number];
@@ -87,7 +87,7 @@ function makeSideTable(style: Style, f: Finish): AssetDraft {
       round ? num("diameter", 0.45, 0.36, 0.6, "Diameter of the round top in metres.") : num("size", 0.48, 0.38, 0.6, "Width and depth of the square top."),
       num("height", style === "c-frame" ? 0.6 : 0.55, 0.45, 0.66, "Height of the top surface above the floor."),
     ],
-    materials: mats(...new Set([f.top, f.base, "brass", "rubber"])),
+    materials: fmats(...new Set([f.top, f.base, "brass", "rubber"])),
     nodes: [group("SideTable", { tripod, square, drum, "c-frame": cframe }[style](f), { material: f.base, vars })],
   };
 }
