@@ -147,7 +147,7 @@ point. `model lint` scores four categories from 0 to 100:
 | Category | What it checks |
 | --- | --- |
 | geometry | triangles facing against their own normals (pink backfaces, wrong light), open edges on single-sided surfaces, edges shared by more than two triangles, triangles without area, negative scale, models that are almost but not quite left-right symmetric |
-| materials | missing normals, UVs or tangents, UVs outside 0..1, very large or non-power-of-two textures |
+| materials | missing normals, UVs or tangents, UVs outside 0..1, very large or non-power-of-two textures, base colours real surfaces do not have (`model/albedo`, an info: a non-metal brighter than snow or darker than charcoal, or a dark "metal" that renders as a black mirror; a textured material is judged by the mean of its colour map) |
 | performance | triangle budget (`--max-triangles`), texture memory budget (`--max-texture-mb`), many materials |
 | rig | sibling nodes with the same name, unnamed nodes, a model that does not sit on y = 0, an empty file |
 
@@ -207,7 +207,8 @@ Anything else is built from a **model spec**: a JSON tree of named parts (box, c
 lathe, loft, extrude, roof, tube) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic
 expressions (`"$width / 2 - 0.1"`, never executed as code). Boxes and cylinders can have rounded edges (`bevel`),
 ellipsoids an organic, lumpy outline (`lumps`), a tube follows a path (frames, rails, pipes, branches), and a material
-of your own can use any of the texture patterns in its own colour (`"texture": "wood"`). `model spec` explains the format and prints a
+of your own can use any of the texture patterns in its own colour (`"texture": "wood"`): brick, roof_tile, roof_slate, wood, bark,
+concrete, asphalt, plaster, leaf, grass, stone, sand, water, ground, and for finishes fabric, leather, painted, plastic, brushed and rust. `model spec` explains the format and prints a
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
@@ -789,7 +790,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 39 tools
+### The 40 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -828,6 +829,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
+| `godot_model_library` | Search over a thousand ready-made base recipes (furniture, street, storage, nature, buildings, vehicles, props) in English or Dutch; build one by id or take its spec as the start of your own |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (inside the project), and lint it |
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
 | `godot_model_view` | See a `.glb` as text: front, side and top views, parts with sizes, parts that do not touch |
@@ -851,8 +853,8 @@ godotwright mcp --read-only             # or GODOTWRIGHT_READ_ONLY=1
 | `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~16,500 |
 | `game` | session, game | 2 tools, ~5,400 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
-| `model` | model_brief, model_identify, model_spec, model_build, model_view, model_lint, model_inspect | 7 tools, ~10,000 |
-| `all` (default) | everything | 39 tools, ~79,900 |
+| `model` | model_brief, model_identify, model_spec, model_library, model_build, model_view, model_lint, model_inspect | 8 tools, ~11,800 |
+| `all` (default) | everything | 40 tools, ~81,700 |
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never

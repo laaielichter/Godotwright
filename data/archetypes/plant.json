@@ -495,5 +495,123 @@
     ]
    }
   ]
+ },
+ {
+  "id": "plant.stump",
+  "name": "tree stump",
+  "description": "A cut tree stump or a fallen log.",
+  "aliases": [
+   "tree stump",
+   "stump",
+   "boomstronk",
+   "stronk",
+   "log",
+   "logs",
+   "fallen log",
+   "boomstam",
+   "stam",
+   "omgevallen boom"
+  ],
+  "extends": "plant",
+  "parts": [
+   {
+    "name": "Wood",
+    "role": "wood",
+    "required": true,
+    "aliases": [
+     "wood",
+     "trunk",
+     "log",
+     "stump",
+     "stam",
+     "stronk",
+     "hout"
+    ]
+   },
+   {
+    "name": "Root",
+    "role": "root",
+    "required": false,
+    "aliases": [
+     "root",
+     "roots",
+     "wortel",
+     "wortels"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.3,
+    8
+   ],
+   "width": [
+    0.3,
+    2
+   ],
+   "height": [
+    0.2,
+    1.5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "plant.mushroom",
+  "name": "mushroom",
+  "description": "A mushroom or toadstool, from a forest floor cluster to a giant fantasy one.",
+  "aliases": [
+   "mushroom",
+   "mushrooms",
+   "paddenstoel",
+   "paddenstoelen",
+   "toadstool",
+   "fungus",
+   "zwam",
+   "champignon",
+   "vliegenzwam"
+  ],
+  "extends": "plant",
+  "parts": [
+   {
+    "name": "Stem",
+    "role": "stem",
+    "required": true,
+    "aliases": [
+     "stem",
+     "stalk",
+     "steel",
+     "voet"
+    ]
+   },
+   {
+    "name": "Cap",
+    "role": "cap",
+    "required": true,
+    "aliases": [
+     "cap",
+     "hood",
+     "hoed",
+     "hoedje"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.03,
+    4
+   ],
+   "width": [
+    0.03,
+    4
+   ],
+   "height": [
+    0.03,
+    5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
  }
 ]

@@ -45,7 +45,8 @@ export interface GltfMaterial {
   normalTexture?: { index: number };
   occlusionTexture?: { index: number };
   emissiveTexture?: { index: number };
-  pbrMetallicRoughness?: { baseColorFactor?: number[]; baseColorTexture?: { index: number }; metallicRoughnessTexture?: { index: number } };
+  emissiveFactor?: number[];
+  pbrMetallicRoughness?: { baseColorFactor?: number[]; baseColorTexture?: { index: number }; metallicFactor?: number; metallicRoughnessTexture?: { index: number } };
   extensions?: Record<string, unknown>;
 }
 

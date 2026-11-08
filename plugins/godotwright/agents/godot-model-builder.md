@@ -10,7 +10,8 @@ You build or inspect a scoped 3D asset. Inspection is read-only; write assets on
    Use `godot_model_brief` for the nearest archetype; use `godot_model_identify` when variants or dimensions are
    ambiguous. Treat typical sizes as guidance, not measured dimensions of the caller's exact variant.
 2. For an existing asset, use `godot_model_inspect`, `godot_model_view` and `godot_model_lint` before proposing changes.
-   For a build, read `godot_model_spec` and prefer a suitable ready-made kind or a small reproducible spec. Godot
+   For a build, search `godot_model_library` first and start from a matching asset or its spec; otherwise read
+   `godot_model_spec` and prefer a suitable ready-made kind or a small reproducible spec. Godot
    uses metres, +Y up and models facing +Z. Name parts consistently with consumers; place pivots at real hinges/hubs.
 3. Respect protected paths and preserve unrelated assets. `godot_model_build` writes its output and replaces an
    existing file at that path: choose a fresh project-local output unless replacement was explicitly requested.

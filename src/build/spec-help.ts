@@ -87,7 +87,7 @@ Functions: min max abs sqrt sin cos tan asin acos atan atan2 hypot floor ceil ro
 Conventions: +y is up, the front of a model faces +z (Godot's Vector3.MODEL_FRONT, also the glTF convention; the model's left is then +x), the model stands on y = 0, a moving part gets its own node with its pivot at its origin
 (a wheel at its hub). A custom material may also have "emissive": [r, g, b] (a lamp that glows), "alpha": "BLEND", and "texture": a
 pattern drawn in its colour with a matching normal map (brick roof_tile roof_slate wood bark concrete asphalt plaster leaf grass stone
-sand water ground), so a blue door can be "wood" and a yellow wall "brick". Presets: plaster brick concrete stone asphalt roof_tile roof_slate wood frame_white glass glass_tinted metal steel chrome aluminium brass plastic plastic_white rubber paint canvas light light_red light_amber bark leaf grass soil sand water.
+sand water ground, and for finishes: fabric leather painted plastic brushed rust), so a blue door can be "wood" and a yellow wall "brick". Presets: plaster brick concrete stone asphalt roof_tile roof_slate wood frame_white glass glass_tinted metal steel chrome aluminium brass plastic plastic_white rubber paint canvas light light_red light_amber bark leaf grass soil sand water.
 Presets with a texture: plaster brick concrete stone asphalt roof_tile roof_slate wood bark leaf grass soil sand water. Lights (light,
 light_red, light_amber) glow a little.
 

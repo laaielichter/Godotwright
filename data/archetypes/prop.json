@@ -1701,5 +1701,1007 @@
   "pitfalls": [
    "The chute must incline downward from the ladder platform to ground level."
   ]
+ },
+ {
+  "id": "prop.stool",
+  "name": "stool",
+  "description": "A seat without a back: a kitchen, bar, milking or work stool.",
+  "aliases": [
+   "bar stool",
+   "barstool",
+   "kitchen stool",
+   "milking stool",
+   "work stool",
+   "krukje",
+   "barkruk",
+   "taburet"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Seat",
+    "role": "seat",
+    "required": true,
+    "aliases": [
+     "seat",
+     "zitting",
+     "top"
+    ]
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": true,
+    "aliases": [
+     "leg",
+     "legs",
+     "poot",
+     "poten",
+     "base",
+     "pedestal"
+    ],
+    "count": [
+     1,
+     5
+    ]
+   },
+   {
+    "name": "Footrest",
+    "role": "footrest",
+    "required": false,
+    "aliases": [
+     "footrest",
+     "ring",
+     "voetsteun",
+     "stretcher"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.25,
+    0.6
+   ],
+   "width": [
+    0.25,
+    0.6
+   ],
+   "height": [
+    0.3,
+    1.1
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "A stool has no back; a seat with a back is a chair."
+  ]
+ },
+ {
+  "id": "prop.drawers",
+  "name": "chest of drawers",
+  "description": "A cabinet of drawers: a dresser, nightstand or filing cabinet.",
+  "aliases": [
+   "chest of drawers",
+   "dresser",
+   "nightstand",
+   "bedside table",
+   "nachtkastje",
+   "ladekast",
+   "commode",
+   "filing cabinet",
+   "archiefkast",
+   "ladenkast"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "carcass",
+     "case",
+     "kast"
+    ]
+   },
+   {
+    "name": "Drawer",
+    "role": "drawer",
+    "required": true,
+    "aliases": [
+     "drawer",
+     "drawers",
+     "la",
+     "lade",
+     "laden"
+    ],
+    "count": [
+     1,
+     12
+    ],
+    "moves": [
+     {
+      "kind": "slide",
+      "axis": "z"
+     }
+    ],
+    "pivot": "center"
+   },
+   {
+    "name": "Handle",
+    "role": "handle",
+    "required": false,
+    "aliases": [
+     "handle",
+     "knob",
+     "pull",
+     "greep",
+     "knop"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.3,
+    0.7
+   ],
+   "width": [
+    0.35,
+    1.8
+   ],
+   "height": [
+    0.4,
+    1.6
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Each drawer is its own node with its pivot in its centre, so a script can slide it out along +z."
+  ]
+ },
+ {
+  "id": "prop.lamp",
+  "name": "lamp",
+  "description": "A free-standing light: a floor lamp, table lamp or lantern.",
+  "aliases": [
+   "lamp",
+   "lamps",
+   "floor lamp",
+   "table lamp",
+   "desk lamp",
+   "staande lamp",
+   "schemerlamp",
+   "tafellamp",
+   "bureaulamp",
+   "lampje"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Base",
+    "role": "base",
+    "required": true,
+    "aliases": [
+     "base",
+     "foot",
+     "voet",
+     "stand"
+    ]
+   },
+   {
+    "name": "Stem",
+    "role": "stem",
+    "required": false,
+    "aliases": [
+     "stem",
+     "pole",
+     "arm",
+     "stang"
+    ]
+   },
+   {
+    "name": "Shade",
+    "role": "shade",
+    "required": true,
+    "aliases": [
+     "shade",
+     "kap",
+     "lampenkap",
+     "glass",
+     "globe"
+    ]
+   },
+   {
+    "name": "Bulb",
+    "role": "bulb",
+    "required": false,
+    "aliases": [
+     "bulb",
+     "light",
+     "lampje",
+     "peer"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.1,
+    1.0
+   ],
+   "width": [
+    0.1,
+    1.0
+   ],
+   "height": [
+    0.15,
+    2.1
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Give the bulb an emissive material and add an OmniLight3D or SpotLight3D in Godot; a mesh alone lights nothing."
+  ]
+ },
+ {
+  "id": "prop.planter",
+  "name": "planter",
+  "description": "A plant pot or planter box, with soil and often a plant.",
+  "aliases": [
+   "planter",
+   "planters",
+   "plant pot",
+   "flower pot",
+   "bloempot",
+   "plantenbak",
+   "bloembak",
+   "pot",
+   "potten",
+   "flower box",
+   "kuip"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "pot",
+     "box",
+     "bak",
+     "container"
+    ]
+   },
+   {
+    "name": "Soil",
+    "role": "soil",
+    "required": false,
+    "aliases": [
+     "soil",
+     "earth",
+     "aarde",
+     "grond"
+    ]
+   },
+   {
+    "name": "Plant",
+    "role": "plant",
+    "required": false,
+    "aliases": [
+     "plant",
+     "foliage",
+     "flowers",
+     "bloemen",
+     "shrub"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    3.0
+   ],
+   "width": [
+    0.2,
+    3.0
+   ],
+   "height": [
+    0.15,
+    1.5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.pallet",
+  "name": "pallet",
+  "description": "A loading pallet of boards and blocks, as used by forklifts.",
+  "aliases": [
+   "pallet",
+   "pallets",
+   "pallet board",
+   "europallet",
+   "euro pallet",
+   "laadbord"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Deck",
+    "role": "deck",
+    "required": true,
+    "aliases": [
+     "deck",
+     "top",
+     "boards",
+     "planks",
+     "dek"
+    ]
+   },
+   {
+    "name": "Block",
+    "role": "block",
+    "required": true,
+    "aliases": [
+     "block",
+     "blocks",
+     "blok",
+     "stringer",
+     "runner"
+    ],
+    "count": [
+     2,
+     12
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.8,
+    1.3
+   ],
+   "width": [
+    0.8,
+    1.3
+   ],
+   "height": [
+    0.1,
+    0.25
+   ],
+   "source": "general knowledge: EUR pallets are 1.2 x 0.8 x 0.144 m, US GMA pallets 1.22 x 1.02 m",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Leave the fork openings open: forklift gameplay and the silhouette depend on them."
+  ]
+ },
+ {
+  "id": "prop.gas-cylinder",
+  "name": "gas cylinder",
+  "description": "A pressurised gas bottle or propane tank with a valve.",
+  "aliases": [
+   "gas cylinder",
+   "gas bottle",
+   "gasfles",
+   "gasflessen",
+   "propane tank",
+   "propaanfles",
+   "oxygen cylinder",
+   "zuurstoffles",
+   "cylinder bottle"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "bottle",
+     "cylinder",
+     "fles"
+    ]
+   },
+   {
+    "name": "Valve",
+    "role": "valve",
+    "required": true,
+    "aliases": [
+     "valve",
+     "ventiel",
+     "kraan",
+     "tap"
+    ]
+   },
+   {
+    "name": "Collar",
+    "role": "collar",
+    "required": false,
+    "aliases": [
+     "collar",
+     "guard",
+     "ring",
+     "kraag"
+    ]
+   }
+  ],
+  "scale": {
+   "width": [
+    0.15,
+    0.5
+   ],
+   "height": [
+    0.3,
+    1.8
+   ],
+   "source": "general knowledge: common 5-50 kg gas bottles; not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.rack",
+  "name": "storage rack",
+  "description": "Open shelving for storage: a pallet rack, warehouse shelving or wine rack.",
+  "aliases": [
+   "storage rack",
+   "pallet rack",
+   "warehouse rack",
+   "shelving",
+   "stellingkast",
+   "magazijnstelling",
+   "palletstelling",
+   "stelling",
+   "wine rack",
+   "wijnrek"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Upright",
+    "role": "upright",
+    "required": true,
+    "aliases": [
+     "upright",
+     "uprights",
+     "post",
+     "staander",
+     "frame"
+    ],
+    "count": [
+     2,
+     16
+    ]
+   },
+   {
+    "name": "Shelf",
+    "role": "shelf",
+    "required": true,
+    "aliases": [
+     "shelf",
+     "shelves",
+     "beam",
+     "plank",
+     "legbord"
+    ],
+    "count": [
+     1,
+     16
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.3,
+    1.5
+   ],
+   "width": [
+    0.6,
+    3.0
+   ],
+   "height": [
+    0.8,
+    6.0
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.cable-reel",
+  "name": "cable reel",
+  "description": "A large drum of cable or hose on two round flanges.",
+  "aliases": [
+   "cable reel",
+   "cable drum",
+   "kabelhaspel",
+   "kabelrol",
+   "haspel",
+   "hose reel",
+   "slanghaspel",
+   "spool",
+   "spoel"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Flange",
+    "role": "flange",
+    "required": true,
+    "aliases": [
+     "flange",
+     "flanges",
+     "rim",
+     "flens",
+     "schijf"
+    ],
+    "count": 2
+   },
+   {
+    "name": "Core",
+    "role": "core",
+    "required": true,
+    "aliases": [
+     "core",
+     "drum",
+     "barrel",
+     "kern",
+     "cable",
+     "kabel"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.3,
+    2.5
+   ],
+   "width": [
+    0.3,
+    2.5
+   ],
+   "height": [
+    0.3,
+    2.5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.chest",
+  "name": "chest",
+  "description": "A box with a hinged lid: a treasure chest, toolbox, toy box or trunk.",
+  "aliases": [
+   "treasure chest",
+   "schatkist",
+   "toolbox",
+   "gereedschapskist",
+   "trunk",
+   "hutkoffer",
+   "koffer",
+   "toy box",
+   "speelgoedkist",
+   "footlocker"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "box",
+     "case",
+     "kist"
+    ]
+   },
+   {
+    "name": "Lid",
+    "role": "lid",
+    "required": true,
+    "aliases": [
+     "lid",
+     "deksel",
+     "top",
+     "cover"
+    ],
+    "count": 1,
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hinge"
+   },
+   {
+    "name": "Handle",
+    "role": "handle",
+    "required": false,
+    "aliases": [
+     "handle",
+     "handles",
+     "grip",
+     "hengsel",
+     "greep"
+    ]
+   },
+   {
+    "name": "Lock",
+    "role": "lock",
+    "required": false,
+    "aliases": [
+     "lock",
+     "latch",
+     "hasp",
+     "slot"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    1.2
+   ],
+   "width": [
+    0.2,
+    1.6
+   ],
+   "height": [
+    0.1,
+    1.0
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Put the lid's pivot on its hinge line at the back top edge, so it opens about x."
+  ]
+ },
+ {
+  "id": "prop.jerrycan",
+  "name": "jerrycan",
+  "description": "A flat fuel or water can with handles and a spout.",
+  "aliases": [
+   "jerrycan",
+   "jerry can",
+   "jerrycans",
+   "fuel can",
+   "benzineblik",
+   "jerrycan blik",
+   "gas can",
+   "water can"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "can",
+     "blik"
+    ]
+   },
+   {
+    "name": "Handle",
+    "role": "handle",
+    "required": true,
+    "aliases": [
+     "handle",
+     "handles",
+     "grip",
+     "hengsel"
+    ]
+   },
+   {
+    "name": "Spout",
+    "role": "spout",
+    "required": false,
+    "aliases": [
+     "spout",
+     "cap",
+     "dop",
+     "tuit",
+     "nozzle"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.1,
+    0.5
+   ],
+   "width": [
+    0.2,
+    0.5
+   ],
+   "height": [
+    0.2,
+    0.6
+   ],
+   "source": "general knowledge: 5-25 litre cans; the 20 l NATO can is about 0.47 x 0.35 x 0.16 m",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.traffic-cone",
+  "name": "traffic cone",
+  "description": "A road cone, post or drum used to mark works and lanes.",
+  "aliases": [
+   "traffic cone",
+   "road cone",
+   "pylon cone",
+   "verkeerskegel",
+   "pion",
+   "pionnen",
+   "safety cone",
+   "leitkegel"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Base",
+    "role": "base",
+    "required": true,
+    "aliases": [
+     "base",
+     "foot",
+     "voet"
+    ]
+   },
+   {
+    "name": "Cone",
+    "role": "cone",
+    "required": true,
+    "aliases": [
+     "cone",
+     "body",
+     "kegel"
+    ]
+   },
+   {
+    "name": "Band",
+    "role": "band",
+    "required": false,
+    "aliases": [
+     "band",
+     "stripe",
+     "reflector",
+     "reflective"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    0.6
+   ],
+   "width": [
+    0.2,
+    0.6
+   ],
+   "height": [
+    0.2,
+    1.2
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.market-stall",
+  "name": "market stall",
+  "description": "A market stand or kiosk: a counter under an awning or roof.",
+  "aliases": [
+   "market stall",
+   "market stand",
+   "marktkraam",
+   "kraam",
+   "kraampje",
+   "stall",
+   "kiosk",
+   "food stand",
+   "booth",
+   "kermiskraam"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Counter",
+    "role": "counter",
+    "required": true,
+    "aliases": [
+     "counter",
+     "toonbank",
+     "table",
+     "bench",
+     "stall"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "awning",
+     "canopy",
+     "dak",
+     "luifel",
+     "zeil"
+    ]
+   },
+   {
+    "name": "Post",
+    "role": "post",
+    "required": true,
+    "aliases": [
+     "post",
+     "posts",
+     "pole",
+     "paal",
+     "frame"
+    ],
+    "count": [
+     2,
+     8
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    1.0,
+    4.0
+   ],
+   "width": [
+    1.5,
+    6.0
+   ],
+   "height": [
+    2.0,
+    3.5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "prop.terminal",
+  "name": "terminal",
+  "description": "A standing console, kiosk screen or sci-fi control panel.",
+  "aliases": [
+   "terminal",
+   "console",
+   "control panel",
+   "bedieningspaneel",
+   "computer terminal",
+   "kiosk screen",
+   "ticket machine",
+   "kaartautomaat",
+   "arcade cabinet",
+   "consolepaneel"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "cabinet",
+     "case",
+     "kast",
+     "pedestal"
+    ]
+   },
+   {
+    "name": "Screen",
+    "role": "screen",
+    "required": true,
+    "aliases": [
+     "screen",
+     "display",
+     "scherm",
+     "monitor"
+    ]
+   },
+   {
+    "name": "Panel",
+    "role": "panel",
+    "required": false,
+    "aliases": [
+     "panel",
+     "keyboard",
+     "buttons",
+     "keys",
+     "toetsen",
+     "controls"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.3,
+    1.5
+   ],
+   "width": [
+    0.3,
+    2.0
+   ],
+   "height": [
+    0.8,
+    2.4
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Make the screen emissive so it reads at night, and keep it its own node so a script can swap its material."
+  ]
+ },
+ {
+  "id": "prop.rock",
+  "name": "rock",
+  "description": "A boulder, stone or rock outcrop for set dressing.",
+  "aliases": [
+   "rock",
+   "rocks",
+   "boulder",
+   "boulders",
+   "kei",
+   "keien",
+   "rots",
+   "rotsen",
+   "zwerfkei",
+   "outcrop",
+   "cliff rock"
+  ],
+  "extends": "prop",
+  "parts": [
+   {
+    "name": "Rock",
+    "role": "rock",
+    "required": true,
+    "aliases": [
+     "rock",
+     "boulder",
+     "stone",
+     "kei",
+     "rots",
+     "steen",
+     "main"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    15
+   ],
+   "width": [
+    0.2,
+    15
+   ],
+   "height": [
+    0.1,
+    10
+   ],
+   "source": "general knowledge: from a pebble pile to a large boulder; not a standard",
+   "confidence": "C"
+  },
+  "pitfalls": [
+   "Sink the base a little into the ground so it does not seem to float, and keep one node per stone so they can be scattered."
+  ]
  }
 ]

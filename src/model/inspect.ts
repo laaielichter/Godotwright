@@ -1,4 +1,5 @@
 import { type Gltf, type GltfMaterial, type GltfNode, type GltfPrimitive, type LoadedGltf, ModelError, isIndex, loadGltf, readAccessor, readUri } from "./gltf.js";
+import { decodePng } from "../screenshot/png.js";
 import { imageSize } from "./images.js";
 import { at } from "./num.js";
 
@@ -50,6 +51,8 @@ export interface TextureInfo {
   /** Estimated uncompressed RGBA memory with a full mipmap chain. */
   megabytes: number;
   roles: string[];
+  /** Mean linear RGB of a colour map embedded as PNG (sampled), for the albedo check. */
+  meanLinear?: [number, number, number];
 }
 
 export interface ModelInfo {
@@ -74,6 +77,12 @@ export interface ModelInfo {
     luminance: number;
     /** KHR_materials_transmission: light passes through, as through glass. */
     transmission: boolean;
+    /** metallicFactor (glTF's default is 1). */
+    metallic: number;
+    /** True when the material gives off light (an emissive factor above zero, or an emissive map). */
+    emissive: boolean;
+    /** Mean linear base colour: the factor times the mean of the colour map when that can be read; undefined when it cannot. */
+    albedo?: [number, number, number];
   }[];
   textures: TextureInfo[];
   triangles: number;
@@ -150,7 +159,7 @@ function triangleIndices(model: LoadedGltf, prim: GltfPrimitive, vertexCount: nu
 /** glTF's CLAMP_TO_EDGE: the only wrap mode that does not repeat a texture. */
 const CLAMP_TO_EDGE = 33071;
 
-function materialInfo(json: Gltf, m: GltfMaterial, index: number) {
+function materialInfo(json: Gltf, m: GltfMaterial, index: number, textures: TextureInfo[]) {
   const used = [m.pbrMetallicRoughness?.baseColorTexture, m.pbrMetallicRoughness?.metallicRoughnessTexture, m.normalTexture, m.emissiveTexture, m.occlusionTexture].filter((t) => t !== undefined);
   const repeats = used.every((t) => {
     const sampler = json.samplers?.[json.textures?.[t.index]?.sampler ?? -1];
@@ -170,7 +179,44 @@ function materialInfo(json: Gltf, m: GltfMaterial, index: number) {
     alpha: typeof alpha === "number" && Number.isFinite(alpha) ? alpha : 1,
     luminance: 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2),
     transmission: Boolean(m.extensions?.["KHR_materials_transmission"]),
+    metallic: typeof m.pbrMetallicRoughness?.metallicFactor === "number" ? m.pbrMetallicRoughness.metallicFactor : 1,
+    emissive: m.emissiveTexture !== undefined || (m.emissiveFactor ?? []).some((v) => v > 0),
+    ...albedoOf(m, channel, textures),
   };
+}
+
+/** The mean linear base colour of a material, when its colour map (if any) could be read. */
+function albedoOf(m: GltfMaterial, channel: (i: number) => number, textures: TextureInfo[]): { albedo?: [number, number, number] } {
+  const map = m.pbrMetallicRoughness?.baseColorTexture;
+  const mean = map === undefined ? [1, 1, 1] : textures[map.index]?.meanLinear;
+  if (!mean) return {};
+  return { albedo: [channel(0) * mean[0]!, channel(1) * mean[1]!, channel(2) * mean[2]!] };
+}
+
+/** sRGB byte to linear 0..1. */
+const linear = (byte: number): number => {
+  const c = byte / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+};
+
+/** Mean linear RGB of a PNG, from at most about 4096 sampled pixels; undefined when it cannot be decoded. */
+function meanOfPng(bytes: Buffer): [number, number, number] | undefined {
+  try {
+    const img = decodePng(bytes);
+    const step = Math.max(1, Math.floor(Math.sqrt((img.width * img.height) / 4096)));
+    const sum = [0, 0, 0];
+    let n = 0;
+    for (let y = 0; y < img.height; y += step) {
+      for (let x = 0; x < img.width; x += step) {
+        const i = (y * img.width + x) * 4;
+        for (let c = 0; c < 3; c++) sum[c]! += linear(img.rgba[i + c]!);
+        n++;
+      }
+    }
+    return n ? [sum[0]! / n, sum[1]! / n, sum[2]! / n] : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function textureRoles(json: Gltf): Map<number, string[]> {
@@ -208,14 +254,18 @@ function readTextures(model: LoadedGltf): TextureInfo[] {
       format: size?.format ?? (typeof image?.mimeType === "string" ? image.mimeType.replace("image/", "") : undefined),
       megabytes: size ? (size.width * size.height * 4 * (4 / 3)) / 1048576 : 0,
       roles: roles.get(index) ?? [],
+      ...(bytes && size?.format === "png" && roles.get(index)?.includes("color") ? withMean(meanOfPng(bytes)) : {}),
     };
   });
 }
+
+const withMean = (mean: [number, number, number] | undefined): { meanLinear?: [number, number, number] } => (mean ? { meanLinear: mean } : {});
 
 /** Reads a model and gathers everything the report and the lint rules need. */
 export function inspectModel(file: string): ModelInfo {
   const model = loadGltf(file);
   const json = model.json;
+  const textures = readTextures(model);
   const nodes: NodeInfo[] = [];
   const primitives: PrimitiveInfo[] = [];
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
@@ -279,8 +329,8 @@ export function inspectModel(file: string): ModelInfo {
     generator: json.asset?.generator,
     nodes,
     primitives,
-    materials: (json.materials ?? []).map((m, i) => materialInfo(json, m, i)),
-    textures: readTextures(model),
+    materials: (json.materials ?? []).map((m, i) => materialInfo(json, m, i, textures)),
+    textures,
     triangles: primitives.reduce((n, p) => n + p.triangles, 0),
     animations: json.animations?.length ?? 0,
     bounds: hasBounds ? { min, max, size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]] } : undefined,

@@ -331,6 +331,87 @@ export const PATTERNS: Record<string, Pattern> = {
         return [scale(c, 0.95 + 0.08 * big), clamp01(0.5 + 0.35 * big + 0.15 * small)];
       }),
   },
+  fabric: {
+    tile: 0.3,
+    relief: 1.4,
+    description: "woven cloth: a plain weave of warp and weft threads, slightly uneven",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const threads = 48;
+        const fu = u * threads, fv = v * threads;
+        const iu = Math.floor(fu), iv = Math.floor(fv);
+        const tu = fu - iu, tv = fv - iv;
+        // Plain weave: in even cells the warp (along v) lies on top, in odd cells the weft.
+        const warpUp = (iu + iv) % 2 === 0;
+        const warp = Math.sin(tu * Math.PI), weft = Math.sin(tv * Math.PI);
+        const h = warpUp ? 0.5 + 0.5 * warp * (0.6 + 0.4 * weft) : 0.5 + 0.5 * weft * (0.6 + 0.4 * warp);
+        const slub = 1 + 0.07 * fbm(u, v, 4, 64, 2, 141) + 0.05 * fbm(u, v, 64, 4, 2, 142);
+        const fuzz = 1 + 0.05 * fbm(u, v, 32, 32, 2, 143);
+        return [scale(c, (0.82 + 0.3 * h) * slub * fuzz), clamp01(h)];
+      }),
+  },
+  leather: {
+    tile: 0.5,
+    relief: 1.8,
+    description: "leather: fine pebbled grain with soft creases",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const grain = cells(u, v, 40, 40, 151, 0.9);
+        const pebble = smooth(clamp01((grain.f2 - grain.f1) / 0.25));
+        const crease = 1 - smooth(clamp01(Math.abs(fbm(u, v, 3, 3, 3, 152)) / 0.06)) * 0.5;
+        const tone = (0.84 + 0.2 * pebble + 0.1 * fbm(u, v, 4, 4, 3, 153)) * (0.9 + 0.1 * crease);
+        return [scale(c, tone), clamp01(0.3 + 0.55 * pebble * crease + 0.15 * crease)];
+      }),
+  },
+  painted: {
+    tile: 1.0,
+    relief: 0.35,
+    description: "painted surface: a faint orange-peel ripple and slightly uneven gloss",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const peel = fbm(u, v, 24, 24, 3, 161);
+        const mottle = fbm(u, v, 3, 3, 3, 162);
+        return [scale(c, 0.96 + 0.05 * mottle + 0.015 * peel), clamp01(0.5 + 0.5 * peel)];
+      }),
+  },
+  plastic: {
+    tile: 0.5,
+    relief: 0.4,
+    description: "moulded plastic: a fine spark-eroded texture",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const fine = fbm(u, v, 96, 96, 2, 171);
+        const spot = cells(u, v, 60, 60, 172, 1);
+        const pit = 1 - 0.5 * smooth(clamp01(1 - spot.f1 / 0.3));
+        return [scale(c, 0.95 + 0.04 * fine + 0.04 * pit + 0.02 * fbm(u, v, 3, 3, 2, 173)), clamp01(0.5 + 0.3 * fine + 0.2 * (pit - 0.75))];
+      }),
+  },
+  brushed: {
+    tile: 0.6,
+    relief: 0.5,
+    description: "brushed metal: fine streaks along u",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const streak = fbm(u, v, 2, 160, 3, 181);
+        const wide = fbm(u, v, 1, 12, 2, 182);
+        return [scale(c, 0.93 + 0.08 * streak + 0.04 * wide), clamp01(0.5 + 0.5 * streak)];
+      }),
+  },
+  rust: {
+    tile: 1.0,
+    relief: 1.6,
+    description: "rusted steel: blotches of orange and dark oxide with pits",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        const blotch = smooth(clamp01((fbm(u, v, 4, 4, 4, 191) + 0.15) / 0.6));
+        const pits = cells(u, v, 36, 36, 192, 1);
+        const pit = smooth(clamp01(1 - pits.f1 / 0.22)) * ((pits.id >>> 24) / 255 > 0.6 ? 1 : 0);
+        const orange: RGB = [c[0] * 1.35 + 0.02, c[1] * 0.95, c[2] * 0.6];
+        const dark: RGB = [c[0] * 0.45, c[1] * 0.4, c[2] * 0.38];
+        const col = blend(blend(dark, c, 0.5 + 0.5 * blotch), orange, 0.35 * blotch * (0.5 + 0.5 * fbm(u, v, 16, 16, 2, 193)));
+        return [scale(col, 1 - 0.35 * pit), clamp01(0.55 + 0.2 * blotch - 0.45 * pit + 0.1 * fbm(u, v, 32, 32, 2, 194))];
+      }),
+  },
   ground: {
     tile: 4.0,
     relief: 1,
