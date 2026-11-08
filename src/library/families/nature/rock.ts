@@ -104,7 +104,7 @@ function stone(name: string, rx: string, ryRaw: string, rz: string, x: string, z
 function weathered(m: MaterialDef): MaterialDef {
   const [r, g, b] = m.color;
   const top = Math.max(r, g, b);
-  const k = top > 0.32 ? 0.32 / top : 1;
+  const k = top > 0.26 ? 0.26 / top : 1;
   // A touch of warm grey mixed in, so a white stone does not render as flat white.
   const mix = (c: number, warm: number): number => Math.round((c * k * 0.85 + warm * 0.15) * 1000) / 1000;
   return { ...m, color: [mix(r, 0.24), mix(g, 0.21), mix(b, 0.17)], roughness: Math.max(m.roughness, 0.92), texture: "concrete" };
