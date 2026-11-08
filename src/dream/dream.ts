@@ -761,12 +761,23 @@ export function applyDream(path: string, selection: string | string[], options: 
       journal.write(full, data);
       out.files.push(toRes(root, full));
     } catch (error) {
-      if (!(error instanceof ProtectedPathError)) throw error;
-      out.notes.push(`${toRes(root, full)} is protected and was not written`);
+      // One file that cannot be written (protected, read-only, a full disk) never loses what was applied.
+      out.notes.push(
+        error instanceof ProtectedPathError ? `${toRes(root, full)} is protected and was not written` : `${toRes(root, full)} was not written: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   };
 
-  if (out.applied.length || out.seen.length) {
+  try {
+    writeFiles();
+  } finally {
+    // What was applied to the learning file is always journalled, so undo can take it back.
+    out.journal = journal.commit();
+  }
+  return out;
+
+  function writeFiles(): void {
+    if (!out.applied.length && !out.seen.length) return;
     const dir = dreamDir(root);
     write(join(dir, "state.json"), `${JSON.stringify(state, null, 2)}\n`);
     const stamp = now.toISOString().slice(0, 16).replace("T", "-").replace(":", "");
@@ -774,14 +785,18 @@ export function applyDream(path: string, selection: string | string[], options: 
     const after = readLearning();
     const block = agentsBlock(after, state, api, projectKey(root));
     for (const file of agentsFiles(root, options.writeAgentsFile === true)) {
-      const current = existsSync(file) ? readFileSync(file, "utf8") : "";
+      let current: string;
+      try {
+        current = existsSync(file) ? readFileSync(file, "utf8") : "";
+      } catch (error) {
+        out.notes.push(`${toRes(root, file)} could not be read: ${error instanceof Error ? error.message : String(error)}`);
+        continue;
+      }
       // Only marking suggestions as seen changes nothing an agent needs: an agents file gets a block only from a change.
       if (!out.applied.length && !current.includes(BLOCK_START)) continue;
       write(file, withBlock(current, block), relative(root, file).startsWith(".."));
     }
   }
-  out.journal = journal.commit();
-  return out;
 }
 
 function toRes(root: string, full: string): string {

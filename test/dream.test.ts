@@ -356,6 +356,32 @@ describe("dream apply and undo", () => {
     expect(existsSync(join(root, ".godot/godotwright/dreams/state.json"))).toBe(false);
   });
 
+  it("journals what was applied even when a file cannot be written, and says which", () => {
+    const root = project({ "AGENTS.md/keep": "a folder where a file was expected\n", "CLAUDE.md": "# Claude\n" });
+    learn((d) => {
+      d.missedByReview[errorTemplate(MESSAGE)] = 2;
+      d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } };
+    });
+    const r = applyDream(root, "all");
+    expect(r.applied).toHaveLength(2);
+    expect(r.notes.some((n) => n.startsWith("res://AGENTS.md could not be read"))).toBe(true);
+    expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toContain(BLOCK_START);
+    expect(r.journal).toBeDefined();
+    expect(readLearning().localLessons).toHaveLength(1);
+    undoJournal(root);
+    expect(readLearning().localLessons).toEqual([]);
+    expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toBe("# Claude\n");
+  });
+
+  it("keeps going when the dream state cannot be written", () => {
+    const root = project({ ".godot/godotwright/dreams/state.json/keep": "x\n" });
+    learn((d) => (d.missedByReview[errorTemplate(MESSAGE)] = 2));
+    const r = applyDream(root, "all");
+    expect(r.notes.some((n) => n.startsWith("res://.godot/godotwright/dreams/state.json was not written"))).toBe(true);
+    expect(r.files.some((f) => f.endsWith(".md"))).toBe(true);
+    expect(readJournal(root).entries.at(-1)!.learning?.lessons).toHaveLength(1);
+  });
+
   it("marks suggestions as seen until their evidence doubles", () => {
     const root = project();
     learn((d) => (d.rules["quality/magic-number"] = { reported: 30, confirmed: 0, contradicted: 0, dismissed: 3 }));
