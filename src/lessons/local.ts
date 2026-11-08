@@ -143,7 +143,8 @@ export function addLocalLesson(input: LessonInput, options: { projectNames?: Ite
     const existing = d.localLessons.find((l) => l.id === base);
     if (existing) {
       const errors = [...new Set([...(existing.errors ?? []), ...(lesson.errors ?? [])])].slice(0, 8);
-      const tags = [...new Set([...existing.tags, ...lesson.tags])].slice(0, 12);
+      // A draft rewritten without the draft tag (a real cause and fix) is a draft no more.
+      const tags = [...new Set([...existing.tags, ...lesson.tags])].filter((t) => t !== "draft" || lesson.tags.includes("draft")).slice(0, 12);
       const projects = [...new Set([...(existing.projects ?? []), ...(key ? [key] : [])])].slice(0, 20);
       Object.assign(existing, lesson, { id: base, tags, ...(errors.length ? { errors } : {}), ...(projects.length ? { projects } : {}) });
       result = { lesson: existing, replaced, updated: true };

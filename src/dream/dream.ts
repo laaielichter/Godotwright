@@ -301,7 +301,9 @@ function similar(a: Lesson, b: Lesson): boolean {
   return shared / (wa.size + wb.size - shared) >= 0.75;
 }
 
-const isDraft = (l: Lesson) => l.tags.includes("draft");
+/** The fix a dream writes into a draft; a lesson whose fix still starts with it is a draft, whatever its tags. */
+const DRAFT_FIX = "Not written yet.";
+const isDraft = (l: Lesson) => l.tags.includes("draft") || l.fix.startsWith(DRAFT_FIX);
 
 /** Words for a file kind in a lesson title. */
 const KIND_WORDS: Record<string, string> = {
@@ -342,7 +344,7 @@ export function draftLessonInput(template: string, evidence: Record<string, numb
   return {
     title: `Godot error without a lesson yet: ${shortTemplate(template)}`,
     symptom: `${seenText(evidence)}, and no review rule or lesson explained it.`,
-    fix: "Not written yet. Find the cause, fix it once, then rewrite this lesson with the cause, the fix and a test.",
+    fix: `${DRAFT_FIX} Find the cause, fix it once, then rewrite this lesson with the cause, the fix and a test.`,
     error: template,
     topic: "gdscript",
     tags: ["draft", "dream"],
@@ -354,7 +356,7 @@ function undoLessonInput(tool: string, kind: string, count: number): LessonInput
   return {
     title: `Writes by the ${tool} tool to ${what} files were undone repeatedly`,
     symptom: `In this project ${count} writes of ${what} files by the ${tool} tool were taken back with undo.`,
-    fix: "Not written yet. Look at what the undone writes changed, find what went wrong, and rewrite this lesson with the cause and a check to run before the next write.",
+    fix: `${DRAFT_FIX} Look at what the undone writes changed, find what went wrong, and rewrite this lesson with the cause and a check to run before the next write.`,
     topic: "tooling",
     tags: ["draft", "dream", "undo"],
   };

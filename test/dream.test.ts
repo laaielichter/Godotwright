@@ -290,6 +290,28 @@ describe("dream apply and undo", () => {
     expect(dream(root).proposals).toHaveLength(2);
   });
 
+  it("drops the draft tag when a draft is rewritten with a real cause and fix, so it is no longer a draft", () => {
+    const root = project();
+    learn((d) => (d.missedByReview[errorTemplate(MESSAGE)] = 2));
+    applyDream(root, "1");
+    const draft = readLearning().localLessons[0]!;
+    expect(draft.tags).toContain("draft");
+    addLocalLesson({ title: draft.title, cause: "The method is defined on another node than the one it is called on.", fix: "Call the function on the node that defines it, after checking it with has_method.", error: MESSAGE });
+    const done = readLearning().localLessons[0]!;
+    expect(done.tags).not.toContain("draft");
+    expect(done.tags).toContain("dream");
+    learn((d) => (d.lessons[done.id] = { shown: 5, helped: 0, wrong: 0 }));
+    expect(kinds(dream(root, { all: true }).proposals)).not.toContain("finish-draft");
+    // It may now go into the agents block.
+    expect(agentsBlock(readLearning(), readProjectState(root), undefined, projectKey(root))).toContain("has_method");
+  });
+
+  it("still treats a lesson whose fix is the draft placeholder as a draft", () => {
+    const root = project();
+    addLocalLesson({ ...draftLessonInput(errorTemplate(MESSAGE), { x: 2 }), tags: ["dream"] }, { project: root });
+    expect(kinds(dream(root).proposals)).toContain("finish-draft");
+  });
+
   it("leaves a lesson rewritten since the apply alone on undo", () => {
     const root = project();
     learn((d) => (d.missedByReview[errorTemplate(MESSAGE)] = 2));
