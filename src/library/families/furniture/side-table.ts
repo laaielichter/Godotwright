@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats, knob, ring, squareLeg } from "./parts.js";
+import { board, fmats, knob, ring, squareLeg } from "./parts.js";
 
 const STYLES = ["tripod", "square", "drum", "c-frame"] as const;
 type Style = (typeof STYLES)[number];
@@ -15,7 +15,7 @@ const FINISHES: Record<Style, Finish[]> = {
 
 /** A round top with a soft edge, surface at $H. */
 const roundTop = (f: Finish): SpecNode =>
-  lathe("Top", [[0.004, "$H - $t"], ["$R - 0.01", "$H - $t"], ["$R", "$H - $t + 0.008"], ["$R", "$H - 0.005"], ["$R - 0.005", "$H"], [0.004, "$H"]], { segments: 40, material: f.top });
+  lathe("Top", [["$R - 0.01", "$H - $t"], ["$R", "$H - $t + 0.008"], ["$R", "$H - 0.005"], ["$R - 0.005", "$H"]], { segments: 40, material: f.top });
 
 function tripod(f: Finish): SpecNode[] {
   return [
@@ -30,8 +30,8 @@ function tripod(f: Finish): SpecNode[] {
 function square(f: Finish): SpecNode[] {
   return [
     box("Top", ["$S", "$t", "$S"], { at: [0, "$H - $t / 2", 0], bevel: 0.006, material: f.top }),
-    box("Apron_B", ["2 * $xl", 0.12, 0.018], { at: [0, "$H - $t - 0.06", "-$xl"], bevel: 0.003 }),
-    box("Apron_L", [0.018, 0.12, "2 * $xl"], { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.003, mirror: "Apron_R" }),
+    board("Apron_B", ["2 * $xl", 0.12, 0.018], "x", { at: [0, "$H - $t - 0.06", "-$xl"], bevel: 0.003 }),
+    board("Apron_L", [0.018, 0.12, "2 * $xl"], "z", { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.003, mirror: "Apron_R" }),
     group("Drawer", [
       box("Front", ["2 * $xl - 0.03", 0.1, 0.018], { bevel: 0.004, material: f.top }),
       knob("Knob", [0, 0, 0.008], "brass"),

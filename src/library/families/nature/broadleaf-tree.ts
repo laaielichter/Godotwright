@@ -68,29 +68,38 @@ const SHADE: Record<string, string> = { leaf_green: "leaf_shade", leaf_light: "l
 const TIP: Record<string, string> = { leaf_light: "leaf_tip", leaf_green: "leaf_light", leaf_dark: "leaf_green", leaf_yellow: "leaf_yellow", leaf_autumn: "leaf_yellow", leaf_red: "leaf_autumn", leaf_blossom: "leaf_blossom" };
 
 /**
- * Small, very lumpy leaf tufts round a cluster centred on (x, y, z), in terms of $c: they break the smooth outline of
- * the cluster into a ragged, many-lobed silhouette, light on the upper, outer side and dark underneath.
+ * Leaf masses round a cluster centred on (x, y, z), in terms of $c: two big lobes sunk deep into the cluster, a few
+ * middle ones and many small, ragged tufts pushed out past its outline, every one of them sized differently per limb
+ * (through `v`, the limb number or a fixed number), so the crown reads as foliage of all sizes instead of even
+ * "popcorn". Light on the upper, outer side and dark underneath.
  */
-function tufts(prefix: string, x: string, y: string, z: string, seed: string, tones: { up: string; out: string; low: string }, scale = 1): SpecNode[] {
+function tufts(prefix: string, x: string, y: string, z: string, seed: string, tones: { up: string; out: string; low: string }, scale = 1, v = "$i"): SpecNode[] {
   const k = n4(scale);
-  const spots: [string, string, string, string, number][] = [
-    // [dx, dy, dz, size, tone 0 up / 1 out / 2 low] in cluster radii
-    ["0.72", "0.42", "0.38", "0.44", 1],
-    ["0.25", "0.78", "-0.36", "0.42", 0],
-    ["-0.3", "0.66", "0.5", "0.4", 0],
-    ["0.6", "0.05", "-0.66", "0.42", 1],
-    ["0.18", "-0.36", "0.62", "0.4", 2],
-    ["-0.55", "0.2", "-0.45", "0.38", 1],
+  const spots: [number, number, number, number, number][] = [
+    // [dx, dy, dz, size, tone 0 up / 1 out / 2 low] in cluster radii: big lobes deep inside, small tufts far out.
+    [0.38, 0.32, 0.18, 0.62, 1],
+    [-0.3, 0.46, -0.22, 0.54, 0],
+    [0.12, 0.74, 0.5, 0.36, 0],
+    [0.72, -0.05, -0.55, 0.34, 1],
+    [-0.62, 0.1, 0.42, 0.3, 1],
+    [0.8, 0.34, 0.32, 0.22, 0],
+    [0.26, 0.8, -0.32, 0.2, 0],
+    [-0.42, 0.6, 0.55, 0.18, 0],
+    [0.12, -0.36, 0.72, 0.24, 2],
+    [-0.8, -0.1, -0.28, 0.2, 2],
+    [0.62, 0.6, -0.18, 0.16, 0],
   ];
-  return spots.map(([dx, dy, dz, size, tone], n) =>
-    ellipsoid(`${prefix}_${n + 1}`, [`$c * ${size} * ${k}`, `$c * ${size} * 0.82 * ${k}`, `$c * ${size} * 0.9 * ${k}`], {
-      at: [`${x} + $c * ${dx} * ${k}`, `${y} + $c * ${dy} * ${k}`, `${z} + $c * ${dz} * ${k}`],
-      segments: 12,
-      lumps: 0.6,
+  return spots.map(([dx, dy, dz, size, tone], n) => {
+    // Each copy grows between 55 % and 130 % of its size, with its own rhythm per spot.
+    const f = `(${n4(size * scale)} * (0.55 + 0.75 * (0.5 + 0.5 * sin(${v} * ${n4(1.9 + n * 0.83)} + ${n4(n * 2.17)}))))`;
+    return ellipsoid(`${prefix}_${n + 1}`, [`$c * ${f}`, `$c * ${f} * ${n4(0.78 + 0.04 * (n % 3))}`, `$c * ${f} * 0.9`], {
+      at: [`${x} + $c * ${n4(dx)} * ${k}`, `${y} + $c * ${n4(dy)} * ${k}`, `${z} + $c * ${n4(dz)} * ${k}`],
+      segments: size > 0.3 ? 14 : 10,
+      lumps: size > 0.3 ? 0.5 : 0.6,
       seed: `${seed} + ${n * 31 + 3}`,
       material: tone === 0 ? tones.up : tone === 1 ? tones.out : tones.low,
-    }),
-  );
+    });
+  });
 }
 
 const clampRange = (v: number, r: [number, number, number]): number => Math.min(r[2], Math.max(r[1], Math.round(v * 100) / 100));
@@ -135,12 +144,12 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
     ], ["$tr * 0.56", "$tr * 0.42", "$tr * 0.27", "$tr * 0.12"], { segments: 10 }),
     tube("Twig", [["$L * 0.68", "$ys + ($ye - $ys) * 0.82", "-$L * 0.05"], ["$L * 0.62", "$ye + $ry * 0.28", "$L * 0.32"]], ["$tr * 0.16", "$tr * 0.07"], { segments: 6 }),
     tube("TwigLow", [["$L * 0.45", "$ys + ($ye - $ys) * 0.6", "0"], ["$L * 0.75", "$ys + ($ye - $ys) * 0.7", "-$L * 0.3"]], ["$tr * 0.14", "$tr * 0.06"], { segments: 6 }),
-    ellipsoid("Leaves", ["$c", "$c * $sq", "$c * 0.9"], { at: ["$L", "$ye + $c * 0.2", 0], segments: 18, lumps, seed: `$i * 13 + ${seedBase + 1}`, material: leaf }),
-    ellipsoid("LeavesMid", ["$c * 0.72", "$c * 0.72 * $sq", "$c * 0.7"], { at: ["$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32"], segments: 16, lumps, seed: `$i * 7 + ${seedBase + 2}`, material: sun }),
+    ellipsoid("Leaves", ["$c * $m", "$c * $m * $sq", "$c * $m * 0.9"], { at: ["$L", "$ye + $c * 0.2", 0], segments: 18, lumps, seed: `$i * 13 + ${seedBase + 1}`, material: leaf }),
+    ellipsoid("LeavesMid", ["$c * 0.72 * (1.5 - $m * 0.6)", "$c * 0.72 * (1.5 - $m * 0.6) * $sq", "$c * 0.7 * (1.5 - $m * 0.6)"], { at: ["$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32"], segments: 16, lumps, seed: `$i * 7 + ${seedBase + 2}`, material: sun }),
     ellipsoid("LeavesSide", ["$c * 0.62", "$c * 0.6 * $sq", "$c * 0.6"], { at: ["$L * 0.8", "$ys + ($ye - $ys) * 0.75", "-$L * 0.32"], segments: 14, lumps, seed: `$i * 5 + ${seedBase + 3}`, material: shade }),
     ellipsoid("LeavesUnder", ["$c * 0.8", "$c * 0.42 * $sq", "$c * 0.72"], { at: ["$L * 0.9", "$ye - $c * 0.22", 0], segments: 14, lumps: lumps + 0.1, seed: `$i * 3 + ${seedBase + 9}`, material: shade }),
     ...tufts("LeavesTuft", "$L", "$ye + $c * 0.2", "0", `$i * 17 + ${seedBase + 11}`, { up: tip, out: sun, low: shade }),
-    ...tufts("LeavesMidTuft", "$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32", `$i * 19 + ${seedBase + 12}`, { up: tip, out: leaf, low: shade }, 0.7).slice(0, 4),
+    ...tufts("LeavesMidTuft", "$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32", `$i * 19 + ${seedBase + 12}`, { up: tip, out: leaf, low: shade }, 0.7, "($i + 2.6)").filter((_, n) => n % 2 === 0),
   ];
   const extraMats: string[] = [];
   let extraText = "";
@@ -172,17 +181,19 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
   const limbs = group("Limb_{i}", [group("Arm", armChildren, {
     vars: {
       k: `0.5 + 0.5 * sin($i * 2.4 + ${s})`,
+      // The size of this limb's main mass: a few big masses, more small ones.
+      m: `0.62 + 0.6 * pow(0.5 + 0.5 * sin($i * 3.7 + ${s} * 1.3), 2)`,
       L: `$cr * ${n4(sp.spread)} * (${n4(1 - sp.vary)} + ${n4(sp.vary)} * $k)`,
-      ye: `$yc + $ry * (${n4(sp.lift)} + 0.25 * ($k - 0.5))`,
+      ye: `$yc + $ry * (${n4(sp.lift)} + 0.25 * ($k - 0.5) + 0.2 * sin($i * 4.1 + ${s}))`,
       ys: `$hf - $tr * 0.4 + ($yc - $hf) * 0.1 * (1 - $k)`,
     },
-  })], { rotate: [0, "9 * sin($i * 1.7)", 0], repeat: { count: "$branches", around: "y", phase } });
+  })], { rotate: [0, `22 * sin($i * 1.7 + ${s})`, 0], repeat: { count: "$branches", around: "y", phase } });
 
   // The top of the crown, closing the silhouette above the limbs (the lower crown stays open, so the limbs show).
   const crown: SpecNode[] = [
     ellipsoid("Leaves_Top", ["$c * 1.05", "$c * $sq", "$c"], { at: [0, "$height - $c * $sq * 0.95", 0], segments: 18, lumps, seed: seedBase + 5, material: sun }),
-    ...tufts("Leaves_TopTuft", "0", "$height - $c * $sq * 0.95", "0", String(seedBase + 13), { up: tip, out: sun, low: leaf }, 1.1),
-    ellipsoid("Leaves_Fill_{i}", ["$c * 0.85", "$c * 0.8 * $sq", "$c * 0.8"], { at: [`$cr * ${n4(sp.spread * 0.42)}`, "$yc + $ry * 0.32", 0], segments: 16, lumps, seed: `$i * 11 + ${seedBase + 6}`, material: shade, repeat: { count: 3, around: "y", phase: phase + 60 } }),
+    ...tufts("Leaves_TopTuft", "0", "$height - $c * $sq * 0.95", "0", String(seedBase + 13), { up: tip, out: sun, low: leaf }, 1.1, n4(1 + (seedBase % 7))),
+    ellipsoid("Leaves_Fill_{i}", ["$c * (0.5 + 0.25 * sin($i * 2.9))", "$c * (0.5 + 0.25 * sin($i * 2.9)) * $sq", "$c * 0.55"], { at: [`$cr * ${n4(sp.spread * 0.36)}`, "$yc + $ry * (0.2 + 0.2 * sin($i * 1.3))", 0], segments: 16, lumps, seed: `$i * 11 + ${seedBase + 6}`, material: shade, repeat: { count: 3, around: "y", phase: phase + 60 } }),
   ];
   const branchNodes: SpecNode[] = [limbs];
   if (sp.extra === "airy") {

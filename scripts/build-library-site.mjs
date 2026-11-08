@@ -115,7 +115,7 @@ ${style.replace(
 .asset h4 { font-size: .86rem; margin: 0; }
 .asset code { font-size: .66rem; color: var(--muted); overflow-wrap: anywhere; }
 .asset.hidden, .family.hidden, .category.hidden { display: none; }
-.search { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: .8rem 0; }
+.search { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-block: .8rem; }
 .search input { width: 100%; font: inherit; padding: .7rem .9rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); }
 .search p { margin: .4rem 0 0; color: var(--muted); font-size: .85rem; }
 </style>`,

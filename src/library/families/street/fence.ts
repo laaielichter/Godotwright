@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { GRIME, LOCAL, grimeBox, grimeRound, nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, boardX, grimeBox, grimeRound, nice, up, useMats } from "./common.js";
 
 type Style = "picket" | "post-and-rail" | "mesh" | "railing";
 
@@ -25,8 +25,8 @@ function nodes(style: Style, mat: string): SpecNode[] {
           ...grimeBox("Grime", 0.08, 0.08, 0.2, [0, 0, 0], 0.006),
           lathe("Cap", [[0.065 * R2, "$height"], [0.065 * R2, "$height + 0.015"], [0.01, "$height + 0.06"], [0.006, "$height + 0.062"]], { segments: 4, rotate: [0, 45, 0] }),
         ], { at: ["$length / 2 - 0.04", 0, 0], mirror: "Post_R" }),
-        box("Rail_Top", ["$length - 0.06", 0.07, 0.03], { at: [0, "$height * 0.78", -0.035], bevel: 0.004 }),
-        box("Rail_Low", ["$length - 0.06", 0.07, 0.03], { at: [0, "$height * 0.22", -0.035], bevel: 0.004 }),
+        boardX("Rail_Top", ["$length - 0.06", 0.07, 0.03], { at: [0, "$height * 0.78", -0.035], bevel: 0.004 }),
+        boardX("Rail_Low", ["$length - 0.06", 0.07, 0.03], { at: [0, "$height * 0.22", -0.035], bevel: 0.004 }),
         spread("Picket_{i}", [
           box("Stave", [0.065, "$height - 0.12", 0.02], { at: [0, 0.05, -0.01], anchor: "bottom", bevel: 0.003 }),
           cyl("Tip", 0.0375, 0.02, { axis: "z", segments: 3, at: [0, "$height - 0.07 + 0.0185", -0.01], rotate: [0, 0, 90] }),
@@ -39,7 +39,7 @@ function nodes(style: Style, mat: string): SpecNode[] {
           ...grimeRound("Grime", 0.065, 0.065, 0.22, [0, 0, 0], 14),
           lathe("Top", [[0.065, "$height - 0.045"], [0.065, "$height - 0.03"], [0.035, "$height"]], { segments: 14 }),
         ], { at: ["$length / 2 - 0.06", 0, 0], mirror: "Post_R" }),
-        box("Rail_{i}", ["$length - 0.06", 0.1, 0.045], { at: [0, "$height - 0.18", 0], repeat: { count: "$rails", step: [0, "-($height - 0.35) / max($rails - 1, 1)", 0] }, bevel: 0.008 }),
+        boardX("Rail_{i}", ["$length - 0.06", 0.1, 0.045], { at: [0, "$height - 0.18", 0], repeat: { count: "$rails", step: [0, "-($height - 0.35) / max($rails - 1, 1)", 0] }, bevel: 0.008 }),
       ];
     case "mesh":
       return [

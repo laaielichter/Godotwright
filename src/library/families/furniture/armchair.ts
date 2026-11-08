@@ -1,6 +1,6 @@
 import { box, combos, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats } from "./parts.js";
+import { board, fmats } from "./parts.js";
 
 /** The silhouettes, each with its own parts and sizes. */
 const STYLES = ["club", "wingback", "lounge", "rocking"] as const;
@@ -104,7 +104,7 @@ function lounge(f: { cover: string; wood: string }): SpecNode[] {
     ] }),
     group("Back", [
       box("Stile_L", [0.04, "$hb", 0.035], { at: ["$W / 2 - 0.06", 0, 0], anchor: "bottom", bevel: 0.008, mirror: "Stile_R", material: f.wood }),
-      box("Crest", ["$W - 0.1", 0.05, 0.03], { at: [0, "$hb - 0.03", 0], bevel: 0.01, material: f.wood }),
+      board("Crest", ["$W - 0.1", 0.05, 0.03], "x", { at: [0, "$hb - 0.03", 0], bevel: 0.01, material: f.wood }),
       box("Back_Pillow", ["$W - 0.2", "$hb - 0.16", 0.12], { at: [0, 0.09, 0.07], anchor: "bottom", bevel: 0.045 }),
     ], { at: [0, "$sh - 0.12", "-$D / 2 + 0.07"], rotate: [-14, 0, 0], vars: { hb: "($bh - $sh + 0.12) / 0.97" } }),
   ], { material: f.cover, vars: { lh: "$sh - 0.16" } })];
@@ -127,8 +127,8 @@ function rocking(f: { cover: string; wood: string }): SpecNode[] {
     ] }),
     group("Back", [
       box("Post_L", [0.035, "$hb", 0.035], { at: ["$W / 2 - 0.06", 0, 0], anchor: "bottom", bevel: 0.008, mirror: "Post_R" }),
-      box("Crest", ["$W - 0.08", 0.08, 0.03], { at: [0, "$hb - 0.05", 0], bevel: 0.012 }),
-      box("Bottom_Bar", ["$W - 0.1", 0.04, 0.025], { at: [0, 0.07, 0], bevel: 0.006 }),
+      board("Crest", ["$W - 0.08", 0.08, 0.03], "x", { at: [0, "$hb - 0.05", 0], bevel: 0.012 }),
+      board("Bottom_Bar", ["$W - 0.1", 0.04, 0.025], "x", { at: [0, 0.07, 0], bevel: 0.006 }),
       cyl("Spindle_{i}", 0.009, "$hb - 0.16", { at: ["-($W - 0.2) / 2", "($hb - 0.16) / 2 + 0.08", 0], repeat: { count: 7, step: ["($W - 0.2) / 6", 0, 0] }, segments: 8 }),
     ], { at: [0, "$sh - 0.08", "-$D / 2 + 0.04"], rotate: [-12, 0, 0], vars: { hb: "($bh - $sh + 0.08) / 0.98" } }),
   ], { material: f.wood, vars: { ry: `0.022 + 0.085 * pow(($D / 2 - 0.07) / ($D / 2 + 0.1), 2)`, lf: "$sh - 0.085 - $ry + 0.012" } })];

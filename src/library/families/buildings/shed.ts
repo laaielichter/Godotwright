@@ -1,6 +1,6 @@
 import { box, cyl, extrude, group, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats } from "../../palette.js";
-import { bmats, flatRoof, gableRoof, hingedDoor, windowUnit } from "./shared.js";
+import { bmats, flatRoof, gableRoof, hingedDoor, sheetRib, solid, windowUnit } from "./shared.js";
 
 const STYLES = {
   apex: { text: "an apex garden shed with shiplap walls on bearers, a pitched roof over the door gable, corner trims and a side window", nl: ["tuinschuur", "tuinhuisje"], w: [1.8, 3, 2.2], d: [2, 3.6, 2.6], h: [1.8, 2.2, 2] },
@@ -39,7 +39,7 @@ const FINISHES: Record<Style, { id: string; wall: string; roof: string; trim: st
   ],
   workshop: [
     { id: "galvanised", wall: "corrugated", roof: "corrugated", trim: "paint_grey", door: "corrugated", text: "galvanised", nl: "gegalvaniseerd" },
-    { id: "green", wall: "corrugated_green", roof: "corrugated", trim: "paint_white", door: "corrugated_green", text: "green", nl: "groen" },
+    { id: "green", wall: "corrugated_green", roof: "roof_steel", trim: "paint_white", door: "corrugated_green", text: "green", nl: "groen" },
     { id: "red", wall: "corrugated_red", roof: "corrugated", trim: "paint_cream", door: "corrugated_red", text: "rust red", nl: "roestrood" },
   ],
 };
@@ -59,17 +59,17 @@ function shed(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     // Round logs: a core box and log courses on all four walls, crossing at the corners.
     kids.push(group("Walls", [
       box("Core", ["2 * $hw - 0.1", "$wallH", "2 * $hd - 0.1"], { anchor: "bottom", at: [0, base, 0], material: f.wall }),
-      cyl("LogF_{i}", 0.09, "2 * $hw + 0.35", { axis: "x", at: [0, `${base} + 0.09`, "$hd - 0.06"], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: f.wall }),
-      cyl("LogB_{i}", 0.09, "2 * $hw + 0.35", { axis: "x", at: [0, `${base} + 0.09`, "-$hd + 0.06"], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: f.wall }),
-      cyl("LogL_{i}", 0.09, "2 * $hd + 0.35", { axis: "z", at: ["-$hw + 0.06", `${base} + 0.17`, 0], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: f.wall }),
-      cyl("LogR_{i}", 0.09, "2 * $hd + 0.35", { axis: "z", at: ["$hw - 0.06", `${base} + 0.17`, 0], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: f.wall }),
+      cyl("LogF_{i}", 0.09, "2 * $hw + 0.35", { axis: "x", at: [0, `${base} + 0.09`, "$hd - 0.06"], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: solid(f.wall) }),
+      cyl("LogB_{i}", 0.09, "2 * $hw + 0.35", { axis: "x", at: [0, `${base} + 0.09`, "-$hd + 0.06"], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: solid(f.wall) }),
+      cyl("LogL_{i}", 0.09, "2 * $hd + 0.35", { axis: "z", at: ["-$hw + 0.06", `${base} + 0.17`, 0], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: solid(f.wall) }),
+      cyl("LogR_{i}", 0.09, "2 * $hd + 0.35", { axis: "z", at: ["$hw - 0.06", `${base} + 0.17`, 0], repeat: { count: "floor($wallH / 0.17)", step: [0, 0.17, 0] }, segments: 10, material: solid(f.wall) }),
     ]));
   } else {
     kids.push(box("Walls", ["2 * $hw", "$wallH", "2 * $hd"], { anchor: "bottom", at: [0, base, 0], material: f.wall, bevel: style === "garage" ? 0.02 : 0.01 }));
   }
   if (style === "apex" || style === "pent") {
-    kids.push(box("Corner_FL", [0.06, "$wallH", 0.06], { anchor: "bottom", at: ["-$hw", base, "$hd"], mirror: "Corner_FR", material: f.trim, bevel: 0.005 }));
-    kids.push(box("Corner_BL", [0.06, "$wallH", 0.06], { anchor: "bottom", at: ["-$hw", base, "-$hd"], mirror: "Corner_BR", material: f.trim, bevel: 0.005 }));
+    kids.push(box("Corner_FL", [0.06, "$wallH", 0.06], { anchor: "bottom", at: ["-$hw", base, "$hd"], mirror: "Corner_FR", material: solid(f.trim), bevel: 0.005 }));
+    kids.push(box("Corner_BL", [0.06, "$wallH", 0.06], { anchor: "bottom", at: ["-$hw", base, "-$hd"], mirror: "Corner_BR", material: solid(f.trim), bevel: 0.005 }));
     kids.push(box("Board_{i}", ["2 * $hw + 0.01", 0.018, "2 * $hd + 0.01"], { at: [0, `${base} + 0.15`, 0], repeat: { count: "floor($wallH / 0.15)", step: [0, 0.15, 0] }, material: f.wall }));
   }
   if (style === "workshop") {
@@ -92,12 +92,13 @@ function shed(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   } else if (style === "cabin") {
     kids.push(gableRoof("Roof", { hw: "$hw", hd: "$hd + 0.45", y: top, rise: "$rise", roof: f.roof, trim: f.trim, gable: f.wall, oh: 0.25, ohg: 0.15, t: 0.1, at: [0, 0, 0.45] }));
     kids.push(box("Deck", ["2 * $hw + 0.2", 0.12, 1.0], { anchor: "bottom", at: [0, 0, "$hd + 0.48"], material: f.trim, bevel: 0.01 }));
-    kids.push(cyl("PorchPost_L", 0.07, `${top} - 0.06`, { anchor: "base", at: ["-$hw + 0.05", 0.06, "$hd + 0.85"], mirror: "PorchPost_R", segments: 10, material: f.wall }));
+    kids.push(cyl("PorchPost_L", 0.07, `${top} - 0.06`, { anchor: "base", at: ["-$hw + 0.05", 0.06, "$hd + 0.85"], mirror: "PorchPost_R", segments: 10, material: solid(f.wall) }));
     roofRiseParam = [0.9, 1.6, 1.2];
   } else if (style === "pent") {
     kids.push(group("Roof", [
       extrude("Wedge", [[0, "-$hd"], [0, "$hd"], ["$rise", "$hd"], [0.01, "-$hd"]], "-$hw", "$hw", { at: [0, `${top} - 0.01`, 0], rotate: [0, 0, 90], material: f.wall }),
       box("Sheet", ["2 * $hw + 0.3", 0.05, "hypot(2 * $hd + 0.5, $rise)"], { at: [0, `${top} + $rise / 2 + 0.03`, 0], rotate: ["-deg(atan($rise / (2 * $hd)))", 0, 0], material: f.roof, bevel: 0.005 }),
+      ...(sheetRib(f.roof) ? [box("SheetRib_{i}", [0.05, 0.04, "hypot(2 * $hd + 0.5, $rise)"], { at: ["-$hw - 0.15 + 0.165", `${top} + $rise / 2 + 0.03 + 0.04 * cos(atan($rise / (2 * $hd)))`, "-0.04 * sin(atan($rise / (2 * $hd)))"], rotate: ["-deg(atan($rise / (2 * $hd)))", 0, 0], repeat: { count: "floor((2 * $hw + 0.3) / 0.33)", step: [0.33, 0, 0] }, material: f.roof })] : []),
       box("Fascia", ["2 * $hw + 0.32", 0.14, 0.03], { at: [0, `${top} + $rise + 0.06`, "$hd + 0.25"], material: f.trim }),
     ]));
     roofRiseParam = [0.25, 0.6, 0.4];
@@ -122,8 +123,8 @@ function shed(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     const [left] = hingedDoor({ x: -leafW / 2, y: base + 0.01, z, w: leafW, h: leafH, leaf: f.door, frame: f.trim, metal: style === "cabin" ? "black_steel" : "galvanised", glass: GLASS, kind: style === "cabin" ? "glazed" : "plank" }, "Door_L", false);
     kids.push({ ...(left as SpecNode), mirror: "Door_R" });
     kids.push(group("Surround", [
-      box("Post_L", [0.1, leafH + 0.1, 0.12], { anchor: "bottom", at: [-leafW - 0.05, 0, 0.04], mirror: "Post_R", material: f.trim, bevel: 0.006 }),
-      box("Head", [2 * leafW + 0.3, 0.12, 0.14], { at: [0, leafH + 0.1, 0.05], material: f.trim, bevel: 0.006 }),
+      box("Post_L", [0.1, leafH + 0.1, 0.12], { anchor: "bottom", at: [-leafW - 0.05, 0, 0.04], mirror: "Post_R", material: solid(f.trim), bevel: 0.006 }),
+      box("Head", [2 * leafW + 0.3, 0.12, 0.14], { at: [0, leafH + 0.1, 0.05], material: solid(f.trim), bevel: 0.006 }),
     ], { at: [0, base, z] }));
   } else {
     const x = style === "pent" ? "-$hw + 0.6" : 0;
@@ -148,7 +149,7 @@ function shed(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   ];
   if (roofRiseParam) params.push(num("rise", roofRiseParam[2], roofRiseParam[0], roofRiseParam[1], "Height of the roof above the eaves in metres."));
   const names = new Set<string>([f.wall, f.roof, f.trim, f.door, "weathered_wood", "black_steel", "brushed_steel", "brass", "galvanised", "concrete", "paint_grey", GLASS]);
-  const palette = [...names].filter((n) => !n.startsWith("cladding") && !["felt_black", "shingle_wood", "shingle_green", "slate_grey", "corrugated", "corrugated_green", "corrugated_red", "render_white", "log", "log_dark", GLASS].includes(n));
+  const palette = [...names].filter((n) => !n.startsWith("cladding") && !["felt_black", "shingle_wood", "shingle_green", "slate_grey", "corrugated", "corrugated_green", "corrugated_red", "roof_steel", "render_white", "log", "log_dark", GLASS].includes(n));
   const own = [...names].filter((n) => !palette.includes(n));
   const title = { apex: "apex garden shed", pent: "pent shed", garage: "garage", cabin: "log cabin", workshop: "workshop" }[style];
   return {

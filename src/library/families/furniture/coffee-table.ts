@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats, squareLeg } from "./parts.js";
+import { board, fmats, squareLeg } from "./parts.js";
 
 const STYLES = ["shelf", "tripod", "sled", "hairpin"] as const;
 type Style = (typeof STYLES)[number];
@@ -17,9 +17,9 @@ function shelf(f: Finish): SpecNode[] {
   return [
     box("Top", ["$W", "$t", "$D"], { at: [0, "$H - $t / 2", 0], bevel: 0.008, material: f.top }),
     group("Aprons", [
-      box("Apron_F", ["2 * $xl", 0.06, 0.02], { at: [0, "$H - $t - 0.03", "$zl"], bevel: 0.004 }),
-      box("Apron_B", ["2 * $xl", 0.06, 0.02], { at: [0, "$H - $t - 0.03", "-$zl"], bevel: 0.004 }),
-      box("Apron_L", [0.02, 0.06, "2 * $zl"], { at: ["$xl", "$H - $t - 0.03", 0], bevel: 0.004, mirror: "Apron_R" }),
+      board("Apron_F", ["2 * $xl", 0.06, 0.02], "x", { at: [0, "$H - $t - 0.03", "$zl"], bevel: 0.004 }),
+      board("Apron_B", ["2 * $xl", 0.06, 0.02], "x", { at: [0, "$H - $t - 0.03", "-$zl"], bevel: 0.004 }),
+      board("Apron_L", [0.02, 0.06, "2 * $zl"], "z", { at: ["$xl", "$H - $t - 0.03", 0], bevel: 0.004, mirror: "Apron_R" }),
     ]),
     box("Shelf", ["2 * $xl + 0.02", 0.022, "2 * $zl + 0.02"], { at: [0, 0.11, 0], bevel: 0.005, material: f.top, children: [
       box("Magazine_{i}", [0.22, 0.008, 0.29], { at: ["-$xl * 0.4", 0.015, 0], repeat: { count: 3, step: [0.01, 0.008, 0.006] }, material: "paper" }),
@@ -33,7 +33,7 @@ function shelf(f: Finish): SpecNode[] {
 
 function tripod(f: Finish): SpecNode[] {
   return [
-    lathe("Top", [[0.004, "$H - $t"], ["$R - 0.015", "$H - $t"], ["$R", "$H - $t + 0.01"], ["$R", "$H - 0.006"], ["$R - 0.006", "$H"], [0.004, "$H"]], { segments: 48, material: f.top }),
+    lathe("Top", [["$R - 0.015", "$H - $t"], ["$R", "$H - $t + 0.01"], ["$R", "$H - 0.006"], ["$R - 0.006", "$H"]], { segments: 48, material: f.top }),
     lathe("Hub", [[0.004, "$H - $t - 0.05"], [0.1, "$H - $t - 0.05"], [0.11, "$H - $t - 0.03"], ["$R * 0.5", "$H - $t + 0.002"], [0.004, "$H - $t + 0.002"]], { segments: 24 }),
     group("Legs", [
       lathe("Leg_{i}", [[0.012, 0], [0.014, 0.01], [0.024, "$ll * 0.85"], [0.026, "$ll + 0.01"]], { at: ["0.08 + $ll * sin(rad(14))", 0.003, 0], rotate: [0, 0, 14], segments: 14, repeat: { count: 3, around: "y", phase: 90 } }),

@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, int, num, slugify, cap, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { barHandle, fmats, knob, shell, squareLeg } from "./parts.js";
+import { board, barHandle, fmats, knob, shell, squareLeg } from "./parts.js";
 
 const STYLES = ["wardrobe", "kitchen", "display", "sideboard"] as const;
 type Style = (typeof STYLES)[number];
@@ -51,8 +51,8 @@ function door(name: string, at: [Num, Num, Num], w: string, h: string, kind: Doo
     leaf.push(
       box("Stile_H", [fr, h, 0.022], { at: [`-${fr / 2} - 0.002`, `(${h}) / 2`, 0.011], bevel: 0.004 }),
       box("Stile_F", [fr, h, 0.022], { at: [`-(${w}) + ${fr / 2} + 0.002`, `(${h}) / 2`, 0.011], bevel: 0.004 }),
-      box("Top_Rail", [`${w} - ${2 * fr}`, fr, 0.022], { at: [`-(${w}) / 2`, `${h} - ${fr / 2}`, 0.011], bevel: 0.004 }),
-      box("Bottom_Rail", [`${w} - ${2 * fr}`, fr + 0.01, 0.022], { at: [`-(${w}) / 2`, `${(fr + 0.01) / 2}`, 0.011], bevel: 0.004 }),
+      board("Top_Rail", [`${w} - ${2 * fr}`, fr, 0.022], "x", { at: [`-(${w}) / 2`, `${h} - ${fr / 2}`, 0.011], bevel: 0.004 }),
+      board("Bottom_Rail", [`${w} - ${2 * fr}`, fr + 0.01, 0.022], "x", { at: [`-(${w}) / 2`, `${(fr + 0.01) / 2}`, 0.011], bevel: 0.004 }),
     );
     if (kind === "glass") {
       leaf.push(

@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { barHandle, fmats, knob, squareLeg } from "./parts.js";
+import { board, barHandle, fmats, knob, squareLeg } from "./parts.js";
 
 const STYLES = ["writing", "pedestal", "standing", "steel"] as const;
 type Style = (typeof STYLES)[number];
@@ -21,9 +21,9 @@ function writing(f: Finish): SpecNode[] {
     top(f),
     box("Inlay", ["$W - 0.16", 0.004, "$D - 0.16"], { at: [0, "$H + 0.001", 0], bevel: 0.0015, material: f.trim }),
     group("Aprons", [
-      box("Apron_B", ["2 * $xl", 0.12, 0.022], { at: [0, "$H - $t - 0.06", "-$zl"], bevel: 0.004 }),
-      box("Apron_L", [0.022, 0.12, "2 * $zl"], { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.004, mirror: "Apron_R" }),
-      box("Apron_F", ["2 * $xl", 0.12, 0.022], { at: [0, "$H - $t - 0.06", "$zl"], bevel: 0.004 }),
+      board("Apron_B", ["2 * $xl", 0.12, 0.022], "x", { at: [0, "$H - $t - 0.06", "-$zl"], bevel: 0.004 }),
+      board("Apron_L", [0.022, 0.12, "2 * $zl"], "z", { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.004, mirror: "Apron_R" }),
+      board("Apron_F", ["2 * $xl", 0.12, 0.022], "x", { at: [0, "$H - $t - 0.06", "$zl"], bevel: 0.004 }),
       group("Drawer_{i}", [
         box("Front", ["$dw - 0.012", 0.095, 0.02], { at: [0, 0, 0], bevel: 0.005 }),
         knob("Knob", [0, 0, 0.009], "brass"),
@@ -52,13 +52,13 @@ function pedestal(f: Finish): SpecNode[] {
       squareLeg("Leg_BL", ["-$xl", 0, "-$zl"], "$H - $t + 0.003", 0.045, 0.045),
     ]),
     box("Modesty_Panel", ["$W - $pw - 0.06", 0.32, 0.018], { at: ["-$pw / 2 + 0.01", "$H - $t - 0.16", "-$zl"], bevel: 0.004 }),
-    box("Apron_L", [0.02, 0.08, "2 * $zl"], { at: ["-$xl", "$H - $t - 0.04", 0], bevel: 0.004 }),
+    board("Apron_L", [0.02, 0.08, "2 * $zl"], "z", { at: ["-$xl", "$H - $t - 0.04", 0], bevel: 0.004 }),
   ];
 }
 
 function standing(f: Finish): SpecNode[] {
   const leg = group("Leg_L", [
-    box("Foot", [0.07, 0.035, "$D - 0.08"], { at: [0, 0.008, 0], anchor: "bottom", bevel: 0.01 }),
+    board("Foot", [0.07, 0.035, "$D - 0.08"], "z", { at: [0, 0.008, 0], anchor: "bottom", bevel: 0.01 }),
     box("Glide_F", [0.05, 0.01, 0.05], { at: [0, 0, "$D / 2 - 0.08"], anchor: "bottom", material: "rubber", bevel: 0.003 }),
     box("Glide_B", [0.05, 0.01, 0.05], { at: [0, 0, "-$D / 2 + 0.08"], anchor: "bottom", material: "rubber", bevel: 0.003 }),
     box("Sleeve", [0.08, 0.5, 0.06], { at: [0, 0.04, 0], anchor: "bottom", bevel: 0.006 }),
@@ -81,7 +81,7 @@ function steel(f: Finish): SpecNode[] {
   const frame = group("Leg_L", [
     box("Post_F", [0.04, "$H - $t", 0.04], { at: [0, 0, "$zl"], anchor: "bottom", bevel: 0.004 }),
     box("Post_B", [0.04, "$H - $t", 0.04], { at: [0, 0, "-$zl"], anchor: "bottom", bevel: 0.004 }),
-    box("Foot_Bar", [0.04, 0.04, "2 * $zl"], { at: [0, 0.02, 0], bevel: 0.004 }),
+    board("Foot_Bar", [0.04, 0.04, "2 * $zl"], "z", { at: [0, 0.02, 0], bevel: 0.004 }),
     box("Top_Bar", [0.04, 0.04, "2 * $zl"], { at: [0, "$H - $t - 0.02", 0], bevel: 0.004 }),
     cyl("Bolt_{i}", 0.006, 0.006, { axis: "x", at: [0.022, "$H - $t - 0.02", "-$zl + 0.1"], repeat: { count: 2, step: [0, 0, "2 * $zl - 0.2"] }, segments: 8 }),
   ], { at: ["$xl", 0, 0], mirror: "Leg_R" });
@@ -90,7 +90,7 @@ function steel(f: Finish): SpecNode[] {
       box("Plank_{i}", ["$W", "$t", "$D / 2 - 0.002"], { at: [0, "$H - $t / 2", "-$D / 4"], repeat: { count: 2, step: [0, 0, "$D / 2"] }, bevel: 0.006 }),
     ], { material: f.top }),
     group("Legs", [frame], { material: f.frame }),
-    box("Stretcher", ["2 * $xl", 0.04, 0.02], { at: [0, 0.3, "-$zl"], bevel: 0.003, material: f.frame }),
+    board("Stretcher", ["2 * $xl", 0.04, 0.02], "x", { at: [0, 0.3, "-$zl"], bevel: 0.003, material: f.frame }),
     box("Drawer", ["$W * 0.4", 0.09, "$D - 0.14"], { at: [0, "$H - $t - 0.045", 0], bevel: 0.004, material: f.top, children: [
       barHandle("Handle", 0.14, [0, 0, "($D - 0.14) / 2"], f.trim, { standoff: 0.025 }),
       box("Runner_L", [0.03, 0.02, "$D - 0.14"], { at: ["$W * 0.2 + 0.014", 0.035, 0], material: f.frame, mirror: "Runner_R" }),

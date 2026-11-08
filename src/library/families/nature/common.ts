@@ -2,7 +2,7 @@
  * Small helpers shared by the nature families: numbers written into expressions, the true extent of a lumpy
  * ellipsoid (so a rock can be sunk until its lowest point is exactly on y = 0), and a few local materials.
  */
-import { lumpyEllipsoid } from "../../../build/shapes.js";
+import { fracturedEllipsoid, lumpyEllipsoid, noise3 } from "../../../build/shapes.js";
 import type { MaterialDef } from "../../palette.js";
 
 /** A number for an expression: at most 4 decimals, never "-0". */
@@ -29,11 +29,12 @@ const extents = new Map<string, LumpExtent>();
  * How far a lumpy ellipsoid really reaches. The lumps scale each direction by a factor that does not depend on the
  * radii, so for radii [rx, ry, rz] the lowest point is exactly ry * low below the centre.
  */
-export function lumpExtent(segments: number, lumps: number, seed: number): LumpExtent {
-  const key = `${segments}/${lumps}/${seed}`;
+export function lumpExtent(segments: number, lumps: number, seed: number, cuts = 0): LumpExtent {
+  const key = `${segments}/${lumps}/${seed}/${cuts}`;
   const hit = extents.get(key);
   if (hit) return hit;
-  const mesh = lumpyEllipsoid(1, 1, 1, segments, lumps, seed, "m");
+  // The fracture planes are cut in unit space before the radii are applied, so the same rule holds for a cut stone.
+  const mesh = cuts > 0 ? fracturedEllipsoid(1, 1, 1, segments, lumps, seed, cuts, "m") : lumpyEllipsoid(1, 1, 1, segments, lumps, seed, "m");
   let low = 0, high = 0, side = 0;
   for (const p of mesh.prims.values()) {
     for (let v = 0; v < p.positions.length; v += 3) {
@@ -46,6 +47,53 @@ export function lumpExtent(segments: number, lumps: number, seed: number): LumpE
   const out = { low, high, side };
   extents.set(key, out);
   return out;
+}
+
+/**
+ * The fracture planes of a cut ellipsoid (unit space, before the radii): the outward normal and the distance of the
+ * plane from the centre, in the order they are cut. The same rule as the builder's, so a family can turn a stone until
+ * one fracture faces where it wants it (the clean face of a split boulder).
+ */
+export function cutPlanes(seed: number, cuts: number): { n: [number, number, number]; offset: number }[] {
+  const rand = (n: number): number => (noise3(n * 1.37 + 0.5, seed * 0.173 + 2.5, n * 0.71 + 7.25, seed + 101) + 1) / 2;
+  const out: { n: [number, number, number]; offset: number }[] = [];
+  for (let c = 0; c < cuts; c++) {
+    const z = 1 - 2 * ((c + 0.5 + 0.6 * (rand(c) - 0.5)) / cuts);
+    const theta = c * 2.399963 + rand(c + 50) * 1.2;
+    const r = Math.sqrt(Math.max(0, 1 - z * z));
+    out.push({ n: [r * Math.cos(theta), z, r * Math.sin(theta)], offset: 1 - (0.08 + 0.22 * rand(c + 100)) });
+  }
+  return out;
+}
+
+/**
+ * Writes variables straight into a node and its children ("$g" becomes "(expression)"), for values that depend on $i
+ * of the node's own repeat: the builder evaluates a node's `vars` before its copies get their $i.
+ */
+export function inlineVars<T>(node: T, vars: Record<string, string>): T {
+  const names = Object.keys(vars).sort((a, b) => b.length - a.length);
+  const pattern = new RegExp(`\\$(${names.join("|")})(?![A-Za-z0-9_])`, "g");
+  const sub = (v: unknown): unknown => {
+    if (typeof v === "string") return v.replace(pattern, (_, k: string) => `(${vars[k]})`);
+    if (Array.isArray(v)) return v.map(sub);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, sub(x)]));
+    return v;
+  };
+  return sub(node) as T;
+}
+
+/** Inlines the `vars` of every repeated node (whose vars may use its own $i) into that node, all through a tree. */
+export function inlineRepeatVars(nodes: Record<string, unknown>[]): Record<string, unknown>[] {
+  return nodes.map((node) => {
+    let n = node;
+    const vars = n["vars"] as Record<string, string | number> | undefined;
+    if (n["repeat"] && vars) {
+      const { vars: _drop, ...rest } = n;
+      n = inlineVars(rest, Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, String(v)])));
+    }
+    const children = n["children"] as Record<string, unknown>[] | undefined;
+    return children ? { ...n, children: inlineRepeatVars(children) } : n;
+  });
 }
 
 /** Picks one item of a list with a random number in [0, 1). */

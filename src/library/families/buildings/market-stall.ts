@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS } from "./shared.js";
+import { BMATS, solid } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
   stripe_white: { color: [0.54, 0.53, 0.49], metallic: 0, roughness: 0.92, texture: "fabric" },
@@ -81,19 +81,19 @@ function stall(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       ], { at: [0, "$h - 0.12", 0.25], rotate: ["deg(atan(0.25 / (2 * $hd + 0.5)))", 0, 0] }),
       box("Counter", ["2 * $hw - 0.1", 0.04, "$hd"], { at: [0, 0.82, "$hd * 0.45"], material: f.wood, bevel: 0.005 }),
       box("Cloth", ["2 * $hw - 0.08", 0.4, 0.01], { at: [0, 0.64, "$hd * 0.95 + 0.01"], material: f.b }),
-      box("Trestle_L", [0.04, 0.8, "$hd * 0.8"], { anchor: "bottom", at: ["-$hw + 0.25", 0, "$hd * 0.45"], mirror: "Trestle_R", material: f.wood }),
+      box("Trestle_L", [0.04, 0.8, "$hd * 0.8"], { anchor: "bottom", at: ["-$hw + 0.25", 0, "$hd * 0.45"], mirror: "Trestle_R", material: solid(f.wood, LOCAL) }),
       crate("Crate_{i}", f.wood, f.produce, { at: ["-$hw + 0.4", 0.84, "$hd * 0.45"], repeat: { count: "floor((2 * $hw - 0.4) / 0.6)", step: [0.6, 0, 0] } }),
     );
   } else if (style === "wooden") {
     kids.push(
-      box("Post_{i}", [0.09, "$h", 0.09], { anchor: "bottom", at: ["-$hw", 0, "-$hd"], repeat: { count: 2, step: ["2 * $hw", 0, 0] }, material: f.wood, bevel: 0.006 }),
-      box("PostFront_{i}", [0.09, "$h", 0.09], { anchor: "bottom", at: ["-$hw", 0, "$hd"], repeat: { count: 2, step: ["2 * $hw", 0, 0] }, material: f.wood, bevel: 0.006 }),
+      box("Post_{i}", [0.09, "$h", 0.09], { anchor: "bottom", at: ["-$hw", 0, "-$hd"], repeat: { count: 2, step: ["2 * $hw", 0, 0] }, material: solid(f.wood, LOCAL), bevel: 0.006 }),
+      box("PostFront_{i}", [0.09, "$h", 0.09], { anchor: "bottom", at: ["-$hw", 0, "$hd"], repeat: { count: 2, step: ["2 * $hw", 0, 0] }, material: solid(f.wood, LOCAL), bevel: 0.006 }),
       box("Counter", ["2 * $hw + 0.1", 0.05, "$hd + 0.2"], { at: [0, 0.9, "$hd * 0.5"], material: f.wood, bevel: 0.008 }),
       box("CounterFront", ["2 * $hw", 0.85, 0.03], { anchor: "bottom", at: [0, 0, "$hd + 0.05"], material: f.wood }),
-      box("Plank_{i}", [0.02, 0.85, 0.02], { anchor: "bottom", at: ["-$hw + 0.15", 0, "$hd + 0.07"], repeat: { count: "floor((2 * $hw - 0.1) / 0.15)", step: [0.15, 0, 0] }, material: f.wood }),
+      box("Plank_{i}", [0.02, 0.85, 0.02], { anchor: "bottom", at: ["-$hw + 0.15", 0, "$hd + 0.07"], repeat: { count: "floor((2 * $hw - 0.1) / 0.15)", step: [0.15, 0, 0] }, material: solid(f.wood, LOCAL) }),
       box("Shelf", ["2 * $hw", 0.03, "2 * $hd"], { at: [0, 0.3, 0], material: f.wood }),
-      box("Lintel", ["2 * $hw + 0.1", 0.12, 0.1], { at: [0, "$h - 0.06", "$hd"], material: f.wood }),
-      box("LintelBack", ["2 * $hw + 0.1", 0.12, 0.1], { at: [0, "$h - 0.06", "-$hd"], material: f.wood }),
+      box("Lintel", ["2 * $hw + 0.1", 0.12, 0.1], { at: [0, "$h - 0.06", "$hd"], material: solid(f.wood, LOCAL) }),
+      box("LintelBack", ["2 * $hw + 0.1", 0.12, 0.1], { at: [0, "$h - 0.06", "-$hd"], material: solid(f.wood, LOCAL) }),
       roof("Roof", { x0: "-$hw - 0.25", x1: "$hw + 0.25", z0: "-$hd - 0.25", z1: "$hd + 0.25", y: "$h", rise: "$hd * 0.7", kind: "gable" }, { material: f.a }),
       group("Sign", [
         box("Board", ["$hw", 0.3, 0.03], { at: [0, -0.35, 0], material: f.b, bevel: 0.006 }),

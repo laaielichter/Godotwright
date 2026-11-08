@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { carPaint, f, L, ladd, lerpL, lev, ls, lscale, ringProfile, VMATS, wheel, WHEEL_MATS, type Lin, type WheelStyle } from "./parts.js";
+import { carPaint, f, L, ladd, lerpL, lev, ls, lscale, lsub, ringProfile, VMATS, wheel, WHEEL_MATS, type Lin, type WheelStyle } from "./parts.js";
 
 /** A point of the side silhouette: z as a fraction of the half length, y as a fraction of the roof height. */
 type Pt = [number, number, string?];
@@ -18,13 +18,16 @@ interface CarStyle {
   /** Angle of the sill under the hub (radians): small = high ground clearance. */
   a0: number;
   tyreW: number;
-  /** The body side silhouette from the front bottom over the top to the rear bottom (arches are added). */
+  /**
+   * The body side silhouette (without the greenhouse) from the front bottom over the top to the rear bottom; the arches
+   * and the sill are added. Its top line is the centre line of the bonnet, the belt and the boot.
+   */
   upper: Pt[];
   belt: number;
   /** Greenhouse sections: [z fraction, 0 = belt .. 1 = roof]. */
   glass: [number, number][];
-  /** Inset of the greenhouse from the body side, metres. */
-  gin: number;
+  /** Shelf between the body's top edge and the foot of the glass, metres. */
+  shelf: number;
   roof: [number, number];
   doors: 2 | 4;
   /** Front door front edge, B pillar, rear door end as fractions of the half length (rear end only with 4 doors). */
@@ -35,86 +38,104 @@ interface CarStyle {
   bumper: "body" | "chrome" | "black";
   seats: { front: number; rear?: number };
   rails?: boolean;
-  /** How far the side glass leans in, per metre of greenhouse height (default 0.3). */
-  tumble?: number;
+  /** How far the side glass leans in, per metre of greenhouse height. */
+  tumble: number;
   spoiler?: boolean;
+  /** Body form: plan width (nose, between the arches, tail; fractions of the half width, 1 = over the arches). */
+  plan: [number, number, number];
+  /** Tuck-under of the lower side (m), the radius of the shoulder edge (m), the depth of the shoulder crease (0..1). */
+  tuck: number;
+  edge: number;
+  crease: number;
+  /** Inward lean of the side above the crease, per metre. */
+  lean: number;
+  /** Pickup only: bed floor as a fraction of the height, and the cab back (z fraction). */
+  bed?: [number, number];
 }
 
-// Proportions after real cars: big wheels that fill the arches, a low stance (sill 0.12-0.16 m on cars, more on SUVs and
-// pickups), a bonnet that drops to the nose, a raked windscreen (about 30-35 degrees on saloons, steeper on vans and SUVs)
-// and a greenhouse that leans in over the shoulders.
+// Proportions after real cars: big wheels that fill the arches, a low stance, a bonnet that drops to the nose, a raked
+// windscreen and a glasshouse that is clearly narrower than the body, sitting on a shoulder that runs the full length.
 const STYLES: Record<string, CarStyle> = {
   hatchback: {
     name: "hatchback", text: "a compact five-door hatchback with a short nose and a steep tailgate",
     length: [4.0, 3.6, 4.35], width: [1.76, 1.66, 1.84], height: [1.48, 1.42, 1.56], wheel: [0.32, 0.3, 0.34],
     ff: 0.67, fr: 0.68, a0: 0.52, tyreW: 0.21,
-    upper: [[0.965, 0.11], [0.995, 0.2], [1.0, 0.3, "lampF"], [0.98, 0.39], [0.92, 0.46, "hoodF"], [0.45, 0.575, "hoodR"], [0.0, 0.6], [-0.5, 0.615], [-0.93, 0.63, "trunkF"], [-0.985, 0.5, "lampR"], [-1.0, 0.36, "trunkR"], [-0.995, 0.22], [-0.965, 0.11]],
-    belt: 0.6, glass: [[0.45, 0.04], [0.33, 0.48], [0.18, 0.88], [0.06, 1], [-0.72, 1], [-0.82, 0.9], [-0.88, 0.5], [-0.92, 0.04]], gin: 0.12, roof: [0.06, -0.73],
+    upper: [[0.955, 0.13], [0.99, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.95, 0.5, "hoodF"], [0.45, 0.59, "hoodR"], [0.0, 0.6], [-0.5, 0.615], [-0.9, 0.63, "trunkF"], [-0.975, 0.52, "lampR"], [-1.0, 0.36, "trunkR"], [-0.995, 0.22], [-0.955, 0.12]],
+    belt: 0.6, glass: [[0.45, 0.04], [0.33, 0.48], [0.18, 0.88], [0.06, 1], [-0.72, 1], [-0.82, 0.9], [-0.87, 0.5], [-0.9, 0.04]], shelf: 0.05, roof: [0.06, -0.73], tumble: 0.3,
     doors: 4, doorZ: [0.36, -0.06, -0.5], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.1, rear: -0.55 },
+    plan: [0.78, 0.97, 0.84], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14,
   },
   sedan: {
     name: "sedan", text: "a four-door saloon with a separate boot and a sloping rear window",
     length: [4.65, 4.3, 5.0], width: [1.82, 1.74, 1.9], height: [1.45, 1.4, 1.52], wheel: [0.335, 0.31, 0.36],
     ff: 0.65, fr: 0.6, a0: 0.5, tyreW: 0.225,
-    upper: [[0.975, 0.12], [0.998, 0.22], [1.0, 0.32, "lampF"], [0.985, 0.4], [0.95, 0.46, "hoodF"], [0.42, 0.575, "hoodR"], [0.1, 0.59], [-0.3, 0.6], [-0.63, 0.612, "trunkF"], [-0.95, 0.625, "trunkR"], [-0.995, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.28], [-0.965, 0.12]],
-    belt: 0.6, glass: [[0.42, 0.04], [0.3, 0.48], [0.15, 0.88], [0.04, 1], [-0.3, 1], [-0.44, 0.84], [-0.55, 0.45], [-0.63, 0.04]], gin: 0.13, roof: [0.04, -0.31],
+    upper: [[0.965, 0.12], [0.993, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.955, 0.5, "hoodF"], [0.42, 0.585, "hoodR"], [0.1, 0.595], [-0.3, 0.6], [-0.63, 0.612, "trunkF"], [-0.94, 0.625, "trunkR"], [-0.99, 0.56], [-1.0, 0.45, "lampR"], [-0.99, 0.28], [-0.96, 0.12]],
+    belt: 0.6, glass: [[0.42, 0.04], [0.3, 0.48], [0.15, 0.88], [0.04, 1], [-0.3, 1], [-0.44, 0.84], [-0.55, 0.45], [-0.63, 0.04]], shelf: 0.05, roof: [0.04, -0.31], tumble: 0.3,
     doors: 4, doorZ: [0.34, -0.04, -0.4], trunk: "lid", lamps: "slim", tails: "corner", bumper: "body", seats: { front: -0.04, rear: -0.38 },
+    plan: [0.78, 0.97, 0.82], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14,
   },
   estate: {
     name: "estate", text: "a long estate car with a flat roof that runs to an upright tailgate",
     length: [4.75, 4.45, 5.0], width: [1.82, 1.75, 1.9], height: [1.48, 1.42, 1.56], wheel: [0.335, 0.31, 0.36],
     ff: 0.65, fr: 0.6, a0: 0.48, tyreW: 0.225,
-    upper: [[0.975, 0.12], [0.998, 0.22], [1.0, 0.32, "lampF"], [0.985, 0.4], [0.95, 0.46, "hoodF"], [0.44, 0.57, "hoodR"], [0.0, 0.59], [-0.6, 0.605], [-0.95, 0.62, "trunkF"], [-0.99, 0.5, "lampR"], [-1.0, 0.38, "trunkR"], [-0.995, 0.23], [-0.965, 0.12]],
-    belt: 0.59, glass: [[0.44, 0.04], [0.32, 0.48], [0.17, 0.88], [0.06, 1], [-0.8, 1], [-0.88, 0.85], [-0.92, 0.45], [-0.94, 0.04]], gin: 0.13, roof: [0.06, -0.83],
+    upper: [[0.965, 0.12], [0.993, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.955, 0.5, "hoodF"], [0.44, 0.58, "hoodR"], [0.0, 0.59], [-0.6, 0.605], [-0.94, 0.62, "trunkF"], [-0.985, 0.5, "lampR"], [-1.0, 0.38, "trunkR"], [-0.995, 0.23], [-0.96, 0.12]],
+    belt: 0.59, glass: [[0.44, 0.04], [0.32, 0.48], [0.17, 0.88], [0.06, 1], [-0.8, 1], [-0.88, 0.85], [-0.915, 0.45], [-0.94, 0.04]], shelf: 0.05, roof: [0.06, -0.83], tumble: 0.3,
     doors: 4, doorZ: [0.36, -0.02, -0.38], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.06, rear: -0.4 }, rails: true,
+    plan: [0.78, 0.97, 0.84], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14,
   },
   suv: {
     name: "SUV", text: "a tall SUV with high ground clearance, black wheel-arch trims and roof rails",
     length: [4.6, 4.3, 4.95], width: [1.9, 1.82, 2.0], height: [1.72, 1.64, 1.86], wheel: [0.375, 0.35, 0.4],
     ff: 0.66, fr: 0.66, a0: 0.36, tyreW: 0.25,
-    upper: [[0.97, 0.15], [0.995, 0.25], [1.0, 0.37, "lampF"], [0.985, 0.45], [0.94, 0.51, "hoodF"], [0.46, 0.595, "hoodR"], [0.0, 0.615], [-0.6, 0.625], [-0.93, 0.635, "trunkF"], [-0.985, 0.52, "lampR"], [-1.0, 0.4, "trunkR"], [-0.995, 0.26], [-0.97, 0.15]],
-    belt: 0.62, glass: [[0.46, 0.04], [0.36, 0.48], [0.23, 0.88], [0.13, 1], [-0.76, 1], [-0.85, 0.88], [-0.9, 0.45], [-0.93, 0.04]], gin: 0.13, roof: [0.13, -0.78],
+    upper: [[0.96, 0.16], [0.99, 0.27], [1.0, 0.4, "lampF"], [0.99, 0.5], [0.96, 0.555, "hoodF"], [0.46, 0.61, "hoodR"], [0.0, 0.615], [-0.6, 0.625], [-0.92, 0.635, "trunkF"], [-0.98, 0.53, "lampR"], [-1.0, 0.4, "trunkR"], [-0.995, 0.26], [-0.965, 0.15]],
+    belt: 0.62, glass: [[0.46, 0.04], [0.36, 0.48], [0.23, 0.88], [0.13, 1], [-0.76, 1], [-0.85, 0.88], [-0.895, 0.45], [-0.92, 0.04]], shelf: 0.055, roof: [0.13, -0.78], tumble: 0.26,
     doors: 4, doorZ: [0.37, -0.04, -0.47], trunk: "gate", lamps: "square", tails: "tall", bumper: "black", seats: { front: -0.04, rear: -0.48 }, rails: true,
+    plan: [0.82, 0.97, 0.86], tuck: 0.035, edge: 0.035, crease: 0.8, lean: 0.1,
   },
   pickup: {
     name: "pickup", text: "a double-cab pickup with a long bonnet and an open load bed behind the cab",
     length: [5.2, 4.95, 5.3], width: [1.9, 1.84, 2.0], height: [1.8, 1.74, 1.9], wheel: [0.39, 0.37, 0.41],
     ff: 0.66, fr: 0.6, a0: 0.3, tyreW: 0.26,
-    upper: [[0.97, 0.16], [0.995, 0.28], [1.0, 0.42, "lampF"], [0.99, 0.5], [0.95, 0.55, "hoodF"], [0.5, 0.6, "hoodR"], [0.0, 0.605], [-0.2, 0.61], [-0.21, 0.52], [-0.985, 0.52, "trunkF"], [-1.0, 0.5, "lampR"], [-1.0, 0.28], [-0.97, 0.16]],
-    belt: 0.6, glass: [[0.5, 0.04], [0.41, 0.45], [0.3, 0.86], [0.2, 1], [-0.17, 1], [-0.19, 0.6], [-0.2, 0.04]], gin: 0.13, roof: [0.2, -0.18], tumble: 0.22,
+    upper: [[0.965, 0.17], [0.992, 0.28], [1.0, 0.42, "lampF"], [0.995, 0.51], [0.965, 0.565, "hoodF"], [0.5, 0.6, "hoodR"], [0.0, 0.605], [-0.5, 0.605], [-0.985, 0.6, "trunkF"], [-1.0, 0.56, "lampR"], [-1.0, 0.28], [-0.97, 0.17]],
+    belt: 0.6, glass: [[0.5, 0.04], [0.41, 0.45], [0.3, 0.86], [0.2, 1], [-0.17, 1], [-0.185, 0.6], [-0.2, 0.04]], shelf: 0.06, roof: [0.2, -0.18], tumble: 0.22,
     doors: 4, doorZ: [0.4, 0.06, -0.19], trunk: "bed", lamps: "square", tails: "tall", bumper: "chrome", seats: { front: 0.12, rear: -0.14 },
+    plan: [0.88, 0.98, 0.97], tuck: 0.03, edge: 0.03, crease: 0.6, lean: 0.08, bed: [0.53, -0.21],
   },
   coupe: {
     name: "coupe", text: "a low two-door coupe with a long door and a fastback roofline",
     length: [4.5, 4.2, 4.8], width: [1.84, 1.76, 1.92], height: [1.38, 1.33, 1.45], wheel: [0.335, 0.31, 0.36],
     ff: 0.66, fr: 0.62, a0: 0.55, tyreW: 0.245,
-    upper: [[0.975, 0.11], [0.998, 0.2], [1.0, 0.31, "lampF"], [0.985, 0.38], [0.95, 0.43, "hoodF"], [0.32, 0.57, "hoodR"], [0.0, 0.585], [-0.5, 0.6], [-0.7, 0.61, "trunkF"], [-0.96, 0.625, "trunkR"], [-0.995, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.27], [-0.965, 0.11]],
-    belt: 0.6, glass: [[0.32, 0.04], [0.2, 0.45], [0.06, 0.88], [-0.05, 1], [-0.25, 1], [-0.42, 0.78], [-0.58, 0.4], [-0.71, 0.04]], gin: 0.14, roof: [-0.05, -0.27],
+    upper: [[0.965, 0.11], [0.993, 0.2], [1.0, 0.31, "lampF"], [0.99, 0.4], [0.955, 0.47, "hoodF"], [0.32, 0.585, "hoodR"], [0.0, 0.585], [-0.5, 0.6], [-0.7, 0.61, "trunkF"], [-0.95, 0.625, "trunkR"], [-0.99, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.27], [-0.96, 0.11]],
+    belt: 0.6, glass: [[0.32, 0.04], [0.2, 0.45], [0.06, 0.88], [-0.05, 1], [-0.25, 1], [-0.42, 0.78], [-0.58, 0.4], [-0.71, 0.04]], shelf: 0.06, roof: [-0.05, -0.27], tumble: 0.34,
     doors: 2, doorZ: [0.33, -0.22], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.14, rear: -0.44 }, spoiler: true,
+    plan: [0.77, 0.95, 0.82], tuck: 0.055, edge: 0.03, crease: 1, lean: 0.16,
   },
   mpv: {
     name: "MPV", text: "a tall people carrier with a short nose, a long steep windscreen and a boxy cabin",
     length: [4.6, 4.3, 4.9], width: [1.86, 1.78, 1.95], height: [1.76, 1.66, 1.86], wheel: [0.335, 0.31, 0.35],
     ff: 0.68, fr: 0.7, a0: 0.45, tyreW: 0.22,
-    upper: [[0.97, 0.12], [0.995, 0.22], [1.0, 0.31, "lampF"], [0.98, 0.39], [0.92, 0.45, "hoodF"], [0.66, 0.52, "hoodR"], [0.3, 0.55], [-0.5, 0.56], [-0.95, 0.57, "trunkF"], [-0.99, 0.46, "lampR"], [-1.0, 0.34, "trunkR"], [-0.995, 0.23], [-0.965, 0.12]],
-    belt: 0.55, glass: [[0.66, 0.04], [0.54, 0.4], [0.38, 0.84], [0.26, 1], [-0.84, 1], [-0.9, 0.85], [-0.93, 0.45], [-0.95, 0.04]], gin: 0.13, roof: [0.26, -0.86],
+    upper: [[0.96, 0.12], [0.99, 0.22], [1.0, 0.31, "lampF"], [0.985, 0.41], [0.94, 0.48, "hoodF"], [0.66, 0.54, "hoodR"], [0.3, 0.55], [-0.5, 0.56], [-0.94, 0.57, "trunkF"], [-0.985, 0.46, "lampR"], [-1.0, 0.34, "trunkR"], [-0.995, 0.23], [-0.96, 0.12]],
+    belt: 0.55, glass: [[0.66, 0.04], [0.54, 0.4], [0.38, 0.84], [0.26, 1], [-0.84, 1], [-0.9, 0.85], [-0.925, 0.45], [-0.94, 0.04]], shelf: 0.05, roof: [0.26, -0.86], tumble: 0.2,
     doors: 4, doorZ: [0.39, 0.0, -0.45], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: 0.1, rear: -0.38 }, rails: true,
+    plan: [0.8, 0.975, 0.86], tuck: 0.045, edge: 0.04, crease: 0.8, lean: 0.1,
   },
   sports: {
     name: "sports car", text: "a low, wide mid-engined sports car with a cab-forward canopy and a rear spoiler",
     length: [4.4, 4.1, 4.65], width: [1.92, 1.85, 2.0], height: [1.3, 1.27, 1.36], wheel: [0.335, 0.31, 0.345],
     ff: 0.68, fr: 0.64, a0: 0.62, tyreW: 0.28,
-    upper: [[0.975, 0.09], [0.998, 0.18], [1.0, 0.27], [0.985, 0.37, "lampF"], [0.95, 0.47, "hoodF"], [0.45, 0.6, "hoodR"], [0.0, 0.62], [-0.4, 0.625], [-0.48, 0.635, "trunkF"], [-0.95, 0.65, "trunkR"], [-0.995, 0.59], [-1.0, 0.47, "lampR"], [-0.99, 0.23], [-0.965, 0.09]],
-    belt: 0.62, glass: [[0.45, 0.04], [0.3, 0.45], [0.14, 0.88], [0.04, 1], [-0.18, 1], [-0.32, 0.72], [-0.42, 0.35], [-0.48, 0.04]], gin: 0.17, roof: [0.04, -0.2],
+    upper: [[0.97, 0.09], [0.993, 0.17], [1.0, 0.26], [0.99, 0.36, "lampF"], [0.955, 0.46, "hoodF"], [0.45, 0.6, "hoodR"], [0.0, 0.62], [-0.4, 0.625], [-0.48, 0.635, "trunkF"], [-0.95, 0.65, "trunkR"], [-0.99, 0.59], [-1.0, 0.47, "lampR"], [-0.99, 0.23], [-0.965, 0.09]],
+    belt: 0.62, glass: [[0.45, 0.04], [0.3, 0.45], [0.14, 0.88], [0.04, 1], [-0.18, 1], [-0.32, 0.72], [-0.42, 0.35], [-0.48, 0.04]], shelf: 0.09, roof: [0.04, -0.2], tumble: 0.42,
     doors: 2, doorZ: [0.34, -0.2], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.08 }, spoiler: true,
+    plan: [0.76, 0.92, 0.84], tuck: 0.07, edge: 0.025, crease: 1, lean: 0.2,
   },
   vintage: {
     name: "vintage", text: "a 1950s-style saloon with round headlamps, chrome bumpers, whitewall tyres and chrome hubcaps",
     length: [4.6, 4.3, 5.0], width: [1.8, 1.7, 1.9], height: [1.56, 1.5, 1.65], wheel: [0.355, 0.34, 0.38],
     ff: 0.62, fr: 0.6, a0: 0.4, tyreW: 0.19,
-    upper: [[0.96, 0.15], [0.99, 0.25], [1.0, 0.35], [0.99, 0.41, "lampF"], [0.95, 0.48, "hoodF"], [0.38, 0.565, "hoodR"], [0.0, 0.575], [-0.32, 0.58], [-0.55, 0.585, "trunkF"], [-0.92, 0.54, "trunkR"], [-0.975, 0.48], [-0.995, 0.4, "lampR"], [-0.995, 0.28], [-0.96, 0.15]],
-    belt: 0.57, glass: [[0.38, 0.04], [0.3, 0.45], [0.22, 0.86], [0.14, 1], [-0.22, 1], [-0.34, 0.85], [-0.46, 0.45], [-0.56, 0.04]], gin: 0.13, roof: [0.14, -0.24],
+    upper: [[0.955, 0.16], [0.985, 0.26], [1.0, 0.35], [0.99, 0.41, "lampF"], [0.95, 0.48, "hoodF"], [0.38, 0.565, "hoodR"], [0.0, 0.575], [-0.32, 0.58], [-0.55, 0.585, "trunkF"], [-0.92, 0.54, "trunkR"], [-0.975, 0.48], [-0.995, 0.4, "lampR"], [-0.995, 0.28], [-0.955, 0.16]],
+    belt: 0.57, glass: [[0.38, 0.04], [0.3, 0.45], [0.22, 0.86], [0.14, 1], [-0.22, 1], [-0.34, 0.85], [-0.46, 0.45], [-0.56, 0.04]], shelf: 0.05, roof: [0.14, -0.24], tumble: 0.3,
     doors: 4, doorZ: [0.34, -0.02, -0.37], trunk: "lid", lamps: "round", tails: "round", bumper: "chrome", seats: { front: 0.0, rear: -0.34 },
+    plan: [0.84, 0.98, 0.86], tuck: 0.09, edge: 0.07, crease: 0.15, lean: 0.3,
   },
 };
 
@@ -142,229 +163,518 @@ const FINISHES: Record<string, Finish[]> = {
   vintage: [P("cream", "crème", [0.52, 0.45, 0.31], "chrome", undefined, undefined, SOLID), P("teal", "petrol", [0.03, 0.16, 0.16], "chrome", undefined, "whitewall"), P("burgundy", "bordeaux", [0.14, 0.012, 0.022], "wire", 24)],
 };
 
-/** Body sections across the width: [distance in from the side, inset of the silhouette]; the shoulders round off. */
-const EDGE: [number, number][] = [[0, 0.085], [0.01, 0.062], [0.03, 0.036], [0.065, 0.016], [0.12, 0.004], [0.19, 0]];
+type P2 = [number, number];
+type LP = [Lin, Lin];
 
-const zl = (z: number): Lin => L(0, { L2: z });
-const yl = (y: number): Lin => L(0, { H: y });
-
-function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDraft {
-  const env = { L2: st.length[0] / 2, W2: st.width[0] / 2, H: st.height[0], wr: st.wheel[0] };
-  // The side silhouette: the upper line, then the rear arch and the front arch along the bottom.
-  // The silhouette height over an axle (z as a fraction of the half length), along the top of the outline.
-  const yAt = (zf: number): Lin => {
-    for (let i = 1; i + 2 < st.upper.length; i++) {
-      const a = st.upper[i]!, b = st.upper[i + 1]!;
-      if ((a[0] - zf) * (b[0] - zf) <= 0 && a[0] !== b[0]) return yl(a[1] + ((zf - a[0]) / (b[0] - a[0])) * (b[1] - a[1]));
-    }
-    throw new Error(`car ${key}: no silhouette over ${zf}`);
-  };
-  // The arch radius never reaches into the hood line: the arch stays 6 cm under it, and the shoulders are 4 cm lower at the side.
-  const room = (zf: number): string => `${ls(yAt(zf))} - 0.07 - $wheelRadius`;
-  const raExpr = `min($wheelRadius + 0.03, ${room(st.ff)}, ${room(-st.fr)})`;
-  const ra0 = Math.min(env.wr + 0.03, lev(yAt(st.ff), env) - 0.07 - env.wr, lev(yAt(-st.fr), env) - 0.07 - env.wr);
-  const envR = { ...env, Ra: ra0 };
-  const sill = L(0, { wr: 1, Ra: -Math.sin(st.a0) });
-  // The first and last points (under the bumpers) sit a little above the sill line, so the bottom never folds.
-  const pts: [Lin, Lin][] = st.upper.map(([z, y], i) => [zl(z), i === 0 || i === st.upper.length - 1 ? ladd(sill, L(0.035)) : yl(y)]);
-  const N = 12;
-  for (const [zc] of [[-st.fr], [st.ff]] as [number][]) {
-    for (let k = 0; k <= N; k++) {
-      const th = Math.PI + st.a0 - (k * (Math.PI + 2 * st.a0)) / N;
-      const c = Math.cos(th), s = Math.sin(th);
-      pts.push([L(0, { L2: zc, Ra: c }), L(0, { wr: 1, Ra: s })]);
-    }
+/** Linear interpolation in a table of [x, y] rows (sorted by x), clamped at the ends. */
+function interp(rows: [number, number][], x: number): number {
+  if (x <= rows[0]![0]) return rows[0]![1];
+  for (let i = 1; i < rows.length; i++) {
+    const a = rows[i - 1]!, b = rows[i]!;
+    if (x <= b[0]) return a[1] + ((x - a[0]) / (b[0] - a[0] || 1)) * (b[1] - a[1]);
   }
-  const tag = (t: string): [Lin, Lin] => {
-    const i = st.upper.findIndex((p) => p[2] === t);
-    if (i < 0) throw new Error(`car ${key}: no ${t}`);
-    return pts[i]!;
-  };
-  // Outward normals at the defaults, for the rounded shoulders of the outer sections.
-  const P2 = pts.map(([z, y]) => [lev(z, envR), lev(y, envR)] as [number, number]);
-  let area = 0;
-  P2.forEach((p, i) => { const q = P2[(i + 1) % P2.length]!; area += p[0] * q[1] - q[0] * p[1]; });
-  const sgn = area >= 0 ? 1 : -1;
-  const normals = P2.map((_, i) => {
-    const a = P2[(i - 1 + P2.length) % P2.length]!, b = P2[(i + 1) % P2.length]!;
-    const tz = b[0] - a[0], ty = b[1] - a[1];
-    const l = Math.hypot(tz, ty) || 1;
-    return [(sgn * ty) / l, (-sgn * tz) / l] as [number, number];
-  });
-  const span = (Math.max(...P2.map((p) => p[1])) - lev(sill, envR)) * 2;
-  const section = (z: string, d: number) => ({
-    z,
-    points: pts.map(([pz, py], i) => {
-      // Arch points move straight away from the hub (the lip flares); the rest along their normal, more at nose and tail.
-      const k = i - st.upper.length;
-      if (k >= 0) {
-        const th = Math.PI + st.a0 - ((k % (N + 1)) * (Math.PI + 2 * st.a0)) / N;
-        void th;
-        return [ls(pz), ls(py)];
-      }
-      // Scaling toward the middle of the sill line can never fold the outline.
-      return [ls(lscale(pz, 1 - (1.7 * d) / env.L2)), ls(ladd(lscale(py, 1 - d / span), lscale(sill, d / span)))];
-    }),
-  });
-  const sections = [
-    ...EDGE.map(([e, d]) => section(`-$W2 + ${f(e)}`, d)),
-    ...[...EDGE].reverse().map(([e, d]) => section(`$W2 - ${f(e)}`, d)),
-  ];
+  return rows[rows.length - 1]![1];
+}
 
-  const yb = `$yb`;
-  const nodes: SpecNode[] = [];
+function inside(poly: P2[], p: P2): boolean {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i]!, b = poly[j]!;
+    if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c;
+  }
+  return c;
+}
+
+/**
+ * The car body as a loft along z. Stations run on a coordinate s: 0..1 the front overhang (nose to the front arch), 1..2
+ * the front arch, 2..3 between the arches, 3..4 the rear arch, 4..5 the rear overhang. Over an arch the bottom of every
+ * section follows the arch circle, so the wheel sits in a tunnel that reads as a wheel arch from outside.
+ */
+class Body {
+  env: Record<string, number>;
+  sill: Lin;
+  iF: number;
+  iR: number;
+  constructor(public st: CarStyle) {
+    const wr = st.wheel[0], H = st.height[0];
+    const ra = wr + 0.035;
+    this.env = { L2: st.length[0] / 2, W2: st.width[0] / 2, H, wr, Ra: ra };
+    this.sill = L(0, { wr: 1, Ra: -Math.sin(st.a0) });
+    const zs = st.upper.map((p) => p[0]);
+    this.iF = zs.indexOf(Math.max(...zs));
+    this.iR = zs.lastIndexOf(Math.min(...zs));
+  }
+  raExpr(): string { return "$wheelRadius + 0.035"; }
+  ev(l: Lin): number { return lev(l, this.env); }
+  /** Top centre line (fraction of H) at a z fraction. */
+  topFracRaw(zf: number): number {
+    const u = this.st.upper;
+    const zs = u.map((p) => p[0]);
+    const iF = zs.indexOf(Math.max(...zs)), iR = zs.lastIndexOf(Math.min(...zs));
+    const chain = u.slice(iF, iR + 1).map((p) => [-p[0], p[1]] as [number, number]);
+    return interp(chain, -zf);
+  }
+  /** z of a station. */
+  Z(s: number): Lin {
+    const st = this.st, c = Math.cos(st.a0);
+    const edge = (zc: number, sgn: number): Lin => L(0, { L2: zc, Ra: sgn * c });
+    if (s <= 1) return lerpL(L(0, { L2: 1 }), edge(st.ff, 1), s);
+    if (s <= 2) { const th = this.th(s - 1); return L(0, { L2: st.ff, Ra: Math.cos(th) }); }
+    if (s <= 3) return lerpL(edge(st.ff, -1), edge(-st.fr, 1), s - 2);
+    if (s <= 4) { const th = this.th(s - 3); return L(0, { L2: -st.fr, Ra: Math.cos(th) }); }
+    return lerpL(edge(-st.fr, -1), L(0, { L2: -1 }), s - 4);
+  }
+  th(u: number): number { return -this.st.a0 + u * (Math.PI + 2 * this.st.a0); }
+  zf(s: number): number { return this.ev(this.Z(s)) / this.env.L2!; }
+  /** The station at a z fraction (at the defaults). */
+  sAt(zf: number): number {
+    let a = 0, b = 5;
+    for (let k = 0; k < 50; k++) { const m = (a + b) / 2; if (this.zf(m) > zf) a = m; else b = m; }
+    return (a + b) / 2;
+  }
+  arch(s: number): boolean { return (s > 1 && s < 2) || (s > 3 && s < 4); }
+  /** Bottom of the section. */
+  bottom(s: number): Lin {
+    const st = this.st, u = st.upper;
+    if (this.arch(s)) { const th = this.th(s > 3 ? s - 3 : s - 1); return L(0, { wr: 1, Ra: Math.sin(th) }); }
+    const zf = this.zf(s);
+    if (s <= 1) {
+      const chain = u.slice(0, this.iF + 1);
+      const zm = chain[chain.length - 1]![0] - 0.004;
+      const z = Math.min(zf, zm);
+      if (z >= chain[0]![0]) return L(0, { H: interp(chain.map((p) => [p[0], p[1]]), z) });
+      const t = (chain[0]![0] - z) / (chain[0]![0] - this.zf(1));
+      return lerpL(L(0, { H: chain[0]![1] }), this.sill, t);
+    }
+    if (s >= 4) {
+      const chain = u.slice(this.iR);
+      const zm = chain[0]![0] + 0.004;
+      const z = Math.max(zf, zm);
+      const last = chain[chain.length - 1]!;
+      if (z <= last[0]) return L(0, { H: interp(chain.map((p) => [p[0], p[1]]), z) });
+      const t = (z - last[0]) / (this.zf(4) - last[0]);
+      return lerpL(L(0, { H: last[1] }), this.sill, t);
+    }
+    return this.sill;
+  }
+  top(s: number): Lin {
+    const u = this.st.upper;
+    const zf = Math.min(u[this.iF]![0] - 0.004, Math.max(u[this.iR]![0] + 0.004, this.zf(s)));
+    return L(0, { H: this.topFracRaw(zf) });
+  }
+  hw(s: number): number {
+    const [n, m, t] = this.st.plan;
+    return interp([[0, n], [0.03, n + 0.06], [0.12, n + 0.1], [0.35, Math.max(n + 0.12, 0.95)], [1, 0.985], [1.5, 1], [2, 0.985], [2.5, m], [3, 0.985], [3.5, 1], [4, 0.985], [4.65, Math.max(t + 0.1, 0.95)], [4.88, t + 0.08], [4.97, t + 0.04], [5, t]], s);
+  }
+  isBed(s: number): boolean { return !!this.st.bed && this.zf(s) < this.st.bed[1] - 0.004; }
+  /**
+   * The right half of the section at s, from the bottom (inboard) over the side and the shoulder to the top centre:
+   * a rounded bottom corner, the tuck-under, the shoulder crease (widest point), the shoulder edge and the crowned top.
+   */
+  section(s: number) {
+    const st = this.st, ev = (l: Lin) => this.ev(l);
+    const yB = this.bottom(s);
+    const yT = this.top(s);
+    const ext = ev(yT) - ev(yB);
+    const crown = Math.min(0.025, 0.12 * ext);
+    let yE = ladd(yT, L(-crown));
+    // Over the arches the wings rise where the bonnet is low (sports cars): the shoulder stays 17 cm over the arch.
+    const w = s < 1 ? Math.max(0, 1 - (1 - s) / 0.45) : s <= 2 ? 1 : s < 3 ? Math.max(0, 1 - (s - 2) / 0.45, 1 - (3 - s) / 0.45) : s <= 4 ? 1 : Math.max(0, 1 - (s - 4) / 0.45);
+    const wing = L(0.17, { wr: 1, Ra: 1 });
+    if (w > 0 && ev(wing) > ev(yE)) yE = lerpL(yE, wing, w);
+    // The shoulder crease runs level along the side, a little under the belt; at nose and tail it follows the top edge.
+    const belt = L(-0.085 + 0.012 * (s - 2.5) / 2.5, { H: st.belt });
+    const lim = ev(yE) - 0.05;
+    const yC = ev(belt) < lim ? belt : ev(yE) - 0.05 > ev(yB) + 0.07 ? ladd(yE, L(-0.05)) : lerpL(yB, yE, 0.58);
+    const hs = ev(yC) - ev(yB);
+    const hwm = L(0, { W2: this.hw(s) });
+    const x = (d: number): Lin => ladd(hwm, L(-d));
+    const rb = Math.min(0.06, 0.3 * hs);
+    const tuck = st.tuck * Math.min(1, hs / 0.4);
+    const cm = Math.min(0.02, 0.22 * hs), cp = Math.min(0.015, 0.3 * (ev(yE) - ev(yC)));
+    const up = ev(yE) - ev(yC);
+    const re = Math.min(st.edge, 0.4 * up, 0.3 * ext);
+    const lean = st.lean * up;
+    const yb0 = ladd(yB, L(rb));
+    const pts: LP[] = [
+      [x(tuck + rb), yB],
+      [x(tuck + rb * 0.293), ladd(yB, L(rb * 0.293))],
+      [x(tuck), yb0],
+      ...[0.3, 0.6, 0.85].map((u): LP => [x(tuck * (1 - u) * (1 - u)), lerpL(yb0, ladd(yC, L(-cm)), u)]),
+      [x(0.003 * st.crease + 0.001), ladd(yC, L(-cm))],
+      [x(0), yC],
+      [x(0.008 * st.crease + 0.002), ladd(yC, L(cp))],
+      [x(0.008 * st.crease + 0.002 + lean * 0.5), lerpL(ladd(yC, L(cp)), ladd(yE, L(-re)), 0.5)],
+      [x(0.008 * st.crease + 0.002 + lean), ladd(yE, L(-re))],
+      [x(0.008 * st.crease + 0.002 + lean + re * 0.293), ladd(yE, L(-re * 0.293))],
+    ];
+    const xe = x(0.008 * st.crease + 0.002 + lean + re);
+    pts.push([xe, yE]);
+    if (this.isBed(s)) {
+      const floor = L(0, { H: st.bed![0] });
+      pts.push([ladd(xe, L(-0.05)), ladd(yE, L(-0.004))], [ladd(xe, L(-0.05)), floor]);
+    } else {
+      pts.push([lscale(xe, 0.62), lerpL(yE, yT, 1 - 0.62 * 0.62)], [lscale(xe, 0.25), lerpL(yE, yT, 1 - 0.25 * 0.25)]);
+    }
+    return { pts, yB, yT, yE, yC, xe, hwm, rb };
+  }
+  ring(s: number): LP[] {
+    const h = this.section(s).pts;
+    return [...h, ...[...h].reverse().map(([x, y]): LP => [lscale(x, -1), y])];
+  }
+  ringDef(s: number): P2[] { return this.ring(s).map(([x, y]) => [this.ev(x), this.ev(y)]); }
+  /** The station where the front (or rear) surface passes through (x, y) at the defaults. */
+  surfaceS(x: number, y: number, rear = false): number {
+    let a = rear ? 4 : 0, b = rear ? 5 : 1;
+    if (!rear && !inside(this.ringDef(1), [x, y])) return 1;
+    if (rear && !inside(this.ringDef(4), [x, y])) return 4;
+    for (let k = 0; k < 30; k++) {
+      const m = (a + b) / 2;
+      const isIn = inside(this.ringDef(m), [x, y]);
+      if (rear ? isIn : !isIn) a = m; else b = m;
+    }
+    return (a + b) / 2;
+  }
+  /** x of the body side at height y (default value) on station s, as an expression that scales with the half width. */
+  sideX(s: number, y: number): Lin {
+    const h = this.section(s).pts.slice(0, 13).map(([px, py]) => [this.ev(py), this.ev(px)] as [number, number]);
+    const xs = interp(h, y);
+    const w = this.hw(s);
+    return L(xs - w * this.env.W2!, { W2: w });
+  }
+}
+
+function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
+  const B = new Body(st);
+  const env = B.env;
+  const ev = (l: Lin) => B.ev(l);
+  const Hd = env.H!;
   const kids: SpecNode[] = [];
-  kids.push(loft("Body", sections, { material: "body_paint", rotate: [0, -90, 0] }));
+  const tagZ = (t: string): number => { const p = st.upper.find((q) => q[2] === t); if (!p) throw new Error(`car ${key}: no ${t}`); return p[0]; };
 
-  // Greenhouse: glass loft with tumblehome and rounded roof corners.
-  const gsec = [...st.glass].sort((a, b) => a[0] - b[0]).map(([z, t]) => {
-    const yT = `($yb + ${f(t)} * ($H - 0.035 - $yb))`;
-    const h = `(${yT} - $yb + 0.05)`;
-    const rc = `min(0.085, 0.4 * ${h})`;
-    const wt = `($wb - ${f(st.tumble ?? 0.3)} * ${h})`;
-    const pts2: [Num, Num][] = [[`$wb`, `$yb - 0.05`]];
-    for (const a of [0, 30, 60, 90]) {
-      const c = Math.cos((a * Math.PI) / 180), s = Math.sin((a * Math.PI) / 180);
-      pts2.push([`${wt} - ${rc} * ${f(1 - c)}`, `${yT} - ${rc} * ${f(1 - s)}`]);
-    }
-    for (const a of [90, 120, 150, 180]) {
-      const c = Math.cos((a * Math.PI) / 180), s = Math.sin((a * Math.PI) / 180);
-      pts2.push([`-${wt} + ${rc} * ${f(1 + c)}`, `${yT} - ${rc} * ${f(1 - s)}`]);
-    }
-    pts2.push([`-$wb`, `$yb - 0.05`]);
-    return { z: `${f(z)} * $L2`, points: pts2 };
-  });
-  kids.push(loft("Glass", gsec, { material: "tinted_glass" }));
+  // Stations: the overhangs dense at nose and tail, 12 over each arch, the tagged panel edges as extra stations.
+  const over = [0, 0.01, 0.035, 0.08, 0.15, 0.25, 0.38, 0.54, 0.72, 0.88];
+  const sList = new Set<number>([...over, ...Array.from({ length: 13 }, (_, i) => 1 + i / 12), 2.12, 2.28, 2.45, 2.62, 2.78, 2.9, ...Array.from({ length: 13 }, (_, i) => 3 + i / 12), ...over.map((v) => 5 - v)]);
+  const extra: Record<string, number> = {};
+  for (const t of ["hoodF", "hoodR", "trunkF", "trunkR"]) {
+    if (st.trunk === "bed" && t === "trunkR") continue;
+    const s = B.sAt(tagZ(t));
+    extra[t] = s;
+    sList.add(s);
+  }
+  if (st.bed) { const s = B.sAt(st.bed[1] + 0.002); sList.add(s); extra["cab"] = s; sList.add(B.sAt(st.bed[1] - 0.012)); }
+  const stations = [...sList].sort((a, b) => a - b).filter((s, i, arr) => i === 0 || s - arr[i - 1]! > 0.006 || Object.values(extra).includes(s));
+  const sec = (s: number) => ({ z: ls(B.Z(s)), points: B.ring(s).map(([x, y]) => [ls(x), ls(y)]) });
+  kids.push(loft("Body", stations.map(sec), { material: "body_paint" }));
+
+  // Arch liners: black wells between the wheels, so the tunnel over each axle reads as a dark wheel arch.
+  const tw = st.tyreW + 0.015;
+  for (const [n, zc] of [["ArchLiner_F", st.ff], ["ArchLiner_R", -st.fr]] as [string, number][]) {
+    kids.push(box(n, [`2 * $W2 - ${f(2 * tw + 0.1)}`, `$wr + $Ra * 0.9 - $ys`, "$Ra * 1.6"], { at: [0, `($wr + $Ra * 0.9 + $ys) / 2`, `${f(zc)} * $L2`], material: "trim_black" }));
+    void n;
+  }
+
+  // Greenhouse: glass on a shelf inside the shoulders, bowed side glass, rounded roof corners.
+  const yb = L(0, { H: st.belt });
+  const glassAt = (zf: number, t: number) => {
+    const s = B.sAt(zf);
+    const S = B.section(s);
+    const yT = lerpL(yb, L(-0.035, { H: 1 }), t);
+    const h = ladd(lsub(yT, yb), L(0.05));
+    const rc = Math.min(0.085, 0.4 * ev(h));
+    const wbz = ladd(S.xe, L(-st.shelf));
+    const wt = ladd(wbz, lscale(h, -st.tumble));
+    const side: LP[] = [[wbz, ladd(yb, L(-0.05))], [ladd(lerpL(wbz, wt, 0.42), L(0.012 * Math.min(1, t * 1.5))), lerpL(yb, ladd(yT, L(-rc)), 0.5)]];
+    const corner: LP[] = [0, 30, 60, 90].map((a) => { const r = (a * Math.PI) / 180; return [ladd(wt, L(-rc * (1 - Math.cos(r)))), ladd(yT, L(-rc * (1 - Math.sin(r))))]; });
+    const half = [...side, ...corner];
+    return { s, z: B.Z(s), half, wt, wbz, yT, rc };
+  };
+  const gl = [...st.glass].sort((a, b) => b[0] - a[0]).map(([z, t]) => glassAt(z, t));
+  kids.push(loft("Glass", gl.map((g) => ({ z: ls(g.z), points: [...g.half, ...[...g.half].reverse().map(([x, y]): LP => [lscale(x, -1), y])].map(([x, y]) => [ls(x), ls(y)]) })), { material: "tinted_glass" }));
+
+  // Roof: a separate panel on the glass, narrower than the body.
   const roofMat = fin.roof ?? "body_paint";
   const [rz0, rz1] = st.roof;
-  const rw = (dz: number, k: number) => ({ z: `${f(rz1 + (rz0 - rz1) * k)} * $L2 ${dz < 0 ? "-" : "+"} ${f(Math.abs(dz))}`, superellipse: { width: `2 * $wtop + ${f(dz === 0 ? 0.03 : 0.0)}`, height: dz === 0 ? 0.07 : 0.04, n: 5, count: 24, cy: `$H - ${dz === 0 ? 0.035 : 0.025}` } });
-  kids.push(loft("Roof", [rw(-0.04, 0), rw(0, 0), rw(0, 0.5), rw(0, 1), rw(0.04, 1)], { material: roofMat }));
-
-  // Pillars and window seals.
-  const zws = st.glass[0]![0], zgr = st.glass[st.glass.length - 1]![0];
-  const za = st.roof[0], zc = st.roof[1];
-  kids.push(tube("PillarA_L", [[`$wb - 0.02`, `$yb - 0.01`, `${f(zws)} * $L2 - 0.02`], [`$wtop - 0.02`, `$H - 0.045`, `${f(za)} * $L2`]], 0.032, { material: roofMat, segments: 10, mirror: "PillarA_R" }));
-  kids.push(tube("PillarC_L", [[`$wtop - 0.02`, `$H - 0.045`, `${f(zc)} * $L2`], [`$wb - 0.02`, `$yb - 0.01`, `${f(zgr)} * $L2 + 0.02`]], st.trunk === "lid" ? 0.06 : 0.045, { material: roofMat, segments: 10, mirror: "PillarC_R" }));
-  kids.push(tube("Seal_L", [[`$wb + 0.004`, `$yb + 0.004`, `${f(zws)} * $L2 - 0.04`], [`$wb + 0.004`, `$yb + 0.004`, `${f(zgr)} * $L2 + 0.04`]], 0.012, { material: st.bumper === "chrome" ? "chrome" : "rubber_seal", segments: 8, mirror: "Seal_R" }));
-  const zB = st.doorZ[1];
-  kids.push(box("PillarB_L", [0.05, `$H - 0.04 - $yb`, 0.08], { at: [`($wb + $wtop) / 2 - 0.012`, `($H - 0.04 + $yb) / 2`, `${f(zB)} * $L2 - 0.02`], rotate: [0, 0, 12.4], material: "trim_black", mirror: "PillarB_R" }));
-  if (st.rails) {
-    kids.push(tube("RoofRail_L", [[`$wtop - 0.06`, `$H - 0.01`, `${f(za)} * $L2 - 0.02`], [`$wtop - 0.06`, `$H + 0.04`, `${f(za)} * $L2 - 0.1`], [`$wtop - 0.06`, `$H + 0.04`, `${f(zc)} * $L2 + 0.1`], [`$wtop - 0.06`, `$H - 0.01`, `${f(zc)} * $L2 + 0.02`]], 0.016, { material: "aluminium", segments: 8, mirror: "RoofRail_R" }));
-  }
-
-  // Doors: hinged on their front edge, the skin sits a few millimetres proud of the body side.
-  const doorBot = `$ys + 0.05`, doorTop = `$yb - 0.07`;
-  const door = (name: string, z0: Num, z1: Num, mirror: string): SpecNode =>
-    group(name, [
-      box("Skin", [0.028, `${doorTop} - (${doorBot})`, `${z0} - (${z1}) - 0.012`], { at: [-0.01, `(${doorTop} - (${doorBot})) / 2`, `-(${z0} - (${z1}) - 0.012) / 2`], bevel: 0.006, material: "body_paint" }),
-      box("Gap", [0.026, `${doorTop} - (${doorBot}) + 0.01`, `${z0} - (${z1}) - 0.002`], { at: [-0.0115, `(${doorTop} - (${doorBot})) / 2`, `-(${z0} - (${z1}) - 0.012) / 2`], material: "panel_gap" }),
-      // Shut lines at the leading and trailing edges, where the door meets the wing and the next panel.
-      box("Seam_{i}", [0.008, `${doorTop} - (${doorBot}) - 0.03`, 0.005], { at: [0.007, `(${doorTop} - (${doorBot})) / 2 + 0.01`, 0.0], repeat: { count: 2, step: [0, 0, `-(${z0} - (${z1}) - 0.006)`] }, material: "panel_gap" }),
-      box("Seal", [0.02, 0.012, `${z0} - (${z1}) - 0.03`], { at: [-0.012, `${doorTop} - (${doorBot}) + 0.012`, `-(${z0} - (${z1}) - 0.012) / 2`], material: st.bumper === "chrome" ? "chrome" : "rubber_seal" }),
-      box("Handle", [0.03, 0.03, 0.17], { at: [0.008, `${doorTop} - (${doorBot}) - 0.12`, `-(${z0} - (${z1})) + 0.16`], bevel: 0.01, material: st.bumper === "chrome" ? "chrome" : "satin_black" }),
-    ], { at: ["$W2 - 0.006", doorBot, z0], mirror });
-  const frontEdge = `min(${f(st.doorZ[0])} * $L2, ${f(st.ff)} * $L2 - $Ra - 0.06)`;
-  kids.push(door("Door_FL", frontEdge, `${f(zB)} * $L2`, "Door_FR"));
-  if (st.doors === 4) kids.push(door("Door_RL", `${f(zB)} * $L2 - 0.008`, `max(${f(st.doorZ[2]!)} * $L2, -${f(st.fr)} * $L2 + $Ra + 0.05)`, "Door_RR"));
-
-  // Hinged panels: a thin plate from the hinge (a) to its far edge (b), proud of the surface on the outside.
-  const panel = (name: string, a: [Lin, Lin], b: [Lin, Lin], out: [number, number], width: Num, extra: SpecNode[] = []): SpecNode => {
-    const dz = ladd(b[0], lscale(a[0], -1)), dy = ladd(b[1], lscale(a[1], -1));
-    const vz = lev(dz, env), vy = lev(dy, env);
-    const phi = Math.atan2(-vy, vz);
-    // Local +y after the turn about x.
-    const ly: [number, number] = [Math.cos(phi), Math.sin(phi)]; // (y, z)
-    const sgn = ly[0] * out[0] + ly[1] * out[1] >= 0 ? 1 : -1;
-    const len = `hypot(${ls(dz)}, ${ls(dy)})`;
-    return group(name, [
-      box("Panel", [width, 0.024, len], { at: [0, f(sgn * 0.004), `${len} / 2`], bevel: 0.008, material: "body_paint" }),
-      box("Gap", [`${width} + 0.012`, 0.024, `${len} + 0.006`], { at: [0, f(sgn * 0.0015), `${len} / 2`], material: "panel_gap" }),
-      ...extra,
-    ], { at: [0, ls(a[1]), ls(a[0])], rotate: [`deg(atan2(-(${ls(dy)}), ${ls(dz)}))`, 0, 0] });
+  const roofSec = (zf: number, dz: number, full: boolean) => {
+    const g = glassAt(zf, 1);
+    return { z: `${ls(g.z)} ${dz < 0 ? "-" : "+"} ${f(Math.abs(dz))}`, superellipse: { width: `2 * (${ls(g.wt)}) + ${full ? 0.02 : -0.01}`, height: full ? 0.05 : 0.03, n: 3.5, count: 24, cy: `$H - ${full ? 0.027 : 0.022}` } };
   };
-  kids.push(panel("Hood", tag("hoodR"), tag("hoodF"), [1, 0], "$W2 * 1.56"));
-  if (st.trunk === "lid") kids.push(panel("Trunk", tag("trunkF"), tag("trunkR"), [1, 0], "$W2 * 1.5"));
-  else if (st.trunk === "gate") kids.push(panel("Trunk", tag("trunkF"), tag("trunkR"), [0, -1], "$W2 * 1.4", [box("Handle", [0.24, 0.03, 0.03], { at: [0, -0.012, 0.09], material: "chrome", bevel: 0.008 })]));
-  else {
-    // Pickup bed: floor at trunkF, side walls up to the belt, a tailgate hinged at the bottom.
-    const [fz, fy] = tag("trunkF");
-    const cab = "-0.21 * $L2";
-    kids.push(box("BedSide_L", [0.055, `$yb - (${ls(fy)}) + 0.1`, `${cab} + $L2 - 0.03`], { at: ["$W2 - 0.03", `($yb + ${ls(fy)} - 0.1) / 2`, `(${cab} - $L2 + 0.03) / 2`], bevel: 0.01, material: "body_paint", mirror: "BedSide_R" }));
-    kids.push(tube("BedRail_L", [["$W2 - 0.03", "$yb + 0.01", `${cab} - 0.02`], ["$W2 - 0.03", "$yb + 0.01", "-$L2 + 0.05"]], 0.03, { material: "trim_black", segments: 8, mirror: "BedRail_R" }));
-    kids.push(box("BedFront", ["2 * $W2 - 0.08", `$yb - (${ls(fy)}) + 0.1`, 0.05], { at: [0, `($yb + ${ls(fy)} - 0.1) / 2`, `${cab} - 0.02`], bevel: 0.01, material: "body_paint" }));
-    kids.push(box("BedLiner", ["2 * $W2 - 0.1", 0.02, `${cab} + $L2 - 0.12`], { at: [0, `${ls(fy)} + 0.005`, `(${cab} - $L2 + 0.05) / 2`], material: "trim_black" }));
-    void fz;
-    kids.push(group("Trunk", [
-      box("Panel", ["2 * $W2 - 0.08", `$yb - (${ls(fy)})`, 0.05], { at: [0, `($yb - (${ls(fy)})) / 2`, -0.02], bevel: 0.01, material: "body_paint" }),
-      box("Handle", [0.26, 0.04, 0.03], { at: [0, `($yb - (${ls(fy)})) * 0.8`, -0.05], material: "chrome", bevel: 0.008 }),
-    ], { at: [0, ls(fy), "-$L2 - 0.005"] }));
+  kids.push(loft("Roof", [roofSec(rz1, -0.04, false), roofSec(rz1, 0, true), roofSec((rz0 + rz1) / 2, 0, true), roofSec(rz0, 0, true), roofSec(rz0, 0.04, false)], { material: roofMat }));
+
+  // Pillars along the glass corners (A at the windscreen, C at the rear window), B on the side glass; window seals.
+  const cornerPt = (g: ReturnType<typeof glassAt>, out: number): [Num, Num, Num] => [ls(ladd(g.half[3]![0], L(out))), ls(ladd(g.half[3]![1], L(out * 0.5))), ls(g.z)];
+  const front = gl.filter((g) => g.s <= B.sAt(st.roof[0]) + 1e-6);
+  const rear = gl.filter((g) => g.s >= B.sAt(st.roof[1]) - 1e-6);
+  const pathA = front.map((g) => cornerPt(g, 0.012));
+  pathA[0] = [ls(ladd(front[0]!.wbz, L(0.01))), ls(ladd(yb, L(-0.01))), ls(front[0]!.z)];
+  kids.push(tube("PillarA_L", pathA.reverse(), 0.034, { material: roofMat, segments: 10, mirror: "PillarA_R" }));
+  const pathC = rear.map((g) => cornerPt(g, 0.012));
+  pathC[pathC.length - 1] = [ls(ladd(rear[rear.length - 1]!.wbz, L(0.01))), ls(ladd(yb, L(-0.01))), ls(rear[rear.length - 1]!.z)];
+  kids.push(tube("PillarC_L", pathC, st.trunk === "lid" ? 0.06 : 0.045, { material: roofMat, segments: 10, mirror: "PillarC_R" }));
+  const gB = glassAt(st.doorZ[1], 1);
+  kids.push(tube("PillarB_L", [[ls(ladd(gB.half[0]![0], L(0.006))), ls(ladd(yb, L(-0.02))), ls(gB.z)], [ls(ladd(gB.half[1]![0], L(0.006))), ls(gB.half[1]![1]), ls(gB.z)], [ls(ladd(gB.half[3]![0], L(0.004))), ls(gB.half[3]![1]), ls(gB.z)]], 0.036, { material: "trim_black", segments: 8, mirror: "PillarB_R" }));
+  kids.push(tube("Seal_L", gl.map((g) => [ls(ladd(g.wbz, L(0.006))), ls(ladd(yb, L(0.004))), ls(g.z)] as [Num, Num, Num]), 0.011, { material: st.bumper === "chrome" ? "chrome" : "rubber_seal", segments: 8, mirror: "Seal_R" }));
+  if (st.rails) {
+    const a = glassAt(st.roof[0], 1), c = glassAt(st.roof[1], 1);
+    kids.push(tube("RoofRail_L", [[ls(ladd(a.wt, L(-0.06))), `$H - 0.01`, `${ls(a.z)} - 0.02`], [ls(ladd(a.wt, L(-0.06))), `$H + 0.04`, `${ls(a.z)} - 0.1`], [ls(ladd(c.wt, L(-0.06))), `$H + 0.04`, `${ls(c.z)} + 0.1`], [ls(ladd(c.wt, L(-0.06))), `$H - 0.01`, `${ls(c.z)} + 0.02`]], 0.016, { material: "aluminium", segments: 8, mirror: "RoofRail_R" }));
   }
 
-  // Lights.
-  const [lfz, lfy] = tag("lampF");
-  const [lrz, lry] = tag("lampR");
-  // Headlamps: a dark housing, a chrome reflector bowl with a projector, a clear outer lens, and a DRL strip.
+  // Doors: skins that follow the body side (tuck-under and crease), hinged on their front edge, over a dark shut line.
+  const doorBotY = ev(B.sill) + 0.09;
+  const sMid = B.sAt(st.doorZ[1]);
+  const refSec = B.section(sMid);
+  const doorTopY = ev(refSec.yE) - st.edge - 0.012;
+  const heights = [doorBotY, ...refSec.pts.slice(3, 11).map(([, y]) => ev(y)).filter((y) => y > doorBotY + 0.02 && y < doorTopY - 0.01), doorTopY];
+  const hLin = heights.map((y) => L(y - st.belt * Hd, { H: st.belt }));
+  const strip = (zs: number[], out: number, inn: number, dy: number, origin: [Lin, Lin, Lin]) => zs.map((zf) => {
+    const s = B.sAt(zf);
+    const pts = heights.map((y, i): [Num, Num] => {
+      const yy = i === 0 ? y - dy : i === heights.length - 1 ? y + dy : y;
+      const yl = i === 0 ? ladd(hLin[i]!, L(-dy)) : i === heights.length - 1 ? ladd(hLin[i]!, L(dy)) : hLin[i]!;
+      return [ls(lsub(ladd(B.sideX(s, yy), L(out)), origin[0])), ls(lsub(yl, origin[1]))];
+    });
+    const back = [...heights].reverse().map((y, j): [Num, Num] => {
+      const i = heights.length - 1 - j;
+      const yy = i === 0 ? y - dy : i === heights.length - 1 ? y + dy : y;
+      const yl = i === 0 ? ladd(hLin[i]!, L(-dy)) : i === heights.length - 1 ? ladd(hLin[i]!, L(dy)) : hLin[i]!;
+      return [ls(lsub(ladd(B.sideX(s, yy), L(-inn)), origin[0])), ls(lsub(yl, origin[1]))];
+    });
+    return { z: ls(lsub(B.Z(s), origin[2])), points: [...pts, ...back] };
+  });
+  const doorNode = (name: string, z0: number, z1: number, mirror: string): SpecNode => {
+    const s0 = B.sAt(z0);
+    const origin: [Lin, Lin, Lin] = [B.sideX(s0, doorBotY), hLin[0]!, B.Z(s0)];
+    const span = z0 - z1;
+    const zs = [z1 + 0.003 / env.L2!, z1 + (0.025 / env.L2!), z1 + span / 2, z0 - 0.025 / env.L2!, z0 - 0.003 / env.L2!];
+    const zg = [z1 - 0.004 / env.L2!, z1 + 0.025 / env.L2!, z1 + span / 2, z0 - 0.025 / env.L2!, z0 + 0.004 / env.L2!];
+    const yH = doorTopY - 0.1;
+    const sH = B.sAt(z1 + 0.16 / env.L2!);
+    const handle = box("Handle", [0.03, 0.028, 0.16], { at: [ls(lsub(ladd(B.sideX(sH, yH), L(0.012)), origin[0])), ls(lsub(L(yH - st.belt * Hd, { H: st.belt }), origin[1])), ls(lsub(B.Z(sH), origin[2]))], bevel: 0.01, material: st.bumper === "chrome" ? "chrome" : "satin_black" });
+    return group(name, [
+      loft("Skin", strip(zs, 0.0045, 0.006, 0, origin), { material: "body_paint" }),
+      loft("Gap", strip(zg, 0.0018, 0.008, 0.005, origin), { material: "panel_gap" }),
+      handle,
+    ], { at: [ls(origin[0]), ls(origin[1]), ls(origin[2])], mirror });
+  };
+  const zArchF = (ev(B.Z(1)) - 0.06) / env.L2!, zArchR = (ev(B.Z(4)) + 0.04) / env.L2!;
+  const zFront = Math.min(st.doorZ[0], (ev(B.Z(2)) - 0.03) / env.L2!);
+  kids.push(doorNode("Door_FL", zFront, st.doorZ[1] + 0.004, "Door_FR"));
+  if (st.doors === 4) kids.push(doorNode("Door_RL", st.doorZ[1] - 0.004, Math.max(st.doorZ[2]!, (ev(B.Z(3)) + 0.03) / env.L2!), "Door_RR"));
+  void zArchF; void zArchR;
+
+  // Bonnet and boot lid: shells over the top surface between their stations, a few millimetres proud, over a dark gap.
+  const shell = (name: string, sA: number, sB: number, hingeAtA: boolean, extraKids: SpecNode[] = []): SpecNode => {
+    const ss = stations.filter((s) => s >= Math.min(sA, sB) - 1e-9 && s <= Math.max(sA, sB) + 1e-9);
+    const sh = hingeAtA ? sA : sB;
+    const H0 = B.section(sh);
+    const origin: [Lin, Lin] = [ladd(H0.yT, L(0.004)), B.Z(sh)];
+    const ringOf = (s: number, up: number, down: number, grow: number) => {
+      const S = B.section(s);
+      const top = S.pts.slice(12);
+      const half = top.map(([x, y], i): LP => [i === 0 ? ladd(x, L(grow)) : x, y]);
+      const outer = [...half, ...[...half].reverse().map(([x, y]): LP => [lscale(x, -1), y])].reverse();
+      const o = outer.map(([x, y]): [Num, Num] => [ls(x), ls(lsub(ladd(y, L(up)), origin[0]))]);
+      const inn = [...outer].reverse().map(([x, y]): [Num, Num] => [ls(x), ls(lsub(ladd(y, L(-down)), origin[0]))]);
+      return { z: ls(lsub(B.Z(s), origin[1])), points: [...o, ...inn] };
+    };
+    return group(name, [
+      loft("Panel", ss.map((s) => ringOf(s, 0.005, 0.006, 0)), { material: "body_paint" }),
+      loft("Gap", ss.map((s) => ringOf(s, 0.0022, 0.008, 0.006)), { material: "panel_gap" }),
+      ...extraKids,
+    ], { at: [0, ls(origin[0]), ls(origin[1])] });
+  };
+  kids.push(shell("Hood", extra["hoodR"]!, extra["hoodF"]!, true));
+  if (st.trunk === "lid") kids.push(shell("Trunk", extra["trunkF"]!, extra["trunkR"]!, true));
+
+  // Lamps sit in the surface, turned to its normal.
+  const onFront = (x: number, y: number, rear = false) => {
+    const s = B.surfaceS(x, y, rear);
+    const z = ev(B.Z(s));
+    const dzx = ev(B.Z(B.surfaceS(x + 0.04, y, rear))) - ev(B.Z(B.surfaceS(x - 0.04, y, rear)));
+    const dzy = ev(B.Z(B.surfaceS(x, y + 0.03, rear))) - ev(B.Z(B.surfaceS(x, y - 0.03, rear)));
+    const sg = rear ? -1 : 1;
+    const yaw = (Math.atan2(-sg * dzx / 0.08, 1) * 180) / Math.PI;
+    const pitch = (Math.atan2(-sg * dzy / 0.06, 1) * 180) / Math.PI;
+    return { s, z, Zl: B.Z(s), yaw: Math.max(-55, Math.min(55, yaw)), pitch: Math.max(-40, Math.min(40, pitch)) };
+  };
+  const yl = (y: number): Lin => L(0, { H: y / Hd });
+  const xl = (x: number): Lin => L(0, { W2: x / env.W2! });
+  const lampFY0 = st.upper.find((p) => p[2] === "lampF")![1] * Hd;
+  const lampFY = st.lamps === "round" ? lampFY0 : lampFY0 + 0.55 * (st.upper.find((p) => p[2] === "hoodF")![1] * Hd - lampFY0);
+  const lampRY = st.upper.find((p) => p[2] === "lampR")![1] * Hd;
+  const W2 = env.W2!;
+  const lampX = st.lamps === "round" ? W2 * 0.66 : st.lamps === "square" ? W2 * 0.62 : W2 * 0.64;
+  const lf = onFront(lampX, lampFY);
   const lampF: SpecNode[] = st.lamps === "round"
     ? [cyl("Bezel", 0.095, 0.08, { axis: "z", segments: 24, material: "chrome", bevel: 0.01 }), ellipsoid("Bowl", [0.078, 0.078, 0.03], { at: [0, 0, 0.03], segments: 18, material: "reflector" }), cyl("Bulb", 0.02, 0.04, { axis: "z", at: [0, 0, 0.045], segments: 12, material: "lamp_lens" }), ellipsoid("Lens", [0.082, 0.082, 0.035], { at: [0, 0, 0.042], segments: 18, material: "lamp_glass" })]
     : st.lamps === "square"
       ? [box("Housing", [0.32, 0.12, 0.1], { bevel: 0.02, material: "gloss_black" }), box("Bowl_{i}", [0.12, 0.08, 0.03], { at: [-0.07, 0.008, 0.04], repeat: { count: 2, step: [0.14, 0, 0] }, bevel: 0.012, material: "reflector" }), cyl("Bulb_{i}", 0.025, 0.03, { axis: "z", at: [-0.07, 0.008, 0.055], repeat: { count: 2, step: [0.14, 0, 0] }, segments: 12, material: "lamp_lens" }), box("Lens", [0.3, 0.1, 0.03], { at: [0, 0, 0.05], bevel: 0.012, material: "lamp_glass" }), box("Drl", [0.28, 0.012, 0.02], { at: [0, -0.05, 0.05], material: "lamp_lens" })]
-      : [ellipsoid("Housing", [0.17, 0.055, 0.07], { segments: 16, material: "gloss_black" }), ellipsoid("Bowl", [0.11, 0.04, 0.05], { at: [-0.03, 0.002, 0.02], segments: 14, material: "reflector" }), cyl("Bulb", 0.022, 0.05, { axis: "z", at: [-0.03, 0.002, 0.04], segments: 12, material: "lamp_lens" }), box("Drl", [0.22, 0.01, 0.03], { at: [0, -0.034, 0.04], rotate: [0, 0, 0], material: "lamp_lens" }), ellipsoid("Lens", [0.165, 0.05, 0.06], { at: [0, 0, 0.022], segments: 16, material: "lamp_glass" }), box("Signal", [0.06, 0.02, 0.03], { at: [0.11, -0.012, 0.03], material: "lamp_amber" })];
-  kids.push(group("Headlight_L", lampF, { at: ["$W2 * 0.66", ls(lfy), `${ls(lfz)} - 0.04`], rotate: [0, st.lamps === "round" ? 0 : 12, 0], mirror: "Headlight_R" }));
+      : [ellipsoid("Housing", [0.21, 0.056, 0.08], { segments: 16, material: "gloss_black" }), ellipsoid("Bowl", [0.12, 0.036, 0.05], { at: [-0.03, 0.002, 0.02], segments: 14, material: "reflector" }), cyl("Bulb", 0.022, 0.05, { axis: "z", at: [-0.03, 0.002, 0.04], segments: 12, material: "lamp_lens" }), box("Drl", [0.26, 0.01, 0.03], { at: [0, -0.03, 0.045], material: "lamp_lens" }), ellipsoid("Lens", [0.205, 0.052, 0.07], { at: [0, 0, 0.022], segments: 16, material: "lamp_glass" }), box("Signal", [0.06, 0.02, 0.03], { at: [0.13, -0.01, 0.03], material: "lamp_amber" })];
+  kids.push(group("Headlight_L", lampF, { at: [ls(xl(lampX)), ls(yl(lampFY)), `${ls(lf.Zl)} - 0.035`], rotate: [-lf.pitch, lf.yaw, 0], mirror: "Headlight_R" }));
+
+  const tailX = st.tails === "bar" || st.tails === "corner" ? W2 * 0.68 : st.trunk === "bed" ? W2 * 0.86 : W2 * 0.76;
+  const tailY = st.trunk === "bed" ? Hd * 0.42 : lampRY;
+  const lr = onFront(tailX, tailY, true);
   const tail: SpecNode[] = st.tails === "round"
     ? [cyl("Lens", 0.06, 0.08, { axis: "z", segments: 20, material: "lamp_red", bevel: 0.01 }), cyl("Ring", 0.07, 0.05, { axis: "z", segments: 20, material: "chrome" })]
     : st.tails === "tall"
-      ? [box("Lens", [0.1, 0.26, 0.08], { bevel: 0.02, material: "lamp_red" }), box("Reverse", [0.06, 0.05, 0.08], { at: [-0.015, -0.1, 0.008], material: "lamp_lens" })]
+      ? [box("Lens", [0.12, 0.26, 0.08], { bevel: 0.02, material: "lamp_red" }), box("Reverse", [0.07, 0.05, 0.08], { at: [-0.015, -0.1, 0.008], material: "lamp_lens" })]
       : st.tails === "bar"
-        ? [box("Lens", [0.32, 0.06, 0.08], { bevel: 0.02, material: "lamp_red" })]
-        : [box("Lens", [0.28, 0.1, 0.08], { bevel: 0.02, material: "lamp_red" }), box("Amber", [0.1, 0.1, 0.08], { at: [-0.12, 0, 0.006], bevel: 0.015, material: "lamp_amber" })];
-  const tx = st.tails === "bar" || st.tails === "corner" ? "$W2 * 0.7" : st.trunk === "bed" ? "$W2 - 0.03" : "$W2 * 0.8";
-  kids.push(group("Taillight_L", tail, { at: [tx, ls(st.trunk === "bed" ? L(-0.18, { H: 0.6 }) : lry), `${ls(lrz)} + 0.02`], rotate: [0, 180, 0], mirror: "Taillight_R" }));
-  if (st.tails === "bar") kids.push(box("TailStrip", ["$W2 * 1.0", 0.025, 0.04], { at: [0, ls(lry), `${ls(lrz)} - 0.005`], material: "lamp_red" }));
-
-  // Front: grille, bumpers, plates.
-  const grilleY = ls(ladd(lfy, L(-0.02)));
-  if (st.lamps === "round") {
-    kids.push(group("Grille", [
-      box("Frame", ["$W2 * 0.75", 0.2, 0.06], { bevel: 0.025, material: "chrome" }),
-      box("Bar_{i}", ["$W2 * 0.7", 0.012, 0.03], { at: [0, -0.08, 0.025], repeat: { count: 7, step: [0, 0.027, 0] }, material: "chrome" }),
-    ], { at: [0, `${grilleY} - 0.04`, `$L2 - 0.03`] }));
-  } else {
-    kids.push(group("Grille", [
-      box("Frame", [`$W2 * ${st.bumper === "black" || st.trunk === "bed" ? 0.9 : 0.62}`, st.trunk === "bed" ? 0.2 : 0.11, 0.06], { bevel: 0.02, material: "trim_black" }),
-      box("Slat_{i}", [`$W2 * ${st.bumper === "black" || st.trunk === "bed" ? 0.84 : 0.56}`, 0.008, 0.015], { at: [0, -0.03, 0.028], repeat: { count: 4, step: [0, 0.02, 0] }, material: "chrome" }),
-    ], { at: [0, grilleY, `${ls(lfz)} - 0.03`] }));
+        ? [box("Lens", [0.36, 0.06, 0.08], { bevel: 0.02, material: "lamp_red" })]
+        : [box("Lens", [0.3, 0.1, 0.08], { bevel: 0.02, material: "lamp_red" }), box("Amber", [0.1, 0.1, 0.08], { at: [-0.13, 0, 0.006], bevel: 0.015, material: "lamp_amber" })];
+  kids.push(group("Taillight_L", tail, { at: [ls(xl(tailX)), ls(yl(tailY)), `${ls(lr.Zl)} + 0.025`], rotate: [-lr.pitch, 180 - lr.yaw, 0], mirror: "Taillight_R" }));
+  if (st.tails === "bar") {
+    const c = onFront(0, lampRY, true);
+    kids.push(box("TailStrip", ["$W2 * 1.0", 0.025, 0.05], { at: [0, ls(yl(lampRY)), `${ls(c.Zl)} + 0.012`], material: "lamp_red" }));
   }
-  const bumperY0 = ls(yl(st.upper[0]![1]));
+
+  // Bumpers: wrap-around bands lofted across the nose and the tail, following the surface.
+  const bumperBand = (name: string, y0: number, y1: number, prot: number, xfrac: number, mat: string, rear: boolean, sink = 0.04): SpecNode => {
+    const n = 15;
+    const rr = B.ringDef(rear ? 4.3 : 0.7).filter((p) => p[0] > 0);
+    const halfAt = (y: number) => Math.min(...ys0(y).map((yy) => Math.max(...rr.filter((p) => Math.abs(p[1] - yy) < 0.06).map((p) => p[0]), 0)));
+    const ys0 = (y: number) => [y];
+    const xb = Math.min(W2 * xfrac, Math.min(halfAt(y0), halfAt(y1)) - 0.05);
+    const ys = [y0, y0 + (y1 - y0) * 0.12, y0 + (y1 - y0) * 0.5, y0 + (y1 - y0) * 0.88, y1];
+    const bulge = [0.55, 0.92, 1, 0.92, 0.55];
+    const secs = Array.from({ length: n }, (_, i) => {
+      const X = -xb + (2 * xb * i) / (n - 1);
+      const taper = 1 - Math.pow(Math.abs(X) / xb, 4) * 0.8;
+      const sg = rear ? -1 : 1;
+      const zf = ys.map((y) => ev(B.Z(B.surfaceS(Math.abs(X), y, rear))));
+      const zBack = rear ? Math.max(...zf) + sink : Math.min(...zf) - sink;
+      const pts: [Num, Num][] = ys.map((y, k) => [ls(lscale(L(0, { L2: zf[k]! / env.L2! }), -1) as Lin), ls(yl(y))]).map(([z, y], k) => [`${z} - ${f(sg * prot * taper * bulge[k]!)}`, y] as [Num, Num]);
+      pts.push([ls(L(0, { L2: -zBack / env.L2! })), ls(yl(y1 - 0.004))], [ls(L(0, { L2: -zBack / env.L2! })), ls(yl(y0 + 0.004))]);
+      return { z: ls(xl(X)), points: pts };
+    });
+    return loft(name, secs, { material: mat, rotate: [0, 90, 0] });
+  };
+  const yBot0 = ev(B.bottom(0.02));
+  const yBot5 = ev(B.bottom(4.98));
+  const sillY = ev(B.sill);
+  const frontZ = (x: number, y: number) => B.Z(B.surfaceS(x, y));
+  const rearZ = (x: number, y: number) => B.Z(B.surfaceS(x, y, true));
+  let plateFY: number, plateRY: number;
   if (st.bumper === "chrome") {
-    kids.push(box("BumperFront", ["$W2 * 2 - 0.06", 0.12, 0.14], { at: [0, `${bumperY0} + 0.1`, "$L2 + 0.0"], bevel: 0.045, material: "chrome" }));
-    kids.push(box("BumperRear", ["$W2 * 2 - 0.06", 0.12, 0.14], { at: [0, `${bumperY0} + 0.1`, "-$L2"], bevel: 0.045, material: "chrome" }));
+    const y0 = Math.max(yBot0, sillY) + 0.02, y1 = y0 + 0.13;
+    kids.push(bumperBand("BumperFront", y0, y1, 0.07, 0.94, "chrome", false));
+    const r0 = Math.max(yBot5, sillY) + 0.04;
+    kids.push(bumperBand("BumperRear", r0, r0 + 0.13, 0.06, 0.94, "chrome", true));
+    plateFY = y1 + 0.07; plateRY = st.trunk === "bed" ? r0 + 0.22 : lampRY - 0.09;
+    if (st.trunk === "bed") plateRY = r0 + 0.065;
   } else if (st.bumper === "black") {
-    kids.push(box("BumperFront", ["$W2 * 2 - 0.1", 0.16, 0.12], { at: [0, `${bumperY0} + 0.08`, "$L2 - 0.02"], bevel: 0.04, material: "trim_black" }));
-    kids.push(box("SkidPlate", ["$W2 * 0.9", 0.05, 0.14], { at: [0, `${bumperY0} + 0.02`, "$L2 - 0.06"], bevel: 0.015, material: "aluminium" }));
-    kids.push(box("BumperRear", ["$W2 * 2 - 0.1", 0.16, 0.12], { at: [0, `${bumperY0} + 0.08`, "-$L2 + 0.02"], bevel: 0.04, material: "trim_black" }));
-    kids.push(box("Cladding_L", [0.04, 0.12, `${f(st.ff + st.fr)} * $L2 - 2 * $Ra - 0.06`], { at: ["$W2 - 0.01", "$ys + 0.07", `${f((st.ff - st.fr) / 2)} * $L2`], bevel: 0.015, material: "trim_black", mirror: "Cladding_R" }));
+    const y0 = yBot0 + 0.01, y1 = y0 + 0.2;
+    kids.push(bumperBand("BumperFront", y0, y1, 0.035, 0.93, "trim_black", false));
+    kids.push(bumperBand("BumperRear", yBot5 + 0.01, yBot5 + 0.2, 0.03, 0.93, "trim_black", true));
+    const zs = frontZ(0, y0 + 0.03);
+    kids.push(box("SkidPlate", ["$W2 * 0.8", 0.05, 0.16], { at: [0, ls(yl(y0 + 0.03)), `${ls(zs)} - 0.02`], rotate: [12, 0, 0], bevel: 0.015, material: "aluminium" }));
+    plateFY = y1 + 0.1; plateRY = yBot5 + 0.28;
   } else {
-    kids.push(box("Intake", ["$W2 * 1.1", 0.08, 0.06], { at: [0, `${bumperY0} + 0.08`, "$L2 - 0.035"], bevel: 0.025, material: "trim_black" }));
-    kids.push(box("Diffuser", ["$W2 * 1.3", 0.06, 0.12], { at: [0, `${bumperY0} + 0.04`, "-$L2 + 0.07"], bevel: 0.02, material: "trim_black" }));
-    kids.push(box("Sill_L", [0.03, 0.06, `${f(st.ff + st.fr)} * $L2 - 2 * $Ra - 0.08`], { at: ["$W2 - 0.04", "$ys + 0.03", `${f((st.ff - st.fr) / 2)} * $L2`], bevel: 0.01, material: "trim_black", mirror: "Sill_R" }));
-  }
-  kids.push(box("PlateFront", [0.52, 0.11, 0.012], { at: [0, `${bumperY0} + 0.17`, `$L2 + ${st.bumper === "chrome" ? 0.075 : 0.003}`], bevel: 0.004, material: "plate" }));
-  kids.push(box("PlateRear", [0.52, 0.11, 0.012], { at: [0, st.trunk === "bed" ? `${bumperY0} + 0.22` : `${ls(lry)} - 0.08`, `-$L2 - ${st.bumper === "chrome" && st.trunk !== "bed" ? 0.004 : 0.004}`], bevel: 0.004, material: "plate" }));
-  kids.push(cyl("Exhaust", 0.035, 0.12, { axis: "z", at: ["$W2 * 0.55", `${bumperY0} + 0.04`, "-$L2 + 0.03"], segments: 14, material: "chrome" }));
-  if (st.spoiler) {
-    kids.push(group("Spoiler", [
-      box("Wing", ["$W2 * 1.5", 0.025, 0.2], { at: [0, 0.07, 0], rotate: [-6, 0, 0], bevel: 0.01, material: "carbon" }),
-      box("Stand_L", [0.03, 0.08, 0.06], { at: ["$W2 * 0.55", 0.03, 0], material: "carbon", mirror: "Stand_R" }),
-    ], { at: [0, ls(tag("trunkR")[1]), `${ls(tag("trunkR")[0])} + 0.12`] }));
+    // Body-colour bumper skins with a lower intake, a black splitter lip and a rear diffuser.
+    const y0 = yBot0 + 0.005, y1 = lampFY - 0.07;
+    kids.push(bumperBand("BumperFront", y0, y1, 0.012, 0.95, "body_paint", false));
+    const r0 = yBot5 + 0.005, r1 = Math.min(lampRY - 0.09, r0 + 0.32);
+    kids.push(bumperBand("BumperRear", r0, r1, 0.012, 0.95, "body_paint", true));
+    kids.push(bumperBand("Splitter", y0 - 0.004, y0 + 0.04, 0.03, 0.82, "trim_black", false, 0.06));
+    kids.push(bumperBand("Diffuser", r0 - 0.004, r0 + 0.07, 0.025, 0.8, "trim_black", true, 0.06));
+    const yi = y0 + 0.1;
+    const zi = frontZ(0, yi);
+    kids.push(group("Intake", [
+      box("Frame", ["$W2 * 0.95", 0.12, 0.08], { bevel: 0.03, material: "trim_black" }),
+      box("Slat_{i}", ["$W2 * 0.9", 0.008, 0.02], { at: [0, -0.04, 0.035], repeat: { count: 4, step: [0, 0.027, 0] }, material: "satin_black" }),
+      box("Fog_L", [0.1, 0.04, 0.03], { at: ["$W2 * 0.55", 0, 0.03], bevel: 0.01, material: "lamp_lens", mirror: "Fog_R" }),
+    ], { at: [0, ls(yl(yi)), `${ls(zi)} - 0.02`] }));
+    plateFY = yi + 0.11; plateRY = Math.min(lampRY - 0.13, r1 - 0.02);
+    if (st.trunk !== "gate") plateRY = r1 - 0.09;
   }
 
-  // Mirrors, wipers.
+  // Grille between the headlamps.
+  if (st.lamps === "round") {
+    const yg = lampFY - 0.06;
+    kids.push(group("Grille", [
+      box("Frame", ["$W2 * 0.72", 0.22, 0.06], { bevel: 0.025, material: "chrome" }),
+      box("Bar_{i}", ["$W2 * 0.68", 0.012, 0.03], { at: [0, -0.085, 0.025], repeat: { count: 7, step: [0, 0.028, 0] }, material: "chrome" }),
+    ], { at: [0, ls(yl(yg)), `${ls(frontZ(0, yg))} - 0.02`] }));
+  } else {
+    const big = st.bumper === "black" || st.trunk === "bed";
+    const yg = lampFY - (big ? 0.06 : 0.02);
+    kids.push(group("Grille", [
+      box("Frame", [`$W2 * ${big ? 0.95 : 0.62}`, big ? 0.24 : 0.09, 0.06], { bevel: 0.02, material: big && st.bumper === "chrome" ? "chrome" : "gloss_black" }),
+      box("Mesh", [`$W2 * ${big ? 0.88 : 0.56}`, big ? 0.19 : 0.06, 0.03], { at: [0, 0, 0.012], material: "trim_black" }),
+      box("Slat_{i}", [`$W2 * ${big ? 0.86 : 0.54}`, 0.01, 0.015], { at: [0, big ? -0.06 : -0.02, 0.03], repeat: { count: big ? 4 : 3, step: [0, big ? 0.04 : 0.02, 0] }, material: big ? "chrome" : "satin_black" }),
+      box("Badge", [0.08, 0.04, 0.012], { at: [0, 0, 0.036], bevel: 0.006, material: "chrome" }),
+    ], { at: [0, ls(yl(yg)), `${ls(frontZ(0, yg))} - 0.02`] }));
+  }
+  const zpf = frontZ(0, plateFY);
+  kids.push(box("PlateFront", [0.52, 0.11, 0.012], { at: [0, ls(yl(plateFY)), `${ls(zpf)} + ${st.bumper === "chrome" ? 0.0 : 0.012}`], bevel: 0.004, material: "plate" }));
+  const zpr = rearZ(0, plateRY);
+  kids.push(box("PlateRear", [0.52, 0.11, 0.012], { at: [0, ls(yl(plateRY)), `${ls(zpr)} - 0.012`], bevel: 0.004, material: "plate" }));
+  kids.push(cyl("Exhaust", 0.035, 0.16, { axis: "z", at: ["$W2 * 0.55", ls(yl(yBot5 + 0.03)), `${ls(rearZ(W2 * 0.55, yBot5 + 0.06))} + 0.02`], segments: 14, material: "chrome" }));
+
+  // Tailgate (hatch, estate, SUV, MPV): a panel between the rear window and the bumper; pickup: the bed and its gate.
+  if (st.trunk === "gate") {
+    const yA = st.upper.find((p) => p[2] === "trunkF")![1] * Hd - 0.02, yZ = (st.bumper === "body" ? Math.min(lampRY - 0.09, yBot5 + 0.325) : yBot5 + 0.2) + 0.02;
+    const zA = rearZ(0, yA), zZ = rearZ(0, yZ);
+    const dz = ev(zZ) - ev(zA), dy = yZ - yA;
+    const len = Math.hypot(dz, dy);
+    const ang = (Math.atan2(-dy, dz) * 180) / Math.PI;
+    const sT = B.sAt(-0.96);
+    const half = ev(B.section(sT).xe) * 0.86;
+    kids.push(group("Trunk", [
+      box("Panel", [ls(xl(2 * half)), 0.02, len], { at: [0, -0.006, len / 2], bevel: 0.008, material: "body_paint" }),
+      box("Gap", [ls(ladd(xl(2 * half), L(0.012))), 0.02, len + 0.008], { at: [0, -0.0035, len / 2], material: "panel_gap" }),
+      box("Handle", [0.24, 0.03, 0.03], { at: [0, -0.02, Math.min(0.12, len * 0.3)], material: "chrome", bevel: 0.008 }),
+    ], { at: [0, ls(yl(yA)), `${ls(zA)} - 0.008`], rotate: [ang, 0, 0] }));
+  } else if (st.trunk === "bed") {
+    const floor = st.bed![0] * Hd;
+    const yTop = st.upper.find((p) => p[2] === "trunkF")![1] * Hd - 0.03;
+    const sT = B.sAt(-0.98);
+    const half = ev(B.section(sT).xe) - 0.02;
+    kids.push(box("BedLiner", [ls(xl(2 * half - 0.12)), 0.02, `${f(0.98 + st.bed![1])} * $L2 - 0.06`], { at: [0, ls(yl(floor + 0.008)), `${f((st.bed![1] - 0.98) / 2)} * $L2`], material: "trim_black" }));
+    kids.push(tube("BedRail_L", [[ls(xl(half - 0.02)), ls(yl(yTop + 0.03)), `${f(st.bed![1] - 0.01)} * $L2`], [ls(xl(half - 0.02)), ls(yl(yTop + 0.03)), "-$L2 * 0.985"]], 0.022, { material: "trim_black", segments: 8, mirror: "BedRail_R" }));
+    const zg = B.Z(5);
+    kids.push(group("Trunk", [
+      box("Panel", [ls(xl(2 * half - 0.04)), yTop - floor, 0.03], { at: [0, (yTop - floor) / 2, -0.012], bevel: 0.01, material: "body_paint" }),
+      box("Handle", [0.26, 0.05, 0.03], { at: [0, (yTop - floor) * 0.78, -0.03], material: "chrome", bevel: 0.008 }),
+    ], { at: [0, ls(yl(floor)), ls(zg)] }));
+  }
+  if (st.spoiler) {
+    const tr = st.upper.find((p) => p[2] === "trunkR")!;
+    kids.push(group("Spoiler", [
+      box("Wing", ["$W2 * 1.5", 0.025, 0.2], { at: [0, 0.075, 0], rotate: [-6, 0, 0], bevel: 0.01, material: "carbon" }),
+      box("Stand_L", [0.03, 0.09, 0.06], { at: ["$W2 * 0.55", 0.03, 0], material: "carbon", mirror: "Stand_R" }),
+    ], { at: [0, ls(L(0, { H: tr[1] })), `${f(tr[0])} * $L2 + 0.12`] }));
+  }
+
+  // Side: sill trim (black cladding on SUVs), wheel-arch lips that follow the arch and the side.
+  const black = st.bumper === "black" || st.trunk === "bed";
+  {
+    const s1 = 2.08, s2 = 2.92;
+    const yS = sillY + 0.07;
+    kids.push(tube("Sill_L", [[ls(ladd(B.sideX(s1, yS), L(0.004))), ls(yl(yS)), ls(B.Z(s1))], [ls(ladd(B.sideX(2.5, yS), L(0.004))), ls(yl(yS)), ls(B.Z(2.5))], [ls(ladd(B.sideX(s2, yS), L(0.004))), ls(yl(yS)), ls(B.Z(s2))]], black ? 0.05 : 0.022, { material: black ? "trim_black" : "satin_black", segments: 8, mirror: "Sill_R" }));
+  }
+  for (const [n, base] of [["ArchFlare_FL", 1], ["ArchFlare_RL", 3]] as [string, number][]) {
+    const arc = Array.from({ length: 13 }, (_, i) => {
+      const u = 0.04 + (0.92 * i) / 12;
+      const s = base + u;
+      const S = B.section(s);
+      const th = B.th(u);
+      const r = 0.012;
+      return [ls(ladd(S.pts[2]![0], L(black ? 0.014 : 0.002))), ls(L(Math.sin(th) * r, { wr: 1, Ra: Math.sin(th) })), ls(ladd(B.Z(s), L(Math.cos(th) * r)))] as [Num, Num, Num];
+    });
+    kids.push(tube(n, arc, black ? 0.034 : 0.02, { segments: 8, material: black ? "trim_black" : "body_paint", mirror: n.replace("L", "R") }));
+  }
+
+  // Mirrors at the foot of the A pillar, wipers at the foot of the windscreen.
+  const g0 = gl[0]!;
+  const sM = B.sAt((ev(g0.z) - 0.15) / env.L2!);
   kids.push(group("Mirror_L", [
-    box("Arm", [0.12, 0.03, 0.06], { at: [0.05, 0, 0], bevel: 0.01, material: "trim_black" }),
-    ellipsoid("Housing", [0.1, 0.065, 0.055], { at: [0.14, 0.035, 0], segments: 14, material: st.bumper === "chrome" ? "chrome" : "body_paint" }),
-    ellipsoid("Face", [0.088, 0.054, 0.012], { at: [0.14, 0.035, -0.045], segments: 12, material: "chrome" }),
-  ], { at: ["$W2 - 0.05", "$yb + 0.05", `${f(zws)} * $L2 - 0.18`], mirror: "Mirror_R" }));
-  kids.push(box("Wiper_L", ["$W2 * 0.5", 0.012, 0.02], { at: ["$W2 * 0.3", "$yb + 0.02", `${f(zws)} * $L2 - 0.04`], rotate: [0, -6, 3], material: "trim_black", mirror: "Wiper_R" }));
+    box("Arm", [0.12, 0.03, 0.07], { at: [0.04, 0, 0], bevel: 0.01, material: "trim_black" }),
+    ellipsoid("Housing", [0.1, 0.065, 0.06], { at: [0.13, 0.04, 0], segments: 14, material: st.bumper === "chrome" ? "chrome" : roofMat === "carbon" ? "carbon" : "body_paint" }),
+    ellipsoid("Face", [0.088, 0.054, 0.012], { at: [0.13, 0.04, -0.05], segments: 12, material: "chrome" }),
+    box("Repeater", [0.05, 0.012, 0.03], { at: [0.15, 0.0, 0.03], material: "lamp_amber" }),
+  ], { at: [ls(ladd(B.section(sM).xe, L(-0.03))), ls(ladd(yb, L(0.03))), ls(B.Z(sM))], mirror: "Mirror_R" }));
+  kids.push(box("Wiper_L", ["$W2 * 0.5", 0.012, 0.02], { at: ["$W2 * 0.28", ls(ladd(yb, L(0.0))), `${ls(g0.z)} - 0.05`], rotate: [0, -6, 3], material: "trim_black", mirror: "Wiper_R" }));
 
   // Interior: seats and a dashboard behind the glass, the steering wheel on the left (+x).
   const up = key === "vintage" || (key === "sports" && fin.name === "white") || (key === "coupe" && fin.name === "silver") ? "upholstery_tan" : "upholstery";
@@ -381,52 +691,39 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
       box("Headrest_{i}", [0.24, 0.13, 0.08], { at: ["-$wb * 0.48", 0.6, -0.12], repeat: { count: 2, step: ["$wb * 0.96", 0, 0] }, bevel: 0.03 }),
     ], { at: [0, "$yb - 0.28", `${f(st.seats.rear)} * $L2`], material: up }));
   }
-  const zDash = `${f(zws)} * $L2 - 0.12`;
+  const zDash = `${ls(g0.z)} - 0.12`;
   interior.push(box("Dash", ["2 * $wb - 0.04", 0.14, 0.32], { at: [0, "$yb - 0.02", zDash], bevel: 0.04, material: "trim_black" }));
   kids.push(group("Interior", interior, { material: up }));
   kids.push(group("SteeringWheel", [
     lathe("Rim", ringProfile(0.18, 0.016, 8), { segments: 20, caps: false, material: "trim_black" }),
     box("Spokes", [0.33, 0.02, 0.05], { material: "trim_black" }),
     cyl("Boss", 0.055, 0.05, { segments: 16, material: "trim_black" }),
-  ], { at: ["$wb * 0.48", "$yb + 0.12", `${zDash} - 0.32`], rotate: [-62, 0, 0] }));
+  ], { at: ["$wb * 0.48", "$yb + 0.1", `${zDash} - 0.32`], rotate: [-62, 0, 0] }));
 
   // Wheels at the hubs, outer face out.
-  const tw = st.tyreW + 0.015;
   const wo = { r: "$wr", w: f(tw), style: fin.wheel, rim: fin.rim ?? (fin.wheel === "steel" ? "steel_wheel" : fin.wheel === "chrome" || fin.wheel === "wire" ? "chrome" : "alloy"), hub: fin.wheel === "alloy" ? "gloss_black" : fin.wheel === "chrome" ? "alloy" : "chrome", ...(fin.spokes ? { spokes: fin.spokes } : {}), ...(fin.roof === "whitewall" || key === "vintage" ? { whitewall: "whitewall" } : {}) } as const;
-  const wx = `$W2 - ${f(tw / 2 + 0.006)}`;
+  const wx = `$W2 - ${f(tw / 2 + 0.008)}`;
   kids.push(group("Wheels", [
     wheel("Wheel_FL", [wx, "$wr", `${f(st.ff)} * $L2`], wo, { mirror: "Wheel_FR" }),
     wheel("Wheel_RL", [wx, "$wr", `-${f(st.fr)} * $L2`], wo, { mirror: "Wheel_RR" }),
   ]));
-  // Flared wheel-arch lips (black cladding on the SUV and pickup) and a shoulder crease along the side above them.
-  const flare = st.bumper === "black" || st.trunk === "bed" ? "trim_black" : "body_paint";
-  for (const [n, zc] of [["ArchFlare_FL", st.ff], ["ArchFlare_RL", -st.fr]] as [string, number][]) {
-    const arc = Array.from({ length: 11 }, (_, i) => {
-      const a = ((168 - i * 15.6) * Math.PI) / 180;
-      return [`$W2 - 0.012`, `$wr + ($Ra + 0.014) * ${f(Math.sin(a))}`, `${f(zc)} * $L2 + ($Ra + 0.014) * ${f(Math.cos(a))}`] as [Num, Num, Num];
-    });
-    kids.push(tube(n, arc, flare === "trim_black" ? 0.032 : 0.022, { segments: 8, material: flare, mirror: n.replace("L", "R") }));
-  }
-  kids.push(tube("Shoulder_L", [[`$W2 - 0.006`, "$yb - 0.13", `${frontEdge} + 0.02`], [`$W2 - 0.006`, "$yb - 0.125", `-${f(st.fr)} * $L2 + $Ra + 0.02`]], 0.011, { segments: 8, material: "body_paint", mirror: "Shoulder_R" }));
   if (fin.wheel === "alloy") {
     const cal = key === "sports" || key === "coupe" ? "caliper" : "alloy_dark";
     for (const [n, z] of [["Caliper_FL", st.ff], ["Caliper_RL", -st.fr]] as [string, number][]) {
       kids.push(box(n, [0.045, "$wr * 0.2", "$wr * 0.34"], { at: [`${wx} - ${f(tw * 0.1)}`, "$wr * 1.4", `${f(z)} * $L2 - $wr * 0.12`], rotate: [-18, 0, 0], bevel: 0.012, material: cal, mirror: n.replace("L", "R") }));
     }
   }
-  nodes.push(group("Car", kids, {
+  const nodes: SpecNode[] = [group("Car", kids, {
     vars: {
-      L2: "$length / 2", W2: "$width / 2", H: "$height", wr: "$wheelRadius", Ra: raExpr,
+      L2: "$length / 2", W2: "$width / 2", H: "$height", wr: "$wheelRadius", Ra: B.raExpr(),
       ys: `$wheelRadius - ${f(Math.sin(st.a0))} * $Ra`,
-      yb: `$height * ${f(st.belt)}`, wb: `$width / 2 - ${f(st.gin)}`,
-      wtop: `$width / 2 - ${f(st.gin)} - ${f(st.tumble ?? 0.3)} * ($height - 0.035 - $height * ${f(st.belt)} + 0.05)`,
+      yb: `$height * ${f(st.belt)}`, wb: `$width / 2 - ${f(0.1 + st.shelf)}`,
     },
-  }));
+  })];
 
   const roofText = fin.roof === "gloss_black" || fin.roof === "carbon" ? `, a contrasting ${fin.roof === "carbon" ? "carbon" : "black"} roof` : "";
   const mats2: Record<string, MaterialDef> = { body_paint: fin.paint, ...mats("aluminium", "chrome"), ...WHEEL_MATS() };
   for (const k of ["tinted_glass", "trim_black", "satin_black", "gloss_black", "rubber_seal", "panel_gap", "lamp_lens", "lamp_glass", "reflector", "lamp_red", "lamp_amber", "plate", "upholstery", "upholstery_tan", "carbon", "whitewall", "caliper", "alloy_dark"]) mats2[k] = VMATS[k]!;
-  void idx;
   return {
     slug: slugify("car", st.name, fin.name),
     title: `${fin.name.charAt(0).toUpperCase()}${fin.name.slice(1)} ${st.name}`,
@@ -448,5 +745,5 @@ export const car: Family = {
   category: "vehicles",
   archetype: "vehicle.wheeled.car",
   tags: ["car", "auto", "personenauto", "vehicle", "voertuig", "automobile", "wagen"],
-  assets: () => Object.entries(STYLES).flatMap(([key, st]) => FINISHES[key]!.map((fin, i) => buildCar(key, st, fin, i))),
+  assets: () => Object.entries(STYLES).flatMap(([key, st]) => FINISHES[key]!.map((fin) => buildCar(key, st, fin))),
 };

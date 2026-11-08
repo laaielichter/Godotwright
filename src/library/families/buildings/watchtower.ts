@@ -1,6 +1,6 @@
 import { box, cyl, group, int, lathe, num, roof, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS } from "./shared.js";
+import { BMATS, solid } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
   flag_red: { color: [0.4, 0.03, 0.025], metallic: 0, roughness: 0.8, texture: "fabric", doubleSided: true },
@@ -88,7 +88,7 @@ function stoneTower(style: "battlement" | "conical", f: (typeof FINISHES)["battl
   } else {
     kids.push(
       group("Gallery", [
-        box("Bracket_{i}", [0.18, 0.9, 1.3], { at: [0, "$top - 0.55", "$r + 0.5"], rotate: [0, 0, 0], repeat: { count: 12, around: "y" }, material: f.second }),
+        box("Bracket_{i}", [0.18, 0.9, 1.3], { at: [0, "$top - 0.55", "$r + 0.5"], rotate: [0, 0, 0], repeat: { count: 12, around: "y" }, material: solid(f.second) }),
         lathe("Walkway", [[`$r - 0.1`, "$top - 0.1"], [`$r + 1.25`, "$top - 0.1"], [`$r + 1.25`, "$top + 0.1"], [`$r - 0.1`, "$top + 0.1"]], { segments: 24, material: f.second }),
         lathe("Hoarding", [[`$r + 1.0`, "$top + 0.1"], [`$r + 1.2`, "$top + 0.1"], [`$r + 1.2`, "$top + 2.0"], [`$r + 1.0`, "$top + 2.0"]], { segments: 24, material: f.second }),
         box("Shutter_{i}", [0.9, 0.7, 0.08], { at: [0, "$top + 1.2", "$r + 1.24"], repeat: { count: 8, around: "y", phase: 22.5 }, material: "dark_stain" }),
@@ -106,27 +106,29 @@ function stoneTower(style: "battlement" | "conical", f: (typeof FINISHES)["battl
 function lattice(style: "timber" | "fire", f: (typeof FINISHES)["timber"][number]): SpecNode[] {
   const steel = style === "fire";
   const leg = steel ? 0.09 : 0.14;
+  // Timber legs, braces and rails are solid sawn or round timber: grain, not planks.
+  const main = solid(f.main), second = solid(f.second);
   // a(y): half the spread of the legs at height y; legs run from a0 at the ground to a1 at the platform.
   const a = (y: string): string => `($a0 + ($a1 - $a0) * (${y}) / $top)`;
   const yi = "0.1 + $i * ($top - 0.1) / $levels";
   const yj = "0.1 + ($i + 1) * ($top - 0.1) / $levels";
   const kids: SpecNode[] = [
     group("Shaft", [
-      tube("Leg_{i}", [[`$a0`, 0.08, `$a0`], [`$a1`, "$top + 0.05", `$a1`]], leg, { repeat: { count: 4, around: "y" }, segments: 10, material: f.main }),
+      tube("Leg_{i}", [[`$a0`, 0.08, `$a0`], [`$a1`, "$top + 0.05", `$a1`]], leg, { repeat: { count: 4, around: "y" }, segments: 10, material: main }),
       group("Face_{i}", [
-        tube("BraceA_{i}", [[`-${a(yi)}`, yi, a(yi)], [a(yj), yj, a(yj)]], leg * 0.5, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 8, material: f.main }),
-        tube("BraceB_{i}", [[a(yi), yi, a(yi)], [`-${a(yj)}`, yj, a(yj)]], leg * 0.5, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 8, material: f.main }),
-        box("Girt_{i}", [`2 * ${a(yj)}`, leg * 1.2, leg * 1.2], { at: [0, yj, a(yj)], repeat: { count: "$levels", step: [0, 0, 0] }, material: f.main }),
+        tube("BraceA_{i}", [[`-${a(yi)}`, yi, a(yi)], [a(yj), yj, a(yj)]], leg * 0.5, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 8, material: main }),
+        tube("BraceB_{i}", [[a(yi), yi, a(yi)], [`-${a(yj)}`, yj, a(yj)]], leg * 0.5, { repeat: { count: "$levels", step: [0, 0, 0] }, segments: 8, material: main }),
+        box("Girt_{i}", [`2 * ${a(yj)}`, leg * 1.2, leg * 1.2], { at: [0, yj, a(yj)], repeat: { count: "$levels", step: [0, 0, 0] }, material: main }),
       ], { repeat: { count: 4, around: "y" } }),
       box("Footing_{i}", [0.6, 0.3, 0.6], { at: ["$a0", 0.15, "$a0"], repeat: { count: 4, around: "y" }, material: "concrete" }),
     ]),
     group("Gallery", [
       box("Platform", ["2 * $a1 + 1.6", 0.16, "2 * $a1 + 1.6"], { at: [0, "$top + 0.08", 0], material: f.second, bevel: 0.01 }),
-      box("Joist_{i}", [0.12, 0.2, "2 * $a1 + 1.6"], { at: ["-$a1", "$top - 0.08", 0], repeat: { count: 3, step: ["$a1", 0, 0] }, material: f.main }),
+      box("Joist_{i}", [0.12, 0.2, "2 * $a1 + 1.6"], { at: ["-$a1", "$top - 0.08", 0], repeat: { count: 3, step: ["$a1", 0, 0] }, material: main }),
       group("Rail_{i}", [
-        box("Handrail", ["2 * $a1 + 1.6", 0.06, 0.08], { at: [0, "$top + 1.1", "$a1 + 0.76"], material: f.main }),
-        box("MidRail", ["2 * $a1 + 1.6", 0.05, 0.05], { at: [0, "$top + 0.6", "$a1 + 0.76"], material: f.main }),
-        box("Baluster_{i}", [0.06, 1.0, 0.06], { at: ["-$a1 - 0.76", "$top + 0.62", "$a1 + 0.76"], repeat: { count: 6, step: ["(2 * $a1 + 1.52) / 5", 0, 0] }, material: f.main }),
+        box("Handrail", ["2 * $a1 + 1.6", 0.06, 0.08], { at: [0, "$top + 1.1", "$a1 + 0.76"], material: main }),
+        box("MidRail", ["2 * $a1 + 1.6", 0.05, 0.05], { at: [0, "$top + 0.6", "$a1 + 0.76"], material: main }),
+        box("Baluster_{i}", [0.06, 1.0, 0.06], { at: ["-$a1 - 0.76", "$top + 0.62", "$a1 + 0.76"], repeat: { count: 6, step: ["(2 * $a1 + 1.52) / 5", 0, 0] }, material: main }),
       ], { repeat: { count: 4, around: "y" } }),
     ]),
   ];
@@ -135,7 +137,7 @@ function lattice(style: "timber" | "fire", f: (typeof FINISHES)["timber"][number
       group("Cab", [
         box("CabWalls", ["2 * $a1", 1.0, "2 * $a1"], { anchor: "bottom", at: [0, "$top + 0.16", 0], material: f.second, bevel: 0.01 }),
         box("Window_{i}", ["2 * $a1 - 0.1", 1.2, 0.06], { at: [0, "$top + 1.75", "$a1 - 0.02"], repeat: { count: 4, around: "y" }, material: "window_glass" }),
-        box("Corner_{i}", [0.1, 1.3, 0.1], { anchor: "bottom", at: ["$a1 - 0.03", "$top + 1.1", "$a1 - 0.03"], repeat: { count: 4, around: "y" }, material: f.main }),
+        box("Corner_{i}", [0.1, 1.3, 0.1], { anchor: "bottom", at: ["$a1 - 0.03", "$top + 1.1", "$a1 - 0.03"], repeat: { count: 4, around: "y" }, material: main }),
         box("Head", ["2 * $a1 + 0.05", 0.2, "2 * $a1 + 0.05"], { at: [0, "$top + 2.45", 0], material: f.second }),
       ]),
       roof("Roof", { x0: "-$a1 - 0.5", x1: "$a1 + 0.5", z0: "-$a1 - 0.5", z1: "$a1 + 0.5", y: "$top + 2.55", rise: 0.9, kind: "hip" }, { material: f.roof }),
@@ -149,12 +151,12 @@ function lattice(style: "timber" | "fire", f: (typeof FINISHES)["timber"][number
     );
   } else {
     kids.push(
-      box("Post_{i}", [0.14, 2.3, 0.14], { anchor: "bottom", at: ["$a1 + 0.65", "$top + 0.1", "$a1 + 0.65"], repeat: { count: 4, around: "y" }, material: f.main }),
+      box("Post_{i}", [0.14, 2.3, 0.14], { anchor: "bottom", at: ["$a1 + 0.65", "$top + 0.1", "$a1 + 0.65"], repeat: { count: 4, around: "y" }, material: main }),
       roof("Roof", { x0: "-$a1 - 1.25", x1: "$a1 + 1.25", z0: "-$a1 - 1.25", z1: "$a1 + 1.25", y: "$top + 2.35", rise: "$a1 + 0.9", kind: "hip" }, { material: f.roof }),
-      box("Eaves", ["2 * $a1 + 2.4", 0.12, "2 * $a1 + 2.4"], { at: [0, "$top + 2.33", 0], material: f.main }),
+      box("Eaves", ["2 * $a1 + 2.4", 0.12, "2 * $a1 + 2.4"], { at: [0, "$top + 2.33", 0], material: main }),
       group("Ladder", [
-        tube("Stile_L", [["-0.25", 0, "$a0 + 0.5"], ["-0.25", "$top + 0.1", "$a1 + 0.1"]], 0.04, { mirror: "Stile_R", segments: 6, material: f.second }),
-        box("Rung_{i}", [0.5, 0.04, 0.04], { at: [0, "0.3 + $i * 0.3", "$a0 + 0.5 - ($a0 + 0.4 - $a1) * (0.3 + $i * 0.3) / ($top + 0.1)"], repeat: { count: "floor($top / 0.3)", step: [0, 0, 0] }, material: f.second }),
+        tube("Stile_L", [["-0.25", 0, "$a0 + 0.5"], ["-0.25", "$top + 0.1", "$a1 + 0.1"]], 0.04, { mirror: "Stile_R", segments: 6, material: second }),
+        box("Rung_{i}", [0.5, 0.04, 0.04], { at: [0, "0.3 + $i * 0.3", "$a0 + 0.5 - ($a0 + 0.4 - $a1) * (0.3 + $i * 0.3) / ($top + 0.1)"], repeat: { count: "floor($top / 0.3)", step: [0, 0, 0] }, material: second }),
       ]),
       group("Door", [box("Trapdoor", [0.7, 0.06, 0.7], { at: [0, "$top + 0.19", "$a1 + 0.3"], material: f.main })]),
       group("Mast", [flag("$top + 2.35 + $a1 + 0.7", f.flag, "galvanised")]),

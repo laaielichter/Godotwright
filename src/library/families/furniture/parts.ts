@@ -3,7 +3,7 @@
  * same well-made hardware without repeating it.
  */
 import { PALETTE, type MaterialDef } from "../../palette.js";
-import { box, group, lathe, loft, tube, type Num, type NodeOpts, type SpecNode, type Vec } from "../../kit.js";
+import { box, ellipsoid, group, lathe, loft, tube, type Num, type NodeOpts, type SpecNode, type Vec } from "../../kit.js";
 
 const wood = (r: number, g: number, b: number, roughness = 0.62): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
 const cloth = (r: number, g: number, b: number, roughness = 0.94): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "fabric" });
@@ -59,13 +59,15 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
   leather_black: hide(0.03, 0.027, 0.025, 0.42),
   leather_tan: hide(0.19, 0.09, 0.04, 0.5),
   // Metals: satin bright metal, powder-coated dark metal (never a black mirror).
-  brass: metal(0.78, 0.58, 0.3, 0.32, "brushed"),
-  bronze: metal(0.5, 0.33, 0.18, 0.42, "brushed"),
-  copper: metal(0.82, 0.48, 0.34, 0.35, "brushed"),
-  chrome: metal(0.86, 0.86, 0.87, 0.2),
-  brushed_steel: metal(0.58, 0.59, 0.6, 0.45, "brushed"),
-  aluminium: metal(0.78, 0.79, 0.8, 0.45, "brushed"),
-  gunmetal: metal(0.34, 0.35, 0.37, 0.42, "brushed"),
+  // Bright metals are a little rough and warm, so they show their own colour under an open sky instead of mirroring
+  // it blue: brass is a clear yellow gold, chrome a soft polished highlight, steel and aluminium satin.
+  brass: metal(0.9, 0.68, 0.3, 0.36, "brushed"),
+  bronze: metal(0.6, 0.4, 0.2, 0.45, "brushed"),
+  copper: metal(0.88, 0.52, 0.36, 0.4, "brushed"),
+  chrome: metal(0.8, 0.79, 0.77, 0.3),
+  brushed_steel: metal(0.6, 0.595, 0.585, 0.52, "brushed"),
+  aluminium: metal(0.8, 0.795, 0.78, 0.5, "brushed"),
+  gunmetal: metal(0.36, 0.36, 0.37, 0.48, "brushed"),
   black_steel: coat(0.045, 0.045, 0.047, 0.55),
   cast_iron: coat(0.04, 0.038, 0.037, 0.65),
   galvanised: { color: [0.48, 0.49, 0.49], metallic: 0.7, roughness: 0.62, texture: "brushed" },
@@ -185,3 +187,89 @@ export function books(name: string, y: Num, x0: Num = "-$sw / 2 + 0.03", index: 
       repeat: { count: "max(1, floor($sw * (0.3 + 0.25 * abs(sin($bi * 2.1 + 0.5))) / 0.104))", step: [0.104, 0, 0] },
     })), { vars: { bi: index } });
 }
+
+/** a + b / 2 for numbers or expressions. */
+const addHalf = (a: Num, b: Num): Num => (typeof a === "number" && typeof b === "number" ? Math.round((a + b / 2) * 10000) / 10000 : `(${a}) + (${b}) / 2`);
+
+/**
+ * A solid board of timber, size [x, y, z] as for a box, whose grain runs along its length (`along` x or z) on every face,
+ * also on the edges and the front. A plain box maps the side faces with the grain upright, which reads wrong on a rail or
+ * an apron. Built as a box turned about z (along x) or x (along z); keep children off it.
+ */
+export function board(name: string, size: Vec, along: "x" | "z", o: NodeOpts & { bevel?: Num; anchor?: "center" | "bottom" } = {}): SpecNode {
+  const [w, h, d] = size;
+  const { anchor, ...rest } = o;
+  const at: Vec = (o.at as Vec | undefined) ?? [0, 0, 0];
+  const placed: Vec = anchor === "bottom" ? [at[0], addHalf(at[1], h), at[2]] : at;
+  return along === "x"
+    ? box(name, [h, w, d], { ...rest, at: placed, rotate: [0, 0, 90] })
+    : box(name, [w, d, h], { ...rest, at: placed, rotate: [90, 0, 0] });
+}
+
+/** Linear colour of a finish, darker by factor k: the shadow of a pleat or tuft in that fabric or leather. */
+export function shade(name: string, k = 0.45): Record<string, MaterialDef> {
+  const m = FURNITURE_FINISHES[name] ?? PALETTE[name];
+  if (!m) throw new Error(`furniture: no material "${name}"`);
+  const [r, g, b] = m.color;
+  return { [`${name}_tuft`]: { ...m, color: [Math.max(0.012, r * k), Math.max(0.012, g * k), Math.max(0.012, b * k)], roughness: Math.min(1, m.roughness + 0.1) } };
+}
+
+/**
+ * Deep buttoned (capitonné) tufting on a padded face that looks +z, from the node origin: rows of buttons, each sunk in a
+ * dark dimple, joined by dark diagonal pleats into the classic diamond pattern. `cover` is the upholstery; its `_tuft`
+ * shade (see `shade`) must be in the materials. Rows alternate between `cols` and `cols - 1` buttons at spacing `sx`
+ * across and `sy` up, starting at the origin (bottom row, centred). `cols` may be an expression.
+ */
+export function tufting(name: string, cover: string, cols: Num, rows: number, sx: number, sy: Num, o: NodeOpts = {}): SpecNode {
+  const dark = `${cover}_tuft`;
+  const hx = Math.round((sx / 2) * 10000) / 10000;
+  const pleat = (k: number, sxn: number, syn: number): SpecNode =>
+    tube(`Pleat_${k}`, [[0.014 * sxn, 0.014 * syn, 0.001], [Math.round(hx * 0.9 * sxn * 10000) / 10000, `(${sy}) * 0.9 * ${syn}`, 0.001]], 0.0035, { segments: 6, material: dark });
+  const tuft: SpecNode[] = [
+    lathe("Dimple", [[0.004, -0.004], [0.022, -0.004], [0.026, 0.0015], [0.004, 0.002]], { rotate: [90, 0, 0], segments: 14, material: dark }),
+    ellipsoid("Button", [0.013, 0.013, 0.008], { at: [0, 0, 0.003], segments: 12, material: cover }),
+  ];
+  const rowNodes: SpecNode[] = [];
+  for (let r = 0; r < rows; r++) {
+    const odd = r % 2 === 1;
+    const n: Num = odd ? (typeof cols === "number" ? cols - 1 : `(${cols}) - 1`) : cols;
+    const pleats: SpecNode[] = [];
+    // Pleats run diagonally up from every button to its two neighbours in the row above.
+    if (r < rows - 1) pleats.push(pleat(1, 1, 1), pleat(2, -1, 1));
+    rowNodes.push(group(`Tuft_${r + 1}_{i}`, [...tuft, ...pleats], {
+      at: [`-((${n}) - 1) * ${sx} / 2`, `${r} * (${sy})`, 0],
+      repeat: { count: n, step: [sx, 0, 0] },
+    }));
+  }
+  return group(name, rowNodes, o);
+}
+
+/**
+ * A plump pillow lying along x, `w` wide (an expression), 2 * dz deep and about 1.5 * hy thick: a loft of pointed lens sections
+ * (crisp seam edge, rounder on top than underneath where it rests), full in the middle and pinched flat at the four
+ * corners, with piping along both long seams in the `${material}_tuft` shade. The node origin is the centre of its
+ * underside.
+ */
+export function pillow(name: string, w: string, dz: number, hy: number, material: string, o: NodeOpts = {}): SpecNode {
+  const count = 20;
+  const r4 = (v: number): number => Math.round(v * 10000) / 10000;
+  const lens = (t: number): [number, number][] => {
+    const f = Math.max(0.09, Math.sqrt(1 - Math.abs(t) ** 6)) * (1 + 0.04 * (1 - t * t) * Math.sin(3 * t + 0.6));
+    const g = 0.92 + 0.08 * t ** 4;
+    return Array.from({ length: count }, (_, k): [number, number] => {
+      const a = (2 * Math.PI * k) / count;
+      const s = Math.sin(a);
+      const y = hy * f * Math.sign(s) * Math.abs(s) ** 1.5 * (s < 0 ? 0.55 : 1);
+      return [r4(dz * g * Math.cos(a)), r4(y + hy * 0.55 * 0.97)];
+    });
+  };
+  const stations = [-1, -0.97, -0.88, -0.65, -0.32, 0, 0.32, 0.65, 0.88, 0.97, 1];
+  const seam = (side: number): SpecNode =>
+    tube(side > 0 ? "Seam_F" : "Seam_B", stations.slice(1, -1).map((t): [string, number, number] => [`(${w}) / 2 * ${t}`, r4(hy * 0.55 * 0.97), r4(side * dz * (0.92 + 0.08 * t ** 4) - side * 0.002)]), 0.0045, { segments: 6, material: `${material}_tuft` });
+  return group(name, [
+    loft("Case", stations.map((t) => ({ z: `(${w}) / 2 * ${t}`, points: lens(t) })), { rotate: [0, 90, 0], material }),
+    seam(1),
+    seam(-1),
+  ], o);
+}
+

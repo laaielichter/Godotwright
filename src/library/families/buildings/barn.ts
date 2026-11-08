@@ -1,6 +1,6 @@
 import { box, cyl, extrude, group, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS, gableRoof, hipRoof, slab, swanDownpipe, windowUnit } from "./shared.js";
+import { BMATS, gableRoof, hipRoof, slab, solid, swanDownpipe, thatchHip, windowUnit } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
   barn_red: { color: [0.2, 0.034, 0.022], metallic: 0, roughness: 0.85, texture: "wood" },
@@ -29,9 +29,9 @@ const FINISHES: Record<Style, { id: string; wall: string; roof: string; trim: st
     { id: "brown", wall: "barn_brown", roof: "corrugated_red", trim: "paint_cream", door: "barn_brown", text: "brown", nl: "bruin" },
   ],
   steel: [
-    { id: "grey", wall: "corrugated", roof: "corrugated", trim: "paint_anthracite", door: "paint_anthracite", text: "grey", nl: "grijs" },
-    { id: "green", wall: "corrugated_green", roof: "corrugated", trim: "paint_white", door: "galvanised", text: "green", nl: "groen" },
-    { id: "blue", wall: "steel_blue", roof: "corrugated", trim: "paint_white", door: "galvanised", text: "blue", nl: "blauw" },
+    { id: "grey", wall: "corrugated", roof: "roof_steel", trim: "paint_anthracite", door: "paint_anthracite", text: "grey", nl: "grijs" },
+    { id: "green", wall: "corrugated_green", roof: "roof_steel", trim: "paint_white", door: "galvanised", text: "green", nl: "groen" },
+    { id: "blue", wall: "steel_blue", roof: "roof_steel", trim: "paint_white", door: "galvanised", text: "blue", nl: "blauw" },
   ],
   hip: [
     { id: "thatch", wall: "brick_red", roof: "thatch", trim: "paint_green", door: "paint_green", text: "thatched red brick", nl: "rieten dak" },
@@ -44,9 +44,9 @@ const FINISHES: Record<Style, { id: string; wall: string; roof: string; trim: st
 function barnLeaf(f: { door: string; trim: string }): SpecNode[] {
   return [
     box("Leaf", ["$bw", "$bh", 0.08], { at: ["$bw / 2", "$bh / 2", 0.04], material: f.door, bevel: 0.01 }),
-    box("Rail_{i}", ["$bw", 0.14, 0.04], { at: ["$bw / 2", "0.07 + $i * ($bh - 0.14) / 2", 0.1], repeat: { count: 3, step: [0, 0, 0] }, material: f.trim }),
-    box("Stile_{i}", [0.14, "$bh", 0.04], { at: ["0.07 + $i * ($bw - 0.14)", "$bh / 2", 0.1], repeat: { count: 2, step: [0, 0, 0] }, material: f.trim }),
-    box("Brace_{i}", ["hypot($bw - 0.28, $bh / 2 - 0.28)", 0.12, 0.035], { at: ["$bw / 2", "$bh / 4 + $i * ($bh / 2 - 0.07)", 0.1], rotate: [0, 0, "deg(atan(($bh / 2 - 0.28) / ($bw - 0.28)))"], repeat: { count: 2, step: [0, 0, 0] }, material: f.trim }),
+    box("Rail_{i}", ["$bw", 0.14, 0.04], { at: ["$bw / 2", "0.07 + $i * ($bh - 0.14) / 2", 0.1], repeat: { count: 3, step: [0, 0, 0] }, material: solid(f.trim, LOCAL) }),
+    box("Stile_{i}", [0.14, "$bh", 0.04], { at: ["0.07 + $i * ($bw - 0.14)", "$bh / 2", 0.1], repeat: { count: 2, step: [0, 0, 0] }, material: solid(f.trim, LOCAL) }),
+    box("Brace_{i}", ["hypot($bw - 0.28, $bh / 2 - 0.28)", 0.12, 0.035], { at: ["$bw / 2", "$bh / 4 + $i * ($bh / 2 - 0.07)", 0.1], rotate: [0, 0, "deg(atan(($bh / 2 - 0.28) / ($bw - 0.28)))"], repeat: { count: 2, step: [0, 0, 0] }, material: solid(f.trim, LOCAL) }),
     box("Strap_{i}", ["$bw * 0.4", 0.06, 0.02], { at: ["$bw * 0.2", "$bh * 0.2 + $i * $bh * 0.6", 0.13], repeat: { count: 2, step: [0, 0, 0] }, material: "black_steel" }),
     box("Handle", [0.04, 0.35, 0.05], { at: ["$bw - 0.25", "$bh * 0.45", 0.14], material: "black_steel", bevel: 0.01 }),
   ];
@@ -59,9 +59,9 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   kids.push(box("Plinth", ["2 * $hw + 0.1", pl, "2 * $hl + 0.1"], { anchor: "bottom", material: style === "steel" ? "concrete" : style === "hip" ? "brick_brown" : "granite", bevel: 0.02 }));
   kids.push(box("Walls", ["2 * $hw", "$wh - 0.05", "2 * $hl"], { anchor: "bottom", at: [0, 0.05, 0], material: f.wall, bevel: 0.02 }));
   if (style === "gable" || style === "gambrel") {
-    kids.push(box("BattenSide_{i}", ["2 * $hw + 0.06", "$wh - $pl", 0.06], { anchor: "bottom", at: [0, "$pl", "-$hl + 0.3"], repeat: { count: "floor((2 * $hl - 0.3) / 0.6)", step: [0, 0, 0.6] }, material: f.wall }));
-    kids.push(box("Corner_FL", [0.14, "$wh - $pl", 0.14], { anchor: "bottom", at: ["-$hw", "$pl", "$hl"], mirror: "Corner_FR", material: f.trim, bevel: 0.01 }));
-    kids.push(box("Corner_BL", [0.14, "$wh - $pl", 0.14], { anchor: "bottom", at: ["-$hw", "$pl", "-$hl"], mirror: "Corner_BR", material: f.trim, bevel: 0.01 }));
+    kids.push(box("BattenSide_{i}", ["2 * $hw + 0.06", "$wh - $pl", 0.06], { anchor: "bottom", at: [0, "$pl", "-$hl + 0.3"], repeat: { count: "floor((2 * $hl - 0.3) / 0.6)", step: [0, 0, 0.6] }, material: solid(f.wall, LOCAL) }));
+    kids.push(box("Corner_FL", [0.14, "$wh - $pl", 0.14], { anchor: "bottom", at: ["-$hw", "$pl", "$hl"], mirror: "Corner_FR", material: solid(f.trim, LOCAL), bevel: 0.01 }));
+    kids.push(box("Corner_BL", [0.14, "$wh - $pl", 0.14], { anchor: "bottom", at: ["-$hw", "$pl", "-$hl"], mirror: "Corner_BR", material: solid(f.trim, LOCAL), bevel: 0.01 }));
   }
   if (style === "steel") {
     kids.push(box("Rib_{i}", ["2 * $hw + 0.04", "$wh - $pl", 0.05], { anchor: "bottom", at: [0, "$pl", "-$hl + 0.25"], repeat: { count: "floor((2 * $hl - 0.25) / 0.5)", step: [0, 0, 0.5] }, material: f.wall }));
@@ -97,10 +97,13 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     kids.push(group("LeanTo", [
       box("LeanWall", [0.15, "$wh * 0.55", "2 * $hl * 0.7"], { anchor: "bottom", at: [-4, 0, 0], material: f.wall }),
       box("LeanSheet", [4.6, 0.08, "2 * $hl * 0.7 + 0.4"], { at: [-2.1, "$wh * 0.55 + $wh * 0.3 * 1.9 / 4 + 0.06", 0], rotate: [0, 0, "deg(atan(($wh * 0.85 - $wh * 0.55) / 4.2))"], material: f.roof }),
+      box("LeanRib_{i}", [4.6, 0.04, 0.05], { at: ["-2.1 - 0.056 * sin(atan($wh * 0.3 / 4.2))", "$wh * 0.55 + $wh * 0.3 * 1.9 / 4 + 0.06 + 0.056 * cos(atan($wh * 0.3 / 4.2))", "-$hl * 0.7 - 0.2 + 0.165"], rotate: [0, 0, "deg(atan(($wh * 0.85 - $wh * 0.55) / 4.2))"], repeat: { count: "floor((2 * $hl * 0.7 + 0.4) / 0.33)", step: [0, 0, 0.33] }, material: f.roof }),
       box("LeanPost_{i}", [0.15, "$wh * 0.55", 0.15], { anchor: "bottom", at: [-4, 0, "-$hl * 0.7"], repeat: { count: 3, step: [0, 0, "$hl * 0.7"] }, material: "paint_anthracite" }),
     ], { at: ["-$hw", 0, 0] }));
   } else {
-    kids.push(hipRoof("Roof", { hw: "$hw", hd: "$hl", y: "$wh", rise: "$rise", roof: f.roof, trim: f.trim, oh: 0.6, gutter: f.roof === "thatch" ? undefined : "zinc" }));
+    kids.push(f.roof === "thatch"
+      ? thatchHip("Roof", { hw: "$hw", hd: "$hl", y: "$wh", rise: "$rise", oh: 0.7, roof: f.roof })
+      : hipRoof("Roof", { hw: "$hw", hd: "$hl", y: "$wh", rise: "$rise", roof: f.roof, trim: f.trim, oh: 0.6, gutter: "zinc" }));
     kids.push(box("Hood", [5.2, 0.14, 1.2], { at: [0, "$wh + 0.6", "$hl + 0.7"], rotate: [12, 0, 0], material: f.roof, bevel: 0.02 }));
   }
 
@@ -124,13 +127,13 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     kids.push(box("Track", ["2 * $dw", 0.14, 0.12], { at: [0, "$pl + $dh + 0.1", "$hl + 0.1"], material: "brushed_steel" }));
   } else {
     kids.push(group("Door_L", barnLeaf(f), { at: ["-$bw", "$pl", "$hl"], mirror: "Door_R" }));
-    kids.push(box("DoorHead", ["2 * $bw + 0.4", 0.25, 0.2], { at: [0, "$pl + $bh + 0.12", "$hl + 0.08"], material: f.trim, bevel: 0.01 }));
+    kids.push(box("DoorHead", ["2 * $bw + 0.4", 0.25, 0.2], { at: [0, "$pl + $bh + 0.12", "$hl + 0.08"], material: solid(f.trim, LOCAL), bevel: 0.01 }));
   }
   if (style === "gable" || style === "gambrel") {
     kids.push(group("Hatch", [
       box("HatchLeaf", [1.4, 1.3, 0.08], { at: [0, 0, 0.04], material: f.door, bevel: 0.01 }),
-      box("HatchFrame", [1.6, 0.12, 0.12], { at: [0, 0.71, 0.05], material: f.trim }),
-      box("HatchSill", [1.6, 0.12, 0.12], { at: [0, -0.71, 0.05], material: f.trim }),
+      box("HatchFrame", [1.6, 0.12, 0.12], { at: [0, 0.71, 0.05], material: solid(f.trim, LOCAL) }),
+      box("HatchSill", [1.6, 0.12, 0.12], { at: [0, -0.71, 0.05], material: solid(f.trim, LOCAL) }),
     ], { at: [0, `$wh + ${style === "gambrel" ? "$rise * 0.45" : "$rise * 0.3"}`, "$hl"] }));
   }
   // Side windows.

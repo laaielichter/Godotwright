@@ -1,5 +1,5 @@
 import { box, cyl, group, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { GRIME, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
+import { GRIME, boardZ, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "pillar" | "collection" | "residential" | "parcel" | "post-mounted";
 
@@ -57,7 +57,7 @@ function nodes(style: Style, body: string): SpecNode[] {
       return [
         group("Post", [
           box("Upright", [0.09, "$height - $width * 1.1", 0.09], { anchor: "bottom", bevel: 0.008, material: "weathered_wood" }),
-          box("Bracket", ["$width + 0.04", 0.04, "$length * 0.7"], { at: [0, "$height - $width * 1.1", 0], anchor: "bottom", bevel: 0.006, material: "weathered_wood" }),
+          boardZ("Bracket", ["$width + 0.04", 0.04, "$length * 0.7"], { at: [0, "$height - $width * 1.1", 0], anchor: "bottom", bevel: 0.006, material: "weathered_wood" }),
           box("Brace", [0.05, 0.3, 0.05], { at: [0, "$height - $width * 1.1 - 0.12", "-0.1"], rotate: [-35, 0, 0], bevel: 0.006, material: "weathered_wood" }),
         ]),
         group("Body", [

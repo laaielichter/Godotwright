@@ -1,5 +1,5 @@
 import { box, cyl, group, int, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { GRIME, LOCAL, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, boardX, boardZ, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "glass" | "cantilever" | "wooden" | "canopy";
 interface Finish { frame: string; accent: string }
@@ -32,7 +32,7 @@ const backBays = (z: string, y0: number, top: string): SpecNode[] => [
 
 const plankBench = (z: string, len: string, wood: string, legs: string): SpecNode =>
   group("Bench", [
-    box("Plank", [len, 0.045, 0.34], { at: [0, 0.45, 0], bevel: 0.008, material: wood }),
+    boardX("Plank", [len, 0.045, 0.34], { at: [0, 0.45, 0], bevel: 0.008, material: wood }),
     box("Bracket_L", [0.04, 0.43, 0.3], { at: [`${len} * 0.4`, 0, -0.01], anchor: "bottom", bevel: 0.005, material: legs, mirror: "Bracket_R" }),
   ], { at: [0, 0, z] });
 
@@ -82,15 +82,15 @@ function nodes(style: Style, f: Finish): SpecNode[] {
           ...grimeBox("Grime_FR", 0.12, 0.12, 0.25, ["-$width / 2 + 0.06", 0.03, "$depth / 2 - 0.06"], 0.008),
           ...grimeBox("Grime_BL", 0.12, 0.12, 0.25, ["$width / 2 - 0.06", 0.03, "-$depth / 2 + 0.06"], 0.008),
           ...grimeBox("Grime_BR", 0.12, 0.12, 0.25, ["-$width / 2 + 0.06", 0.03, "-$depth / 2 + 0.06"], 0.008),
-          box("Weatherboard_{i}", ["$width - 0.1", 0.15, 0.025], { at: [0, 0.1, "-$depth / 2 + 0.05"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } }),
-          group("Side_L", [box("Weatherboard_{i}", [0.025, 0.15, "$depth * 0.5"], { at: [0, 0.1, "-$depth / 4 + 0.06"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } })], { at: ["$width / 2 - 0.05", 0, 0], mirror: "Side_R" }),
-          box("Plate_F", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "$depth / 2 - 0.06"], bevel: 0.01 }),
-          box("Plate_B", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "-$depth / 2 + 0.06"], bevel: 0.01 }),
-          box("TieBeam_L", [0.1, 0.1, "$depth"], { at: ["$width / 2 - 0.06", "$height", 0], bevel: 0.01, mirror: "TieBeam_R" }),
+          boardX("Weatherboard_{i}", ["$width - 0.1", 0.15, 0.025], { at: [0, 0.1, "-$depth / 2 + 0.05"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } }),
+          group("Side_L", [boardZ("Weatherboard_{i}", [0.025, 0.15, "$depth * 0.5"], { at: [0, 0.1, "-$depth / 4 + 0.06"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } })], { at: ["$width / 2 - 0.05", 0, 0], mirror: "Side_R" }),
+          boardX("Plate_F", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "$depth / 2 - 0.06"], bevel: 0.01 }),
+          boardX("Plate_B", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "-$depth / 2 + 0.06"], bevel: 0.01 }),
+          boardZ("TieBeam_L", [0.1, 0.1, "$depth"], { at: ["$width / 2 - 0.06", "$height", 0], bevel: 0.01, mirror: "TieBeam_R" }),
         ], { vars: { boards: "floor(($height - 0.5) / 0.155)" } }),
         group("Roof", [
           roof("Covering", { x0: "-$width / 2 - 0.25", x1: "$width / 2 + 0.25", z0: "-$depth / 2 - 0.3", z1: "$depth / 2 + 0.3", y: "$height + 0.05", rise: "$depth * 0.4" }, { material: f.accent }),
-          box("Ridge", ["$width + 0.55", 0.06, 0.08], { at: [0, "$height + 0.05 + $depth * 0.4", 0], bevel: 0.01, material: f.frame }),
+          boardX("Ridge", ["$width + 0.55", 0.06, 0.08], { at: [0, "$height + 0.05 + $depth * 0.4", 0], bevel: 0.01, material: f.frame }),
         ]),
         plankBench("-$depth / 2 + 0.24", "$width * 0.7", f.frame, f.frame),
         sign(),
@@ -110,7 +110,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
           cyl("Gutter", 0.04, "$width", { axis: "x", at: [0, "$height + 0.06 + ($depth / 2 + 0.1) * 0.105", "$depth / 2 + 0.1"], segments: 14 }),
         ]),
         group("Bench", [
-          box("Perch", ["$width * 0.6 - 0.1", 0.05, 0.14], { at: [0, 0.75, 0.07], bevel: 0.015, material: "teak" }),
+          boardX("Perch", ["$width * 0.6 - 0.1", 0.05, 0.14], { at: [0, 0.75, 0.07], bevel: 0.015, material: "teak" }),
           box("Bracket_L", [0.03, 0.05, 0.12], { at: ["$width * 0.2", 0.72, 0.05], bevel: 0.004, mirror: "Bracket_R" }),
         ], { at: [0, 0, "-$depth / 2 + 0.12"] }),
         sign(),
