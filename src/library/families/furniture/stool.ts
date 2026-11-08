@@ -40,7 +40,7 @@ function roundSeat(f: Finish): SpecNode {
       lathe("Pan", [[0.06, "$sh - 0.09"], ["$sr - 0.03", "$sh - 0.085"], ["$sr - 0.02", "$sh - 0.07"], [0.06, "$sh - 0.07"]], { segments: 24, material: "black_steel" }),
     ] });
   }
-  return lathe("Seat", [["$sr - 0.012", "$sh - 0.04"], ["$sr", "$sh - 0.028"], ["$sr", "$sh - 0.01"], ["$sr - 0.015", "$sh"], ["$sr * 0.5", "$sh - 0.006"]], { segments: 28, material: f.seat });
+  return lathe("Seat", [["$sr - 0.012", "$sh - 0.04"], ["$sr", "$sh - 0.028"], ["$sr", "$sh - 0.01"], ["$sr - 0.015", "$sh"]], { segments: 28, material: f.seat });
 }
 
 function bar(f: Finish): SpecNode[] {

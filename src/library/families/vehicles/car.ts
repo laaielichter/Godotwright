@@ -532,8 +532,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
   const bumperBand = (name: string, y0: number, y1: number, prot: number, xfrac: number, mat: string, rear: boolean, sink = 0.04): SpecNode => {
     const n = 15;
     const rr = B.ringDef(rear ? 4.3 : 0.7).filter((p) => p[0] > 0);
-    const halfAt = (y: number) => Math.min(...ys0(y).map((yy) => Math.max(...rr.filter((p) => Math.abs(p[1] - yy) < 0.06).map((p) => p[0]), 0)));
-    const ys0 = (y: number) => [y];
+    const halfAt = (y: number) => { const c = rr.filter((p) => Math.abs(p[1] - y) < 0.06).map((p) => p[0]); return c.length ? Math.max(...c) : W2; };
     const xb = Math.min(W2 * xfrac, Math.min(halfAt(y0), halfAt(y1)) - 0.05);
     const ys = [y0, y0 + (y1 - y0) * 0.12, y0 + (y1 - y0) * 0.5, y0 + (y1 - y0) * 0.88, y1];
     const bulge = [0.55, 0.92, 1, 0.92, 0.55];
@@ -571,7 +570,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     plateFY = y1 + 0.1; plateRY = yBot5 + 0.28;
   } else {
     // Body-colour bumper skins with a lower intake, a black splitter lip and a rear diffuser.
-    const y0 = yBot0 + 0.005, y1 = lampFY - 0.07;
+    const y0 = yBot0 + 0.005, y1 = lampFY0 - 0.02;
     kids.push(bumperBand("BumperFront", y0, y1, 0.012, 0.95, "body_paint", false));
     const r0 = yBot5 + 0.005, r1 = Math.min(lampRY - 0.09, r0 + 0.32);
     kids.push(bumperBand("BumperRear", r0, r1, 0.012, 0.95, "body_paint", true));

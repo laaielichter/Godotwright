@@ -10,7 +10,7 @@ const cloth = (r: number, g: number, b: number, roughness = 0.94): MaterialDef =
 const hide = (r: number, g: number, b: number, roughness = 0.5): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "leather" });
 const paint = (r: number, g: number, b: number, roughness = 0.5, metallic = 0): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
 const coat = (r: number, g: number, b: number, roughness = 0.55): MaterialDef => ({ color: [r, g, b], metallic: 0.28, roughness, texture: "painted" });
-const metal = (r: number, g: number, b: number, roughness: number, texture?: string): MaterialDef => ({ color: [r, g, b], metallic: 1, roughness, ...(texture ? { texture } : {}) });
+const metal = (r: number, g: number, b: number, roughness: number, texture?: string, metallic = 1): MaterialDef => ({ color: [r, g, b], metallic, roughness, ...(texture ? { texture } : {}) });
 
 /**
  * Furniture-catalogue finishes, under the same names as the library palette so slugs and titles stay put: real
@@ -61,13 +61,13 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
   // Metals: satin bright metal, powder-coated dark metal (never a black mirror).
   // Bright metals are a little rough and warm, so they show their own colour under an open sky instead of mirroring
   // it blue: brass is a clear yellow gold, chrome a soft polished highlight, steel and aluminium satin.
-  brass: metal(0.9, 0.68, 0.3, 0.36, "brushed"),
-  bronze: metal(0.6, 0.4, 0.2, 0.45, "brushed"),
-  copper: metal(0.88, 0.52, 0.36, 0.4, "brushed"),
-  chrome: metal(0.8, 0.79, 0.77, 0.3),
-  brushed_steel: metal(0.6, 0.595, 0.585, 0.52, "brushed"),
-  aluminium: metal(0.8, 0.795, 0.78, 0.5, "brushed"),
-  gunmetal: metal(0.36, 0.36, 0.37, 0.48, "brushed"),
+  brass: metal(0.88, 0.64, 0.26, 0.38, "brushed", 0.92),
+  bronze: metal(0.6, 0.4, 0.2, 0.45, "brushed", 0.92),
+  copper: metal(0.88, 0.52, 0.36, 0.42, "brushed", 0.92),
+  chrome: metal(0.74, 0.725, 0.7, 0.36, undefined, 0.9),
+  brushed_steel: metal(0.6, 0.59, 0.57, 0.5, "brushed", 0.88),
+  aluminium: metal(0.76, 0.75, 0.73, 0.48, "brushed", 0.88),
+  gunmetal: metal(0.36, 0.36, 0.37, 0.48, "brushed", 0.9),
   black_steel: coat(0.045, 0.045, 0.047, 0.55),
   cast_iron: coat(0.04, 0.038, 0.037, 0.65),
   galvanised: { color: [0.48, 0.49, 0.49], metallic: 0.7, roughness: 0.62, texture: "brushed" },
