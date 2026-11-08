@@ -9,7 +9,8 @@ let cached: Lesson[] | undefined;
 export function bundledLessons(): Lesson[] {
   if (cached) return cached;
   try {
-    cached = parseLessons(JSON.parse(readFileSync(DATA_URL, "utf8")));
+    // A byte order mark (added by some Windows editors) would make JSON.parse fail and empty the whole library.
+    cached = parseLessons(JSON.parse(readFileSync(DATA_URL, "utf8").replace(/^﻿/, "")));
   } catch {
     cached = [];
   }

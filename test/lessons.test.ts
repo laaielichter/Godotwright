@@ -295,7 +295,7 @@ describe("gaps: what to teach Godotwright next", () => {
 describe("the lessons command", () => {
   it("searches, shows one in full, adds, gives feedback, exports and removes", async () => {
     resetLearning();
-    expect((await runCli(["lessons", "moving", "ship", "deck"])).output.split("\n")[0]).toContain("physics/moving-platform-velocity");
+    expect((await runCli(["lessons", "moving", "platform", "speed"])).output.split("\n")[0]).toContain("physics/moving-platform-velocity");
     expect((await runCli(["lessons", "physics/collider-through-deck", "--detail", "full"])).output).toContain("cause:");
     expect((await runCli(["lessons", "--rule", "api/infer-variant"])).output).toContain("gdscript/variant-loop-inference");
     expect((await runCli(["lessons", "topics"])).output).toMatch(/physics\s+\d+/);
