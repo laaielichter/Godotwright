@@ -17,7 +17,7 @@ import { projectNames } from "../lessons/names.js";
 import { allLessons, errorTemplate } from "../lessons/search.js";
 import type { Lesson, LocalLesson } from "../lessons/types.js";
 import { findProjectRoot } from "../project/files.js";
-import { ProtectedPathError } from "../project/protect.js";
+import { ProtectedPathError, protectionOf } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { emptyFacts, readTranscripts, sessionFolders, type TranscriptFacts, type TranscriptOptions } from "./transcripts.js";
 
@@ -753,6 +753,11 @@ export function applyDream(path: string, selection: string | string[], options: 
       if (outside) journal.allowOutside(full);
       const current = existsSync(full) ? readFileSync(full, "utf8") : undefined;
       if (current === data) return;
+      // A protected file is skipped before the journal sees it, so the entry is stored once, with what was written.
+      if (protectionOf(full)) {
+        out.notes.push(`${toRes(root, full)} is protected and was not written`);
+        return;
+      }
       journal.write(full, data);
       out.files.push(toRes(root, full));
     } catch (error) {

@@ -343,6 +343,19 @@ describe("dream apply and undo", () => {
     expect(readFileSync(join(bare, "AGENTS.md"), "utf8")).toContain("Use `Node2D.look_at`");
   });
 
+  it("skips a protected agents file with a note and stores one journal entry that undo takes back", () => {
+    const root = project({ "AGENTS.md": "# Agents\n", "godotwright.json": JSON.stringify({ protect: ["AGENTS.md"] }) });
+    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
+    const before = readJournal(root).entries.length;
+    const r = applyDream(root, "all");
+    expect(r.notes).toEqual(["res://AGENTS.md is protected and was not written"]);
+    expect(readJournal(root).entries).toHaveLength(before + 1);
+    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe("# Agents\n");
+    const u = undoJournal(root);
+    expect(u.blocked).toBeUndefined();
+    expect(existsSync(join(root, ".godot/godotwright/dreams/state.json"))).toBe(false);
+  });
+
   it("marks suggestions as seen until their evidence doubles", () => {
     const root = project();
     learn((d) => (d.rules["quality/magic-number"] = { reported: 30, confirmed: 0, contradicted: 0, dismissed: 3 }));

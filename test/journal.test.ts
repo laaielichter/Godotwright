@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { formatJournal, formatUndo, readJournal, undoJournal } from "../src/journal/journal.js";
+import { formatJournal, formatUndo, JournalWriter, readJournal, undoJournal } from "../src/journal/journal.js";
 import { renameInProject } from "../src/rename/rename.js";
 import { editScene } from "../src/scene/edit.js";
 import { editProjectSettings } from "../src/settings/edit.js";
@@ -61,5 +61,24 @@ describe("the write journal and undo", () => {
     expect(readFileSync(join(root, "main.tscn"), "utf8")).toContain("ByHand");
     undoJournal(root, { force: true });
     expect(readFileSync(join(root, "main.tscn"), "utf8")).toBe(SCENE);
+  });
+
+  it("stores one entry when a refused write already stored it and the call commits again", () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="J"\n',
+      "godotwright.json": JSON.stringify({ protect: ["locked"] }),
+      "main.tscn": SCENE,
+    });
+    const journal = new JournalWriter(root, "fix", "two files");
+    journal.write(join(root, "main.tscn"), SCENE.replace("Main", "Changed"));
+    expect(() => journal.write(join(root, "locked", "a.txt"), "x")).toThrow(/protected/);
+    journal.write(join(root, "extra.txt"), "new");
+    const id = journal.commit();
+    expect(readJournal(root).entries.map((e) => e.id)).toEqual([id]);
+    expect(readJournal(root).entries[0]!.files.map((f) => f.file).sort()).toEqual(["res://extra.txt", "res://main.tscn"]);
+    const undone = undoJournal(root);
+    expect(undone.blocked).toBeUndefined();
+    expect(readFileSync(join(root, "main.tscn"), "utf8")).toBe(SCENE);
+    expect(existsSync(join(root, "extra.txt"))).toBe(false);
   });
 });

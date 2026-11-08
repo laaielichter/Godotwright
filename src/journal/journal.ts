@@ -142,7 +142,7 @@ export class JournalWriter {
     try {
       assertWritable(full);
     } catch (error) {
-      if (this.before.size && this.dir === undefined) this.commit();
+      if (this.before.size) this.commit();
       throw error;
     }
   }
@@ -163,12 +163,17 @@ export class JournalWriter {
     renameSync(from, to);
   }
 
-  /** Stores the entry; returns its id, or undefined when nothing was written. */
+  /**
+   * Stores the entry; returns its id, or undefined when nothing was written. Calling it again (after a refused write
+   * already stored the entry) updates the same entry instead of adding a second one.
+   */
   commit(): number | undefined {
     if (!this.before.size && !this.learning) return undefined;
-    const ids = entryIds(this.root);
-    this.id = (ids.at(-1) ?? 0) + 1;
-    this.dir = join(journalDir(this.root), String(this.id));
+    if (this.dir === undefined || !existsSync(this.dir)) {
+      const ids = entryIds(this.root);
+      this.id = (ids.at(-1) ?? 0) + 1;
+      this.dir = join(journalDir(this.root), String(this.id));
+    }
     mkdirSync(this.dir, { recursive: true });
     const files: JournalFile[] = [];
     let i = 0;
