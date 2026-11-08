@@ -145,6 +145,12 @@ describe("using an asset", () => {
 });
 
 describe("the catalogue", () => {
+  it("the site page docs/library.html shows every asset (regenerate with: npm run render:library)", () => {
+    const html = readFileSync(new URL("../../docs/library.html", import.meta.url), "utf8");
+    expect(html).toContain(`${library.size} base models`);
+    for (const id of library.keys()) expect(html, id).toContain(`<code>${id}</code>`);
+  });
+
   it("LIBRARY.md lists every asset and is up to date (regenerate with: npm run build:library)", () => {
     const text = readFileSync(new URL("../../LIBRARY.md", import.meta.url), "utf8");
     expect(text).toBe(catalogMarkdown());

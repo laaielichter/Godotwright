@@ -215,7 +215,8 @@ godotwright model build furniture/dining-chair-oak-ladder --set seatHeight=0.5 -
 godotwright model library furniture/dining-chair-oak-ladder --spec > my-chair.json   # change it, build with --spec
 ```
 
-`godotwright model brief <thing>` names the library assets of that thing too. The full list is in [LIBRARY.md](LIBRARY.md).
+`godotwright model brief <thing>` names the library assets of that thing too. Browse all of them with their Godot
+renders on the [asset library page](https://laaielichter.github.io/Godotwright/library.html); the full list is also in [LIBRARY.md](LIBRARY.md).
 
 ## The 40 tools
 

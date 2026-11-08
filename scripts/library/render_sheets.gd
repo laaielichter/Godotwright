@@ -1,7 +1,7 @@
 extends SceneTree
 # Used by scripts/render-library.mjs. Renders every .glb under res://assets/<group>/ in Godot (Compatibility renderer)
 # with calibrated light (AgX tone mapping, sun 0.9, ambient 0.28: an 18 % grey card in sun reads about sRGB 130-150) and
-# writes one contact sheet per group: res://sheets/<group>.png, cells in file-name order. Args after --: cell cols.
+# writes one contact sheet per group: res://sheets/<group>.png (or .jpg), cells in file-name order. Args after --: cell cols [jpg].
 var COLS := 6
 var cell := 320
 var vp: SubViewport
@@ -98,6 +98,7 @@ func _init() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0: cell = int(args[0])
 	if args.size() > 1: COLS = int(args[1])
+	var jpg := args.size() > 2 and args[2] == "jpg"
 	_setup()
 	DirAccess.make_dir_recursive_absolute("res://sheets")
 	await process_frame
@@ -115,7 +116,11 @@ func _init() -> void:
 			img.convert(Image.FORMAT_RGBA8)
 			sheet.blit_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i((i % COLS) * cell, (i / COLS) * cell))
 			total += 1
-		sheet.save_png("res://sheets/%s.png" % group)
+		if jpg:
+			sheet.convert(Image.FORMAT_RGB8)
+			sheet.save_jpg("res://sheets/%s.jpg" % group, 0.82)
+		else:
+			sheet.save_png("res://sheets/%s.png" % group)
 		print("sheet %s: %d" % [group, list.size()])
 	print("rendered %d assets" % total)
 	quit()

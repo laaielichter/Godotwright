@@ -3,6 +3,7 @@
 //   npm run build
 //   node scripts/render-library.mjs --gallery                                 # docs/library.png: one asset of every family
 //   node scripts/render-library.mjs --out /tmp/sheets [category] [family]     # <out>/<category>--<family>.png, 6 per row
+//   node scripts/render-library.mjs --site                                    # docs/library/<category>--<family>.jpg for docs/library.html
 //
 // Needs Godot 4.7 ($GODOT, or godot on the PATH) and, on Linux without a display, xvfb-run. It builds the assets from
 // the current source, imports them into a temporary Godot project and renders them with the Compatibility renderer under
@@ -17,6 +18,9 @@ import { buildSpec } from "../dist/build/spec.js";
 import { findGodot } from "../dist/check/godot.js";
 import { loadAssetLibrary } from "../dist/library/library.js";
 
+/** Pixels per asset on the site's sheets; keep in step with CELL in scripts/build-library-site.mjs. */
+const SITE_CELL = 192;
+
 const args = process.argv.slice(2);
 const option = (name) => {
   const at = args.indexOf(name);
@@ -25,10 +29,15 @@ const option = (name) => {
   args.splice(at, 2);
   return value;
 };
-const gallery = args.includes("--gallery");
-if (gallery) args.splice(args.indexOf("--gallery"), 1);
-const out = option("--out") ?? fileURLToPath(new URL("../docs/", import.meta.url));
-const cell = Number(option("--cell") ?? (gallery ? 160 : 256));
+const flag = (name) => {
+  const at = args.indexOf(name);
+  if (at >= 0) args.splice(at, 1);
+  return at >= 0;
+};
+const gallery = flag("--gallery");
+const site = flag("--site");
+const out = option("--out") ?? fileURLToPath(new URL(site ? "../docs/library/" : "../docs/", import.meta.url));
+const cell = Number(option("--cell") ?? (gallery ? 160 : site ? SITE_CELL : 256));
 const [category, family] = args;
 
 const godot = findGodot();
@@ -54,7 +63,7 @@ console.log(`built ${n} assets into ${project}`);
 execFileSync(godot, ["--headless", "--path", project, "--import"], { stdio: "ignore" });
 const headless = process.platform === "linux" && !process.env["DISPLAY"];
 const [bin, pre] = headless ? ["xvfb-run", ["-a", "-s", "-screen 0 1280x1024x24", godot]] : [godot, []];
-execFileSync(bin, [...pre, "--path", project, "--script", "res://render_sheets.gd", "--", String(cell), gallery ? "12" : "6"], { stdio: ["ignore", "inherit", "ignore"] });
+execFileSync(bin, [...pre, "--path", project, "--script", "res://render_sheets.gd", "--", String(cell), gallery ? "12" : "6", site ? "jpg" : "png"], { stdio: ["ignore", "inherit", "ignore"] });
 
 mkdirSync(out, { recursive: true });
 for (const f of readdirSync(join(project, "sheets"))) copyFileSync(join(project, "sheets", f), join(out, f));
