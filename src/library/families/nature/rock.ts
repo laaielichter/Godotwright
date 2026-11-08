@@ -1,5 +1,6 @@
 import { ellipsoid, group, int, num, rng, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats } from "../../palette.js";
+import type { MaterialDef } from "../../palette.js";
 import { lumpExtent, n4, natureMats } from "./common.js";
 
 type Style = "boulder" | "pile" | "slab" | "cliff" | "pebbles" | "split";
@@ -99,6 +100,16 @@ function stone(name: string, rx: string, ryRaw: string, rz: string, x: string, z
   });
 }
 
+/** Natural rock: a speckled surface (the palette's "stone" pattern is dressed masonry), pale colours toned to grey-beige. */
+function weathered(m: MaterialDef): MaterialDef {
+  const [r, g, b] = m.color;
+  const top = Math.max(r, g, b);
+  const k = top > 0.32 ? 0.32 / top : 1;
+  // A touch of warm grey mixed in, so a white stone does not render as flat white.
+  const mix = (c: number, warm: number): number => Math.round((c * k * 0.85 + warm * 0.15) * 1000) / 1000;
+  return { ...m, color: [mix(r, 0.24), mix(g, 0.21), mix(b, 0.17)], roughness: Math.max(m.roughness, 0.92), texture: "concrete" };
+}
+
 function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
   const st = STYLES[style];
   const r = rng(index * 3301 + 29);
@@ -171,7 +182,8 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
     tags: [style, st.dutch, f.key, f.dutch, f.stone.replace(/_/g, " "), ...(moss ? ["moss", "mos"] : []), ...(count > 2 ? ["rocks", "stenen"] : [])],
     params,
     // Natural rock: the palette colour with a weathered, speckled surface (the "stone" pattern is dressed masonry).
-    materials: Object.fromEntries(Object.entries(natureMats(mats, f.stone, ...(moss ? ["moss"] : []))).map(([k, v]) => [k, k === f.stone ? { ...v, texture: "concrete" } : v])),
+    // Pale stones (chalk, limestone, quartz) are toned down a little so they read as weathered rock, not plaster.
+    materials: Object.fromEntries(Object.entries(natureMats(mats, f.stone, ...(moss ? ["moss"] : []))).map(([k, v]) => [k, k === f.stone ? weathered(v) : v])),
     nodes: [group("Rocks", nodes, { material: f.stone })],
   };
 }

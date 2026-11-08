@@ -30,10 +30,10 @@ interface Style {
 }
 
 const STYLES: Record<string, Style> = {
-  coconut: { name: "coconut palm", dutch: "kokospalm", leaf: "feather", bark: "palm_bark", height: [10, 5, 20], trunk: [0.18, 0.12, 0.28], frond: [4, 2.5, 5.5], fronds: [12, 8, 16], lean: [0.14, 0, 0.3], rings: 0.07, ringCount: 24, wing: 0.13, hang: 0.9, droop: 0.42, tilt: -12, extra: "coconuts", text: "a slim, curving trunk ringed with leaf scars and swollen at the foot, a cluster of coconuts under a ring of long arching feather fronds" },
-  date: { name: "date palm", dutch: "dadelpalm", leaf: "feather", bark: "palm_bark", height: [9, 4, 18], trunk: [0.32, 0.22, 0.45], frond: [3.6, 2.4, 5], fronds: [14, 10, 18], rings: 0.16, ringCount: 30, wing: 0.11, hang: 0.45, droop: 0.22, tilt: -28, extra: "dates", text: "a thick, straight trunk knobbly with old leaf bases, a dense, stiff crown of two rings of feather fronds and hanging bunches of dates" },
-  fan: { name: "fan palm", dutch: "waaierpalm", leaf: "fan", bark: "palm_bark_grey", height: [14, 6, 25], trunk: [0.25, 0.16, 0.4], frond: [2.4, 1.6, 3.2], fronds: [16, 10, 22], rings: 0.04, ringCount: 26, droop: 0.25, tilt: -18, extra: "skirt", text: "a tall, straight grey trunk with a shaggy skirt of dead leaves under a round head of pleated fan leaves on long stalks" },
-  royal: { name: "royal palm", dutch: "koningspalm", leaf: "feather", bark: "palm_bark_grey", height: [15, 7, 25], trunk: [0.3, 0.2, 0.45], frond: [4.2, 3, 5.5], fronds: [12, 8, 16], rings: 0.02, ringCount: 18, wing: 0.12, hang: 0.7, droop: 0.32, tilt: -22, extra: "shaft", text: "a smooth, pale grey column of a trunk, swelling a little half way, topped by a glossy green crownshaft and gracefully arching feather fronds" },
+  coconut: { name: "coconut palm", dutch: "kokospalm", leaf: "feather", bark: "palm_bark", height: [10, 5, 20], trunk: [0.17, 0.12, 0.25], frond: [3.6, 2.4, 6], fronds: [18, 12, 20], lean: [0.14, 0, 0.3], rings: 0.07, ringCount: 24, wing: 0.16, hang: 0.85, droop: 0.42, tilt: -12, extra: "coconuts", text: "a slim, curving trunk ringed with leaf scars and swollen at the foot, a cluster of coconuts under a ring of long arching feather fronds" },
+  date: { name: "date palm", dutch: "dadelpalm", leaf: "feather", bark: "palm_bark", height: [8, 4, 16], trunk: [0.28, 0.2, 0.4], frond: [3.2, 2.2, 5], fronds: [16, 12, 18], rings: 0.16, ringCount: 30, wing: 0.14, hang: 0.45, droop: 0.22, tilt: -28, extra: "dates", text: "a thick, straight trunk knobbly with old leaf bases, a dense, stiff crown of two rings of feather fronds and hanging bunches of dates" },
+  fan: { name: "fan palm", dutch: "waaierpalm", leaf: "fan", bark: "palm_bark_grey", height: [11, 6, 22], trunk: [0.22, 0.15, 0.32], frond: [3.6, 2.4, 5.5], fronds: [18, 12, 20], rings: 0.04, ringCount: 26, droop: 0.25, tilt: -18, extra: "skirt", text: "a tall, straight grey trunk with a shaggy skirt of dead leaves under a round head of pleated fan leaves on long stalks" },
+  royal: { name: "royal palm", dutch: "koningspalm", leaf: "feather", bark: "palm_bark_grey", height: [14, 7, 25], trunk: [0.24, 0.17, 0.32], frond: [4.4, 3, 6.5], fronds: [15, 12, 18], rings: 0.02, ringCount: 18, wing: 0.15, hang: 0.7, droop: 0.32, tilt: -22, extra: "shaft", text: "a smooth, pale grey column of a trunk, swelling a little half way, topped by a glossy green crownshaft and gracefully arching feather fronds" },
 };
 
 interface Variant {
@@ -87,12 +87,12 @@ function fanFrond(name: string, material: string, tilt: string, count: string | 
   const ribs: SpecNode[] = [];
   for (let k = 0; k < 9; k++) {
     const a = ((k - 4) / 4) * 1.25;
-    ribs.push(tube(`Rib_${k + 1}`, [[0, "$fl * 0.02", "$fl * 0.52"], [`$fl * ${n4(Math.sin(a) * 0.47)}`, `$fl * ${n4(0.012 - 0.08 * (1 - Math.cos(a)))}`, `$fl * ${n4(0.52 + Math.cos(a) * 0.47 - 0.02)}`]], ["$fl * 0.012", "$fl * 0.006"], { segments: 4 }));
+    ribs.push(tube(`Rib_${k + 1}`, [[0, "$fl * 0.02", 0], [`$fl * ${n4(Math.sin(a) * 0.47)}`, `$fl * ${n4(0.012 - 0.08 * (1 - Math.cos(a)))}`, `$fl * ${n4(Math.cos(a) * 0.47 - 0.02)}`]], ["$fl * 0.012", "$fl * 0.006"], { segments: 4 }));
   }
   return group(name, [group("Arch", [
     tube("Stalk", [[0, 0, 0], [0, "$fl * 0.04", "$fl * 0.3"], [0, "$fl * 0.03", "$fl * 0.56"]], ["$fl * 0.02", "$fl * 0.016", "$fl * 0.012"], { segments: 6, material: "palm_rachis" }),
-    ellipsoid("Blade", ["$fl * 0.5", "$fl * 0.025", "$fl * 0.45"], { at: [0, "$fl * 0.0", "$fl * 0.98"], segments: 18 }),
-    ...ribs,
+    // The fan stands up from the end of its stalk, facing outward, so the head reads as a round ball of fans.
+    group("Fan", [ellipsoid("Blade", ["$fl * 0.5", "$fl * 0.025", "$fl * 0.45"], { at: [0, 0, "$fl * 0.46"], segments: 18 }), ...ribs], { at: [0, "$fl * 0.03", "$fl * 0.52"], rotate: ["-40 - 15 * sin($i * 1.3)", 0, 0] }),
   ], { vars: { fl: "$frondLength * (0.92 + 0.08 * sin($i * 1.7))" } })], {
     material,
     rotate: [tilt, `9 * sin($i * 2.3)`, 0],
@@ -124,10 +124,11 @@ function palm(key: string, st: Style, v: Variant, index: number): AssetDraft {
   const fronds: SpecNode[] = [];
   const crown: SpecNode[] = [];
   const extraMats: string[] = [];
-  const t0 = `${tilt} - 18 * (0.5 + 0.5 * sin($i * 2.4 + ${n4(r() * 3)}))`;
+  const t0 = `${tilt + 18} - 50 * (0.5 + 0.5 * sin($i * 2.4 + ${n4(r() * 3)}))`;
   if (st.leaf === "feather") fronds.push(featherFrond("Frond_{i}", st, v.frond, t0, "$fronds", phase));
   else fronds.push(fanFrond("Frond_{i}", v.frond, t0, "$fronds", phase));
   if (key === "date") fronds.push(featherFrond("FrondUpper_{i}", st, v.frond, `${tilt - 38} + 8 * sin($i * 1.7)`, 8, phase + 22, 0.6));
+  else if (st.leaf === "feather") fronds.push(featherFrond("FrondUpper_{i}", st, v.frond, `${tilt - 30} + 8 * sin($i * 1.7)`, 6, phase + 30, 0.7));
   if (v.dead) {
     const dead = st.leaf === "feather" ? featherFrond("FrondDead_{i}", st, "dead_frond", "55 + 10 * sin($i * 2.2)", 4, phase + 45, 0.5) : fanFrond("FrondDead_{i}", "dead_frond", "62 + 8 * sin($i * 2.2)", 4, phase + 45);
     fronds.push(dead);

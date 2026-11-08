@@ -2,38 +2,40 @@ import { ellipsoid, group, int, num, rng, slugify, tube, type AssetDraft, type F
 import { mats } from "../../palette.js";
 import { n4, natureMats } from "./common.js";
 
-/** The shape of each species: trunk, fork, crown proportions and what else it carries. */
+/** The shape of each species: trunk, fork, limbs and crown silhouette. */
 interface Species {
   name: string;
   dutch: string;
   bark: string;
-  /** [default, min, max] in metres. */
+  /** [default, min, max] in metres; the trunk radius is about 1/30 of the height. */
   height: [number, number, number];
   crown: [number, number, number];
   trunk: [number, number, number];
-  branches: [number, number, number];
+  limbs: [number, number, number];
   /** Fork height as a share of the height. */
   fork: number;
   /** Crown half-height / crown radius. */
   flat: number;
-  /** How far out the limbs reach, as a share of the crown radius. */
+  /** Reach of the limbs as a share of the crown radius, and how much it varies from limb to limb. */
   spread: number;
-  /** Height of the limb ends in the crown, in crown half-heights from its centre. */
+  vary: number;
+  /** Height of the limb ends, in crown half-heights from the crown centre. */
   lift: number;
-  /** Radius of a leaf cluster, as a share of the crown radius. */
+  /** Leaf cluster radius as a share of the crown radius, and its height / width. */
   cluster: number;
+  squash: number;
   lumps: number;
-  extra: "low" | "tall" | "twin" | "round" | "weep" | "fruit";
+  extra: "low" | "dome" | "airy" | "round" | "weep" | "fruit";
   text: string;
 }
 
 const SPECIES: Record<string, Species> = {
-  oak: { name: "oak", dutch: "eik", bark: "bark_dark", height: [14, 8, 25], crown: [6, 3.5, 10], trunk: [0.45, 0.25, 0.8], branches: [6, 4, 8], fork: 0.28, flat: 0.62, spread: 0.7, lift: -0.05, cluster: 0.42, lumps: 0.45, extra: "low", text: "a short, thick trunk forking low into wide, crooked limbs under a broad, flat-topped crown" },
-  beech: { name: "beech", dutch: "beuk", bark: "bark_grey", height: [18, 10, 30], crown: [5, 3, 8], trunk: [0.35, 0.2, 0.6], branches: [5, 4, 7], fork: 0.36, flat: 1.0, spread: 0.52, lift: 0.1, cluster: 0.45, lumps: 0.35, extra: "tall", text: "a smooth grey trunk rising into steep limbs and a tall, oval, dense crown" },
-  birch: { name: "birch", dutch: "berk", bark: "bark_birch", height: [13, 7, 22], crown: [2.6, 1.6, 4], trunk: [0.16, 0.09, 0.28], branches: [5, 3, 7], fork: 0.32, flat: 1.45, spread: 0.55, lift: 0.0, cluster: 0.38, lumps: 0.5, extra: "twin", text: "two slender white stems with an airy, narrow crown of small leaf clusters" },
-  maple: { name: "maple", dutch: "esdoorn", bark: "bark_brown", height: [12, 7, 20], crown: [4.5, 2.5, 7], trunk: [0.3, 0.18, 0.5], branches: [6, 4, 8], fork: 0.3, flat: 0.88, spread: 0.6, lift: 0.05, cluster: 0.46, lumps: 0.4, extra: "round", text: "a straight trunk under a full, rounded crown of dense leaf clusters" },
-  willow: { name: "willow", dutch: "wilg", bark: "bark_grey", height: [10, 6, 16], crown: [5, 3, 8], trunk: [0.4, 0.22, 0.65], branches: [6, 4, 8], fork: 0.32, flat: 0.68, spread: 0.68, lift: 0.0, cluster: 0.4, lumps: 0.4, extra: "weep", text: "a stout, leaning trunk and a domed crown from which long curtains of foliage weep almost to the ground" },
-  fruit: { name: "fruit tree", dutch: "fruitboom", bark: "bark_brown", height: [5, 4, 8], crown: [2.6, 1.6, 4], trunk: [0.14, 0.08, 0.24], branches: [5, 3, 7], fork: 0.24, flat: 0.72, spread: 0.68, lift: 0.0, cluster: 0.44, lumps: 0.42, extra: "fruit", text: "a short orchard trunk with an open, low, wide crown" },
+  oak: { name: "oak", dutch: "eik", bark: "bark_dark", height: [14, 8, 25], crown: [6.5, 3.5, 10], trunk: [0.48, 0.28, 0.85], limbs: [5, 3, 6], fork: 0.3, flat: 0.6, spread: 0.82, vary: 0.3, lift: -0.15, cluster: 0.36, squash: 0.68, lumps: 0.45, extra: "low", text: "a short, thick, flared trunk forking low into wide, crooked limbs that carry an irregular, broad, flat-topped crown of leaf clusters" },
+  beech: { name: "beech", dutch: "beuk", bark: "bark_grey", height: [18, 10, 30], crown: [7, 3.5, 10], trunk: [0.6, 0.3, 0.9], limbs: [5, 4, 6], fork: 0.36, flat: 0.85, spread: 0.66, vary: 0.15, lift: 0.0, cluster: 0.38, squash: 0.8, lumps: 0.35, extra: "dome", text: "a smooth grey, flared trunk splitting into steep limbs under a tall, dense dome of leaf clusters" },
+  birch: { name: "birch", dutch: "berk", bark: "bark_birch", height: [13, 7, 22], crown: [2.8, 1.6, 4], trunk: [0.25, 0.12, 0.4], limbs: [4, 3, 5], fork: 0.38, flat: 1.5, spread: 0.55, vary: 0.2, lift: 0.0, cluster: 0.36, squash: 0.95, lumps: 0.5, extra: "airy", text: "a slender white stem running right up through a narrow, airy crown of small leaf clusters on thin, rising limbs, with a second leaning stem" },
+  maple: { name: "maple", dutch: "esdoorn", bark: "bark_brown", height: [12, 7, 20], crown: [4.8, 2.5, 7], trunk: [0.4, 0.22, 0.7], limbs: [5, 4, 6], fork: 0.32, flat: 0.85, spread: 0.66, vary: 0.12, lift: -0.05, cluster: 0.44, squash: 0.78, lumps: 0.4, extra: "round", text: "a straight, flared trunk forking into evenly spread limbs under a full, rounded crown" },
+  willow: { name: "willow", dutch: "wilg", bark: "bark_grey", height: [10, 6, 16], crown: [5, 3, 8], trunk: [0.45, 0.25, 0.8], limbs: [5, 4, 6], fork: 0.32, flat: 0.62, spread: 0.72, vary: 0.15, lift: 0.0, cluster: 0.38, squash: 0.7, lumps: 0.4, extra: "weep", text: "a stout, leaning trunk with arching limbs and a domed crown from which long curtains of foliage weep almost to the ground" },
+  fruit: { name: "fruit tree", dutch: "fruitboom", bark: "bark_brown", height: [5, 4, 8], crown: [2.6, 1.6, 4], trunk: [0.15, 0.08, 0.28], limbs: [4, 3, 5], fork: 0.26, flat: 0.72, spread: 0.75, vary: 0.2, lift: -0.05, cluster: 0.42, squash: 0.75, lumps: 0.42, extra: "fruit", text: "a short orchard trunk opening into a low goblet of limbs with a wide, open crown" },
 };
 
 /** Season and age. Each species gets all five, with its own leaf colours. */
@@ -68,110 +70,92 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
   const j = (): number => r() * 2 - 1;
   const seedBase = Math.floor(r() * 5000);
   const [leaf, sun] = v.leaves[key] ?? v.leaves.default;
-  const spread = sp.spread * (0.92 + r() * 0.16);
   const phase = Math.round(r() * 60);
   const s = n4(r() * 6);
   const vet = v.key === "veteran";
+  const lumps = sp.lumps;
 
-  // The trunk: flared at the foot, wandering a little, thinning into the crown centre.
+  // The trunk: a flared foot (about 1/30 of the height), a real taper to the fork, then a thinner leader into the crown.
   const trunkPath: [string, string, string][] = [
     ["0", "0", "0"],
-    ["0", "$hf * 0.06", "0"],
-    [`$tr * ${n4(j() * 0.7)}`, "$hf * 0.45", `$tr * ${n4(j() * 0.7)}`],
-    [`$tr * ${n4(j() * 0.9)}`, "$hf", `$tr * ${n4(j() * 0.9)}`],
+    ["0", "$tr * 1.2", "0"],
+    [`$tr * ${n4(j() * 0.5)}`, "$hf * 0.5", `$tr * ${n4(j() * 0.5)}`],
+    [`$tr * ${n4(j() * 0.7)}`, "$hf", `$tr * ${n4(j() * 0.7)}`],
     [`$tr * ${n4(j() * 0.6)}`, "($hf + $yc) / 2", `$tr * ${n4(j() * 0.6)}`],
-    ["0", "$yc + $ry * 0.2", "0"],
+    ["0", "$top", "0"],
   ];
-  if (sp.extra === "weep") trunkPath[3] = ["$tr * 1.4", "$hf", "$tr * 0.4"];
-  const flares: SpecNode = tube("Flare_{i}", [["$tr * 0.45", "$tr * 1.3", 0], ["$tr * 1.2", "$tr * 0.5", 0], ["$tr * 2", "$tr * 0.2", 0]], ["$tr * 0.55", "$tr * 0.3", "$tr * 0.16"], {
+  if (sp.extra === "weep") trunkPath[3] = ["$tr * 1.2", "$hf", "$tr * 0.4"];
+  const flares = tube("Flare_{i}", [["$tr * 0.4", "$tr * 1.4", 0], ["$tr * 1.15", "$tr * 0.55", 0], ["$tr * 2.1", "$tr * 0.2", 0]], ["$tr * 0.5", "$tr * 0.3", "$tr * 0.17"], {
     segments: 8,
-    repeat: { count: vet ? 6 : 4, around: "y", phase },
+    rotate: [0, "15 * sin($i * 2.1)", 0],
+    repeat: { count: vet ? 7 : 5, around: "y", phase },
   });
-  const trunk = tube("Trunk", trunkPath, ["$tr * 1.45", "$tr * 1.12", "$tr", "$tr * 0.85", "$tr * 0.6", "$tr * 0.3"], { segments: 14, children: [flares] });
+  const trunk = tube("Trunk", trunkPath, ["$tr * 1.15", "$tr", "$tr * 0.88", "$tr * 0.75", "$tr * 0.42", "$tr * 0.14"], { segments: 14, children: [flares] });
 
-  // Limbs: one per crown cluster, each with a side twig; $i varies length, height and lift.
-  const wob = (k: number, f: number): string => `sin($i * ${n4(f)} + ${s} + ${k})`;
-  const endX = `$cr * ${n4(spread)} * (0.86 + 0.14 * ${wob(1, 1.7)})`;
-  const endY = `$yc + $ry * (${n4(sp.lift)} + 0.18 * ${wob(2, 2.1)})`;
-  const startY = `$hf + ($yc - $hf) * (0.05 + 0.2 * (0.5 + 0.5 * ${wob(3, 2.4)}))`;
-  const limb = tube("Branch_{i}", [
-    ["0", startY, "0"],
-    [`$cr * ${n4(spread * 0.4)}`, `(${startY}) * 0.4 + (${endY}) * 0.6 - $ry * 0.1`, `$cr * 0.06`],
-    [endX, endY, `-$cr * 0.05`],
-  ], ["$tr * 0.5", "$tr * 0.32", "$tr * 0.14"], {
-    segments: 9,
-    repeat: { count: "$branches", around: "y", phase },
-    children: [tube("Twig", [[`$cr * ${n4(spread * 0.4)}`, `(${startY}) * 0.4 + (${endY}) * 0.6 - $ry * 0.1`, `$cr * 0.06`], [`$cr * ${n4(spread * 0.62)}`, `$yc + $ry * 0.45`, `$cr * 0.3`]], ["$tr * 0.2", "$tr * 0.08"], { segments: 6 })],
-  });
-  const branchNodes: SpecNode[] = [limb];
-
-  // The crown: a core, a cluster at each limb end, a sunlit ring above and the species' extras.
-  const lump = sp.lumps;
-  const crown: SpecNode[] = [
-    ellipsoid("Core", ["$cr * 0.62", "$ry * 0.74", "$cr * 0.62"], { at: [0, "$yc", 0], segments: 20, lumps: lump, seed: seedBase }),
-    ellipsoid("Cluster_{i}", [`$cr * ${n4(sp.cluster)}`, `$cr * ${n4(sp.cluster * 0.72)} * max(0.8, ${n4(sp.flat)})`, `$cr * ${n4(sp.cluster * 0.9)}`], {
-      at: [endX, `${endY} + $ry * 0.12`, `-$cr * 0.05`],
-      segments: 18,
-      lumps: lump,
-      seed: `$i * 13 + ${seedBase + 1}`,
-      repeat: { count: "$branches", around: "y", phase },
-    }),
-    ellipsoid("Top_{i}", [`$cr * ${n4(sp.cluster * 0.85)}`, `$ry * 0.42`, `$cr * ${n4(sp.cluster * 0.8)}`], {
-      at: [`$cr * 0.3`, `$yc + $ry * 0.5`, 0],
-      segments: 16,
-      lumps: lump,
-      seed: `$i * 7 + ${seedBase + 2}`,
-      material: sun,
-      repeat: { count: 3, around: "y", phase: phase + 40 },
-    }),
+  // One main limb with its leaves; copies turn round the trunk and vary in reach and height with $i.
+  const armChildren: SpecNode[] = [
+    tube("Branch", [
+      ["0", "$ys", "0"],
+      ["$L * 0.3", "$ys + ($ye - $ys) * 0.45", "$L * 0.06"],
+      ["$L * 0.68", "$ys + ($ye - $ys) * 0.82", "-$L * 0.05"],
+      ["$L", "$ye", "0"],
+    ], ["$tr * 0.56", "$tr * 0.42", "$tr * 0.27", "$tr * 0.12"], { segments: 10 }),
+    tube("Twig", [["$L * 0.68", "$ys + ($ye - $ys) * 0.82", "-$L * 0.05"], ["$L * 0.62", "$ye + $ry * 0.28", "$L * 0.32"]], ["$tr * 0.16", "$tr * 0.07"], { segments: 6 }),
+    tube("TwigLow", [["$L * 0.45", "$ys + ($ye - $ys) * 0.6", "0"], ["$L * 0.75", "$ys + ($ye - $ys) * 0.7", "-$L * 0.3"]], ["$tr * 0.14", "$tr * 0.06"], { segments: 6 }),
+    ellipsoid("Leaves", ["$c", "$c * $sq", "$c * 0.9"], { at: ["$L", "$ye + $c * 0.2", 0], segments: 18, lumps, seed: `$i * 13 + ${seedBase + 1}`, material: leaf }),
+    ellipsoid("LeavesMid", ["$c * 0.72", "$c * 0.72 * $sq", "$c * 0.7"], { at: ["$L * 0.62", "$ye + $ry * 0.3", "$L * 0.32"], segments: 16, lumps, seed: `$i * 7 + ${seedBase + 2}`, material: sun }),
+    ellipsoid("LeavesSide", ["$c * 0.62", "$c * 0.6 * $sq", "$c * 0.6"], { at: ["$L * 0.8", "$ys + ($ye - $ys) * 0.75", "-$L * 0.32"], segments: 14, lumps, seed: `$i * 5 + ${seedBase + 3}`, material: leaf }),
   ];
   const extraMats: string[] = [];
   let extraText = "";
-  switch (sp.extra) {
-    case "low":
-      crown.push(ellipsoid("Under_{i}", [`$cr * 0.42`, `$ry * 0.3`, `$cr * 0.36`], { at: [`$cr * 0.62`, `$yc - $ry * 0.42`, 0], segments: 14, lumps: 0.4, seed: `$i * 5 + ${seedBase + 3}`, repeat: { count: 4, around: "y", phase: phase + 20 } }));
-      extraText = " Low, heavy clusters hang under the crown edge.";
-      break;
-    case "tall":
-      crown.push(ellipsoid("Spire", ["$cr * 0.45", "$ry * 0.5", "$cr * 0.42"], { at: [0, "$yc + $ry * 0.62", 0], segments: 16, lumps: 0.35, seed: seedBase + 4, material: sun }));
-      break;
-    case "twin": {
-      const tx = n4(0.35 + r() * 0.15);
-      branchNodes.push(tube("Trunk_B", [["$tr * 0.5", 0, "$tr * 0.2"], ["$tr * 1.2", "$hf * 0.5", "$tr * 0.5"], [`$cr * ${tx}`, "$yc * 0.82", "$cr * 0.25"], [`$cr * ${tx} * 1.1`, "$yc + $ry * 0.15", "$cr * 0.3"]], ["$tr * 0.8", "$tr * 0.66", "$tr * 0.42", "$tr * 0.22"], { segments: 10, material: sp.bark }));
-      crown.push(ellipsoid("Cluster_Twin", ["$cr * 0.5", "$ry * 0.45", "$cr * 0.46"], { at: [`$cr * ${tx} * 1.1`, "$yc + $ry * 0.12", "$cr * 0.3"], segments: 16, lumps: 0.5, seed: seedBase + 5 }));
-      extraText = " A second, leaning stem carries its own leaf cluster.";
-      break;
+  if (sp.extra === "low") {
+    armChildren.push(ellipsoid("LeavesLow", ["$c * 0.7", "$c * 0.5 * $sq", "$c * 0.6"], { at: ["$L * 1.05", "$ye - $ry * 0.22", "$L * 0.15"], segments: 14, lumps, seed: `$i * 3 + ${seedBase + 4}`, material: leaf }));
+    extraText = " Heavy outer clusters hang low at the limb ends.";
+  }
+  if (sp.extra === "weep") {
+    for (const [k, dz] of [[1, -0.3], [2, 0], [3, 0.3]] as const) {
+      armChildren.push(tube(`Drape_${k}`, [["$L * 0.95", "$ye", `$L * ${dz}`], ["$L * 1.1", "$ye - ($ye - $db) * 0.35", `$L * ${dz * 1.1}`], ["$L * 1.14", `$db + ($ye - $db) * ${n4(0.05 + 0.08 * k)}`, `$L * ${dz * 1.15}`]], ["$c * 0.36", "$c * 0.26", "$c * 0.1"], { segments: 7, material: sun }));
     }
-    case "round":
-      crown.push(ellipsoid("Fill_{i}", [`$cr * 0.4`, `$ry * 0.38`, `$cr * 0.4`], { at: [`$cr * 0.5`, `$yc - $ry * 0.15`, 0], segments: 14, lumps: 0.35, seed: `$i * 3 + ${seedBase + 6}`, material: sun, repeat: { count: 5, around: "y", phase: phase + 36 } }));
-      break;
-    case "weep":
-      crown.push(tube("Drape_{i}", [
-        [`$cr * (0.7 + 0.08 * sin($i * 1.9 + ${s}))`, "$yc + $ry * 0.1", 0],
-        [`$cr * (0.88 + 0.08 * sin($i * 1.9 + ${s}))`, "$yc - ($yc - $db) * 0.3", "$cr * 0.04"],
-        [`$cr * (0.93 + 0.08 * sin($i * 1.9 + ${s}))`, `$db + ($yc - $db) * 0.12 * (0.5 + 0.5 * sin($i * 2.7))`, "$cr * 0.06"],
-      ], ["$cr * 0.14", "$cr * 0.1", "$cr * 0.04"], { segments: 7, material: sun, repeat: { count: 22, around: "y", phase } }));
-      extraText = " Twenty-two long drapes of leaves hang from the crown edge.";
-      break;
-    case "fruit":
-      if (v.fruit) {
-        crown.push(ellipsoid("Fruit_{i}", ["$cr * 0.045 + 0.03", "$cr * 0.045 + 0.03", "$cr * 0.045 + 0.03"], {
-          at: [`$cr * (0.68 + 0.05 * sin($i * 2.3))`, `$yc - $ry * (0.08 - 0.25 * sin($i * 1.7 + ${s}))`, 0],
-          segments: 8,
-          material: v.fruit,
-          repeat: { count: 12, around: "y", phase: phase + 7 },
-        }));
-        extraMats.push(v.fruit);
-        extraText = ` Twelve ${v.fruitName} hang on the outside of the crown.`;
-      } else extraText = " The crown is in full blossom.";
-      break;
+    extraText = " Three long curtains of leaves hang from every limb end.";
+  }
+  if (sp.extra === "fruit" && v.fruit) {
+    for (const [k, dx, dz] of [[1, 0.2, 0.4], [2, -0.3, 0.5], [3, 0.5, -0.3], [4, -0.1, -0.6]] as const) {
+      armChildren.push(ellipsoid(`Fruit_${k}`, ["$cr * 0.035 + 0.03", "$cr * 0.035 + 0.03", "$cr * 0.035 + 0.03"], { at: [`$L + $c * ${dx}`, "$ye - $c * 0.38", `$c * ${dz}`], segments: 8, material: v.fruit }));
+    }
+    extraMats.push(v.fruit);
+    extraText = ` ${v.fruitName ? v.fruitName.charAt(0).toUpperCase() + v.fruitName.slice(1) : "Fruit"} hang under the leaf clusters.`;
+  } else if (sp.extra === "fruit") extraText = " The crown is in full blossom.";
+
+  const limbs = group("Limb_{i}", [group("Arm", armChildren, {
+    vars: {
+      k: `0.5 + 0.5 * sin($i * 2.4 + ${s})`,
+      L: `$cr * ${n4(sp.spread)} * (${n4(1 - sp.vary)} + ${n4(sp.vary)} * $k)`,
+      ye: `$yc + $ry * (${n4(sp.lift)} + 0.25 * ($k - 0.5))`,
+      ys: `$hf - $tr * 0.4 + ($yc - $hf) * 0.1 * (1 - $k)`,
+    },
+  })], { rotate: [0, "9 * sin($i * 1.7)", 0], repeat: { count: "$branches", around: "y", phase } });
+
+  // The top of the crown, closing the silhouette above the limbs (the lower crown stays open, so the limbs show).
+  const crown: SpecNode[] = [
+    ellipsoid("Leaves_Top", ["$c * 1.05", "$c * $sq", "$c"], { at: [0, "$height - $c * $sq * 0.95", 0], segments: 18, lumps, seed: seedBase + 5, material: sun }),
+    ellipsoid("Leaves_Fill_{i}", ["$c * 0.85", "$c * 0.8 * $sq", "$c * 0.8"], { at: [`$cr * ${n4(sp.spread * 0.42)}`, "$yc + $ry * 0.32", 0], segments: 16, lumps, seed: `$i * 11 + ${seedBase + 6}`, repeat: { count: 3, around: "y", phase: phase + 60 } }),
+  ];
+  const branchNodes: SpecNode[] = [limbs];
+  if (sp.extra === "airy") {
+    crown.push(ellipsoid("Leaves_Leader_{i}", ["$c * 0.7", "$c * 0.8 * $sq", "$c * 0.65"], { at: ["$tr * 1.2", "$yc + $ry * (0.15 + 0.4 * $i)", 0], segments: 14, lumps, seed: `$i * 3 + ${seedBase + 7}`, repeat: { count: 2, around: "y", phase: phase + 90 } }));
+    const tx = n4(0.35 + r() * 0.1);
+    branchNodes.push(tube("Trunk_B", [["$tr * 0.5", 0, "$tr * 0.2"], ["$tr * 1.4", "$hf * 0.5", "$tr * 0.6"], [`$cr * ${tx}`, "$yc * 0.85", "$cr * 0.3"], [`$cr * ${tx} * 1.15`, "$yc + $ry * 0.1", "$cr * 0.36"]], ["$tr * 0.62", "$tr * 0.5", "$tr * 0.3", "$tr * 0.12"], { segments: 10, material: sp.bark }));
+    crown.push(ellipsoid("Leaves_Twin", ["$c * 0.85", "$c * $sq", "$c * 0.8"], { at: [`$cr * ${tx} * 1.15`, "$yc + $ry * 0.15", "$cr * 0.36"], segments: 16, lumps, seed: seedBase + 8 }));
+    extraText = " A second, leaning stem carries its own leaf cluster.";
+  }
+  if (sp.extra === "weep") {
+    crown.push(tube("Drape_Top_{i}", [["$cr * 0.45", "$yc + $ry * 0.3", 0], ["$cr * 0.62", "$yc - ($yc - $db) * 0.3", "$cr * 0.05"], ["$cr * 0.66", "$db + ($yc - $db) * 0.25", "$cr * 0.08"]], ["$c * 0.34", "$c * 0.24", "$c * 0.1"], { segments: 7, material: sun, repeat: { count: 6, around: "y", phase: phase + 30 } }));
   }
 
   const height = clampRange(sp.height[0] * v.scale, sp.height);
   const crownR = clampRange(sp.crown[0] * (0.85 + 0.15 * v.scale) * (0.95 + r() * 0.1), sp.crown);
   const trunkR = clampRange(sp.trunk[0] * v.scale, sp.trunk);
-  const branches = Math.min(sp.branches[2], Math.max(sp.branches[1], sp.branches[0] + v.more));
-  const flat = sp.flat;
+  const branches = Math.min(sp.limbs[2], Math.max(sp.limbs[1], sp.limbs[0] + v.more));
 
   const nodes: SpecNode[] = [
     group("Tree", [trunk, group("Branches", branchNodes), group("Crown", crown, { material: leaf })], {
@@ -179,24 +163,26 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
       vars: {
         cr: "$crownRadius",
         tr: "$trunkRadius",
-        ry: `min($crownRadius * ${n4(flat)}, $height * 0.42)`,
-        yc: "$height - $ry",
-        hf: `min($height * ${n4(sp.fork)}, $yc - $ry * 0.35)`,
+        ry: `min($crownRadius * ${n4(sp.flat)}, $height * 0.4)`,
+        yc: "$height - $ry * 0.95",
+        hf: `min($height * ${n4(sp.fork)}, $yc - $ry * 0.55)`,
+        c: `$crownRadius * ${n4(sp.cluster)}`,
+        sq: n4(sp.squash),
+        top: "$height - $crownRadius * " + n4(sp.cluster * sp.squash * 0.9),
         db: "max($height * 0.14, 0.8)",
       },
     }),
   ];
-  const title = `${v.label.charAt(0).toUpperCase()}${v.label.slice(1)} ${sp.name}`;
   return {
     slug: slugify("broadleaf-tree", sp.name, v.key),
-    title,
-    description: `A ${v.label} ${sp.name}: ${sp.text}, its limbs ending in lumpy ${leaf.replace("leaf_", "")} leaf clusters around a core, with a sunlit ${sun.replace("leaf_", "")} top.${extraText} It stands on y = 0; the front faces +z.`,
+    title: `${v.label.charAt(0).toUpperCase()}${v.label.slice(1)} ${sp.name}`,
+    description: `A ${v.label} ${sp.name}: ${sp.text}. Each main limb ends in lumpy ${leaf.replace("leaf_", "")} leaf clusters with sunlit ${sun.replace("leaf_", "")} ones above.${extraText} It stands on y = 0; the front faces +z.`,
     tags: [sp.name, sp.dutch, v.label, v.dutch, leaf.replace("leaf_", ""), ...(sp.extra === "fruit" ? ["apple tree", "appelboom", "orchard", "boomgaard"] : []), ...(v.key === "spring" && sp.extra === "fruit" ? ["blossom", "bloesem"] : [])],
     params: [
       num("height", height, sp.height[1], sp.height[2], "Total height of the tree in metres."),
       num("crownRadius", crownR, sp.crown[1], sp.crown[2], "Radius of the crown in metres."),
-      num("trunkRadius", trunkR, sp.trunk[1], sp.trunk[2], "Trunk radius at the fork in metres (the foot flares wider)."),
-      int("branches", branches, sp.branches[1], sp.branches[2], "Number of main limbs, each with a leaf cluster."),
+      num("trunkRadius", trunkR, sp.trunk[1], sp.trunk[2], "Trunk radius just above the root flare, in metres."),
+      int("branches", branches, sp.limbs[1], sp.limbs[2], "Number of main limbs, each ending in leaf clusters."),
     ],
     materials: { ...mats(sp.bark, leaf, sun), ...natureMats(mats, ...extraMats) },
     nodes,
