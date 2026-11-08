@@ -17,7 +17,8 @@ The learning file (`godotwright learn` shows where it is) holds:
   replaced (`Identifier "<s>" not declared in the current scope.`). Every other
   word that is not Godot or engine wording becomes `<id>`, and a message that
   still holds a path or a name is not kept;
-- hashes of findings marked as wrong (so they stay hidden), local only;
+- hashes of findings marked as wrong (so they stay hidden), and of findings marked as right or confirmed by Godot
+  after they were marked wrong (so `godotwright dream` can find verdicts that contradict each other), local only;
 - per lesson id: how often the lesson was shown, and how often it was marked as helpful or wrong;
 - lessons you keep with `godot_lesson_add` or `godotwright lessons add`, local only. Before one is stored, names of
   the project (its title, classes, nodes, files, groups and input actions), paths, links, e-mail addresses, dates,
@@ -28,6 +29,15 @@ The learning file (`godotwright learn` shows where it is) holds:
 The hooks of the Claude Code plugin (`godotwright hook`) keep a small state file per agent session: the paths of the
 Godot files changed in that session that still had review errors, so the agent is reminded of them once before it
 stops. It lives in the plugin's data folder (or the system temp folder), is never sent, and is deleted after two days.
+
+`godotwright dream` (and `godot_dream`) reads the learning file and the project's journal on this machine; it calls no
+model and sends nothing. Only with `--transcripts` (`transcripts: true`) does it also read this project's Claude Code and
+Codex session transcripts, from your home folder. From those it keeps nothing but counts of Godotwright tool calls,
+Godot error messages as templates (as above), and failed Godot API lookups (as above); their text, code, names and
+paths are never copied into its output, a lesson or a report. Next to the learning file, `dreams.json` counts sessions
+per project (by a hash of the project folder and of each session id) to know when a dream is due. An applied dream
+writes lessons into the learning file (scrubbed as above), and hints, a report and a short block of lessons into the
+project (`.godot/godotwright/dreams/`, and `AGENTS.md` or `CLAUDE.md` when one exists); `godotwright undo` takes it back.
 
 The learning file is built not to hold code, paths or project names. A method of your own on
 a Godot class can still look like a Godot name, so keep the file local.

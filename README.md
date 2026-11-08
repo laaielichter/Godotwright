@@ -77,7 +77,7 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 
 | Client | How |
 | --- | --- |
-| **Claude Code** | `/plugin install godotwright --marketplace laaielichter/Godotwright` (MCP server, hooks, ten skills, seven subagents) |
+| **Claude Code** | `/plugin install godotwright --marketplace laaielichter/Godotwright` (MCP server, hooks, eleven skills, eight subagents) |
 | **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it |
 | **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
@@ -156,7 +156,41 @@ opt-in and off by default ([PRIVACY.md](PRIVACY.md)).
 
 Every command, option and rule: [docs/reference.md](docs/reference.md).
 
-## The 38 tools
+## Dreaming: learn from past sessions
+
+Between sessions, Godotwright can look back at what happened in a project and tidy up what it learned, like the
+"dreaming" of long-running agents, but local and Godot-specific. `godotwright dream` (or `godot_dream`) reads the local
+learning file, the project's write journal and, only with `--transcripts`, the project's Claude Code and Codex session
+transcripts, and proposes, each with its evidence and a reason:
+
+- a **draft lesson** for a Godot error that keeps coming back and that no rule predicts and no lesson explains;
+- a **project hint** for an API name the agent keeps guessing ("use `Node2D.look_at`, not `Node2D.look_att`");
+- to **retire, rewrite or merge** lessons that were shown often but marked wrong, or say the same thing twice;
+- a **lesson about writes that were undone** again and again by the same tool on the same kind of file;
+- that a **rule is noisy here**, when this project keeps marking it as a false alarm (a suggestion only);
+- to **resolve** verdicts that contradict each other (a finding marked wrong, then right or confirmed by Godot).
+
+```sh
+godotwright dream                    # numbered proposals with their evidence; nothing changes
+godotwright dream --transcripts      # also learn from this project's agent sessions (anonymous facts only)
+godotwright dream --apply 1,3        # or --apply all; godotwright undo takes it back
+```
+
+It is deterministic: no model, no network, nothing leaves the machine. From transcripts it keeps only tool names, Godot
+message templates without names or paths, and Godot API names, never their text. An apply keeps lessons through the
+same scrubber as `godot_lesson_add`, writes a short "Godotwright lessons for agents" block (top recurring mistakes and
+project hints) into the project's `AGENTS.md` or `CLAUDE.md` when one exists (`--write-agents-file` creates
+`AGENTS.md`), and a dated report into `.godot/godotwright/dreams/`, all through the journal, so `godotwright undo` takes
+it back. Draft lessons hold the symptom and the message; the plugin's `godot-dreamer` subagent (or `/godotwright:dream`)
+works out the cause and fix with `godot_api`, `godot_lessons` and, when Godot is installed, `godot_check`, and applies
+only what you approve.
+
+The session-start hook counts sessions and, once a dream is due (24 hours and 5 sessions since the last one), says
+"Godotwright has N dream proposals: run godot_dream". Set it in `godotwright.json`:
+`"dream": {"auto": "suggest" | "apply" | "off", "minHours": 24, "minSessions": 5}`. With `"apply"` it applies lesson and
+hint changes by itself, never a removal.
+
+## The 39 tools
 
 <details>
 <summary>All MCP tools (most are also CLI commands; <code>--tools core</code> loads 13)</summary>
@@ -172,6 +206,7 @@ Every command, option and rule: [docs/reference.md](docs/reference.md).
 | `godot_feedback` | Mark a review finding as wrong or right, or say whether a lesson helped, so Godotwright learns from it |
 | `godot_lessons` | Lessons from real Godot projects (symptom, cause, fix, test) by words, Godot error, rule or topic; `gaps` lists what it cannot predict yet |
 | `godot_lesson_add` | Keep a lesson learned here, scrubbed of names, paths and code; it comes back when the same error does |
+| `godot_dream` | Look back between sessions (learning file, journal, optionally session transcripts) and propose draft lessons, project hints, merges, retirements and fixes for contradictions, each with its evidence; nothing changes until `apply` |
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |

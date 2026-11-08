@@ -89,6 +89,12 @@ node dist/cli.js --help
   sends the opt-in anonymous report (see `PRIVACY.md`; keep it in sync). Learning must never break a
   tool, and must never store code, names or paths. Local lessons are free text: they are scrubbed when kept and are
   never part of a report (only counts per bundled lesson id are).
+- `src/dream/`: dreaming (`godotwright dream`, `godot_dream`). `dream.ts` turns the learning file, the journal's log of
+  undone writes and (only when asked) session transcripts into numbered proposals with evidence, applies them through
+  the journal (lessons through `src/lessons/local.ts`, so they are scrubbed), keeps the "Godotwright lessons for
+  agents" block in AGENTS.md or CLAUDE.md, and holds the due logic the session-start hook uses. `transcripts.ts` reads
+  Claude Code and Codex transcripts into anonymous facts only (tool names, message templates, Godot API names): never
+  let their text reach an output, a lesson or a report. Deterministic: no model calls, no network.
 - `src/version.ts`: package version and the Godot target version.
 - `server.json`: the MCP Registry entry. Its name and versions must match `package.json`
   (`mcpName`, `version`); a test checks this.
