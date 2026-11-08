@@ -153,9 +153,9 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
       // A curtain of hanging leaf clumps, narrowing toward its ragged lower end.
       const bottom = `($db + ($ye - $db) * ${n4(0.05 + 0.08 * k)})`;
       [0.12, 0.36, 0.6, 0.84].forEach((t, n) => {
-        armChildren.push(ellipsoid(`Drape_${k}_${n + 1}`, [`$c * ${n4(0.34 - 0.13 * t)}`, `($ye - ${bottom}) * 0.16`, `$c * ${n4(0.3 - 0.12 * t)}`], {
+        armChildren.push(ellipsoid(`Drape_${k}_${n + 1}`, [`$c * ${n4(0.34 - 0.13 * t)}`, `min(($ye - ${bottom}) * 0.16, $c * 1.1)`, `$c * ${n4(0.3 - 0.12 * t)}`], {
           at: [`$L * ${n4(0.95 + 0.19 * t)}`, `$ye - ($ye - ${bottom}) * ${n4(t)}`, `$L * ${n4(dz * (1 + 0.15 * t))}`],
-          segments: 10, lumps: 0.55, seed: `$i * 23 + ${k * 7 + n}`, material: n % 2 ? leaf : sun,
+          segments: 10, lumps: 0.35, seed: `$i * 23 + ${k * 7 + n}`, material: n % 2 ? leaf : sun,
         }));
       });
     }
@@ -194,9 +194,9 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
   }
   if (sp.extra === "weep") {
     [0.15, 0.42, 0.7].forEach((t, n) => {
-      crown.push(ellipsoid(`Drape_Top_${n + 1}_{i}`, [`$c * ${n4(0.34 - 0.12 * t)}`, "($yc - $db) * 0.2", `$c * ${n4(0.3 - 0.1 * t)}`], {
+      crown.push(ellipsoid(`Drape_Top_${n + 1}_{i}`, [`$c * ${n4(0.34 - 0.12 * t)}`, "min(($yc - $db) * 0.2, $c * 1.1)", `$c * ${n4(0.3 - 0.1 * t)}`], {
         at: [`$cr * ${n4(0.5 + 0.16 * t)}`, `$yc + $ry * 0.2 - ($yc + $ry * 0.2 - $db) * ${n4(t)}`, `$cr * ${n4(0.08 * t)}`],
-        segments: 10, lumps: 0.55, seed: `$i * 29 + ${n + 3}`, material: n % 2 ? shade : leaf, repeat: { count: 6, around: "y", phase: phase + 30 },
+        segments: 10, lumps: 0.35, seed: `$i * 29 + ${n + 3}`, material: n % 2 ? shade : leaf, repeat: { count: 6, around: "y", phase: phase + 30 },
       }));
     });
   }

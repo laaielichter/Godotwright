@@ -48,7 +48,7 @@ export const br = (e: Num): string => (typeof e === "number" ? f(e) : /^[$\w.]+$
 
 /** Extra finishes for vehicles (linear RGB), calibrated for Godot: dark parts are painted, moulded or anodised. */
 export const VMATS: Record<string, MaterialDef> = {
-  tinted_glass: { color: [0.018, 0.024, 0.03, 0.8], metallic: 0.1, roughness: 0.03, alpha: "BLEND" },
+  tinted_glass: { color: [0.014, 0.018, 0.022, 0.93], metallic: 0.1, roughness: 0.03, alpha: "BLEND" },
   clear_glass: { color: [0.3, 0.35, 0.38, 0.32], metallic: 0, roughness: 0.03, alpha: "BLEND" },
   dark_glass: { color: [0.022, 0.028, 0.034], metallic: 0.3, roughness: 0.05 },
   trim_black: { color: [0.028, 0.028, 0.03], metallic: 0, roughness: 0.55, texture: "plastic" },

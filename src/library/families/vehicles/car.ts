@@ -35,80 +35,85 @@ interface CarStyle {
   bumper: "body" | "chrome" | "black";
   seats: { front: number; rear?: number };
   rails?: boolean;
+  /** How far the side glass leans in, per metre of greenhouse height (default 0.3). */
+  tumble?: number;
   spoiler?: boolean;
 }
 
+// Proportions after real cars: big wheels that fill the arches, a low stance (sill 0.12-0.16 m on cars, more on SUVs and
+// pickups), a bonnet that drops to the nose, a raked windscreen (about 30-35 degrees on saloons, steeper on vans and SUVs)
+// and a greenhouse that leans in over the shoulders.
 const STYLES: Record<string, CarStyle> = {
   hatchback: {
     name: "hatchback", text: "a compact five-door hatchback with a short nose and a steep tailgate",
-    length: [4.0, 3.6, 4.35], width: [1.76, 1.66, 1.84], height: [1.48, 1.42, 1.56], wheel: [0.31, 0.29, 0.34],
-    ff: 0.66, fr: 0.67, a0: 0.28, tyreW: 0.2,
-    upper: [[0.965, 0.13], [0.995, 0.24], [1.0, 0.34, "lampF"], [0.985, 0.43], [0.93, 0.5, "hoodF"], [0.42, 0.585, "hoodR"], [0.0, 0.6], [-0.5, 0.615], [-0.93, 0.63, "trunkF"], [-0.985, 0.5, "lampR"], [-1.0, 0.36, "trunkR"], [-0.995, 0.24], [-0.965, 0.13]],
-    belt: 0.6, glass: [[0.42, 0.04], [0.33, 0.45], [0.2, 0.86], [0.1, 1], [-0.72, 1], [-0.82, 0.9], [-0.88, 0.5], [-0.92, 0.04]], gin: 0.09, roof: [0.1, -0.73],
-    doors: 4, doorZ: [0.36, -0.06, -0.5], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.08, rear: -0.55 },
+    length: [4.0, 3.6, 4.35], width: [1.76, 1.66, 1.84], height: [1.48, 1.42, 1.56], wheel: [0.32, 0.3, 0.34],
+    ff: 0.67, fr: 0.68, a0: 0.52, tyreW: 0.21,
+    upper: [[0.965, 0.11], [0.995, 0.2], [1.0, 0.3, "lampF"], [0.98, 0.39], [0.92, 0.46, "hoodF"], [0.45, 0.575, "hoodR"], [0.0, 0.6], [-0.5, 0.615], [-0.93, 0.63, "trunkF"], [-0.985, 0.5, "lampR"], [-1.0, 0.36, "trunkR"], [-0.995, 0.22], [-0.965, 0.11]],
+    belt: 0.6, glass: [[0.45, 0.04], [0.33, 0.48], [0.18, 0.88], [0.06, 1], [-0.72, 1], [-0.82, 0.9], [-0.88, 0.5], [-0.92, 0.04]], gin: 0.12, roof: [0.06, -0.73],
+    doors: 4, doorZ: [0.36, -0.06, -0.5], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.1, rear: -0.55 },
   },
   sedan: {
     name: "sedan", text: "a four-door saloon with a separate boot and a sloping rear window",
-    length: [4.65, 4.3, 5.0], width: [1.82, 1.74, 1.9], height: [1.45, 1.4, 1.52], wheel: [0.33, 0.31, 0.36],
-    ff: 0.63, fr: 0.62, a0: 0.3, tyreW: 0.22,
-    upper: [[0.975, 0.14], [0.998, 0.25], [1.0, 0.36, "lampF"], [0.985, 0.44], [0.95, 0.5, "hoodF"], [0.4, 0.58, "hoodR"], [0.1, 0.59], [-0.3, 0.6], [-0.61, 0.612, "trunkF"], [-0.95, 0.625, "trunkR"], [-0.995, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.3], [-0.965, 0.14]],
-    belt: 0.6, glass: [[0.4, 0.04], [0.3, 0.45], [0.18, 0.86], [0.08, 1], [-0.3, 1], [-0.42, 0.84], [-0.53, 0.45], [-0.63, 0.04]], gin: 0.1, roof: [0.08, -0.31],
-    doors: 4, doorZ: [0.34, -0.04, -0.4], trunk: "lid", lamps: "slim", tails: "corner", bumper: "body", seats: { front: -0.02, rear: -0.36 },
+    length: [4.65, 4.3, 5.0], width: [1.82, 1.74, 1.9], height: [1.45, 1.4, 1.52], wheel: [0.335, 0.31, 0.36],
+    ff: 0.65, fr: 0.6, a0: 0.5, tyreW: 0.225,
+    upper: [[0.975, 0.12], [0.998, 0.22], [1.0, 0.32, "lampF"], [0.985, 0.4], [0.95, 0.46, "hoodF"], [0.42, 0.575, "hoodR"], [0.1, 0.59], [-0.3, 0.6], [-0.63, 0.612, "trunkF"], [-0.95, 0.625, "trunkR"], [-0.995, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.28], [-0.965, 0.12]],
+    belt: 0.6, glass: [[0.42, 0.04], [0.3, 0.48], [0.15, 0.88], [0.04, 1], [-0.3, 1], [-0.44, 0.84], [-0.55, 0.45], [-0.63, 0.04]], gin: 0.13, roof: [0.04, -0.31],
+    doors: 4, doorZ: [0.34, -0.04, -0.4], trunk: "lid", lamps: "slim", tails: "corner", bumper: "body", seats: { front: -0.04, rear: -0.38 },
   },
   estate: {
     name: "estate", text: "a long estate car with a flat roof that runs to an upright tailgate",
-    length: [4.75, 4.45, 5.0], width: [1.82, 1.75, 1.9], height: [1.48, 1.42, 1.56], wheel: [0.33, 0.31, 0.36],
-    ff: 0.63, fr: 0.6, a0: 0.28, tyreW: 0.22,
-    upper: [[0.975, 0.14], [0.998, 0.25], [1.0, 0.36, "lampF"], [0.985, 0.44], [0.95, 0.5, "hoodF"], [0.42, 0.575, "hoodR"], [0.0, 0.59], [-0.6, 0.605], [-0.95, 0.62, "trunkF"], [-0.99, 0.5, "lampR"], [-1.0, 0.38, "trunkR"], [-0.995, 0.25], [-0.965, 0.14]],
-    belt: 0.59, glass: [[0.42, 0.04], [0.32, 0.45], [0.2, 0.86], [0.1, 1], [-0.8, 1], [-0.88, 0.85], [-0.92, 0.45], [-0.94, 0.04]], gin: 0.1, roof: [0.1, -0.83],
-    doors: 4, doorZ: [0.36, -0.02, -0.38], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.04, rear: -0.38 }, rails: true,
+    length: [4.75, 4.45, 5.0], width: [1.82, 1.75, 1.9], height: [1.48, 1.42, 1.56], wheel: [0.335, 0.31, 0.36],
+    ff: 0.65, fr: 0.6, a0: 0.48, tyreW: 0.225,
+    upper: [[0.975, 0.12], [0.998, 0.22], [1.0, 0.32, "lampF"], [0.985, 0.4], [0.95, 0.46, "hoodF"], [0.44, 0.57, "hoodR"], [0.0, 0.59], [-0.6, 0.605], [-0.95, 0.62, "trunkF"], [-0.99, 0.5, "lampR"], [-1.0, 0.38, "trunkR"], [-0.995, 0.23], [-0.965, 0.12]],
+    belt: 0.59, glass: [[0.44, 0.04], [0.32, 0.48], [0.17, 0.88], [0.06, 1], [-0.8, 1], [-0.88, 0.85], [-0.92, 0.45], [-0.94, 0.04]], gin: 0.13, roof: [0.06, -0.83],
+    doors: 4, doorZ: [0.36, -0.02, -0.38], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.06, rear: -0.4 }, rails: true,
   },
   suv: {
     name: "SUV", text: "a tall SUV with high ground clearance, black wheel-arch trims and roof rails",
-    length: [4.6, 4.3, 4.95], width: [1.9, 1.82, 2.0], height: [1.72, 1.64, 1.86], wheel: [0.37, 0.35, 0.4],
-    ff: 0.64, fr: 0.64, a0: 0.12, tyreW: 0.25,
-    upper: [[0.97, 0.16], [0.995, 0.26], [1.0, 0.4, "lampF"], [0.985, 0.48], [0.94, 0.54, "hoodF"], [0.45, 0.6, "hoodR"], [0.0, 0.615], [-0.6, 0.625], [-0.93, 0.635, "trunkF"], [-0.985, 0.52, "lampR"], [-1.0, 0.4, "trunkR"], [-0.995, 0.26], [-0.97, 0.16]],
-    belt: 0.62, glass: [[0.45, 0.04], [0.36, 0.45], [0.24, 0.86], [0.14, 1], [-0.76, 1], [-0.85, 0.88], [-0.9, 0.45], [-0.93, 0.04]], gin: 0.1, roof: [0.14, -0.78],
+    length: [4.6, 4.3, 4.95], width: [1.9, 1.82, 2.0], height: [1.72, 1.64, 1.86], wheel: [0.375, 0.35, 0.4],
+    ff: 0.66, fr: 0.66, a0: 0.36, tyreW: 0.25,
+    upper: [[0.97, 0.15], [0.995, 0.25], [1.0, 0.37, "lampF"], [0.985, 0.45], [0.94, 0.51, "hoodF"], [0.46, 0.595, "hoodR"], [0.0, 0.615], [-0.6, 0.625], [-0.93, 0.635, "trunkF"], [-0.985, 0.52, "lampR"], [-1.0, 0.4, "trunkR"], [-0.995, 0.26], [-0.97, 0.15]],
+    belt: 0.62, glass: [[0.46, 0.04], [0.36, 0.48], [0.23, 0.88], [0.13, 1], [-0.76, 1], [-0.85, 0.88], [-0.9, 0.45], [-0.93, 0.04]], gin: 0.13, roof: [0.13, -0.78],
     doors: 4, doorZ: [0.37, -0.04, -0.47], trunk: "gate", lamps: "square", tails: "tall", bumper: "black", seats: { front: -0.04, rear: -0.48 }, rails: true,
   },
   pickup: {
     name: "pickup", text: "a double-cab pickup with a long bonnet and an open load bed behind the cab",
     length: [5.2, 4.95, 5.3], width: [1.9, 1.84, 2.0], height: [1.8, 1.74, 1.9], wheel: [0.39, 0.37, 0.41],
-    ff: 0.66, fr: 0.6, a0: 0.1, tyreW: 0.26,
-    upper: [[0.97, 0.16], [0.995, 0.28], [1.0, 0.42, "lampF"], [0.99, 0.5], [0.95, 0.56, "hoodF"], [0.5, 0.6, "hoodR"], [0.0, 0.605], [-0.2, 0.61], [-0.21, 0.52], [-0.985, 0.52, "trunkF"], [-1.0, 0.5, "lampR"], [-1.0, 0.28], [-0.97, 0.16]],
-    belt: 0.6, glass: [[0.5, 0.04], [0.41, 0.45], [0.3, 0.86], [0.2, 1], [-0.17, 1], [-0.19, 0.6], [-0.2, 0.04]], gin: 0.12, roof: [0.2, -0.18],
+    ff: 0.66, fr: 0.6, a0: 0.3, tyreW: 0.26,
+    upper: [[0.97, 0.16], [0.995, 0.28], [1.0, 0.42, "lampF"], [0.99, 0.5], [0.95, 0.55, "hoodF"], [0.5, 0.6, "hoodR"], [0.0, 0.605], [-0.2, 0.61], [-0.21, 0.52], [-0.985, 0.52, "trunkF"], [-1.0, 0.5, "lampR"], [-1.0, 0.28], [-0.97, 0.16]],
+    belt: 0.6, glass: [[0.5, 0.04], [0.41, 0.45], [0.3, 0.86], [0.2, 1], [-0.17, 1], [-0.19, 0.6], [-0.2, 0.04]], gin: 0.13, roof: [0.2, -0.18], tumble: 0.22,
     doors: 4, doorZ: [0.4, 0.06, -0.19], trunk: "bed", lamps: "square", tails: "tall", bumper: "chrome", seats: { front: 0.12, rear: -0.14 },
   },
   coupe: {
     name: "coupe", text: "a low two-door coupe with a long door and a fastback roofline",
-    length: [4.5, 4.2, 4.8], width: [1.84, 1.76, 1.92], height: [1.38, 1.33, 1.45], wheel: [0.33, 0.31, 0.36],
-    ff: 0.64, fr: 0.62, a0: 0.34, tyreW: 0.24,
-    upper: [[0.975, 0.12], [0.998, 0.22], [1.0, 0.34, "lampF"], [0.985, 0.42], [0.95, 0.47, "hoodF"], [0.32, 0.57, "hoodR"], [0.0, 0.585], [-0.5, 0.6], [-0.7, 0.61, "trunkF"], [-0.96, 0.625, "trunkR"], [-0.995, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.28], [-0.965, 0.12]],
-    belt: 0.6, glass: [[0.32, 0.04], [0.2, 0.45], [0.06, 0.88], [-0.05, 1], [-0.25, 1], [-0.42, 0.78], [-0.58, 0.4], [-0.71, 0.04]], gin: 0.12, roof: [-0.05, -0.27],
-    doors: 2, doorZ: [0.33, -0.22], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.12, rear: -0.42 }, spoiler: true,
+    length: [4.5, 4.2, 4.8], width: [1.84, 1.76, 1.92], height: [1.38, 1.33, 1.45], wheel: [0.335, 0.31, 0.36],
+    ff: 0.66, fr: 0.62, a0: 0.55, tyreW: 0.245,
+    upper: [[0.975, 0.11], [0.998, 0.2], [1.0, 0.31, "lampF"], [0.985, 0.38], [0.95, 0.43, "hoodF"], [0.32, 0.57, "hoodR"], [0.0, 0.585], [-0.5, 0.6], [-0.7, 0.61, "trunkF"], [-0.96, 0.625, "trunkR"], [-0.995, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.27], [-0.965, 0.11]],
+    belt: 0.6, glass: [[0.32, 0.04], [0.2, 0.45], [0.06, 0.88], [-0.05, 1], [-0.25, 1], [-0.42, 0.78], [-0.58, 0.4], [-0.71, 0.04]], gin: 0.14, roof: [-0.05, -0.27],
+    doors: 2, doorZ: [0.33, -0.22], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.14, rear: -0.44 }, spoiler: true,
   },
   mpv: {
     name: "MPV", text: "a tall people carrier with a short nose, a long steep windscreen and a boxy cabin",
-    length: [4.6, 4.3, 4.9], width: [1.86, 1.78, 1.95], height: [1.76, 1.66, 1.86], wheel: [0.33, 0.31, 0.35],
-    ff: 0.66, fr: 0.67, a0: 0.25, tyreW: 0.22,
-    upper: [[0.97, 0.13], [0.995, 0.24], [1.0, 0.33, "lampF"], [0.98, 0.42], [0.92, 0.47, "hoodF"], [0.66, 0.53, "hoodR"], [0.3, 0.55], [-0.5, 0.56], [-0.95, 0.57, "trunkF"], [-0.99, 0.46, "lampR"], [-1.0, 0.34, "trunkR"], [-0.995, 0.24], [-0.965, 0.13]],
-    belt: 0.55, glass: [[0.66, 0.04], [0.55, 0.4], [0.4, 0.84], [0.28, 1], [-0.84, 1], [-0.9, 0.85], [-0.93, 0.45], [-0.95, 0.04]], gin: 0.1, roof: [0.28, -0.86],
+    length: [4.6, 4.3, 4.9], width: [1.86, 1.78, 1.95], height: [1.76, 1.66, 1.86], wheel: [0.335, 0.31, 0.35],
+    ff: 0.68, fr: 0.7, a0: 0.45, tyreW: 0.22,
+    upper: [[0.97, 0.12], [0.995, 0.22], [1.0, 0.31, "lampF"], [0.98, 0.39], [0.92, 0.45, "hoodF"], [0.66, 0.52, "hoodR"], [0.3, 0.55], [-0.5, 0.56], [-0.95, 0.57, "trunkF"], [-0.99, 0.46, "lampR"], [-1.0, 0.34, "trunkR"], [-0.995, 0.23], [-0.965, 0.12]],
+    belt: 0.55, glass: [[0.66, 0.04], [0.54, 0.4], [0.38, 0.84], [0.26, 1], [-0.84, 1], [-0.9, 0.85], [-0.93, 0.45], [-0.95, 0.04]], gin: 0.13, roof: [0.26, -0.86],
     doors: 4, doorZ: [0.39, 0.0, -0.45], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: 0.1, rear: -0.38 }, rails: true,
   },
   sports: {
     name: "sports car", text: "a low, wide mid-engined sports car with a cab-forward canopy and a rear spoiler",
-    length: [4.4, 4.1, 4.65], width: [1.92, 1.85, 2.0], height: [1.3, 1.27, 1.36], wheel: [0.33, 0.31, 0.345],
-    ff: 0.66, fr: 0.62, a0: 0.42, tyreW: 0.28,
-    upper: [[0.975, 0.1], [0.998, 0.2], [1.0, 0.3], [0.985, 0.42, "lampF"], [0.95, 0.55, "hoodF"], [0.45, 0.62, "hoodR"], [0.0, 0.62], [-0.4, 0.625], [-0.48, 0.635, "trunkF"], [-0.95, 0.65, "trunkR"], [-0.995, 0.59], [-1.0, 0.47, "lampR"], [-0.99, 0.24], [-0.965, 0.1]],
-    belt: 0.62, glass: [[0.45, 0.04], [0.3, 0.45], [0.14, 0.88], [0.04, 1], [-0.18, 1], [-0.32, 0.72], [-0.42, 0.35], [-0.48, 0.04]], gin: 0.16, roof: [0.04, -0.2],
+    length: [4.4, 4.1, 4.65], width: [1.92, 1.85, 2.0], height: [1.3, 1.27, 1.36], wheel: [0.335, 0.31, 0.345],
+    ff: 0.68, fr: 0.64, a0: 0.62, tyreW: 0.28,
+    upper: [[0.975, 0.09], [0.998, 0.18], [1.0, 0.27], [0.985, 0.37, "lampF"], [0.95, 0.47, "hoodF"], [0.45, 0.6, "hoodR"], [0.0, 0.62], [-0.4, 0.625], [-0.48, 0.635, "trunkF"], [-0.95, 0.65, "trunkR"], [-0.995, 0.59], [-1.0, 0.47, "lampR"], [-0.99, 0.23], [-0.965, 0.09]],
+    belt: 0.62, glass: [[0.45, 0.04], [0.3, 0.45], [0.14, 0.88], [0.04, 1], [-0.18, 1], [-0.32, 0.72], [-0.42, 0.35], [-0.48, 0.04]], gin: 0.17, roof: [0.04, -0.2],
     doors: 2, doorZ: [0.34, -0.2], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.08 }, spoiler: true,
   },
   vintage: {
     name: "vintage", text: "a 1950s-style saloon with round headlamps, chrome bumpers, whitewall tyres and chrome hubcaps",
-    length: [4.6, 4.3, 5.0], width: [1.8, 1.7, 1.9], height: [1.56, 1.5, 1.65], wheel: [0.36, 0.34, 0.38],
-    ff: 0.6, fr: 0.6, a0: 0.2, tyreW: 0.18,
-    upper: [[0.96, 0.16], [0.99, 0.26], [1.0, 0.36], [0.99, 0.42, "lampF"], [0.95, 0.5, "hoodF"], [0.38, 0.57, "hoodR"], [0.0, 0.575], [-0.32, 0.58], [-0.55, 0.585, "trunkF"], [-0.92, 0.54, "trunkR"], [-0.975, 0.48], [-0.995, 0.4, "lampR"], [-0.995, 0.28], [-0.96, 0.16]],
-    belt: 0.57, glass: [[0.38, 0.04], [0.31, 0.45], [0.24, 0.86], [0.16, 1], [-0.22, 1], [-0.34, 0.85], [-0.46, 0.45], [-0.56, 0.04]], gin: 0.12, roof: [0.16, -0.24],
+    length: [4.6, 4.3, 5.0], width: [1.8, 1.7, 1.9], height: [1.56, 1.5, 1.65], wheel: [0.355, 0.34, 0.38],
+    ff: 0.62, fr: 0.6, a0: 0.4, tyreW: 0.19,
+    upper: [[0.96, 0.15], [0.99, 0.25], [1.0, 0.35], [0.99, 0.41, "lampF"], [0.95, 0.48, "hoodF"], [0.38, 0.565, "hoodR"], [0.0, 0.575], [-0.32, 0.58], [-0.55, 0.585, "trunkF"], [-0.92, 0.54, "trunkR"], [-0.975, 0.48], [-0.995, 0.4, "lampR"], [-0.995, 0.28], [-0.96, 0.15]],
+    belt: 0.57, glass: [[0.38, 0.04], [0.3, 0.45], [0.22, 0.86], [0.14, 1], [-0.22, 1], [-0.34, 0.85], [-0.46, 0.45], [-0.56, 0.04]], gin: 0.13, roof: [0.14, -0.24],
     doors: 4, doorZ: [0.34, -0.02, -0.37], trunk: "lid", lamps: "round", tails: "round", bumper: "chrome", seats: { front: 0.0, rear: -0.34 },
   },
 };
@@ -156,8 +161,8 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   };
   // The arch radius never reaches into the hood line: the arch stays 6 cm under it, and the shoulders are 4 cm lower at the side.
   const room = (zf: number): string => `${ls(yAt(zf))} - 0.07 - $wheelRadius`;
-  const raExpr = `min($wheelRadius + 0.035, ${room(st.ff)}, ${room(-st.fr)})`;
-  const ra0 = Math.min(env.wr + 0.035, lev(yAt(st.ff), env) - 0.07 - env.wr, lev(yAt(-st.fr), env) - 0.07 - env.wr);
+  const raExpr = `min($wheelRadius + 0.03, ${room(st.ff)}, ${room(-st.fr)})`;
+  const ra0 = Math.min(env.wr + 0.03, lev(yAt(st.ff), env) - 0.07 - env.wr, lev(yAt(-st.fr), env) - 0.07 - env.wr);
   const envR = { ...env, Ra: ra0 };
   const sill = L(0, { wr: 1, Ra: -Math.sin(st.a0) });
   // The first and last points (under the bumpers) sit a little above the sill line, so the bottom never folds.
@@ -216,7 +221,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
     const yT = `($yb + ${f(t)} * ($H - 0.035 - $yb))`;
     const h = `(${yT} - $yb + 0.05)`;
     const rc = `min(0.085, 0.4 * ${h})`;
-    const wt = `($wb - 0.22 * ${h})`;
+    const wt = `($wb - ${f(st.tumble ?? 0.3)} * ${h})`;
     const pts2: [Num, Num][] = [[`$wb`, `$yb - 0.05`]];
     for (const a of [0, 30, 60, 90]) {
       const c = Math.cos((a * Math.PI) / 180), s = Math.sin((a * Math.PI) / 180);
@@ -388,11 +393,21 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   // Wheels at the hubs, outer face out.
   const tw = st.tyreW;
   const wo = { r: "$wr", w: f(tw), style: fin.wheel, rim: fin.rim ?? (fin.wheel === "steel" ? "steel_wheel" : fin.wheel === "chrome" || fin.wheel === "wire" ? "chrome" : "alloy"), hub: fin.wheel === "alloy" ? "gloss_black" : fin.wheel === "chrome" ? "alloy" : "chrome", ...(fin.spokes ? { spokes: fin.spokes } : {}), ...(fin.roof === "whitewall" || key === "vintage" ? { whitewall: "whitewall" } : {}) } as const;
-  const wx = `$W2 - ${f(tw / 2 + 0.035)}`;
+  const wx = `$W2 - ${f(tw / 2 + 0.022)}`;
   kids.push(group("Wheels", [
     wheel("Wheel_FL", [wx, "$wr", `${f(st.ff)} * $L2`], wo, { mirror: "Wheel_FR" }),
     wheel("Wheel_RL", [wx, "$wr", `-${f(st.fr)} * $L2`], wo, { mirror: "Wheel_RR" }),
   ]));
+  // Flared wheel-arch lips (black cladding on the SUV and pickup) and a shoulder crease along the side above them.
+  const flare = st.bumper === "black" || st.trunk === "bed" ? "trim_black" : "body_paint";
+  for (const [n, zc] of [["ArchFlare_FL", st.ff], ["ArchFlare_RL", -st.fr]] as [string, number][]) {
+    const arc = Array.from({ length: 11 }, (_, i) => {
+      const a = ((168 - i * 15.6) * Math.PI) / 180;
+      return [`$W2 - 0.012`, `$wr + ($Ra + 0.014) * ${f(Math.sin(a))}`, `${f(zc)} * $L2 + ($Ra + 0.014) * ${f(Math.cos(a))}`] as [Num, Num, Num];
+    });
+    kids.push(tube(n, arc, flare === "trim_black" ? 0.032 : 0.022, { segments: 8, material: flare, mirror: n.replace("L", "R") }));
+  }
+  kids.push(tube("Shoulder_L", [[`$W2 - 0.006`, "$yb - 0.13", `${frontEdge} + 0.02`], [`$W2 - 0.006`, "$yb - 0.125", `-${f(st.fr)} * $L2 + $Ra + 0.02`]], 0.011, { segments: 8, material: "body_paint", mirror: "Shoulder_R" }));
   if (fin.wheel === "alloy") {
     const cal = key === "sports" || key === "coupe" ? "caliper" : "alloy_dark";
     for (const [n, z] of [["Caliper_FL", st.ff], ["Caliper_RL", -st.fr]] as [string, number][]) {
@@ -404,7 +419,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
       L2: "$length / 2", W2: "$width / 2", H: "$height", wr: "$wheelRadius", Ra: raExpr,
       ys: `$wheelRadius - ${f(Math.sin(st.a0))} * $Ra`,
       yb: `$height * ${f(st.belt)}`, wb: `$width / 2 - ${f(st.gin)}`,
-      wtop: `$width / 2 - ${f(st.gin)} - 0.22 * ($height - 0.035 - $height * ${f(st.belt)} + 0.05)`,
+      wtop: `$width / 2 - ${f(st.gin)} - ${f(st.tumble ?? 0.3)} * ($height - 0.035 - $height * ${f(st.belt)} + 0.05)`,
     },
   }));
 
