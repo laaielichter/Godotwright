@@ -1295,5 +1295,172 @@
   "pitfalls": [
    "A gatehouse with the opening modelled as a flat texture cannot be walked through: cut the archway."
   ]
+ },
+ {
+  "id": "building.shed",
+  "name": "shed",
+  "description": "A small outbuilding: a garden shed, garage, workshop or hut.",
+  "aliases": [
+   "garden shed",
+   "schuurtje",
+   "tuinhuis",
+   "tool shed",
+   "hutje",
+   "garage",
+   "garages",
+   "workshop",
+   "werkplaats",
+   "berging",
+   "blokhut",
+   "cabin"
+  ],
+  "extends": "building",
+  "parts": [
+   {
+    "name": "Walls",
+    "role": "walls",
+    "required": true,
+    "aliases": [
+     "walls",
+     "wall",
+     "muren",
+     "body"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak"
+    ]
+   },
+   {
+    "name": "Door",
+    "role": "door",
+    "required": true,
+    "aliases": [
+     "door",
+     "deur",
+     "garage door"
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "moves": [
+     {
+      "kind": "hinge",
+      "axis": "y"
+     }
+    ],
+    "pivot": "hinge"
+   },
+   {
+    "name": "Window",
+    "role": "window",
+    "required": false,
+    "aliases": [
+     "window",
+     "windows",
+     "raam",
+     "ramen"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2,
+    9
+   ],
+   "width": [
+    1.5,
+    7
+   ],
+   "height": [
+    2,
+    5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "building.gazebo",
+  "name": "gazebo",
+  "description": "An open garden pavilion: a gazebo, pergola, bandstand or carport.",
+  "aliases": [
+   "gazebo",
+   "gazebos",
+   "prieel",
+   "paviljoen",
+   "pavilion",
+   "pergola",
+   "bandstand",
+   "muziektent",
+   "carport",
+   "overkapping",
+   "tuinoverkapping"
+  ],
+  "extends": "building",
+  "parts": [
+   {
+    "name": "Post",
+    "role": "post",
+    "required": true,
+    "aliases": [
+     "post",
+     "posts",
+     "column",
+     "columns",
+     "paal",
+     "palen",
+     "zuil"
+    ],
+    "count": [
+     3,
+     12
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": true,
+    "aliases": [
+     "roof",
+     "dak",
+     "canopy",
+     "beams"
+    ]
+   },
+   {
+    "name": "Floor",
+    "role": "floor",
+    "required": false,
+    "aliases": [
+     "floor",
+     "deck",
+     "platform",
+     "vloer"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    2.5,
+    10
+   ],
+   "width": [
+    2.5,
+    10
+   ],
+   "height": [
+    2.2,
+    6
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
  }
 ]

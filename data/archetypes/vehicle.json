@@ -1489,5 +1489,91 @@
    "The cab is narrower than the body behind it; roller shutters must not run through the wheel arches.",
    "A ladder truck deploys its outriggers before the ladder may rise."
   ]
+ },
+ {
+  "id": "vehicle.wheeled.cart",
+  "name": "cart",
+  "description": "A hand-pushed or animal-drawn cart: a wheelbarrow, handcart or wagon.",
+  "aliases": [
+   "cart",
+   "carts",
+   "handcart",
+   "hand cart",
+   "kar",
+   "karretje",
+   "handkar",
+   "bolderkar",
+   "wheelbarrow",
+   "kruiwagen",
+   "wagon",
+   "boerenkar",
+   "trolley"
+  ],
+  "extends": "vehicle.wheeled",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "bed",
+     "bak",
+     "tray",
+     "box",
+     "bin"
+    ]
+   },
+   {
+    "name": "Wheel",
+    "role": "wheel",
+    "required": true,
+    "aliases": [
+     "wheel",
+     "wiel",
+     "wielen"
+    ],
+    "count": [
+     1,
+     4
+    ],
+    "moves": [
+     {
+      "kind": "spin",
+      "axis": "x"
+     }
+    ],
+    "pivot": "hub"
+   },
+   {
+    "name": "Handle",
+    "role": "handle",
+    "required": false,
+    "aliases": [
+     "handle",
+     "handles",
+     "shaft",
+     "shafts",
+     "disselboom",
+     "handvat"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.8,
+    4.5
+   ],
+   "width": [
+    0.5,
+    2.2
+   ],
+   "height": [
+    0.5,
+    2.0
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
  }
 ]
