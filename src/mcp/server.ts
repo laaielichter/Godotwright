@@ -60,6 +60,7 @@ import {
   recordShown,
 } from "../lessons/local.js";
 import { projectNames } from "../lessons/names.js";
+import { applyDream, DreamError, dream, formatApply, formatDream, markDreamed, parseSince } from "../dream/dream.js";
 import {
   findLesson,
   lessonsForError,
@@ -1929,6 +1930,40 @@ export function createServer(options: ServerOptions = {}): McpServer {
         );
       } catch (error) {
         return failure(error instanceof LessonError || error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  tool(
+    "godot_dream",
+    {
+      title: "Dream: learn from past sessions",
+      description:
+        "Look back at what Godotwright learned and did in this project, between sessions, and propose what to keep: draft lessons for Godot errors that keep coming back with no rule or lesson, project hints for API names the agent keeps guessing (use X, not Y), lessons to merge, retire or rewrite (shown often but marked wrong, or duplicates), lessons about writes that were undone again and again, rules this project marks as false alarms again and again (a suggestion only), and verdicts that contradict each other. It reads the local learning file and the project's journal, and with `transcripts: true` also this project's Claude Code and Codex session transcripts (only anonymous facts are kept: tool names, Godot message templates, Godot API names; no text, names, paths or code). Deterministic: no model, no network. Each proposal has a number, an id, its evidence and a reason. Nothing changes until `apply` (numbers or ids, or \"all\"): lessons go through the same scrubbing as godot_lesson_add, hints and a short \"Godotwright lessons for agents\" block go into the project's AGENTS.md or CLAUDE.md when one exists (`write_agents_file` creates AGENTS.md), and a dated report goes to .godot/godotwright/dreams/. godot_undo takes an apply back, lessons included. Draft lessons hold the symptom and message only: look up the cause and fix (godot_lessons, godot_api, godot_check) and rewrite them with godot_lesson_add, same title. Show the person the proposals with their evidence and apply only what they approve.",
+      inputSchema: {
+        path: pathParam,
+        apply: z.string().optional().describe('proposals to apply: numbers or ids from the list, comma separated, or "all"; leave out to only list them'),
+        transcripts: z.boolean().optional().describe("also read this project's Claude Code and Codex session transcripts (default false)"),
+        since: z.string().optional().describe("only journal events and transcripts this recent: 7d, 12h, 2w or a date (default 30d)"),
+        write_agents_file: z.boolean().optional().describe("with apply: create AGENTS.md for the lessons block when the project has neither AGENTS.md nor CLAUDE.md"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, apply, transcripts, since, write_agents_file, detail }) => {
+      try {
+        const common = { ...(since ? { since: parseSince(since) } : {}), ...(transcripts ? { transcripts: true } : {}) };
+        if (apply !== undefined) {
+          const r = applyDream(where(path), apply, { ...common, ...(write_agents_file ? { writeAgentsFile: true } : {}) });
+          markDreamed(r.root);
+          return text(formatApply(r));
+        }
+        const r = dream(where(path), common);
+        markDreamed(r.root);
+        return text(formatDream(r, detail ?? profile.detail));
+      } catch (error) {
+        if (error instanceof DreamError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );
