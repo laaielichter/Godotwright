@@ -5,7 +5,7 @@
 import { PALETTE, type MaterialDef } from "../../palette.js";
 import { box, group, lathe, loft, tube, type Num, type NodeOpts, type SpecNode, type Vec } from "../../kit.js";
 
-const wood = (r: number, g: number, b: number, roughness = 0.62): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
+const wood = (r: number, g: number, b: number, roughness = 0.62): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
 const cloth = (r: number, g: number, b: number, roughness = 0.94): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "fabric" });
 const hide = (r: number, g: number, b: number, roughness = 0.5): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "leather" });
 const paint = (r: number, g: number, b: number, roughness = 0.5, metallic = 0): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
