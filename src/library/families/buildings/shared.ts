@@ -56,10 +56,10 @@ export const BUILDING_OVERRIDES: Record<string, MaterialDef> = {
   // The brick and stone textures keep the colour as their mean (the mortar follows it), so these are the real albedos.
   brick_red: { color: [0.25, 0.075, 0.045], metallic: 0, roughness: 0.88, texture: "brick" },
   brick_brown: { color: [0.15, 0.072, 0.045], metallic: 0, roughness: 0.88, texture: "brick" },
-  brick_yellow: { color: [0.36, 0.255, 0.115], metallic: 0, roughness: 0.88, texture: "brick" },
-  limestone: { color: [0.4, 0.385, 0.34], metallic: 0, roughness: 0.85, texture: "stone" },
-  sandstone: { color: [0.34, 0.24, 0.13], metallic: 0, roughness: 0.9, texture: "stone" },
-  granite: { color: [0.19, 0.185, 0.18], metallic: 0, roughness: 0.8, texture: "stone" },
+  brick_yellow: { color: [0.33, 0.23, 0.1], metallic: 0, roughness: 0.88, texture: "brick" },
+  limestone: { color: [0.33, 0.315, 0.275], metallic: 0, roughness: 0.85, texture: "stone" },
+  sandstone: { color: [0.3, 0.2, 0.105], metallic: 0, roughness: 0.9, texture: "stone" },
+  granite: { color: [0.15, 0.148, 0.145], metallic: 0, roughness: 0.8, texture: "stone" },
   slate: { color: [0.06, 0.065, 0.075], metallic: 0, roughness: 0.7, texture: "stone" },
   plaster_white: { color: [0.5, 0.49, 0.45], metallic: 0, roughness: 0.92, texture: "plaster" },
   terracotta: { color: [0.26, 0.08, 0.04], metallic: 0, roughness: 0.85, texture: "plaster" },
@@ -197,10 +197,10 @@ export function thatchHip(name: string, o: { hw: Num; hd: Num; y: Num; rise: Num
   const roll = (n: string, r: number, len: string, at: Vec, axis: "x" | "z", m: string) => cyl(n, r, len, { axis, at, segments: 12, material: m });
   for (let k = 0; k < 4; k++) {
     const c = `${k} * $tc`;
-    // The lower courses are older reed and a shade darker; every course ends in a rounded, combed edge.
-    const m = k < 2 && o.roof === "thatch" ? "thatch_dark" : o.roof;
-    const yb = `$ty + ${c} * $tk + ${k} * 0.14`;
-    const r = k === 0 ? 0.2 : 0.12;
+    // Subtle stepped courses of reed, each ending in a rounded, combed edge; the drip edge at the eaves is darker.
+    const m = k < 1 && o.roof === "thatch" ? "thatch_dark" : o.roof;
+    const yb = `$ty + ${c} * $tk + ${k} * 0.05`;
+    const r = k === 0 ? 0.2 : 0.055;
     const ex = `$tw + $to - ${c} - ${k === 0 ? 0.08 : 0.04}`, ez = `$td + $to - ${c} - ${k === 0 ? 0.08 : 0.04}`;
     kids.push(roof(`Course_${k + 1}`, {
       x0: `-$tw - $to + ${c}`, x1: `$tw + $to - ${c}`, z0: `-$td - $to + ${c}`, z1: `$td + $to - ${c}`,
@@ -215,9 +215,9 @@ export function thatchHip(name: string, o: { hw: Num; hd: Num; y: Num; rise: Num
   }
   kids.push(
     box("Soffit", ["2 * ($tw + $to) - 0.1", 0.06, "2 * ($td + $to) - 0.1"], { at: [0, "$ty - 0.1", 0], material: o.roof }),
-    cyl("Ridge", 0.3, "max(0.4, 2 * ($td - $tw) + 0.6)", { axis: "z", at: [0, "$ty + $tr + 0.27", 0], segments: 14, material: o.roof }),
+    cyl("Ridge", 0.3, "max(0.4, 2 * ($td - $tw) + 0.6)", { axis: "z", at: [0, "$ty + $tr + 0.08", 0], segments: 14, material: o.roof }),
     // Dutch reed roofs are capped with a row of dark ridge tiles.
-    cyl("RidgeCap", 0.17, "max(0.4, 2 * ($td - $tw) + 0.8)", { axis: "z", at: [0, "$ty + $tr + 0.51", 0], segments: 12, material: "tile_black" }),
+    cyl("RidgeCap", 0.17, "max(0.4, 2 * ($td - $tw) + 0.8)", { axis: "z", at: [0, "$ty + $tr + 0.32", 0], segments: 12, material: "tile_black" }),
   );
   return group(name, kids, { at: o.at, vars: { tw: o.hw, td: o.hd, ty: o.y, tr: o.rise, to: o.oh ?? 0.6, tk: "$tr / ($tw + $to)", tc: "($tw + $to) * 0.16" } });
 }

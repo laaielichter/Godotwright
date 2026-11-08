@@ -69,8 +69,8 @@ export const FINISH: Record<string, MaterialDef> = {
   // Stone: dressed blocks ("stone") for walls and plinths, carved stone ("concrete": weathered, blotchy) for figures.
   // Tuned in the Godot sheets: the stone and brick textures keep the colour as their mean, and a plinth top or a
   // sunlit face reads lighter than the albedo suggests, so these sit a little under the textbook values.
-  limestone_block: stone(0.27, 0.255, 0.215),
-  limestone_carved: stone(0.27, 0.255, 0.215, "concrete", 0.85),
+  limestone_block: stone(0.23, 0.218, 0.185),
+  limestone_carved: stone(0.23, 0.218, 0.185, "concrete", 0.85),
   sandstone_block: stone(0.25, 0.17, 0.09),
   sandstone_carved: stone(0.25, 0.17, 0.09, "concrete", 0.9),
   granite_block: stone(0.15, 0.15, 0.142, "stone", 0.75),
@@ -89,6 +89,8 @@ export const FINISH: Record<string, MaterialDef> = {
   bronze_weathered: { color: [0.13, 0.15, 0.09], metallic: 0.35, roughness: 0.55, texture: "rust" },
   bronze_polished: { color: [0.55, 0.37, 0.18], metallic: 1, roughness: 0.32 },
   verdigris: { color: [0.11, 0.19, 0.15], metallic: 0.15, roughness: 0.75, texture: "rust" },
+  /** A thinner run of patina washed over stone: the green of verdigris, dulled by the stone under it. */
+  patina_run: { color: [0.08, 0.13, 0.1], metallic: 0, roughness: 0.8, texture: "rust" },
   brass_worn: { color: [0.62, 0.48, 0.24], metallic: 1, roughness: 0.38 },
   gilt: { color: [0.75, 0.56, 0.24], metallic: 1, roughness: 0.28 },
   corten: { color: [0.2, 0.075, 0.03], metallic: 0.1, roughness: 0.9, texture: "rust" },

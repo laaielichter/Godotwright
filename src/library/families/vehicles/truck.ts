@@ -60,35 +60,76 @@ const CARGO_TEXT: Record<Cargo, string> = {
   tanker: "a rounded tank with a top walkway, ladder and valves",
 };
 
+/** A rounded-rectangle section of the cab, its sides $cw / 2 - dw out, from $cy0 + yb to $cy0 + yt, corner radius r, the top crowned. */
+function cabSec(z: string, dw: number, yb: number, yt: number, r: number, crown = 0): { z: string; points: [string, string][] } {
+  const pts: [string, string][] = [];
+  const xc = (sg: number, d: number) => `${sg < 0 ? "-" : ""}($cw / 2 - ${f(dw + d)})`;
+  const y = (v: number) => `$cy0 + ${f(v)}`;
+  const arc = (sx: number, sy: number, a0: number) => {
+    for (let k = 0; k < 4; k++) {
+      const a = ((a0 + k * 30) * Math.PI) / 180;
+      const cx = r - r * Math.abs(Math.cos(a));
+      pts.push([xc(sx, cx), y(sy > 0 ? yt - r + r * Math.sin(a) : yb + r + r * Math.sin(a))]);
+    }
+  };
+  arc(1, -1, -90);
+  arc(1, 1, 0);
+  pts.push(["0", y(yt + crown)]);
+  // Upper left quarter, then lower left.
+  for (let k = 0; k < 4; k++) { const a = ((90 + k * 30) * Math.PI) / 180; pts.push([xc(-1, r + r * Math.cos(a)), y(yt - r + r * Math.sin(a))]); }
+  for (let k = 0; k < 4; k++) { const a = ((180 + k * 30) * Math.PI) / 180; pts.push([xc(-1, r + r * Math.cos(a)), y(yb + r + r * Math.sin(a))]); }
+  pts.push(["0", y(yb)]);
+  return { z, points: pts };
+}
+
 function cabNodes(t: TruckDef): SpecNode[] {
   const k: SpecNode[] = [];
-  // The cab-over cab is a rounded box from $cz0 (rear) to $cz1 (front); a bonneted cab sits behind an engine hood.
-  const sec = (z: string, w: string, h: string, cy: string) => ({ z, superellipse: { width: w, height: h, n: 7, count: 32, cy } });
+  const H = t.cab === "bonnet" ? 2.0 : 2.15;
+  // The cab: radiused all round, the roof rounding into a raked, curved windscreen, a vertical grille face below it.
   k.push(loft("Shell", [
-    sec("$cz0", "$cw - 0.06", "$chh - 0.06", "$cy0 + $chh / 2"),
-    sec("$cz0 + 0.04", "$cw", "$chh", "$cy0 + $chh / 2"),
-    sec("$cz1 - 0.12", "$cw", "$chh", "$cy0 + $chh / 2"),
-    sec("$cz1 - 0.03", "$cw - 0.06", "$chh - 0.1", "$cy0 + $chh / 2 - 0.03"),
-    sec("$cz1", "$cw - 0.16", "$chh - 0.24", "$cy0 + $chh / 2 - 0.08"),
+    cabSec("$cz0", 0.03, 0.03, H - 0.03, 0.12),
+    cabSec("$cz0 + 0.05", 0, 0, H, 0.17),
+    cabSec("$cz1 - 0.5", 0, 0, H, 0.17),
+    cabSec("$cz1 - 0.38", 0, 0, H - 0.025, 0.17, 0.01),
+    cabSec("$cz1 - 0.31", 0.005, 0, H - 0.1, 0.17, 0.03),
+    cabSec("$cz1 - 0.18", 0.01, 0, H * 0.78, 0.16, 0.05),
+    cabSec("$cz1 - 0.06", 0.02, 0, H * 0.45, 0.15, 0.06),
+    cabSec("$cz1 - 0.02", 0.05, 0.01, H * 0.42, 0.13, 0.05),
+    cabSec("$cz1", 0.1, 0.04, H * 0.38, 0.1, 0.04),
   ], { material: "cab_paint" }));
-  // Windscreen, side windows, grille, bumper, lamps.
-  k.push(box("Windscreen", ["$cw - 0.3", "$chh * 0.36", 0.05], { at: [0, "$cy0 + $chh * 0.68", "$cz1 - 0.035"], rotate: [-4, 0, 0], bevel: 0.02, material: "dark_glass" }));
-  k.push(box("SideWindow_L", [0.05, "$chh * 0.32", 0.85], { at: ["$cw / 2 - 0.01", "$cy0 + $chh * 0.68", "$cz1 - 0.6"], bevel: 0.02, material: "dark_glass", mirror: "SideWindow_R" }));
+  // Curved windscreen glass on the raked face: a lens-shaped band that follows the crowned top of the sections.
+  const ws = ([z, dw, yt, r, crown, out]: [string, number, number, number, number, number]) => {
+    const xc = `($cw / 2 - ${f(dw + r)})`;
+    const w = `(${xc} - 0.06)`;
+    const yAt = (u: number, off: number) => `$cy0 + ${f(yt)} + ${f(crown)} * (1 - ${f(Math.abs(u))} * ${w} / ${xc}) + ${f(off + 0.012 * (1 - u * u))}`;
+    const P = (u: number, off: number): [string, string] => [`${f(u)} * ${w}`, yAt(u, off)];
+    return { z, points: [P(1, out * 0.1), P(0.96, out), P(0.5, out), P(0, out), P(-0.5, out), P(-0.96, out), P(-1, out * 0.1), P(-0.96, -out * 0.8), P(-0.5, -out * 0.8), P(0, -out * 0.8), P(0.5, -out * 0.8), P(0.96, -out * 0.8)] };
+  };
+  k.push(loft("Windscreen", [ws(["$cz1 - 0.3", 0.005, H - 0.11, 0.17, 0.03, 0.03]), ws(["$cz1 - 0.18", 0.01, H * 0.78, 0.16, 0.05, 0.06]), ws(["$cz1 - 0.075", 0.02, H * 0.47, 0.15, 0.06, 0.06])], { material: "dark_glass" }));
+  k.push(box("Wiper_{i}", [0.7, 0.025, 0.03], { at: ["-$cw * 0.22", `$cy0 + ${f(H * 0.5)}`, "$cz1 - 0.05"], repeat: { count: 2, step: ["$cw * 0.44", 0, 0] }, rotate: [-14, 0, 8], material: "trim_black" }));
+  k.push(box("SideWindow_L", [0.05, "$chh * 0.3", 0.66], { at: ["$cw / 2 - 0.01", "$cy0 + $chh * 0.67", "$cz1 - 0.72"], bevel: 0.02, material: "dark_glass", mirror: "SideWindow_R" }));
   k.push(box("DoorLine_L", [0.03, "$chh * 0.62", 0.02], { at: ["$cw / 2", "$cy0 + $chh * 0.42", "$cz1 - 1.15"], material: "trim_black", mirror: "DoorLine_R" }));
   k.push(box("Handle_L", [0.04, 0.04, 0.22], { at: ["$cw / 2 + 0.005", "$cy0 + $chh * 0.5", "$cz1 - 1.0"], bevel: 0.01, material: "chrome", mirror: "Handle_R" }));
   if (t.cab === "cabover") {
     k.push(group("Grille", [
-      box("Panel", ["$cw * 0.62", "$chh * 0.3", 0.06], { bevel: 0.02, material: "trim_black" }),
-      box("Slat_{i}", ["$cw * 0.58", 0.025, 0.04], { at: [0, "-$chh * 0.12", 0.03], repeat: { count: 5, step: [0, "$chh * 0.06", 0] }, material: "chrome" }),
-    ], { at: [0, "$cy0 + $chh * 0.3", "$cz1 - 0.06"] }));
-    k.push(box("Visor", ["$cw - 0.1", 0.04, 0.3], { at: [0, "$cy0 + $chh * 0.89", "$cz1 - 0.04"], rotate: [8, 0, 0], bevel: 0.015, material: "cab_paint" }));
+      box("Frame", ["$cw * 0.66", "$chh * 0.27", 0.05], { bevel: 0.025, material: "cab_paint" }),
+      box("Panel", ["$cw * 0.6", "$chh * 0.22", 0.05], { at: [0, 0, 0.012], bevel: 0.015, material: "trim_black" }),
+      box("Slat_{i}", ["$cw * 0.57", 0.022, 0.03], { at: [0, "-$chh * 0.085", 0.03], repeat: { count: 5, step: [0, "$chh * 0.042", 0] }, material: "chrome" }),
+      box("Badge", [0.22, 0.06, 0.02], { at: [0, "$chh * 0.115", 0.03], bevel: 0.008, material: "chrome" }),
+    ], { at: [0, "$cy0 + $chh * 0.22", "$cz1 - 0.012"] }));
+    k.push(box("Visor", ["$cw - 0.36", 0.035, 0.24], { at: [0, "$cy0 + $chh - 0.09", "$cz1 - 0.26"], rotate: [10, 0, 0], bevel: 0.015, material: "cab_paint" }));
     k.push(box("Step_L", [0.12, 0.05, 0.45], { at: ["$cw / 2 - 0.04", "$cy0 - 0.25", "$cz1 - 1.0"], material: "aluminium", mirror: "Step_R" }));
     k.push(box("StepPlate_L", [0.06, 0.4, 0.5], { at: ["$cw / 2 - 0.08", "$cy0 - 0.1", "$cz1 - 1.0"], material: "trim_black", mirror: "StepPlate_R" }));
   }
   k.push(group("Mirror_L", [
-    tube("Arm", [[0, 0, 0], [0.18, 0.05, 0.05], [0.24, 0.3, 0.05]], 0.018, { material: "trim_black", segments: 8 }),
-    box("Glass", [0.06, 0.38, 0.2], { at: [0.27, 0.22, 0.05], bevel: 0.02, material: "trim_black" }),
-  ], { at: ["$cw / 2 - 0.02", "$cy0 + $chh * 0.55", "$cz1 - 0.15"], mirror: "Mirror_R" }));
+    // Two arms out from the door frame to a main mirror, a wide-angle mirror under it.
+    tube("ArmUpper", [[-0.02, 0.42, -0.02], [0.14, 0.46, 0.04], [0.26, 0.42, 0.06]], 0.016, { material: "trim_black", segments: 8 }),
+    tube("ArmLower", [[-0.02, 0, -0.02], [0.14, 0.02, 0.04], [0.26, 0.06, 0.06]], 0.016, { material: "trim_black", segments: 8 }),
+    box("Housing", [0.08, 0.36, 0.2], { at: [0.29, 0.25, 0.07], bevel: 0.03, material: "trim_black" }),
+    box("Glass", [0.06, 0.32, 0.012], { at: [0.29, 0.25, -0.03], bevel: 0.004, material: "mirror_face" }),
+    box("WideAngle", [0.08, 0.16, 0.16], { at: [0.29, -0.03, 0.07], bevel: 0.03, material: "trim_black" }),
+    box("WideGlass", [0.06, 0.13, 0.012], { at: [0.29, -0.03, -0.012], bevel: 0.004, material: "mirror_face" }),
+  ], { at: ["$cw / 2 - 0.02", "$cy0 + $chh * 0.45", "$cz1 - 0.42"], mirror: "Mirror_R" }));
   if (t.roofSpoiler) {
     k.push(group("RoofSpoiler", [
       box("Deflector", ["$cw - 0.24", 0.05, 1.05], { at: [0, 0.25, -0.45], rotate: [28, 0, 0], bevel: 0.02 }),
@@ -126,7 +167,13 @@ function buildTruck(t: TruckDef): AssetDraft {
     cab.push(cyl("Lamp_L", 0.11, 0.08, { axis: "z", at: ["$cw / 2 - 0.4", "$cy0 + 0.4", "$L2 - 0.1"], segments: 18, material: "lamp_lens", mirror: "Lamp_R" }));
     cab.push(cyl("Stack_L", 0.08, 1.9, { at: ["$cw / 2 - 0.1", "$cy0 + $chh - 0.35", "$cz0 + 0.04"], segments: 14, material: "chrome", mirror: "Stack_R" }));
   } else {
-    cab.push(box("Lamp_L", [0.36, 0.14, 0.08], { at: ["$cw / 2 - 0.3", "$cy0 + 0.02", "$cz1 + 0.02"], bevel: 0.02, material: "lamp_lens", mirror: "Lamp_R" }));
+    // Light clusters: a dark housing with two round projectors, an amber indicator and a daytime strip.
+    cab.push(group("Lamp_L", [
+      box("Housing", [0.42, 0.17, 0.08], { bevel: 0.03, material: "trim_black" }),
+      cyl("Lens_{i}", 0.05, 0.03, { axis: "z", at: [-0.12, 0.01, 0.035], repeat: { count: 2, step: [0.12, 0, 0] }, segments: 16, material: "lamp_lens" }),
+      box("Indicator", [0.09, 0.09, 0.03], { at: [0.15, 0.01, 0.035], bevel: 0.01, material: "lamp_amber" }),
+      box("Drl", [0.36, 0.018, 0.02], { at: [0, -0.06, 0.04], material: "lamp_lens" }),
+    ], { at: ["$cw / 2 - 0.34", "$cy0 + 0.12", "$cz1 - 0.02"], mirror: "Lamp_R" }));
   }
   kids.push(group("Cab", cab));
   kids.push(box("Bumper", ["$cw - 0.04", 0.32, 0.22], { at: [0, "$cy0 - 0.12", "$L2 - 0.1"], bevel: 0.04, material: bonnet ? "chrome" : "trim_black" }));
@@ -286,6 +333,7 @@ function buildTruck(t: TruckDef): AssetDraft {
       spoil: { color: [0.2, 0.15, 0.1], metallic: 0, roughness: 1, texture: "ground" },
       ...mats("chrome", "aluminium"),
       dark_glass: VMATS["dark_glass"]!, trim_black: VMATS["trim_black"]!, tyre: VMATS["tyre"]!, lamp_lens: VMATS["lamp_lens"]!, lamp_red: VMATS["lamp_red"]!, lamp_amber: VMATS["lamp_amber"]!, plate_yellow: VMATS["plate_yellow"]!,
+      mirror_face: { color: [0.62, 0.64, 0.66], metallic: 1, roughness: 0.06 },
     },
     nodes,
   };

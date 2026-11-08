@@ -289,12 +289,17 @@ class Body {
     const w = s < 1 ? sm(1 - (1 - s) / 0.8) : s <= 2 ? 1 : s < 3 ? Math.max(sm(1 - (s - 2) / 0.8), sm(1 - (3 - s) / 0.8)) : s <= 4 ? 1 : sm(1 - (s - 4) / 0.8);
     const wing = L(0.17, { wr: 1, Ra: 1 });
     const any = (f2: (e: Record<string, number>) => boolean) => this.envs.some(f2);
-    if (w > 0 && any((e) => lev(wing, e) > lev(yE, e))) yE = lerpL(yE, wing, w);
+    if (w > 0 && ev(wing) > ev(yE) - 0.03) yE = lerpL(yE, wing, w);
     // The shoulder crease runs level along the side, a little under the belt; at nose and tail it follows the top edge.
     const belt = L(-0.085 + 0.012 * (s - 2.5) / 2.5, { H: st.belt });
     const lim = ev(yE) - 0.05;
     void lim;
-    let yC = !any((e) => lev(belt, e) > lev(yE, e) - 0.05) ? belt : ev(yE) - 0.05 > ev(yB) + 0.07 ? ladd(yE, L(-0.05)) : lerpL(yB, yE, 0.58);
+    // Blended, not switched, so the crease never jumps between stations at any parameter setting.
+    const c2 = ladd(yE, L(-0.05)), c3 = lerpL(yB, yE, 0.58);
+    const k1 = Math.max(...this.envs.map((e) => sm((lev(belt, e) - lev(c2, e) + 0.05) / 0.1)));
+    const m12 = lerpL(belt, c2, k1);
+    const k2 = Math.max(...this.envs.map((e) => sm((lev(m12, e) - lev(c3, e) + 0.02) / 0.04)));
+    let yC = lerpL(m12, c3, k2);
     // Over the arches the crease stays 7 cm above the arch at every parameter setting.
     const archC = L(0.07, { wr: 1, Ra: 1 });
     if (w > 0 && any((e) => lev(yC, e) < lev(archC, e))) yC = lerpL(yC, archC, w);
@@ -573,8 +578,8 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     });
     return loft(name, secs, { material: mat, rotate: [0, 90, 0] });
   };
-  const yBot0 = ev(B.bottom(0.02));
-  const yBot5 = ev(B.bottom(4.98));
+  const yBot0 = ev(B.bottom(0.25));
+  const yBot5 = ev(B.bottom(4.75));
   const sillY = ev(B.sill);
   const frontZ = (x: number, y: number) => B.Z(B.surfaceS(x, y));
   const rearZ = (x: number, y: number) => B.Z(B.surfaceS(x, y, true));
@@ -623,7 +628,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     const big = st.bumper === "black" || st.trunk === "bed";
     let yg = lampFY - (big ? 0.06 : 0.02);
     // A low bonnet between raised wings (sports cars): the grille goes down into the nose.
-    while (B.surfaceS(0, yg + 0.05) > 0.5 && yg > lampFY0 - 0.25) yg -= 0.01;
+    while (B.surfaceS(0, yg + 0.05) > 0.12 && yg > lampFY0 - 0.25) yg -= 0.01;
     kids.push(group("Grille", [
       box("Frame", [`$W2 * ${big ? 0.95 : 0.62}`, big ? 0.24 : 0.09, 0.06], { bevel: 0.02, material: big && st.bumper === "chrome" ? "chrome" : "gloss_black" }),
       box("Mesh", [`$W2 * ${big ? 0.88 : 0.56}`, big ? 0.19 : 0.06, 0.03], { at: [0, 0, 0.012], material: "trim_black" }),

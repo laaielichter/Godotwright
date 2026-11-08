@@ -48,24 +48,22 @@ const FINISHES: Record<Style, [Finish, Finish]> = {
  */
 function drip(name: string, x: Num, top: Num, z: Num, len: Num, k: number): SpecNode {
   const r = rng(101 + k * 17);
-  const w = 0.016 + 0.02 * r();
-  const ts = [0, 0.12, 0.3, 0.45, 0.6, 0.75, 0.88, 1];
-  const wob = ts.map(() => (r() - 0.5) * 0.008);
-  const bulge = 2 + Math.floor(r() * 4);
-  const half = (i: number): number => {
-    const t = ts[i]!;
-    const h = (w / 2) * Math.pow(1 - t, 0.7) * (i === bulge ? 1.45 : 1) * (0.85 + 0.3 * r());
-    return Math.max(0.0015, h);
-  };
+  const w = 0.03 + 0.04 * r();
+  const ts = [0, 0.06, 0.16, 0.28, 0.4, 0.52, 0.63, 0.74, 0.84, 0.92, 1];
+  // The run wanders more the further it gets; one or two drops hung on the way down and left a bulge.
+  let cx = 0;
+  const centre = ts.map((t) => (cx += (r() - 0.5) * 0.006 * (0.3 + t)));
+  const bulges = new Set([2 + Math.floor(r() * 4), 6 + Math.floor(r() * 3)]);
   const left: [Num, Num][] = [], right: [Num, Num][] = [];
   ts.forEach((t, i) => {
-    const hw = half(i), cx = wob[i]!;
+    const taper = Math.pow(1 - t, 0.55) * (bulges.has(i) ? 1.35 : 1);
+    const hl = Math.max(0.0012, (w / 2) * taper * (0.8 + 0.4 * r()));
+    const hr = Math.max(0.0012, (w / 2) * taper * (0.8 + 0.4 * r()));
     const d = `(${len}) * ${t.toFixed(3)}`;
-    left.push([Number((cx - hw).toFixed(4)), d]);
-    right.push([Number((cx + hw).toFixed(4)), d]);
+    left.push([Number((centre[i]! - hl).toFixed(4)), d]);
+    right.push([Number((centre[i]! + hr).toFixed(4)), d]);
   });
-  const plan = [...left, ...right.reverse()];
-  return extrude(name, plan, 0, 0.003, { at: [x, top, z], rotate: [90, 0, 0], material: "verdigris" });
+  return extrude(name, [...left, ...right.reverse()], 0, 0.003, { at: [x, top, z], rotate: [90, 0, 0], material: k % 2 ? "patina_run" : "verdigris" });
 }
 
 /** Weathering on a plinth face at z = zf: a dark grime band at the foot and (copper alloys) green run-off drips. */
@@ -74,8 +72,8 @@ const weather = (f: Finish, wx: Num, wz: Num, streak?: { w: Num; z: Num; top: Nu
   ...(f.streaks && streak
     ? [-0.36, -0.2, -0.05, 0.13, 0.3].map((u, k) => {
         const r = rng(7 + k * 31);
-        const lf = 0.35 + 0.55 * r();
-        return drip(`Streak_${k + 1}`, `(${streak.w}) * ${(u + (r() - 0.5) * 0.06).toFixed(3)}`, `${streak.top} - ${(0.002 + 0.02 * r()).toFixed(3)}`, `${streak.z} + 0.001`, `(${streak.len}) * ${lf.toFixed(3)}`, k);
+        const lf = 0.55 + 0.45 * r();
+        return drip(`Streak_${k + 1}`, `(${streak.w}) * ${(u + (r() - 0.5) * 0.06).toFixed(3)}`, `${streak.top} - ${(0.002 + 0.02 * r()).toFixed(3)}`, `${streak.z} + ${(0.001 + 0.0006 * k).toFixed(4)}`, `(${streak.len}) * ${lf.toFixed(3)}`, k);
       })
     : []),
 ];
@@ -264,7 +262,7 @@ function statue(style: Style, f: Finish): AssetDraft {
     description: `${s.text}, in ${f.text}, with a dark weathering band at its foot. It faces +z.`,
     tags: [style, f.key, ...f.text.split(" ").filter((w) => w.length > 3), ...s.tags],
     params: s.params(),
-    materials: finish(...new Set([f.figure, f.plinth, f.accent, "granite_dark", "wet_stain", "verdigris", "corten"])),
+    materials: finish(...new Set([f.figure, f.plinth, f.accent, "granite_dark", "wet_stain", "verdigris", "patina_run", "corten"])),
     nodes: s.build(f),
   };
 }

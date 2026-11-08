@@ -1,6 +1,6 @@
-import { box, cyl, ellipsoid, group, lathe, num, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
+import { box, cyl, ellipsoid, extrude, group, lathe, num, rng, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import type { MaterialDef } from "../../palette.js";
-import { sinkByIndex } from "./rocks.js";
+import { sink } from "./rocks.js";
 import { laid } from "./timber.js";
 import { finish } from "./finishes.js";
 
@@ -49,20 +49,40 @@ const LOCAL: Record<string, MaterialDef> = {
 };
 
 /**
- * Moss on a stone wall (n places round it at radius r, the wall h tall with its coping lip at h - 0.08): at each place
- * two low, irregular cushions spreading along the foot where the damp collects, and a thin tuft tucked into the joint
- * under the coping. Cushions are flat lumpy ellipsoids half sunk into the wall, set down on their own lowest point.
+ * Moss on a stone wall (n places round it at distance r: a round wall, or the face centres of a square one; the wall h
+ * tall with its coping lip at h - 0.08). At each place a low carpet with a ragged edge creeps out along the foot where
+ * the damp collects, two soft cushions grow on it against the wall, and a thin tuft sits in the joint under the
+ * coping. Every place gets its own outline and seeds; cushions are set down on their own lowest point.
  */
-const MOSS = { lumps: 0.3, segments: 14 };
-const moss = (f: Finish, r: Num, n: number, h: Num, phase = 0): SpecNode[] =>
-  f.moss
-    ? [group("Moss_{i}", [
-        ellipsoid("Cushion_A", [0.045, 0.026, 0.17], { at: [`${r} - 0.012`, `0.026 * ${sinkByIndex(n, (i) => i * 5 + 2, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, -0.06], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 2", material: "moss_green" }),
-        ellipsoid("Cushion_B", [0.045, 0.026, 0.11], { at: [`${r} - 0.016`, `0.026 * ${sinkByIndex(n, (i) => i * 5 + 4, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, 0.11], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 4", material: "moss_dark" }),
-        ellipsoid("Cushion_C", [0.035, 0.02, 0.07], { at: [`${r} - 0.012`, `0.02 * ${sinkByIndex(n, (i) => i * 3 + 13, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, -0.24], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 3 + 13", material: "moss_dark" }),
-        ellipsoid("Tuft", [0.022, 0.012, 0.09], { at: [`${r} + 0.004`, `${h} - 0.088`, 0.02], segments: 10, lumps: 0.3, seed: "$i * 3 + 9", material: "moss_green" }),
-      ], { repeat: { count: n, around: "y", phase } })]
-    : [];
+const moss = (f: Finish, r: Num, n: number, h: Num, phase: number, round: boolean): SpecNode[] => {
+  if (!f.moss) return [];
+  /** The wall face at offset z along it (x, from the well's axis). */
+  const face = (z: number): string => (round ? `sqrt((${r}) * (${r}) - ${(z * z).toFixed(5)})` : `(${r})`);
+  return Array.from({ length: n }, (_, k) => {
+    const g = rng(40 + k * 13);
+    const len = 0.34 + 0.22 * g();
+    const z0 = (g() - 0.5) * 0.12;
+    // The ragged outer edge: out from the wall by 2-7 cm, tapering to the wall at both ends.
+    const steps = 9;
+    const outer: [Num, Num][] = [];
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const z = z0 - len / 2 + len * t;
+      const reach = Math.sin(Math.PI * t) * (0.022 + 0.05 * g()) + 0.004;
+      outer.push([`${face(z)} + ${reach.toFixed(4)}`, Number(z.toFixed(4))]);
+    }
+    const inner: [Num, Num][] = [[`${face(z0 + len / 2)} - 0.06`, Number((z0 + len / 2).toFixed(4))], [`${face(z0 - len / 2)} - 0.06`, Number((z0 - len / 2).toFixed(4))]];
+    const cushion = (name: string, radii: [number, number, number], z: number, seed: number, material: string): SpecNode =>
+      ellipsoid(name, radii, { at: [`${face(z)} - 0.008`, Number((radii[1] * sink(seed, 0.3, 0, 14)).toFixed(4)), Number(z.toFixed(4))], segments: 14, lumps: 0.3, seed, material });
+    const za = z0 - len * (0.1 + 0.15 * g()), zb = z0 + len * (0.12 + 0.18 * g());
+    return group(`Moss_${k + 1}`, [
+      extrude("Carpet", [...outer, ...inner], 0, Number((0.008 + 0.006 * g()).toFixed(4)), { material: "moss_dark" }),
+      cushion("Cushion_A", [0.04, 0.022, 0.09 + 0.04 * g()], za, 7 + k * 5, "moss_green"),
+      cushion("Cushion_B", [0.032, 0.018, 0.06 + 0.03 * g()], zb, 9 + k * 5, "moss_dark"),
+      ellipsoid("Tuft", [0.022, 0.012, 0.07 + 0.04 * g()], { at: [`${face(0.02)} + 0.004`, `${h} - 0.088`, 0.02], segments: 10, lumps: 0.3, seed: 3 + k * 3, material: "moss_green" }),
+    ], { rotate: [0, Number((phase + (k * 360) / n).toFixed(3)), 0] });
+  });
+};
 
 /** A ring wall with a moulded coping; 4, 6 or many segments. */
 const ringWall = (rin: Num, rout: Num, h: Num, segments: number, o: { rotate?: [Num, Num, Num] } = {}): SpecNode =>
@@ -99,7 +119,7 @@ function roofed(f: Finish): SpecNode[] {
     group("Well", [
       ringWall("$R - 0.18", "$R", "$wallHeight", 32),
       water("$R - 0.18", "$wallHeight", 32),
-      ...moss(f, "$R", 7, "$wallHeight", 20),
+      ...moss(f, "$R", 7, "$wallHeight", 20, true),
       box("Post_L", [0.12, "$roofHeight - $wallHeight + 0.05", 0.12], { at: ["$R - 0.09", "$wallHeight - 0.05", 0], anchor: "bottom", bevel: 0.01, material: f.wood, mirror: "Post_R" }),
       laid("z", box("Brace_L", [0.06, 0.06, "$R * 0.9"], { at: ["$R - 0.09", "$roofHeight - 0.03", 0], bevel: 0.006, material: f.wood, mirror: "Brace_R" })),
       laid("x", box("Ridge", ["2 * $R + 0.1", 0.08, 0.08], { at: [0, "$roofHeight - 0.03", 0], bevel: 0.008, material: f.wood })),
@@ -132,7 +152,7 @@ function pump(f: Finish): SpecNode[] {
   return [
     group("PumpWell", [
       ringWall("$W * 0.5", "$W * 0.707", "$wallHeight", 4, { rotate: [0, 45, 0] }),
-      ...moss(f, "$W * 0.5", 4, "$wallHeight", 90),
+      ...moss(f, "$W * 0.5", 4, "$wallHeight", 90, false),
       laid("x", box("Cover", ["$W * 0.76", 0.08, "$W * 0.76"], { at: [0, "$wallHeight - 0.06", 0], anchor: "bottom", bevel: 0.01, material: f.wood })),
       laid("z", box("Batten_{i}", [0.06, 0.03, "$W * 0.7"], { at: ["-$W * 0.25 + $i * $W * 0.25", "$wallHeight + 0.015", 0], bevel: 0.006, material: f.wood, repeat: { count: 3, step: [0, 0, 0] } })),
       box("Hatch", ["$W * 0.3", 0.03, "$W * 0.24"], { at: [0, "$wallHeight + 0.01", "$W * 0.2"], bevel: 0.004, material: f.wood }),
@@ -158,7 +178,7 @@ function fourpost(f: Finish): SpecNode[] {
     group("WellHouse", [
       ringWall("$W * 0.52", "$W * 0.707", "$wallHeight", 4, { rotate: [0, 45, 0] }),
       water("$W * 0.52", "$wallHeight", 4, { rotate: [0, 45, 0] }),
-      ...moss(f, "$W * 0.5", 4, "$wallHeight", 90),
+      ...moss(f, "$W * 0.5", 4, "$wallHeight", 90, false),
       box("Post_FL", [0.11, "$roofHeight - $wallHeight + 0.05", 0.11], { at: ["$a", "$wallHeight - 0.05", "$a"], anchor: "bottom", bevel: 0.01, material: f.wood, mirror: "Post_FR" }),
       box("Post_BL", [0.11, "$roofHeight - $wallHeight + 0.05", 0.11], { at: ["$a", "$wallHeight - 0.05", "-$a"], anchor: "bottom", bevel: 0.01, material: f.wood, mirror: "Post_BR" }),
       laid("z", box("Plate_L", [0.1, 0.1, "2 * $a + 0.12"], { at: ["$a", "$roofHeight - 0.05", 0], bevel: 0.008, material: f.wood, mirror: "Plate_R" })),

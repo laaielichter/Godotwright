@@ -82,13 +82,13 @@ function polygonal(style: "hexagonal" | "bandstand", f: (typeof FINISHES)["hexag
   ], { at: [0, 0, "$R * cos(pi / $nn)"], repeat: { count: n - 1, around: "y", phase: 360 / n } }));
   // Roof.
   kids.push(group("Roof", [
-    facetRoof(n, f.roof === "thatch" ? "thatch_dark" : f.roof, band ? 0.08 : 0.1),
+    facetRoof(n, f.roof, band ? 0.08 : 0.1),
     // Thatch: stepped courses of combed reed over the facets, a thick rounded roll round the eaves.
     ...(f.roof === "thatch" ? [
       ...[1, 2, 3].map((k) => group(`Course_${k}`, [
-        facetRoof(n, k < 2 ? "thatch_dark" : f.roof, 0.1),
-        cyl("CourseRoll_{i}", 0.08, `2 * $ra * tan(pi / ${n}) + 0.08`, { axis: "x", at: [0, "$ey + 0.03", "$ra - 0.04"], repeat: { count: n, around: "y" }, segments: 10, material: k < 2 ? "thatch_dark" : f.roof }),
-      ], { vars: { ey: `$ey + ${k} * $ra * 0.17 * tan($phi) + ${k * 0.12}`, ra: `$ra * (1 - ${k} * 0.17)` } })),
+        facetRoof(n, f.roof, 0.1),
+        cyl("CourseRoll_{i}", 0.05, `2 * $ra * tan(pi / ${n}) + 0.08`, { axis: "x", at: [0, "$ey + 0.03", "$ra - 0.04"], repeat: { count: n, around: "y" }, segments: 10, material: f.roof }),
+      ], { vars: { ey: `$ey + ${k} * $ra * 0.17 * tan($phi) + ${k * 0.05}`, ra: `$ra * (1 - ${k} * 0.17)` } })),
       cyl("EaveRoll_{i}", 0.15, `2 * $ra * tan(pi / ${n}) + 0.2`, { axis: "x", at: [0, "$ey + 0.02", "$ra - 0.06"], repeat: { count: n, around: "y" }, segments: 12, material: "thatch_dark" }),
     ] : []),
     lathe("Finial", [[0.12, "$ey + $rr - 0.2"], [0.14, "$ey + $rr + 0.05"], [0.08, "$ey + $rr + 0.25"], [0.1, "$ey + $rr + 0.4"], [0.02, "$ey + $rr + 0.7"]], { segments: 12, material: band ? f.trim : "brass" }),
