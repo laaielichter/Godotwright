@@ -32,10 +32,24 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   path base gets a TODO instead (#166).
 - **Review: `api/export-without-type`.** `@export var speed` with no type and no default value, which Godot 4 does not
   load, is now an error with the fix (#169).
+- **`godotwright migrate`: Godot 3 `JSON.print()` and `JSON.parse(s).result`.** `JSON.print(x[, indent[, sort]])` becomes
+  `JSON.stringify(...)` with Godot 3's `sort_keys = false` default kept, and `JSON.parse(s).result` becomes
+  `JSON.parse_string(s)`; a `JSON.parse(s)` without `.result` gets a TODO (#161, #167).
+- **`godotwright migrate`: no more `DirAccess.new()`.** `Directory.new()` is no longer renamed to the abstract
+  `DirAccess.new()`; `File.new()` and `Directory.new()` get a TODO naming `FileAccess.open(path, mode)` and
+  `DirAccess.open(path)`, and review suggests the same (#158, #168).
+- **Review: `api/node-only-member`.** `@onready` or a node export (`@export var target: Node3D`) in a class that does not
+  inherit Node, such as a Resource, is now an error with the fix (#140, #170).
+- **Review: `api/redefines-native-member`.** A variable, constant or signal that the native base class already has
+  (Godot 4: `Member "..." redefined`) is now an error with the fix (#138, #171).
+- **GitHub workflow annotations.** `godotwright review --github` and `godotwright ci --annotations <file>` show findings
+  and Godot diagnostics on the changed lines of a pull request, without code scanning; the GitHub Action has an
+  `annotations` input, on by default (#151, #155).
 
 ### Thanks
 
-- @ANO3457 for #127, #129, #130, #136, #137, #156, #157, #165, #166 and #169.
+- @ANO3457 for #127, #129, #130, #136, #137, #156, #157, #165, #166, #167, #168, #169, #170 and #171.
+- @Aaqibhafeezkhan for GitHub workflow annotations in review, CI and the Action (#155).
 - @bfs2021 for the debug-guarded print fix (#148), the moved-member arguments in migrate (#153), the export hints (#154) and the SARIF
   repository paths (#164).
 - In 0.6.0: @Vamsi-2581 for the duplicate `funcref` fix (#83) and @bfs2021 for the Packed-type hint on Godot 3 Pool
