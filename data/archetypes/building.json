@@ -411,7 +411,6 @@
    "schuur",
    "stal",
    "loods",
-   "shed",
    "warehouse",
    "magazijn",
    "hangar",
@@ -1301,6 +1300,8 @@
   "name": "shed",
   "description": "A small outbuilding: a garden shed, garage, workshop or hut.",
   "aliases": [
+   "shed",
+   "sheds",
    "garden shed",
    "schuurtje",
    "tuinhuis",
