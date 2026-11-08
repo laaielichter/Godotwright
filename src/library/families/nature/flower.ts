@@ -119,7 +119,7 @@ function plant(f: Flower, leanX: string, leanZ: string): SpecNode[] {
   return [
     tube("Stem", [[0, 0, 0], [`${leanX} * 0.3`, "$h * 0.35", `${leanZ} * 0.3`], [`${leanX} * 0.7`, "$h * 0.75", `${leanZ} * 0.7 + ${bend} * 0.4`], top], [stemR, stemR, `${stemR} * 0.9`, `${stemR} * 0.8`], { segments: 7, material: f.kind === "sunflower" ? "stem_dark" : "stem_green" }),
     group("Leaves", leaves, { material: "leaf_flower" }),
-    group("Head", head(f), { at: top, rotate: [TILT[f.kind], 0, 0], material: f.petal }),
+    group("Head", head(f), { at: top, rotate: [TILT[f.kind], f.kind === "sunflower" ? 14 : 0, 0], material: f.petal }),
   ];
 }
 

@@ -159,6 +159,9 @@ function column(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string[
   const span = n4(0.92 / (e.low + e.high));
   const nodes: SpecNode[] = [
     lathe("Trunk", [["$trunkRadius * 1.3", 0], ["$trunkRadius", "$height * 0.06"], ["$trunkRadius * 0.7", "$height * 0.3"], ["$trunkRadius * 0.3", "$height * 0.6"]], { segments: 10, material: c.bark }),
+    group("Branches", [
+      tube("Branch_{i}", [["0", "$height * 0.08", "0"], ["$crownRadius * 0.3", "$height * 0.14", "0"], ["$crownRadius * 0.55", "$height * 0.22", "$crownRadius * 0.05"]], ["$trunkRadius * 0.35", "$trunkRadius * 0.22", "$trunkRadius * 0.1"], { segments: 6, repeat: { count: 4, around: "y", phase: Math.round(r() * 80) } }),
+    ], { material: c.bark }),
     group("Crown", [
       ellipsoid("Column", ["$crownRadius", `$height * ${span}`, "$crownRadius"], { at: [0, `$height * (0.04 + ${span} * ${n4(e.low)})`, 0], segments: 22, lumps, seed, material: c.inner }),
       ellipsoid("Spray_{i}", ["$crownRadius * 0.5", "min($height * 0.16, $crownRadius * 2.4)", "$crownRadius * 0.45"], {

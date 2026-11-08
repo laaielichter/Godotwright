@@ -101,6 +101,7 @@ function church(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       box("RidgeBeam", [0.4, 0.4, "2 * $hl + 0.7"], { at: [0, `${ridge} + 0.2`, 0], material: f.dress }),
     ]));
     nave.push(box("Forecourt", [8, 0.12, 4], { anchor: "bottom", at: [0, 0, "$hl + 2"], material: "concrete" }));
+    nave.push(box("Path", ["$hw + 3.6", 0.1, 1.8], { anchor: "bottom", at: ["($hw + 3) / 2", 0, "$hl - 1"], material: "concrete" }));
     nave.push(box("Canopy", [4, 0.25, 2.2], { at: [0, 3, "$hl + 1"], material: f.dress, bevel: 0.02 }));
   }
   kids.push(group("Nave", nave));

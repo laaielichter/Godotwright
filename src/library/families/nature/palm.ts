@@ -139,6 +139,7 @@ function palm(key: string, st: Style, v: Variant, index: number): AssetDraft {
     case "coconuts":
       crown.push(lathe("Shaft", [["$trunkRadius * 1.05", "-$trunkRadius * 1.2"], ["$trunkRadius * 1.3", 0], ["$trunkRadius * 0.9", "$trunkRadius * 1.3"], ["$trunkRadius * 0.2", "$trunkRadius * 2"]], { segments: 12, material: "palm_rachis" }));
       crown.push(ellipsoid("Coconut_{i}", ["$trunkRadius * 0.62", "$trunkRadius * 0.7", "$trunkRadius * 0.62"], { at: ["$trunkRadius * 1.3", "-$trunkRadius * (0.3 + 0.4 * (($i * 3) % 2))", 0], segments: 10, material: "coconut", repeat: { count: 6, around: "y", phase: 15 } }));
+      crown.push(group("Branches", [tube("Branch_{i}", [["$trunkRadius * 0.6", "$trunkRadius * 0.3", 0], ["$trunkRadius * 1.2", "$trunkRadius * 0.1", 0], ["$trunkRadius * 1.3", "-$trunkRadius * 0.2", 0]], "$trunkRadius * 0.08", { segments: 5, material: "palm_rachis", repeat: { count: 6, around: "y", phase: 15 } })]));
       extraMats.push("coconut");
       extraText = " Six coconuts hang under the crown.";
       break;

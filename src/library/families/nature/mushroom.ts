@@ -92,7 +92,7 @@ function asset(s: Shroom): AssetDraft {
   let nodes: SpecNode[];
   if (s.cluster) {
     params.push(int("count", s.cluster[0], s.cluster[1], s.cluster[2], "Number of mushrooms around the biggest one."));
-    const spread = s.key.startsWith("giant") ? 1.6 : 1.5;
+    const spread = s.key.startsWith("giant") ? 1.05 : 1.5;
     nodes = [group("Cluster", [
       group("Main", mushroom(s), { vars }),
       group("Shroom_{i}", [group("Body", mushroom(s), { vars: { H: "$height * (0.55 + 0.25 * sin($i * 2.3 + 1))", R: "$capRadius * (0.6 + 0.18 * sin($i * 1.7))", C: `$capRadius * (0.6 + 0.18 * sin($i * 1.7)) * ${n4(s.capH)}`, sr: `$capRadius * (0.6 + 0.18 * sin($i * 1.7)) * ${n4(s.stemR)}` } })], {

@@ -113,10 +113,15 @@ function bushAsset(b: Bush, index: number): AssetDraft {
       const lumps = b.lumps ?? 0.3;
       const s0 = Math.floor(r() * 3000);
       nodes.push(group("Foliage", [
-        box("Body", ["$width * 0.9", "$height * 0.94", "$length"], { anchor: "bottom", bevel: "min($width, $height) * 0.2" }),
+        box("Body", ["$width * 0.9", "$height * 0.84", "$length"], { at: [0, "$height * 0.1", 0], anchor: "bottom", bevel: "min($width, $height) * 0.2" }),
         ellipsoid("Bulge_{i}", ["$width * 0.18", "$height * 0.2", "min($length / $bulges * 0.6, $width * 0.6)"], {
           at: ["$width * 0.37", `$height * (0.5 + 0.18 * sin($i * 2.3 + ${n4(r() * 3)}))`, "-$length / 2 + $length / $bulges * ($i + 0.5)"],
-          segments: 12, lumps, seed: `$i * 5 + ${s0}`, mirror: "BulgeR_{i}",
+          segments: 12, lumps, seed: `$i * 5 + ${s0}`,
+          repeat: { count: "$bulges", step: [0, 0, 0] },
+        }),
+        ellipsoid("BulgeR_{i}", ["$width * 0.17", "$height * 0.19", "min($length / $bulges * 0.55, $width * 0.6)"], {
+          at: ["-$width * 0.36", `$height * (0.48 + 0.18 * sin($i * 1.7 + ${n4(r() * 3)}))`, "-$length / 2 + $length / $bulges * ($i + 0.9) * 0.97"],
+          segments: 12, lumps, seed: `$i * 7 + ${s0 + 2}`,
           repeat: { count: "$bulges", step: [0, 0, 0] },
         }),
         ellipsoid("Crest_{i}", ["$width * 0.42", "$height * 0.08", "min($length / $bulges * 0.62, $width * 1.2)"], {
@@ -124,7 +129,10 @@ function bushAsset(b: Bush, index: number): AssetDraft {
           segments: 12, lumps, seed: `$i * 3 + ${s0 + 1}`, material: b.sun,
           repeat: { count: "$bulges", step: [0, 0, 0] },
         }),
-      ], { material: b.leaf }));
+      ], { material: b.leaf }), group("Stems", [
+        cyl("Stem_{i}", "min($width, $height) * 0.035 + 0.008", "$height * 0.3", { at: ["$width * 0.2 * sin($i * 2.3)", 0, "-$length / 2 + $length / $bulges * ($i + 0.5)"], anchor: "base", segments: 8, repeat: { count: "$bulges", step: [0, 0, 0] } }),
+      ], { material: "bark_brown" }));
+      m.push("bark_brown");
       params.push(num("length", b.length![0], b.length![1], b.length![2], "Length of the hedge along z, in metres."));
       params.push(int("bulges", b.count![0], b.count![1], b.count![2], "Leafy bulges along each side and on top."));
       break;
@@ -176,6 +184,7 @@ function bushAsset(b: Bush, index: number): AssetDraft {
       nodes.push(group("Topiary", [
         pot(b.accent!),
         group("Foliage", foliage, { material: b.leaf }),
+        ...(b.form === "ball" || b.form === "cone" ? [lathe("Stem", [["$width * 0.05 + 0.01", "$pot * 0.85"], ["$width * 0.04 + 0.008", "$pot + ($height - $pot) * 0.2"], ["$width * 0.03 + 0.006", "$pot + ($height - $pot) * 0.25"]], { segments: 8, material: "bark_brown" })] : []),
         ...(b.form === "standard" || b.form === "tiered" ? [lathe("Stem", [["$width * 0.04 + 0.01", "$pot * 0.85"], ["$width * 0.03 + 0.008", b.form === "tiered" ? "$height * 0.9" : "$height - $width * 0.4"], ["$width * 0.02 + 0.006", b.form === "tiered" ? "$height * 0.92" : "$height - $width * 0.3"]], { segments: 8, material: "bark_brown" })] : []),
       ], { vars: { pot: potH, pr } }));
       m.push(b.accent!, "soil", "bark_brown");
@@ -197,9 +206,9 @@ function bushAsset(b: Bush, index: number): AssetDraft {
       nodes.push(group("Foliage", [
         ellipsoid("Mound", ["$width * 0.42", "$height * 0.25", "$width * 0.42"], { at: [0, `$height * 0.25 * ${n4(low)} + 0.01`, 0], segments: 16, lumps: 0.35, seed: s0 }),
         ellipsoid("Mound_Top", ["$width * 0.3", "$height * 0.2", "$width * 0.3"], { at: [0, "$height * 0.35", 0], segments: 14, lumps: 0.35, seed: s0 + 1, material: b.sun }),
-      ], { material: b.leaf }), group("Spikes", [
-        spike("Spike_{i}", 0.4, b.key === "heather" ? 0.45 : 0.82, "$spikes", phase),
-        spike("Inner_{i}", 0.16, b.key === "heather" ? 0.5 : 0.86, 7, phase + 25),
+      ], { material: b.leaf }), group("Stems", [
+        spike("Stem_{i}", 0.4, b.key === "heather" ? 0.45 : 0.82, "$spikes", phase),
+        spike("StemInner_{i}", 0.16, b.key === "heather" ? 0.5 : 0.86, 7, phase + 25),
       ]));
       m.push(...(flower ? [flower, "stem_green"] : []));
       params.push(int("spikes", b.count![0], b.count![1], b.count![2], flower ? "Number of flower stalks in the outer ring." : "Number of shoots in the outer ring."));
