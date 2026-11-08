@@ -51,6 +51,7 @@ godotwright code diagnostics res://player.gd   # Godot's own language server: wa
 godotwright shaders                   # the GPU pass: draw every shader (Compatibility renderer) for driver errors; errors at the line in the .gdshader
 godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
+godotwright dream                     # look back between sessions: proposals for lessons, hints, merges, with evidence (--transcripts, --apply 1,3)
 godotwright screenshot --model car.glb --view front,side,top,iso   # a PNG of a model from four sides (or of a scene); says how much is drawn
 godotwright screenshot --scene res://hud.tscn --baseline hud   # a named baseline: .godotwright/baselines/hud.png with its settings in hud.json
 godotwright api Node2D.look_at        # offline Godot 4.7 API: classes, methods, signals
@@ -735,7 +736,7 @@ One step for each client. Every setup and one-click button is on the [install pa
 
 | Client | How |
 | --- | --- |
-| **Claude Code** | Plugin with the MCP server, hooks, ten skills and seven subagents: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
+| **Claude Code** | Plugin with the MCP server, hooks, eleven skills and eight subagents: `/plugin install godotwright --marketplace laaielichter/Godotwright` |
 | **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it (from release 0.2.0) |
 | **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
@@ -788,7 +789,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 38 tools
+### The 39 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -801,6 +802,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_feedback` | Mark a review finding as wrong or right, or say whether a lesson helped, so Godotwright learns from it |
 | `godot_lessons` | Lessons from real Godot projects (symptom, cause, fix, test) by words, Godot error, rule or topic; `gaps` lists what it cannot predict yet |
 | `godot_lesson_add` | Keep a lesson learned here, scrubbed of names, paths and code; it comes back when the same error does |
+| `godot_dream` | Look back between sessions (learning file, journal, optionally session transcripts) and propose draft lessons, project hints, merges, retirements and fixes for contradictions, each with its evidence; nothing changes until `apply` |
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
@@ -833,8 +835,8 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 37 cost about 72,000 characters (about
-18,000 tokens); the `core` set about 21,000. Load only what the work needs:
+Every tool definition goes into the agent's context on every turn. All 39 cost about 80,000 characters (about
+20,000 tokens); the `core` set about 24,000. Load only what the work needs:
 
 ```sh
 godotwright mcp --tools core            # or GODOTWRIGHT_TOOLS=core
@@ -844,13 +846,13 @@ godotwright mcp --read-only             # or GODOTWRIGHT_READ_ONLY=1
 
 | Set | Tools | Size of the tool list |
 | --- | --- | --- |
-| `core` | scan, api, api_search, review, check, doctor, fix, usages, lessons, feedback, undo, checklist | 12 tools, ~21,100 characters |
-| `edit` | rename, scene_edit, project_edit, resource_edit, migrate, shader, lesson_add | 7 tools, ~15,300 |
-| `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~15,100 |
+| `core` | scan, api, api_search, review, check, code, doctor, fix, usages, lessons, feedback, undo, checklist | 13 tools, ~23,900 characters |
+| `edit` | rename, scene_edit, project_edit, resource_edit, migrate, shader, lesson_add, dream | 8 tools, ~18,600 |
+| `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~16,500 |
 | `game` | session, game | 2 tools, ~5,400 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
 | `model` | model_brief, model_identify, model_spec, model_build, model_view, model_lint, model_inspect | 7 tools, ~10,000 |
-| `all` (default) | everything | 37 tools, ~72,500 |
+| `all` (default) | everything | 39 tools, ~79,900 |
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never
@@ -861,8 +863,8 @@ told to call a tool that is not there. The default stays `all` on both tiers, so
 - left out: `godot_undo`, `godot_model_build` and `godot_export_run`, which always write;
 - kept, but `write: true` is refused, so they show their dry run: `godot_fix`, `godot_rename`, `godot_scene_edit`,
   `godot_project_edit`, `godot_resource_edit`, `godot_migrate`;
-- refused: `godot_scenario` op `save`, `godot_game` ops `set`, `call` and `eval`, and `godot_screenshot` with `model`
-  or `baseline` (they write the picture into the project);
+- refused: `godot_scenario` op `save`, `godot_game` ops `set`, `call` and `eval`, `godot_dream` with `apply`, and
+  `godot_screenshot` with `model` or `baseline` (they write the picture into the project);
 - kept as they are: the review, API and lessons tools (they write only counters to the local learning file in your
   home folder, which `GODOTWRIGHT_LEARN=0` turns off), and the tools that run Godot.
 
@@ -1029,3 +1031,78 @@ For maintainers, `godotwright collector serve` accepts reports (checked again,
 stored without IP addresses), and `godotwright collector aggregate <dir> --out
 data/learned.json` sums them, keeping only what at least 3 installs reported.
 `godotwright collector projects <dirs...>` learns from public projects.
+
+## Dreaming: learn from past sessions
+
+`godotwright dream [path]` (MCP: `godot_dream`) looks back at what Godotwright learned and did in a project, between
+sessions, and proposes what to keep. It is deterministic (no model, no network) and changes nothing until you apply.
+
+It reads:
+
+- the local learning file: Godot errors the review did not predict (`missedByReview`), failed API lookups and what came
+  next, lesson counts (shown, helped, wrong), local lessons, rule counts, and findings marked wrong or right;
+- the project's journal (`.godot/godotwright/journal/`): which writes were undone, by tool and file kind (only those;
+  the journal keeps no names for this);
+- with `--transcripts` (MCP `transcripts: true`) only: this project's Claude Code transcripts
+  (`~/.claude/projects/<project folder>/*.jsonl`, also for the repository root above the project; `$CLAUDE_CONFIG_DIR`
+  moves it) and Codex transcripts (`~/.codex/sessions`, matched by the folder they ran in; `$CODEX_HOME` moves it).
+  The newest 40 changed within `--since` are read, each from its last 4 MB. Kept from them: calls to Godotwright tools by
+  name, Godot errors in tool output as message templates (no names, paths or numbers; a template with anything personal
+  left is dropped), and failed `godot_api` lookups that are a Godot class with a near-miss member, with what was looked
+  up next. Their text, code, names and paths never reach the output, the report or a lesson.
+
+Proposals, numbered, each with an id (stable between runs), its evidence counts and a reason:
+
+| Kind | When | Apply |
+| --- | --- | --- |
+| draft lesson | a Godot error seen at least twice (review misses plus transcripts) that no rule predicts and no lesson explains | keeps a local lesson tagged `draft` with the symptom and message; cause and fix are left to write |
+| project hint | an API name looked up at least twice that does not exist, with what was found next | adds "use X, not Y" to the project's hints and the lessons for agents |
+| lesson from undone writes | writes by the same tool to the same kind of file undone at least twice | keeps a draft lesson about it |
+| merge lessons | two local lessons with the same Godot message or nearly the same title | adds the messages, tags and rules of one to the other and removes it |
+| retire lesson | a local lesson marked wrong at least twice and more often than it helped | removes it |
+| rewrite lesson | a bundled lesson marked wrong here, or a local one shown 10 times with no verdict | a suggestion |
+| finish draft | a draft lesson that has been shown twice and still has no fix | a suggestion |
+| resolve | findings marked wrong and later right or confirmed by Godot (or the other way round); a rule Godot confirmed whose findings were marked wrong | the newest verdict of each finding wins; the rule one is a suggestion |
+| noisy rule | a rule this project marked as a false alarm at least 3 times and at least twice as often as right | a suggestion (findings are not hidden by it) |
+
+```sh
+godotwright dream                       # proposals (--detail brief for one line each, --json)
+godotwright dream --transcripts --since 7d
+godotwright dream --apply 1,3           # numbers or ids; --apply all
+godotwright dream --auto-apply yes        # once, on this machine: let "auto": "apply" act from the session-start hook
+godotwright undo                        # takes the last apply back, lessons in the learning file included
+```
+
+An apply writes, through the journal, only on this machine and never into a file of the repository: lessons into the
+learning file (through the local-lessons API, so the scrubber applies, and recorded in the journal entry so
+`godotwright undo` puts them back; a lesson rewritten since is left alone), and into the dream folder `state.json` (the
+hints, and the proposals applied or seen: a suggestion comes back once its evidence doubles), a dated report
+`<date>-<time>.md` and `lessons-for-agents.md`. The dream folder is `.godot/godotwright/dreams/` in the project when git
+ignores `.godot/` (Godot's own `.gitignore` does) or the project is in no repository; when git would track `.godot/`, it
+is a folder in Godotwright's state folder named by a hash of the project folder, and the journal entry of the apply is
+kept there too (`godotwright undo` still finds it).
+
+`lessons-for-agents.md` holds the top five recurring mistakes with their fix and up to eight project hints; drafts stay
+out of it. Only bundled lessons and local lessons learned in this project go in: a local lesson carries a hash of the
+project folder it was kept in (`godot_lesson_add`, `lessons add` and dream applies set it), and one from another
+project, or kept before this existed, never does. A line that the scrubber would still change (it looks like code or a
+name) is left out. An apply that only marks suggestions as seen does not write it. The session-start hook adds it to the
+agent's context, on this machine only. The learning file counts Godot errors for the whole machine, so a draft lesson
+says where its evidence came from.
+
+When it is due: the session-start hook counts sessions per project (a resumed session once) in Godotwright's state
+folder (`dreams.json`, next to the learning file). Once at least `minHours` passed and `minSessions` sessions started
+since the last dream (any `godotwright dream` or `godot_dream` run), it adds one line: "Godotwright has N dream
+proposals: run godot_dream". It reads no transcripts. Settings in `godotwright.json` (in the project or a folder above
+it):
+
+```json
+{ "dream": { "auto": "suggest", "minHours": 24, "minSessions": 5 } }
+```
+
+`"auto"`: `"suggest"` (default) only says so; `"apply"` applies the draft lessons, lessons from undone writes and
+project hints by itself (never a removal, merge or verdict change) and says what it did, but only once the person has
+allowed it on this machine with `godotwright dream --auto-apply yes` (`--auto-apply no` takes that back; an agent
+cannot give it through `godot_dream`); until then it only suggests; `"off"` stays quiet. Nothing from dreaming is added
+to the opt-in anonymous report.
+`GODOTWRIGHT_LEARN=0` stops the counting.

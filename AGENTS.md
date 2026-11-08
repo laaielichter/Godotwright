@@ -89,6 +89,13 @@ node dist/cli.js --help
   sends the opt-in anonymous report (see `PRIVACY.md`; keep it in sync). Learning must never break a
   tool, and must never store code, names or paths. Local lessons are free text: they are scrubbed when kept and are
   never part of a report (only counts per bundled lesson id are).
+- `src/dream/`: dreaming (`godotwright dream`, `godot_dream`). `dream.ts` turns the learning file, the journal's log of
+  undone writes and (only when asked) session transcripts into numbered proposals with evidence, applies them through
+  the journal (lessons through `src/lessons/local.ts`, so they are scrubbed), keeps the "Godotwright lessons for
+  agents" note in the private dream folder (`src/project/local-dir.ts`: the project's untracked `.godot/godotwright/`,
+  else Godotwright's state folder), and holds the due logic the session-start hook uses. `transcripts.ts` reads
+  Claude Code and Codex transcripts into anonymous facts only (tool names, message templates, Godot API names): never
+  let their text reach an output, a lesson or a report. Deterministic: no model calls, no network.
 - `src/version.ts`: package version and the Godot target version.
 - `server.json`: the MCP Registry entry. Its name and versions must match `package.json`
   (`mcpName`, `version`); a test checks this.
@@ -128,6 +135,16 @@ node dist/cli.js --help
   they are marked as integration tests.
 - Output meant for agents is compact and stable, so it is cheap to read and easy
   to parse.
+
+## Privacy
+
+- Never game code: no code, file contents, paths, or project, file or node names in lessons, hints, reports, learned
+  data or anything sent. Scrub free text (`src/lessons/anonymize.ts`) and drop what still looks like code or a name.
+- Private data only on the user's machine, and only with their permission: reading session transcripts and applying
+  dreams are opt-in per run; automatic applies need the user's one-time consent on that machine.
+- Never into the repository and never online: learned data goes to untracked folders (`.godot/` when git ignores it)
+  or Godotwright's state folder, never into AGENTS.md, CLAUDE.md or any tracked file.
+- Learning across machines only anonymously, through the existing opt-in sharing (`src/learn/share.ts`, `PRIVACY.md`).
 
 ## Commits and content
 

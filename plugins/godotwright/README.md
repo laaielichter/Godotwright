@@ -26,7 +26,8 @@ In Claude Code:
     explain them are added;
   - before Claude stops, review errors still open in files it changed are named once;
   - a session in a Godot project starts with a few lines about it: name, Godot version, scripts and scenes, main scene,
-    and whether Godot is installed for the tools that run it.
+    and whether Godot is installed for the tools that run it; once a dream is due (24 hours and 5 sessions since the
+    last one), one more line says how many dream proposals wait (`godot_dream`).
 
   Turn them off with `GODOTWRIGHT_HOOKS=0`. They use the same godotwright version as the MCP server, say nothing when
   they have nothing to add, and never block on their own failure.
@@ -38,12 +39,14 @@ In Claude Code:
   - `world`: terrain, streaming, levels of detail, road, rail and water networks;
   - `model`: 3D models built, viewed and linted against what the thing really is;
   - `patch`: changes to a shipped game (mods, overlays, installers) with preflight, receipts and rollback.
-- **Skills you start yourself:** `/godotwright:review` (review and fix, errors first), `/godotwright:port` (Godot 3 to 4)
-  and `/godotwright:learn` (teach Godotwright what this session learned, anonymously; nothing is sent).
-- **Seven subagents** for work that would flood the conversation: `godot-reviewer` (a verified review of a change, with
+- **Skills you start yourself:** `/godotwright:review` (review and fix, errors first), `/godotwright:port` (Godot 3 to 4),
+  `/godotwright:learn` (teach Godotwright what this session learned, anonymously; nothing is sent) and
+  `/godotwright:dream` (look back at past sessions and apply the proposals you approve).
+- **Eight subagents** for work that would flood the conversation: `godot-reviewer` (a verified review of a change, with
   Godot when installed), `godot-debugger` (root cause), `godot-migrator` (Godot 3 to 4), `godot-performance`
-  (measured optimization), `godot-shader-specialist` (shaders and materials), `godot-model-builder` (3D assets) and
-  `godot-test-engineer` (unit, gameplay and visual regression checks).
+  (measured optimization), `godot-shader-specialist` (shaders and materials), `godot-model-builder` (3D assets),
+  `godot-test-engineer` (unit, gameplay and visual regression checks) and `godot-dreamer` (turns what past sessions
+  went wrong on into finished lessons, and applies only what you approve).
   Delegate a focused task to the matching agent; editing requires an implementation task, and missing engine or
   renderer checks are reported explicitly.
 

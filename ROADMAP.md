@@ -167,6 +167,14 @@ Godotwright gets better with every use, without collecting anything personal.
     request) and one baseline implementation, with 0.5.0's options kept.
     *Done when:* each is checked against real Godot 4.7.2 in CI, and the review stays quiet on the official demos.
 
+29. **Dreaming.** Between sessions, look back at the learning file, the journal and (when asked) the session
+    transcripts, and propose draft lessons for recurring Godot errors, project hints for guessed API names, lessons to
+    merge, retire or rewrite, lessons about undone writes, noisy rules and contradictions, each with its evidence;
+    apply through the journal, keep lessons for agents only on this machine (never in the repository), and say at
+    session start when a dream is due. Deterministic and local.
+    *Done when:* tests cover every proposal kind, no transcript text reaches any output, the due logic, and that an
+    apply is undone in full.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -205,6 +213,7 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 26: What competitors have, headless (doctor, fix, perf, richer play, call chains, connection arguments)
 - [x] Step 27: A game session that stays up across calls
 - [x] Step 28: What competitors have, round two
+- [x] Step 29: Dreaming (`godotwright dream`, `godot_dream`, the `godot-dreamer` subagent)
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

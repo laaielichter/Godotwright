@@ -4,6 +4,24 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Dreaming: learn from past sessions (`godotwright dream`, MCP `godot_dream`).** Between sessions Godotwright looks
+  back at the local learning file, the project's write journal and, only with `--transcripts`, the project's Claude
+  Code and Codex session transcripts, and proposes, each with its evidence and a reason: draft lessons for Godot errors
+  that keep coming back with no rule or lesson, "use X, not Y" project hints for API names the agent keeps guessing,
+  lessons to retire, rewrite or merge, lessons about writes that were undone again and again, rules this project keeps
+  marking as false alarms (a suggestion only), and verdicts that contradict each other. Deterministic: no model, no
+  network, nothing leaves the machine, and only anonymous facts are kept from transcripts. `--apply <numbers|ids|all>`
+  keeps lessons through the scrubber, and hints, a dated report and a short "Godotwright lessons for agents" note only
+  on this machine (the project's untracked `.godot/godotwright/dreams/`, or Godotwright's state folder when git tracks
+  `.godot/`), never in a file of the repository, all through the journal, so `godotwright undo` takes it back (lessons
+  in the learning file included). The session-start hook shows that note to the agent and says when a dream is due
+  (24 hours and 5 sessions by default; `godotwright.json` `"dream": {"auto": "suggest" | "apply" | "off", "minHours",
+  "minSessions"}`); `"apply"` acts only after a one-time `godotwright dream --auto-apply yes` on that machine. Nothing
+  from dreaming goes into the opt-in report. The Claude Code
+  plugin adds the `godot-dreamer` subagent and the `/godotwright:dream` skill. 39 MCP tools.
+- **`godotwright undo` keeps a short log of undone writes** (tool and file kinds only) for the dream, and puts back
+  lessons a journalled write changed in the learning file.
+
 - **`godotwright migrate`: Godot 3 network keywords become `@rpc`.** `remote`, `remotesync`, `puppet`, `puppetsync`,
   `sync` and `slave` on `func` and `var` are rewritten to the matching `@rpc(...)` annotation; `master` and
   `mastersync` keep a TODO with the Godot 4 way (#127).

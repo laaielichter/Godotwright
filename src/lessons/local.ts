@@ -1,6 +1,7 @@
 import { GodotApi } from "../api/api.js";
+import { findProjectRoot } from "../project/files.js";
 import { shareableTemplate } from "../learn/template.js";
-import { lessonStats, learningAllowed, readLearning, saveLearning, type LearningData } from "../learn/store.js";
+import { lessonStats, learningAllowed, projectKey, readLearning, saveLearning, type LearningData } from "../learn/store.js";
 import { placeholderShare, scrubText } from "./anonymize.js";
 import { isTopic } from "./library.js";
 import { errorTemplate, findLesson } from "./search.js";
@@ -120,24 +121,32 @@ export function prepareLesson(input: LessonInput, options: { api?: GodotApi; pro
   return { lesson, replaced };
 }
 
-/** Keeps a lesson learned here. The same title again updates that lesson (and merges its Godot messages). */
-export function addLocalLesson(input: LessonInput, options: { projectNames?: Iterable<string>; now?: Date } = {}): Added {
+export { projectKey };
+
+/**
+ * Keeps a lesson learned here. The same title again updates that lesson (and merges its Godot messages). `project` (a
+ * path in the project) tags the lesson with that project's key, so a project's lessons for agents only hold its own.
+ */
+export function addLocalLesson(input: LessonInput, options: { projectNames?: Iterable<string>; now?: Date; project?: string } = {}): Added {
   const data = readLearning();
   if (!learningAllowed(data)) throw new LessonError("learning is off on this machine (godotwright learn on, or unset GODOTWRIGHT_LEARN=0), so nothing was kept");
   const { lesson, replaced } = prepareLesson(input, options);
+  const key = options.project ? projectKey(findProjectRoot(options.project) ?? options.project) : undefined;
   let result: Added | undefined;
   const { error } = saveLearning((d) => {
     const base = `local/${slug(lesson.title)}`;
     const existing = d.localLessons.find((l) => l.id === base);
     if (existing) {
       const errors = [...new Set([...(existing.errors ?? []), ...(lesson.errors ?? [])])].slice(0, 8);
-      const tags = [...new Set([...existing.tags, ...lesson.tags])].slice(0, 12);
-      Object.assign(existing, lesson, { id: base, tags, ...(errors.length ? { errors } : {}) });
+      // A draft rewritten without the draft tag (a real cause and fix) is a draft no more.
+      const tags = [...new Set([...existing.tags, ...lesson.tags])].filter((t) => t !== "draft" || lesson.tags.includes("draft")).slice(0, 12);
+      const projects = [...new Set([...(existing.projects ?? []), ...(key ? [key] : [])])].slice(0, 20);
+      Object.assign(existing, lesson, { id: base, tags, ...(errors.length ? { errors } : {}), ...(projects.length ? { projects } : {}) });
       result = { lesson: existing, replaced, updated: true };
       return;
     }
     if (d.localLessons.length >= MAX_LOCAL_LESSONS) throw new LessonError(`there are already ${MAX_LOCAL_LESSONS} local lessons; remove some first (godotwright lessons remove <id>)`);
-    const added: LocalLesson = { id: base, ...lesson };
+    const added: LocalLesson = { id: base, ...lesson, ...(key ? { projects: [key] } : {}) };
     d.localLessons.push(added);
     result = { lesson: added, replaced, updated: false };
   });
@@ -188,5 +197,5 @@ export function recordShown(ids: string[]): void {
  * Their text was scrubbed when they were kept; the ids get a topic prefix instead of `local/`.
  */
 export function exportLocalLessons(data: LearningData = readLearning()): Lesson[] {
-  return data.localLessons.map(({ added: _added, ...lesson }) => ({ ...lesson, id: `${lesson.topic}/${lesson.id.slice("local/".length)}` }));
+  return data.localLessons.map(({ added: _added, projects: _projects, ...lesson }) => ({ ...lesson, id: `${lesson.topic}/${lesson.id.slice("local/".length)}` }));
 }

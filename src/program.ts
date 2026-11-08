@@ -4,6 +4,7 @@ import { checkCommand } from "./commands/check.js";
 import { ciCommand, scenarioCommand } from "./commands/ci.js";
 import { collectorCommand } from "./commands/collector.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { dreamCommand } from "./commands/dream.js";
 import { codeCommand } from "./commands/code.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
@@ -75,6 +76,7 @@ export function createProgram(): Command {
     .addCommand(mcpCommand())
     .addCommand(learnCommand())
     .addCommand(lessonsCommand())
+    .addCommand(dreamCommand())
     .addCommand(collectorCommand())
     .addCommand(hookCommand())
     .hook("postAction", async (_program, action) => {
