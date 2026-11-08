@@ -1,5 +1,6 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { finish } from "./finishes.js";
+import { cycle, sinkByIndex, stone } from "./rocks.js";
 
 /**
  * Campfires: a teepee in a stone ring, a log-cabin stack, a fire basket (brazier), a star fire under a cooking tripod
@@ -63,10 +64,16 @@ const flame = (f: Finish, h: Num, spread: Num, y: Num = 0): SpecNode[] =>
     ], { at: [0, y, 0] })]
     : [];
 
-/** A ring of n lumpy stones of size rs at radius R. */
+/** The fieldstones of a fire ring: lumpy, with a few flat fractures, each set down on its own lowest point. */
+const RING = { lumps: 0.3, cuts: 7, segments: 12, cycle: 6, seed: (k: number): number => k * 7 + 3 };
+
+/** A ring of n rough stones of size rs at radius R: six different stones, round and round. */
 const stones = (f: Finish, n: Num, R: Num, rs: Num): SpecNode =>
   group("Stones", [
-    ellipsoid("Stone_{i}", [`${rs} * 1.1`, `${rs} * 0.7`, `${rs} * 0.85`], { at: [R, `${rs} * 0.6`, 0], segments: 10, lumps: 0.3, seed: "$i * 7 + 3", repeat: { count: n, around: "y" } }),
+    stone("Stone_{i}", [`${rs} * 1.1`, `${rs} * 0.7`, `${rs} * 0.85`], {
+      at: [R, `${rs} * 0.7 * ${sinkByIndex(RING.cycle, RING.seed, RING.lumps, RING.cuts, RING.segments)}`, 0],
+      segments: RING.segments, lumps: RING.lumps, cuts: RING.cuts, seed: `${cycle(RING.cycle)} * 7 + 3`, repeat: { count: n, around: "y" },
+    }),
   ], { material: ROCK[f.stone] });
 
 function teepee(f: Finish): SpecNode[] {
@@ -97,7 +104,7 @@ function cabin(f: Finish): SpecNode[] {
       ]),
       ...flame(f, "$L * 0.75", "$L * 0.12", 0.03),
       group("Stones", [
-        box("Stone_{i}", ["$L * 0.22", 0.05, "$L * 0.16"], { at: ["$L * 0.65", 0.02, 0], rotate: [0, 0, 4], bevel: 0.015, repeat: { count: 8, around: "y", phase: 22.5 } }),
+        stone("Stone_{i}", ["$L * 0.11", 0.035, "$L * 0.08"], { at: ["$L * 0.65", `0.035 * ${sinkByIndex(8, (k) => k * 5 + 11, 0.25, 9, 12, { count: "fixed" })}`, 0], segments: 12, lumps: 0.25, cuts: 9, seed: "$i * 5 + 11", repeat: { count: 8, around: "y", phase: 22.5 } }),
       ], { material: ROCK[f.stone] }),
     ], { vars: { L: "$logLength", lr: "$logLength * 0.065" } }),
   ];

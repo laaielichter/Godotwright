@@ -217,14 +217,16 @@ class Body {
   /** z of a station. */
   Z(s: number): Lin {
     const st = this.st, c = Math.cos(st.a0);
-    const edge = (zc: number, sgn: number): Lin => L(0, { L2: zc, Ra: sgn * c });
+    const edge = (zc: number, sgn: number): Lin => L(sgn * 0.008, { L2: zc, Ra: sgn });
+    void c;
     if (s <= 1) return lerpL(L(0, { L2: 1 }), edge(st.ff, 1), s);
-    if (s <= 2) { const th = this.th(s - 1); return L(0, { L2: st.ff, Ra: Math.cos(th) }); }
+    if (s < 2) { const th = this.th(s - 1); return L(0, { L2: st.ff, Ra: Math.cos(th) }); }
     if (s <= 3) return lerpL(edge(st.ff, -1), edge(-st.fr, 1), s - 2);
-    if (s <= 4) { const th = this.th(s - 3); return L(0, { L2: -st.fr, Ra: Math.cos(th) }); }
+    if (s < 4) { const th = this.th(s - 3); return L(0, { L2: -st.fr, Ra: Math.cos(th) }); }
     return lerpL(edge(-st.fr, -1), L(0, { L2: -1 }), s - 4);
   }
-  th(u: number): number { return -this.st.a0 + u * (Math.PI + 2 * this.st.a0); }
+  /** Over an arch the bottom runs on a half circle from hub height in front to hub height behind; under the hub it drops straight to the sill. */
+  th(u: number): number { return u * Math.PI; }
   zf(s: number): number { return this.ev(this.Z(s)) / this.env.L2!; }
   /** The station at a z fraction (at the defaults). */
   sAt(zf: number): number {
@@ -279,7 +281,8 @@ class Body {
     const crown = Math.min(0.025, 0.12 * ext);
     let yE = ladd(yT, L(-crown));
     // Over the arches the wings rise where the bonnet is low (sports cars): the shoulder stays 17 cm over the arch.
-    const w = s < 1 ? Math.max(0, 1 - (1 - s) / 0.45) : s <= 2 ? 1 : s < 3 ? Math.max(0, 1 - (s - 2) / 0.45, 1 - (3 - s) / 0.45) : s <= 4 ? 1 : Math.max(0, 1 - (s - 4) / 0.45);
+    const sm = (v: number) => { const c = Math.max(0, Math.min(1, v)); return c * c * (3 - 2 * c); };
+    const w = s < 1 ? sm(1 - (1 - s) / 0.8) : s <= 2 ? 1 : s < 3 ? Math.max(sm(1 - (s - 2) / 0.8), sm(1 - (3 - s) / 0.8)) : s <= 4 ? 1 : sm(1 - (s - 4) / 0.8);
     const wing = L(0.17, { wr: 1, Ra: 1 });
     if (w > 0 && ev(wing) > ev(yE)) yE = lerpL(yE, wing, w);
     // The shoulder crease runs level along the side, a little under the belt; at nose and tail it follows the top edge.
@@ -293,7 +296,7 @@ class Body {
     const tuck = st.tuck * Math.min(1, hs / 0.4);
     const cm = Math.min(0.02, 0.22 * hs), cp = Math.min(0.015, 0.3 * (ev(yE) - ev(yC)));
     const up = ev(yE) - ev(yC);
-    const re = Math.min(st.edge, 0.4 * up, 0.3 * ext);
+    const re = Math.min(st.edge, 0.4 * up, 0.3 * (ev(yE) - ev(yB)));
     const lean = st.lean * up;
     const yb0 = ladd(yB, L(rb));
     const pts: LP[] = [
@@ -316,10 +319,15 @@ class Body {
     } else {
       pts.push([lscale(xe, 0.62), lerpL(yE, yT, 1 - 0.62 * 0.62)], [lscale(xe, 0.25), lerpL(yE, yT, 1 - 0.25 * 0.25)]);
     }
-    return { pts, yB, yT, yE, yC, xe, hwm, rb };
+    // Under the body: over an arch the tunnel only spans the wheel; inboard of it the body keeps its floor (a well wall).
+    const xin = L(-(st.tyreW + 0.075), { W2: 1 });
+    const floor = this.arch(s) ? this.sill : yB;
+    const under: LP[] = [[ladd(xin, L(-0.03)), floor], [xin, yB]];
+    return { pts, under, yB, yT, yE, yC, xe, hwm, rb };
   }
   ring(s: number): LP[] {
-    const h = this.section(s).pts;
+    const S = this.section(s);
+    const h = [...S.under, ...S.pts];
     return [...h, ...[...h].reverse().map(([x, y]): LP => [lscale(x, -1), y])];
   }
   ringDef(s: number): P2[] { return this.ring(s).map(([x, y]) => [this.ev(x), this.ev(y)]); }
@@ -354,25 +362,26 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
 
   // Stations: the overhangs dense at nose and tail, 12 over each arch, the tagged panel edges as extra stations.
   const over = [0, 0.01, 0.035, 0.08, 0.15, 0.25, 0.38, 0.54, 0.72, 0.88];
-  const sList = new Set<number>([...over, ...Array.from({ length: 13 }, (_, i) => 1 + i / 12), 2.12, 2.28, 2.45, 2.62, 2.78, 2.9, ...Array.from({ length: 13 }, (_, i) => 3 + i / 12), ...over.map((v) => 5 - v)]);
+  const sList = new Set<number>([...over, ...Array.from({ length: 13 }, (_, i) => 1 + i / 12), 1.0005, 1.9995, 2.12, 2.28, 2.45, 2.62, 2.78, 2.9, ...Array.from({ length: 13 }, (_, i) => 3 + i / 12), 3.0005, 3.9995, ...over.map((v) => 5 - v)]);
   const extra: Record<string, number> = {};
   for (const t of ["hoodF", "hoodR", "trunkF", "trunkR"]) {
     if (st.trunk === "bed" && t === "trunkR") continue;
-    const s = B.sAt(tagZ(t));
+    let s = B.sAt(tagZ(t));
+    if (Math.abs(s - Math.round(s)) < 0.04) s = Math.round(s);
     extra[t] = s;
     sList.add(s);
   }
   if (st.bed) { const s = B.sAt(st.bed[1] + 0.002); sList.add(s); extra["cab"] = s; const s2 = B.sAt(st.bed[1] - 0.012); sList.add(s2); extra["cab2"] = s2; }
   // A regular station too close to a panel edge would make sliver quads: the edge station replaces it.
   const ex = Object.values(extra);
-  const stations = [...sList].sort((a, b) => a - b).filter((s) => ex.includes(s) || Number.isInteger(s) || ex.every((e) => Math.abs(s - e) > 0.035));
+  const stations = [...sList].sort((a, b) => a - b).filter((s) => ex.includes(s) || Math.abs(s - Math.round(s)) < 0.001 || ex.every((e) => Math.abs(s - e) > 0.035));
   const sec = (s: number) => ({ z: ls(B.Z(s)), points: B.ring(s).map(([x, y]) => [ls(x), ls(y)]) });
   kids.push(loft("Body", stations.map(sec), { material: "body_paint" }));
 
   // Arch liners: black wells between the wheels, so the tunnel over each axle reads as a dark wheel arch.
   const tw = st.tyreW + 0.015;
   for (const [n, zc] of [["ArchLiner_F", st.ff], ["ArchLiner_R", -st.fr]] as [string, number][]) {
-    kids.push(box(n, [`2 * $W2 - ${f(2 * tw + 0.1)}`, `$wr + $Ra * 0.9 - $ys`, "$Ra * 1.6"], { at: [0, `($wr + $Ra * 0.9 + $ys) / 2`, `${f(zc)} * $L2`], material: "trim_black" }));
+    kids.push(box(n, [`2 * $W2 - ${f(2 * (st.tyreW + 0.075) - 0.012)}`, `$wr + $Ra - $ys`, "$Ra * 2"], { at: [0, `($wr + $Ra + $ys) / 2 - 0.004`, `${f(zc)} * $L2`], material: "trim_black" }));
     void n;
   }
 
@@ -425,30 +434,32 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
   const doorBotY = ev(B.sill) + 0.09;
   const sMid = B.sAt(st.doorZ[1]);
   const refSec = B.section(sMid);
-  const doorTopY = ev(refSec.yE) - st.edge - 0.012;
+  const doorTopY = Math.min(...[2, 2.2, 2.4, 2.6, 2.8, 3].map((s) => ev(B.section(s).yE))) - st.edge - 0.015;
   const heights = [doorBotY, ...refSec.pts.slice(3, 11).map(([, y]) => ev(y)).filter((y) => y > doorBotY + 0.02 && y < doorTopY - 0.01), doorTopY];
   const hLin = heights.map((y) => L(y - st.belt * Hd, { H: st.belt }));
+  // A lens-shaped strip: the outer and inner skins meet at the top and bottom edges (no thin end faces).
   const strip = (zs: number[], out: number, inn: number, dy: number, origin: [Lin, Lin, Lin]) => zs.map((zf) => {
     const s = B.sAt(zf);
-    const pts = heights.map((y, i): [Num, Num] => {
-      const yy = i === 0 ? y - dy : i === heights.length - 1 ? y + dy : y;
-      const yl = i === 0 ? ladd(hLin[i]!, L(-dy)) : i === heights.length - 1 ? ladd(hLin[i]!, L(dy)) : hLin[i]!;
-      return [ls(lsub(ladd(B.sideX(s, yy), L(out)), origin[0])), ls(lsub(yl, origin[1]))];
-    });
-    const back = [...heights].reverse().map((y, j): [Num, Num] => {
-      const i = heights.length - 1 - j;
-      const yy = i === 0 ? y - dy : i === heights.length - 1 ? y + dy : y;
-      const yl = i === 0 ? ladd(hLin[i]!, L(-dy)) : i === heights.length - 1 ? ladd(hLin[i]!, L(dy)) : hLin[i]!;
-      return [ls(lsub(ladd(B.sideX(s, yy), L(-inn)), origin[0])), ls(lsub(yl, origin[1]))];
-    });
-    return { z: ls(lsub(B.Z(s), origin[2])), points: [...pts, ...back] };
+    const n = heights.length;
+    const at = (i: number, off: number): [Num, Num] => {
+      const yy = i === 0 ? heights[i]! - dy : i === n - 1 ? heights[i]! + dy : heights[i]!;
+      const yl = i === 0 ? ladd(hLin[i]!, L(-dy)) : i === n - 1 ? ladd(hLin[i]!, L(dy)) : hLin[i]!;
+      return [ls(lsub(ladd(B.sideX(s, yy), L(off)), origin[0])), ls(lsub(yl, origin[1]))];
+    };
+    const tip = (out - inn) / 2;
+    const pts: [Num, Num][] = [at(0, tip)];
+    for (let i = 1; i < n - 1; i++) pts.push(at(i, out));
+    pts.push(at(n - 1, tip));
+    for (let i = n - 2; i >= 1; i--) pts.push(at(i, -inn));
+    return { z: ls(lsub(B.Z(s), origin[2])), points: pts };
   });
   const doorNode = (name: string, z0: number, z1: number, mirror: string): SpecNode => {
     const s0 = B.sAt(z0);
     const origin: [Lin, Lin, Lin] = [B.sideX(s0, doorBotY), hLin[0]!, B.Z(s0)];
     const span = z0 - z1;
-    const zs = [z1 + 0.003 / env.L2!, z1 + (0.025 / env.L2!), z1 + span / 2, z0 - 0.025 / env.L2!, z0 - 0.003 / env.L2!];
-    const zg = [z1 - 0.004 / env.L2!, z1 + 0.025 / env.L2!, z1 + span / 2, z0 - 0.025 / env.L2!, z0 + 0.004 / env.L2!];
+    const mid = [0.12, 0.27, 0.42, 0.58, 0.73, 0.88].map((u) => z1 + span * u);
+    const zs = [z1 + 0.003 / env.L2!, z1 + (0.025 / env.L2!), ...mid, z0 - 0.025 / env.L2!, z0 - 0.003 / env.L2!];
+    const zg = [z1 - 0.004 / env.L2!, z1 + 0.025 / env.L2!, ...mid, z0 - 0.025 / env.L2!, z0 + 0.004 / env.L2!];
     const yH = doorTopY - 0.1;
     const sH = B.sAt(z1 + 0.16 / env.L2!);
     const handle = box("Handle", [0.03, 0.028, 0.16], { at: [ls(lsub(ladd(B.sideX(sH, yH), L(0.012)), origin[0])), ls(lsub(L(yH - st.belt * Hd, { H: st.belt }), origin[1])), ls(lsub(B.Z(sH), origin[2]))], bevel: 0.01, material: st.bumper === "chrome" ? "chrome" : "satin_black" });
@@ -470,15 +481,17 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     const ss = stations.filter((s) => s >= Math.min(sA, sB) - 1e-9 && s <= Math.max(sA, sB) + 1e-9);
     const sh = hingeAtA ? sA : sB;
     const H0 = B.section(sh);
-    const origin: [Lin, Lin] = [ladd(H0.yT, L(0.004)), B.Z(sh)];
+    // The hinge on the top of the panel's edge: the crown, or the wing tops when they stand higher (sports cars).
+    const tops: Lin[] = [ladd(H0.pts[12]![1], L(-0.0005)), ladd(H0.pts[13]![1], L(0.005)), ladd(H0.pts[14]![1], L(0.005))];
+    const topY = tops.reduce((m, l) => (ev(l) > ev(m) ? l : m));
+    const origin: [Lin, Lin] = [topY, B.Z(sh)];
     const ringOf = (s: number, up: number, down: number, grow: number) => {
       const S = B.section(s);
-      const top = S.pts.slice(12);
-      const half = top.map(([x, y], i): LP => [i === 0 ? ladd(x, L(grow)) : x, y]);
-      const outer = [...half, ...[...half].reverse().map(([x, y]): LP => [lscale(x, -1), y])];
-      const o = outer.map(([x, y]): [Num, Num] => [ls(x), ls(lsub(ladd(y, L(up)), origin[0]))]);
-      const inn = [...outer].reverse().map(([x, y]): [Num, Num] => [ls(x), ls(lsub(ladd(y, L(-down)), origin[0]))]);
-      return { z: ls(lsub(B.Z(s), origin[1])), points: [...o, ...inn] };
+      const [e, t1, t2] = S.pts.slice(12) as [LP, LP, LP];
+      const P = ([x, y]: LP, dx: number, dyy: number): [Num, Num] => [ls(ladd(x, L(dx))), ls(lsub(ladd(y, L(dyy)), origin[0]))];
+      const M = ([x, y]: LP): LP => [lscale(x, -1), y];
+      const tipY = (up - down) / 2;
+      return { z: ls(lsub(B.Z(s), origin[1])), points: [P(e, grow, tipY), P(t1, 0, up), P(t2, 0, up), P(M(t2), 0, up), P(M(t1), 0, up), P(M(e), -grow, tipY), P(M(t1), 0, -down), P(M(t2), 0, -down), P(t2, 0, -down), P(t1, 0, -down)] };
     };
     return group(name, [
       loft("Panel", ss.map((s) => ringOf(s, 0.005, 0.006, 0)), { material: "body_paint" }),
@@ -749,3 +762,4 @@ export const car: Family = {
   tags: ["car", "auto", "personenauto", "vehicle", "voertuig", "automobile", "wagen"],
   assets: () => Object.entries(STYLES).flatMap(([key, st]) => FINISHES[key]!.map((fin) => buildCar(key, st, fin))),
 };
+export const _debug = { Body, STYLES };

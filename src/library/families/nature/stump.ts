@@ -44,7 +44,7 @@ const rings = (heart: string): SpecNode[] => [
 /** Dark lenticel marks of birch bark: short, lens-shaped dashes across the stem, set into the bark in staggered rings. */
 const birchLogMarks = (): SpecNode =>
   group("Marks", [0, 1, 2, 3, 4].map((k) =>
-    ellipsoid(`Mark_${k + 1}_{i}`, [`$r * ${n4(0.3 + 0.08 * (k % 2))}`, "$r * 0.05", "min($len * 0.012, $r * 0.12) + 0.004"], {
+    ellipsoid(`Mark_${k + 1}_{i}`, [`$r * ${n4(0.36 + 0.1 * (k % 2))}`, "$r * 0.05", "min($len * 0.022, $r * 0.2) + 0.006"], {
       at: [0, "$r * 0.985", `$len * ${n4(-0.4 + 0.2 * k)}`],
       segments: 10,
       repeat: { count: 3, around: "z", phase: k * 53 + 20 },
@@ -87,7 +87,7 @@ function stumpAsset(s: Stump): AssetDraft {
       const extras: SpecNode[] = [];
       if (s.bark === "bark_birch") {
         extras.push(group("Marks", [0.3, 0.5, 0.7, 0.88].map((t, k) =>
-          ellipsoid(`Mark_${k + 1}_{i}`, ["$r * 0.05", "$h * 0.022 + 0.004", `$r * ${n4(0.32 + 0.08 * (k % 2))}`], {
+          ellipsoid(`Mark_${k + 1}_{i}`, ["$r * 0.05", "$h * 0.03 + 0.006", `$r * ${n4(0.38 + 0.1 * (k % 2))}`], {
             at: [`$r * ${n4(1.02 - 0.04 * t)}`, `$h * ${n4(t)}`, 0],
             segments: 10,
             repeat: { count: 3, around: "y", phase: k * 47 + 10 },

@@ -158,7 +158,7 @@ export const LOCAL: Record<string, MaterialDef> = {
   bark_brown: barkOf(0.065, 0.047, 0.033),
   bark_grey: barkOf(0.072, 0.068, 0.061, 0.9),
   // Birch: chalky, warm white bark, smooth between the dark lenticel marks (which the families add as their own parts).
-  bark_birch: { color: [0.25, 0.24, 0.212], metallic: 0, roughness: 0.8, texture: "plaster" },
+  bark_birch: { color: [0.19, 0.182, 0.16], metallic: 0, roughness: 0.8, texture: "plaster" },
   birch_mark: barkOf(0.032, 0.029, 0.026, 0.95),
   bark_red: barkOf(0.075, 0.043, 0.027, 0.92),
   bark_dark: barkOf(0.055, 0.042, 0.032),

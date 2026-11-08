@@ -116,8 +116,8 @@ function plant(f: Flower, leanX: string, leanZ: string): SpecNode[] {
     case "tulip":
       // Two broad, channelled leaves clasping the foot of the stem and arching out, and a narrower one higher up.
       leaves.push(
-        group("Leaf_{i}", [blade("Blade", "$h * 0.62", "$h * 0.15 + 0.012", { lift: 76, arch: 0.32, fold: 0.55, twist: 8 })], { repeat: { count: 2, around: "y", phase: 30 } }),
-        group("LeafUpper", [blade("Blade", "$h * 0.4", "$h * 0.08 + 0.008", { lift: 70, arch: 0.4, fold: 0.6, twist: -10 })], { at: [0, "$h * 0.14", 0], rotate: [0, 120, 0] }),
+        group("Leaf_{i}", [blade("Blade", "$h * 0.6", "$h * 0.15 + 0.012", { lift: 64, arch: 0.5, fold: 0.45, twist: 8 })], { repeat: { count: 2, around: "y", phase: 30 } }),
+        group("LeafUpper", [blade("Blade", "$h * 0.42", "$h * 0.1 + 0.008", { lift: 70, arch: 0.42, fold: 0.5, twist: -10 })], { at: [0, "$h * 0.14", 0], rotate: [0, 120, 0] }),
       );
       break;
     case "sunflower":

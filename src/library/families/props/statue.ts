@@ -1,4 +1,4 @@
-import { box, cyl, ellipsoid, group, lathe, loft, num, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
+import { box, cyl, ellipsoid, extrude, group, lathe, loft, num, rng, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { finish } from "./finishes.js";
 
 /**
@@ -42,11 +42,41 @@ const FINISHES: Record<Style, [Finish, Finish]> = {
   ],
 };
 
-/** Weathering on a plinth face at z = zf: a dark grime band at the foot and (copper alloys) green run-off streaks. */
+/**
+ * One run-off drip of patina, hanging from y = 0 down a face at z = 0 (towards +z, 3 mm thick): wide where the water
+ * leaves the bronze, wandering and narrowing to a thin tip, with a bulge where a drop hung. Plan in (x, depth down).
+ */
+function drip(name: string, x: Num, top: Num, z: Num, len: Num, k: number): SpecNode {
+  const r = rng(101 + k * 17);
+  const w = 0.016 + 0.02 * r();
+  const ts = [0, 0.12, 0.3, 0.45, 0.6, 0.75, 0.88, 1];
+  const wob = ts.map(() => (r() - 0.5) * 0.008);
+  const bulge = 2 + Math.floor(r() * 4);
+  const half = (i: number): number => {
+    const t = ts[i]!;
+    const h = (w / 2) * Math.pow(1 - t, 0.7) * (i === bulge ? 1.45 : 1) * (0.85 + 0.3 * r());
+    return Math.max(0.0015, h);
+  };
+  const left: [Num, Num][] = [], right: [Num, Num][] = [];
+  ts.forEach((t, i) => {
+    const hw = half(i), cx = wob[i]!;
+    const d = `(${len}) * ${t.toFixed(3)}`;
+    left.push([Number((cx - hw).toFixed(4)), d]);
+    right.push([Number((cx + hw).toFixed(4)), d]);
+  });
+  const plan = [...left, ...right.reverse()];
+  return extrude(name, plan, 0, 0.003, { at: [x, top, z], rotate: [90, 0, 0], material: "verdigris" });
+}
+
+/** Weathering on a plinth face at z = zf: a dark grime band at the foot and (copper alloys) green run-off drips. */
 const weather = (f: Finish, wx: Num, wz: Num, streak?: { w: Num; z: Num; top: Num; len: Num }): SpecNode[] => [
   box("Grime", [`${wx} + 0.004`, 0.07, `${wz} + 0.004`], { anchor: "bottom", material: "wet_stain" }),
   ...(f.streaks && streak
-    ? [box("Streak_{i}", [0.022, `(${streak.len}) * (0.45 + 0.4 * abs(sin($i * 2.1 + 0.3)))`, 0.004], { at: [`(${streak.w}) * (-0.33 + $i * 0.22)`, `${streak.top} - (${streak.len}) * (0.45 + 0.4 * abs(sin($i * 2.1 + 0.3))) / 2`, `${streak.z} + 0.001`], material: "verdigris", repeat: { count: 4, step: [0, 0, 0] } })]
+    ? [-0.36, -0.2, -0.05, 0.13, 0.3].map((u, k) => {
+        const r = rng(7 + k * 31);
+        const lf = 0.35 + 0.55 * r();
+        return drip(`Streak_${k + 1}`, `(${streak.w}) * ${(u + (r() - 0.5) * 0.06).toFixed(3)}`, `${streak.top} - ${(0.002 + 0.02 * r()).toFixed(3)}`, `${streak.z} + 0.001`, `(${streak.len}) * ${lf.toFixed(3)}`, k);
+      })
     : []),
 ];
 

@@ -1,6 +1,7 @@
 import { box, combos, cyl, group, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { MaterialDef } from "../../palette.js";
 import { FINISH } from "./finishes.js";
+import { laid } from "./timber.js";
 
 /**
  * Ladders: a straight wooden ladder, an aluminium extension ladder with a fly section, an A-frame step ladder and a
@@ -91,13 +92,21 @@ function step(f: Finish): SpecNode[] {
     group("StepLadder", [
       box("RailLeft", ["$rt", "$height / cos($af) + 0.02", "$rd"], { at: ["$width / 2", 0, "$zf"], rotate: ["-deg($af)", 0, 0], anchor: "bottom", bevel: 0.005, mirror: "RailRight" }),
       box("RearLeg_L", ["$rt", "$height / cos($ar) - 0.02", "$rd * 0.8"], { at: ["$width / 2", 0, "-$zr"], rotate: ["deg($ar)", 0, 0], anchor: "bottom", bevel: 0.005, mirror: "RearLeg_R" }),
-      box("Step_{i}", ["$width - $rt + 0.006", 0.026, 0.1], { at: [0, y(), `$zf - ${y()} * tan($af) - 0.015`], bevel: 0.006, material: f.rung, repeat: { count: "floor(($height - 0.3) / $sp)", step: [0, 0, 0] } }),
+      laid("x", box("Step_{i}", ["$width - $rt + 0.006", 0.026, 0.1], { at: [0, y(), `$zf - ${y()} * tan($af) - 0.015`], bevel: 0.006, material: f.rung, repeat: { count: "floor(($height - 0.3) / $sp)", step: [0, 0, 0] } })),
       box("TopCap", ["$width + 0.05", 0.06, 0.24], { at: [0, "$height", -0.01], bevel: 0.012, material: f.trim }),
-      box("RearBrace", ["$width", 0.03, 0.02], { at: [0, "$height * 0.3", "-$zr + $height * 0.3 * tan($ar)"], bevel: 0.004 }),
-      box("Shelf", ["$width - 0.06", 0.018, 0.2], { at: [0, "$height * 0.62", "-$zr * 0.38 + 0.04"], bevel: 0.004 }),
+      laid("x", box("RearBrace", ["$width", 0.03, 0.02], { at: [0, "$height * 0.3", "-$zr + $height * 0.3 * tan($ar)"], bevel: 0.004 })),
+      laid("x", box("Shelf", ["$width - 0.06", 0.018, 0.2], { at: [0, "$height * 0.62", "-$zr * 0.38 + 0.04"], bevel: 0.004 })),
       tube("Spreader_L", [["$width / 2 + 0.022", "$height * 0.45", "$zf - $height * 0.45 * tan($af)"], ["$width / 2 + 0.03", "$height * 0.43", 0], ["$width / 2 + 0.022", "$height * 0.45", "-$zr + $height * 0.45 * tan($ar)"]], 0.006, { segments: 8, material: "galvanised_steel", mirror: "Spreader_R" }),
       box("Foot_FL", ["$rt + 0.012", 0.035, "$rd + 0.012"], { at: ["$width / 2", 0, "$zf - 0.004"], anchor: "bottom", bevel: 0.008, material: f.trim === "powder_red" ? "rubber_black" : f.trim, mirror: "Foot_FR" }),
       box("Foot_RL", ["$rt + 0.012", 0.035, "$rd * 0.8 + 0.012"], { at: ["$width / 2", 0, "-$zr + 0.004"], anchor: "bottom", bevel: 0.008, material: f.trim === "powder_red" ? "rubber_black" : f.trim, mirror: "Foot_RR" }),
+      // Rivets where each tread meets the rails, two per end, and (aluminium) ribbed treads for grip.
+      cyl("Rivet_L{i}", 0.007, 0.008, { axis: "x", at: ["$width / 2 + $rt / 2 + 0.001", y(), `$zf - ${y()} * tan($af) - 0.03`], segments: 8, material: "galvanised_steel", repeat: { count: "floor(($height - 0.3) / $sp)", step: [0, 0, 0] }, mirror: "Rivet_R{i}" }),
+      cyl("RivetB_L{i}", 0.007, 0.008, { axis: "x", at: ["$width / 2 + $rt / 2 + 0.001", y(), `$zf - ${y()} * tan($af) + 0.012`], segments: 8, material: "galvanised_steel", repeat: { count: "floor(($height - 0.3) / $sp)", step: [0, 0, 0] }, mirror: "RivetB_R{i}" }),
+      ...(f.key === "aluminium"
+        ? [group("Grip_{i}", [-0.033, -0.011, 0.011, 0.033].map((dz, k) => box(`Ridge_${k + 1}`, ["$width - $rt - 0.03", 0.005, 0.007], { at: [0, 0.0145, dz], bevel: 0.0015 })), {
+            at: [0, y(), `$zf - ${y()} * tan($af) - 0.015`], material: f.rung, repeat: { count: "floor(($height - 0.3) / $sp)", step: [0, 0, 0] },
+          })]
+        : [box("Strip_{i}", ["$width - $rt - 0.05", 0.003, 0.03], { at: [0, `${y()} + 0.0135`, `$zf - ${y()} * tan($af) - 0.005`], material: "rubber_black", repeat: { count: "floor(($height - 0.3) / $sp)", step: [0, 0, 0] } })]),
     ], { material: f.rail, vars: { rt: 0.03, rd: 0.075, zf: "$depth * 0.55", zr: "$depth * 0.45", af: "atan($depth * 0.55 / $height)", ar: "atan($depth * 0.45 / $height)", sp: "($height - 0.06) / (floor(($height - 0.3) / 0.27) + 1)" } }),
   ];
 }
@@ -118,10 +127,17 @@ function fixed(f: Finish): SpecNode[] {
     group("FixedLadder", [
       box("RailLeft", ["$rt", "$height", 0.065], { at: ["$width / 2", 0, 0], anchor: "bottom", bevel: 0.003, material: f.rail, mirror: "RailRight" }),
       cyl("Rung_{i}", 0.0125, "$width - $rt + 0.006", { axis: "x", at: [0, "0.3 + $i * $spacing", 0], segments: 12, material: f.rung, repeat: { count: "floor(($height - 0.4) / $spacing) + 1", step: [0, 0, 0] } }),
+      // Serrated grips on each rung: raised rings where the feet go.
+      group("Knurl_{i}", [-0.12, -0.06, 0, 0.06, 0.12].map((dx, k) => cyl(`Ring_${k + 1}`, 0.0145, 0.008, { axis: "x", at: [`(${dx}) * $width / 0.4`, 0, 0], segments: 12 })), {
+        at: [0, "0.3 + $i * $spacing", 0], material: f.rung, repeat: { count: "floor(($height - 0.4) / $spacing) + 1", step: [0, 0, 0] },
+      }),
       group("Brackets", [
         box("Bracket_L{i}", [0.012, 0.06, 0.2], { at: ["$width / 2 - 0.004", "0.9 + $i * ($height - 1.2) / max(floor($height / 1.5), 1)", -0.12], bevel: 0.002, repeat: { count: "floor($height / 1.5) + 1", step: [0, 0, 0] }, mirror: "Bracket_R{i}" }),
         box("WallPlate_L{i}", [0.1, 0.14, 0.012], { at: ["$width / 2 - 0.004", "0.9 + $i * ($height - 1.2) / max(floor($height / 1.5), 1)", -0.22], bevel: 0.002, repeat: { count: "floor($height / 1.5) + 1", step: [0, 0, 0] }, mirror: "WallPlate_R{i}" }),
         box("BasePlate_L", [0.12, 0.012, 0.14], { at: ["$width / 2", 0, 0], anchor: "bottom", bevel: 0.002, mirror: "BasePlate_R" }),
+        cyl("AnchorBolt_L{i}", 0.011, 0.014, { at: ["$width / 2 + 0.035", 0.012, -0.045], segments: 6, repeat: { count: 2, step: [0, 0, 0.09] }, mirror: "AnchorBolt_R{i}" }),
+        cyl("PlateBolt_L{i}", 0.01, 0.012, { axis: "z", at: ["$width / 2 - 0.004", "0.9 + $i * ($height - 1.2) / max(floor($height / 1.5), 1) + 0.04", -0.21], segments: 6, repeat: { count: "floor($height / 1.5) + 1", step: [0, 0, 0] }, mirror: "PlateBolt_R{i}" }),
+        cyl("PlateBoltLow_L{i}", 0.01, 0.012, { axis: "z", at: ["$width / 2 - 0.004", "0.9 + $i * ($height - 1.2) / max(floor($height / 1.5), 1) - 0.04", -0.21], segments: 6, repeat: { count: "floor($height / 1.5) + 1", step: [0, 0, 0] }, mirror: "PlateBoltLow_R{i}" }),
       ], { material: f.trim }),
       group("Cage", [
         tube("Hoop_{i}", hoop, 0.012, { at: [0, "2.2 + $i * ($height - 2.24) / max(floor(($height - 2.2) / 0.75), 1)", 0], segments: 8, repeat: { count: "floor(($height - 2.2) / 0.75) + 1", step: [0, 0, 0] } }),

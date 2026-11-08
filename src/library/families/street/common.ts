@@ -149,7 +149,7 @@ function soiled(body: MaterialDef, k: number, heavy: boolean): MaterialDef {
   const tex = heavy ? (onMetal ? "rust" : "concrete") : body.texture;
   return {
     color: [r * k + DIRT[0] * (1 - k), g * k + DIRT[1] * (1 - k), b * k + DIRT[2] * (1 - k)],
-    metallic: body.metallic * (heavy ? 0.3 : 0.6),
+    metallic: Math.min(0.3, body.metallic * (heavy ? 0.3 : 0.6)), // a dirt film is matte
     roughness: Math.max(body.roughness, heavy ? 0.88 : 0.75),
     ...(tex ? { texture: tex } : {}),
   };

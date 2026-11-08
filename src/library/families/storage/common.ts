@@ -28,7 +28,7 @@ export const EXTRA: Record<string, MaterialDef> = {
   paint_forest: paintFin(0.028, 0.065, 0.034, 0.6),
   paint_yellow: paintFin(0.45, 0.3, 0.028),
   paint_orange: paintFin(0.42, 0.13, 0.024),
-  paint_white: paintFin(0.52, 0.52, 0.49, 0.5, 0.05),
+  paint_white: paintFin(0.45, 0.45, 0.425, 0.5, 0.05),
   paint_cream: paintFin(0.46, 0.41, 0.31, 0.55, 0),
   paint_black: paintFin(0.03, 0.03, 0.032, 0.5),
   paint_grey: paintFin(0.16, 0.17, 0.17, 0.55),
@@ -46,7 +46,7 @@ export const EXTRA: Record<string, MaterialDef> = {
   plastic_white: plasticFin(0.47, 0.47, 0.44, 0.5),
   plastic_black: plasticFin(0.03, 0.03, 0.032, 0.6),
   hdpe_blue: plasticFin(0.02, 0.05, 0.155, 0.6),
-  hdpe_white: plasticFin(0.45, 0.44, 0.39, 0.62),
+  hdpe_white: plasticFin(0.38, 0.375, 0.335, 0.62),
   hdpe_black: plasticFin(0.035, 0.035, 0.037, 0.62),
   hdpe_grey: plasticFin(0.14, 0.145, 0.145, 0.62),
   // Woods as they really are (the palette's are a little pale for rough warehouse timber).
@@ -56,7 +56,7 @@ export const EXTRA: Record<string, MaterialDef> = {
   oak: woodFin(0.26, 0.15, 0.065, 0.7),
   rough_timber: woodFin(0.26, 0.17, 0.085, 0.9),
   weathered_wood: woodFin(0.22, 0.19, 0.155, 0.92),
-  whitewash_wood: woodFin(0.36, 0.34, 0.3, 0.85),
+  whitewash_wood: woodFin(0.3, 0.285, 0.25, 0.85),
   // Corten and ISO container paints: weathered steel, mottled with oxide.
   corten: { color: [0.22, 0.075, 0.03], metallic: 0.15, roughness: 0.85, texture: "rust" },
   container_red: weatheredFin(0.17, 0.042, 0.03),
@@ -67,8 +67,8 @@ export const EXTRA: Record<string, MaterialDef> = {
   container_white: weatheredFin(0.44, 0.44, 0.41, 0.55),
   container_teal: weatheredFin(0.022, 0.08, 0.085),
   container_yellow: weatheredFin(0.38, 0.26, 0.03),
-  rope: { color: [0.3, 0.22, 0.12], metallic: 0, roughness: 0.95, texture: "fabric" },
-  canvas_beige: { color: [0.27, 0.23, 0.16], metallic: 0, roughness: 0.95, texture: "fabric" },
+  rope: { color: [0.24, 0.175, 0.095], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_beige: { color: [0.21, 0.18, 0.125], metallic: 0, roughness: 0.95, texture: "fabric" }, // jute: sack tops face the sun
   sand: { color: [0.5, 0.4, 0.25], metallic: 0, roughness: 1, texture: "sand" },
   /** Kraft corrugated board, a little mottled. */
   cardboard: { color: [0.3, 0.19, 0.095], metallic: 0, roughness: 0.92, texture: "painted" },
@@ -83,8 +83,8 @@ export const EXTRA: Record<string, MaterialDef> = {
   cable_blue: plasticFin(0.03, 0.065, 0.18, 0.45),
   cable_green: plasticFin(0.035, 0.11, 0.045, 0.45),
   copper_wire: { color: [0.85, 0.48, 0.32], metallic: 1, roughness: 0.35, texture: "brushed" },
-  tank_white: paintFin(0.42, 0.42, 0.395, 0.5, 0.1), // a tank roof faces the sun: keep the white off-white
-  tank_silver: { color: [0.55, 0.56, 0.57], metallic: 0.6, roughness: 0.5, texture: "brushed" },
+  tank_white: paintFin(0.34, 0.34, 0.32, 0.5, 0.1), // a tank roof faces the sun: keep the white off-white
+  tank_silver: { color: [0.4, 0.41, 0.42], metallic: 0.6, roughness: 0.55, texture: "brushed" }, // aluminium paint, weathered
   /** Site concrete, weathered grey. */
   concrete: { color: [0.18, 0.177, 0.168], metallic: 0, roughness: 0.92, texture: "concrete" }, // plinth tops face the sun
   concrete_dark: { color: [0.12, 0.12, 0.116], metallic: 0, roughness: 0.92, texture: "concrete" },
@@ -92,6 +92,8 @@ export const EXTRA: Record<string, MaterialDef> = {
   gas_maroon: paintFin(0.2, 0.03, 0.035, 0.45),
   /** Hot-dip galvanised steel: a dull spangled grey. */
   galvanised: { color: [0.3, 0.31, 0.315], metallic: 0.55, roughness: 0.62, texture: "plastic" },
+  /** Mill-finish aluminium sheet outdoors: duller than the palette's polished aluminium (a silo roof mirrors the sky). */
+  aluminium: { color: [0.55, 0.56, 0.57], metallic: 0.8, roughness: 0.5, texture: "brushed" },
   /** Oil, dust and grime: a dark smudge at the foot of things. */
   grime: { color: [0.05, 0.045, 0.04], metallic: 0, roughness: 0.9, texture: "rust" },
   /** A translucent film of road dust and grime over the lower part of a wall. */

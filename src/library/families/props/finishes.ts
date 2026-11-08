@@ -7,7 +7,10 @@ import type { MaterialDef } from "../../palette.js";
  */
 const powder = (r: number, g: number, b: number, roughness = 0.55, metallic = 0.15): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
 const stone = (r: number, g: number, b: number, texture = "stone", roughness = 0.88): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture });
-const wood = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
+/** Solid timber (posts, rails, rungs, beams, handles, logs): continuous grain, no plank joints. */
+const wood = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
+/** Boarding: a wall or a floor of planks, with the joints between them. */
+const planks = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
 /** A dark glass screen whose base glows faintly in the content colour. */
 const screen = (e: [number, number, number]): MaterialDef => ({ color: [0.012, 0.014, 0.016], metallic: 0, roughness: 0.08, emissive: e });
 /** Bright screen content (text, bars, icons) or a lit sign. */
@@ -106,6 +109,8 @@ export const FINISH: Record<string, MaterialDef> = {
   wood_rough: wood(0.22, 0.14, 0.07, 0.92),
   wood_whitewash: wood(0.45, 0.43, 0.39, 0.88),
   wood_cut: wood(0.48, 0.34, 0.18, 0.85),
+  wood_weathered_planks: planks(0.25, 0.22, 0.18, 0.92),
+  wood_whitewash_planks: planks(0.45, 0.43, 0.39, 0.88),
 
   // Loose rocks (weathered, no block joints).
   rock_grey: stone(0.17, 0.17, 0.16, "concrete", 0.85),
@@ -117,6 +122,7 @@ export const FINISH: Record<string, MaterialDef> = {
 
   // Nature and fire.
   moss_green: { color: [0.06, 0.1, 0.02], metallic: 0, roughness: 1, texture: "grass" },
+  moss_dark: { color: [0.035, 0.06, 0.016], metallic: 0, roughness: 1, texture: "grass" },
   lichen: { color: [0.2, 0.21, 0.12], metallic: 0, roughness: 1, texture: "grass" },
   bark_pine: { color: [0.16, 0.1, 0.06], metallic: 0, roughness: 0.95, texture: "bark" },
   bark_oak: { color: [0.11, 0.09, 0.07], metallic: 0, roughness: 0.95, texture: "bark" },

@@ -1,5 +1,7 @@
 import { box, cyl, ellipsoid, group, lathe, num, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import type { MaterialDef } from "../../palette.js";
+import { sinkByIndex } from "./rocks.js";
+import { laid } from "./timber.js";
 import { finish } from "./finishes.js";
 
 /**
@@ -26,8 +28,8 @@ const FINISHES: Record<Style, [Finish, Finish]> = {
     { key: "sandstone", moss: true, wall: "sandstone_block", wood: "wood_weathered", roof: "well_slate", metal: "iron_rusty", text: "sandstone, weathered timber and a slate roof" },
   ],
   wishing: [
-    { key: "weathered", wall: "wood_weathered", wood: "wood_weathered", roof: "well_shingle", metal: "iron_rusty", text: "weathered planks and a shingle roof" },
-    { key: "whitewash", wall: "wood_whitewash", wood: "wood_pine", roof: "well_tiles", metal: "iron_painted_black", text: "whitewashed planks, pine posts and a red roof" },
+    { key: "weathered", wall: "wood_weathered_planks", wood: "wood_weathered", roof: "well_shingle", metal: "iron_rusty", text: "weathered planks and a shingle roof" },
+    { key: "whitewash", wall: "wood_whitewash_planks", wood: "wood_pine", roof: "well_tiles", metal: "iron_painted_black", text: "whitewashed planks, pine posts and a red roof" },
   ],
   pump: [
     { key: "brick", moss: true, wall: "brick_old", wood: "wood_oak", roof: "well_slate", metal: "iron_painted_black", text: "old red brick with a black cast-iron pump" },
@@ -46,10 +48,19 @@ const LOCAL: Record<string, MaterialDef> = {
   well_thatch: { color: [0.3, 0.24, 0.1], metallic: 0, roughness: 1, texture: "grass" },
 };
 
-/** Clumps of moss round the foot of a wall (n of them at radius r) and a damp grime band, for stone wells. */
-const moss = (f: Finish, r: Num, n: number, phase = 0): SpecNode[] =>
+/**
+ * Moss on a stone wall (n places round it at radius r, the wall h tall with its coping lip at h - 0.08): at each place
+ * two low, irregular cushions spreading along the foot where the damp collects, and a thin tuft tucked into the joint
+ * under the coping. Cushions are flat lumpy ellipsoids half sunk into the wall, set down on their own lowest point.
+ */
+const MOSS = { lumps: 0.35, segments: 14 };
+const moss = (f: Finish, r: Num, n: number, h: Num, phase = 0): SpecNode[] =>
   f.moss
-    ? [ellipsoid("Moss_{i}", [0.07, 0.05, 0.14], { at: [r, 0.068, 0], segments: 10, lumps: 0.3, seed: "$i * 5 + 2", material: "moss_green", repeat: { count: n, around: "y", phase } })]
+    ? [group("Moss_{i}", [
+        ellipsoid("Cushion_A", [0.05, 0.03, 0.18], { at: [r, `0.03 * ${sinkByIndex(n, (i) => i * 5 + 2, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, -0.07], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 2", material: "moss_green" }),
+        ellipsoid("Cushion_B", [0.04, 0.022, 0.12], { at: [r, `0.022 * ${sinkByIndex(n, (i) => i * 5 + 4, MOSS.lumps, 0, MOSS.segments, { count: "fixed" })}`, 0.13], segments: MOSS.segments, lumps: MOSS.lumps, seed: "$i * 5 + 4", material: "moss_dark" }),
+        ellipsoid("Tuft", [0.022, 0.012, 0.09], { at: [`${r} + 0.004`, `${h} - 0.088`, 0.02], segments: 10, lumps: 0.45, seed: "$i * 3 + 9", material: "moss_green" }),
+      ], { repeat: { count: n, around: "y", phase } })]
     : [];
 
 /** A ring wall with a moulded coping; 4, 6 or many segments. */
@@ -87,10 +98,10 @@ function roofed(f: Finish): SpecNode[] {
     group("Well", [
       ringWall("$R - 0.18", "$R", "$wallHeight", 32),
       water("$R - 0.18", "$wallHeight", 32),
-      ...moss(f, "$R", 7, 20),
+      ...moss(f, "$R", 7, "$wallHeight", 20),
       box("Post_L", [0.12, "$roofHeight - $wallHeight + 0.05", 0.12], { at: ["$R - 0.09", "$wallHeight - 0.05", 0], anchor: "bottom", bevel: 0.01, material: f.wood, mirror: "Post_R" }),
-      box("Brace_L", [0.06, 0.06, "$R * 0.9"], { at: ["$R - 0.09", "$roofHeight - 0.03", 0], bevel: 0.006, material: f.wood, mirror: "Brace_R" }),
-      box("Ridge", ["2 * $R + 0.1", 0.08, 0.08], { at: [0, "$roofHeight - 0.03", 0], bevel: 0.008, material: f.wood }),
+      laid("z", box("Brace_L", [0.06, 0.06, "$R * 0.9"], { at: ["$R - 0.09", "$roofHeight - 0.03", 0], bevel: 0.006, material: f.wood, mirror: "Brace_R" })),
+      laid("x", box("Ridge", ["2 * $R + 0.1", 0.08, 0.08], { at: [0, "$roofHeight - 0.03", 0], bevel: 0.008, material: f.wood })),
       roof("Roof", { x0: "-$R - 0.25", x1: "$R + 0.25", z0: "-$R * 0.8", z1: "$R * 0.8", y: "$roofHeight", rise: "$R * 0.55", kind: "gable" }, { material: f.roof }),
       winch(f, "2 * $R + 0.1", "$R + 0.03", "$ay"),
       tube("Rope", [[0, "$ay - 0.08", 0.02], [0, "$wallHeight + 0.42", 0.02], [0, "$wallHeight + 0.35", 0]], 0.008, { segments: 6, material: "rope_hemp" }),
@@ -106,7 +117,7 @@ function wishing(f: Finish): SpecNode[] {
       water("$R - 0.1", "$wallHeight", 6),
       cyl("Coin_{i}", 0.012, 0.004, { at: ["($R - 0.3) * cos($i * 2.1)", "$wallHeight - 0.338", "($R - 0.3) * sin($i * 2.1) * 0.8"], segments: 10, material: "gilt", repeat: { count: 7, step: [0, 0, 0] } }),
       box("Post_L", [0.09, "$roofHeight - $wallHeight + 0.06", 0.09], { at: ["$R - 0.06", "$wallHeight - 0.06", 0], anchor: "bottom", bevel: 0.008, material: f.wood, mirror: "Post_R" }),
-      box("Beam", ["2 * $R - 0.02", 0.08, 0.1], { at: [0, "$roofHeight - 0.02", 0], bevel: 0.008, material: f.wood }),
+      laid("x", box("Beam", ["2 * $R - 0.02", 0.08, 0.1], { at: [0, "$roofHeight - 0.02", 0], bevel: 0.008, material: f.wood })),
       roof("Roof", { x0: "-$R * 0.95", x1: "$R * 0.95", z0: "-$R * 0.95", z1: "$R * 0.95", y: "$roofHeight + 0.02", rise: "$R * 0.75", kind: "hip" }, { material: f.roof }),
       ellipsoid("Finial", [0.04, 0.06, 0.04], { at: [0, "$roofHeight + 0.02 + $R * 0.75", 0], segments: 10, material: f.metal }),
       winch(f, "2 * $R + 0.08", "$R + 0.02", "$ay"),
@@ -120,9 +131,9 @@ function pump(f: Finish): SpecNode[] {
   return [
     group("PumpWell", [
       ringWall("$W * 0.5", "$W * 0.707", "$wallHeight", 4, { rotate: [0, 45, 0] }),
-      ...moss(f, "$W * 0.5", 4, 90),
-      box("Cover", ["$W * 0.76", 0.08, "$W * 0.76"], { at: [0, "$wallHeight - 0.06", 0], anchor: "bottom", bevel: 0.01, material: f.wood }),
-      box("Batten_{i}", [0.06, 0.03, "$W * 0.7"], { at: ["-$W * 0.25 + $i * $W * 0.25", "$wallHeight + 0.015", 0], bevel: 0.006, material: f.wood, repeat: { count: 3, step: [0, 0, 0] } }),
+      ...moss(f, "$W * 0.5", 4, "$wallHeight", 90),
+      laid("x", box("Cover", ["$W * 0.76", 0.08, "$W * 0.76"], { at: [0, "$wallHeight - 0.06", 0], anchor: "bottom", bevel: 0.01, material: f.wood })),
+      laid("z", box("Batten_{i}", [0.06, 0.03, "$W * 0.7"], { at: ["-$W * 0.25 + $i * $W * 0.25", "$wallHeight + 0.015", 0], bevel: 0.006, material: f.wood, repeat: { count: 3, step: [0, 0, 0] } })),
       box("Hatch", ["$W * 0.3", 0.03, "$W * 0.24"], { at: [0, "$wallHeight + 0.01", "$W * 0.2"], bevel: 0.004, material: f.wood }),
       cyl("HatchRing", 0.03, 0.01, { at: [0, "$wallHeight + 0.03", "$W * 0.27"], segments: 12, material: f.metal }),
       group("Pump", [
@@ -146,12 +157,12 @@ function fourpost(f: Finish): SpecNode[] {
     group("WellHouse", [
       ringWall("$W * 0.52", "$W * 0.707", "$wallHeight", 4, { rotate: [0, 45, 0] }),
       water("$W * 0.52", "$wallHeight", 4, { rotate: [0, 45, 0] }),
-      ...moss(f, "$W * 0.5", 4, 90),
+      ...moss(f, "$W * 0.5", 4, "$wallHeight", 90),
       box("Post_FL", [0.11, "$roofHeight - $wallHeight + 0.05", 0.11], { at: ["$a", "$wallHeight - 0.05", "$a"], anchor: "bottom", bevel: 0.01, material: f.wood, mirror: "Post_FR" }),
       box("Post_BL", [0.11, "$roofHeight - $wallHeight + 0.05", 0.11], { at: ["$a", "$wallHeight - 0.05", "-$a"], anchor: "bottom", bevel: 0.01, material: f.wood, mirror: "Post_BR" }),
-      box("Plate_L", [0.1, 0.1, "2 * $a + 0.12"], { at: ["$a", "$roofHeight - 0.05", 0], bevel: 0.008, material: f.wood, mirror: "Plate_R" }),
-      box("Plate_F", ["2 * $a + 0.12", 0.1, 0.1], { at: [0, "$roofHeight - 0.05", "$a"], bevel: 0.008, material: f.wood }),
-      box("Plate_B", ["2 * $a + 0.12", 0.1, 0.1], { at: [0, "$roofHeight - 0.05", "-$a"], bevel: 0.008, material: f.wood }),
+      laid("z", box("Plate_L", [0.1, 0.1, "2 * $a + 0.12"], { at: ["$a", "$roofHeight - 0.05", 0], bevel: 0.008, material: f.wood, mirror: "Plate_R" })),
+      laid("x", box("Plate_F", ["2 * $a + 0.12", 0.1, 0.1], { at: [0, "$roofHeight - 0.05", "$a"], bevel: 0.008, material: f.wood })),
+      laid("x", box("Plate_B", ["2 * $a + 0.12", 0.1, 0.1], { at: [0, "$roofHeight - 0.05", "-$a"], bevel: 0.008, material: f.wood })),
       box("Hanger_L", [0.05, "$roofHeight - $ay + 0.05", 0.12], { at: ["$a", "$ay - 0.05", 0], anchor: "bottom", bevel: 0.005, material: f.wood, mirror: "Hanger_R" }),
       tube("KneeBrace_L", [["$a", "$roofHeight - 0.4", "$a - 0.03"], ["$a", "$roofHeight - 0.08", "$a - 0.35"]], 0.03, { segments: 6, material: f.wood, mirror: "KneeBrace_R" }),
       roof("Roof", { x0: "-$a - 0.3", x1: "$a + 0.3", z0: "-$a - 0.3", z1: "$a + 0.3", y: "$roofHeight", rise: "$a * 1.1", kind: "hip" }, { material: f.roof }),
@@ -203,7 +214,7 @@ const STYLES: Record<Style, StyleDef> = {
 
 function well(style: Style, f: Finish): AssetDraft {
   const s = STYLES[style];
-  const names = [f.wall, f.wood, f.metal, "gilt", "well_water_dark", "rope_hemp", "moss_green"];
+  const names = [f.wall, f.wood, f.metal, "gilt", "well_water_dark", "rope_hemp", "moss_green", "moss_dark"];
   return {
     slug: slugify("well", f.key, s.name),
     title: `${f.key.charAt(0).toUpperCase()}${f.key.slice(1)} ${s.name}`,

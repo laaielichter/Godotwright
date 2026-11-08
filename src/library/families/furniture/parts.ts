@@ -22,7 +22,7 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
   // Woods: finished furniture timber, with grain.
   oak: wood(0.26, 0.145, 0.062, 0.58),
   light_oak: wood(0.32, 0.2, 0.095, 0.6),
-  walnut: wood(0.13, 0.068, 0.034, 0.52),
+  walnut: wood(0.13, 0.068, 0.034, 0.6),
   pine: wood(0.34, 0.21, 0.09, 0.66),
   birch: wood(0.38, 0.27, 0.15, 0.6),
   cherry: wood(0.2, 0.075, 0.035, 0.48),
@@ -30,7 +30,7 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
   teak: wood(0.23, 0.115, 0.045, 0.58),
   weathered_wood: wood(0.25, 0.22, 0.18, 0.9),
   whitewash_wood: wood(0.4, 0.37, 0.32, 0.78),
-  dark_stain: wood(0.1, 0.056, 0.03, 0.6),
+  dark_stain: wood(0.11, 0.06, 0.032, 0.74),
   rough_timber: wood(0.25, 0.155, 0.08, 0.85),
   bamboo: wood(0.38, 0.27, 0.12, 0.55),
   // Paints: eggshell lacquer on wood or metal; whites are warm off-whites.
