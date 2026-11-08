@@ -124,6 +124,15 @@ const edgeDistance = (f: number): number => Math.min(f, 1 - f);
 // The patterns. u runs to the right, v down the image; on a wall u is horizontal and v points down.
 
 const MORTAR: RGB = [0.4, 0.38, 0.34];
+const luminance = (c: RGB): number => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+
+/**
+ * Mortar for a wall of this colour: a neutral grey-beige a little lighter than the bricks or stones (as real joints
+ * are), never lighter than fresh mortar. A fixed light mortar made dark walls look half again as light as their colour.
+ */
+function mortarFor(c: RGB): RGB {
+  return scale(MORTAR, Math.min(1, (luminance(c) * 1.3) / luminance(MORTAR)));
+}
 
 export const PATTERNS: Record<string, Pattern> = {
   brick: {
@@ -142,7 +151,7 @@ export const PATTERNS: Record<string, Pattern> = {
         const r = rand(col, row, 7), r2 = rand(col, row, 8);
         const brick = blend(scale(c, 0.78 + 0.44 * r), [c[0] * 0.55, c[1] * 0.42, c[2] * 0.36], r2 > 0.85 ? 0.6 : 0);
         const grain = 1 + 0.1 * fbm(u, v, 16, 16, 3, 3);
-        const mortar = scale(MORTAR, 0.9 + 0.2 * fbm(u, v, 32, 32, 2, 5));
+        const mortar = scale(mortarFor(c), 0.9 + 0.2 * fbm(u, v, 32, 32, 2, 5));
         return [blend(mortar, scale(brick, grain), inBrick), 0.25 + 0.7 * inBrick + 0.05 * fbm(u, v, 32, 32, 2, 9)];
       }),
   },
@@ -305,7 +314,7 @@ export const PATTERNS: Record<string, Pattern> = {
         const r = rand(col, row, 102);
         const rough = fbm(u, v, 12, 12, 4, 103 + col + row * 7);
         const block = scale(c, (0.82 + 0.3 * r) * (1 + 0.12 * rough));
-        return [blend(scale(MORTAR, 0.85), block, face), clamp01(0.2 + 0.65 * face + 0.15 * rough * face)];
+        return [blend(scale(mortarFor(c), 0.85), block, face), clamp01(0.2 + 0.65 * face + 0.15 * rough * face)];
       }),
   },
   sand: {
