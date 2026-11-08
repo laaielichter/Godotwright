@@ -175,7 +175,8 @@ function moto(st: Style, ci: number): AssetDraft {
   }
   if (st === "cruiser" || st === "scooter") frame.push(box("TailLamp", [0.12, 0.05, 0.05], { at: [0, st === "scooter" ? "$sh - 0.2" : "$Rr * 2 + 0.03", st === "scooter" ? "-$wb / 2 - 0.2" : "-$wb / 2 - 0.3"], bevel: 0.015, material: "lamp_red" }));
   else frame.push(box("TailLamp", [0.1, 0.035, 0.04], { at: [0, "$sh + 0.06", st === "sport" ? "-$wb / 2 - 0.2" : "-$wb / 2 - 0.42"], bevel: 0.01, material: "lamp_red" }));
-  frame.push(cyl("Stand", 0.012, "$py - 0.02", { at: [0.12, "($py - 0.02) / 2 + 0.01", "$pz - 0.02"], rotate: [0, 0, 25], segments: 6, material: "steel" }));
+  if (st === "scooter") frame.push(box("Stand", [0.3, "$R + 0.06", 0.04], { at: [0, "($R + 0.06) / 2", 0.2], bevel: 0.006, material: "steel" }));
+  else frame.push(cyl("Stand", 0.012, "$py - 0.02", { at: [0.12, "($py - 0.02) / 2 + 0.01", "$pz - 0.02"], rotate: [0, 0, 25], segments: 6, material: "steel" }));
 
   // Fork: pivots about the tilted steering axis at the top clamp; holds the front wheel, the bars and the lamp.
   const fork: SpecNode[] = [];

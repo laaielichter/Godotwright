@@ -212,9 +212,13 @@ function buildBoat(b: BoatDef): AssetDraft {
     case "rib": {
       // Inflatable tubes round the gunwale, from the stern on one side, round the bow, back to the other.
       const path: Vec[] = [];
-      for (const s of [-0.03, 0.15, 0.4, 0.62, 0.78, 0.88]) path.push([`${xb(h, Math.max(s, 0))} + 0.06`, `${ysh(h, Math.max(s, 0))} + 0.02`, zs(s)]);
-      path.push([`${xb(h, 0.95)} * 0.6`, `${ysh(h, 0.96)} + 0.06`, zs(0.97)]);
-      path.push([0, `${ysh(h, 1)} + 0.07`, zs(1.0)]);
+      for (const s of [-0.03, 0.15, 0.4, 0.62, 0.78]) path.push([`${xb(h, Math.max(s, 0))} + 0.06`, `${ysh(h, Math.max(s, 0))} + 0.02`, zs(s)]);
+      // Round the bow on a half circle, so the tube never folds on itself.
+      const rr = `(${xb(h, 0.86)} + 0.06)`;
+      for (const a of [0, 30, 60, 90]) {
+        const r = (a * Math.PI) / 180;
+        path.push([a === 90 ? 0 : `${rr} * ${f(Math.cos(r))}`, `${ysh(h, 0.86)} + ${f(0.02 + 0.06 * Math.sin(r))}`, `${zs(0.86)} + ${rr} * ${f(0.85 * Math.sin(r))}`]);
+      }
       const full = [...path, ...[...path].reverse().slice(1).map(([x, y, z]) => [x === 0 ? 0 : `-(${x})`, y, z] as Vec)];
       kids.push(tube("Tubes", full, 0.23, { segments: 16, material: "tube_grey" }));
       kids.push(tube("Strake_L", path.slice(0, 6).map(([x, y, z]) => [`${x} + 0.2`, `${y} - 0.05`, z] as Vec), 0.03, { segments: 6, material: "accent", mirror: "Strake_R" }));
