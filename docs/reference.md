@@ -147,7 +147,7 @@ point. `model lint` scores four categories from 0 to 100:
 | Category | What it checks |
 | --- | --- |
 | geometry | triangles facing against their own normals (pink backfaces, wrong light), open edges on single-sided surfaces, edges shared by more than two triangles, triangles without area, negative scale, models that are almost but not quite left-right symmetric |
-| materials | missing normals, UVs or tangents, UVs outside 0..1, very large or non-power-of-two textures |
+| materials | missing normals, UVs or tangents, UVs outside 0..1, very large or non-power-of-two textures, base colours real surfaces do not have (`model/albedo`, an info: a non-metal brighter than snow or darker than charcoal, or a dark "metal" that renders as a black mirror; a textured material is judged by the mean of its colour map) |
 | performance | triangle budget (`--max-triangles`), texture memory budget (`--max-texture-mb`), many materials |
 | rig | sibling nodes with the same name, unnamed nodes, a model that does not sit on y = 0, an empty file |
 
@@ -207,7 +207,8 @@ Anything else is built from a **model spec**: a JSON tree of named parts (box, c
 lathe, loft, extrude, roof, tube) with `at`, `rotate`, `mirror`, `repeat`, variables and arithmetic
 expressions (`"$width / 2 - 0.1"`, never executed as code). Boxes and cylinders can have rounded edges (`bevel`),
 ellipsoids an organic, lumpy outline (`lumps`), a tube follows a path (frames, rails, pipes, branches), and a material
-of your own can use any of the texture patterns in its own colour (`"texture": "wood"`). `model spec` explains the format and prints a
+of your own can use any of the texture patterns in its own colour (`"texture": "wood"`): brick, roof_tile, roof_slate, wood, bark,
+concrete, asphalt, plaster, leaf, grass, stone, sand, water, ground, and for finishes fabric, leather, painted, plastic, brushed and rust. `model spec` explains the format and prints a
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).

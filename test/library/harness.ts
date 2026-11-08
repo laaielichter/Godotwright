@@ -15,7 +15,7 @@ const archetypes = loadLibrary();
 /** Triangle budgets per category: a library asset is placed many times, so it must stay light. */
 export const BUDGET: Record<Category, number> = { furniture: 40_000, street: 40_000, storage: 40_000, nature: 80_000, buildings: 200_000, vehicles: 200_000, props: 60_000 };
 
-/** Everything above info that the lint and the archetype check find in an asset built with these parameters. */
+/** Everything above info that the lint and the archetype check find in an asset built with these parameters, and any albedo finding. */
 export function problems(asset: LibraryAsset, input: Record<string, unknown> = {}): { findings: string[]; triangles: number; min: number[]; size: number[] } {
   const path = writeScene(buildSpec(asset.spec, input));
   // LIBRARY_DUMP=<dir> keeps the default build of every asset, to look at (a contact sheet, Godot).
@@ -27,7 +27,8 @@ export function problems(asset: LibraryAsset, input: Record<string, unknown> = {
   const report = lintModelFile(path, { archetype: archetypes.resolve(asset.archetype) });
   const info = inspectModel(path);
   return {
-    findings: report.findings.filter((f) => f.severity !== "info").map((f) => `${f.rule} ${f.node ?? ""} ${f.message}`),
+    // Albedo is info for models in general, but a library asset must look real under Godot's sun.
+    findings: report.findings.filter((f) => f.severity !== "info" || f.rule === "model/albedo").map((f) => `${f.rule} ${f.node ?? ""} ${f.message}`),
     triangles: info.triangles,
     min: info.bounds!.min,
     size: info.bounds!.size,
