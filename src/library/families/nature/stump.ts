@@ -74,7 +74,7 @@ function stumpAsset(s: Stump): AssetDraft {
           ]
         : [group("Cut", rings(s.heart), { at: [0, "$h", 0], vars: { fr: "$r" } })];
       const extras: SpecNode[] = [];
-      if (s.moss) extras.push(ellipsoid("Moss", ["$r * 1.15", "$r * 0.2", "$r * 1.05"], { at: ["$r * 0.4", "$r * 0.06", "$r * 0.3"], segments: 14, lumps: 0.3, seed: 11, material: "moss" }));
+      if (s.moss) extras.push(ellipsoid("Moss", ["$r * 1.15", "$r * 0.2", "$r * 1.05"], { at: ["$r * 0.4", "$r * 0.26", "$r * 0.3"], segments: 14, lumps: 0.3, seed: 11, material: "moss" }));
       if (s.moss && !tall) extras.push(ellipsoid("MossTop", ["$r * 0.55", "$r * 0.08", "$r * 0.45"], { at: ["$r * 0.3", "$h + 0.01", "-$r * 0.2"], segments: 12, lumps: 0.3, seed: 12, material: "moss" }));
       if (fungus) extras.push(ellipsoid("Fungus_{i}", ["$r * 0.3", "$r * 0.07", "$r * 0.22"], { at: ["$r * 0.98", "$h * (0.35 + 0.12 * $i)", "$r * 0.1 * $i"], rotate: [0, "$i * 25", -8], segments: 12, material: "fungus_shelf", repeat: { count: 3, step: [0, 0, 0] } }));
       nodes = [group("Stump", [body, ...top, group("Roots", [roots], { material: s.bark }), ...extras], { vars: { r: "$radius", h: "$height" } })];

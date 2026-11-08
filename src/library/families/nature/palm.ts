@@ -146,7 +146,7 @@ function palm(key: string, st: Style, v: Variant, index: number): AssetDraft {
     case "dates":
       crown.push(lathe("Shaft", [["$trunkRadius * 1.1", "-$trunkRadius * 0.8"], ["$trunkRadius * 1.25", 0], ["$trunkRadius * 0.7", "$trunkRadius * 0.9"], ["$trunkRadius * 0.15", "$trunkRadius * 1.4"]], { segments: 12, material: st.bark }));
       crown.push(group("Bunch_{i}", [
-        tube("Strand", [["$trunkRadius * 0.8", 0, 0], ["$trunkRadius * 1.6", "-$trunkRadius * 0.4", 0], ["$trunkRadius * 1.9", "-$trunkRadius * 1.6", 0]], "$trunkRadius * 0.06", { segments: 5, material: "palm_rachis" }),
+        tube("Branch", [["$trunkRadius * 0.8", 0, 0], ["$trunkRadius * 1.6", "-$trunkRadius * 0.4", 0], ["$trunkRadius * 1.9", "-$trunkRadius * 1.6", 0]], "$trunkRadius * 0.06", { segments: 5, material: "palm_rachis" }),
         ellipsoid("Dates", ["$trunkRadius * 0.45", "$trunkRadius * 0.85", "$trunkRadius * 0.4"], { at: ["$trunkRadius * 1.9", "-$trunkRadius * 1.9", 0], segments: 10, lumps: 0.5, seed: 4, material: "date_fruit" }),
       ], { repeat: { count: 4, around: "y", phase: 30 } }));
       extraMats.push("date_fruit");
@@ -154,11 +154,13 @@ function palm(key: string, st: Style, v: Variant, index: number): AssetDraft {
       break;
     case "skirt":
       crown.push(lathe("Skirt", [["$trunkRadius * 1.02", "-$frondLength * 0.9"], ["$trunkRadius * 1.7", "-$frondLength * 0.8"], ["$trunkRadius * 2.6", "-$frondLength * 0.35"], ["$trunkRadius * 2.4", "-$frondLength * 0.05"], ["$trunkRadius * 1.2", "$trunkRadius * 0.6"]], { segments: 14, material: "dead_frond" }));
+      crown.push(group("Branches", [tube("Branch_{i}", [["$trunkRadius * 1.5", "-$trunkRadius * 0.2", 0], ["$frondLength * 0.5", "$trunkRadius * 0.5", 0], ["$frondLength * 0.85", "-$frondLength * 0.25", 0]], ["$trunkRadius * 0.12", "$trunkRadius * 0.08", "$trunkRadius * 0.04"], { segments: 5, material: "palm_rachis", repeat: { count: 3, around: "y", phase: 50 } })]));
       extraMats.push("dead_frond");
-      extraText = " A skirt of dead leaves hangs under the head.";
+      extraText = " A skirt of dead leaves hangs under the head, and three long flower stalks arch out between the leaves.";
       break;
     case "shaft":
       crown.push(lathe("Shaft", [["$trunkRadius * 0.95", "-$trunkRadius * 7"], ["$trunkRadius * 1.15", "-$trunkRadius * 5"], ["$trunkRadius * 1.1", "-$trunkRadius * 1.5"], ["$trunkRadius * 0.7", "$trunkRadius * 0.3"], ["$trunkRadius * 0.15", "$trunkRadius * 1"]], { segments: 14, material: "crownshaft" }));
+      crown.push(group("Branches", [tube("Branch_{i}", [["$trunkRadius * 0.9", "-$trunkRadius * 7.2", 0], ["$trunkRadius * 2", "-$trunkRadius * 7.8", 0], ["$trunkRadius * 2.6", "-$trunkRadius * 9.5", 0]], ["$trunkRadius * 0.12", "$trunkRadius * 0.09", "$trunkRadius * 0.05"], { segments: 5, material: "palm_rachis", repeat: { count: 4, around: "y", phase: 20 } })]));
       extraMats.push("crownshaft");
       extraText = " A glossy green crownshaft sits on top of the trunk.";
       break;

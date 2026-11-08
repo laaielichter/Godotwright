@@ -150,7 +150,7 @@ function rockAsset(style: Style, f: Finish, index: number): AssetDraft {
       nodes.push(
         stone("Rock_Cobble", "$size * 0.17", "$height * 0.5", "$size * 0.14", "0", "0", seed(), 14, lumps, moss, { turn: turn() }),
         stone("Rock_{i}", "$size * (0.1 + 0.02 * sin($i * 2.1))", "$height * (0.3 + 0.08 * sin($i * 1.3))", "$size * 0.08", "$size * 0.2", "0", inner, seg, lumps, false, { turn: "$i * 53", repeat: { count: 5, around: "y", phase: 10 } }),
-        stone("Rock_Outer_{i}", "$size * (0.075 + 0.02 * sin($i * 1.7))", "$height * (0.22 + 0.06 * cos($i * 2.2))", "$size * 0.06", "$size * 0.36", "0", outer, seg, lumps, false, { turn: "$i * 41", repeat: { count: "$pebbles", around: "y", phase: 25 } }),
+        stone("Rock_Outer_{i}", "$size * (0.075 + 0.02 * sin($i * 1.7))", "$height * (0.22 + 0.06 * cos($i * 2.2))", "$size * 0.06", "$size * 0.33", "0", outer, seg, lumps, false, { turn: "$i * 41", repeat: { count: "$pebbles", around: "y", phase: 25 } }),
       );
       params.push(int("pebbles", 10, 6, 14, "Number of pebbles in the outer ring."));
       break;

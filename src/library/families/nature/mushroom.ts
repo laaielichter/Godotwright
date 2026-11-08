@@ -1,6 +1,6 @@
 import { ellipsoid, group, int, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats } from "../../palette.js";
-import { n4, natureMats } from "./common.js";
+import { lumpExtent, n4, natureMats } from "./common.js";
 
 type CapShape = "dome" | "bun" | "bell" | "funnel" | "flat" | "button";
 
@@ -93,7 +93,10 @@ function asset(s: Shroom): AssetDraft {
   if (s.cluster) {
     params.push(int("count", s.cluster[0], s.cluster[1], s.cluster[2], "Number of mushrooms around the biggest one."));
     const spread = s.key.startsWith("giant") ? 1.05 : 1.5;
+    const low = lumpExtent(16, 0.15, 21).low;
     nodes = [group("Cluster", [
+      // The substrate the cluster grows from: a low mound of soil that joins every foot.
+      ellipsoid("Mound", [`$capRadius * ${n4(spread + 0.5)}`, "$capRadius * 0.3", `$capRadius * ${n4(spread + 0.4)}`], { at: [0, `$capRadius * ${n4(0.3 * low)}`, 0], segments: 16, lumps: 0.15, seed: 21, material: "soil" }),
       group("Main", mushroom(s), { vars }),
       group("Shroom_{i}", [group("Body", mushroom(s), { vars: { H: "$height * (0.55 + 0.25 * sin($i * 2.3 + 1))", R: "$capRadius * (0.6 + 0.18 * sin($i * 1.7))", C: `$capRadius * (0.6 + 0.18 * sin($i * 1.7)) * ${n4(s.capH)}`, sr: `$capRadius * (0.6 + 0.18 * sin($i * 1.7)) * ${n4(s.stemR)}` } })], {
         at: [`$capRadius * ${n4(spread)}`, `$capRadius * ${n4(s.stemR * (s.bulb ?? 1.1) * 0.3)}`, 0],
@@ -108,7 +111,7 @@ function asset(s: Shroom): AssetDraft {
     description: `${s.text.charAt(0).toUpperCase()}${s.text.slice(1)}. It stands on y = 0; the front faces +z.`,
     tags: [s.key.replace(/-/g, " "), s.dutch, ...(s.key.startsWith("giant") ? ["fantasy", "giant", "reus", "sprookje"] : ["forest floor", "bosgrond"]), ...(s.cluster ? ["cluster", "groep"] : [])],
     params,
-    materials: natureMats(mats, s.cap, s.stem, s.gill, ...(s.spots ? [s.spots] : [])),
+    materials: natureMats(mats, s.cap, s.stem, s.gill, ...(s.spots ? [s.spots] : []), ...(s.cluster ? ["soil"] : [])),
     nodes,
   };
 }
