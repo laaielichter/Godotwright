@@ -60,9 +60,10 @@ function featherFrond(name: string, st: Style, material: string, tilt: string, c
   const d = st.droop * droopScale;
   const y = (u: number): string => `$fl * ${n4(0.22 * u - (0.22 + d) * u * u)}`;
   const rachis = tube("Rachis", us.map((u): Vec => [0, y(u), `$fl * ${n4(u)}`]), us.map((u) => `$fl * ${n4(0.022 - 0.017 * u)}`), { segments: 6, material: "palm_rachis" });
-  const wu = us.slice(1);
-  const sections = wu.map((u) => {
-    const w = (st.wing ?? 0.12) * Math.pow(Math.sin(Math.PI * Math.min(u, 0.97)), 0.6) + 0.012;
+  // Many sections, alternately wide and narrow, give the wings a saw-tooth edge that reads as separate leaflets.
+  const wu = Array.from({ length: 28 }, (_, k) => 0.06 + (0.94 * (k + 1)) / 28);
+  const sections = wu.map((u, k) => {
+    const w = ((st.wing ?? 0.12) * Math.pow(Math.sin(Math.PI * Math.min(u, 0.97)), 0.6)) * (k % 2 ? 0.45 : 1) + 0.012;
     const h = w * (st.hang ?? 0.6);
     return {
       z: `$fl * ${n4(u * 0.97)}`,
@@ -89,10 +90,21 @@ function fanFrond(name: string, material: string, tilt: string, count: string | 
     const a = ((k - 4) / 4) * 1.25;
     ribs.push(tube(`Rib_${k + 1}`, [[0, "$fl * 0.02", 0], [`$fl * ${n4(Math.sin(a) * 0.47)}`, `$fl * ${n4(0.012 - 0.08 * (1 - Math.cos(a)))}`, `$fl * ${n4(Math.cos(a) * 0.47 - 0.02)}`]], ["$fl * 0.012", "$fl * 0.006"], { segments: 4 }));
   }
+  // The blade splits into long, stiff leaflet segments along the pleats, so the fan has a ragged, spiky outline.
+  const segs: SpecNode[] = [];
+  for (let k = 0; k < 11; k++) {
+    const a = ((k - 5) / 5) * 1.3;
+    const len = 0.27 - 0.04 * Math.abs(k - 5) / 5;
+    segs.push(ellipsoid(`Blade_${k + 1}`, [`$fl * 0.06`, "$fl * 0.012", `$fl * ${n4(len)}`], {
+      at: [`$fl * ${n4(Math.sin(a) * (len + 0.06))}`, `$fl * ${n4(0.01 - 0.07 * (1 - Math.cos(a)))}`, `$fl * ${n4(Math.cos(a) * (len + 0.06) - 0.02)}`],
+      rotate: [0, n4((a * 180) / Math.PI), 0],
+      segments: 10,
+    }));
+  }
   return group(name, [group("Arch", [
     tube("Stalk", [[0, 0, 0], [0, "$fl * 0.04", "$fl * 0.3"], [0, "$fl * 0.03", "$fl * 0.56"]], ["$fl * 0.02", "$fl * 0.016", "$fl * 0.012"], { segments: 6, material: "palm_rachis" }),
     // The fan stands up from the end of its stalk, facing outward, so the head reads as a round ball of fans.
-    group("Fan", [ellipsoid("Blade", ["$fl * 0.5", "$fl * 0.025", "$fl * 0.45"], { at: [0, 0, "$fl * 0.46"], segments: 18 }), ...ribs], { at: [0, "$fl * 0.03", "$fl * 0.52"], rotate: ["-22 - 12 * sin($i * 1.3)", 0, 0] }),
+    group("Fan", [ellipsoid("Blade", ["$fl * 0.2", "$fl * 0.02", "$fl * 0.16"], { at: [0, 0, "$fl * 0.14"], segments: 14 }), ...segs, ...ribs], { at: [0, "$fl * 0.03", "$fl * 0.52"], rotate: ["-22 - 12 * sin($i * 1.3)", 0, 0] }),
   ], { vars: { fl: "$frondLength * (0.92 + 0.08 * sin($i * 1.7))" } })], {
     material,
     rotate: [tilt, `9 * sin($i * 2.3)`, 0],

@@ -3,13 +3,13 @@ import { mats, type MaterialDef } from "../../palette.js";
 import { BMATS } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
-  stripe_white: { color: [0.6, 0.585, 0.54], metallic: 0, roughness: 0.92, texture: "fabric" },
+  stripe_white: { color: [0.54, 0.53, 0.49], metallic: 0, roughness: 0.92, texture: "fabric" },
   stripe_red: { color: [0.36, 0.03, 0.028], metallic: 0, roughness: 0.92, texture: "fabric" },
   stripe_green: { color: [0.03, 0.14, 0.06], metallic: 0, roughness: 0.92, texture: "fabric" },
   stripe_blue: { color: [0.03, 0.07, 0.22], metallic: 0, roughness: 0.92, texture: "fabric" },
   stripe_yellow: { color: [0.56, 0.38, 0.03], metallic: 0, roughness: 0.92, texture: "fabric" },
   stripe_orange: { color: [0.5, 0.15, 0.02], metallic: 0, roughness: 0.92, texture: "fabric" },
-  tarp_white: { color: [0.56, 0.56, 0.53], metallic: 0, roughness: 0.6, texture: "plastic" },
+  tarp_white: { color: [0.5, 0.5, 0.48], metallic: 0, roughness: 0.6, texture: "plastic" },
   tarp_blue: { color: [0.03, 0.08, 0.22], metallic: 0, roughness: 0.6, texture: "plastic" },
   tarp_green: { color: [0.03, 0.12, 0.06], metallic: 0, roughness: 0.6, texture: "plastic" },
   tarp_red: { color: [0.32, 0.03, 0.03], metallic: 0, roughness: 0.6, texture: "plastic" },

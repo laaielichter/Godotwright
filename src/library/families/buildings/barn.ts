@@ -1,6 +1,6 @@
 import { box, cyl, extrude, group, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS, gableRoof, hipRoof, slab, windowUnit } from "./shared.js";
+import { BMATS, gableRoof, hipRoof, slab, swanDownpipe, windowUnit } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
   barn_red: { color: [0.2, 0.034, 0.022], metallic: 0, roughness: 0.85, texture: "wood" },
@@ -104,6 +104,16 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     kids.push(box("Hood", [5.2, 0.14, 1.2], { at: [0, "$wh + 0.6", "$hl + 0.7"], rotate: [12, 0, 0], material: f.roof, bevel: 0.02 }));
   }
 
+  // Downpipes from the eaves gutters at the four corners.
+  const gut = style === "gable" ? { y: "$wh - $rise * 0.5 / $hw - 0.04", reach: -0.53, m: "zinc" }
+    : style === "steel" ? { y: "$wh - $rise * 0.3 / $hw - 0.04", reach: -0.33, m: "galvanised" }
+    : style === "hip" && f.roof !== "thatch" ? { y: "$wh - 0.05", reach: -0.64, m: "zinc" } : undefined;
+  if (gut) {
+    kids.push(group("Rainwater", [
+      swanDownpipe("Downpipe_FL", "-$hw - 0.06", "$hl - 0.3", gut.y, gut.reach, gut.m, "Downpipe_FR"),
+      swanDownpipe("Downpipe_BL", "-$hw - 0.06", "-$hl + 0.3", gut.y, gut.reach, gut.m, "Downpipe_BR"),
+    ]));
+  }
   // Doors in the +z gable end.
   if (style === "steel") {
     kids.push(group("Door", [

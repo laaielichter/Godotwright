@@ -3,7 +3,7 @@
  * work out normals and directions in TypeScript while the spec keeps its `$param` expressions), wheels at their hub,
  * and a few finishes the palette does not have.
  */
-import { box, cyl, group, lathe, type Num, type SpecNode, type Vec } from "../../kit.js";
+import { box, cyl, ellipsoid, group, lathe, type Num, type SpecNode, type Vec } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
 
 /** Rounds to 4 decimals and prints without trailing zeros. */
@@ -172,7 +172,8 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
       break;
     }
     case "chrome": {
-      kids.push(lathe("Hubcap", [P(rf - 0.02, 0.36), P(rf * 0.8, 0.42), P(rf * 0.45, 0.48), P(0.08, 0.5), P(0.08, 0.3), P(rf - 0.02, 0.3), P(rf - 0.02, 0.36)], { material: hub, rotate: [0, 0, -90], segments: seg, caps: false }));
+      kids.push(cyl("Hubcap", `${f(rf - 0.02)} * $r`, "0.1 * $w", { axis: "x", at: [X(0.35), 0, 0], segments: seg, material: hub, bevel: 0.012 }));
+      kids.push(ellipsoid("Dome", ["0.14 * $w", `${f(rf * 0.5)} * $r`, `${f(rf * 0.5)} * $r`], { at: [X(0.4), 0, 0], segments: 20, material: hub }));
       break;
     }
     case "wire": {

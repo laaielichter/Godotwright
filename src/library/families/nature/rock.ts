@@ -112,17 +112,17 @@ function stone(name: string, rx: string, ryRaw: string, rz: string, x: string, z
  * stones get the pitted "concrete" surface. Every stone has a second, dirtier tone for the smaller blocks.
  */
 const ROCK: Record<string, { color: [number, number, number]; texture: string; roughness: number }> = {
-  granite: { color: [0.11, 0.106, 0.1], texture: "asphalt", roughness: 0.9 },
-  basalt: { color: [0.04, 0.039, 0.039], texture: "asphalt", roughness: 0.9 },
-  sandstone: { color: [0.165, 0.115, 0.064], texture: "asphalt", roughness: 0.95 },
-  limestone: { color: [0.135, 0.128, 0.11], texture: "asphalt", roughness: 0.92 },
-  slate: { color: [0.045, 0.049, 0.055], texture: "concrete", roughness: 0.85 },
-  red_rock: { color: [0.14, 0.06, 0.032], texture: "asphalt", roughness: 0.95 },
-  mossy_rock: { color: [0.075, 0.078, 0.062], texture: "asphalt", roughness: 0.95 },
-  lichen: { color: [0.1, 0.104, 0.082], texture: "asphalt", roughness: 0.97 },
-  sandstone_red: { color: [0.15, 0.066, 0.034], texture: "asphalt", roughness: 0.95 },
-  chalk: { color: [0.19, 0.185, 0.165], texture: "concrete", roughness: 0.92 },
-  quartz: { color: [0.2, 0.195, 0.185], texture: "concrete", roughness: 0.55 },
+  granite: { color: [0.085, 0.082, 0.077], texture: "asphalt", roughness: 0.9 },
+  basalt: { color: [0.034, 0.033, 0.033], texture: "asphalt", roughness: 0.9 },
+  sandstone: { color: [0.12, 0.084, 0.047], texture: "asphalt", roughness: 0.95 },
+  limestone: { color: [0.105, 0.1, 0.087], texture: "asphalt", roughness: 0.92 },
+  slate: { color: [0.04, 0.043, 0.048], texture: "concrete", roughness: 0.85 },
+  red_rock: { color: [0.1, 0.045, 0.025], texture: "asphalt", roughness: 0.95 },
+  mossy_rock: { color: [0.06, 0.062, 0.05], texture: "asphalt", roughness: 0.95 },
+  lichen: { color: [0.08, 0.083, 0.066], texture: "asphalt", roughness: 0.97 },
+  sandstone_red: { color: [0.11, 0.05, 0.027], texture: "asphalt", roughness: 0.95 },
+  chalk: { color: [0.14, 0.136, 0.122], texture: "concrete", roughness: 0.92 },
+  quartz: { color: [0.13, 0.127, 0.12], texture: "concrete", roughness: 0.55 },
 };
 
 function rockMaterials(stone: string, fine: boolean): Record<string, MaterialDef> {

@@ -3,7 +3,7 @@
  * expression ("$width / 2"), so the parts follow the asset's parameters. Local frames: a window or door is built on a
  * wall surface at z = 0 and faces +z; turn its group to put it on another wall.
  */
-import { box, cyl, extrude, group, roof, type Family, type Num, type SpecNode, type Vec } from "../../kit.js";
+import { box, cyl, extrude, group, roof, tube, type Family, type Num, type SpecNode, type Vec } from "../../kit.js";
 import type { MaterialDef } from "../../palette.js";
 
 /**
@@ -14,16 +14,16 @@ export const BMATS: Record<string, MaterialDef> = {
   tile_red: { color: [0.2, 0.052, 0.028], metallic: 0, roughness: 0.72, texture: "roof_tile" },
   tile_brown: { color: [0.085, 0.042, 0.028], metallic: 0, roughness: 0.75, texture: "roof_tile" },
   tile_black: { color: [0.03, 0.03, 0.033], metallic: 0, roughness: 0.42, texture: "roof_tile" },
-  tile_orange: { color: [0.28, 0.085, 0.036], metallic: 0, roughness: 0.75, texture: "roof_tile" },
+  tile_orange: { color: [0.24, 0.07, 0.03], metallic: 0, roughness: 0.75, texture: "roof_tile" },
   slate_grey: { color: [0.042, 0.046, 0.052], metallic: 0, roughness: 0.62, texture: "roof_slate" },
   slate_blue: { color: [0.036, 0.043, 0.058], metallic: 0, roughness: 0.58, texture: "roof_slate" },
   shingle_wood: { color: [0.14, 0.1, 0.068], metallic: 0, roughness: 0.9, texture: "roof_slate" },
   shingle_green: { color: [0.032, 0.065, 0.042], metallic: 0, roughness: 0.85, texture: "roof_slate" },
   thatch: { color: [0.2, 0.15, 0.08], metallic: 0, roughness: 1, texture: "grass" },
   felt_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "asphalt" },
-  zinc: { color: [0.4, 0.42, 0.43], metallic: 0.55, roughness: 0.5, texture: "brushed" },
+  zinc: { color: [0.3, 0.31, 0.32], metallic: 0.4, roughness: 0.55, texture: "brushed" },
   zinc_quartz: { color: [0.11, 0.115, 0.12], metallic: 0.3, roughness: 0.5, texture: "brushed" },
-  corrugated: { color: [0.36, 0.37, 0.38], metallic: 0.5, roughness: 0.6, texture: "brushed" },
+  corrugated: { color: [0.27, 0.28, 0.285], metallic: 0.35, roughness: 0.65, texture: "brushed" },
   corrugated_red: { color: [0.19, 0.035, 0.025], metallic: 0.25, roughness: 0.55, texture: "painted" },
   corrugated_green: { color: [0.03, 0.085, 0.045], metallic: 0.25, roughness: 0.55, texture: "painted" },
   window_glass: { color: [0.028, 0.036, 0.046], metallic: 0.4, roughness: 0.04 },
@@ -72,7 +72,7 @@ export const BUILDING_OVERRIDES: Record<string, MaterialDef> = {
   teak: { color: [0.26, 0.14, 0.06], metallic: 0, roughness: 0.75, texture: "wood" },
   aged_copper: { color: [0.075, 0.17, 0.13], metallic: 0.15, roughness: 0.75, texture: "rust" },
   aluminium: { color: [0.62, 0.63, 0.64], metallic: 0.8, roughness: 0.42, texture: "brushed" },
-  galvanised: { color: [0.48, 0.49, 0.5], metallic: 0.65, roughness: 0.55, texture: "brushed" },
+  galvanised: { color: [0.36, 0.37, 0.38], metallic: 0.4, roughness: 0.6, texture: "brushed" },
   glass_frosted: { color: [0.35, 0.42, 0.45, 0.45], metallic: 0, roughness: 0.15, alpha: "BLEND" },
   glass_clear: { color: [0.3, 0.38, 0.42, 0.3], metallic: 0, roughness: 0.05, alpha: "BLEND" },
   plastic_white: { color: [0.58, 0.58, 0.56], metallic: 0, roughness: 0.5, texture: "plastic" },
@@ -303,6 +303,19 @@ export function downpipe(name: string, x: Num, z: Num, top: Num, metal: string, 
     cyl("Pipe", 0.04, `${typeof top === "number" ? top : `(${top})`} - 0.1`, { anchor: "base", at: [0, 0.1, 0], segments: 10, material: metal }),
     cyl("Shoe", 0.05, 0.12, { axis: "z", at: [0, 0.08, 0.04], segments: 10, material: metal }),
   ], { at: [x, 0, z], mirror });
+}
+
+/**
+ * A downpipe on a wall corner (its node at the foot of the pipe, against the wall) that runs up and swan-necks out by
+ * `reach` in x to the eaves gutter at height `gutterY`; brackets hold it to the wall. Mirror it for the other side.
+ */
+export function swanDownpipe(name: string, x: Num, z: Num, gutterY: Num, reach: Num, metal: string, mirror?: string): SpecNode {
+  return group(name, [
+    cyl("Pipe", 0.045, "$pgy - 0.55", { anchor: "base", at: [0, 0.08, 0], segments: 10, material: metal }),
+    tube("Swan", [[0, "$pgy - 0.5", 0], ["$prx * 0.5", "$pgy - 0.32", 0], ["$prx", "$pgy - 0.14", 0], ["$prx", "$pgy - 0.02", 0]], 0.045, { segments: 10, material: metal }),
+    cyl("Shoe", 0.05, 0.14, { axis: "z", at: [0, 0.09, 0.05], segments: 10, material: metal }),
+    box("Bracket_{i}", [0.1, 0.04, 0.1], { at: ["-$prx / max(0.001, abs($prx)) * 0.02", 1, 0], repeat: { count: 3, step: [0, "($pgy - 1.8) / 2", 0] }, material: metal }),
+  ], { at: [x, 0, z], mirror, vars: { pgy: gutterY, prx: reach } });
 }
 
 /**

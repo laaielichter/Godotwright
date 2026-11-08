@@ -1,6 +1,6 @@
 import { box, cyl, group, int, num, slugify, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS, flatRoof } from "./shared.js";
+import { BMATS, downpipe, flatRoof } from "./shared.js";
 
 const STYLES = {
   slab: { text: "a long gallery-less slab block with a grid of windows, a balcony with a glass balustrade at every bay of the front, two glazed entrances under canopies and a stair housing on the flat roof", w: [24, 60, 36], d: [10, 13, 11], f: [4, 7, 5], b: [6, 14, 9] },
@@ -13,8 +13,8 @@ type Style = keyof typeof STYLES;
 const FINISHES: Record<Style, { id: string; wall: string; accent: string; frame: string; text: string; nl: string }[]> = {
   slab: [
     { id: "red-brick", wall: "brick_red", accent: "concrete", frame: "aluminium", text: "red brick", nl: "rode baksteen" },
-    { id: "concrete", wall: "concrete", accent: "paint_white", frame: "paint_anthracite", text: "concrete", nl: "beton" },
-    { id: "yellow-brick", wall: "brick_yellow", accent: "paint_white", frame: "paint_white", text: "yellow brick", nl: "gele baksteen" },
+    { id: "concrete", wall: "concrete", accent: "concrete_dark", frame: "paint_anthracite", text: "concrete", nl: "beton" },
+    { id: "yellow-brick", wall: "brick_yellow", accent: "concrete", frame: "paint_white", text: "yellow brick", nl: "gele baksteen" },
   ],
   tower: [
     { id: "white", wall: "render_white", accent: "paint_anthracite", frame: "paint_anthracite", text: "white", nl: "wit" },
@@ -28,22 +28,27 @@ const FINISHES: Record<Style, { id: string; wall: string; accent: string; frame:
   ],
   gallery: [
     { id: "concrete", wall: "concrete", accent: "paint_orange", frame: "aluminium", text: "concrete and orange", nl: "beton" },
-    { id: "brick", wall: "brick_brown", accent: "paint_white", frame: "paint_white", text: "brown brick", nl: "bruine baksteen" },
+    { id: "brick", wall: "brick_brown", accent: "concrete", frame: "paint_white", text: "brown brick", nl: "bruine baksteen" },
     { id: "blue", wall: "render_blue", accent: "paint_white", frame: "paint_anthracite", text: "blue rendered", nl: "blauw" },
   ],
 };
 
 const GLASS = "window_glass";
 
-/** A plain flat window (no bevels, to keep the triangle count of a whole facade low): pane, frame and sill. */
+/**
+ * A flat-fronted window (no bevels, to keep the triangle count of a whole facade low): a dark reveal round the opening,
+ * a frame (with a mullion), dark reflecting glass and, on the mansion blocks, a stone sill and lintel.
+ */
 function flatWindow(name: string, w: string, h: string, frame: string, sill: string, o: { at: Vec; repeat?: { count: string | number; step: Vec }; lintel?: string; bars?: boolean }): SpecNode {
   const kids: SpecNode[] = [
-    box("Pane", [w, h, 0.04], { at: [0, 0, 0.01], material: GLASS }),
-    box("Surround", [`${w} + 0.12`, `${h} + 0.12`, 0.03], { at: [0, 0, 0], material: frame }),
-    box("Sill", [`${w} + 0.2`, 0.06, 0.16], { at: [0, `-${h} / 2 - 0.06`, 0.07], material: sill }),
+    box("Reveal", [`${w} + 0.24`, `${h} + 0.2`, 0.02], { at: [0, 0, 0.002], material: "reveal_dark" }),
+    box("Pane", [w, h, 0.03], { at: [0, 0, 0.012], material: GLASS }),
+    box("Surround", [`${w} + 0.12`, `${h} + 0.12`, 0.03], { at: [0, 0, 0.008], material: frame }),
   ];
-  if (o.bars) kids.push(box("Mullion", [0.05, h, 0.06], { at: [0, 0, 0.03], material: frame }));
-  if (o.lintel) kids.push(box("Lintel", [`${w} + 0.3`, 0.18, 0.05], { at: [0, `${h} / 2 + 0.12`, 0.015], material: o.lintel }));
+  // Stone sills on the old mansion blocks; the modern frames have a flush sill (the bottom of the frame).
+  if (o.lintel) kids.push(box("Sill", [`${w} + 0.2`, 0.05, 0.16], { at: [0, `-${h} / 2 - 0.06`, 0.08], material: sill }));
+  if (o.bars) kids.push(box("Mullion", [0.05, h, 0.05], { at: [0, 0, 0.03], material: frame }));
+  if (o.lintel) kids.push(box("Lintel", [`${w} + 0.3`, 0.18, 0.05], { at: [0, `${h} / 2 + 0.14`, 0.015], material: o.lintel }));
   return group(name, kids, { at: o.at, repeat: o.repeat });
 }
 
@@ -91,6 +96,15 @@ function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraf
       flatWindow("BayGlass_{i}", "1.6", "$st * 0.55", f.frame, f.accent, { at: ["-$hw * 0.62", "$st * 0.55 + 0.6", 0.66], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] } }),
       flatWindow("BayUpper_{i}", "1.6", "$st * 0.55", f.frame, f.accent, { at: ["-$hw * 0.62", "$st * 1.55 + 0.6", 0.66], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] } }),
     ], { at: [0, 0, "$hd"] }));
+  }
+  // Rainwater downpipes at the four corners, with brackets.
+  kids.push(group("Rainwater", [
+    downpipe("Downpipe_FL", "-$hw + 0.3", "$hd + 0.07", H, "zinc", "Downpipe_FR"),
+    downpipe("Downpipe_BL", "-$hw + 0.3", "-$hd - 0.07", H, "zinc", "Downpipe_BR"),
+  ]));
+  // Brick piers between the bays give the long facades of the slab and gallery blocks a rhythm.
+  if (style === "slab" || style === "gallery") {
+    kids.push(box("Pier_{i}", [0.32, `${H} - 0.6`, 0.08], { anchor: "bottom", at: ["-$hw", 0.6, "$hd + 0.03"], repeat: { count: "$bays + 1", step: ["$sp", 0, 0] }, material: style === "slab" ? (f.wall === "concrete" ? "concrete_dark" : "brick_brown") : f.accent }));
   }
   // Rooftop housing: the stair and lift core.
   kids.push(group("Core", [
@@ -160,7 +174,7 @@ function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraf
     ], { at: ["$hw + 2", 0, "$hd - 1.6"] }));
   }
 
-  const names = [f.wall, f.accent, f.frame, "concrete", "concrete_dark", "granite", "aluminium", "galvanised", "brushed_steel", "paint_black", "glass_frosted", "bulb_warm", "felt_black", GLASS];
+  const names = [f.wall, f.accent, f.frame, "concrete", "concrete_dark", "granite", "aluminium", "galvanised", "brushed_steel", "paint_black", "glass_frosted", "bulb_warm", "felt_black", "brick_brown", "zinc", GLASS];
   const materials: Record<string, MaterialDef> = {};
   for (const n of names) materials[n] = BMATS[n] ?? (mats(n)[n] as MaterialDef);
   const title = { slab: "apartment block", tower: "residential tower", mansion: "mansion block", gallery: "gallery flats" }[style];

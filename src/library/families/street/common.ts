@@ -45,7 +45,7 @@ export const LOCAL: Record<string, MaterialDef> = {
   postal_yellow: coat(0.56, 0.37, 0.016, 0.5, 0.1), // post horn yellow
   screen_cyan: { color: [0.02, 0.15, 0.18], metallic: 0, roughness: 0.2, emissive: [0.03, 0.3, 0.36] }, // a dimmed LCD
   // --- Bare and weathered metals ---
-  galvanised: { color: [0.36, 0.38, 0.38], metallic: 0.6, roughness: 0.66, texture: "plastic" }, // dull hot-dip zinc
+  galvanised: { color: [0.3, 0.315, 0.315], metallic: 0.55, roughness: 0.68, texture: "plastic" }, // dull hot-dip zinc
   steel: { color: [0.42, 0.43, 0.44], metallic: 0.85, roughness: 0.55, texture: "brushed" }, // bolts, clamps
   brushed_steel: { color: [0.55, 0.56, 0.57], metallic: 1, roughness: 0.38 }, // satin stainless (brush marks would run round a post)
   aluminium: { color: [0.62, 0.63, 0.64], metallic: 0.9, roughness: 0.45, texture: "brushed" }, // anodised, matte
@@ -82,8 +82,8 @@ export const LOCAL: Record<string, MaterialDef> = {
   sheet_grey: sheeting(0.2, 0.21, 0.21),
   sheet_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.55, texture: "painted" }, // printed ink
   // --- Stone and concrete ---
-  concrete: stone(0.27, 0.265, 0.25, "concrete", 0.92), // cast concrete
-  concrete_dark: stone(0.17, 0.17, 0.16, "concrete", 0.92),
+  concrete: stone(0.25, 0.245, 0.23, "concrete", 0.92), // cast concrete
+  concrete_dark: stone(0.15, 0.15, 0.14, "concrete", 0.92),
   granite: stone(0.2, 0.2, 0.19, "concrete", 0.75), // fine-grained cut stone
   limestone: stone(0.4, 0.38, 0.32, "concrete"),
   sandstone: stone(0.35, 0.24, 0.12, "concrete"),
@@ -102,7 +102,10 @@ export const LOCAL: Record<string, MaterialDef> = {
   rough_timber: timber(0.24, 0.155, 0.08, 0.92),
   bamboo: timber(0.44, 0.33, 0.15, 0.7),
   dark_stain: timber(0.1, 0.06, 0.035, 0.65),
-  // --- Planting ---
+  // --- Planting and logs ---
+  bark_brown: { color: [0.12, 0.08, 0.05], metallic: 0, roughness: 0.95, texture: "bark" },
+  bark_grey: { color: [0.2, 0.19, 0.17], metallic: 0, roughness: 0.95, texture: "bark" },
+  bark_red: { color: [0.18, 0.075, 0.04], metallic: 0, roughness: 0.92, texture: "bark" },
   leaf_green: { color: [0.06, 0.14, 0.035], metallic: 0, roughness: 0.75, texture: "leaf", doubleSided: true },
   leaf_dark: { color: [0.035, 0.09, 0.025], metallic: 0, roughness: 0.75, texture: "leaf", doubleSided: true },
   leaf_light: { color: [0.11, 0.2, 0.045], metallic: 0, roughness: 0.75, texture: "leaf", doubleSided: true },
@@ -138,7 +141,9 @@ const DIRT: [number, number, number] = [0.075, 0.06, 0.042];
 /** The finish `body` soiled by road dirt: `k` of its own colour, the rest dirt, duller and less metallic. */
 function soiled(body: MaterialDef, k: number, heavy: boolean): MaterialDef {
   const [r, g, b] = body.color;
-  const tex = body.texture === "wood" || body.texture === "concrete" || body.texture === "stone" ? (heavy ? "concrete" : body.texture) : heavy ? "rust" : body.texture;
+  // Heavy dirt on metal and paint reads as rust bloom; on plastic, wood and stone as blotchy road film.
+  const onMetal = body.texture === undefined || body.texture === "painted" || body.texture === "brushed" || body.texture === "rust" || body.metallic >= 0.5;
+  const tex = heavy ? (onMetal ? "rust" : "concrete") : body.texture;
   return {
     color: [r * k + DIRT[0] * (1 - k), g * k + DIRT[1] * (1 - k), b * k + DIRT[2] * (1 - k)],
     metallic: body.metallic * (heavy ? 0.3 : 0.6),

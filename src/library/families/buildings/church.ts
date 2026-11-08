@@ -1,6 +1,6 @@
 import { box, cyl, extrude, group, lathe, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS, gableRoof, slab } from "./shared.js";
+import { BMATS, gableRoof, slab, swanDownpipe } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
   stained_glass: { color: [0.035, 0.032, 0.055], metallic: 0.3, roughness: 0.08, emissive: [0.018, 0.012, 0.03] },
@@ -68,6 +68,10 @@ function church(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   if (style === "steeple" || style === "chapel") {
     nave.push(lancet("Window_L{i}", style === "chapel" ? "0.9" : "1.2", "$wh * 0.55", f.dress, style === "chapel", { at: ["-$hw", "$wh * 0.22", `-$hl + ${winSp} / 2`], rotate: [0, -90, 0], repeat: { count: winCount, step: [0, 0, winSp] }, mirror: "Window_R{i}" }));
     nave.push(gableRoof("Roof", { hw: "$hw", hd: "$hl", y: "$wh", rise: "$hw * 1.1", roof: f.roof, trim: f.dress, gable: f.wall, oh: 0.4, ohg: 0.3, t: 0.2, gutter: "zinc" }));
+    nave.push(group("Rainwater", [
+      swanDownpipe("Downpipe_FL", "-$hw - 0.06", "$hl - 0.3", "$wh - 0.48", -0.43, "zinc", "Downpipe_FR"),
+      swanDownpipe("Downpipe_BL", "-$hw - 0.06", "-$hl + 0.3", "$wh - 0.48", -0.43, "zinc", "Downpipe_BR"),
+    ]));
     nave.push(lancet("EastWindow", "2.2", "$wh * 0.7", f.dress, style === "chapel", { at: [0, "$wh * 0.2", "-$hl"], rotate: [0, 180, 0] }));
   }
   if (style === "basilica") {
