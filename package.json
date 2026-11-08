@@ -29,6 +29,7 @@
     "check": "npm run typecheck && npm test && npm run build",
     "build:api": "node scripts/build-api.ts",
     "build:library": "npm run build && node scripts/build-library.mjs",
+    "render:library": "npm run build && node scripts/render-library.mjs --gallery",
     "prepare": "npm run build",
     "version": "node scripts/sync-version.mjs && git add server.json plugins/godotwright gemini-extension.json",
     "build:mcpb": "node scripts/build-mcpb.mjs"
