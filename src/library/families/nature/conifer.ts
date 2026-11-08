@@ -205,6 +205,17 @@ function column(c: Conifer, r: () => number): { nodes: SpecNode[]; mats: string[
         material: tipOf(c),
         repeat: { count: "$sprays", around: "y", phase: sPhase },
       }),
+      // Rings of small, ragged tufts all over the column, so its outline is shaggy instead of a smooth spindle.
+      ...([[0.22, 0.78, 0], [0.34, 0.92, 1], [0.58, 0.95, 0], [0.7, 0.86, 1], [0.8, 0.66, 0]] as const).map(([f, reach, tipTone], n) =>
+        ellipsoid(`Tuft_${n + 1}_{i}`, ["$crownRadius * 0.3", "min($height * 0.06, $crownRadius * 0.9)", "$crownRadius * 0.28"], {
+          at: [`$crownRadius * ${n4(reach)}`, `$height * ${n4(f)}`, 0],
+          segments: 10,
+          lumps: 0.55,
+          seed: `$i * 5 + ${seed + 11 + n * 7}`,
+          ...(tipTone ? { material: tipOf(c) } : {}),
+          repeat: { count: "$sprays", around: "y", phase: sPhase + 20 + n * 17 },
+        }),
+      ),
       ellipsoid("Tip", ["$crownRadius * 0.35", "$height * 0.08", "$crownRadius * 0.35"], { at: [0, "$height * 0.9", 0], segments: 12, lumps: 0.2, seed: seed + 2 }),
     ], { material: c.needles }),
   ];

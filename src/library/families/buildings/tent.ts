@@ -82,7 +82,7 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     kids.push(group("Canvas", [
       loft("Fly", ks.map((k) => ({ z: `$hl * ${k}`, points: archPoints("$hw", "$h", Math.sqrt(1 - 0.9 * k * k), 10) })), { material: f.a, rotate: [0, 90, 0] }),
       // The darker bathtub groundsheet and skirt showing as a band round the foot of the fly.
-      loft("Skirt", ks.map((k) => ({ z: `$hl * ${(k * 1.015).toFixed(4)}`, points: archPoints("$hw * 1.015", "0.16", Math.sqrt(1 - 0.9 * k * k), 10) })), { material: f.b, rotate: [0, 90, 0] }),
+      extrude("Skirt", [...ks.map((k) => [`$hl * ${(k * 1.012).toFixed(4)}`, `$hw * ${(1.012 * Math.sqrt(1 - 0.9 * k * k)).toFixed(4)}`] as [string, string]), ...[...ks].reverse().map((k) => [`$hl * ${(k * 1.012).toFixed(4)}`, `-$hw * ${(1.012 * Math.sqrt(1 - 0.9 * k * k)).toFixed(4)}`] as [string, string])], 0, 0.15, { material: f.b }),
       box("Groundsheet", ["2 * $hl * 0.72", 0.01, "2 * $hw * 0.68"], { at: [0, 0.005, 0], material: f.b }),
       cyl("Vent_{i}", 0.09, 0.05, { axis: "z", at: ["$hl * 0.42", "$h * 0.78", "$hw * 0.42"], rotate: [-38, 0, 0], repeat: { count: 2, around: "y" }, segments: 10, material: f.b }),
     ]));

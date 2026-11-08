@@ -391,9 +391,9 @@ function buildCar(key: string, st: CarStyle, fin: Finish, idx: number): AssetDra
   ], { at: ["$wb * 0.48", "$yb + 0.12", `${zDash} - 0.32`], rotate: [-62, 0, 0] }));
 
   // Wheels at the hubs, outer face out.
-  const tw = st.tyreW;
+  const tw = st.tyreW + 0.015;
   const wo = { r: "$wr", w: f(tw), style: fin.wheel, rim: fin.rim ?? (fin.wheel === "steel" ? "steel_wheel" : fin.wheel === "chrome" || fin.wheel === "wire" ? "chrome" : "alloy"), hub: fin.wheel === "alloy" ? "gloss_black" : fin.wheel === "chrome" ? "alloy" : "chrome", ...(fin.spokes ? { spokes: fin.spokes } : {}), ...(fin.roof === "whitewall" || key === "vintage" ? { whitewall: "whitewall" } : {}) } as const;
-  const wx = `$W2 - ${f(tw / 2 + 0.022)}`;
+  const wx = `$W2 - ${f(tw / 2 + 0.006)}`;
   kids.push(group("Wheels", [
     wheel("Wheel_FL", [wx, "$wr", `${f(st.ff)} * $L2`], wo, { mirror: "Wheel_FR" }),
     wheel("Wheel_RL", [wx, "$wr", `-${f(st.fr)} * $L2`], wo, { mirror: "Wheel_RR" }),
