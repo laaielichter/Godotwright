@@ -1,5 +1,5 @@
 import type { ParamDef } from "../build/params.js";
-import type { LibraryAsset, libraryOverview } from "./library.js";
+import { libraryOverview, loadAssetLibrary, type LibraryAsset } from "./library.js";
 
 const paramLine = (p: ParamDef): string => `${p.name}=${String(p.default)}${p.min !== undefined || p.max !== undefined ? ` (${p.min ?? ""}..${p.max ?? ""})` : ""}`;
 
@@ -45,5 +45,45 @@ export function formatOverview(overview: ReturnType<typeof libraryOverview>, tot
     out.push(`${c.category} (${c.count}): ${c.families.map((f) => `${f.family} ${f.count}`).join(", ")}`);
   }
   out.push("", 'Search: godotwright model library "oak chair"   (or --category, --family, --archetype)', "Show one: godotwright model library <id>   Its spec: --spec   Build: godotwright model build <id> -o <file>.glb", "");
+  return out.join("\n");
+}
+
+/** LIBRARY.md: every asset by category and family, with its id, title and parameters. Kept in sync by a test. */
+export function catalogMarkdown(): string {
+  const all = [...loadAssetLibrary().values()];
+  const overview = libraryOverview();
+  const out = [
+    "# Asset library",
+    "",
+    `${all.length} ready-made base recipes for Godot 4. Every asset is a model spec with parameters: it builds a clean .glb`,
+    "(UVs, tangents, one node per part, pivots on hinges and hubs) and passes the model lint and the check against its",
+    "archetype at its defaults and at the ends of its parameter ranges. Agents start from one instead of from nothing.",
+    "",
+    "```sh",
+    'godotwright model library "oak chair"                         # search, English or Dutch ("eiken stoel")',
+    "godotwright model library furniture/dining-chair-oak-ladder   # what it is, parameters, parts",
+    "godotwright model build furniture/dining-chair-oak-ladder --set seatHeight=0.5 -o chair.glb",
+    "godotwright model library furniture/dining-chair-oak-ladder --spec > my-chair.json   # change it, then model build --spec",
+    "```",
+    "",
+    "MCP: `godot_model_library` (search, show, `spec: true`) and `godot_model_build` with `kind: <id>`.",
+    "",
+    "This file is generated: `npm run build:library`.",
+    "",
+    "| Category | Assets | Families |",
+    "| --- | ---: | --- |",
+    ...overview.map((c) => `| ${c.category} | ${c.count} | ${c.families.map((f) => `${f.family} (${f.count})`).join(", ")} |`),
+    "",
+  ];
+  for (const c of overview) {
+    out.push(`## ${c.category}`, "");
+    for (const f of c.families) {
+      const assets = all.filter((a) => a.family === f.family);
+      const params = (assets[0]!.spec["params"] as ParamDef[]).map((p) => p.name).join(", ");
+      out.push(`### ${f.family}`, "", `${f.count} assets, archetype \`${f.archetype}\`, parameters: ${params}.`, "");
+      for (const a of assets) out.push(`- \`${a.id}\`: ${a.title}`);
+      out.push("");
+    }
+  }
   return out.join("\n");
 }

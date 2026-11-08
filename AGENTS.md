@@ -59,6 +59,12 @@ node dist/cli.js --help
   writes the GLB, `generators/` holds the ready-made kinds (`house`, `terrain`, `sea`),
   `spec.ts` builds a JSON model spec, `recipes.ts` loads `data/recipes/`, and `run.ts`
   builds a model and lints it.
+- `src/library/`: the asset library (`model library`, `godot_model_library`). `kit.ts` is the authoring kit (node and
+  parameter builders, `combos`, `rng`), `palette.ts` the named materials, `families/<category>/` one file per family
+  (each a `Family` that makes its variants as specs), `library.ts` loads and searches them (English and Dutch words), and
+  `format.ts` prints them and makes `LIBRARY.md` (`npm run build:library`; a test keeps it in sync). Every asset must
+  build clean against its archetype at its defaults and parameter extremes (`test/library/`; run one family with
+  `LIBRARY_FAMILY=<id>`, every extreme with `LIBRARY_EXTREMES=all`, and keep the .glbs with `LIBRARY_DUMP=<dir>`).
 - `src/archetype/`: what a thing is, from `data/archetypes/` (`library.ts` loads it).
   `identify.ts` matches a name in English or Dutch, `check.ts` checks a model against
   its archetype, and `format.ts` prints the results.

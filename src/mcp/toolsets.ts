@@ -36,6 +36,7 @@ export const TOOLSETS = {
     "godot_model_brief",
     "godot_model_identify",
     "godot_model_spec",
+    "godot_model_library",
     "godot_model_build",
     "godot_model_view",
     "godot_model_lint",

@@ -82,9 +82,27 @@ export interface AssetQuery {
   limit?: number;
 }
 
+/** Dutch words for finishes, colours, shapes and things, with the English words the titles use. */
+const DUTCH: Record<string, string[]> = {
+  eiken: ["oak"], eikenhout: ["oak"], walnoot: ["walnut"], notenhout: ["walnut"], grenen: ["pine"], vuren: ["pine", "spruce"], berken: ["birch"],
+  kersen: ["cherry"], mahonie: ["mahogany"], hout: ["wood", "wooden"], houten: ["wood", "wooden"], metaal: ["metal"], metalen: ["metal"],
+  staal: ["steel"], stalen: ["steel"], ijzer: ["iron"], ijzeren: ["iron"], gietijzer: ["cast", "iron"], messing: ["brass"], koper: ["copper"],
+  steen: ["stone"], stenen: ["stone"], beton: ["concrete"], betonnen: ["concrete"], baksteen: ["brick"], glas: ["glass"], glazen: ["glass"],
+  leer: ["leather"], leren: ["leather"], stof: ["fabric"], fluweel: ["velvet"], plastic: ["plastic"], kunststof: ["plastic"],
+  zwart: ["black"], zwarte: ["black"], wit: ["white"], witte: ["white"], rood: ["red"], rode: ["red"], blauw: ["blue"], blauwe: ["blue"],
+  groen: ["green"], groene: ["green"], geel: ["yellow"], gele: ["yellow"], oranje: ["orange"], grijs: ["grey", "gray"], grijze: ["grey", "gray"],
+  bruin: ["brown"], bruine: ["brown"], roze: ["pink"], paars: ["purple"], paarse: ["purple"], goud: ["gold"], zilver: ["silver"],
+  rond: ["round"], ronde: ["round"], vierkant: ["square"], vierkante: ["square"], hoog: ["tall", "high"], hoge: ["tall", "high"], laag: ["low"], lage: ["low"],
+  groot: ["large", "big"], grote: ["large", "big"], klein: ["small"], kleine: ["small"], oud: ["old", "vintage"], oude: ["old", "vintage"],
+  stoel: ["chair"], tafel: ["table"], bank: ["sofa", "bench"], kast: ["cupboard", "bookcase", "cabinet"], lamp: ["lamp"], bed: ["bed"],
+  boom: ["tree"], struik: ["bush"], rots: ["rock"], kei: ["rock", "boulder"], bloem: ["flower"], gras: ["grass"], huis: ["house"],
+  schuur: ["shed", "barn"], toren: ["tower"], kerk: ["church"], tent: ["tent"], auto: ["car"], vrachtwagen: ["truck"], fiets: ["bicycle"],
+  boot: ["boat"], kist: ["chest", "crate"], ton: ["barrel"], vat: ["barrel"], kar: ["cart"], hek: ["fence"], paal: ["post", "bollard"],
+};
+
 /** The assets that fit a query, best first. Words count in the title most, then tags, family and description. */
 export function searchAssets(query: AssetQuery = {}): LibraryAsset[] {
-  const words = query.text ? tokens(query.text).map(stem).filter((w) => w.length > 1) : [];
+  const words = query.text ? tokens(query.text).filter((w) => w.length > 1).map((w) => [...new Set([stem(w), ...(DUTCH[w] ?? []).map(stem)])]) : [];
   const scored: { asset: LibraryAsset; score: number }[] = [];
   for (const asset of loadAssetLibrary().values()) {
     if (query.category && asset.category !== query.category) continue;
@@ -96,10 +114,10 @@ export function searchAssets(query: AssetQuery = {}): LibraryAsset[] {
       const tags = new Set(asset.tags.flatMap((t) => tokens(t)).map(stem));
       const rest = new Set(tokens(`${asset.family} ${asset.archetype} ${asset.description}`).map(stem));
       let missing = 0;
-      for (const w of words) {
-        if (title.has(w)) score += 3;
-        else if (tags.has(w)) score += 2;
-        else if (rest.has(w)) score += 1;
+      for (const options of words) {
+        if (options.some((w) => title.has(w))) score += 3;
+        else if (options.some((w) => tags.has(w))) score += 2;
+        else if (options.some((w) => rest.has(w))) score += 1;
         else missing++;
       }
       // Every word should be found somewhere; one miss in a long query is forgiven.

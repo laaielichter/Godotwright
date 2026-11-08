@@ -789,7 +789,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 39 tools
+### The 40 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -828,6 +828,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
+| `godot_model_library` | Search over a thousand ready-made base recipes (furniture, street, storage, nature, buildings, vehicles, props) in English or Dutch; build one by id or take its spec as the start of your own |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (inside the project), and lint it |
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
 | `godot_model_view` | See a `.glb` as text: front, side and top views, parts with sizes, parts that do not touch |
@@ -851,8 +852,8 @@ godotwright mcp --read-only             # or GODOTWRIGHT_READ_ONLY=1
 | `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~16,500 |
 | `game` | session, game | 2 tools, ~5,400 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
-| `model` | model_brief, model_identify, model_spec, model_build, model_view, model_lint, model_inspect | 7 tools, ~10,000 |
-| `all` (default) | everything | 39 tools, ~79,900 |
+| `model` | model_brief, model_identify, model_spec, model_library, model_build, model_view, model_lint, model_inspect | 8 tools, ~11,800 |
+| `all` (default) | everything | 40 tools, ~81,700 |
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never

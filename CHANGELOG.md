@@ -4,6 +4,16 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Asset library: a thousand base recipes (`godotwright model library`, MCP `godot_model_library`).** Over a thousand
+  ready-made model specs in seven categories (furniture, street, storage, nature, buildings, vehicles, props), made by
+  families of variants that differ in style, part layout and finish. Every asset has parameters, builds a clean `.glb`
+  and passes the model lint and its archetype check at its defaults and at the ends of its ranges (tested). Search in
+  English or Dutch, build by id (`model build furniture/dining-chair-oak-ladder`), or print the spec (`--spec`) as the
+  start of your own model. `model brief` names the library assets of a thing; the catalogue is in `LIBRARY.md`
+  (`npm run build:library`). New archetypes for the library: stool, chest of drawers, lamp, planter, pallet, gas
+  cylinder, storage rack, cable reel, chest, jerrycan, traffic cone, market stall, terminal, rock, bollard, bike rack,
+  road barrier, storage tank, tree stump, mushroom, cart, shed and gazebo. 40 MCP tools.
+
 - **Dreaming: learn from past sessions (`godotwright dream`, MCP `godot_dream`).** Between sessions Godotwright looks
   back at the local learning file, the project's write journal and, only with `--transcripts`, the project's Claude
   Code and Codex session transcripts, and proposes, each with its evidence and a reason: draft lessons for Godot errors

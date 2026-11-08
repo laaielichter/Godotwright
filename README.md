@@ -130,6 +130,7 @@ you give on the frames you give, and prints the values you watch; `screenshot` r
 **Build 3D models.** `model build` makes a clean `.glb` with no Blender: one of 59 ready-made kinds (vehicles, aircraft,
 ships, buildings, plants, terrain with lakes and rivers) or your own JSON spec. `model identify` says what a thing is
 (parts, sizes, pivots), `model view` draws it as text for agents that cannot see pictures, and `model lint` scores it.
+The [asset library](LIBRARY.md) adds over a thousand ready-made base recipes to build or start from.
 
 **Review every pull request.** Add this to your game's repository:
 
@@ -193,7 +194,28 @@ The session-start hook counts sessions and, once a dream is due (24 hours and 5 
 applies lesson and hint changes by itself, never a removal, and only after you allowed it once on this machine with
 `godotwright dream --auto-apply yes`. Nothing from dreaming goes into the opt-in anonymous report.
 
-## The 39 tools
+## Asset library: a thousand base recipes
+
+![A sample of the asset library](docs/library.png)
+
+`godotwright model library` (MCP `godot_model_library`) holds over a thousand ready-made base recipes in seven
+categories: furniture, street furniture, storage and industrial props, nature, buildings, vehicles and props. Each one
+is a model spec with parameters, made by a family of variants (styles, part layouts and finishes), and each one builds a
+clean `.glb` that passes the model lint and the check against its archetype, at its defaults and at the ends of its
+parameter ranges. An agent searches it in English or Dutch, builds an asset as it is, or copies its spec as the start of
+its own model instead of starting from nothing.
+
+```sh
+godotwright model library                                       # the overview per category and family
+godotwright model library "rode houten bank"                    # search, English or Dutch
+godotwright model library furniture/dining-chair-oak-ladder     # what it is, its parameters and parts
+godotwright model build furniture/dining-chair-oak-ladder --set seatHeight=0.5 -o chair.glb --collision convex
+godotwright model library furniture/dining-chair-oak-ladder --spec > my-chair.json   # change it, build with --spec
+```
+
+`godotwright model brief <thing>` names the library assets of that thing too. The full list is in [LIBRARY.md](LIBRARY.md).
+
+## The 40 tools
 
 <details>
 <summary>All MCP tools (most are also CLI commands; <code>--tools core</code> loads 13)</summary>
@@ -235,6 +257,7 @@ applies lesson and hint changes by itself, never a removal, and only after you a
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
+| `godot_model_library` | Search over a thousand ready-made base recipes (furniture, street, storage, nature, buildings, vehicles, props) in English or Dutch; build one by id or take its spec as the start of your own |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (inside the project), and lint it |
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
 | `godot_model_view` | See a `.glb` as text: front, side and top views, parts with sizes, parts that do not touch |
