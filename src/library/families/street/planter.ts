@@ -42,12 +42,17 @@ function plant(kind: PlantKind, hx: string, hz: string, ph: string, base: string
       ]));
       return out;
     }
-    case "grass":
+    case "grass": {
+      // Three rings of blades, leaning further out and shorter towards the edge: a fountain, not a funnel.
+      const ring = (name: string, count: number, tilt: number, len: number, phase: number, material: string): SpecNode =>
+        group(`${name}_{i}`, [group("Lean", [box("Blade", [0.03, `${ph} * ${len}`, 0.005], { at: [0, `${ph} * ${len / 2}`, 0] })], { rotate: [tilt, 0, 0] })], { at: [0, base, `min(${hx}, ${hz}) * 0.12`], repeat: { count, around: "y", phase }, material });
       return [
-        group("Tuft_{i}", [box("Blade", [0.04, ph, 0.005], { at: [0, `${ph} / 2`, `${hz} * 0.3`], rotate: [22, 0, 0] })], { at: [0, base, 0], repeat: { count: 22, around: "y" }, material: "grass_dry" }),
-        group("Inner_{i}", [box("Blade", [0.035, `${ph} * 0.85`, 0.005], { at: [0, `${ph} * 0.425`, `${hz} * 0.1`], rotate: [8, 0, 0] })], { at: [0, base, 0], repeat: { count: 16, around: "y", phase: 11 }, material: "leaf_light" }),
+        ring("Core", 8, 6, 1, 0, "leaf_light"),
+        ring("Mid", 14, 22, 0.85, 180 / 14, "grass_dry"),
+        ring("Outer", 20, 42, 0.65, 0, "grass_dry"),
         ellipsoid("Clump", [`${hx} * 0.45`, 0.05, `${hz} * 0.45`], { at: [0, base, 0], segments: 14, material: "grass_dry" }),
       ];
+    }
     case "topiary":
       return [
         cyl("Trunk", 0.02, `${ph} * 0.55`, { at: [0, `${base} - 0.01`, 0], anchor: "base", segments: 10, material: "bark_brown" }),

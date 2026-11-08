@@ -79,8 +79,12 @@ function buildBoat(b: BoatDef): AssetDraft {
   const bowS = [b.deck - 0.004, ...[0.7, 0.8, 0.88, 0.94, 0.98, 1].filter((s) => s > b.deck + 0.01)];
   const hullKids: SpecNode[] = [
     loft("Shell", shell, { material: "hull_paint" }),
-    loft("Foredeck", bowS.map((s) => solidSection(h, s)), { material: b.kind === "rib" || b.kind === "dinghy" ? "hull_paint" : "deck_white" }),
+    loft("Foredeck", bowS.map((s) => solidSection(h, s)), { material: "hull_paint" }),
   ];
+  // A white deck skin on the foredeck.
+  if (b.kind !== "dinghy" && b.kind !== "rib") {
+    hullKids.push(loft("DeckSkin", bowS.filter((s) => s <= 0.95).map((s) => ({ z: `-$L2 + ${f(2 * s)} * $L2`, superellipse: { width: `${f(beamAt(h, s) * 1.9)} * $B2`, height: 0.03, n: 4, count: 16, cy: `${f(sheerAt(h, s))} * $fb + 0.006` } })), { material: "deck_white" }));
+  }
   // Rub rail along the sheer, both sides.
   const rail: Vec[] = [0.0, 0.15, 0.35, 0.55, 0.72, 0.85, 0.93, 0.98].map((s) => [`${xb(h, s)} + 0.01`, `${ysh(h, s)} - 0.03`, zs(s)] as Vec);
   hullKids.push(tube("RubRail_L", rail, 0.028, { segments: 8, material: b.kind === "dinghy" ? "accent" : "rub_black", mirror: "RubRail_R" }));

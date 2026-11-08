@@ -65,15 +65,16 @@ function framedCrate(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof 
       box("CleatL", ["$cw", "$bh - 2 * $cw + 0.004", "$ct"], { at: ["$W / 2 - $ct - $cw / 2", "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 }),
       box("CleatR", ["$cw", "$bh - 2 * $cw + 0.004", "$ct"], { at: ["-$W / 2 + $ct + $cw / 2", "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 }),
       box("Brace", ["hypot($W - 2 * $ct - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7", "$cw * 0.9", "$ct * 0.9"], { at: [0, "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], rotate: [0, 0, `${s} * deg(atan2($bh - 2 * $cw, $W - 2 * $ct - 2 * $cw))`], bevel: 0.004 }),
+      box("BraceX", ["hypot($W - 2 * $ct - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7", "$cw * 0.9", "$ct * 0.9"], { at: [0, "$s + $bh / 2", `${s} * ($D / 2 - $ct * 0.45)`], rotate: [0, 0, `${-s} * deg(atan2($bh - 2 * $cw, $W - 2 * $ct - 2 * $cw))`], bevel: 0.004 }),
     ]),
-    box(`Boards_${tag}{i}`, ["$W - 2 * $ct", "$bh / $nb - 0.006", "$bt"], { at: [0, "$s + $bh / $nb / 2", `${s} * ($D / 2 - $ct - $bt / 2 + 0.002)`], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] } }),
+    box(`Plank_${tag}{i}`, ["$W - 2 * $ct", "$bh / $nb - 0.006", "$bt"], { at: [0, "$s + $bh / $nb / 2", `${s} * ($D / 2 - $ct - $bt / 2 + 0.002)`], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] } }),
   ]);
   const nodes = [
     group("ShippingCrate", [
       box("Skid_L", [0.08, "$s", "$D"], { at: ["$W / 2 - 0.12", "$s / 2", 0], bevel: 0.006, mirror: "Skid_R" }),
       group("Body", [
         box("Core", ["$W - 2 * $ct - 2 * $bt + 0.004", "$bh", "$D - 2 * $ct - 2 * $bt + 0.004"], { at: [0, "$s + $bh / 2", 0] }),
-        box("Boards_L{i}", ["$bt", "$bh / $nb - 0.006", "$D - 2 * $ct"], { at: ["$W / 2 - $ct - $bt / 2 + 0.002", "$s + $bh / $nb / 2", 0], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] }, mirror: "Boards_R{i}" }),
+        box("Plank_L{i}", ["$bt", "$bh / $nb - 0.006", "$D - 2 * $ct"], { at: ["$W / 2 - $ct - $bt / 2 + 0.002", "$s + $bh / $nb / 2", 0], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] }, mirror: "Plank_R{i}" }),
         ...sideX,
         ...faceZ,
       ]),
@@ -161,7 +162,7 @@ function plasticCrate(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof
           box(`Rib_${tag}{i}`, [0.012, "$H - 0.06", 0.01], { at: ["-($W - 0.12) / 2", "0.025 + ($H - 0.06) / 2", `${s} * ($D / 2 - 0.009)`], repeat: { count: "$ribs", step: ["($W - 0.12) / ($ribs - 1)", 0, 0] }, bevel: 0.002 }),
           box(`Band_${tag}`, ["$W - 0.03", 0.014, 0.01], { at: [0, "0.025 + ($H - 0.06) * 0.45", `${s} * ($D / 2 - 0.009)`], bevel: 0.002 }),
         ]),
-        box("Rib_L{i}", [0.01, "$H - 0.06", 0.012], { at: ["$W / 2 - 0.009", "0.025 + ($H - 0.06) / 2", "-($D - 0.1) / 2"], repeat: { count: 3, step: [0, 0, "($D - 0.1) / 2"] }, bevel: 0.002, mirror: "Rib_R{i}" }),
+        box("Post_L{i}", [0.01, "$H - 0.06", 0.012], { at: ["$W / 2 - 0.009", "0.025 + ($H - 0.06) / 2", "-($D - 0.1) / 2"], repeat: { count: 3, step: [0, 0, "($D - 0.1) / 2"] }, bevel: 0.002, mirror: "Post_R{i}" }),
         box("Slot_L", [0.012, 0.028, "min(0.13, $D * 0.35)"], { at: ["$W / 2 - 0.009", "$H - 0.055", 0], material: "hole", mirror: "Slot_R" }),
         box("Label", ["min(0.12, $W * 0.25)", 0.05, 0.004], { at: [0, "$H - 0.07", "$D / 2 - 0.004"], material: f.accent, bevel: 0.001 }),
       ]),
@@ -214,8 +215,8 @@ function scifiCrate(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof n
         box("Strip_B", ["$W * 0.55", 0.022, 0.008], { at: [0, "$f + $bh * 0.35", "-$D / 2 + 0.002"], material: f.accent, bevel: 0.002 }),
         box("Plate_F", ["$W * 0.3", "$bh * 0.18", 0.01], { at: [0, "$f + $bh * 0.62", "$D / 2 - 0.002"], material: f.trim, bevel: 0.003 }),
         box("Status_FL", [0.03, 0.03, 0.012], { at: ["$W * 0.22", "$f + $bh * 0.62", "$D / 2 - 0.002"], material: f.accent, bevel: 0.004, mirror: "Status_FR" }),
-        bumper("Bumper_FL", "$D / 2 - $c / 2 + 0.004", 45, "Bumper_FR"),
-        bumper("Bumper_BL", "-$D / 2 + $c / 2 - 0.004", 135, "Bumper_BR"),
+        bumper("Corner_FL", "$D / 2 - $c / 2 + 0.004", 45, "Corner_FR"),
+        bumper("Corner_BL", "-$D / 2 + $c / 2 - 0.004", 135, "Corner_BR"),
         box("Clasp_L", [0.06, 0.07, 0.03], { at: ["$W * 0.3", "$f + $bh - 0.02", "$D / 2 - 0.004"], material: f.trim, bevel: 0.006, mirror: "Clasp_R" }),
       ]),
       group("Lid", [
@@ -240,7 +241,7 @@ function ammoBox(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof num>
     group("AmmoBox", [
       group("Body", [
         box("Case", ["$W", "$bh", "$D"], { at: [0, "$bh / 2", 0], bevel: 0.008 }),
-        box("Rib_{i}", ["$W + 0.006", 0.012, "$D + 0.006"], { at: [0, "$bh * 0.25", 0], repeat: { count: 2, step: [0, "$bh * 0.4", 0] }, bevel: 0.004 }),
+        box("Frame_{i}", ["$W + 0.006", 0.012, "$D + 0.006"], { at: [0, "$bh * 0.25", 0], repeat: { count: 2, step: [0, "$bh * 0.4", 0] }, bevel: 0.004 }),
         box("Band", ["$W + 0.004", 0.022, "$D + 0.004"], { at: [0, "$bh * 0.45", 0], material: f.accent }),
         box("Stencil", ["$W * 0.4", "$bh * 0.18", 0.003], { at: [0, "$bh * 0.72", "$D / 2"], material: f.accent }),
         group("Clamp_L", [

@@ -88,7 +88,7 @@ function handcart(f: Finish): SpecNode[] {
         box("Shaft", [0.05, 0.06, "$L * 0.75"], { at: ["$W / 2 - 0.08", "$r", "$L * 0.125"], bevel: 0.008 }),
       ], { mirror: "Handle_R" }),
       box("Crossbar", ["$W - 0.1", 0.045, 0.045], { at: [0, "$r", "$L / 2 - 0.05"], bevel: 0.008 }),
-      box("Prop", [0.05, "$r", 0.05], { at: [0, "$r / 2", "$L * 0.3"], bevel: 0.005, material: f.trim }),
+      box("Prop", [0.05, "$r", 0.05], { at: [0, "$r / 2", "$L / 2 - 0.05"], bevel: 0.005, material: f.trim }),
     ], { material: f.main, vars: { L: "$length", W: "$width", r: "$wheel", tw: 0.06 } }),
   ];
 }
