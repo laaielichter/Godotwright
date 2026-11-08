@@ -836,7 +836,7 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 39 cost about 80,000 characters (about
+Every tool definition goes into the agent's context on every turn. All 40 cost about 82,000 characters (about
 20,000 tokens); the `core` set about 24,000. Load only what the work needs:
 
 ```sh

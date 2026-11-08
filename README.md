@@ -196,8 +196,6 @@ applies lesson and hint changes by itself, never a removal, and only after you a
 
 ## Asset library: a thousand base recipes
 
-![A sample of the asset library](docs/library.png)
-
 `godotwright model library` (MCP `godot_model_library`) holds over a thousand ready-made base recipes in seven
 categories: furniture, street furniture, storage and industrial props, nature, buildings, vehicles and props. Each one
 is a model spec with parameters, made by a family of variants (styles, part layouts and finishes), and each one builds a
