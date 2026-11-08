@@ -58,7 +58,7 @@ export interface LocalLesson extends Lesson {
   added: string;
   /**
    * Hashes of the project folders it was learned in (never the paths). A lesson without one, kept by an older version,
-   * belongs to no project: `godotwright dream` never writes it into a project's agents file.
+   * belongs to no project: `godotwright dream` never shows it in a project's lessons for agents.
    */
   projects?: string[];
 }

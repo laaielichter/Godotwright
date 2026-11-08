@@ -17,7 +17,10 @@ import { projectNames } from "../lessons/names.js";
 import { allLessons, errorTemplate } from "../lessons/search.js";
 import type { Lesson, LocalLesson } from "../lessons/types.js";
 import { findProjectRoot } from "../project/files.js";
+import { localDataDir } from "../project/local-dir.js";
 import { ProtectedPathError, protectionOf } from "../project/protect.js";
+import { scrubText } from "../lessons/anonymize.js";
+import { shareableQuery } from "../learn/share.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { emptyFacts, readTranscripts, sessionFolders, type TranscriptFacts, type TranscriptOptions } from "./transcripts.js";
 
@@ -167,6 +170,8 @@ interface MachineState {
   sessions: number;
   /** Hashes of the last session ids counted, so a resumed session is not counted twice. */
   recent: string[];
+  /** When the person allowed the session-start hook to apply dreams by itself in this project ("auto": "apply"). */
+  autoApply?: string;
 }
 
 function machineFile(): string {
@@ -185,6 +190,7 @@ function readMachine(): Record<string, MachineState> {
         ...(typeof v["lastDream"] === "string" ? { lastDream: v["lastDream"] } : {}),
         sessions: typeof v["sessions"] === "number" && v["sessions"] >= 0 ? v["sessions"] : 0,
         recent: Array.isArray(v["recent"]) ? v["recent"].filter((r): r is string => typeof r === "string").slice(-20) : [],
+        ...(typeof v["autoApply"] === "string" ? { autoApply: v["autoApply"] } : {}),
       };
     }
     return out;
@@ -223,6 +229,22 @@ export function recordSession(root: string, sessionId?: string, now = new Date()
   });
 }
 
+/**
+ * The person's one-time consent, on this machine, that the session-start hook may apply dreams by itself in this
+ * project (`godotwright dream --auto-apply yes`). Without it, "auto": "apply" only suggests.
+ */
+export function setAutoApplyConsent(root: string, allow: boolean, now = new Date()): void {
+  writeMachine((projects) => {
+    const s = (projects[projectKey(root)] ??= { firstSeen: now.toISOString(), sessions: 0, recent: [] });
+    if (allow) s.autoApply = now.toISOString();
+    else delete s.autoApply;
+  });
+}
+
+export function autoApplyConsented(root: string): boolean {
+  return readMachine()[projectKey(root)]?.autoApply !== undefined;
+}
+
 /** Marks that the project dreamed now: the hours and sessions start counting again. */
 export function markDreamed(root: string, now = new Date()): void {
   writeMachine((projects) => {
@@ -251,10 +273,9 @@ export interface ProjectDreamState {
   acknowledged: Record<string, number>;
 }
 
-const DREAM_DIR = [".godot", "godotwright", "dreams"];
-
+/** The dream's private folder: `.godot/godotwright/dreams` when git ignores `.godot/`, else one in the state folder. */
 export function dreamDir(root: string): string {
-  return join(root, ...DREAM_DIR);
+  return join(localDataDir(root), "dreams");
 }
 
 export function readProjectState(root: string): ProjectDreamState {
@@ -385,7 +406,8 @@ export function dream(path: string, options: DreamOptions = {}): DreamResult {
   for (const [t, n] of Object.entries(learning.missedByReview)) errors.set(t, { ...errors.get(t), [MACHINE]: n });
   for (const [t, n] of Object.entries(facts.errors)) errors.set(t, { ...errors.get(t), [PROJECT_SESSIONS]: n });
   for (const [template, evidence] of errors) {
-    if (total(evidence) < MIN_REPEATS || explainedBy(template, learning, api).length) continue;
+    // A template that still looks like code or a name once scrubbed is left out altogether.
+    if (total(evidence) < MIN_REPEATS || !safeLine(template, api) || explainedBy(template, learning, api).length) continue;
     raw.push({
       key: keyOf("draft-lesson", template),
       kind: "draft-lesson",
@@ -420,7 +442,7 @@ export function dream(path: string, options: DreamOptions = {}): DreamResult {
       title: `Remember: use ${best[0]}, not ${query}`,
       reason: `${query} does not exist in Godot 4.7; it was looked up ${plural(miss.count, "time")} and ${best[0]} was what came next.`,
       evidence: { "failed lookups": miss.count, "then found": best[1] },
-      apply: "adds the hint to the project's dream state and the agents-file block",
+      apply: "adds the hint to the project's private dream state and the lessons for agents",
       auto: true,
       detail: { use: best[0], not: query },
     });
@@ -599,8 +621,6 @@ function keepFirst(a: LocalLesson, b: LocalLesson, learning: LearningData): [Loc
 export interface ApplyOptions extends DreamOptions {
   /** Only the proposals "auto": "apply" may apply (lesson and hint changes, never a removal). */
   auto?: boolean;
-  /** Create AGENTS.md in the project when neither AGENTS.md nor CLAUDE.md exists. */
-  writeAgentsFile?: boolean;
 }
 
 export interface ApplyResult {
@@ -609,7 +629,7 @@ export interface ApplyResult {
   /** Suggestions marked as seen: they come back when their evidence doubles. */
   seen: Proposal[];
   skipped: { proposal: Proposal; why: string }[];
-  /** Files written, as res:// paths (an agents file above the project starts with res://../). */
+  /** Files written, as res:// paths, or (private)/<name> for a file in Godotwright's state folder. */
   files: string[];
   journal?: number;
   /** Proposals that were not selected. */
@@ -642,7 +662,8 @@ export function applyDream(path: string, selection: string | string[], options: 
   const learning = options.learning ?? readLearning();
   const canLearn = learningAllowed(learning);
   const state = readProjectState(root);
-  const journal = new JournalWriter(root, "dream", `dream: ${plural(chosen.length, "proposal")} applied`);
+  // Private: the entry stays in the project's untracked .godot, or in the state folder when git tracks .godot.
+  const journal = new JournalWriter(root, "dream", `dream: ${plural(chosen.length, "proposal")} applied`, undefined, { private: true });
   const out: ApplyResult = { root, applied: [], seen: [], skipped: [], files: [], left: result.proposals.length - chosen.length, notes: [] };
   const names = chosen.some((p) => p.kind === "draft-lesson" || p.kind === "undo-lesson") ? projectNames(root) : [];
   const api = GodotApi.load();
@@ -749,9 +770,9 @@ export function applyDream(path: string, selection: string | string[], options: 
 
   for (const p of [...out.applied.map((a) => a.proposal), ...out.seen]) state.acknowledged[p.key] = total(p.evidence);
 
-  const write = (full: string, data: string, outside = false) => {
+  const write = (full: string, data: string) => {
     try {
-      if (outside) journal.allowOutside(full);
+      if (relative(root, full).startsWith("..")) journal.allowOutside(full);
       const current = existsSync(full) ? readFileSync(full, "utf8") : undefined;
       if (current === data) return;
       // A protected file is skipped before the journal sees it, so the entry is stored once, with what was written.
@@ -783,48 +804,35 @@ export function applyDream(path: string, selection: string | string[], options: 
     write(join(dir, "state.json"), `${JSON.stringify(state, null, 2)}\n`);
     const stamp = now.toISOString().slice(0, 16).replace("T", "-").replace(":", "");
     write(join(dir, `${stamp}.md`), formatReport(result, out, now));
-    const after = readLearning();
-    const block = agentsBlock(after, state, api, projectKey(root));
-    for (const file of agentsFiles(root, options.writeAgentsFile === true)) {
-      let current: string;
-      try {
-        current = existsSync(file) ? readFileSync(file, "utf8") : "";
-      } catch (error) {
-        out.notes.push(`${toRes(root, file)} could not be read: ${error instanceof Error ? error.message : String(error)}`);
-        continue;
-      }
-      // Only marking suggestions as seen changes nothing an agent needs: an agents file gets a block only from a change.
-      if (!out.applied.length && !current.includes(BLOCK_START)) continue;
-      write(file, withBlock(current, block), relative(root, file).startsWith(".."));
-    }
+    const notesFile = join(dir, NOTES_FILE);
+    // Only marking suggestions as seen changes nothing an agent needs.
+    if (out.applied.length || existsSync(notesFile)) write(notesFile, agentNotes(readLearning(), state, api, projectKey(root)));
   }
 }
 
 function toRes(root: string, full: string): string {
-  return `res://${relative(root, full).split(sep).join("/")}`;
+  const rel = relative(root, full);
+  // A file in the private state folder is named by its place there, never by a path of the machine.
+  return rel.startsWith("..") ? `(private)/${full.slice(full.lastIndexOf(sep) + 1)}` : `res://${rel.split(sep).join("/")}`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The agents-file block
+// Lessons for agents: kept only in the private folder, never in a file of the repository
 
-export const BLOCK_START = "<!-- godotwright:dream:start -->";
-export const BLOCK_END = "<!-- godotwright:dream:end -->";
+export const NOTES_FILE = "lessons-for-agents.md";
 
-/** The AGENTS.md and CLAUDE.md files the block goes into: those in the project, else those at the repository root above it. */
-export function agentsFiles(root: string, create: boolean): string[] {
-  for (const dir of sessionFolders(root)) {
-    const found = ["AGENTS.md", "CLAUDE.md"].map((f) => join(dir, f)).filter((f) => existsSync(f));
-    if (found.length) return found;
-  }
-  return create ? [join(root, "AGENTS.md")] : [];
+/** A line that the scrubber would change still holds something like code or a name: it is left out. */
+function safeLine(text: string, api: GodotApi): boolean {
+  return Object.keys(scrubText(text.replace(/`[^`]*`/g, ""), { api }).replaced).length === 0;
 }
 
 /**
- * The block: the top recurring mistakes with their fix, and the project's API hints. Short on purpose. Only lessons that
- * ship with Godotwright and local lessons learned in this project (`project`: its key) go in: local lessons from other
- * projects on the machine, or without a project, never do.
+ * The lessons for agents: the top recurring mistakes with their fix, and the project's API hints. Short on purpose.
+ * Only lessons that ship with Godotwright and local lessons learned in this project (`project`: its key) go in, and no
+ * line that still looks like code or a name. The session-start hook shows it to the agent; it is never written into a
+ * file a repository could track.
  */
-export function agentsBlock(learning: LearningData, state: ProjectDreamState, api: GodotApi = GodotApi.load(), project?: string): string {
+export function agentNotes(learning: LearningData, state: ProjectDreamState, api: GodotApi = GodotApi.load(), project?: string): string {
   const mistakes: { lesson: Lesson; weight: number }[] = [];
   const mine = learning.localLessons.filter((l) => project !== undefined && (l.projects ?? []).includes(project));
   const scoped = { ...learning, localLessons: mine };
@@ -841,34 +849,36 @@ export function agentsBlock(learning: LearningData, state: ProjectDreamState, ap
   }
   const byId = new Map<string, { lesson: Lesson; weight: number }>();
   for (const m of mistakes) byId.set(m.lesson.id, { lesson: m.lesson, weight: (byId.get(m.lesson.id)?.weight ?? 0) + m.weight });
-  const top = [...byId.values()].sort((a, b) => b.weight - a.weight || a.lesson.id.localeCompare(b.lesson.id)).slice(0, 5);
   const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 3).trimEnd()}...` : s);
-  const out = [
-    BLOCK_START,
-    "## Godotwright lessons for agents",
-    "",
-    "Kept by `godotwright dream` from what went wrong in this project; it rewrites this block, so edit outside the markers.",
-  ];
+  const top = [...byId.values()]
+    .sort((a, b) => b.weight - a.weight || a.lesson.id.localeCompare(b.lesson.id))
+    .filter(({ lesson }) => safeLine(lesson.title, api) && safeLine(lesson.fix, api))
+    .map(({ lesson }) => ({ lesson, line: `${clip(lesson.title, 120)} Fix: ${clip(lesson.fix, 160)}` }))
+    .slice(0, 5);
+  const hints = [...state.hints]
+    .filter((h) => api.lookup(h.use).entries.length > 0 && shareableQuery(h.not, api))
+    .sort((a, b) => b.count - a.count || a.not.localeCompare(b.not))
+    .slice(0, 8);
+  const out = ["Godotwright lessons for agents (kept on this machine by godotwright dream; never in the repository):"];
   if (top.length) {
-    out.push("", "Recurring mistakes:");
-    for (const { lesson } of top) out.push(`- ${clip(lesson.title, 120)} Fix: ${clip(lesson.fix, 160)} (\`${lesson.id}\`)`);
+    out.push("Recurring mistakes:");
+    for (const { lesson, line } of top) out.push(`- ${line} (\`${lesson.id}\`)`);
   }
-  if (state.hints.length) {
-    out.push("", "Project hints:");
-    for (const h of [...state.hints].sort((a, b) => b.count - a.count || a.not.localeCompare(b.not)).slice(0, 8)) out.push(`- Use \`${h.use}\`, not \`${h.not}\`.`);
+  if (hints.length) {
+    out.push("Project hints:");
+    for (const h of hints) out.push(`- Use \`${h.use}\`, not \`${h.not}\`.`);
   }
-  if (!top.length && !state.hints.length) out.push("", "No recurring mistakes yet.");
-  out.push(BLOCK_END);
-  return out.join("\n");
+  if (!top.length && !hints.length) out.push("No recurring mistakes yet.");
+  return `${out.join("\n")}\n`;
 }
 
-/** Puts the block into a file's text: in place of the old block, else at the end. */
-export function withBlock(text: string, block: string): string {
-  const start = text.indexOf(BLOCK_START);
-  const end = text.indexOf(BLOCK_END);
-  if (start >= 0 && end > start) return `${text.slice(0, start)}${block}${text.slice(end + BLOCK_END.length)}`;
-  const base = text.replace(/\s*$/, "");
-  return base ? `${base}\n\n${block}\n` : `${block}\n`;
+/** The lessons for agents of a project, as kept by the last dream apply (empty when there are none). */
+export function readAgentNotes(root: string): string {
+  try {
+    return readFileSync(join(dreamDir(root), NOTES_FILE), "utf8");
+  } catch {
+    return "";
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------

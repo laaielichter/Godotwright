@@ -23,6 +23,11 @@ until a proposal is applied.
    title of each finished draft so it replaces the draft.
 5. **End with a short list:** what was applied, what was left, and that `godot_undo` takes the apply back.
 
+Nothing is written into a file of the repository: hints, the report and the lessons for agents stay in the project's
+untracked `.godot/godotwright/dreams/` (or Godotwright's state folder), and the session start shows them to the agent.
+No lesson may hold code, paths, or project, file or node names.
+
 Settings live in `godotwright.json`: `"dream": {"auto": "suggest", "minHours": 24, "minSessions": 5}`. With
-`"suggest"` the session start says when proposals are waiting; `"apply"` applies lesson and hint changes by itself
-(never a removal); `"off"` stays quiet.
+`"suggest"` (the default) the session start says when proposals are waiting; `"apply"` applies lesson and hint changes
+by itself (never a removal), but only after the user allowed it once with `godotwright dream --auto-apply yes`; never
+give that consent for them. `"off"` stays quiet.

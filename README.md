@@ -176,19 +176,22 @@ godotwright dream --transcripts      # also learn from this project's agent sess
 godotwright dream --apply 1,3        # or --apply all; godotwright undo takes it back
 ```
 
-It is deterministic: no model, no network, nothing leaves the machine. From transcripts it keeps only tool names, Godot
-message templates without names or paths, and Godot API names, never their text. An apply keeps lessons through the
-same scrubber as `godot_lesson_add`, writes a short "Godotwright lessons for agents" block (top recurring mistakes and
-project hints) into the project's `AGENTS.md` or `CLAUDE.md` when one exists (`--write-agents-file` creates
-`AGENTS.md`), and a dated report into `.godot/godotwright/dreams/`, all through the journal, so `godotwright undo` takes
-it back. Draft lessons hold the symptom and the message; the plugin's `godot-dreamer` subagent (or `/godotwright:dream`)
+It is deterministic: no model, no network, nothing leaves the machine, and it never writes into a file of your
+repository. From transcripts (only when you ask, per run) it keeps only tool names, Godot message templates without
+names or paths, and Godot API names, never their text; nothing that still looks like code or a name is kept. An apply
+(only when you ask) keeps lessons through the same scrubber as `godot_lesson_add`, and keeps hints, a dated report and a
+short "Godotwright lessons for agents" note (top recurring mistakes and project hints) in `.godot/godotwright/dreams/`,
+which Godot's `.gitignore` leaves out (when git tracks `.godot/`, they go to Godotwright's state folder instead). The
+session-start hook shows the note to the agent. All of it goes through the journal, so `godotwright undo` takes it
+back. Draft lessons hold the symptom and the message; the plugin's `godot-dreamer` subagent (or `/godotwright:dream`)
 works out the cause and fix with `godot_api`, `godot_lessons` and, when Godot is installed, `godot_check`, and applies
 only what you approve.
 
 The session-start hook counts sessions and, once a dream is due (24 hours and 5 sessions since the last one), says
 "Godotwright has N dream proposals: run godot_dream". Set it in `godotwright.json`:
-`"dream": {"auto": "suggest" | "apply" | "off", "minHours": 24, "minSessions": 5}`. With `"apply"` it applies lesson and
-hint changes by itself, never a removal.
+`"dream": {"auto": "suggest" | "apply" | "off", "minHours": 24, "minSessions": 5}` (default `"suggest"`). `"apply"`
+applies lesson and hint changes by itself, never a removal, and only after you allowed it once on this machine with
+`godotwright dream --auto-apply yes`. Nothing from dreaming goes into the opt-in anonymous report.
 
 ## The 39 tools
 

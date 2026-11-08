@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { lessonFrom } from "../lessons/library.js";
 import type { LessonStats, LocalLesson } from "../lessons/types.js";
 
@@ -256,6 +256,11 @@ export function saveLearning(change: (data: LearningData) => void, file = learni
 /** saveLearning for tools: errors are swallowed, since learning is a side effect and must not break a tool. */
 export function updateLearning(change: (data: LearningData) => void, file = learningFile()): LearningData {
   return saveLearning(change, file).data;
+}
+
+/** A project's key in Godotwright's state: a hash of its folder, so no path is kept. */
+export function projectKey(root: string): string {
+  return createHash("sha1").update(resolve(root)).digest("hex").slice(0, 16);
 }
 
 /** A stable hash of a local lesson as it is stored, so an undo can tell whether it changed since. */

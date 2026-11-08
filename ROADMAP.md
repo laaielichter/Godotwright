@@ -170,8 +170,8 @@ Godotwright gets better with every use, without collecting anything personal.
 29. **Dreaming.** Between sessions, look back at the learning file, the journal and (when asked) the session
     transcripts, and propose draft lessons for recurring Godot errors, project hints for guessed API names, lessons to
     merge, retire or rewrite, lessons about undone writes, noisy rules and contradictions, each with its evidence;
-    apply through the journal, keep a lessons block in AGENTS.md or CLAUDE.md, and say at session start when a dream
-    is due. Deterministic and local.
+    apply through the journal, keep lessons for agents only on this machine (never in the repository), and say at
+    session start when a dream is due. Deterministic and local.
     *Done when:* tests cover every proposal kind, no transcript text reaches any output, the due logic, and that an
     apply is undone in full.
 

@@ -4,9 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
-  BLOCK_END,
-  BLOCK_START,
-  agentsBlock,
+  agentNotes,
   applyDream,
   dream,
   dreamDue,
@@ -17,12 +15,16 @@ import {
   readProjectState,
   recordSession,
   selectProposals,
-  withBlock,
+  readAgentNotes,
+  setAutoApplyConsent,
+  NOTES_FILE,
   type Proposal,
 } from "../src/dream/dream.js";
 import { claudeSlug, emptyFacts, readTranscript, readTranscripts, sessionFolders } from "../src/dream/transcripts.js";
-import { dreamNotice } from "../src/hooks/agent-hooks.js";
-import { JournalWriter, readJournal, undoJournal } from "../src/journal/journal.js";
+import { dreamNotice, sessionStart } from "../src/hooks/agent-hooks.js";
+import { GodotApi } from "../src/api/api.js";
+import { shareableSnapshot } from "../src/learn/share.js";
+import { formatJournal, formatUndo, JournalWriter, readJournal, undoJournal } from "../src/journal/journal.js";
 import { fingerprint } from "../src/learn/learn.js";
 import { readLearning, resetLearning, saveLearning, type LearningData } from "../src/learn/store.js";
 import { addLocalLesson, projectKey } from "../src/lessons/local.js";
@@ -223,7 +225,7 @@ describe("dream transcripts", () => {
   });
 
   it("turns transcripts into proposals only when asked, and the output and the applied files hold nothing from them", () => {
-    const root = project({ "CLAUDE.md": "# Notes\n\nOur own rules.\n" });
+    const root = project();
     const transcriptOptions = homes(root);
     // One failed lookup in the transcripts and one in the learning file: together they recur.
     learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 1, resolved: {} }));
@@ -238,6 +240,7 @@ describe("dream transcripts", () => {
       JSON.stringify({ ...r, root: undefined }),
       JSON.stringify({ ...applied, root: undefined }),
       ...applied.files.map((f) => readFileSync(join(root, f.slice("res://".length)), "utf8")),
+      readAgentNotes(root),
       JSON.stringify(readLearning().localLessons),
     ].join("\n");
     for (const secret of ["alice", "MySecretGame", "spawn_wizard_boss", "boss_brain", "wizard", "secret_sauce", "sk-ant", "/home", "WizardBoss", root]) expect(written).not.toContain(secret);
@@ -259,8 +262,8 @@ describe("dream transcripts", () => {
 });
 
 describe("dream apply and undo", () => {
-  it("keeps lessons and hints, writes the report and the agents block, and undo takes all of it back", () => {
-    const root = project({ "AGENTS.md": "# Agents\n\nBe kind.\n" });
+  it("keeps lessons and hints, writes the report and the lessons for agents privately, and undo takes all of it back", () => {
+    const root = project({ "AGENTS.md": "# Agents\n\nBe kind.\n", "CLAUDE.md": "# Claude\n" });
     learn((d) => {
       d.missedByReview[errorTemplate(MESSAGE)] = 4;
       d.apiMisses["Node2D.look_att"] = { count: 3, resolved: { "Node2D.look_at": 2 } };
@@ -271,12 +274,13 @@ describe("dream apply and undo", () => {
     expect(lesson).toMatchObject({ tags: ["draft", "dream"], errors: [errorTemplate(MESSAGE)] });
     expect(lesson.title).toMatch(/^Godot error without a lesson yet: /);
     expect(readProjectState(root).hints).toEqual([{ use: "Node2D.look_at", not: "Node2D.look_att", count: 3 }]);
-    const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
-    expect(agents.startsWith("# Agents\n\nBe kind.\n\n")).toBe(true);
-    expect(agents).toContain("## Godotwright lessons for agents");
-    expect(agents).toContain("- Use `Node2D.look_at`, not `Node2D.look_att`.");
-    expect(r.files).toEqual(expect.arrayContaining(["res://.godot/godotwright/dreams/state.json", "res://AGENTS.md"]));
+    // Never a file of the repository: the agents files stay as they were.
+    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe("# Agents\n\nBe kind.\n");
+    expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toBe("# Claude\n");
+    expect(r.files.every((f) => f.startsWith("res://.godot/godotwright/dreams/"))).toBe(true);
+    expect(r.files).toEqual(expect.arrayContaining(["res://.godot/godotwright/dreams/state.json", `res://.godot/godotwright/dreams/${NOTES_FILE}`]));
     expect(r.files.some((f) => /^res:\/\/\.godot\/godotwright\/dreams\/\d{4}-\d{2}-\d{2}-\d{4}\.md$/.test(f))).toBe(true);
+    expect(readAgentNotes(root)).toContain("- Use `Node2D.look_at`, not `Node2D.look_att`.");
     expect(readJournal(root).entries.at(-1)).toMatchObject({ tool: "dream", id: r.journal });
 
     // Applied proposals are not proposed again.
@@ -285,9 +289,27 @@ describe("dream apply and undo", () => {
     const u = undoJournal(root);
     expect(u.undone[0]!.lessons).toEqual({ restored: [lesson.id], kept: [] });
     expect(readLearning().localLessons).toEqual([]);
-    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe("# Agents\n\nBe kind.\n");
     expect(existsSync(join(root, ".godot/godotwright/dreams/state.json"))).toBe(false);
+    expect(readAgentNotes(root)).toBe("");
     expect(dream(root).proposals).toHaveLength(2);
+  });
+
+  it("keeps everything in the state folder, never in the project, when git tracks the project's .godot", () => {
+    const repo = makeProject({ ".git/HEAD": "ref: refs/heads/main\n", ".gitignore": "*.tmp\n", "game/project.godot": PROJECT });
+    const root = join(repo, "game");
+    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
+    const r = applyDream(root, "all");
+    expect(r.applied).toHaveLength(1);
+    expect(existsSync(join(root, ".godot"))).toBe(false);
+    expect(r.files.every((f) => f.startsWith("(private)/"))).toBe(true);
+    expect(readAgentNotes(root)).toContain("Node2D.look_at");
+    expect(readJournal(root).entries.at(-1)).toMatchObject({ tool: "dream" });
+    expect(formatJournal(readJournal(root).entries)).not.toContain(repo);
+    const u = undoJournal(root);
+    expect(formatUndo(u)).not.toContain(repo);
+    expect(formatUndo(u)).toContain("(private)/state.json");
+    expect(readAgentNotes(root)).toBe("");
+    expect(existsSync(join(root, ".godot"))).toBe(false);
   });
 
   it("drops the draft tag when a draft is rewritten with a real cause and fix, so it is no longer a draft", () => {
@@ -303,7 +325,7 @@ describe("dream apply and undo", () => {
     learn((d) => (d.lessons[done.id] = { shown: 5, helped: 0, wrong: 0 }));
     expect(kinds(dream(root, { all: true }).proposals)).not.toContain("finish-draft");
     // It may now go into the agents block.
-    expect(agentsBlock(readLearning(), readProjectState(root), undefined, projectKey(root))).toContain("has_method");
+    expect(agentNotes(readLearning(), readProjectState(root), undefined, projectKey(root))).toContain("has_method");
   });
 
   it("still treats a lesson whose fix is the draft placeholder as a draft", () => {
@@ -324,53 +346,16 @@ describe("dream apply and undo", () => {
     expect(readLearning().localLessons[0]!.fix).toMatch(/has_method/);
   });
 
-  it("does not write an agents file unless one exists or it is asked to, and finds one at the repository root", () => {
-    const repo = makeProject({ ".git/HEAD": "ref: refs/heads/main\n", "CLAUDE.md": "# Repo rules\n", "game/project.godot": PROJECT });
-    const root = join(repo, "game");
-    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
-    const r = applyDream(root, "all");
-    expect(r.files).toContain("res://../CLAUDE.md");
-    expect(readFileSync(join(repo, "CLAUDE.md"), "utf8")).toContain(BLOCK_START);
-    undoJournal(root);
-    expect(readFileSync(join(repo, "CLAUDE.md"), "utf8")).toBe("# Repo rules\n");
-
-    const bare = project();
-    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
-    applyDream(bare, "all");
-    expect(existsSync(join(bare, "AGENTS.md"))).toBe(false);
-    undoJournal(bare);
-    applyDream(bare, "all", { writeAgentsFile: true });
-    expect(readFileSync(join(bare, "AGENTS.md"), "utf8")).toContain("Use `Node2D.look_at`");
-  });
-
-  it("skips a protected agents file with a note and stores one journal entry that undo takes back", () => {
-    const root = project({ "AGENTS.md": "# Agents\n", "godotwright.json": JSON.stringify({ protect: ["AGENTS.md"] }) });
+  it("skips a protected dream file with a note and stores one journal entry that undo takes back", () => {
+    const root = project({ "godotwright.json": JSON.stringify({ protect: [`.godot/godotwright/dreams/${NOTES_FILE}`] }) });
     learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
     const before = readJournal(root).entries.length;
     const r = applyDream(root, "all");
-    expect(r.notes).toEqual(["res://AGENTS.md is protected and was not written"]);
+    expect(r.notes).toEqual([`res://.godot/godotwright/dreams/${NOTES_FILE} is protected and was not written`]);
     expect(readJournal(root).entries).toHaveLength(before + 1);
-    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe("# Agents\n");
     const u = undoJournal(root);
     expect(u.blocked).toBeUndefined();
     expect(existsSync(join(root, ".godot/godotwright/dreams/state.json"))).toBe(false);
-  });
-
-  it("journals what was applied even when a file cannot be written, and says which", () => {
-    const root = project({ "AGENTS.md/keep": "a folder where a file was expected\n", "CLAUDE.md": "# Claude\n" });
-    learn((d) => {
-      d.missedByReview[errorTemplate(MESSAGE)] = 2;
-      d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } };
-    });
-    const r = applyDream(root, "all");
-    expect(r.applied).toHaveLength(2);
-    expect(r.notes.some((n) => n.startsWith("res://AGENTS.md could not be read"))).toBe(true);
-    expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toContain(BLOCK_START);
-    expect(r.journal).toBeDefined();
-    expect(readLearning().localLessons).toHaveLength(1);
-    undoJournal(root);
-    expect(readLearning().localLessons).toEqual([]);
-    expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toBe("# Claude\n");
   });
 
   it("keeps going when the dream state cannot be written", () => {
@@ -441,52 +426,64 @@ describe("dream apply and undo", () => {
   });
 });
 
-describe("the agents-file block", () => {
-  it("replaces the old block in place and keeps the rest of the file", () => {
-    const block = `${BLOCK_START}\nnew\n${BLOCK_END}`;
-    expect(withBlock(`# A\n\n${BLOCK_START}\nold\n${BLOCK_END}\n\n## B\n`, block)).toBe(`# A\n\n${block}\n\n## B\n`);
-    expect(withBlock("", block)).toBe(`${block}\n`);
-    expect(withBlock("# A\n\n\n", block)).toBe(`# A\n\n${block}\n`);
-  });
-
+describe("lessons for agents", () => {
   it("lists recurring mistakes with their fix and the project hints, without drafts, and stays short", () => {
     const root = project();
     const template = errorTemplate("Cannot call method 'add_child' on a null value.");
     addLocalLesson({ title: "A node read before the scene is ready is null", fix: "Read the node in ready or later, with an onready variable.", error: "Cannot call method 'add_child' on a null value." }, { project: root });
     addLocalLesson(draftLessonInput(errorTemplate(MESSAGE), { x: 2 }), { project: root });
     learn((d) => (d.missedByReview[template] = 3));
-    const block = agentsBlock(readLearning(), { version: 1, hints: [{ use: "Node2D.look_at", not: "Node2D.look_att", count: 2 }], acknowledged: {} }, undefined, projectKey(root));
-    expect(block).toContain("Recurring mistakes:\n- A node read before the scene is ready is null Fix: Read the node in ready or later");
-    expect(block).toContain("Project hints:\n- Use `Node2D.look_at`, not `Node2D.look_att`.");
-    expect(block).not.toContain("without a lesson yet");
-    expect(block.split("\n").length).toBeLessThan(25);
+    const notes = agentNotes(readLearning(), { version: 1, hints: [{ use: "Node2D.look_at", not: "Node2D.look_att", count: 2 }], acknowledged: {} }, undefined, projectKey(root));
+    expect(notes).toContain("Recurring mistakes:\n- A node read before the scene is ready is null Fix: Read the node in ready or later");
+    expect(notes).toContain("Project hints:\n- Use `Node2D.look_at`, not `Node2D.look_att`.");
+    expect(notes).not.toContain("without a lesson yet");
+    expect(notes.split("\n").length).toBeLessThan(20);
   });
-});
 
-describe("agents-file privacy", () => {
-  it("never writes local lessons of other projects, or without a project, into this project's agents file", () => {
-    const mine = project({ "AGENTS.md": "# Agents\n" });
+  it("never holds lessons of other projects, lessons without a project, or a line that looks like code or a name", () => {
+    const mine = project();
     const other = project();
     addLocalLesson({ title: "Lanterns flicker when the tower generator overloads", fix: "Limit the lantern lights per room to eight." }, { project: other });
     addLocalLesson({ title: "An old lesson kept before projects were tagged", fix: "Keep the old fix written down here somewhere." });
     addLocalLesson({ title: "Moving decks need the deck speed on the body", fix: "Give the body the deck velocity when it lands." }, { project: mine });
+    // A lesson edited by hand in the learning file so that it holds code and a name: it is left out.
+    learn((d) => d.localLessons.push({ id: "local/hand-edited", topic: "gdscript", title: "Call spawn_wizard_boss from WizardTower", symptom: "x", cause: "x", fix: "var hp := 3", tags: [], added: "2026-11-01", projects: [projectKey(mine)] }));
     learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
     applyDream(mine, "all");
-    const text = readFileSync(join(mine, "AGENTS.md"), "utf8");
+    const text = readAgentNotes(mine);
     expect(text).toContain("Moving decks need the deck speed");
-    expect(text).not.toContain("Lanterns");
-    expect(text).not.toContain("old lesson");
+    for (const secret of ["Lanterns", "old lesson", "spawn_wizard_boss", "WizardTower", "hp :="]) expect(text).not.toContain(secret);
     // The lessons hold a hash of their project, never its path.
     expect(JSON.stringify(readLearning().localLessons)).not.toContain(mine);
     expect(readLearning().localLessons.find((l) => l.title.startsWith("Moving"))!.projects).toEqual([projectKey(mine)]);
   });
 
-  it("does not add a block to an agents file when an apply only marks suggestions as seen", () => {
-    const root = project({ "AGENTS.md": "# Agents\n" });
+  it("are not written when an apply only marks suggestions as seen", () => {
+    const root = project();
     learn((d) => (d.rules["quality/magic-number"] = { reported: 30, confirmed: 0, contradicted: 0, dismissed: 3 }));
     const r = applyDream(root, "all");
     expect(r.seen).toHaveLength(1);
-    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe("# Agents\n");
+    expect(readAgentNotes(root)).toBe("");
+  });
+
+  it("are shown to the agent at session start, on this machine only", () => {
+    const root = project();
+    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
+    applyDream(root, "all");
+    const out = sessionStart({ cwd: root, session_id: "x" }, {});
+    expect(out?.hookSpecificOutput?.additionalContext).toContain("Use `Node2D.look_at`, not `Node2D.look_att`.");
+  });
+
+  it("adds nothing from dreaming to the shared report", () => {
+    const root = project();
+    learn((d) => {
+      d.missedByReview[errorTemplate(MESSAGE)] = 2;
+      d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } };
+    });
+    const api = GodotApi.load();
+    const before = shareableSnapshot(readLearning(), api);
+    applyDream(root, "all");
+    expect(shareableSnapshot(readLearning(), api)).toEqual(before);
   });
 });
 
@@ -541,8 +538,16 @@ describe("dream due", () => {
     expect(readProjectState(root).hints).toEqual([]);
   });
 
-  it("applies only lesson and hint changes by itself with auto apply, never a removal", () => {
+  it("does not apply by itself without the person's one-time consent on this machine", () => {
     const root = project({ "godotwright.json": JSON.stringify({ dream: { auto: "apply", minHours: 0, minSessions: 1 } }) });
+    learn((d) => (d.apiMisses["Node2D.look_att"] = { count: 2, resolved: { "Node2D.look_at": 1 } }));
+    expect(dreamNotice(root, "s1")).toMatch(/^Godotwright has 1 dream proposal: run godot_dream \(dream.auto is apply, but the person has not allowed it here yet: godotwright dream --auto-apply yes\)\.$/);
+    expect(readProjectState(root).hints).toEqual([]);
+  });
+
+  it("applies only lesson and hint changes by itself with auto apply and consent, never a removal", () => {
+    const root = project({ "godotwright.json": JSON.stringify({ dream: { auto: "apply", minHours: 0, minSessions: 1 } }) });
+    setAutoApplyConsent(root, true);
     const c = addLocalLesson({ title: "Physics interpolation hides jitter on fast cameras", fix: "Turn on physics interpolation in the project settings." }).lesson;
     learn((d) => {
       d.lessons[c.id] = { shown: 9, helped: 0, wrong: 3 };

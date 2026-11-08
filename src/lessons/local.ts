@@ -1,9 +1,7 @@
-import { createHash } from "node:crypto";
-import { resolve } from "node:path";
 import { GodotApi } from "../api/api.js";
 import { findProjectRoot } from "../project/files.js";
 import { shareableTemplate } from "../learn/template.js";
-import { lessonStats, learningAllowed, readLearning, saveLearning, type LearningData } from "../learn/store.js";
+import { lessonStats, learningAllowed, projectKey, readLearning, saveLearning, type LearningData } from "../learn/store.js";
 import { placeholderShare, scrubText } from "./anonymize.js";
 import { isTopic } from "./library.js";
 import { errorTemplate, findLesson } from "./search.js";
@@ -123,14 +121,11 @@ export function prepareLesson(input: LessonInput, options: { api?: GodotApi; pro
   return { lesson, replaced };
 }
 
-/** A project's key in the learning file: a hash of its folder, so no path is kept. */
-export function projectKey(root: string): string {
-  return createHash("sha1").update(resolve(root)).digest("hex").slice(0, 16);
-}
+export { projectKey };
 
 /**
  * Keeps a lesson learned here. The same title again updates that lesson (and merges its Godot messages). `project` (a
- * path in the project) tags the lesson with that project's key, so a project's agents file only ever gets its own.
+ * path in the project) tags the lesson with that project's key, so a project's lessons for agents only hold its own.
  */
 export function addLocalLesson(input: LessonInput, options: { projectNames?: Iterable<string>; now?: Date; project?: string } = {}): Added {
   const data = readLearning();

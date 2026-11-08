@@ -1056,7 +1056,7 @@ Proposals, numbered, each with an id (stable between runs), its evidence counts 
 | Kind | When | Apply |
 | --- | --- | --- |
 | draft lesson | a Godot error seen at least twice (review misses plus transcripts) that no rule predicts and no lesson explains | keeps a local lesson tagged `draft` with the symptom and message; cause and fix are left to write |
-| project hint | an API name looked up at least twice that does not exist, with what was found next | adds "use X, not Y" to the project's hints and the agents-file block |
+| project hint | an API name looked up at least twice that does not exist, with what was found next | adds "use X, not Y" to the project's hints and the lessons for agents |
 | lesson from undone writes | writes by the same tool to the same kind of file undone at least twice | keeps a draft lesson about it |
 | merge lessons | two local lessons with the same Godot message or nearly the same title | adds the messages, tags and rules of one to the other and removes it |
 | retire lesson | a local lesson marked wrong at least twice and more often than it helped | removes it |
@@ -1069,22 +1069,26 @@ Proposals, numbered, each with an id (stable between runs), its evidence counts 
 godotwright dream                       # proposals (--detail brief for one line each, --json)
 godotwright dream --transcripts --since 7d
 godotwright dream --apply 1,3           # numbers or ids; --apply all
-godotwright dream --apply all --write-agents-file
+godotwright dream --auto-apply yes        # once, on this machine: let "auto": "apply" act from the session-start hook
 godotwright undo                        # takes the last apply back, lessons in the learning file included
 ```
 
-An apply writes, through the journal: lessons into the learning file (through the local-lessons API, so the scrubber
-applies, and recorded in the journal entry so `godotwright undo` puts them back; a lesson rewritten since is left
-alone), `.godot/godotwright/dreams/state.json` (the hints, and the proposals applied or seen: a suggestion comes back
-once its evidence doubles), a dated report `.godot/godotwright/dreams/<date>-<time>.md`, and a "Godotwright lessons for
-agents" block between `<!-- godotwright:dream:start -->` and `<!-- godotwright:dream:end -->` in `AGENTS.md` and
-`CLAUDE.md`: those in the project, else those at the repository root above it. Without either file, the block is only
-written with `--write-agents-file` (MCP `write_agents_file`), which creates `AGENTS.md` in the project. The block holds
-the top five recurring mistakes with their fix and up to eight project hints; drafts stay out of it. Only bundled
-lessons and local lessons learned in this project go in: a local lesson carries a hash of the project folder it was
-kept in (`godot_lesson_add`, `lessons add` and dream applies set it), and one from another project, or kept before this
-existed, never reaches the file. An apply that only marks suggestions as seen does not add a block. The learning file
-counts Godot errors for the whole machine, so a draft lesson says where its evidence came from.
+An apply writes, through the journal, only on this machine and never into a file of the repository: lessons into the
+learning file (through the local-lessons API, so the scrubber applies, and recorded in the journal entry so
+`godotwright undo` puts them back; a lesson rewritten since is left alone), and into the dream folder `state.json` (the
+hints, and the proposals applied or seen: a suggestion comes back once its evidence doubles), a dated report
+`<date>-<time>.md` and `lessons-for-agents.md`. The dream folder is `.godot/godotwright/dreams/` in the project when git
+ignores `.godot/` (Godot's own `.gitignore` does) or the project is in no repository; when git would track `.godot/`, it
+is a folder in Godotwright's state folder named by a hash of the project folder, and the journal entry of the apply is
+kept there too (`godotwright undo` still finds it).
+
+`lessons-for-agents.md` holds the top five recurring mistakes with their fix and up to eight project hints; drafts stay
+out of it. Only bundled lessons and local lessons learned in this project go in: a local lesson carries a hash of the
+project folder it was kept in (`godot_lesson_add`, `lessons add` and dream applies set it), and one from another
+project, or kept before this existed, never does. A line that the scrubber would still change (it looks like code or a
+name) is left out. An apply that only marks suggestions as seen does not write it. The session-start hook adds it to the
+agent's context, on this machine only. The learning file counts Godot errors for the whole machine, so a draft lesson
+says where its evidence came from.
 
 When it is due: the session-start hook counts sessions per project (a resumed session once) in Godotwright's state
 folder (`dreams.json`, next to the learning file). Once at least `minHours` passed and `minSessions` sessions started
@@ -1097,5 +1101,8 @@ it):
 ```
 
 `"auto"`: `"suggest"` (default) only says so; `"apply"` applies the draft lessons, lessons from undone writes and
-project hints by itself (never a removal, merge or verdict change) and says what it did; `"off"` stays quiet.
+project hints by itself (never a removal, merge or verdict change) and says what it did, but only once the person has
+allowed it on this machine with `godotwright dream --auto-apply yes` (`--auto-apply no` takes that back; an agent
+cannot give it through `godot_dream`); until then it only suggests; `"off"` stays quiet. Nothing from dreaming is added
+to the opt-in anonymous report.
 `GODOTWRIGHT_LEARN=0` stops the counting.

@@ -10,7 +10,7 @@ import { currentLearning } from "../learn/learn.js";
 import { emptyLearning, learningAllowed, readLearning } from "../learn/store.js";
 import { lessonHintsForMessages, lessonHintsForRules } from "../lessons/hints.js";
 import { bundledLessons } from "../lessons/library.js";
-import { applyDream, dream, dreamDue, markDreamed, readDreamConfig, recordSession } from "../dream/dream.js";
+import { applyDream, autoApplyConsented, dream, dreamDue, markDreamed, readAgentNotes, readDreamConfig, recordSession } from "../dream/dream.js";
 import { findProjectRoot, listProjectFiles, toResPath } from "../project/files.js";
 import { ProtectedPathError, protectionOf } from "../project/protect.js";
 import { reviewProject } from "../review/review.js";
@@ -284,11 +284,13 @@ export function sessionStart(input: HookInput, context: HookContext = {}): HookO
   }
   const version = settings.godotVersion ?? settings.features.find((f) => /^\d+\.\d+$/.test(f));
   const dreamLine = dreamNotice(root, input.session_id);
+  const notes = learningAllowed(readLearning()) ? readAgentNotes(root).trim().split("\n").slice(0, 20) : [];
   return context_("SessionStart", [
     `Godotwright: Godot project "${settings.name ?? "(unnamed)"}"${version ? ` (Godot ${version}${settings.renderer ? `, ${settings.renderer}` : ""})` : ""}: ${plural(scripts, "script")}, ${plural(scenes, "scene")}${settings.mainScene ? `, main scene ${settings.mainScene}` : ""}${settings.autoloads.length ? `, autoloads ${settings.autoloads.map((a) => a.name).slice(0, 8).join(", ")}` : ""}.`,
     godot,
     "Every Godot file you edit is reviewed right after the edit; errors come back to you. Next: godot_doctor when something is broken (what is wrong, in which order, why), godot_scan once to map the project, godot_api for engine names (never guess Godot 3 names).",
     `godot_lessons holds ${bundledLessons().length} lessons from real Godot projects: ask it before you build vehicles, moving platforms, large worlds, shaders or runtime-loaded models, and with any Godot error you do not understand.`,
+    ...(notes.length > 1 ? notes : []),
     ...(dreamLine ? [dreamLine] : []),
   ]);
 }
@@ -309,13 +311,16 @@ export function dreamNotice(root: string, sessionId: string | undefined, now = n
       markDreamed(root, now);
       return undefined;
     }
-    if (config.auto === "apply" && proposals.some((p) => p.auto)) {
+    // "apply" acts only after the person allowed it once on this machine (godotwright dream --auto-apply yes).
+    const consent = config.auto === "apply" && autoApplyConsented(root);
+    if (consent && proposals.some((p) => p.auto)) {
       const r = applyDream(root, "all", { auto: true, now });
       markDreamed(root, now);
       const left = proposals.length - r.applied.length;
       return `Godotwright dreamed: applied ${r.applied.length} lesson and hint change${r.applied.length === 1 ? "" : "s"} (godot_undo takes them back)${left > 0 ? `; ${left} more proposal${left === 1 ? " waits" : "s wait"}: run godot_dream` : ""}.`;
     }
-    return `Godotwright has ${proposals.length} dream proposal${proposals.length === 1 ? "" : "s"}: run godot_dream.`;
+    const ask = config.auto === "apply" && !consent ? " (dream.auto is apply, but the person has not allowed it here yet: godotwright dream --auto-apply yes)" : "";
+    return `Godotwright has ${proposals.length} dream proposal${proposals.length === 1 ? "" : "s"}: run godot_dream${ask}.`;
   } catch {
     return undefined;
   }

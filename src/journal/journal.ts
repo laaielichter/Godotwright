@@ -3,6 +3,7 @@ import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, 
 import { dirname, extname, join, relative } from "node:path";
 import { applyLearningUndo, saveLearning, type LearningUndo } from "../learn/store.js";
 import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { localDataDir } from "../project/local-dir.js";
 import { assertWritable } from "../project/protect.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 
@@ -70,13 +71,31 @@ function journalDir(root: string): string {
   return join(root, ...DIR);
 }
 
-function entryIds(root: string): number[] {
-  const dir = journalDir(root);
+/**
+ * The journal's folders: the project's, and the private one for writes that must never land in a repository
+ * (dreaming), which is the same folder unless git tracks the project's .godot.
+ */
+function journalDirs(root: string): string[] {
+  return [...new Set([journalDir(root), privateJournalDir(root)])];
+}
+
+/** Where journal entries of private writes (dreaming) and the log of undone writes are kept. */
+export function privateJournalDir(root: string): string {
+  return join(localDataDir(root), "journal");
+}
+
+function idsIn(dir: string): number[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((d) => /^\d+$/.test(d) && existsSync(join(dir, d, "entry.json")))
-    .map(Number)
-    .sort((a, b) => a - b);
+    .map(Number);
+}
+
+/** Every entry id with its folder, oldest first. */
+function entryIds(root: string): { id: number; dir: string }[] {
+  return journalDirs(root)
+    .flatMap((dir) => idsIn(dir).map((id) => ({ id, dir: join(dir, String(id)) })))
+    .sort((a, b) => a.id - b.id);
 }
 
 /** One call's writes. Writes go through it; commit() stores the entry when anything was written. */
@@ -89,17 +108,21 @@ export class JournalWriter {
   private dir: string | undefined;
   private id = 0;
   private learning: LearningUndo | undefined;
-  /** Files outside the project this call may write and keep (an agents file at the repository root). */
+  /** Files outside the project this call may write and keep (the dream's files in the private state folder). */
   private readonly outside = new Set<string>();
 
-  constructor(root: string, tool: string, summary: string, note?: string) {
+  /** The folder this call's entry goes into (the project's journal, or the private one). */
+  private readonly entriesDir: string;
+
+  constructor(root: string, tool: string, summary: string, note?: string, options: { private?: boolean } = {}) {
     this.root = root;
     this.tool = tool;
     this.summary = summary;
     this.note = note;
+    this.entriesDir = options.private ? privateJournalDir(root) : journalDir(root);
   }
 
-  /** Lets this call keep a file outside the project in the journal, such as AGENTS.md at the root of the repository. */
+  /** Lets this call keep a file outside the project in the journal, such as a dream file in the private state folder. */
   allowOutside(full: string): void {
     this.outside.add(full);
   }
@@ -171,8 +194,8 @@ export class JournalWriter {
     if (!this.before.size && !this.learning) return undefined;
     if (this.dir === undefined || !existsSync(this.dir)) {
       const ids = entryIds(this.root);
-      this.id = (ids.at(-1) ?? 0) + 1;
-      this.dir = join(journalDir(this.root), String(this.id));
+      this.id = (ids.at(-1)?.id ?? 0) + 1;
+      this.dir = join(this.entriesDir, String(this.id));
     }
     mkdirSync(this.dir, { recursive: true });
     const files: JournalFile[] = [];
@@ -198,7 +221,7 @@ export class JournalWriter {
       ...(this.learning ? { learning: this.learning } : {}),
     };
     writeFileSync(join(this.dir, "entry.json"), `${JSON.stringify(entry, null, 2)}\n`);
-    for (const old of entryIds(this.root).slice(0, -KEEP)) rmSync(join(journalDir(this.root), String(old)), { recursive: true, force: true });
+    for (const old of entryIds(this.root).slice(0, -KEEP)) rmSync(old.dir, { recursive: true, force: true });
     return this.id;
   }
 }
@@ -206,7 +229,7 @@ export class JournalWriter {
 export function readJournal(path: string): { root: string; entries: JournalEntry[] } {
   const root = findProjectRoot(path);
   if (!root) throw new ProjectNotFoundError(path);
-  const entries = entryIds(root).map((id) => JSON.parse(readFileSync(join(journalDir(root), String(id), "entry.json"), "utf8")) as JournalEntry);
+  const entries = entryIds(root).map(({ dir }) => JSON.parse(readFileSync(join(dir, "entry.json"), "utf8")) as JournalEntry);
   return { root, entries };
 }
 
@@ -228,7 +251,7 @@ export function undoJournal(path: string, options: { steps?: number; force?: boo
   const undone: UndoResult["undone"] = [];
   let blocked: UndoResult["blocked"];
   for (const entry of entries.slice(-steps).reverse()) {
-    const dir = join(journalDir(root), String(entry.id));
+    const dir = entryIds(root).find((e) => e.id === entry.id)!.dir;
     const changed: string[] = [];
     const notKept: string[] = [];
     for (const f of entry.files) {
@@ -285,7 +308,7 @@ function fileKind(file: string): string {
 /** Keeps a short, anonymous record of an undone write (tool and file kinds only) for `godotwright dream`. */
 function logUndone(root: string, entry: JournalEntry): void {
   try {
-    const file = join(journalDir(root), "undone.jsonl");
+    const file = join(privateJournalDir(root), "undone.jsonl");
     const line: UndoneWrite = { tool: entry.tool, kinds: [...new Set(entry.files.map((f) => fileKind(f.file)))].sort(), date: entry.date, undoneAt: new Date().toISOString() };
     mkdirSync(dirname(file), { recursive: true });
     appendFileSync(file, `${JSON.stringify(line)}\n`);
@@ -300,7 +323,7 @@ function logUndone(root: string, entry: JournalEntry): void {
 export function readUndone(root: string): UndoneWrite[] {
   try {
     const out: UndoneWrite[] = [];
-    for (const line of readFileSync(join(journalDir(root), "undone.jsonl"), "utf8").split("\n")) {
+    for (const line of readFileSync(join(privateJournalDir(root), "undone.jsonl"), "utf8").split("\n")) {
       if (!line.trim()) continue;
       try {
         const u = JSON.parse(line) as Partial<UndoneWrite>;
@@ -318,12 +341,14 @@ export function readUndone(root: string): UndoneWrite[] {
 }
 
 const when = (iso: string) => iso.slice(0, 16).replace("T", " ");
+/** A file as printed: one outside the project (the dream's private state folder) by its name only, never its path. */
+const shown = (file: string) => (file.startsWith("res://../") ? `(private)/${file.slice(file.lastIndexOf("/") + 1)}` : file);
 
 export function formatJournal(entries: JournalEntry[], limit = 15): string {
   if (!entries.length) return "journal: no Godotwright writes to undo in this project\n";
   const out = [`journal: ${entries.length} write${entries.length === 1 ? "" : "s"} can be undone, newest first:`];
   for (const e of entries.slice(-limit).reverse()) {
-    const files = e.files.map((f) => f.file);
+    const files = e.files.map((f) => shown(f.file));
     out.push(`#${e.id} ${when(e.date)} UTC ${e.tool}: ${e.summary} (${files.slice(0, 3).join(", ")}${files.length > 3 ? ` +${files.length - 3} more` : ""})`);
   }
   out.push("Next: godot_undo (steps: n) undoes the newest n writes; a file changed by hand since is left alone unless force.");
@@ -336,14 +361,14 @@ export function formatUndo(r: UndoResult): string {
     const parts = [u.restored.length ? `${u.restored.length} file${u.restored.length === 1 ? "" : "s"} restored` : "", u.removed.length ? `${u.removed.length} new file${u.removed.length === 1 ? "" : "s"} removed` : ""].filter(Boolean);
     if (u.lessons?.restored.length) parts.push(`${u.lessons.restored.length} lesson${u.lessons.restored.length === 1 ? "" : "s"} put back in the learning file`);
     out.push(`undone #${u.entry.id} ${u.entry.tool}: ${u.entry.summary}: ${parts.join(", ") || "nothing left to restore"}`);
-    for (const f of [...u.restored, ...u.removed].slice(0, 12)) out.push(`  ${f}`);
+    for (const f of [...u.restored, ...u.removed].slice(0, 12)) out.push(`  ${shown(f)}`);
     if (u.lessons?.kept.length) out.push(`  left alone (changed since): ${u.lessons.kept.join(", ")}`);
     if (u.entry.note) out.push(`  note: ${u.entry.note}`);
   }
   if (r.blocked) {
     const b = r.blocked;
-    if (b.notKept.length) out.push(`not undone #${b.entry.id} ${b.entry.tool}: no copy was kept of ${b.notKept.join(", ")} (too big); restore it from version control`);
-    else out.push(`not undone #${b.entry.id} ${b.entry.tool}: ${b.changed.join(", ")} changed after that write; undo with force: true to lose those changes, or edit by hand`);
+    if (b.notKept.length) out.push(`not undone #${b.entry.id} ${b.entry.tool}: no copy was kept of ${b.notKept.map(shown).join(", ")} (too big); restore it from version control`);
+    else out.push(`not undone #${b.entry.id} ${b.entry.tool}: ${b.changed.map(shown).join(", ")} changed after that write; undo with force: true to lose those changes, or edit by hand`);
   }
   if (!r.undone.length && !r.blocked) out.push("nothing to undo: no Godotwright writes are in the journal");
   out.push(`${r.left} older write${r.left === 1 ? "" : "s"} can still be undone.`);
