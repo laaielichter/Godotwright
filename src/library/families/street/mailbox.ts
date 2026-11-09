@@ -83,8 +83,11 @@ function nodes(style: Style, body: string): SpecNode[] {
           box("Plinth", ["$width - 0.04", 0.08, 0.46], { anchor: "bottom", bevel: 0.008, material: "paint_black" }),
           box("Cabinet", ["$width", "$height - 0.12", 0.5], { at: [0, 0.07, 0], anchor: "bottom", bevel: 0.015 }),
           box("Canopy", ["$width + 0.06", 0.05, 0.58], { at: [0, "$height - 0.05", 0.03], anchor: "bottom", bevel: 0.01 }),
-          box("Screen", ["$width * 0.4", 0.16, 0.01], { at: [0, "$height - 0.32", 0.252], bevel: 0.003, material: "screen_cyan" }),
+          box("Bezel", ["$width * 0.4 + 0.03", 0.19, 0.012], { at: [0, "$height - 0.32", 0.251], bevel: 0.004, material: "paint_black" }),
+          box("Screen", ["$width * 0.4", 0.16, 0.01], { at: [0, "$height - 0.32", 0.257], bevel: 0.003, material: "screen_cyan" }),
+          box("ScreenLine_{i}", ["$width * 0.28", 0.012, 0.004], { at: [0, "$height - 0.28", 0.263], repeat: { count: 4, step: [0, -0.027, 0] }, material: "paint_white" }),
           box("Keypad", ["$width * 0.25", 0.1, 0.02], { at: [0, "$height - 0.47", 0.255], bevel: 0.004, material: "paint_black" }),
+          box("Key_{i}", [0.022, 0.016, 0.006], { at: ["-$width * 0.25 / 2 + 0.03", "$height - 0.45", 0.267], repeat: { count: 3, step: [0.04, 0, 0] }, material: "paint_white" }),
         ]),
         group("Slot", [
           box("Mouth", ["$width * 0.55", 0.03, 0.02], { material: "opening_dark" }),

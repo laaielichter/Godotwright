@@ -81,24 +81,39 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     // A taut two-pole dome: the fly is a superellipse dome (n = 8), so the four panels between the crossing poles pull
     // nearly straight across (flatter than a balloon) and the pole sleeves stand out as ridges along the diagonals.
     const N = 8, C = Math.pow(Math.SQRT1_2, 2 / N);
+    // The plan of the fly is a rounded rectangle with a real corner on each pole line and a gently bowed, taut panel
+    // between the corners. The ring has two points at every corner a few millimetres apart (a sliver of fabric that the
+    // pole sleeve covers), so each panel shades as its own surface with a sharp crease along the poles.
+    const M = 6, bow = 1 - C, P = 2.3, eps = 0.01;
+    const panelRing = (d: number, k: number, lift: number) => {
+      const pts: [string, string][] = [];
+      for (let q = 0; q < 4; q++) {
+        for (let j = 0; j <= M; j++) {
+          const u = -1 + eps + ((2 - 2 * eps) * j) / M;
+          const e = 1 - bow * Math.pow(Math.abs(u), P), a = C * u;
+          const [px, py] = q === 0 ? [e, a] : q === 1 ? [-a, e] : q === 2 ? [-e, -a] : [a, -e];
+          pts.push([`$hl * ${(d * k * px).toFixed(5)}`, `$hw * ${(d * k * py).toFixed(5)}`]);
+        }
+      }
+      return { z: y(d, lift), points: pts };
+    };
     const g = (d: number): number => Math.pow(Math.max(0, 1 - d * d), 0.58);
     const y = (d: number, lift = 0): string => `${(0.05 + lift).toFixed(4)} + ($h - 0.05) * ${g(d).toFixed(5)}`;
-    const ring = (d: number, k = 1, lift = 0) => ({ z: y(d, lift), superellipse: { width: `2 * $hl * ${(d * k).toFixed(5)}`, height: `2 * $hw * ${(d * k).toFixed(5)}`, n: N, count: 32 } });
-    const levels = [1, 0.985, 0.95, 0.89, 0.8, 0.68, 0.53, 0.37, 0.21, 0.07];
+    const levels = [1, 0.985, 0.95, 0.89, 0.8, 0.68, 0.53, 0.37, 0.21, 0.05];
     const front = "$hw + 0.45";
     // Points along the pole on the (+x, +z) diagonal, foot to top, just proud of the fly.
-    const diag = (d: number, out: number): [string, string, string] => [`$hl * ${(C * d).toFixed(5)} + ${out}`, y(d, 0.012), `$hw * ${(C * d).toFixed(5)} + ${out}`];
-    const half = levels.slice(1).map((d) => diag(d, 0.008));
+    const diag = (d: number, out: number): [string, string, string] => [`$hl * ${(C * d).toFixed(5)} + ${out}`, y(d, 0.006), `$hw * ${(C * d).toFixed(5)} + ${out}`];
+    const half = levels.slice(1).map((d) => diag(d, 0.004));
     const pole: Vec[] = [[`-$hl * ${(C * 1.02).toFixed(5)}`, "0.012", `-$hw * ${(C * 1.02).toFixed(5)}`], ...[...half].reverse().map(([a, b, c]) => [`-(${a})`, b, `-(${c})`] as [string, string, string]), [0, "$h + 0.012", 0], ...half.reverse(), [`$hl * ${(C * 1.02).toFixed(5)}`, "0.012", `$hw * ${(C * 1.02).toFixed(5)}`]];
     half.reverse();
     const sleeve = pole.slice(2, -2);
     // A slope tilt for a part on the end panel (x side) at level d: 90 deg minus the slope of the fly there.
     const tilt = (d: number) => `90 - deg(atan(${(0.58 * 2 * d * Math.pow(1 - d * d, -0.42)).toFixed(4)} * ($h - 0.05) / $hl))`;
     kids.push(group("Canvas", [
-      loft("Fly", levels.map((d) => ring(d)), { material: f.a, rotate: [-90, 0, 0] }),
+      loft("Fly", levels.map((d) => panelRing(d, 1, 0)), { material: f.a, rotate: [-90, 0, 0] }),
       // The pegged skirt: a darker band round the hem, a little proud of the fly, with webbing loops to the pegs.
-      loft("Skirt", [{ ...ring(1, 1.012, -0.012) }, { ...ring(0.985, 1.012, 0.004) }], { material: f.b, rotate: [-90, 0, 0] }),
-      tube("Sleeve_A", sleeve, 0.02, { mirror: "Sleeve_B", segments: 8, material: f.s ?? f.b }),
+      loft("Skirt", [panelRing(1, 1.012, -0.012), panelRing(0.985, 1.012, 0.004)], { material: f.b, rotate: [-90, 0, 0] }),
+      tube("Sleeve_A", sleeve, 0.017, { mirror: "Sleeve_B", segments: 8, material: f.s ?? f.b }),
       box("Groundsheet", ["2 * $hl * 0.8", 0.01, "2 * $hw * 0.8"], { at: [0, 0.005, 0], material: f.b }),
       box("Vent_{i}", [0.05, 0.13, "min(0.3, $hw * 0.36)"], { at: [`$hl * 0.45 + 0.012`, y(0.45), 0], rotate: [0, 0, tilt(0.45)], repeat: { count: 2, around: "y" }, material: f.b, bevel: 0.012 }),
       ellipsoid("GuyPoint_{i}", [0.035, 0.035, 0.035], { at: diag(0.6, 0.02), repeat: { count: 2, around: "y" }, mirror: "GuyPointB_{i}", segments: 8, material: f.b }),
@@ -112,8 +127,8 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     ]));
     kids.push(group("Entrance", [
       // A vestibule over the door: a hoop pole holds a short tunnel that ends in a near-upright D-shaped front.
-      loft("Porch", [0, 0.4, 0.75, 1].map((t, j) => ({ z: `$hw * 0.55 + (${front} - $hw * 0.55) * ${t}`, points: archPoints("0.55", "$h * 0.74", [1, 0.97, 0.9, 0.78][j] as number, 10) })), { material: f.a }),
-      tube("Hoop", [-1, -0.96, -0.82, -0.58, -0.3, 0, 0.3, 0.58, 0.82, 0.96, 1].map((c): Vec => [`0.507 * ${c}`, `0.012 + ($h * 0.666) * ${Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(c), 2.6))).toFixed(4)}`, `$hw * 0.55 + (${front} - $hw * 0.55) * 0.75`]), 0.016, { segments: 8, material: f.s ?? f.b }),
+      extrude("Porch", archPoints("0.55", "$h * 0.74", 1, 6), `-(${front})`, "-$hw * 0.55", { rotate: [-90, 0, 0], material: f.a }),
+      tube("Hoop", [-1, -0.9, -0.7, -0.4, 0, 0.4, 0.7, 0.9, 1].map((c): Vec => [`0.566 * ${c}`, `0.012 + ($h * 0.74 + 0.01) * ${Math.pow(Math.max(0, 1 - Math.pow(Math.abs(c), 2.4)), 0.7).toFixed(4)}`, `$hw * 0.55 + (${front} - $hw * 0.55) * 0.75`]), 0.016, { segments: 8, material: f.s ?? f.b }),
       extrude("DoorPanel", archPoints("0.34", "$h * 0.74 * 0.78 * 0.86", 1, 10), `-(${front}) - 0.012`, `-(${front}) + 0.004`, { rotate: [-90, 0, 0], material: "mesh_dark" }),
       box("Zip", [0.018, "$h * 0.74 * 0.78 * 0.82", 0.012], { anchor: "bottom", at: [0, 0.02, `${front} + 0.014`], material: f.b }),
       box("Toggle", [0.12, 0.03, 0.02], { at: [0, "$h * 0.74 * 0.78 * 0.62", `${front} + 0.016`], material: "rope" }),

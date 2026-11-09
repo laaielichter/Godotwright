@@ -56,7 +56,7 @@ function door(name: string, at: [Num, Num, Num], w: string, h: string, kind: Doo
     );
     if (kind === "glass") {
       leaf.push(
-        box("Glass", [`${w} - ${2 * fr} + 0.01`, `${h} - ${2 * fr}`, 0.006], { at: [`-(${w}) / 2`, `(${h}) / 2 + 0.005`, 0.011], material: "glass_clear" }),
+        box("Glass", [`${w} - ${2 * fr} + 0.01`, `${h} - ${2 * fr}`, 0.006], { at: [`-(${w}) / 2`, `(${h}) / 2 + 0.005`, 0.011], material: "glass_cabinet" }),
         box("Muntin", [0.018, `${h} - ${2 * fr} + 0.004`, 0.014], { at: [`-(${w}) / 2`, `(${h}) / 2 + 0.005`, 0.011], bevel: 0.003 }),
       );
     } else {
@@ -65,7 +65,15 @@ function door(name: string, at: [Num, Num, Num], w: string, h: string, kind: Doo
       ] : [] }));
     }
   }
-  leaf.push(box("Reveal", [`${w} + 0.004`, `${h} + 0.006`, 0.004], { at: [`-(${w} + 0.004) / 2`, `(${h}) / 2`, -0.001], material: "reveal" }));
+  if (kind === "glass") {
+    // Only the gap lines round the leaf: a dark backing behind the glass would hide the lit interior.
+    leaf.push(
+      box("Reveal_T", [`${w} + 0.004`, 0.008, 0.004], { at: [`-(${w} + 0.004) / 2`, `${h} + 0.001`, -0.001], material: "reveal" }),
+      box("Reveal_B", [`${w} + 0.004`, 0.008, 0.004], { at: [`-(${w} + 0.004) / 2`, "-0.001", -0.001], material: "reveal" }),
+      box("Reveal_H", [0.008, `${h} + 0.006`, 0.004], { at: [0.0, `(${h}) / 2`, -0.001], material: "reveal" }),
+      box("Reveal_F", [0.008, `${h} + 0.006`, 0.004], { at: [`-(${w})`, `(${h}) / 2`, -0.001], material: "reveal" }),
+    );
+  } else leaf.push(box("Reveal", [`${w} + 0.004`, `${h} + 0.006`, 0.004], { at: [`-(${w} + 0.004) / 2`, `(${h}) / 2`, -0.001], material: "reveal" }));
   const hx = `-(${w}) + 0.04`;
   if (handle === "vbar") leaf.push(barHandle("Handle", `min(0.3, (${h}) * 0.25)`, [hx, `(${h}) / 2`, 0.022], f.metal, { rotate: [0, 0, 90] }));
   else if (handle === "hbar") leaf.push(barHandle("Handle", 0.12, [`-(${w}) + 0.1`, `${h} - 0.06`, 0.022], f.metal));
@@ -94,7 +102,7 @@ function wardrobe(f: Finish): SpecNode[] {
   const dh = "$H - 0.1 - 0.06";
   return [
     carcass("0", "$H - 0.05", [
-      box("Cornice", ["$W + 0.04", 0.06, "$D + 0.03"], { at: [0, "$H - 0.03", 0.015], bevel: 0.01, material: f.top }),
+      board("Cornice", ["$W + 0.04", 0.06, "$D + 0.03"], "x", { at: [0, "$H - 0.03", 0.015], bevel: 0.01, material: f.top }),
       box("Plinth", ["$W + 0.01", 0.1, 0.02], { at: [0, 0, "$D / 2 - 0.005"], anchor: "bottom", bevel: 0.004 }),
     ]),
     shelves("$H - 0.32", "-0.25"),
@@ -109,10 +117,11 @@ function kitchen(f: Finish): SpecNode[] {
     carcass("0.1", "$H - 0.035", [
       box("Plinth", ["$W - 0.004", 0.1, 0.02], { at: [0, 0, "$D / 2 - 0.07"], anchor: "bottom", material: "paint_anthracite" }),
       box("Plinth_Back", ["$W - 0.004", 0.1, 0.02], { at: [0, 0, "-$D / 2 + 0.03"], anchor: "bottom", material: "paint_anthracite" }),
-      box("Worktop", ["$W + 0.02", 0.035, "$D + 0.03"], { at: [0, "$H - 0.0175", 0.015], bevel: 0.004, material: f.top }),
-      box("Drawer_Front", ["$W - 0.006", 0.155, 0.02], { at: [0, "$H - 0.035 - 0.0825", "$D / 2 + 0.01"], bevel: 0.004, material: f.door, children: [
-        barHandle("Handle", "min(0.3, $W * 0.35)", [0, 0.02, 0.01], f.metal),
-      ] }),
+      board("Worktop", ["$W + 0.02", 0.035, "$D + 0.03"], "x", { at: [0, "$H - 0.0175", 0.015], bevel: 0.004, material: f.top }),
+      group("Drawer_Front", [
+        board("Face", ["$W - 0.006", 0.155, 0.02], "x", { bevel: 0.004 }),
+        barHandle("Handle", "min(0.3, $W * 0.35)", [0, 0.02, 0.02], f.metal),
+      ], { at: [0, "$H - 0.035 - 0.0825", "$D / 2 + 0.01"], material: f.door }),
     ]),
     shelves("0.1 + $s + ($H - 0.36) / ($n + 1)", "($H - 0.36) / ($n + 1)"),
     door("Door_L", ["$W / 2 - 0.002", 0.1, "$D / 2"], "$W / 2 - 0.004", dh, "shaker", "hbar", f, "Door_R"),
@@ -124,8 +133,8 @@ function display(f: Finish): SpecNode[] {
   const upper = `$H - 0.12 - 0.05 - ${lower} - 0.035`;
   return [
     carcass("0.1", "$H - 0.04", [
-      box("Crown", ["$W + 0.03", 0.05, "$D + 0.02"], { at: [0, "$H - 0.025", 0.01], bevel: 0.01, material: f.top }),
-      box("Waist", ["$W + 0.02", 0.035, "$D + 0.015"], { at: [0, `0.1 + ${lower} + 0.0175`, 0.008], bevel: 0.006, material: f.top }),
+      board("Crown", ["$W + 0.03", 0.05, "$D + 0.02"], "x", { at: [0, "$H - 0.025", 0.01], bevel: 0.01, material: f.top }),
+      board("Waist", ["$W + 0.02", 0.035, "$D + 0.015"], "x", { at: [0, `0.1 + ${lower} + 0.0175`, 0.008], bevel: 0.006, material: f.top }),
       box("Apron", ["$W", 0.05, 0.02], { at: [0, 0.075, "$D / 2 - 0.01"], bevel: 0.004 }),
       squareLeg("Leg_FL", ["$W / 2 - 0.035", 0, "$D / 2 - 0.035"], 0.102, 0.05, 0.034, "Leg_FR"),
       squareLeg("Leg_BL", ["$W / 2 - 0.035", 0, "-$D / 2 + 0.035"], 0.102, 0.05, 0.034, "Leg_BR"),
@@ -134,6 +143,7 @@ function display(f: Finish): SpecNode[] {
       shell("Bowl", [[0.035, 0.004], [0.07, 0.03], [0.08, 0.05]], 0.004, { at: ["-$W * 0.2", 0, -0.02], material: "ceramic_white", segments: 18 }),
       shell("Vase", [[0.03, 0.004], [0.045, 0.06], [0.025, 0.13], [0.03, 0.16]], 0.004, { at: ["$W * 0.22", 0, -0.03], material: "ceramic_blue", segments: 16 }),
     ]),
+    box("Lining", ["$W - 2 * $s", upper, 0.004], { at: [0, `0.1 + ${lower} + 0.035 + (${upper}) / 2`, "-$D / 2 + 0.012"], material: "lining_lit" }),
     door("Door_UL", ["$W / 2 - 0.002", `0.1 + ${lower} + 0.035`, "$D / 2"], "$W / 2 - 0.004", upper, "glass", "knob", f, "Door_UR"),
     door("Door_LL", ["$W / 2 - 0.002", 0.1, "$D / 2"], "$W / 2 - 0.004", lower, "raised", "knob", f, "Door_LR"),
   ];
@@ -143,7 +153,7 @@ function sideboard(f: Finish): SpecNode[] {
   const dh = "$H - 0.2 - 0.03";
   return [
     carcass("0.2", "$H - 0.03", [
-      box("Top", ["$W + 0.02", 0.03, "$D + 0.015"], { at: [0, "$H - 0.015", 0.007], bevel: 0.008, material: f.top }),
+      board("Top", ["$W + 0.02", 0.03, "$D + 0.015"], "x", { at: [0, "$H - 0.015", 0.007], bevel: 0.008, material: f.top }),
       squareLeg("Leg_FL", ["$W / 2 - 0.06", 0, "$D / 2 - 0.06"], 0.203, 0.045, 0.024, "Leg_FR", { material: f.top }),
       squareLeg("Leg_BL", ["$W / 2 - 0.06", 0, "-$D / 2 + 0.06"], 0.203, 0.045, 0.024, "Leg_BR", { material: f.top }),
       box("Divider_{i}", ["$s", `${dh} - 0.02`, "$D - 0.02"], { at: ["$W / 2 - ($W / 3) * ($i + 1)", "0.2 + $s", -0.005], anchor: "bottom", repeat: { count: 2, step: [0, 0, 0] } }),
@@ -188,7 +198,7 @@ function makeCupboard(style: Style, f: Finish): AssetDraft {
       num("depth", r.d[0], r.d[1], r.d[2], "Depth along z in metres."),
       int("shelves", r.n[0], r.n[1], r.n[2], "Number of shelves inside."),
     ],
-    materials: fmats(...new Set([f.body, f.door, f.top, f.metal, "glass_clear", "paint_anthracite", "ceramic_white", "ceramic_blue", "reveal"])),
+    materials: fmats(...new Set([f.body, f.door, f.top, f.metal, "glass_cabinet", "glass_clear", "paint_anthracite", "lining_lit", "ceramic_white", "ceramic_blue", "reveal"])),
     nodes: [group("Cupboard", { wardrobe, kitchen, display, sideboard }[style](f), { material: f.body, vars: { W: "$width", H: "$height", D: "$depth", n: "$shelves", s: 0.018 } })],
   };
 }

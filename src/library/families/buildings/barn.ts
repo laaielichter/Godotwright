@@ -64,7 +64,8 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     kids.push(box("Corner_BL", [0.14, "$wh - $pl", 0.14], { anchor: "bottom", at: ["-$hw", "$pl", "-$hl"], mirror: "Corner_BR", material: solid(f.trim, LOCAL), bevel: 0.01 }));
   }
   if (style === "steel") {
-    kids.push(box("Rib_{i}", ["2 * $hw + 0.04", "$wh - $pl", 0.05], { anchor: "bottom", at: [0, "$pl", "-$hl + 0.25"], repeat: { count: "floor((2 * $hl - 0.25) / 0.5)", step: [0, 0, 0.5] }, material: f.wall }));
+    // Wall ribs: the pitch grows with the length (about 24 ribs along the longest wall) so they do not alias into moire.
+    kids.push(box("Rib_{i}", ["2 * $hw + 0.04", "$wh - $pl", "$rw"], { anchor: "bottom", at: [0, "$pl", "-$hl + $rp / 2"], repeat: { count: "floor(2 * $hl / $rp)", step: [0, 0, "$rp"] }, material: f.wall }));
     kids.push(box("Column_{i}", [0.25, "$wh", 0.25], { anchor: "bottom", at: ["-$hw - 0.08", 0, "-$hl + 0.1"], repeat: { count: "floor($length / 6) + 1", step: [0, 0, "(2 * $hl - 0.2) / floor($length / 6)"] }, material: "paint_anthracite" }));
   }
 
@@ -97,7 +98,7 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     kids.push(group("LeanTo", [
       box("LeanWall", [0.15, "$wh * 0.55", "2 * $hl * 0.7"], { anchor: "bottom", at: [-4, 0, 0], material: f.wall }),
       box("LeanSheet", [4.6, 0.08, "2 * $hl * 0.7 + 0.4"], { at: [-2.1, "$wh * 0.55 + $wh * 0.3 * 1.9 / 4 + 0.06", 0], rotate: [0, 0, "deg(atan(($wh * 0.85 - $wh * 0.55) / 4.2))"], material: f.roof }),
-      box("LeanRib_{i}", [4.6, 0.04, 0.05], { at: ["-2.1 - 0.056 * sin(atan($wh * 0.3 / 4.2))", "$wh * 0.55 + $wh * 0.3 * 1.9 / 4 + 0.06 + 0.056 * cos(atan($wh * 0.3 / 4.2))", "-$hl * 0.7 - 0.2 + 0.165"], rotate: [0, 0, "deg(atan(($wh * 0.85 - $wh * 0.55) / 4.2))"], repeat: { count: "floor((2 * $hl * 0.7 + 0.4) / 0.33)", step: [0, 0, 0.33] }, material: f.roof }),
+      box("LeanRib_{i}", [4.6, 0.06, "$lw"], { at: ["-2.1 - 0.056 * sin(atan($wh * 0.3 / 4.2))", "$wh * 0.55 + $wh * 0.3 * 1.9 / 4 + 0.06 + 0.056 * cos(atan($wh * 0.3 / 4.2))", "-$hl * 0.7 - 0.2 + $lp / 2"], rotate: [0, 0, "deg(atan(($wh * 0.85 - $wh * 0.55) / 4.2))"], repeat: { count: "floor((2 * $hl * 0.7 + 0.4) / $lp)", step: [0, 0, "$lp"] }, material: f.roof }),
       box("LeanPost_{i}", [0.15, "$wh * 0.55", 0.15], { anchor: "bottom", at: [-4, 0, "-$hl * 0.7"], repeat: { count: 3, step: [0, 0, "$hl * 0.7"] }, material: "paint_anthracite" }),
     ], { at: ["-$hw", 0, 0] }));
   } else {
@@ -168,6 +169,7 @@ function barn(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
         hw: "$width / 2", hl: "$length / 2", wh: "$wallHeight", pl,
         bw: "min($width * 0.2, 2.2)", bh: "min($wallHeight * 0.85, 3.8) - 0.45",
         dw: "min($width * 0.4, 6)", dh: "$wallHeight - 1.2",
+        rp: "max(0.5, 2 * $hl / 24)", rw: "clamp($rp * 0.18, 0.05, 0.14)", lp: "max(0.5, 2 * $hl * 0.7 / 14)", lw: "clamp($lp * 0.2, 0.05, 0.14)",
         wn: "max(1, floor(($length - 2) / 4))", wsp: "$length / max(1, floor(($length - 2) / 4))",
       },
     })],

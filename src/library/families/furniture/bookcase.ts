@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, int, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
 import { label } from "../../palette.js";
-import { BOOK_MATERIALS, books, fmats, shell, squareLeg } from "./parts.js";
+import { BOOK_MATERIALS, board, books, fmats, shell, squareLeg, tubular } from "./parts.js";
 
 const STYLES = ["open", "low", "ladder", "etagere"] as const;
 type Style = (typeof STYLES)[number];
@@ -17,15 +17,19 @@ function open(f: Finish): SpecNode[] {
   return [
     group("Body", [
       box("Side_L", ["$s", "$H - $ct + 0.002", "$D"], { at: ["$W / 2 - $s / 2", 0, 0], anchor: "bottom", bevel: 0.004, mirror: "Side_R" }),
-      box("Cornice", ["$W + 0.03", "$ct", "$D + 0.02"], { at: [0, "$H - $ct / 2", 0.01], bevel: 0.008 }),
-      box("Moulding", ["$W + 0.012", 0.018, "$D + 0.008"], { at: [0, "$H - $ct - 0.007", 0.004], bevel: 0.006 }),
+      board("Cornice", ["$W + 0.03", "$ct", "$D + 0.02"], "x", { at: [0, "$H - $ct / 2", 0.01], bevel: 0.008 }),
+      board("Moulding", ["$W + 0.012", 0.018, "$D + 0.008"], "x", { at: [0, "$H - $ct - 0.007", 0.004], bevel: 0.006 }),
       box("Plinth", ["$W - 2 * $s + 0.004", "$pl", "$s"], { at: [0, 0, "$D / 2 - $s / 2 - 0.012"], anchor: "bottom", bevel: 0.003 }),
-      box("Bottom", ["$W - 2 * $s + 0.004", "$s", "$D - 0.02"], { at: [0, "$pl + $s / 2", 0], bevel: 0.003, children: [books("Books", "$s / 2", "-$sw / 2 + 0.03", 7)], vars: { bh: "$g - $s - 0.03", bd: "$D - 0.06", sw: "$W - 2 * $s" } }),
+      group("Bottom", [
+        board("Plank", ["$W - 2 * $s + 0.004", "$s", "$D - 0.02"], "x", { bevel: 0.003 }),
+        books("Books", "$s / 2", "-$sw / 2 + 0.03", 7),
+      ], { at: [0, "$pl + $s / 2", 0], vars: { bh: "$g - $s - 0.03", bd: "$D - 0.06", sw: "$W - 2 * $s" } }),
     ]),
     box("Back", ["$W - 2 * $s + 0.006", "$H - $ct - $pl", 0.008], { at: [0, "$pl", "-$D / 2 + 0.008"], anchor: "bottom" }),
-    box("Shelf_{i}", ["$W - 2 * $s + 0.004", "$s", "$D - 0.03"], { at: [0, "$pl + $s / 2 + $g", -0.005], repeat: { count: "$n", step: [0, "$g", 0] }, bevel: 0.003, children: [
+    group("Shelf_{i}", [
+      board("Plank", ["$W - 2 * $s + 0.004", "$s", "$D - 0.03"], "x", { bevel: 0.003 }),
       books("Books", "$s / 2"),
-    ] }),
+    ], { at: [0, "$pl + $s / 2 + $g", -0.005], repeat: { count: "$n", step: [0, "$g", 0] } }),
   ];
 }
 
@@ -33,14 +37,14 @@ function low(f: Finish): SpecNode[] {
   return [
     group("Body", [
       box("Side_L", ["$s", "$H - 0.1 - $ct + 0.002", "$D"], { at: ["$W / 2 - $s / 2", 0.1, 0], anchor: "bottom", bevel: 0.004, mirror: "Side_R" }),
-      box("Lid", ["$W + 0.02", "$ct", "$D + 0.01"], { at: [0, "$H - $ct / 2", 0.005], bevel: 0.008 }),
-      box("Bottom", ["$W - 0.004", "$s", "$D"], { at: [0, "0.1 + $s / 2", 0], bevel: 0.004 }),
+      board("Lid", ["$W + 0.02", "$ct", "$D + 0.01"], "x", { at: [0, "$H - $ct / 2", 0.005], bevel: 0.008 }),
+      board("Bottom", ["$W - 0.004", "$s", "$D"], "x", { at: [0, "0.1 + $s / 2", 0], bevel: 0.004 }),
       box("Divider", ["$s", "$H - 0.1 - $ct - $s + 0.004", "$D - 0.02"], { at: [0, "0.1 + $s - 0.002", -0.01], anchor: "bottom", bevel: 0.003 }),
       squareLeg("Leg_FL", ["$W / 2 - 0.05", 0, "$D / 2 - 0.05"], 0.104, 0.04, 0.026, "Leg_FR", { material: f.frame }),
       squareLeg("Leg_BL", ["$W / 2 - 0.05", 0, "-$D / 2 + 0.05"], 0.104, 0.04, 0.026, "Leg_BR", { material: f.frame }),
     ]),
     box("Back", ["$W - 2 * $s + 0.006", "$H - 0.1 - $ct", 0.008], { at: [0, 0.1, "-$D / 2 + 0.006"], anchor: "bottom" }),
-    box("Shelf_{i}", ["$W - 2 * $s + 0.004", "$s", "$D - 0.03"], { at: [0, "0.1 + $s / 2 + $g", -0.005], repeat: { count: "$n", step: [0, "$g", 0] }, bevel: 0.003 }),
+    board("Shelf_{i}", ["$W - 2 * $s + 0.004", "$s", "$D - 0.03"], "x", { at: [0, "0.1 + $s / 2 + $g", -0.005], repeat: { count: "$n", step: [0, "$g", 0] }, bevel: 0.003 }),
     group("Book_Row", [books("Books", "0.1 + $s", "-$W / 2 + 0.05", 2)], { vars: { sw: "$W / 2 - 0.05", bh: "$g - $s - 0.03", bd: "$D - 0.06" } }),
     shell("Vase", [[0.05, "$H - 0.001"], [0.075, "$H + 0.08"], [0.04, "$H + 0.2"], [0.045, "$H + 0.24"]], 0.005, { at: ["$W / 2 - 0.15", 0, 0], material: "ceramic_celadon", segments: 20 }),
   ];
@@ -56,9 +60,10 @@ function ladder(f: Finish): SpecNode[] {
         box("Cap", [0.042, 0.012, 0.037], { at: [0, 0.004, 0], material: "rubber", bevel: 0.003 }),
       ] }),
     ]),
-    box("Shelf_{i}", ["$W - 0.076", 0.022, `${zf} + $D / 2`], { at: [0, y, `(${zf} - $D / 2) / 2`], repeat: { count: "$n", step: [0, 0, 0] }, bevel: 0.004, children: [
-      box("Lip", ["$W - 0.08", 0.045, 0.016], { at: [0, 0.02, `(${zf} + $D / 2) / 2 - 0.008`], bevel: 0.004 }),
-    ] }),
+    group("Shelf_{i}", [
+      board("Plank", ["$W - 0.076", 0.022, `${zf} + $D / 2`], "x", { bevel: 0.004 }),
+      board("Lip", ["$W - 0.08", 0.045, 0.016], "x", { at: [0, 0.02, `(${zf} + $D / 2) / 2 - 0.008`], bevel: 0.004 }),
+    ], { at: [0, y, `(${zf} - $D / 2) / 2`], repeat: { count: "$n", step: [0, 0, 0] } }),
   ];
 }
 
@@ -79,9 +84,10 @@ function etagere(f: Finish): SpecNode[] {
       brace("Brace_R1", ["-$W / 2 + 0.015", 0.1, "-$D / 2 + 0.015"], ["-$W / 2 + 0.015", "$H - 0.1", "$D / 2 - 0.015"]),
       brace("Brace_R2", ["-$W / 2 + 0.015", 0.1, "$D / 2 - 0.015"], ["-$W / 2 + 0.015", "$H - 0.1", "-$D / 2 + 0.015"]),
     ]),
-    box("Shelf_{i}", ["$W + 0.01", glass ? 0.012 : 0.026, "$D + 0.01"], { at: [0, "0.12", 0], repeat: { count: "$n", step: [0, "$g", 0] }, bevel: glass ? 0.003 : 0.005, material: f.wood, children: [
+    group("Shelf_{i}", [
+      board("Plank", ["$W + 0.01", glass ? 0.012 : 0.026, "$D + 0.01"], "x", { bevel: glass ? 0.003 : 0.005 }),
       books("Books", glass ? 0.006 : 0.013, "-$sw / 2 + 0.05"),
-    ] }),
+    ], { at: [0, "0.12", 0], repeat: { count: "$n", step: [0, "$g", 0] }, material: f.wood }),
   ];
 }
 
@@ -120,8 +126,8 @@ function makeBookcase(style: Style, f: Finish): AssetDraft {
       num("depth", r.d[0], r.d[1], r.d[2], "Depth along z in metres."),
       int("shelves", r.n[0], r.n[1], r.n[2], "Number of shelves."),
     ],
-    materials: { ...fmats(...new Set([f.wood, f.frame, "rubber", "ceramic_celadon"])), ...BOOK_MATERIALS },
-    nodes: [group("Bookcase", nodes, { material: f.frame, vars })],
+    materials: { ...fmats(...new Set([f.wood, f.frame, tubular(f.frame), "rubber", "ceramic_celadon"])), ...BOOK_MATERIALS },
+    nodes: [group("Bookcase", nodes, { material: style === "etagere" ? tubular(f.frame) : f.frame, vars })],
   };
 }
 

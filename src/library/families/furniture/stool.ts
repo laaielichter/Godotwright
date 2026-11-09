@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { board, fmats, ring } from "./parts.js";
+import { board, fmats, ring, tubular } from "./parts.js";
 
 const STYLES = ["bar", "kitchen", "milking", "swivel"] as const;
 type Style = (typeof STYLES)[number];
@@ -51,8 +51,8 @@ function bar(f: Finish): SpecNode[] {
       tube("Leg_{i}", [["$rt", "$sh - 0.07", 0], ["$rb", 0.016, 0]], 0.013, { segments: 12, repeat: { count: 4, around: "y", phase: 45 }, children: [
         cyl("Glide", 0.016, 0.016, { at: ["$rb", 0, 0], anchor: "base", material: "rubber", segments: 12 }),
       ] }),
-    ], { material: f.frame }),
-    ring("Footrest_Ring", "$rb + ($rt - $rb) * ($fh - 0.016) / ($sh - 0.086)", 0.011, "$fh", { material: f.frame, segments: 28 }),
+    ], { material: tubular(f.frame) }),
+    ring("Footrest_Ring", "$rb + ($rt - $rb) * ($fh - 0.016) / ($sh - 0.086)", 0.011, "$fh", { material: tubular(f.frame), segments: 28 }),
   ];
 }
 
@@ -104,7 +104,7 @@ function swivel(f: Finish): SpecNode[] {
       ring("Footrest_Ring", "$sr * 0.95", 0.011, "$fh", { segments: 32 }),
       cyl("Spoke_{i}", 0.008, "$sr * 0.95 - 0.02", { axis: "x", at: ["$sr * 0.475 + 0.01", "$fh", 0], repeat: { count: 3, around: "y", phase: 30 }, segments: 8 }),
       cyl("Collar", 0.042, 0.04, { at: [0, "$fh", 0], segments: 16 }),
-    ], { material: f.frame }),
+    ], { material: tubular(f.frame) }),
   ];
 }
 
@@ -139,7 +139,7 @@ function makeStool(style: Style, f: Finish): AssetDraft {
     description: `${TEXT[style]}, in ${frame}${f.seat !== f.frame ? ` with a ${seat} seat` : ""}. It has no back and faces +z.`,
     tags: [style, f.frame.replace(/^paint_/, ""), f.seat.split("_").pop() ?? f.seat, ...(style === "bar" ? ["barkruk", "bar stool"] : style === "milking" ? ["melkkrukje", "milking stool"] : style === "swivel" ? ["draaikruk", "swivel"] : ["keukenkruk", "kitchen stool"])],
     params: PARAMS[style](),
-    materials: fmats(...new Set([f.frame, f.seat, "rubber", "black_steel", "chrome", "dark_stain"])),
+    materials: fmats(...new Set([f.frame, tubular(f.frame), f.seat, "rubber", "black_steel", "chrome", "dark_stain"])),
     nodes,
   };
 }

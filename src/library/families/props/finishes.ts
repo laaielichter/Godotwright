@@ -69,8 +69,8 @@ export const FINISH: Record<string, MaterialDef> = {
   // Stone: dressed blocks ("stone") for walls and plinths, carved stone ("concrete": weathered, blotchy) for figures.
   // Tuned in the Godot sheets: the stone and brick textures keep the colour as their mean, and a plinth top or a
   // sunlit face reads lighter than the albedo suggests, so these sit a little under the textbook values.
-  limestone_block: stone(0.23, 0.218, 0.185),
-  limestone_carved: stone(0.23, 0.218, 0.185, "concrete", 0.85),
+  limestone_block: stone(0.19, 0.172, 0.13),
+  limestone_carved: stone(0.19, 0.172, 0.13, "concrete", 0.85),
   sandstone_block: stone(0.25, 0.17, 0.09),
   sandstone_carved: stone(0.25, 0.17, 0.09, "concrete", 0.9),
   granite_block: stone(0.15, 0.15, 0.142, "stone", 0.75),

@@ -4,7 +4,7 @@ import { BMATS, gableRoof, slab, swanDownpipe } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
   // Grey volcanic tuff blocks, as on Rhineland and Dutch Romanesque churches.
-  tuff: { color: [0.2, 0.195, 0.18], metallic: 0, roughness: 0.92, texture: "stone" },
+  tuff: { color: [0.115, 0.11, 0.098], metallic: 0, roughness: 0.92, texture: "stone" },
   stained_glass: { color: [0.035, 0.032, 0.055], metallic: 0.3, roughness: 0.08, emissive: [0.018, 0.012, 0.03] },
   clock_face: { color: [0.6, 0.58, 0.52], metallic: 0, roughness: 0.4, texture: "painted" },
   bell_bronze: { color: [0.55, 0.36, 0.17], metallic: 1, roughness: 0.35 },

@@ -49,6 +49,10 @@ interface CarStyle {
   crease: number;
   /** Inward lean of the side above the crease, per metre. */
   lean: number;
+  /** Extra tuck of the lower flank over the overhangs (m). */
+  noseTuck: number;
+  /** Height of the wing crest over the arch (m). */
+  wingUp: number;
   /** Pickup only: bed floor as a fraction of the height, and the cab back (z fraction). */
   bed?: [number, number];
 }
@@ -58,12 +62,12 @@ interface CarStyle {
 const STYLES: Record<string, CarStyle> = {
   hatchback: {
     name: "hatchback", text: "a compact five-door hatchback with a short nose and a steep tailgate",
-    length: [4.0, 3.6, 4.35], width: [1.76, 1.66, 1.84], height: [1.48, 1.42, 1.56], wheel: [0.32, 0.3, 0.34],
+    length: [4.0, 3.6, 4.35], width: [1.76, 1.66, 1.84], height: [1.45, 1.4, 1.52], wheel: [0.32, 0.3, 0.34],
     ff: 0.67, fr: 0.68, a0: 0.52, tyreW: 0.21,
-    upper: [[0.955, 0.13], [0.99, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.95, 0.5, "hoodF"], [0.45, 0.59, "hoodR"], [0.0, 0.6], [-0.5, 0.615], [-0.9, 0.63, "trunkF"], [-0.975, 0.52, "lampR"], [-1.0, 0.36, "trunkR"], [-0.995, 0.22], [-0.955, 0.12]],
-    belt: 0.6, glass: [[0.45, 0.04], [0.33, 0.48], [0.18, 0.88], [0.06, 1], [-0.72, 1], [-0.82, 0.9], [-0.87, 0.5], [-0.9, 0.04]], shelf: 0.05, roof: [0.06, -0.73], tumble: 0.3,
+    upper: [[0.955, 0.13], [0.99, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.95, 0.52, "hoodF"], [0.45, 0.635, "hoodR"], [0.0, 0.65], [-0.5, 0.665], [-0.93, 0.675, "trunkF"], [-0.975, 0.56, "lampR"], [-1.0, 0.4, "trunkR"], [-0.995, 0.22], [-0.955, 0.12]],
+    belt: 0.66, glass: [[0.46, 0.04], [0.34, 0.48], [0.2, 0.88], [0.08, 1], [-0.62, 1], [-0.74, 0.9], [-0.84, 0.5], [-0.925, 0.04]], shelf: 0.05, roof: [0.08, -0.63], tumble: 0.3,
     doors: 4, doorZ: [0.36, -0.06, -0.5], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.1, rear: -0.55 },
-    plan: [0.78, 0.97, 0.84], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14,
+    plan: [0.78, 0.97, 0.84], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14, noseTuck: 0.09, wingUp: 0.17,
   },
   sedan: {
     name: "sedan", text: "a four-door saloon with a separate boot and a sloping rear window",
@@ -72,7 +76,7 @@ const STYLES: Record<string, CarStyle> = {
     upper: [[0.965, 0.12], [0.993, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.955, 0.5, "hoodF"], [0.42, 0.585, "hoodR"], [0.1, 0.595], [-0.3, 0.6], [-0.63, 0.612, "trunkF"], [-0.94, 0.625, "trunkR"], [-0.99, 0.56], [-1.0, 0.45, "lampR"], [-0.99, 0.28], [-0.96, 0.12]],
     belt: 0.6, glass: [[0.42, 0.04], [0.3, 0.48], [0.15, 0.88], [0.04, 1], [-0.3, 1], [-0.44, 0.84], [-0.55, 0.45], [-0.63, 0.04]], shelf: 0.05, roof: [0.04, -0.31], tumble: 0.3,
     doors: 4, doorZ: [0.34, -0.04, -0.4], trunk: "lid", lamps: "slim", tails: "corner", bumper: "body", seats: { front: -0.04, rear: -0.38 },
-    plan: [0.78, 0.97, 0.82], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14,
+    plan: [0.78, 0.97, 0.82], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14, noseTuck: 0.09, wingUp: 0.17,
   },
   estate: {
     name: "estate", text: "a long estate car with a flat roof that runs to an upright tailgate",
@@ -81,7 +85,7 @@ const STYLES: Record<string, CarStyle> = {
     upper: [[0.965, 0.12], [0.993, 0.22], [1.0, 0.33, "lampF"], [0.99, 0.43], [0.955, 0.5, "hoodF"], [0.44, 0.58, "hoodR"], [0.0, 0.59], [-0.6, 0.605], [-0.94, 0.62, "trunkF"], [-0.985, 0.5, "lampR"], [-1.0, 0.38, "trunkR"], [-0.995, 0.23], [-0.96, 0.12]],
     belt: 0.59, glass: [[0.44, 0.04], [0.32, 0.48], [0.17, 0.88], [0.06, 1], [-0.8, 1], [-0.88, 0.85], [-0.915, 0.45], [-0.94, 0.04]], shelf: 0.05, roof: [0.06, -0.83], tumble: 0.3,
     doors: 4, doorZ: [0.36, -0.02, -0.38], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: -0.06, rear: -0.4 }, rails: true,
-    plan: [0.78, 0.97, 0.84], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14,
+    plan: [0.78, 0.97, 0.84], tuck: 0.05, edge: 0.03, crease: 1, lean: 0.14, noseTuck: 0.09, wingUp: 0.17,
   },
   suv: {
     name: "SUV", text: "a tall SUV with high ground clearance, black wheel-arch trims and roof rails",
@@ -90,7 +94,7 @@ const STYLES: Record<string, CarStyle> = {
     upper: [[0.96, 0.16], [0.99, 0.27], [1.0, 0.4, "lampF"], [0.99, 0.5], [0.96, 0.555, "hoodF"], [0.46, 0.61, "hoodR"], [0.0, 0.615], [-0.6, 0.625], [-0.92, 0.635, "trunkF"], [-0.98, 0.53, "lampR"], [-1.0, 0.4, "trunkR"], [-0.995, 0.26], [-0.965, 0.15]],
     belt: 0.62, glass: [[0.46, 0.04], [0.36, 0.48], [0.23, 0.88], [0.13, 1], [-0.76, 1], [-0.85, 0.88], [-0.895, 0.45], [-0.92, 0.04]], shelf: 0.055, roof: [0.13, -0.78], tumble: 0.26,
     doors: 4, doorZ: [0.37, -0.04, -0.47], trunk: "gate", lamps: "square", tails: "tall", bumper: "black", seats: { front: -0.04, rear: -0.48 }, rails: true,
-    plan: [0.82, 0.97, 0.86], tuck: 0.035, edge: 0.035, crease: 0.8, lean: 0.1,
+    plan: [0.82, 0.97, 0.86], tuck: 0.035, edge: 0.035, crease: 0.8, lean: 0.1, noseTuck: 0.09, wingUp: 0.17,
   },
   pickup: {
     name: "pickup", text: "a double-cab pickup with a long bonnet and an open load bed behind the cab",
@@ -99,7 +103,7 @@ const STYLES: Record<string, CarStyle> = {
     upper: [[0.965, 0.17], [0.992, 0.28], [1.0, 0.42, "lampF"], [0.995, 0.51], [0.965, 0.565, "hoodF"], [0.5, 0.6, "hoodR"], [0.0, 0.605], [-0.5, 0.605], [-0.985, 0.6, "trunkF"], [-1.0, 0.56, "lampR"], [-1.0, 0.28], [-0.97, 0.17]],
     belt: 0.6, glass: [[0.5, 0.04], [0.41, 0.45], [0.3, 0.86], [0.2, 1], [-0.17, 1], [-0.185, 0.6], [-0.2, 0.04]], shelf: 0.06, roof: [0.2, -0.18], tumble: 0.22,
     doors: 4, doorZ: [0.4, 0.06, -0.19], trunk: "bed", lamps: "square", tails: "tall", bumper: "chrome", seats: { front: 0.12, rear: -0.14 },
-    plan: [0.88, 0.98, 0.97], tuck: 0.03, edge: 0.03, crease: 0.6, lean: 0.08, bed: [0.53, -0.21],
+    plan: [0.88, 0.98, 0.97], tuck: 0.03, edge: 0.03, crease: 0.6, lean: 0.08, noseTuck: 0.09, wingUp: 0.17, bed: [0.53, -0.21],
   },
   coupe: {
     name: "coupe", text: "a low two-door coupe with a long door and a fastback roofline",
@@ -108,25 +112,25 @@ const STYLES: Record<string, CarStyle> = {
     upper: [[0.965, 0.11], [0.993, 0.2], [1.0, 0.31, "lampF"], [0.99, 0.4], [0.955, 0.47, "hoodF"], [0.32, 0.585, "hoodR"], [0.0, 0.585], [-0.5, 0.6], [-0.7, 0.61, "trunkF"], [-0.95, 0.625, "trunkR"], [-0.99, 0.56], [-1.0, 0.46, "lampR"], [-0.99, 0.27], [-0.96, 0.11]],
     belt: 0.6, glass: [[0.32, 0.04], [0.2, 0.45], [0.06, 0.88], [-0.05, 1], [-0.25, 1], [-0.42, 0.78], [-0.58, 0.4], [-0.71, 0.04]], shelf: 0.06, roof: [-0.05, -0.27], tumble: 0.34,
     doors: 2, doorZ: [0.33, -0.22], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.14, rear: -0.44 }, spoiler: true,
-    plan: [0.77, 0.95, 0.82], tuck: 0.055, edge: 0.03, crease: 1, lean: 0.16,
+    plan: [0.77, 0.95, 0.82], tuck: 0.055, edge: 0.03, crease: 1, lean: 0.16, noseTuck: 0.09, wingUp: 0.17,
   },
   mpv: {
     name: "MPV", text: "a tall people carrier with a short nose, a long steep windscreen and a boxy cabin",
-    length: [4.6, 4.3, 4.9], width: [1.86, 1.78, 1.95], height: [1.76, 1.66, 1.86], wheel: [0.335, 0.31, 0.35],
+    length: [4.6, 4.3, 4.9], width: [1.86, 1.78, 1.95], height: [1.65, 1.58, 1.75], wheel: [0.335, 0.31, 0.35],
     ff: 0.68, fr: 0.7, a0: 0.45, tyreW: 0.22,
-    upper: [[0.96, 0.12], [0.99, 0.22], [1.0, 0.31, "lampF"], [0.985, 0.41], [0.94, 0.48, "hoodF"], [0.66, 0.54, "hoodR"], [0.3, 0.55], [-0.5, 0.56], [-0.94, 0.57, "trunkF"], [-0.985, 0.46, "lampR"], [-1.0, 0.34, "trunkR"], [-0.995, 0.23], [-0.96, 0.12]],
-    belt: 0.55, glass: [[0.66, 0.04], [0.54, 0.4], [0.38, 0.84], [0.26, 1], [-0.84, 1], [-0.9, 0.85], [-0.925, 0.45], [-0.94, 0.04]], shelf: 0.05, roof: [0.26, -0.86], tumble: 0.2,
+    upper: [[0.96, 0.13], [0.99, 0.23], [1.0, 0.33, "lampF"], [0.985, 0.43], [0.94, 0.51, "hoodF"], [0.66, 0.585, "hoodR"], [0.3, 0.6], [-0.5, 0.61], [-0.94, 0.62, "trunkF"], [-0.985, 0.5, "lampR"], [-1.0, 0.36, "trunkR"], [-0.995, 0.23], [-0.96, 0.12]],
+    belt: 0.6, glass: [[0.66, 0.04], [0.54, 0.4], [0.38, 0.84], [0.26, 1], [-0.8, 1], [-0.87, 0.85], [-0.91, 0.45], [-0.945, 0.04]], shelf: 0.05, roof: [0.26, -0.82], tumble: 0.2,
     doors: 4, doorZ: [0.39, 0.0, -0.45], trunk: "gate", lamps: "slim", tails: "tall", bumper: "body", seats: { front: 0.1, rear: -0.38 }, rails: true,
-    plan: [0.8, 0.975, 0.86], tuck: 0.045, edge: 0.04, crease: 0.8, lean: 0.1,
+    plan: [0.8, 0.975, 0.86], tuck: 0.045, edge: 0.04, crease: 0.8, lean: 0.1, noseTuck: 0.09, wingUp: 0.17,
   },
   sports: {
     name: "sports car", text: "a low, wide mid-engined sports car with a cab-forward canopy and a rear spoiler",
     length: [4.4, 4.1, 4.65], width: [1.92, 1.85, 2.0], height: [1.3, 1.27, 1.36], wheel: [0.335, 0.31, 0.345],
     ff: 0.68, fr: 0.64, a0: 0.62, tyreW: 0.28,
-    upper: [[0.97, 0.09], [0.993, 0.17], [1.0, 0.26], [0.99, 0.36, "lampF"], [0.955, 0.46, "hoodF"], [0.45, 0.6, "hoodR"], [0.0, 0.62], [-0.4, 0.625], [-0.48, 0.635, "trunkF"], [-0.95, 0.65, "trunkR"], [-0.99, 0.59], [-1.0, 0.47, "lampR"], [-0.99, 0.23], [-0.965, 0.09]],
-    belt: 0.62, glass: [[0.45, 0.04], [0.3, 0.45], [0.14, 0.88], [0.04, 1], [-0.18, 1], [-0.32, 0.72], [-0.42, 0.35], [-0.48, 0.04]], shelf: 0.09, roof: [0.04, -0.2], tumble: 0.42,
+    upper: [[0.97, 0.09], [0.993, 0.17], [1.0, 0.26], [0.99, 0.35, "lampF"], [0.955, 0.43, "hoodF"], [0.7, 0.55], [0.45, 0.645, "hoodR"], [0.0, 0.67], [-0.4, 0.675], [-0.48, 0.68, "trunkF"], [-0.95, 0.69, "trunkR"], [-0.99, 0.62], [-1.0, 0.5, "lampR"], [-0.99, 0.23], [-0.965, 0.09]],
+    belt: 0.67, glass: [[0.45, 0.04], [0.3, 0.45], [0.14, 0.88], [0.04, 1], [-0.18, 1], [-0.32, 0.72], [-0.42, 0.35], [-0.48, 0.04]], shelf: 0.09, roof: [0.04, -0.2], tumble: 0.42,
     doors: 2, doorZ: [0.34, -0.2], trunk: "lid", lamps: "slim", tails: "bar", bumper: "body", seats: { front: -0.08 }, spoiler: true,
-    plan: [0.76, 0.92, 0.84], tuck: 0.07, edge: 0.025, crease: 1, lean: 0.2,
+    plan: [0.76, 0.92, 0.84], tuck: 0.07, edge: 0.025, crease: 1, lean: 0.2, noseTuck: 0.09, wingUp: 0.115,
   },
   vintage: {
     name: "vintage", text: "a 1950s-style saloon with round headlamps, chrome bumpers, whitewall tyres and chrome hubcaps",
@@ -135,7 +139,7 @@ const STYLES: Record<string, CarStyle> = {
     upper: [[0.955, 0.16], [0.985, 0.26], [1.0, 0.35], [0.99, 0.41, "lampF"], [0.95, 0.48, "hoodF"], [0.38, 0.565, "hoodR"], [0.0, 0.575], [-0.32, 0.58], [-0.55, 0.585, "trunkF"], [-0.92, 0.54, "trunkR"], [-0.975, 0.48], [-0.995, 0.4, "lampR"], [-0.995, 0.28], [-0.955, 0.16]],
     belt: 0.57, glass: [[0.38, 0.04], [0.3, 0.45], [0.22, 0.86], [0.14, 1], [-0.22, 1], [-0.34, 0.85], [-0.46, 0.45], [-0.56, 0.04]], shelf: 0.05, roof: [0.14, -0.24], tumble: 0.3,
     doors: 4, doorZ: [0.34, -0.02, -0.37], trunk: "lid", lamps: "round", tails: "round", bumper: "chrome", seats: { front: 0.0, rear: -0.34 },
-    plan: [0.84, 0.98, 0.86], tuck: 0.09, edge: 0.07, crease: 0.15, lean: 0.3,
+    plan: [0.84, 0.98, 0.86], tuck: 0.09, edge: 0.07, crease: 0.15, lean: 0.3, noseTuck: 0.09, wingUp: 0.17,
   },
 };
 
@@ -210,7 +214,7 @@ class Body {
   }
   /** Stations are asked for again and again (by every panel, seal and light), and the answer never changes. */
   private memo = new Map<string, unknown>();
-  private cached<T>(key: string, make: () => T): T {
+  cached<T>(key: string, make: () => T): T {
     if (this.memo.has(key)) return this.memo.get(key) as T;
     const value = make();
     this.memo.set(key, value);
@@ -297,7 +301,7 @@ class Body {
     // Over the arches the wings rise where the bonnet is low (sports cars): the shoulder stays 17 cm over the arch.
     const sm = (v: number) => { const c = Math.max(0, Math.min(1, v)); return c * c * (3 - 2 * c); };
     const w = s < 1 ? sm(1 - (1 - s) / 0.8) : s <= 2 ? 1 : s < 3 ? Math.max(sm(1 - (s - 2) / 0.8), sm(1 - (3 - s) / 0.8)) : s <= 4 ? 1 : sm(1 - (s - 4) / 0.8);
-    const wing = L(0.17, { wr: 1, Ra: 1 });
+    const wing = L(st.wingUp, { wr: 1, Ra: 1 });
     const any = (f2: (e: Record<string, number>) => boolean) => this.envs.some(f2);
     if (w > 0 && ev(wing) > ev(yE) - 0.03) yE = lerpL(yE, wing, w);
     // The shoulder crease runs level along the side, a little under the belt; at nose and tail it follows the top edge.
@@ -316,8 +320,11 @@ class Body {
     const hs = ev(yC) - ev(yB);
     const hwm = L(0, { W2: this.hw(s) });
     const x = (d: number): Lin => ladd(hwm, L(-d));
-    const rb = Math.min(0.06, 0.3 * hs);
-    const tuck = st.tuck * Math.min(1, hs / 0.4);
+    // The lower flank of the nose and tail tucks in, so that the tyres show from the front and the rear.
+    const so = s <= 2.5 ? s : 5 - s;
+    const ov = 1 - sm((so - 0.55) / 0.9);
+    const rb = Math.min(0.06 + 0.07 * ov, 0.3 * hs);
+    const tuck = st.tuck * Math.min(1, hs / 0.4) + st.noseTuck * ov;
     const cm = Math.min(0.02, 0.22 * hs), cp = Math.min(0.015, 0.3 * (ev(yE) - ev(yC)));
     const up = ev(yE) - ev(yC);
     const re = Math.min(st.edge, 0.4 * up, 0.3 * (ev(yE) - ev(yB)));
@@ -344,7 +351,10 @@ class Body {
       pts.push([lscale(xe, 0.62), lerpL(yE, yT, 1 - 0.62 * 0.62)], [lscale(xe, 0.25), lerpL(yE, yT, 1 - 0.25 * 0.25)]);
     }
     // Under the body: over an arch the tunnel only spans the wheel; inboard of it the body keeps its floor (a well wall).
-    const xin = L(-(st.tyreW + 0.075), { W2: 1 });
+    let xin = L(-(st.tyreW + 0.075), { W2: 1 });
+    // Never further out than the rounded bottom corner of the flank (over the overhangs, where the flank tucks in).
+    const cornerX = x(tuck + rb);
+    if (this.envs.some((e) => lev(cornerX, e) - 0.05 < lev(xin, e))) xin = ladd(cornerX, L(-0.05));
     const floor = this.arch(s) ? this.sill : yB;
     const under: LP[] = [[ladd(xin, L(-0.03)), floor], [xin, yB]];
     return { pts, under, yB, yT, yE, yC, xe, hwm, rb };
@@ -358,6 +368,14 @@ class Body {
   ringDef(s: number): P2[] { return this.ring(s).map(([x, y]) => [this.ev(x), this.ev(y)]); }
   /** The station where the front (or rear) surface passes through (x, y) at the defaults. */
   surfaceS(x: number, y: number, rear = false): number {
+    const key = `S${Math.round(x * 10000)}|${Math.round(y * 10000)}|${rear ? 1 : 0}`;
+    const hit = this.memo.get(key) as number | undefined;
+    if (hit !== undefined) return hit;
+    const v = this.surfaceSRaw(x, y, rear);
+    this.memo.set(key, v);
+    return v;
+  }
+  private surfaceSRaw(x: number, y: number, rear: boolean): number {
     let a = rear ? 4 : 0, b = rear ? 5 : 1;
     if (!rear && !inside(this.ringDef(1), [x, y])) return 1;
     if (rear && !inside(this.ringDef(4), [x, y])) return 4;
@@ -441,6 +459,16 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
   };
   kids.push(loft("Roof", [roofSec(rz1, -0.03, false), roofSec(rz1, 0, true), roofSec((rz0 + rz1) / 2, 0, true), roofSec(rz0, 0, true), roofSec(rz0, 0.03, false)], { material: roofMat }));
 
+  // Roof spoiler lip over the tailgate (hatchback, estate, SUV, MPV): a swept blade with two end plates.
+  if (st.trunk === "gate") {
+    const c = glassAt(st.roof[1], 1);
+    const wl = ls(lscale(ladd(c.wt, L(-0.09)), 2));
+    kids.push(group("RoofSpoiler", [
+      box("Blade", [wl, 0.018, 0.17], { at: [0, 0.004, 0.0], rotate: [-9, 0, 0], bevel: 0.007, material: roofMat }),
+      box("Plate_L", [0.012, 0.05, 0.17], { at: [ls(lscale(ladd(c.wt, L(-0.09)), 1)), -0.012, 0.0], rotate: [-9, 0, 0], bevel: 0.004, material: roofMat, mirror: "Plate_R" }),
+    ], { at: [0, `$H - 0.028`, `${ls(c.z)} - 0.06`] }));
+  }
+
   // Pillars along the glass corners (A at the windscreen, C at the rear window), B on the side glass; window seals.
   const cornerPt = (g: ReturnType<typeof glassAt>, out: number): [Num, Num, Num] => [ls(ladd(g.half[3]![0], L(out))), ls(ladd(g.half[3]![1], L(out * 0.5))), ls(g.z)];
   const front = gl.filter((g) => g.s <= B.sAt(st.roof[0]) + 1e-6);
@@ -488,14 +516,19 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     const span = z0 - z1;
     const mid = [0.12, 0.27, 0.42, 0.58, 0.73, 0.88].map((u) => z1 + span * u);
     const zs = [z1 + 0.003 / env.L2!, z1 + (0.025 / env.L2!), ...mid, z0 - 0.025 / env.L2!, z0 - 0.003 / env.L2!];
-    const zg = [z1 - 0.004 / env.L2!, z1 + 0.025 / env.L2!, ...mid, z0 - 0.025 / env.L2!, z0 + 0.004 / env.L2!];
     const yH = doorTopY - 0.1;
     const sH = B.sAt(z1 + 0.16 / env.L2!);
     const handle = box("Handle", [0.03, 0.028, 0.16], { at: [ls(lsub(ladd(B.sideX(sH, yH), L(0.012)), origin[0])), ls(lsub(L(yH - st.belt * Hd, { H: st.belt }), origin[1])), ls(lsub(B.Z(sH), origin[2]))], bevel: 0.01, material: st.bumper === "chrome" ? "chrome" : "satin_black" });
-    zs.reverse(); zg.reverse();
+    zs.reverse();
+    // The shut line is a thin dark tube around the door (never a full dark shell under the skin: coplanar layers flicker).
+    const pathAt = (zf: number, off: number): [Num, Num, Num][] => { const s = B.sAt(zf); return heights.map((yy, i) => [ls(lsub(ladd(B.sideX(s, yy), L(off)), origin[0])), ls(lsub(hLin[i]!, origin[1])), ls(lsub(B.Z(s), origin[2]))] as [Num, Num, Num]); };
+    const along = (y: number, i: number, fracs: number[]): [Num, Num, Num][] => fracs.map((zf) => { const s = B.sAt(zf); return [ls(lsub(ladd(B.sideX(s, y), L(0.003)), origin[0])), ls(lsub(hLin[i]!, origin[1])), ls(lsub(B.Z(s), origin[2]))] as [Num, Num, Num]; });
+    const bottomZ = [z0, ...mid.slice().reverse(), z1];
     return group(name, [
-      loft("Skin", strip(zs, 0.0045, 0.006, 0, origin), { material: "body_paint" }),
-      loft("Gap", strip(zg, 0.0018, 0.008, 0.005, origin), { material: "panel_gap" }),
+      loft("Skin", strip(zs, 0.007, 0.006, 0, origin), { material: "body_paint" }),
+      tube("ShutFront", pathAt(z0 + 0.002 / env.L2!, 0.003), 0.0032, { segments: 5, material: "panel_gap" }),
+      tube("ShutRear", pathAt(z1 - 0.002 / env.L2!, 0.003), 0.0032, { segments: 5, material: "panel_gap" }),
+      tube("ShutSill", along(heights[0]! + 0.004, 0, bottomZ), 0.0032, { segments: 5, material: "panel_gap" }),
       handle,
     ], { at: [ls(origin[0]), ls(origin[1]), ls(origin[2])], mirror });
   };
@@ -522,9 +555,21 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
       const tipY = (up - down) / 2;
       return { z: ls(lsub(B.Z(s), origin[1])), points: [P(e, grow, tipY), P(t1, 0, up), P(t2, 0, up), P(M(t2), 0, up), P(M(t1), 0, up), P(M(e), -grow, tipY), P(M(t1), 0, -down), P(M(t2), 0, -down), P(t2, 0, -down), P(t1, 0, -down)] };
     };
+    // Shut lines: thin dark tubes along the sides and across both ends of the panel.
+    const topPts = (s: number, grow: number, dy: number): [Num, Num, Num][] => {
+      const S = B.section(s);
+      const [e, t1, t2] = S.pts.slice(12) as [LP, LP, LP];
+      const M = ([x, y]: LP): LP => [lscale(x, -1), y];
+      const z = ls(lsub(B.Z(s), origin[1]));
+      const Q = ([x, y]: LP, dx: number): [Num, Num, Num] => [ls(ladd(x, L(dx))), ls(lsub(ladd(y, L(dy)), origin[0])), z];
+      return [Q(e, grow), Q(t1, 0), Q(t2, 0), Q(M(t2), 0), Q(M(t1), 0), Q(M(e), -grow)];
+    };
+    const edgeSide = ss.map((s) => { const S = B.section(s); const e = S.pts[12] as LP; return [ls(ladd(e[0], L(0.004))), ls(lsub(ladd(e[1], L(-0.002)), origin[0])), ls(lsub(B.Z(s), origin[1]))] as [Num, Num, Num]; });
     return group(name, [
-      loft("Panel", ss.map((s) => ringOf(s, 0.005, 0.006, 0)), { material: "body_paint" }),
-      loft("Gap", ss.map((s) => ringOf(s, 0.0022, 0.008, 0.006)), { material: "panel_gap" }),
+      loft("Panel", ss.map((s) => ringOf(s, 0.007, 0.006, 0)), { material: "body_paint" }),
+      tube("ShutSide_L", edgeSide, 0.0032, { segments: 5, material: "panel_gap", mirror: "ShutSide_R" }),
+      tube("ShutA", topPts(sA, 0.004, -0.001), 0.0032, { segments: 5, material: "panel_gap" }),
+      tube("ShutB", topPts(sB, 0.004, -0.001), 0.0032, { segments: 5, material: "panel_gap" }),
       ...extraKids,
     ], { at: [0, ls(origin[0]), ls(origin[1])] });
   };
@@ -659,18 +704,62 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
 
   // Tailgate (hatch, estate, SUV, MPV): a panel between the rear window and the bumper; pickup: the bed and its gate.
   if (st.trunk === "gate") {
-    const yA = st.upper.find((p) => p[2] === "trunkF")![1] * Hd - 0.02, yZ = (st.bumper === "body" ? Math.min(lampRY - 0.09, yBot5 + 0.325) : yBot5 + 0.2) + 0.02;
-    const zA = rearZ(0, yA), zZ = rearZ(0, yZ);
-    const dz = ev(zZ) - ev(zA), dy = yZ - yA;
-    const len = Math.hypot(dz, dy);
-    const ang = (Math.atan2(-dy, dz) * 180) / Math.PI;
-    const sT = B.sAt(-0.96);
-    const half = ev(B.section(sT).xe) * 0.86;
+    // The tailgate is a skin lofted over the curved tail of the body (it follows the plan taper and the rake of the
+    // rear face), hinged at its top edge under the rear window, with a rounded top edge and a dark shut line.
+    const yA = st.upper.find((p) => p[2] === "trunkF")![1] * Hd - 0.02;
+    const yZ = (st.bumper === "body" ? Math.min(lampRY - 0.09, yBot5 + 0.325) : yBot5 + 0.2) + 0.02;
+    const zA = rearZ(0, yA);
+    const origin: [Lin, Lin] = [yl(yA), ladd(zA, L(-0.008))];
+    // Half width of the body at the heights of the gate (the body narrows towards its top edge): the gate stays inside it.
+    const nH = 14;
+    const yH = Array.from({ length: nH }, (_, i) => yA + (yZ - yA) * (i / (nH - 1)));
+    const halfs = B.cached(`gateHalf${yA.toFixed(4)}|${yZ.toFixed(4)}`, () => yH.map((y) => {
+      const ring = B.ringDef(B.surfaceS(0, y, true) + 0.02).filter((q) => q[0] > 0 && Math.abs(q[1] - y) < 0.08);
+      return ring.length ? Math.max(...ring.map((q) => q[0])) - 0.045 : 0;
+    }));
+    const xb = Math.min(tailX - 0.09, Math.max(...halfs) - 0.0);
+    /** The highest edge of the gate at a distance X from the centre line: where the body is still wide enough. */
+    const topAt = (X: number): number => {
+      for (let i = 0; i < nH; i++) if (halfs[i]! >= X) return i === 0 ? yH[0]! : yH[i - 1]! + (yH[i]! - yH[i - 1]!) * Math.max(0, Math.min(1, (X - halfs[i - 1]!) / (halfs[i]! - halfs[i - 1]! || 1)));
+      return yH[nH - 1]! + 0.1;
+    };
+    const rows = [1, 0.78, 0.58, 0.4, 0.24, 0.1, 0];
+    const bulge = [0.5, 0.9, 1, 1, 1, 0.8, 0.35];
+    const nX = 17;
+    const Xi = (i: number): number => -xb + (2 * xb * i) / (nX - 1);
+    const yTopOf = (X: number): number => Math.min(yA, topAt(Math.abs(X))) - 0.03 * Math.pow(Math.abs(X) / xb, 6);
+    const yBotOf = (X: number): number => yZ + 0.05 * Math.pow(Math.abs(X) / xb, 5);
+    const loc = (X: number, y: number, dz: number): [Num, Num, Num] => {
+      const z = ev(B.Z(B.surfaceS(Math.abs(X), y, true))) + dz;
+      return [ls(xl(X)), ls(lsub(yl(y), origin[0])), ls(lsub(L(0, { L2: z / env.L2! }), origin[1]))];
+    };
+    const sections = Array.from({ length: nX }, (_, i) => {
+      const X = Xi(i);
+      const yTop = yTopOf(X), yBot = yBotOf(X);
+      const ys = rows.map((t) => yTop + (yBot - yTop) * t);
+      const zf = ys.map((y) => ev(B.Z(B.surfaceS(Math.abs(X), y, true))));
+      const lx = (z: number): Num => ls(lsub(origin[1], L(0, { L2: z / env.L2! })));
+      const outer: [Num, Num][] = ys.map((y, k) => [lx(zf[k]! - 0.009 * bulge[k]!), ls(lsub(yl(y), origin[0]))]);
+      const inner: [Num, Num][] = ys.map((y, k) => [lx(zf[k]! + 0.014), ls(lsub(yl(y), origin[0]))]).reverse() as [Num, Num][];
+      // Rounded bottom and top edges: a point between the outer and the inner skin, a little beyond the edge.
+      const last = rows.length - 1;
+      const capBot: [Num, Num] = [lx(zf[0]! + 0.0025), ls(lsub(yl(yBot - 0.004), origin[0]))];
+      const capTop: [Num, Num] = [lx(zf[last]! + 0.0025), ls(lsub(yl(yTop + 0.004), origin[0]))];
+      return { z: ls(xl(X)), points: [capBot, ...outer, capTop, ...inner] };
+    });
+    const loopTop = Array.from({ length: nX }, (_, i) => loc(Xi(i), yTopOf(Xi(i)) - 0.003, -0.007));
+    const loopBot = Array.from({ length: nX }, (_, i) => loc(Xi(i), yBotOf(Xi(i)), -0.007));
+    const sideL = (sg: number): [Num, Num, Num][] => Array.from({ length: 6 }, (_, k) => loc(sg * xb, yTopOf(xb) + (yBotOf(xb) - yTopOf(xb)) * (k / 5), -0.007));
+    const yh = yA + (yZ - yA) * 0.12;
+    const zh = ev(B.Z(B.surfaceS(0, yh, true)));
     kids.push(group("Trunk", [
-      box("Panel", [ls(xl(2 * half)), 0.02, len], { at: [0, -0.006, len / 2], bevel: 0.008, material: "body_paint" }),
-      box("Gap", [ls(ladd(xl(2 * half), L(0.012))), 0.02, len + 0.008], { at: [0, -0.0035, len / 2], material: "panel_gap" }),
-      box("Handle", [0.24, 0.03, 0.03], { at: [0, -0.02, Math.min(0.12, len * 0.3)], material: "chrome", bevel: 0.008 }),
-    ], { at: [0, ls(yl(yA)), `${ls(zA)} - 0.008`], rotate: [ang, 0, 0] }));
+      loft("Panel", sections, { material: "body_paint", rotate: [0, 90, 0] }),
+      tube("ShutTop", loopTop, 0.0032, { segments: 5, material: "panel_gap" }),
+      tube("ShutBottom", loopBot, 0.0032, { segments: 5, material: "panel_gap" }),
+      tube("ShutSide_L", sideL(-1), 0.0032, { segments: 5, material: "panel_gap" }),
+      tube("ShutSide_R", sideL(1), 0.0032, { segments: 5, material: "panel_gap" }),
+      box("Handle", [0.24, 0.028, 0.026], { at: [0, ls(lsub(yl(yh), origin[0])), ls(lsub(L(0, { L2: (zh - 0.02) / env.L2! }), origin[1]))], material: st.bumper === "chrome" ? "chrome" : "satin_black", bevel: 0.008 }),
+    ], { at: [0, ls(origin[0]), ls(origin[1])] }));
   } else if (st.trunk === "bed") {
     const floor = st.bed![0] * Hd;
     const yTop = st.upper.find((p) => p[2] === "trunkF")![1] * Hd - 0.03;

@@ -58,7 +58,8 @@ const moss = (f: Finish, r: Num, n: number, h: Num, phase: number, round: boolea
   if (!f.moss) return [];
   /** The wall face at offset z along it (x, from the well's axis). */
   const face = (z: number): string => (round ? `sqrt((${r}) * (${r}) - ${(z * z).toFixed(5)})` : `(${r})`);
-  return Array.from({ length: n }, (_, k) => {
+  const extra = jointMoss(r, n, h, phase, round);
+  const base = Array.from({ length: n }, (_, k) => {
     const g = rng(40 + k * 13);
     const len = 0.34 + 0.22 * g();
     const z0 = (g() - 0.5) * 0.12;
@@ -81,6 +82,31 @@ const moss = (f: Finish, r: Num, n: number, h: Num, phase: number, round: boolea
       cushion("Cushion_B", [0.032, 0.018, 0.06 + 0.03 * g()], zb, 9 + k * 5, "moss_dark"),
       ellipsoid("Tuft", [0.022, 0.012, 0.07 + 0.04 * g()], { at: [`${face(0.02)} + 0.004`, `${h} - 0.088`, 0.02], segments: 10, lumps: 0.3, seed: 3 + k * 3, material: "moss_green" }),
     ], { rotate: [0, Number((phase + (k * 360) / n).toFixed(3)), 0] });
+  });
+  return [...base, ...extra];
+};
+
+/**
+ * Moss that grows where water runs: short green runs in the horizontal joints and drips down the vertical ones at
+ * different heights of every wall face, and cushions on the top ledge (the coping) where rain collects.
+ */
+const jointMoss = (r: Num, n: number, h: Num, phase: number, round: boolean): SpecNode[] => {
+  const face = (z: number): string => (round ? `sqrt((${r}) * (${r}) - ${(z * z).toFixed(5)})` : `(${r})`);
+  return Array.from({ length: n }, (_, k) => {
+    const g = rng(300 + k * 17);
+    const parts: SpecNode[] = [];
+    for (let j = 0; j < 4; j++) {
+      const z = (g() - 0.5) * 0.4;
+      const yy = 0.12 + 0.62 * g();
+      const horizontal = j % 2 === 0;
+      const radii: [number, number, number] = horizontal ? [0.014, 0.012, 0.05 + 0.05 * g()] : [0.014, 0.05 + 0.05 * g(), 0.012];
+      parts.push(ellipsoid(`Joint_${j + 1}`, radii, { at: [`${face(z)} - 0.002`, `(${h}) * ${yy.toFixed(3)}`, Number(z.toFixed(4))], segments: 8, lumps: 0.25, seed: 11 + k * 7 + j, material: j % 3 === 0 ? "moss_green" : "moss_dark" }));
+    }
+    for (let j = 0; j < 2; j++) {
+      const z = (g() - 0.5) * 0.36;
+      parts.push(ellipsoid(`Ledge_${j + 1}`, [0.07 + 0.03 * g(), 0.02, 0.06 + 0.06 * g()], { at: [`${face(z)} + 0.01`, `(${h}) - 0.006`, Number(z.toFixed(4))], segments: 12, lumps: 0.3, seed: 21 + k * 5 + j, material: j === 0 ? "moss_green" : "moss_dark" }));
+    }
+    return group(`Growth_${k + 1}`, parts, { rotate: [0, Number((phase + 25 + (k * 360) / n).toFixed(3)), 0] });
   });
 };
 

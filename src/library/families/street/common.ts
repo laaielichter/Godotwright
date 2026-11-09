@@ -43,7 +43,7 @@ export const LOCAL: Record<string, MaterialDef> = {
   postal_blue: coat(0.016, 0.045, 0.15, 0.5, 0.15),
   postal_orange: coat(0.5, 0.15, 0.015, 0.5, 0.1), // PostNL orange
   postal_yellow: coat(0.56, 0.37, 0.016, 0.5, 0.1), // post horn yellow
-  screen_cyan: { color: [0.02, 0.15, 0.18], metallic: 0, roughness: 0.2, emissive: [0.03, 0.3, 0.36] }, // a dimmed LCD
+  screen_cyan: { color: [0.015, 0.09, 0.12], metallic: 0, roughness: 0.2, emissive: [0.01, 0.1, 0.14] }, // a dimmed LCD
   // --- Bare and weathered metals ---
   galvanised: { color: [0.16, 0.168, 0.168], metallic: 0.35, roughness: 0.78, texture: "plastic" }, // dull hot-dip zinc (thin tubes catch the sky: keep it dark)
   steel: { color: [0.42, 0.43, 0.44], metallic: 0.85, roughness: 0.55, texture: "brushed" }, // bolts, clamps
@@ -142,15 +142,18 @@ const DIRT: [number, number, number] = [0.075, 0.06, 0.042];
 function soiled(body: MaterialDef, k: number, heavy: boolean): MaterialDef {
   // Bare metal looks darker than its albedo (it mirrors the ground and the shade); its dirt film is matte, so start
   // from what the metal reads as, not from its albedo, or the band reads as a pale ring.
-  const dim = 1 - 0.6 * body.metallic * body.metallic;
+  const bare = body.metallic >= 0.5;
+  const dim = bare ? 0.04 + 0.075 * Math.max(0, (k - 0.45) / 0.42) : 1 - 0.6 * body.metallic * body.metallic;
   const [r, g, b] = body.color.map((c) => c * dim) as [number, number, number];
   // Heavy dirt on metal and paint reads as rust bloom; on plastic, wood and stone as blotchy road film.
   const onMetal = body.texture === undefined || body.texture === "painted" || body.texture === "brushed" || body.texture === "rust" || body.metallic >= 0.5;
-  const tex = heavy ? (onMetal ? "rust" : "concrete") : body.texture;
+  // Dirt on bare polished metal is darker than the mirror around it, matte and patchy (oxide texture), never a pale ring.
+  const dirt: [number, number, number] = bare ? [0.014, 0.012, 0.01] : DIRT;
+  const tex = bare ? "rust" : heavy ? (onMetal ? "rust" : "concrete") : body.texture;
   return {
-    color: [r * k + DIRT[0] * (1 - k), g * k + DIRT[1] * (1 - k), b * k + DIRT[2] * (1 - k)],
-    metallic: Math.min(0.3, body.metallic * (heavy ? 0.3 : 0.6)), // a dirt film is matte
-    roughness: Math.max(body.roughness, heavy ? 0.88 : 0.75),
+    color: [r * k + dirt[0] * (1 - k), g * k + dirt[1] * (1 - k), b * k + dirt[2] * (1 - k)],
+    metallic: Math.min(bare ? 0.15 : 0.3, body.metallic * (heavy ? 0.3 : 0.6)), // a dirt film is matte
+    roughness: Math.max(body.roughness, heavy ? 0.9 : bare ? 0.85 : 0.75),
     ...(tex ? { texture: tex } : {}),
   };
 }

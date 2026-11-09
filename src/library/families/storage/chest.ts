@@ -22,7 +22,9 @@ const archY = (k: number, extra = "0"): string => `$ls + $rise * ${Math.sqrt(Mat
 function archLoft(name: string, x0: string, x1: string, extra: string, material?: string): SpecNode {
   const sections = Array.from({ length: STEPS + 1 }, (_, k) => ({
     z: `-${extra} + ($D + 2 * ${extra}) * ${k / STEPS}`,
-    points: [[x0, 0], [x1, 0], [x1, archY(k, extra)], [x0, archY(k, extra)]],
+    // Tiny chamfers at the four corners keep the loft's smooth normals from blending the end walls into the top and
+    // bottom (which rendered the lid ends nearly black); the slivers are too small to carry weight.
+    points: [[`${x0} + 0.003`, 0], [`${x1} - 0.003`, 0], [x1, 0.003], [x1, `${archY(k, extra)} - 0.003`], [`${x1} - 0.003`, archY(k, extra)], [`${x0} + 0.003`, archY(k, extra)], [x0, `${archY(k, extra)} - 0.003`], [x0, 0.003]],
   }));
   return loft(name, sections, material ? { material } : {});
 }

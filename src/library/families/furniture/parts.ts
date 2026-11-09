@@ -3,7 +3,7 @@
  * same well-made hardware without repeating it.
  */
 import { PALETTE, type MaterialDef } from "../../palette.js";
-import { box, ellipsoid, group, lathe, loft, tube, type Num, type NodeOpts, type SpecNode, type Vec } from "../../kit.js";
+import { box, cyl, ellipsoid, group, lathe, loft, tube, type Num, type NodeOpts, type SpecNode, type Vec } from "../../kit.js";
 
 const wood = (r: number, g: number, b: number, roughness = 0.62): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
 const cloth = (r: number, g: number, b: number, roughness = 0.94): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "fabric" });
@@ -56,7 +56,7 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
   wool_grey: cloth(0.16, 0.155, 0.145, 0.98),
   wool_charcoal: cloth(0.048, 0.048, 0.05, 0.98),
   leather_brown: hide(0.09, 0.042, 0.022, 0.45),
-  leather_black: hide(0.03, 0.027, 0.025, 0.42),
+  leather_black: hide(0.046, 0.042, 0.039, 0.36),
   leather_tan: hide(0.19, 0.09, 0.04, 0.5),
   // Metals: satin bright metal, powder-coated dark metal (never a black mirror).
   // Bright metals are a little rough and warm, so they show their own colour under an open sky instead of mirroring
@@ -70,13 +70,15 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
   gunmetal: metal(0.36, 0.36, 0.37, 0.48, "brushed", 0.9),
   black_steel: coat(0.045, 0.045, 0.047, 0.55),
   cast_iron: coat(0.04, 0.038, 0.037, 0.65),
-  galvanised: { color: [0.48, 0.49, 0.49], metallic: 0.7, roughness: 0.62, texture: "brushed" },
+  galvanised: { color: [0.4, 0.41, 0.41], metallic: 0.8, roughness: 0.55, texture: "brushed" },
   // Stone, ceramics and glass.
+  lining_lit: { color: [0.4, 0.36, 0.28], metallic: 0, roughness: 0.9, texture: "fabric", emissive: [0.1, 0.085, 0.06] },
+  glass_cabinet: { color: [0.7, 0.8, 0.85, 0.16], metallic: 0, roughness: 0.03, alpha: "BLEND" },
   marble: { color: [0.5, 0.49, 0.46], metallic: 0, roughness: 0.25, texture: "plaster" },
   marble_black: { color: [0.035, 0.034, 0.036], metallic: 0, roughness: 0.22, texture: "plaster" },
   granite: { color: [0.2, 0.195, 0.19], metallic: 0, roughness: 0.4, texture: "concrete" },
   concrete: { color: [0.34, 0.33, 0.31], metallic: 0, roughness: 0.85, texture: "concrete" },
-  terracotta: { color: [0.26, 0.1, 0.05], metallic: 0, roughness: 0.85, texture: "plaster" },
+  terracotta: { color: [0.26, 0.1, 0.05], metallic: 0, roughness: 0.82 },
   ceramic_white: { color: [0.54, 0.53, 0.5], metallic: 0, roughness: 0.15 },
   ceramic_blue: { color: [0.035, 0.08, 0.2], metallic: 0, roughness: 0.15 },
   ceramic_celadon: { color: [0.28, 0.38, 0.3], metallic: 0, roughness: 0.18 },
@@ -95,11 +97,26 @@ export const FURNITURE_FINISHES: Record<string, MaterialDef> = {
 export function fmats(...names: string[]): Record<string, MaterialDef> {
   const out: Record<string, MaterialDef> = {};
   for (const name of names) {
+    if (name.endsWith("_tube")) {
+      const base = fmats(name.slice(0, -5))[name.slice(0, -5)] as MaterialDef;
+      const { texture: _t, ...plain } = base;
+      out[name] = plain;
+      continue;
+    }
     const m = FURNITURE_FINISHES[name] ?? PALETTE[name];
     if (!m) throw new Error(`furniture: no material "${name}"`);
     out[name] = m;
   }
   return out;
+}
+
+/**
+ * The finish to use on thin tubes and posts: a brushed metal streaks across a round section like wound tape, so its
+ * tube version (`name_tube`, registered by `fmats`) is the same metal without the brushed texture. Other finishes are unchanged.
+ */
+export function tubular(name: string): string {
+  const m = FURNITURE_FINISHES[name] ?? PALETTE[name];
+  return m && m.texture === "brushed" ? `${name}_tube` : name;
 }
 
 /** a + b for a number or an expression. */
@@ -153,6 +170,23 @@ export function cupPull(name: string, at: Vec, material: string): SpecNode {
   });
 }
 
+/** A drop-ring pull: a round backplate with a post at the top and a ring hanging from it, pointing +z. */
+export function ringPull(name: string, at: Vec, material: string): SpecNode {
+  const R = 0.0275;
+  const rr = (v: number): number => Math.round(v * 10000) / 10000;
+  const section = Array.from({ length: 10 }, (_, k): [number, number] => {
+    const a = -Math.PI / 2 + (2 * Math.PI * k) / 10;
+    return [rr(R + 0.0042 * Math.cos(a)), rr(0.0042 * Math.sin(a))];
+  });
+  return cyl(name, 0.02, 0.008, {
+    at, material, segments: 20, rotate: [90, 0, 0], bevel: 0.002,
+    children: [
+      cyl("Post", 0.0055, 0.016, { at: [0, 0.008, -0.013], segments: 10 }),
+      lathe("Ring", [...section, section[0] as [number, number]], { at: [0, 0.012, 0.0135], segments: 22, caps: false }),
+    ],
+  });
+}
+
 /** A label holder (filing cabinets): a thin frame with a white card. */
 export function labelHolder(name: string, at: Vec, material: string): SpecNode {
   return box(name, [0.08, 0.035, 0.006], { at, material, bevel: 0.002, children: [box("Card", [0.068, 0.025, 0.004], { at: [0, 0, 0.002], material: "plastic_white" })] });
@@ -168,24 +202,47 @@ export function squareLeg(name: string, at: Vec, h: Num, top: number, bottom: nu
 }
 
 /** Book cover colours for `books`. */
+const bookCloth = (r: number, g: number, b: number, texture = "fabric", roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture });
 export const BOOK_MATERIALS: Record<string, MaterialDef> = {
-  book_red: { color: [0.22, 0.035, 0.03], metallic: 0, roughness: 0.75, texture: "fabric" },
-  book_blue: { color: [0.03, 0.055, 0.13], metallic: 0, roughness: 0.75, texture: "fabric" },
-  book_green: { color: [0.04, 0.1, 0.06], metallic: 0, roughness: 0.75, texture: "fabric" },
-  book_cream: { color: [0.5, 0.44, 0.33], metallic: 0, roughness: 0.8, texture: "leather" },
+  book_red: bookCloth(0.22, 0.035, 0.03),
+  book_blue: bookCloth(0.03, 0.055, 0.13),
+  book_green: bookCloth(0.04, 0.1, 0.06),
+  book_cream: bookCloth(0.5, 0.44, 0.33, "leather", 0.8),
+  book_brown: bookCloth(0.12, 0.055, 0.025, "leather", 0.55),
+  book_mustard: bookCloth(0.34, 0.21, 0.04),
+  book_grey: bookCloth(0.14, 0.145, 0.15, "fabric", 0.8),
+  book_burgundy: bookCloth(0.1, 0.015, 0.025, "leather", 0.55),
+  book_teal: bookCloth(0.03, 0.12, 0.12),
+  book_black: bookCloth(0.03, 0.03, 0.032, "leather", 0.5),
+  book_gilt: { color: [0.75, 0.55, 0.2], metallic: 0.8, roughness: 0.4 },
+  book_pages: { color: [0.55, 0.5, 0.4], metallic: 0, roughness: 0.9 },
 };
 
 /**
  * A row of books standing on a surface at local y = `y`, spread over a share of the width `$sw` that changes with `$s`
  * (`index`, the shelf index, by default the $i of the shelf it stands on). `$bh` is the clear height and `$bd` the usable depth.
+ * Ten different covers in ten slots whose widths, heights and depths all vary, and gilt bands on the spines.
  */
 export function books(name: string, y: Num, x0: Num = "-$sw / 2 + 0.03", index: Num = "$i"): SpecNode {
-  const mats = ["book_red", "book_blue", "book_cream", "book_green"];
-  return group(name, mats.map((m, k) =>
-    box(`Book_${k + 1}_{i}`, [0.024, `min($bh, 0.16 + 0.08 * abs(sin(($i + $bi * 3) * 1.9 + ${k})))`, `min($bd, 0.14 + 0.05 * abs(cos($i * 2.3 + ${k})))`], {
-      at: [`${x0} + ${k * 0.026}`, y, 0], anchor: "bottom", material: m,
-      repeat: { count: "max(1, floor($sw * (0.3 + 0.25 * abs(sin($bi * 2.1 + 0.5))) / 0.104))", step: [0.104, 0, 0] },
-    })), { vars: { bi: index } });
+  const mats = ["book_red", "book_teal", "book_cream", "book_brown", "book_blue", "book_mustard", "book_burgundy", "book_green", "book_grey", "book_black"];
+  const slots = 10;
+  const pitch = 0.026 * slots;
+  const count = `max(1, floor($sw * (0.3 + 0.25 * abs(sin($bi * 2.1 + 0.5))) / ${pitch + 0.002}))`;
+  const book = (k: number): SpecNode => {
+    const m = mats[k % mats.length] as string;
+    const bw = `(0.017 + 0.013 * abs(sin($i * 1.7 + ${k * 2.9} + $bi)))`;
+    const bk = `min($bh, 0.15 + 0.09 * abs(sin(($i + $bi * 3) * 1.9 + ${k * 1.3})))`;
+    const bz = `min($bd, 0.14 + 0.05 * abs(cos($i * 2.3 + ${k})))`;
+    return box(`Book_${k + 1}_{i}`, [bw, bk, bz], {
+      at: [`${x0} + ${(k % slots) * 0.026}`, y, 0], anchor: "bottom", material: m,
+      repeat: { count, step: [pitch + 0.002, 0, 0] },
+      children: [
+        box("Band_T", [`${bw} + 0.002`, 0.008, 0.002], { at: [0, `${bk} * 0.8`, `${bz} / 2`], material: "book_gilt" }),
+        box("Band_B", [`${bw} + 0.002`, 0.005, 0.002], { at: [0, `${bk} * 0.18`, `${bz} / 2`], material: "book_gilt" }),
+      ],
+    });
+  };
+  return group(name, Array.from({ length: slots }, (_, k) => book(k)), { vars: { bi: index } });
 }
 
 /** a + b / 2 for numbers or expressions. */
@@ -273,3 +330,80 @@ export function pillow(name: string, w: string, dz: number, hy: number, material
   ], o);
 }
 
+
+/**
+ * An upholstered cushion, `w` wide (x, an expression), `h` thick and `d` deep (z, an expression), with its origin at the
+ * centre: a lofted case with soft rounded edges and a crowned top that swells towards the middle (no crease), welt
+ * piping on the seam line round the top and bottom, and optionally `tufts` deep-buttoned dimples across the crown (each
+ * with four `pleats` unless `pleats` is false) or a top-stitched `seam`. The `${cover}_tuft` shade of `cover` (see `shade`)
+ * must be in the materials when `tufts` or `seam` is used. `bevel` is the edge radius. Keep other nodes off it.
+ */
+export function cushion(name: string, w: Num, h: number, d: Num, cover: string, o: NodeOpts & { bevel?: number; crown?: number; tufts?: number; pleats?: boolean; seam?: boolean } = {}): SpecNode {
+  const { bevel: bv, crown: cr, tufts, pleats, seam, ...rest } = o;
+  const e = Math.min(bv ?? 0.04, h * 0.45);
+  const crown = cr ?? 0.014;
+  const r4n = (v: number): number => Math.round(v * 10000) / 10000;
+  const N = 28;
+  const dark = `${cover}_tuft`;
+  const W2 = (k: number, off = 0): Num => (typeof w === "number" ? r4n((w / 2) * k - off * Math.sign(k)) : `(${w}) / 2 * ${r4n(k)}${off ? ` ${k < 0 ? "+" : "-"} ${r4n(off)}` : ""}`);
+  const D2 = (sign: number, u: number): Num => (typeof d === "number" ? r4n(sign * (d / 2 - u)) : `${sign < 0 ? "-" : ""}((${d}) / 2 - ${r4n(u)})`);
+  const Dk = (k: number): Num => (typeof d === "number" ? r4n((d / 2) * k) : `(${d}) / 2 * ${r4n(k)}`);
+  // Edge inset of the rounded end at distance u from the end face.
+  const delta = (u: number): number => (u >= e ? 0 : e - Math.sqrt(Math.max(0, e * e - (e - u) * (e - u))));
+  const sections = (): Record<string, unknown>[] => {
+    const stations: { z: Num; d: number; c: number }[] = [];
+    const ends = [0, 0.004, 0.011, 0.021, e * 0.7, e];
+    for (const u of ends) stations.push({ z: D2(-1, u), d: delta(u), c: 0 });
+    stations.push({ z: Dk(-0.4), d: 0, c: 0.84 }, { z: 0, d: 0, c: 1 }, { z: Dk(0.4), d: 0, c: 0.84 });
+    for (const u of [...ends].reverse()) stations.push({ z: D2(1, u), d: delta(u), c: 0 });
+    // The crown fades out towards the end faces along the rounded edge.
+    return stations.map((st) => {
+      const c = st.c === 0 && st.d === 0 ? 0.55 : st.c;
+      const pts: [Num, Num][] = [];
+      for (let k = 0; k < N; k++) {
+        const a = (2 * Math.PI * k) / N;
+        const cs = Math.cos(a), sn = Math.sin(a);
+        const cf = Math.sign(cs) * Math.abs(cs) ** (2 / 5);
+        const sf = Math.sign(sn) * Math.abs(sn) ** (2 / 5);
+        const y = (h / 2 - st.d) * sf + (sf > 0 ? crown * c * (1 - cf * cf) * sf : 0);
+        pts.push([W2(cf, st.d * Math.sign(cf)), r4n(y)]);
+      }
+      return { z: st.z, points: pts };
+    });
+  };
+  const loop = (y: number, tag: string): SpecNode => {
+    const fx = (1 - (Math.abs(y) / (h / 2)) ** 5) ** (1 / 5);
+    const c = 0.045;
+    const xa = (k: number): Num => W2(fx, k);
+    const xb = (k: number): Num => W2(-fx, k);
+    const za = (k: number): Num => D2(1, k);
+    const zb = (k: number): Num => D2(-1, k);
+    const y4 = r4n(y);
+    const zi = 0.012;
+    return tube(`Welt_${tag}`, [
+      [xb(c), y4, za(zi)], [xa(c), y4, za(zi)], [xa(0), y4, za(zi + c)], [xa(0), y4, zb(zi + c)],
+      [xa(c), y4, zb(zi)], [xb(c), y4, zb(zi)], [xb(0), y4, zb(zi + c)], [xb(0), y4, za(zi + c)], [xb(c), y4, za(zi)],
+    ], 0.0058, { segments: 8 });
+  };
+  const kids: SpecNode[] = [loop(h / 2 * 0.8, "T"), loop(-h / 2 * 0.8, "B")];
+  if (seam) {
+    const s = 0.04;
+    const y4 = r4n(h / 2 + crown * 0.5);
+    kids.push(tube("Stitch", [[W2(-0.8, s), y4, D2(-1, s)], [W2(0.8, s), y4, D2(-1, s)], [W2(0.8, s), y4, D2(1, s)], [W2(-0.8, s), y4, D2(1, s)], [W2(-0.8, s), y4, D2(-1, s)]], 0.0016, { segments: 5, material: dark }));
+  }
+  if (tufts && tufts > 0) {
+    const top = r4n(h / 2 + crown * 0.97);
+    for (let k = 0; k < tufts; k++) {
+      const f = tufts === 1 ? 0 : (k / (tufts - 1)) * 2 - 1;
+      const x: Num = typeof w === "number" ? r4n((w / 2) * 0.6 * f) : `(${w}) / 2 * ${r4n(0.6 * f)}`;
+      kids.push(group(`Tuft_${k + 1}`, [
+        lathe("Dimple", [[0.004, -0.007], [0.021, -0.003], [0.026, 0.002], [0.004, 0.002]], { segments: 14, material: dark }),
+        ellipsoid("Button", [0.012, 0.007, 0.012], { at: [0, 0.0015, 0], segments: 12 }),
+        ...(pleats === false ? [] : [[1, 1], [-1, 1], [1, -1], [-1, -1]].map(([sx, sz], q) =>
+          tube(`Pleat_${q + 1}`, [[0.012 * (sx as number), 0.0005, 0.012 * (sz as number)], [0.05 * (sx as number), 0.0005, 0.05 * (sz as number)]], 0.0028, { segments: 5, material: dark }))),
+      ], { at: [x, top, 0] }));
+    }
+  }
+  const body = loft("Case", sections());
+  return group(name, [body, ...kids], rest);
+}

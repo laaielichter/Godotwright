@@ -135,16 +135,14 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
   /** A profile point: radius as a fraction of $r, position along the axle as a fraction of $w (outer face +). */
   const P = (a: number, b: number): [Num, Num] => [`${f(a)} * $r`, X(b)];
   const kids: SpecNode[] = [];
+  // The tyre: rounded shoulders and a tread with four circumferential grooves.
+  const gr = (r: number, b: number): [Num, Num] => [`${f(r)} * $r`, `${f(b)} * $w`];
   const prof: [Num, Num][] = [
-    [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
-    [`${f(rf + 0.55 * (1 - rf))} * $r`, `${f(-0.505)} * $w`],
-    [`${f(0.965)} * $r`, `${f(-0.47)} * $w`],
-    ["$r", `${f(-0.36)} * $w`],
-    ["$r", `${f(0.36)} * $w`],
-    [`${f(0.965)} * $r`, `${f(0.47)} * $w`],
-    [`${f(rf + 0.55 * (1 - rf))} * $r`, `${f(0.505)} * $w`],
-    [`${f(rf)} * $r`, `${f(0.43)} * $w`],
-    [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
+    gr(rf, -0.43), gr(rf + 0.55 * (1 - rf), -0.505), gr(0.965, -0.47), gr(0.992, -0.41), gr(1, -0.36),
+    gr(1, -0.285), gr(0.982, -0.27), gr(0.982, -0.2), gr(1, -0.185),
+    gr(1, -0.04), gr(0.982, -0.025), gr(0.982, 0.025), gr(1, 0.04),
+    gr(1, 0.185), gr(0.982, 0.2), gr(0.982, 0.27), gr(1, 0.285),
+    gr(1, 0.36), gr(0.992, 0.41), gr(0.965, 0.47), gr(rf + 0.55 * (1 - rf), 0.505), gr(rf, 0.43), gr(rf, -0.43),
   ];
   kids.push(lathe("Tyre", prof, { material: tyre, rotate: [0, 0, -90], segments: seg, caps: false }));
   // A moulded sidewall band on the outer face (lettering ring), a touch glossier than the tread.
@@ -157,6 +155,9 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
     [rf - 0.03, -0.42], [rf + 0.02, -0.45], [rf + 0.025, -0.4], [rf + 0.025, 0.4], [rf + 0.03, 0.47],
     [rf - 0.005, 0.5], [rf - 0.05, 0.44], [rf - 0.05, -0.38], [rf - 0.03, -0.42],
   ].map(([a, b]) => P(a!, b!)), { material: o.rim, rotate: [0, 0, -90], segments: seg, caps: false }));
+  // A rim-protector ridge on the sidewall and the valve stem.
+  kids.push(lathe("Ridge", [P(rf + 0.07 * (1 - rf), 0.485), P(rf + 0.12 * (1 - rf), 0.515), P(rf + 0.17 * (1 - rf), 0.485), P(rf + 0.07 * (1 - rf), 0.485)], { material: tyre, rotate: [0, 0, -90], segments: seg, caps: false }));
+  kids.push(cyl("Valve", "0.012 * $r", "0.05 * $w", { axis: "x", at: [X(0.5), `${f(rf - 0.04)} * $r`, `${f(0.2)} * $r`], segments: 6, material: "trim_black" }));
   const hub = o.hub ?? o.rim;
   switch (o.style) {
     case "alloy": {

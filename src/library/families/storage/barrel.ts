@@ -34,6 +34,20 @@ const hoop = (name: string, t: number, w: number, material: string): SpecNode =>
     [`${bulge(t)} - 0.004`, `$H * ${t} + ${w / 2}`],
   ], { segments: 32, material });
 
+/** Dark stave seams: thin grooves along the bulged side, `count` around the cask, so the body reads as coopered staves. */
+function seams(count: number, y0 = 0.05, y1 = 0.95): SpecNode {
+  const pts: [Num, Num, Num][] = [];
+  for (let k = 0; k <= 10; k++) {
+    const t = y0 + ((y1 - y0) * k) / 10;
+    pts.push([0, `$H * ${t.toFixed(4)}`, `${bulge(t)} - 0.0005`]);
+  }
+  return tube("Seam_{i}", pts, 0.0028, { segments: 5, material: "hole", repeat: { count, around: "y" } });
+}
+
+/** Rivets on a hoop: a ring of small domed heads at height fraction t. */
+const rivets = (name: string, t: number, count: number, material: string): SpecNode =>
+  cyl(name + "_{i}", 0.0095, 0.012, { axis: "z", at: [0, `$H * ${t}`, `${bulge(t)} + 0.003`], segments: 8, bevel: 0.003, material, repeat: { count, around: "y", phase: 7 } });
+
 const caskParams = (h: number): ParamDef[] => [
   num("height", h, 0.8, 0.95, "Height of the cask in metres."),
   num("radius", 0.29, 0.26, 0.32, "Radius at the bilge (the widest middle) in metres."),
@@ -48,6 +62,8 @@ function cask(f: Finish): { nodes: SpecNode[]; params: ParamDef[] } {
       group("Cask", [
         lathe("Body", caskProfile(), { segments: 40 }),
         group("Hoops", hoops.map((t, i) => hoop(`Hoop_${i + 1}`, t, i === 0 || i === 5 ? 0.03 : 0.04, f.trim))),
+        seams(24),
+        group("Rivets", [rivets("RivetA", 0.13, 12, f.trim), rivets("RivetB", 0.87, 12, f.trim)]),
         cyl("Bung", 0.024, 0.03, { axis: "z", at: [0, "$H * 0.5", `${bulge(0.5)} - 0.008`], segments: 14, material: f.accent, bevel: 0.004 }),
         group("Lid", [
           cyl("Head", `${bulge(1)} - 0.028`, 0.016, { at: [0, 0, 0], anchor: "base", segments: 40 }),
@@ -69,6 +85,8 @@ function waterButt(f: Finish): { nodes: SpecNode[]; params: ParamDef[] } {
         hoop("Band_Low", 0.2, 0.07, f.trim),
         hoop("Band_High", 0.8, 0.07, f.trim),
         hoop("Rim_Top", 0.97, 0.025, f.trim),
+        seams(20, 0.04, 0.96),
+        group("Rivets", [rivets("RivetA", 0.2, 10, f.trim), rivets("RivetB", 0.8, 10, f.trim)]),
         group("Tap", [
           cyl("Boss", 0.03, 0.04, { axis: "z", at: [0, 0, 0], segments: 14, bevel: 0.004 }),
           tube("Spout", [[0, 0, 0.015], [0, 0, 0.06], [0, -0.03, 0.075], [0, -0.05, 0.075]], 0.011, { segments: 10 }),
@@ -115,6 +133,10 @@ function steelDrum(f: Finish): { nodes: SpecNode[]; params: ParamDef[] } {
           lathe("Emboss", [["$R * 0.7", 0.004], ["$R * 0.72", 0.009], ["$R * 0.76", 0.009], ["$R * 0.78", 0.004]], { segments: 40 }),
           cyl("Bung_Big", 0.034, 0.016, { at: ["-$R * $bungs", 0.004, 0], anchor: "base", segments: 16, bevel: 0.003, material: f.trim }),
           cyl("Bung_Small", 0.022, 0.016, { at: ["$R * $bungs", 0.004, 0], anchor: "base", segments: 14, bevel: 0.003, material: f.trim }),
+          cyl("Flange_Big", 0.046, 0.006, { at: ["-$R * $bungs", 0.004, 0], anchor: "base", segments: 20, material: worn(f.main) }),
+          cyl("Flange_Small", 0.034, 0.006, { at: ["$R * $bungs", 0.004, 0], anchor: "base", segments: 18, material: worn(f.main) }),
+          box("Slot_Big", [0.05, 0.004, 0.008], { at: ["-$R * $bungs", 0.0205, 0], material: "hole" }),
+          box("Slot_Small", [0.034, 0.004, 0.007], { at: ["$R * $bungs", 0.0205, 0.0], rotate: [0, 40, 0], material: "hole" }),
         ], { at: [0, "$H - 0.016", 0] }),
       ], { material: f.main, vars: { H: "$height", R: "$radius" } }),
     ],
