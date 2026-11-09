@@ -63,7 +63,8 @@ cockpits, VFX, streaming, shaders, installers for shipped games, headless tests)
 
 ## 3D models
 
-`godot_model_brief` first, then `godot_model_spec`, `godot_model_build`, `godot_model_view` (look at it as text) and
+`godot_model_brief` first, then `godot_model_library` (over a thousand ready-made base recipes to start from) or
+`godot_model_spec`, `godot_model_build`, `godot_model_view` (look at it as text) and
 `godot_model_lint` with the archetype. Models face +Z, +Y is up, units are metres. The `model` skill has the details.
 
 ## When the plugin hooks are on

@@ -443,3 +443,84 @@ export function tube(path: V3[], radii: number[], segments: number, material: st
   });
   return ringSurface(rings, { material, caps });
 }
+
+/**
+ * A lumpy ellipsoid with `cuts` flat fractures: seeded planes slice caps off the stone, as a break or a split does, so
+ * it gets flat faces with sharp edges between them (rocks, boulders, cliff chunks, broken stone). The rest of the
+ * surface stays smooth: normals are shared only between faces that meet at a gentle angle. The same seed gives the
+ * same stone, and the planes are cut before the radii are applied, so a fracture stays flat on any ellipsoid.
+ */
+export function fracturedEllipsoid(rx: number, ry: number, rz: number, segments: number, lumps: number, seed: number, cuts: number, material: string): MeshBuilder {
+  const rows = Math.max(4, Math.round(segments / 2));
+  // The unit-space surface: a lumpy sphere, as lumpyEllipsoid makes it.
+  const grid: V3[][] = [];
+  for (let i = 0; i <= rows; i++) {
+    const phi = (i / rows) * Math.PI;
+    grid.push(
+      Array.from({ length: segments }, (_, k): V3 => {
+        const angle = (k / segments) * Math.PI * 2;
+        const d: V3 = [Math.sin(phi) * Math.cos(angle), Math.cos(phi), Math.sin(phi) * Math.sin(angle)];
+        if (lumps <= 0) return d;
+        const f = 1.7;
+        const bump = noise3(d[0] * f + 11.3, d[1] * f + 5.1, d[2] * f + 7.7, seed) + 0.5 * noise3(d[0] * f * 2.3, d[1] * f * 2.3, d[2] * f * 2.3, seed + 17);
+        const k2 = Math.max(0.2, 1 + (lumps * bump) / 1.5);
+        return [d[0] * k2, d[1] * k2, d[2] * k2];
+      }),
+    );
+  }
+  // Fracture planes: a direction spread over the sphere and a depth of 8-30 % of the radius; points beyond a plane
+  // are moved back onto it along its normal.
+  const rand = (n: number): number => (noise3(n * 1.37 + 0.5, seed * 0.173 + 2.5, n * 0.71 + 7.25, seed + 101) + 1) / 2;
+  for (let c = 0; c < cuts; c++) {
+    const z = 1 - 2 * ((c + 0.5 + 0.6 * (rand(c) - 0.5)) / cuts);
+    const theta = c * 2.399963 + rand(c + 50) * 1.2;
+    const r = Math.sqrt(Math.max(0, 1 - z * z));
+    const n: V3 = [r * Math.cos(theta), z, r * Math.sin(theta)];
+    const offset = 1 - (0.08 + 0.22 * rand(c + 100));
+    for (const ring of grid) {
+      for (let k = 0; k < ring.length; k++) {
+        const q = ring[k]!;
+        const over = dot(q, n) - offset;
+        if (over > 0) ring[k] = [q[0] - over * n[0], q[1] - over * n[1], q[2] - over * n[2]];
+      }
+    }
+  }
+  const point = (i: number, k: number): V3 => {
+    const q = grid[i]![((k % segments) + segments) % segments]!;
+    return [q[0] * rx, q[1] * ry, q[2] * rz];
+  };
+  // A vertex is the pole for the first and last ring, else its grid point.
+  const key = (i: number, k: number): string => (i === 0 ? "top" : i === rows ? "bottom" : `${i}:${((k % segments) + segments) % segments}`);
+  type Face = { pts: V3[]; keys: string[]; n: V3 };
+  const faces: Face[] = [];
+  const addFace = (a: [number, number], b: [number, number], c: [number, number]): void => {
+    const pts = [point(...a), point(...b), point(...c)];
+    const n = cross(sub(pts[1]!, pts[0]!), sub(pts[2]!, pts[0]!));
+    // A triangle at a pole has two corners on the same point: it is not part of the surface.
+    if (length(n) < 1e-14) return;
+    faces.push({ pts, keys: [key(...a), key(...b), key(...c)], n });
+  };
+  for (let i = 0; i < rows; i++) {
+    for (let k = 0; k < segments; k++) {
+      // Wound so that the faces point outwards (counter-clockwise seen from outside).
+      addFace([i, k], [i + 1, k + 1], [i + 1, k]);
+      addFace([i, k], [i, k + 1], [i + 1, k + 1]);
+    }
+  }
+  const around = new Map<string, Face[]>();
+  for (const f of faces) for (const k of f.keys) around.set(k, [...(around.get(k) ?? []), f]);
+  const crease = Math.cos((40 * Math.PI) / 180);
+  const b = new MeshBuilder();
+  const p = b.prim(material);
+  for (const f of faces) {
+    const own = normalize(f.n);
+    const base = p.positions.length / 3;
+    f.pts.forEach((pt, v) => {
+      let sum: V3 = [0, 0, 0];
+      for (const g of around.get(f.keys[v]!) ?? []) if (dot(normalize(g.n), own) > crease) sum = add(sum, g.n);
+      b.vertex(p, pt, normalize(sum), projectUv(pt, own));
+    });
+    p.indices.push(base, base + 1, base + 2);
+  }
+  return b;
+}

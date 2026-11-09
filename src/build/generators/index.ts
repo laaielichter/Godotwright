@@ -2,6 +2,7 @@ import type { BuildScene } from "../glb.js";
 import { BuildError, resolveParams, type ParamDef, type Params } from "../params.js";
 import { buildSpec } from "../spec.js";
 import { loadRecipes } from "../recipes.js";
+import { getAsset } from "../../library/library.js";
 import { house } from "./house.js";
 import { sea, terrain } from "./terrain.js";
 
@@ -29,7 +30,7 @@ const isBuiltin = (kind: string): boolean => Object.hasOwn(GENERATORS, kind);
 
 export function generatorFor(kind: string): Generator {
   const g = isBuiltin(kind) ? GENERATORS[kind] : undefined;
-  if (!g) throw new BuildError(`unknown model kind "${kind}" (known: ${allKinds().map((k) => k.kind).join(", ")})`);
+  if (!g) throw new BuildError(`unknown model kind "${kind}" (known: ${allKinds().map((k) => k.kind).join(", ")}; or a library asset such as furniture/dining-chair-oak-ladder, see \`model library\`)`);
   return g;
 }
 
@@ -37,6 +38,9 @@ export function generatorFor(kind: string): Generator {
 export function buildKind(kind: string, input: Record<string, unknown> = {}): BuildScene {
   const recipe = loadRecipes().get(kind);
   if (recipe && !isBuiltin(kind)) return buildSpec(recipe.spec, input);
+  // A library asset ("furniture/dining-chair-oak-ladder"): see `model library`.
+  const asset = kind.includes("/") ? getAsset(kind) : undefined;
+  if (asset) return buildSpec(asset.spec, input);
   const g = generatorFor(kind);
   const scene = g.build(resolveParams(g.params, input, kind));
   return g.archetype ? { ...scene, archetype: g.archetype } : scene;

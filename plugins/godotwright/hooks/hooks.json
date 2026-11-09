@@ -1,5 +1,5 @@
 {
-  "description": "Godotwright refuses Claude's file edits into paths a godotwright.json \"protect\" list (or the protect setting) keeps byte-identical, reviews every Godot file Claude edits and sends the errors back, adds lessons from real projects under Godot errors in command output, names review errors left open before Claude stops, and starts a session in a Godot project with what the project is. Bash commands are not checked against protect. GODOTWRIGHT_HOOKS=0 turns them off.",
+  "description": "Godotwright refuses Claude's file edits into paths a godotwright.json \"protect\" list (or the protect setting) keeps byte-identical, reviews every Godot file Claude edits and sends the errors back, adds lessons from real projects under Godot errors in command output, names review errors left open before Claude stops, and starts a session in a Godot project with what the project is (and, when a dream is due, how many dream proposals wait). Bash commands are not checked against protect. GODOTWRIGHT_HOOKS=0 turns them off.",
   "hooks": {
     "PreToolUse": [
       {

@@ -60,6 +60,7 @@ import {
   recordShown,
 } from "../lessons/local.js";
 import { projectNames } from "../lessons/names.js";
+import { applyDream, DreamError, dream, formatApply, formatDream, markDreamed, parseSince } from "../dream/dream.js";
 import {
   findLesson,
   lessonsForError,
@@ -69,6 +70,8 @@ import {
 } from "../lessons/search.js";
 import { LESSON_TOPICS } from "../lessons/types.js";
 import { allKinds } from "../build/generators/index.js";
+import { formatAsset, formatAssetList, formatOverview } from "../library/format.js";
+import { getAsset, libraryOverview, loadAssetLibrary, searchAssets } from "../library/library.js";
 import { buildModel } from "../build/run.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
 import { loadContract } from "../model/contract.js";
@@ -1921,7 +1924,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     async (input) => {
       try {
-        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base) });
+        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base), project: base });
         const removed = Object.entries(replaced).map(([k, n]) => `${n} ${k}`).join(", ");
         return text(
           `${updated ? "Updated" : "Kept"} ${lesson.id} on this machine${removed ? ` (replaced: ${removed})` : ""}.\n` +
@@ -1929,6 +1932,39 @@ export function createServer(options: ServerOptions = {}): McpServer {
         );
       } catch (error) {
         return failure(error instanceof LessonError || error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  tool(
+    "godot_dream",
+    {
+      title: "Dream: learn from past sessions",
+      description:
+        "Look back at what Godotwright learned and did in this project, between sessions, and propose what to keep: draft lessons for Godot errors that keep coming back with no rule or lesson, project hints for API names the agent keeps guessing (use X, not Y), lessons to merge, retire or rewrite (shown often but marked wrong, or duplicates), lessons about writes that were undone again and again, rules this project marks as false alarms again and again (a suggestion only), and verdicts that contradict each other. It reads the local learning file and the project's journal, and with `transcripts: true` also this project's Claude Code and Codex session transcripts (only anonymous facts are kept: tool names, Godot message templates, Godot API names; no text, names, paths or code). Deterministic: no model, no network. Each proposal has a number, an id, its evidence and a reason. Nothing changes until `apply` (numbers or ids, or \"all\"): lessons go through the same scrubbing as godot_lesson_add, hints, a dated report and a short \"Godotwright lessons for agents\" note are kept only on this machine (the project's untracked .godot/godotwright/dreams/, or Godotwright's state folder when git tracks .godot), never in a file of the repository; the session start shows the note to the agent. godot_undo takes an apply back, lessons included. Draft lessons hold the symptom and message only: look up the cause and fix (godot_lessons, godot_api, godot_check) and rewrite them with godot_lesson_add, same title. Show the person the proposals with their evidence and apply only what they approve.",
+      inputSchema: {
+        path: pathParam,
+        apply: z.string().optional().describe('proposals to apply: numbers or ids from the list, comma separated, or "all"; leave out to only list them'),
+        transcripts: z.boolean().optional().describe("also read this project's Claude Code and Codex session transcripts (default false)"),
+        since: z.string().optional().describe("only journal events and transcripts this recent: 7d, 12h, 2w or a date (default 30d)"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, apply, transcripts, since, detail }) => {
+      try {
+        const common = { ...(since ? { since: parseSince(since) } : {}), ...(transcripts ? { transcripts: true } : {}) };
+        if (apply !== undefined) {
+          const r = applyDream(where(path), apply, common);
+          markDreamed(r.root);
+          return text(formatApply(r));
+        }
+        const r = dream(where(path), common);
+        markDreamed(r.root);
+        return text(formatDream(r, detail ?? profile.detail));
+      } catch (error) {
+        if (error instanceof DreamError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );
@@ -2039,6 +2075,37 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   tool(
+    "godot_model_library",
+    {
+      title: "Asset library: ready-made base recipes",
+      description:
+        "Search the asset library: over a thousand ready-made base recipes (furniture, street furniture, storage and industrial props, nature, buildings, vehicles, props), each a model spec with parameters that builds a clean, lint-checked .glb. With nothing: an overview per category and family. With `query` (English or Dutch words, e.g. 'oak chair', 'rode bank', 'pine tree') and/or filters: matching assets, one line each. With `id` (e.g. furniture/dining-chair-oak-ladder): what it is, its parameters, materials and parts; with `spec: true` the full spec JSON to copy, change and pass to godot_model_build as `spec`. Build one as is with godot_model_build `kind: <id>` and `params`. Start here before writing a spec from scratch. Read-only.",
+      inputSchema: {
+        query: z.string().optional().describe("words to search for, English or Dutch"),
+        id: z.string().optional().describe("an asset id to show, e.g. furniture/dining-chair-oak-ladder"),
+        category: z.string().optional().describe("only this category: furniture, street, storage, nature, buildings, vehicles or props"),
+        family: z.string().optional().describe("only this family, e.g. dining-chair"),
+        archetype: z.string().optional().describe("only assets of this archetype or below it, e.g. prop.chair"),
+        limit: z.number().int().min(1).max(200).optional().describe("at most this many results (default 30)"),
+        spec: z.boolean().optional().describe("with `id`: return the full spec JSON"),
+      },
+      annotations: readOnly,
+    },
+    async ({ query, id, category, family, archetype, limit, spec }) =>
+      guard(() => {
+        if (id !== undefined) {
+          const asset = getAsset(id);
+          if (!asset) return failure(`no library asset "${id}"; search with \`query\` (ids look like furniture/dining-chair-oak-ladder)`);
+          return text(spec ? `${JSON.stringify(asset.spec, null, 2)}\n` : formatAsset(asset));
+        }
+        if (spec) return failure("`spec: true` needs an `id`");
+        if (!query && !category && !family && !archetype) return text(formatOverview(libraryOverview(), loadAssetLibrary().size));
+        const all = searchAssets({ ...(query ? { text: query } : {}), ...(category ? { category } : {}), ...(family ? { family } : {}), ...(archetype ? { archetype } : {}) });
+        return text(formatAssetList(all.slice(0, limit ?? 30), all.length));
+      }),
+  );
+
+  tool(
     "godot_model_build",
     {
       title: "Build a 3D model from code",
@@ -2056,7 +2123,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe(
             `a ready-made kind: ${allKinds()
               .map((k) => k.kind)
-              .join(", ")}`,
+              .join(", ")}; or a library asset id from godot_model_library, e.g. furniture/dining-chair-oak-ladder`,
           ),
         spec: z
           .record(z.string(), z.unknown())

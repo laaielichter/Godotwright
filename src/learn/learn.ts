@@ -157,7 +157,12 @@ export function recordCheck(check: CheckResult, review: Pick<ReviewReport, "find
     for (const f of reviewed) {
       const lines = errorsByFile.get(f.file);
       if (!lines) ruleStats(data, f.rule).contradicted++;
-      else if (lines.some((l) => f.line !== undefined && Math.abs(l - f.line) <= 1)) ruleStats(data, f.rule).confirmed++;
+      else if (lines.some((l) => f.line !== undefined && Math.abs(l - f.line) <= 1)) {
+        ruleStats(data, f.rule).confirmed++;
+        // Godot confirmed a finding that was marked as wrong here: `godotwright dream` asks to resolve it.
+        const id = fingerprint(f);
+        if (data.dismissed[id]) data.verified[id] = Date.now();
+      }
     }
     const reviewedFiles = new Set(judged.filter((f) => f.severity === "error").map((f) => f.file));
     for (const d of godotErrors) {
@@ -245,6 +250,7 @@ export function recordFeedback(finding: Pick<Finding, "rule" | "file" | "message
     } else {
       // A verdict from a user or agent is not Godot's confirmation: it never unlocks a downgrade.
       stats.verified = (stats.verified ?? 0) + 1;
+      data.verified[fingerprint(finding)] = Date.now();
     }
   });
 }

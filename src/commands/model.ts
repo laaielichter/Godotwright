@@ -8,6 +8,8 @@ import { ArchetypeError, loadLibrary } from "../archetype/library.js";
 import { BuildError } from "../build/params.js";
 import { allKinds } from "../build/generators/index.js";
 import { loadRecipes } from "../build/recipes.js";
+import { formatAsset, formatAssetList, formatOverview } from "../library/format.js";
+import { getAsset, libraryOverview, loadAssetLibrary, searchAssets } from "../library/library.js";
 import { buildModel } from "../build/run.js";
 import { EXAMPLE_SPEC, SPEC_CHEAT, SPEC_HELP } from "../build/spec-help.js";
 import { contractFromArchetype, contractFromModel, loadContract } from "../model/contract.js";
@@ -131,6 +133,36 @@ export function modelCommand(): Command {
     });
 
   model
+    .command("library")
+    .description("the asset library: over a thousand ready-made base recipes (furniture, street, storage, nature, buildings, vehicles, props), each a model spec with parameters that builds clean and that you can copy and change")
+    .argument("[query...]", 'an asset id (furniture/dining-chair-oak-ladder) to show it, or words to search for ("oak chair", "rode bank", "pine tree"); nothing for the overview')
+    .option("--category <name>", "only this category")
+    .option("--family <id>", "only this family, e.g. dining-chair")
+    .option("--archetype <id>", "only assets of this archetype (or below it), e.g. prop.chair")
+    .option("--limit <n>", "show at most this many", parseNumber, 40)
+    .option("--spec", "with an asset id: print its full spec (JSON), to save and edit")
+    .option("--json", "print as JSON")
+    .action((query: string[], options: { category?: string; family?: string; archetype?: string; limit: number; spec?: boolean; json?: boolean }, command: Command) => {
+      guard(() => {
+        const text = query.join(" ").trim();
+        const asset = text ? getAsset(text) : undefined;
+        if (asset) {
+          if (options.spec) return writeOut(command, `${JSON.stringify(asset.spec, null, 2)}\n`);
+          return writeOut(command, options.json ? `${JSON.stringify(asset, null, 2)}\n` : formatAsset(asset));
+        }
+        if (options.spec) throw new BuildError(`--spec needs an asset id; "${text}" is not one (search with \`model library ${text || "<words>"}\`)`);
+        if (!text && !options.category && !options.family && !options.archetype) {
+          const overview = libraryOverview();
+          return writeOut(command, options.json ? `${JSON.stringify(overview, null, 2)}\n` : formatOverview(overview, loadAssetLibrary().size));
+        }
+        const all = searchAssets({ ...(text ? { text } : {}), ...(options.category ? { category: options.category } : {}), ...(options.family ? { family: options.family } : {}), ...(options.archetype ? { archetype: options.archetype } : {}) });
+        const shown = all.slice(0, options.limit);
+        if (options.json) return writeOut(command, `${JSON.stringify(shown.map(({ spec: _spec, ...rest }) => rest), null, 2)}\n`);
+        writeOut(command, formatAssetList(shown, all.length));
+      });
+    });
+
+  model
     .command("kinds")
     .description("list the model kinds that `model build` can make, with their parameters")
     .action((_options: object, command: Command) => {
@@ -220,7 +252,7 @@ export function modelCommand(): Command {
           if (at < 1) throw new BuildError(`--set needs name=value, got "${pair}"`);
           input[pair.slice(0, at)] = pair.slice(at + 1);
         }
-        const name = kind ?? ((spec as { name?: unknown }).name as string | undefined) ?? "model";
+        const name = kind?.split("/").pop() ?? ((spec as { name?: unknown }).name as string | undefined) ?? "model";
         const outcome = buildModel({ ...(kind ? { kind } : {}), spec: kind ? undefined : spec, params: kind ? { ...(spec as object | undefined), ...input } : input, out: options.out ?? `${name}.glb`, ...(options.contractOut ? { contractOut: options.contractOut } : {}), ...(options.collision ? { collision: options.collision } : {}), textures: options.textures });
         writeOut(command, `${outcome.summary}\n`);
         if (outcome.report.categories.some((c) => c.errors > 0)) process.exitCode = 1;

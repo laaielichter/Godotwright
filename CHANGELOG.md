@@ -4,6 +4,51 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Asset library tested in Godot, and made to look real.** All 1000 assets import, load and instantiate in Godot 4.7
+  with normals, materials, UVs and tangents where needed and their feet on the ground (a new integration test,
+  `test/integration/library-godot.test.ts`: one asset per family in CI, `LIBRARY_GODOT=all` for every one). Rendered in
+  Godot under calibrated light, the assets got a second pass: real-world colours, painted, plastic, fabric, leather,
+  brushed and rusted finishes, and fixed silhouettes.
+- **`model lint`: `model/albedo`** (info): a base colour real surfaces do not have, a non-metal brighter than snow or
+  darker than charcoal, or a dark "metal" that renders as a black mirror; a textured material is judged by the mean of
+  its colour map.
+- **Ellipsoids with fractures (`"cuts": 0-24`)**: seeded planes slice caps off a (lumpy) ellipsoid, so rocks and broken
+  stone get flat faces with sharp edges while the rest stays smooth.
+- **Brick and stone textures keep their colour:** the mortar now follows the colour of the wall, a little lighter, instead
+  of a fixed light grey that made dark brick and stone look up to 1.8 times as light as their colour.
+- **Better bark, and granite.** The `bark` texture is now tall plates separated by dark fissures (it looked like a giraffe
+  coat), and the new `granite` texture is a grey ground with dense light and dark mineral flecks.
+- **Seven new texture patterns for finishes:** `grain` (solid timber without plank joints), `fabric` (woven), `leather` (grain), `painted` (orange peel), `plastic`
+  (moulded), `brushed` (metal streaks) and `rust`, for any material in a spec (`"texture": "fabric"`).
+
+- **Asset library: a thousand base recipes (`godotwright model library`, MCP `godot_model_library`).** Over a thousand
+  ready-made model specs in seven categories (furniture, street, storage, nature, buildings, vehicles, props), made by
+  families of variants that differ in style, part layout and finish. Every asset has parameters, builds a clean `.glb`
+  and passes the model lint and its archetype check at its defaults and at the ends of its ranges (tested). Search in
+  English or Dutch, build by id (`model build furniture/dining-chair-oak-ladder`), or print the spec (`--spec`) as the
+  start of your own model. `model brief` names the library assets of a thing; the catalogue is in `LIBRARY.md`
+  (`npm run build:library`). New archetypes for the library: stool, chest of drawers, lamp, planter, pallet, gas
+  cylinder, storage rack, cable reel, chest, jerrycan, traffic cone, market stall, terminal, rock, bollard, bike rack,
+  road barrier, storage tank, tree stump, mushroom, cart, shed and gazebo. 40 MCP tools.
+
+- **Dreaming: learn from past sessions (`godotwright dream`, MCP `godot_dream`).** Between sessions Godotwright looks
+  back at the local learning file, the project's write journal and, only with `--transcripts`, the project's Claude
+  Code and Codex session transcripts, and proposes, each with its evidence and a reason: draft lessons for Godot errors
+  that keep coming back with no rule or lesson, "use X, not Y" project hints for API names the agent keeps guessing,
+  lessons to retire, rewrite or merge, lessons about writes that were undone again and again, rules this project keeps
+  marking as false alarms (a suggestion only), and verdicts that contradict each other. Deterministic: no model, no
+  network, nothing leaves the machine, and only anonymous facts are kept from transcripts. `--apply <numbers|ids|all>`
+  keeps lessons through the scrubber, and hints, a dated report and a short "Godotwright lessons for agents" note only
+  on this machine (the project's untracked `.godot/godotwright/dreams/`, or Godotwright's state folder when git tracks
+  `.godot/`), never in a file of the repository, all through the journal, so `godotwright undo` takes it back (lessons
+  in the learning file included). The session-start hook shows that note to the agent and says when a dream is due
+  (24 hours and 5 sessions by default; `godotwright.json` `"dream": {"auto": "suggest" | "apply" | "off", "minHours",
+  "minSessions"}`); `"apply"` acts only after a one-time `godotwright dream --auto-apply yes` on that machine. Nothing
+  from dreaming goes into the opt-in report. The Claude Code
+  plugin adds the `godot-dreamer` subagent and the `/godotwright:dream` skill. 39 MCP tools.
+- **`godotwright undo` keeps a short log of undone writes** (tool and file kinds only) for the dream, and puts back
+  lessons a journalled write changed in the learning file.
+
 - **`godotwright migrate`: Godot 3 network keywords become `@rpc`.** `remote`, `remotesync`, `puppet`, `puppetsync`,
   `sync` and `slave` on `func` and `var` are rewritten to the matching `@rpc(...)` annotation; `master` and
   `mastersync` keep a TODO with the Godot 4 way (#127).
@@ -32,10 +77,24 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   path base gets a TODO instead (#166).
 - **Review: `api/export-without-type`.** `@export var speed` with no type and no default value, which Godot 4 does not
   load, is now an error with the fix (#169).
+- **`godotwright migrate`: Godot 3 `JSON.print()` and `JSON.parse(s).result`.** `JSON.print(x[, indent[, sort]])` becomes
+  `JSON.stringify(...)` with Godot 3's `sort_keys = false` default kept, and `JSON.parse(s).result` becomes
+  `JSON.parse_string(s)`; a `JSON.parse(s)` without `.result` gets a TODO (#161, #167).
+- **`godotwright migrate`: no more `DirAccess.new()`.** `Directory.new()` is no longer renamed to the abstract
+  `DirAccess.new()`; `File.new()` and `Directory.new()` get a TODO naming `FileAccess.open(path, mode)` and
+  `DirAccess.open(path)`, and review suggests the same (#158, #168).
+- **Review: `api/node-only-member`.** `@onready` or a node export (`@export var target: Node3D`) in a class that does not
+  inherit Node, such as a Resource, is now an error with the fix (#140, #170).
+- **Review: `api/redefines-native-member`.** A variable, constant or signal that the native base class already has
+  (Godot 4: `Member "..." redefined`) is now an error with the fix (#138, #171).
+- **GitHub workflow annotations.** `godotwright review --github` and `godotwright ci --annotations <file>` show findings
+  and Godot diagnostics on the changed lines of a pull request, without code scanning; the GitHub Action has an
+  `annotations` input, on by default (#151, #155).
 
 ### Thanks
 
-- @ANO3457 for #127, #129, #130, #136, #137, #156, #157, #165, #166 and #169.
+- @ANO3457 for #127, #129, #130, #136, #137, #156, #157, #165, #166, #167, #168, #169, #170 and #171.
+- @Aaqibhafeezkhan for GitHub workflow annotations in review, CI and the Action (#155).
 - @bfs2021 for the debug-guarded print fix (#148), the moved-member arguments in migrate (#153), the export hints (#154) and the SARIF
   repository paths (#164).
 - In 0.6.0: @Vamsi-2581 for the duplicate `funcref` fix (#83) and @bfs2021 for the Packed-type hint on Godot 3 Pool

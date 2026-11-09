@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { lessonFrom } from "../lessons/library.js";
 import type { LessonStats, LocalLesson } from "../lessons/types.js";
 
@@ -34,8 +34,13 @@ export interface LearningData {
   /** Local learning on or off (default on; nothing leaves the machine). */
   enabled: boolean;
   rules: Record<string, RuleStats>;
-  /** Fingerprints of findings marked as wrong. Local only. */
+  /** Fingerprints of findings marked as wrong, with when. Local only. */
   dismissed: Record<string, number>;
+  /**
+   * Fingerprints of findings marked as right, or confirmed by Godot after they were marked wrong, with when. Local
+   * only: `godotwright dream` uses it to find verdicts that contradict each other.
+   */
+  verified: Record<string, number>;
   /** API lookups that found nothing, by query. */
   apiMisses: Record<string, ApiMiss>;
   /** The last miss, so the next successful lookup can resolve it. */
@@ -87,6 +92,7 @@ export function emptyLearning(): LearningData {
     enabled: true,
     rules: {},
     dismissed: {},
+    verified: {},
     apiMisses: {},
     missedByReview: {},
     unparsed: {},
@@ -132,6 +138,7 @@ function normalizeLearning(parsed: unknown): LearningData {
     enabled: typeof top["enabled"] === "boolean" ? top["enabled"] : base.enabled,
     rules: recordOf(top["rules"], ruleFrom),
     dismissed: counts(top["dismissed"]),
+    verified: counts(top["verified"]),
     apiMisses: recordOf(top["apiMisses"], missFrom),
     lastMiss: lastMissFrom(top["lastMiss"]),
     missedByReview: counts(top["missedByReview"]),
@@ -182,7 +189,8 @@ function localLessonsFrom(v: unknown): LocalLesson[] {
   for (const item of v) {
     const lesson = lessonFrom(item);
     const added = isRecord(item) && typeof item["added"] === "string" ? item["added"] : undefined;
-    if (lesson && lesson.id.startsWith("local/") && added) out.push({ ...lesson, added });
+    const projects = isRecord(item) && Array.isArray(item["projects"]) ? item["projects"].filter((p): p is string => typeof p === "string" && /^[0-9a-f]{16}$/.test(p)).slice(0, 20) : [];
+    if (lesson && lesson.id.startsWith("local/") && added) out.push({ ...lesson, added, ...(projects.length ? { projects } : {}) });
   }
   return out;
 }
@@ -248,6 +256,57 @@ export function saveLearning(change: (data: LearningData) => void, file = learni
 /** saveLearning for tools: errors are swallowed, since learning is a side effect and must not break a tool. */
 export function updateLearning(change: (data: LearningData) => void, file = learningFile()): LearningData {
   return saveLearning(change, file).data;
+}
+
+/** A project's key in Godotwright's state: a hash of its folder, so no path is kept. */
+export function projectKey(root: string): string {
+  return createHash("sha1").update(resolve(root)).digest("hex").slice(0, 16);
+}
+
+/** A stable hash of a local lesson as it is stored, so an undo can tell whether it changed since. */
+export function lessonHash(lesson: LocalLesson): string {
+  // Keys sorted: the same lesson read back from the file hashes the same.
+  const canonical = (v: unknown): unknown =>
+    Array.isArray(v) ? v.map(canonical) : isRecord(v) ? Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => [k, canonical(v[k])])) : v;
+  return createHash("sha1").update(JSON.stringify(canonical(lesson))).digest("hex").slice(0, 16);
+}
+
+/**
+ * What a journalled write changed in the learning file, so `godotwright undo` can put it back. Lessons are restored by
+ * id, and only when they are still as the write left them (`after`, "" when the write removed it): a lesson rewritten
+ * since is left alone. Fingerprints hold their value before the write (null: there was none).
+ */
+export interface LearningUndo {
+  /** `at`: where a removed lesson stood, so it goes back to the same place. */
+  lessons: { id: string; before?: LocalLesson; after: string; at?: number }[];
+  dismissed?: Record<string, number | null>;
+  verified?: Record<string, number | null>;
+}
+
+/** Puts back what a write changed in the learning data. Returns the lesson ids restored and those left alone. */
+export function applyLearningUndo(data: LearningData, undo: LearningUndo, force = false): { restored: string[]; skipped: string[] } {
+  const restored: string[] = [];
+  const skipped: string[] = [];
+  for (const change of [...undo.lessons].reverse()) {
+    const at = data.localLessons.findIndex((l) => l.id === change.id);
+    const now = at >= 0 ? lessonHash(data.localLessons[at]!) : "";
+    if (now !== change.after && !force) {
+      skipped.push(change.id);
+      continue;
+    }
+    if (change.before) {
+      if (at >= 0) data.localLessons[at] = change.before;
+      else data.localLessons.splice(Math.min(change.at ?? data.localLessons.length, data.localLessons.length), 0, change.before);
+    } else if (at >= 0) data.localLessons.splice(at, 1);
+    restored.push(change.id);
+  }
+  for (const [key, map] of [["dismissed", data.dismissed], ["verified", data.verified]] as const) {
+    for (const [fingerprint, value] of Object.entries(undo[key] ?? {})) {
+      if (value === null) delete map[fingerprint];
+      else map[fingerprint] = value;
+    }
+  }
+  return { restored, skipped };
 }
 
 export function resetLearning(file = learningFile()): void {
