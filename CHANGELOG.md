@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+## 0.7.0 (an asset library of a thousand models, dreaming, and seven specialist agents)
+
 - **Asset library tested in Godot, and made to look real.** All 1000 assets import, load and instantiate in Godot 4.7
   with normals, materials, UVs and tangents where needed and their feet on the ground (a new integration test,
   `test/integration/library-godot.test.ts`: one asset per family in CI, `LIBRARY_GODOT=all` for every one). Rendered in
@@ -46,6 +48,12 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   "minSessions"}`); `"apply"` acts only after a one-time `godotwright dream --auto-apply yes` on that machine. Nothing
   from dreaming goes into the opt-in report. The Claude Code
   plugin adds the `godot-dreamer` subagent and the `/godotwright:dream` skill. 39 MCP tools.
+- **Seven specialist subagents in the Claude Code plugin:** next to the reviewer and the debugger, now a migrator, a
+  model builder, a performance tuner, a shader specialist and a test engineer, each with its own tools and checks.
+- **332 lessons from real Godot 4 projects** ship in `data/lessons.json` (282 in 0.6.0), with new ones on rendering
+  under clouds and fog, moving decks and decals, vehicle physics, streaming worlds and runtime glTF vertex colours.
+- **A refreshed project site** and visual identity, a page for the asset library, and links to the sister tools in
+  the README (#173).
 - **`godotwright undo` keeps a short log of undone writes** (tool and file kinds only) for the dream, and puts back
   lessons a journalled write changed in the learning file.
 
