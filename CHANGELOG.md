@@ -4,6 +4,9 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **`api/infer-variant` no longer flags String formatting with a constant:** `var path := SHIP % lod`, where `SHIP` is a
+  String constant (or a typed String or StringName), is a String whatever `lod` is, just like `"name_%d" % v` already was.
+  Found in a real game (Response Helicopter, `ww_haven.gd`), where Godot 4.7.2 runs that line fine.
 - **Asset library tested in Godot, and made to look real.** All 1000 assets import, load and instantiate in Godot 4.7
   with normals, materials, UVs and tangents where needed and their feet on the ground (a new integration test,
   `test/integration/library-godot.test.ts`: one asset per family in CI, `LIBRARY_GODOT=all` for every one). Rendered in

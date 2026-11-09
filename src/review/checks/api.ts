@@ -410,6 +410,12 @@ export function checkScriptApi(pm: ProjectModel, path: string, options: ApiCheck
       if (/\b(?:as|if|and|or|not|in|is)\b|==|!=|<|>/.test(expr.replace(/"[^"]*"/g, '""'))) return;
       // `"name_%d" % v` formats a String: the result has a type whatever v is.
       if (/^[&^]?(["'])(?:\\.|(?!\1).)*\1\s*%/.test(expr)) return;
+      // The same with a String constant or a typed String on the left (`const SHIP := "lod%d.glb"`, `SHIP % lod`).
+      const format = /^([A-Za-z_]\w*)\s*%/.exec(expr);
+      if (format) {
+        const left = locals.has(format[1]!) ? locals.get(format[1]!) : (pm.constType(model, format[1]!) ?? pm.varType(model, format[1]!));
+        if (left?.kind === "native" && (left.name === "String" || left.name === "StringName")) return;
+      }
       for (const operand of topLevelOperands(expr)) {
         const chain = /^([A-Za-z_]\w*)((?:\s*(?:\.\s*[A-Za-z_]\w*|\[[^\]]*\]))*)$/.exec(operand.replace(/^[-+]\s*/, ""));
         if (!chain) continue;

@@ -33,6 +33,8 @@ describe("api/infer-variant on Variant values (loop variables, untyped parameter
     expect(lines("func f(data) -> void:\n\tvar speed := data.speed\n\tprint(speed)\n", rule)).toHaveLength(1);
     expect(lines("func f(cfg: Dictionary) -> void:\n\tvar speed := cfg[\"speed\"]\n\tprint(speed)\n", rule)).toHaveLength(1);
     expect(lines("var table: Array = []\n\n\nfunc f() -> void:\n\tvar first := table[0]\n\tprint(first)\n", rule)).toHaveLength(1);
+    // A constant that is not a String does not format: `SCALE % v` with an int constant on a Variant is still a Variant.
+    expect(lines("const SCALE := 7\n\n\nfunc f(data) -> void:\n\tvar rest := SCALE % data\n\tprint(rest)\n", rule)).toHaveLength(1);
   });
 
   it("stays quiet when the type is known", () => {
@@ -42,6 +44,9 @@ describe("api/infer-variant on Variant values (loop variables, untyped parameter
       "func f() -> void:\n\tfor i in range(4):\n\t\tvar twice := i * 2\n\t\tprint(twice)\n",
       "func f(data) -> void:\n\tvar speed: float = data.speed\n\tprint(speed)\n",
       "func f(data) -> void:\n\tvar label := \"speed_%d\" % data\n\tprint(label)\n",
+      "const SHIP := \"res://ship_lod%d.glb\"\n\n\nfunc f() -> void:\n\tfor lod in [1, 2]:\n\t\tvar path := SHIP % lod\n\t\tprint(path)\n",
+      "const NAME: String = \"unit_%s\"\n\n\nfunc f(data) -> void:\n\tvar label := NAME % data\n\tprint(label)\n",
+      "func f(data, fmt: String) -> void:\n\tvar label := fmt % data\n\tprint(label)\n",
       "func f(data) -> void:\n\tvar speed := data.speed as float\n\tprint(speed)\n",
       "func f(data) -> void:\n\tvar speed := absf(data.speed)\n\tprint(speed)\n",
       "func f(cfg: Dictionary[String, float]) -> void:\n\tvar speed := cfg[\"speed\"]\n\tprint(speed)\n",
