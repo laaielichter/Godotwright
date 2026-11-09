@@ -76,10 +76,18 @@ function buildDrone(d: DroneDef): AssetDraft {
       ], { material: "shell" }));
       kids.push(box("Battery", ["$bw * 0.75", "$bh * 0.3", "$bl * 0.55"], { at: [0, "$by + $bh * 0.42", "-$bl * 0.12"], bevel: 0.005, material: "plastic_dark" }));
       kids.push(box("Sensor_L", [0.015, 0.012, 0.005], { at: ["$bw * 0.18", "$by", "$bl * 0.5 - 0.004"], material: "dark_glass", mirror: "Sensor_R" }));
+      // A three-axis gimbal on rubber dampers: yaw motor, C-bracket, roll motor, camera with a lens barrel.
       kids.push(group("Gimbal", [
-        box("Yoke", [0.04, 0.03, 0.02], { at: [0, -0.012, 0], bevel: 0.004, material: "plastic_dark" }),
-        ellipsoid("Camera", [0.022, 0.02, 0.022], { at: [0, -0.035, 0.005], segments: 14, material: "plastic_dark" }),
-        cyl("Lens", 0.01, 0.01, { axis: "z", at: [0, -0.035, 0.026], segments: 12, material: "dark_glass" }),
+        box("Plate", [0.05, 0.005, 0.042], { at: [0, -0.003, 0], bevel: 0.002, material: "plastic_dark" }),
+        cyl("Damper_{i}", 0.0045, 0.012, { at: [-0.016, 0.004, -0.013], repeat: { count: 2, step: [0.032, 0, 0] }, segments: 8, material: "accent" }),
+        cyl("DamperFront_{i}", 0.0045, 0.012, { at: [-0.016, 0.004, 0.013], repeat: { count: 2, step: [0.032, 0, 0] }, segments: 8, material: "accent" }),
+        cyl("YawMotor", 0.011, 0.014, { at: [0, -0.013, 0], segments: 14, material: "plastic_dark" }),
+        tube("Bracket", [[-0.03, -0.02, 0], [-0.03, -0.045, 0], [0.03, -0.045, 0], [0.03, -0.02, 0]], 0.0032, { segments: 6, material: "plastic_dark" }),
+        cyl("RollMotor_{i}", 0.0085, 0.008, { axis: "x", at: [-0.03, -0.043, 0], repeat: { count: 2, step: [0.06, 0, 0] }, segments: 12, material: "plastic_dark" }),
+        box("Camera", [0.036, 0.03, 0.036], { at: [0, -0.043, 0.003], bevel: 0.007, material: "plastic_dark" }),
+        cyl("Barrel", 0.0115, 0.013, { axis: "z", at: [0, -0.043, 0.027], segments: 14, material: "plastic_dark" }),
+        cyl("Lens", 0.0085, 0.004, { axis: "z", at: [0, -0.043, 0.035], segments: 14, material: "dark_glass" }),
+        cyl("Ring", 0.0105, 0.003, { axis: "z", at: [0, -0.043, 0.0335], segments: 14, material: "aluminium" }),
       ], { at: [0, "$by - $bh * 0.4", "$bl * 0.35"] }));
       break;
     case "racer":
@@ -106,9 +114,17 @@ function buildDrone(d: DroneDef): AssetDraft {
         tube("Skid", [["$bw * 0.55", 0.012, "-$bw * 0.55"], ["$bw * 0.55", 0.012, "$bw * 0.55"]], 0.012, { segments: 8 }),
       ], { material: "carbon", mirror: "Gear_R" }));
       if (big) kids.push(group("Gimbal", [
-        box("Mount", [0.08, 0.04, 0.08], { at: [0, -0.02, 0], bevel: 0.006, material: "plastic_dark" }),
-        box("Camera", [0.1, 0.08, 0.12], { at: [0, -0.09, 0.02], bevel: 0.012, material: "plastic_dark" }),
-        cyl("Lens", 0.03, 0.05, { axis: "z", at: [0, -0.09, 0.1], segments: 16, material: "dark_glass" }),
+        box("Plate", [0.12, 0.008, 0.1], { at: [0, -0.004, 0], bevel: 0.003, material: "plastic_dark" }),
+        cyl("Damper_{i}", 0.011, 0.02, { at: [-0.045, -0.014, -0.035], repeat: { count: 2, step: [0.09, 0, 0] }, segments: 10, material: "accent" }),
+        cyl("DamperFront_{i}", 0.011, 0.02, { at: [-0.045, -0.014, 0.035], repeat: { count: 2, step: [0.09, 0, 0] }, segments: 10, material: "accent" }),
+        cyl("YawMotor", 0.03, 0.03, { at: [0, -0.025, 0], segments: 18, material: "plastic_dark" }),
+        tube("Bracket", [[-0.085, -0.035, 0], [-0.085, -0.13, 0], [0.085, -0.13, 0], [0.085, -0.035, 0]], 0.008, { segments: 8, material: "plastic_dark" }),
+        cyl("RollMotor_{i}", 0.02, 0.016, { axis: "x", at: [-0.085, -0.1, 0], repeat: { count: 2, step: [0.17, 0, 0] }, segments: 14, material: "plastic_dark" }),
+        box("Camera", [0.11, 0.09, 0.12], { at: [0, -0.1, 0.01], bevel: 0.014, material: "plastic_dark" }),
+        cyl("Barrel", 0.036, 0.05, { axis: "z", at: [0, -0.1, 0.095], segments: 20, material: "plastic_dark" }),
+        cyl("Ring", 0.039, 0.008, { axis: "z", at: [0, -0.1, 0.122], segments: 20, material: "aluminium" }),
+        cyl("Lens", 0.03, 0.01, { axis: "z", at: [0, -0.1, 0.13], segments: 20, material: "dark_glass" }),
+        box("Led", [0.012, 0.006, 0.004], { at: [0.035, -0.065, 0.071], material: "accent" }),
       ], { at: [0, "$by - $bh * 0.2", "$bw * 0.25"] }));
       else kids.push(box("Payload", ["$bw * 0.5", "$bh * 0.6", "$bw * 0.5"], { at: [0, "$by - $bh * 0.75", 0], bevel: 0.01, material: "accent" }));
       break;

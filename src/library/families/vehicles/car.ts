@@ -664,7 +664,7 @@ function buildCar(key: string, st: CarStyle, fin: Finish): AssetDraft {
     kids.push(bumperBand("BumperFront", y0, y1, 0.012, 0.95, "body_paint", false));
     const r0 = yBot5 + 0.005, r1 = Math.min(lampRY - 0.09, r0 + 0.32);
     kids.push(bumperBand("BumperRear", r0, r1, 0.012, 0.95, "body_paint", true));
-    kids.push(bumperBand("Splitter", y0 - 0.004, y0 + 0.04, 0.03, 0.82, "trim_black", false, 0.06));
+    kids.push(bumperBand("Splitter", y0 - 0.004, y0 + 0.055, 0.03, 0.82, "trim_black", false, 0.06));
     kids.push(bumperBand("Diffuser", r0 - 0.004, r0 + 0.07, 0.025, 0.8, "trim_black", true, 0.06));
     const yi = y0 + 0.1;
     const zi = frontZ(0, yi);

@@ -132,12 +132,26 @@ function bike(st: Style, ci: number): AssetDraft {
       { z: "-$wb / 2 + 0.08", superellipse: { width: 0.05, height: 0.13, n: 2.5, count: 16, cx: -0.075, cy: "$R + 0.01" } },
       { z: "-$wb / 2 - 0.05", superellipse: { width: 0.04, height: 0.1, n: 2.5, count: 16, cx: -0.075, cy: "$R + 0.01" } },
     ], { material: "plastic_black" }));
-    tubes.push(box("SkirtGuard_L", [0.008, 0.22, 0.32], { at: [0.08, "$R + 0.18", "-$wb / 2 + 0.08"], bevel: 0.004, material: "plastic_black", mirror: "SkirtGuard_R" }));
+    // Skirt guard: nylon strings from the rear mudguard fanning down to the hub, on both sides.
+    for (let i = 0; i < 9; i++) {
+      const u = i / 8;
+      tubes.push(tube(`SkirtString_L${i + 1}`, [[0.075, `$R + 0.34 + ${f(0.05 * Math.sin(u * Math.PI))}`, `-$wb / 2 + ${f(0.34 - 0.5 * u)}`], [0.075, "$R + 0.03", `-$wb / 2 + ${f(0.02 - 0.04 * u)}`]], 0.0022, { segments: 4, material: "plastic_black", mirror: `SkirtString_R${i + 1}` }));
+    }
+    tubes.push(tube("SkirtRim_L", [[0.075, "$R + 0.34", "-$wb / 2 + 0.34"], [0.075, "$R + 0.39", "-$wb / 2 - 0.16"]], 0.005, { segments: 4, material: "plastic_black", mirror: "SkirtRim_R" }));
     tubes.push(box("Lock", [0.03, 0.05, 0.14], { at: [0.06, "$R + 0.27", "-$wb / 2 + 0.22"], bevel: 0.006, material: "chrome" }));
   } else {
-    // Chain: two runs between the chainring and the sprocket on the right (-x).
-    tubes.push(tube("ChainTop", [[-0.05, "$bby + 0.1", "$bbz"], [-0.055, "$R + 0.04", "-$wb / 2"]], 0.004, { segments: 4, material: "steel" }));
-    tubes.push(tube("ChainBottom", [[-0.05, "$bby - 0.1", "$bbz"], [-0.055, "$R - 0.04", "-$wb / 2"]], 0.004, { segments: 4, material: "steel" }));
+    // Chain: two runs of flat links between the chainring and the sprocket on the right (-x).
+    const run = (nm: string, ya: string, za: string, yb: string, zb: string, x: number): SpecNode => {
+      const N = 34;
+      const dy = `((${yb}) - (${ya}))`, dz = `((${zb}) - (${za}))`;
+      return group(nm, [
+        box("Link_{i}", [0.01, 0.012, `hypot(${dy}, ${dz}) / ${N} * 0.78`], { at: [x, `(${ya}) + ${dy} / ${2 * N}`, `(${za}) + ${dz} / ${2 * N}`], rotate: [`deg(-atan2(${dy}, ${dz}))`, 0, 0], repeat: { count: N, step: [0, `${dy} / ${N}`, `${dz} / ${N}`] }, material: "chain_steel" }),
+        tube("Pins", [[x, ya, za], [x, yb, zb]], 0.0035, { segments: 4, material: "chain_steel" }),
+      ]);
+    };
+    const rr = st === "road" ? 0.1 : st === "mtb" ? 0.075 : 0.09;
+    tubes.push(run("ChainTop", `$bby + ${rr}`, "$bbz", "$R + 0.04", "-$wb / 2", -0.052));
+    tubes.push(run("ChainBottom", `$bby - ${rr}`, "$bbz", "$R - 0.04", "-$wb / 2", -0.052));
     tubes.push(cyl("Sprocket", 0.045, 0.03, { axis: "x", at: [-0.05, "$R", "-$wb / 2"], segments: 18, material: "steel" }));
     tubes.push(box("Derailleur", [0.02, 0.08, 0.04], { at: [-0.06, "$R - 0.07", "-$wb / 2 + 0.01"], bevel: 0.006, material: "aluminium" }));
   }
@@ -217,6 +231,7 @@ function bike(st: Style, ci: number): AssetDraft {
       fork_black: VMATS["powder_black"]!,
       aluminium: VMATS["alloy"]!, steel: VMATS["stainless"]!,
       plastic_black: VMATS["trim_black"]!,
+      chain_steel: { color: [0.32, 0.32, 0.33], metallic: 1, roughness: 0.45, texture: "brushed" },
       ...mats("chrome"),
     },
     nodes: [group("Bicycle", kids, {

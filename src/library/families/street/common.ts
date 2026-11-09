@@ -136,20 +136,21 @@ export function useMats(...names: (string | undefined)[]): Record<string, Materi
 }
 
 /** Road dirt: what splash and dust leave on the foot of street furniture. */
-const DIRT: [number, number, number] = [0.075, 0.06, 0.042];
+const DIRT: [number, number, number] = [0.05, 0.04, 0.03];
 
 /** The finish `body` soiled by road dirt: `k` of its own colour, the rest dirt, duller and less metallic. */
 function soiled(body: MaterialDef, k: number, heavy: boolean): MaterialDef {
   // Bare metal looks darker than its albedo (it mirrors the ground and the shade); its dirt film is matte, so start
   // from what the metal reads as, not from its albedo, or the band reads as a pale ring.
   const bare = body.metallic >= 0.5;
-  const dim = bare ? 0.04 + 0.075 * Math.max(0, (k - 0.45) / 0.42) : (1 - 0.6 * body.metallic * body.metallic) * 0.78;
+  const dim = bare ? 0.04 + 0.075 * Math.max(0, (k - 0.45) / 0.42) : (1 - 0.6 * body.metallic * body.metallic) * 0.7;
   const [r, g, b] = body.color.map((c) => c * dim) as [number, number, number];
   // Heavy dirt on metal and paint reads as rust bloom; on plastic, wood and stone as blotchy road film.
   const onMetal = body.texture === undefined || body.texture === "painted" || body.texture === "brushed" || body.texture === "rust" || body.metallic >= 0.5;
   // Dirt on bare polished metal is darker than the mirror around it, matte and patchy (oxide texture), never a pale ring.
   const dirt: [number, number, number] = bare ? [0.014, 0.012, 0.01] : DIRT;
-  const tex = bare ? "rust" : heavy ? (onMetal ? "rust" : "concrete") : body.texture;
+  // Only iron that is already rusting gets the oxide texture; on paint, plastic and stone the splash zone is a blotchy road film.
+  const tex = bare ? "rust" : heavy ? (body.texture === "rust" ? "rust" : "concrete") : body.texture;
   return {
     color: [r * k + dirt[0] * (1 - k), g * k + dirt[1] * (1 - k), b * k + dirt[2] * (1 - k)],
     metallic: Math.min(bare ? 0.15 : 0.3, body.metallic * (heavy ? 0.3 : 0.6)), // a dirt film is matte
