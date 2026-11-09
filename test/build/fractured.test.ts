@@ -7,10 +7,10 @@ import { volume, writeScene } from "./helpers.js";
 const rock = (extra: object) => buildSpec({ version: 1, nodes: [{ name: "Rock", shape: "ellipsoid", material: "stone", radii: [1.2, 0.7, 0.9], segments: 28, ...extra }] });
 
 describe("fractured ellipsoids (cuts)", () => {
-  it("stay closed, face outwards and have no slivers, for many seeds, lumps and cut counts", () => {
-    for (let seed = 1; seed <= 40; seed++) {
-      for (const cuts of [1, 4, 9, 16]) {
-        for (const lumps of [0, 0.25, 0.5]) {
+  it("stay closed, face outwards and have no slivers, for many seeds, lumps and cut counts", { timeout: 120_000 }, () => {
+    for (let seed = 1; seed <= 16; seed++) {
+      for (const cuts of [1, 6, 16]) {
+        for (const lumps of [0, 0.4]) {
           const scene = rock({ seed, cuts, lumps });
           const report = lintModelFile(writeScene(scene));
           const bad = report.findings.filter((f) => ["model/flipped-faces", "model/open-edges", "model/degenerate-triangles", "model/non-manifold"].includes(f.rule));

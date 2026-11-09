@@ -20,9 +20,10 @@ func _setup() -> void:
 	var env := Environment.new()
 	var sky := Sky.new()
 	var mat := ProceduralSkyMaterial.new()
-	mat.sky_top_color = Color(0.36, 0.52, 0.75)
-	mat.sky_horizon_color = Color(0.72, 0.77, 0.82)
-	mat.ground_horizon_color = Color(0.6, 0.6, 0.58)
+	# A neutral grey sky: it is only what shiny surfaces reflect, so a blue one tints every flat metal pale blue.
+	mat.sky_top_color = Color(0.5, 0.52, 0.55)
+	mat.sky_horizon_color = Color(0.68, 0.69, 0.7)
+	mat.ground_horizon_color = Color(0.55, 0.55, 0.53)
 	mat.ground_bottom_color = Color(0.3, 0.3, 0.28)
 	sky.sky_material = mat
 	env.sky = sky
