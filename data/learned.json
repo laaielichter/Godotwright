@@ -10,6 +10,20 @@
       "dismissed": 0,
       "installs": 9
     },
+    "api/redefines-native-member": {
+      "reported": 2,
+      "confirmed": 1,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 2
+    },
+    "api/shader-renamed": {
+      "reported": 2,
+      "confirmed": 0,
+      "contradicted": 0,
+      "dismissed": 0,
+      "installs": 2
+    },
     "api/unknown-function": {
       "reported": 7,
       "confirmed": 22,
