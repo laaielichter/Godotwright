@@ -65,6 +65,26 @@ function outboard(scale: number, cowl: string): SpecNode {
   ], { at: [0, "$ytr", "-$L2 + 0.02"] });
 }
 
+/** A horn cleat lying along the boat (z): a base plate, two feet and the bar over them. */
+const cleat = (name: string, at: Vec, mirror?: string, size = 1): SpecNode => {
+  const k = (v: number): number => Math.round(v * size * 10000) / 10000;
+  return group(name, [
+    box("Base", [k(0.05), k(0.01), k(0.17)], { at: [0, k(0.005), 0], bevel: 0.003, material: "steel" }),
+    box("Foot_{i}", [k(0.028), k(0.026), k(0.03)], { at: [0, k(0.023), k(-0.045)], repeat: { count: 2, step: [0, 0, k(0.09)] }, material: "steel" }),
+    box("Horn", [k(0.03), k(0.02), k(0.17)], { at: [0, k(0.045), 0], bevel: 0.007, material: "steel" }),
+  ], { at, ...(mirror ? { mirror } : {}) });
+};
+
+/** A guard rail: a top rail through the points and a stanchion with a foot at each, along the sheer (s fractions). */
+function railing(name: string, ss: number[], h: HullShape, k: number, up: number, inset = 0): SpecNode[] {
+  const out: SpecNode[] = [tube(`${name}_L`, ss.map((s) => [`${xb(h, s, k)} - ${f(inset)}`, `${ysh(h, s)} + ${f(up)}`, zs(s)] as Vec), 0.014, { segments: 6, material: "steel", mirror: `${name}_R` })];
+  ss.forEach((s, i) => {
+    out.push(cyl(`${name}Post_L${i + 1}`, 0.012, up, { at: [`${xb(h, s, k)} - ${f(inset)}`, `${ysh(h, s)} + ${f(up / 2)}`, zs(s)], segments: 6, material: "steel", mirror: `${name}Post_R${i + 1}` }));
+    out.push(cyl(`${name}Foot_L${i + 1}`, 0.022, 0.012, { at: [`${xb(h, s, k)} - ${f(inset)}`, `${ysh(h, s)} + 0.004`, zs(s)], segments: 10, material: "steel", mirror: `${name}Foot_R${i + 1}` }));
+  });
+  return out;
+}
+
 /** A bucket seat facing +z: cushion and back. */
 const bucket = (name: string, at: Vec, mirror?: string): SpecNode => group(name, [
   box("Base", [0.4, 0.35, 0.4], { at: [0, 0.175, 0], bevel: 0.03, material: "accent" }),
@@ -145,9 +165,8 @@ function buildBoat(b: BoatDef): AssetDraft {
         kids.push(outboard(1.15, "cowl_white"));
         kids.push(box("Cushion_Bow", [`${xb(h, b.deck + 0.08, 1.2)}`, 0.06, 0.6], { at: [0, `${ysh(h, b.deck + 0.08)} + 0.01`, zs(b.deck + 0.08)], bevel: 0.02, material: "upholstery" }));
       }
-      // Bow rail with stanchions.
-      kids.push(tube("BowRail_L", [0.8, 0.88, 0.95, 0.99].map((s) => [`${xb(h, s, 0.85)}`, `${ysh(h, s)} + 0.3`, zs(s)] as Vec), 0.014, { segments: 6, material: "steel", mirror: "BowRail_R" }));
-      kids.push(cyl("Stanchion_L{i}", 0.012, 0.32, { at: [xb(h, 0.8, 0.85), `${ysh(h, 0.8)} + 0.14`, zs(0.8)], repeat: { count: 2, step: [`${xb(h, 0.92, 0.85)} - ${xb(h, 0.8, 0.85)}`, `${ysh(h, 0.92)} - ${ysh(h, 0.8)}`, `${zs(0.92)} - (${zs(0.8)})`] }, segments: 6, material: "steel", mirror: "Stanchion_R" }));
+      // Bow rail with stanchions on feet.
+      kids.push(...railing("BowRail", [0.8, 0.86, 0.92, 0.98], h, 0.85, 0.3, 0.03));
       break;
     }
     case "fishing": {
@@ -172,8 +191,7 @@ function buildBoat(b: BoatDef): AssetDraft {
         box("NavLight_L", [0.06, 0.1, 0.14], { at: [`${w} + 0.08`, 1.92, `${z1} - (${z0}) - 0.15`], material: "lamp_red" }),
         box("NavLight_R", [0.06, 0.1, 0.14], { at: [`-${w} - 0.08`, 1.92, `${z1} - (${z0}) - 0.15`], material: "lamp_green" }),
       ], { at: [0, y0, z0] }));
-      kids.push(tube("GuardRail_L", [0.03, 0.2, 0.45].map((s) => [`${xb(h, s)} - 0.06`, `${ysh(h, s)} + 0.45`, zs(s)] as Vec), 0.02, { segments: 6, material: "steel", mirror: "GuardRail_R" }));
-      kids.push(cyl("Post_L{i}", 0.018, 0.48, { at: [`${xb(h, 0.1)} - 0.06`, `${ysh(h, 0.1)} + 0.22`, zs(0.1)], repeat: { count: 3, step: [0, 0, `$L2 * 0.25`] }, segments: 6, material: "steel", mirror: "Post_R" }));
+      kids.push(...railing("GuardRail", [0.03, 0.12, 0.22, 0.33, 0.45], h, 1, 0.45, 0.06));
       kids.push(cyl("RodHolder_{i}", 0.025, 0.3, { at: [`-${xb(h, 0.08)} + 0.12`, `${ysh(h, 0.08)} + 0.05`, zs(0.08)], rotate: [-20, 0, 0], repeat: { count: 3, step: [`${xb(h, 0.08)} - 0.12`, 0, 0] }, segments: 8, material: "steel" }));
       kids.push(box("FishBox", [0.9, 0.5, 0.6], { at: [0, `${sole} + 0.25`, "-$L2 + 0.9"], bevel: 0.04, material: "deck_white" }));
       kids.push(outboard(1.2, "cowl_black"));
@@ -199,8 +217,7 @@ function buildBoat(b: BoatDef): AssetDraft {
       ], { at: [0, sole, zs(0.33)] }));
       kids.push(box("Seat_Bow", [`${xb(h, 0.85, 1.2)}`, 0.14, 0.5], { at: [0, `${ysh(h, b.deck)} + 0.05`, zs(0.86)], bevel: 0.05, material: "upholstery" }));
       kids.push(outboard(1.3, "cowl_black"));
-      kids.push(tube("BowRail_L", [0.82, 0.9, 0.96, 0.995].map((s) => [`${xb(h, s, 0.85)}`, `${ysh(h, s)} + 0.32`, zs(s)] as Vec), 0.014, { segments: 6, material: "steel", mirror: "BowRail_R" }));
-      kids.push(cyl("Stanchion_L", 0.012, 0.34, { at: [xb(h, 0.82, 0.85), `${ysh(h, 0.82)} + 0.15`, zs(0.82)], segments: 6, material: "steel", mirror: "Stanchion_R" }));
+      kids.push(...railing("BowRail", [0.82, 0.88, 0.94, 0.99], h, 0.85, 0.32, 0.03));
       break;
     }
     case "dinghy": {
@@ -233,7 +250,31 @@ function buildBoat(b: BoatDef): AssetDraft {
       break;
     }
   }
-  kids.push(cyl("Cleat_L", 0.02, 0.18, { axis: "z", at: [`${xb(h, 0.06)} - 0.08`, `${ysh(h, 0.06)} + 0.02`, zs(0.06)], segments: 8, material: "steel", mirror: "Cleat_R" }));
+  // Cleats: aft and amidships on the gunwale (never on an inflatable tube), one on the bow.
+  const gx = (s: number): string => `${xb(h, s)} - 0.03`;
+  kids.push(cleat("Cleat_Stern_L", [gx(0.05), ysh(h, 0.05), zs(0.05)], "Cleat_Stern_R"));
+  if (b.kind !== "rib") kids.push(cleat("Cleat_Mid_L", [gx(0.32), ysh(h, 0.32), zs(0.32)], "Cleat_Mid_R"));
+  if (b.kind === "rib") kids.push(cleat("Cleat_Bow", [0, `${ysh(h, 0.9)} + 0.2`, zs(0.9)], undefined, 1.2));
+  else {
+    const sB = b.kind === "dinghy" ? 0.9 : 0.91;
+    kids.push(cleat("Cleat_Bow", [0, `${ysh(h, sB)} + 0.012`, zs(sB)], undefined, 1.2));
+    kids.push(tube("BowRoller", [[-0.09, `${ysh(h, 0.99)} + 0.03`, `${zs(0.99)} - 0.02`], [-0.09, `${ysh(h, 0.99)} + 0.1`, `${zs(0.99)} + 0.05`], [0.09, `${ysh(h, 0.99)} + 0.1`, `${zs(0.99)} + 0.05`], [0.09, `${ysh(h, 0.99)} + 0.03`, `${zs(0.99)} - 0.02`]], 0.012, { segments: 6, material: "steel" }));
+    kids.push(cyl("Roller", 0.022, 0.16, { axis: "x", at: [0, `${ysh(h, 0.99)} + 0.1`, `${zs(0.99)} + 0.05`], segments: 10, material: "rub_black" }));
+  }
+  // Round fenders hung over the side from the rub rail (cabin boats and workboats).
+  if (b.kind === "cruiser" || b.kind === "fishing") {
+    for (const [i, s] of [0.34, 0.44].entries()) {
+      kids.push(group(`Fender_L${i + 1}`, [
+        cyl("Body", 0.07, 0.3, { segments: 14, material: "fender_white", bevel: 0.03 }),
+        tube("Line", [[0, 0.15, 0.0], [-0.03, 0.22, -0.04]], 0.005, { segments: 4, material: "rope" }),
+      ], { at: [`${xb(h, s)} + 0.07`, `${ysh(h, s)} - 0.3`, zs(s)], mirror: `Fender_R${i + 1}` }));
+    }
+  }
+  // Navigation lights at the bow (the fishing boat has them on the wheelhouse).
+  if (b.kind !== "fishing" && b.kind !== "rib") {
+    kids.push(box("NavLight_L", [0.04, 0.04, 0.05], { at: [`${xb(h, 0.93)} - 0.06`, `${ysh(h, 0.93)} + 0.03`, zs(0.93)], bevel: 0.01, material: "lamp_red" }));
+    kids.push(box("NavLight_R", [0.04, 0.04, 0.05], { at: [`-${xb(h, 0.93)} + 0.06`, `${ysh(h, 0.93)} + 0.03`, zs(0.93)], bevel: 0.01, material: "lamp_green" }));
+  }
 
   const transomTop = ysh(h, 0);
   const kindTag: Record<Kind, string[]> = { runabout: ["speedboat", "speedboot", "bowrider"], cruiser: ["speedboat", "speedboot", "cabin cruiser", "kajuitboot"], fishing: ["fishing boat", "vissersboot", "wheelhouse", "stuurhut"], console: ["center console", "visboot", "sportvisboot"], dinghy: ["dinghy", "bijboot", "aluminium boat"], rib: ["rib", "rubberboot", "inflatable"] };
@@ -260,6 +301,8 @@ function buildBoat(b: BoatDef): AssetDraft {
       cowl_black: { color: [0.025, 0.025, 0.028], metallic: 0.3, roughness: 0.25, texture: "painted" },
       tube_grey: { color: [0.16, 0.17, 0.18], metallic: 0, roughness: 0.7, texture: "fabric" },
       steel: VMATS["stainless"]!,
+      fender_white: { color: [0.6, 0.6, 0.58], metallic: 0, roughness: 0.5, texture: "plastic" },
+      rope: { color: [0.55, 0.5, 0.38], metallic: 0, roughness: 0.9, texture: "fabric" },
     },
     nodes: [group("Boat", kids, { vars: { L2: "$length / 2", B2: "$beam / 2", fb: "$freeboard", d: "0.1 + $beam * 0.1", ytr: transomTop } })],
   };
