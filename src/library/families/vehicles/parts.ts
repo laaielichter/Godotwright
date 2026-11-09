@@ -14,19 +14,25 @@ export type Lin = Record<string, number>;
 
 export const L = (c: number, terms: Record<string, number> = {}): Lin => ({ "": c, ...terms });
 
+// These three run millions of times while a car is being shaped, so they walk the keys directly instead of building
+// arrays of entries; the results (and their order) are the same.
 export function ladd(...ls: Lin[]): Lin {
   const out: Lin = {};
-  for (const l of ls) for (const [k, v] of Object.entries(l)) out[k] = (out[k] ?? 0) + v;
+  for (const l of ls) for (const k in l) out[k] = (out[k] ?? 0) + (l[k] as number);
   return out;
 }
 
-export const lscale = (l: Lin, k: number): Lin => Object.fromEntries(Object.entries(l).map(([n, v]) => [n, v * k]));
+export function lscale(l: Lin, k: number): Lin {
+  const out: Lin = {};
+  for (const n in l) out[n] = (l[n] as number) * k;
+  return out;
+}
 export const lsub = (a: Lin, b: Lin): Lin => ladd(a, lscale(b, -1));
 export const lerpL = (a: Lin, b: Lin, t: number): Lin => ladd(lscale(a, 1 - t), lscale(b, t));
 
 export function lev(l: Lin, env: Record<string, number>): number {
   let s = 0;
-  for (const [k, v] of Object.entries(l)) s += k === "" ? v : v * (env[k] ?? NaN);
+  for (const k in l) s += k === "" ? (l[k] as number) : (l[k] as number) * (env[k] ?? NaN);
   return s;
 }
 
@@ -129,16 +135,14 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
   /** A profile point: radius as a fraction of $r, position along the axle as a fraction of $w (outer face +). */
   const P = (a: number, b: number): [Num, Num] => [`${f(a)} * $r`, X(b)];
   const kids: SpecNode[] = [];
+  // The tyre: rounded shoulders and a tread with four circumferential grooves.
+  const gr = (r: number, b: number): [Num, Num] => [`${f(r)} * $r`, `${f(b)} * $w`];
   const prof: [Num, Num][] = [
-    [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
-    [`${f(rf + 0.55 * (1 - rf))} * $r`, `${f(-0.505)} * $w`],
-    [`${f(0.965)} * $r`, `${f(-0.47)} * $w`],
-    ["$r", `${f(-0.36)} * $w`],
-    ["$r", `${f(0.36)} * $w`],
-    [`${f(0.965)} * $r`, `${f(0.47)} * $w`],
-    [`${f(rf + 0.55 * (1 - rf))} * $r`, `${f(0.505)} * $w`],
-    [`${f(rf)} * $r`, `${f(0.43)} * $w`],
-    [`${f(rf)} * $r`, `${f(-0.43)} * $w`],
+    gr(rf, -0.43), gr(rf + 0.55 * (1 - rf), -0.505), gr(0.965, -0.47), gr(0.992, -0.41), gr(1, -0.36),
+    gr(1, -0.285), gr(0.982, -0.27), gr(0.982, -0.2), gr(1, -0.185),
+    gr(1, -0.04), gr(0.982, -0.025), gr(0.982, 0.025), gr(1, 0.04),
+    gr(1, 0.185), gr(0.982, 0.2), gr(0.982, 0.27), gr(1, 0.285),
+    gr(1, 0.36), gr(0.992, 0.41), gr(0.965, 0.47), gr(rf + 0.55 * (1 - rf), 0.505), gr(rf, 0.43), gr(rf, -0.43),
   ];
   kids.push(lathe("Tyre", prof, { material: tyre, rotate: [0, 0, -90], segments: seg, caps: false }));
   // A moulded sidewall band on the outer face (lettering ring), a touch glossier than the tread.
@@ -151,6 +155,9 @@ export function wheel(name: string, at: Vec, o: WheelOpts, extra: { mirror?: str
     [rf - 0.03, -0.42], [rf + 0.02, -0.45], [rf + 0.025, -0.4], [rf + 0.025, 0.4], [rf + 0.03, 0.47],
     [rf - 0.005, 0.5], [rf - 0.05, 0.44], [rf - 0.05, -0.38], [rf - 0.03, -0.42],
   ].map(([a, b]) => P(a!, b!)), { material: o.rim, rotate: [0, 0, -90], segments: seg, caps: false }));
+  // A rim-protector ridge on the sidewall and the valve stem.
+  kids.push(lathe("Ridge", [P(rf + 0.07 * (1 - rf), 0.485), P(rf + 0.12 * (1 - rf), 0.515), P(rf + 0.17 * (1 - rf), 0.485), P(rf + 0.07 * (1 - rf), 0.485)], { material: tyre, rotate: [0, 0, -90], segments: seg, caps: false }));
+  kids.push(cyl("Valve", "0.012 * $r", "0.05 * $w", { axis: "x", at: [X(0.5), `${f(rf - 0.04)} * $r`, `${f(0.2)} * $r`], segments: 6, material: "trim_black" }));
   const hub = o.hub ?? o.rim;
   switch (o.style) {
     case "alloy": {

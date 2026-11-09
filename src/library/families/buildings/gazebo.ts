@@ -1,6 +1,6 @@
 import { box, cyl, extrude, group, int, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { BMATS } from "./shared.js";
+import { BMATS, sheetRib, solid } from "./shared.js";
 
 const STYLES = {
   hexagonal: { text: "a hexagonal timber gazebo: six posts on a raised deck, railings with balusters on five sides and an open entrance at the front, curved brackets and a faceted roof with a finial", n: 6, r: [1.4, 2.4, 1.8], h: [2.2, 2.8, 2.4] },
@@ -60,29 +60,37 @@ function polygonal(style: "hexagonal" | "bandstand", f: (typeof FINISHES)["hexag
     kids.push(extrude("FloorEdge", polygonPlan(n, "($R + 0.3)"), fy - 0.12, fy, { material: f.trim }));
     kids.push(box("Step_{i}", [1.8, "0.3 * ($i + 1)", 0.4], { anchor: "bottom", at: [0, 0, "$R * cos(pi / 8) + 0.2 + 0.4 * (2 - $i) + 0.2"], repeat: { count: 3, step: [0, 0, 0] }, material: f.floor, bevel: 0.01 }));
   } else {
-    kids.push(box("Joist_{i}", [0.1, 0.12, "2 * $R"], { at: [0, 0.06, 0], rotate: [0, "$i * 60", 0], repeat: { count: 3, step: [0, 0, 0] }, material: f.frame }));
+    kids.push(box("Joist_{i}", [0.1, 0.12, "2 * $R"], { at: [0, 0.06, 0], rotate: [0, "$i * 60", 0], repeat: { count: 3, step: [0, 0, 0] }, material: solid(f.frame) }));
     kids.push(box("Step", [1.0, 0.12, 0.35], { anchor: "bottom", at: [0, 0, "$R * cos(pi / 6) + 0.35"], material: f.floor, bevel: 0.01 }));
   }
   const post: SpecNode = band
     ? cyl("Column_{i}", 0.07, "$h", { anchor: "base", at: [0, fy, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, segments: 12, material: f.frame })
-    : box("Post_{i}", [0.13, "$h", 0.13], { anchor: "bottom", at: [0, fy, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, material: f.frame, bevel: 0.01 });
+    : box("Post_{i}", [0.13, "$h", 0.13], { anchor: "bottom", at: [0, fy, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, material: solid(f.frame), bevel: 0.01 });
   kids.push(post);
-  kids.push(box("Plinth_{i}", [0.22, 0.25, 0.22], { anchor: "bottom", at: [0, fy, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, material: f.trim, bevel: 0.01 }));
-  kids.push(box("Capital_{i}", [0.22, 0.12, 0.22], { at: [0, `${fy} + $h - 0.06`, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, material: f.trim, bevel: 0.01 }));
+  kids.push(box("Plinth_{i}", [0.22, 0.25, 0.22], { anchor: "bottom", at: [0, fy, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, material: solid(f.trim), bevel: 0.01 }));
+  kids.push(box("Capital_{i}", [0.22, 0.12, 0.22], { at: [0, `${fy} + $h - 0.06`, "$R"], repeat: { count: n, around: "y", phase: 180 / n }, material: solid(f.trim), bevel: 0.01 }));
   // Ring beam on the post tops, brackets and railings between the posts (not at the front).
-  kids.push(box("Plate_{i}", ["2 * $R * sin(pi / $nn) + 0.1", 0.18, 0.14], { at: [0, `${fy} + $h + 0.09`, "$R * cos(pi / $nn)"], repeat: { count: n, around: "y" }, material: f.trim, bevel: 0.01 }));
+  kids.push(box("Plate_{i}", ["2 * $R * sin(pi / $nn) + 0.1", 0.18, 0.14], { at: [0, `${fy} + $h + 0.09`, "$R * cos(pi / $nn)"], repeat: { count: n, around: "y" }, material: solid(f.trim), bevel: 0.01 }));
   kids.push(group("Bracket_{i}", [
-    box("Arm_L", [0.5, 0.06, 0.06], { at: ["-$R * sin(pi / $nn) + 0.25", `${fy} + $h - 0.15`, 0], rotate: [0, 0, 35], material: f.trim }),
-    box("Arm_R", [0.5, 0.06, 0.06], { at: ["$R * sin(pi / $nn) - 0.25", `${fy} + $h - 0.15`, 0], rotate: [0, 0, -35], material: f.trim }),
+    box("Arm_L", [0.5, 0.06, 0.06], { at: ["-$R * sin(pi / $nn) + 0.25", `${fy} + $h - 0.15`, 0], rotate: [0, 0, 35], material: solid(f.trim) }),
+    box("Arm_R", [0.5, 0.06, 0.06], { at: ["$R * sin(pi / $nn) - 0.25", `${fy} + $h - 0.15`, 0], rotate: [0, 0, -35], material: solid(f.trim) }),
   ], { at: [0, 0, "$R * cos(pi / $nn)"], repeat: { count: n, around: "y" } }));
   kids.push(group("Railing_{i}", [
-    box("TopRail", ["2 * $R * sin(pi / $nn) - 0.1", 0.07, 0.08], { at: [0, `${fy} + 0.9`, 0], material: f.trim }),
-    box("BottomRail", ["2 * $R * sin(pi / $nn) - 0.1", 0.06, 0.06], { at: [0, `${fy} + 0.12`, 0], material: f.trim }),
-    box("Baluster_{i}", [0.04, 0.78, 0.04], { at: ["-$R * sin(pi / $nn) + 0.15", `${fy} + 0.51`, 0], repeat: { count: "floor(2 * $R * sin(pi / $nn) / 0.14)", step: [0.14, 0, 0] }, material: band ? "cast_iron" : f.trim }),
+    box("TopRail", ["2 * $R * sin(pi / $nn) - 0.1", 0.07, 0.08], { at: [0, `${fy} + 0.9`, 0], material: solid(f.trim) }),
+    box("BottomRail", ["2 * $R * sin(pi / $nn) - 0.1", 0.06, 0.06], { at: [0, `${fy} + 0.12`, 0], material: solid(f.trim) }),
+    box("Baluster_{i}", [0.04, 0.78, 0.04], { at: ["-$R * sin(pi / $nn) + 0.15", `${fy} + 0.51`, 0], repeat: { count: "floor(2 * $R * sin(pi / $nn) / 0.14)", step: [0.14, 0, 0] }, material: band ? "cast_iron" : solid(f.trim) }),
   ], { at: [0, 0, "$R * cos(pi / $nn)"], repeat: { count: n - 1, around: "y", phase: 360 / n } }));
   // Roof.
   kids.push(group("Roof", [
     facetRoof(n, f.roof, band ? 0.08 : 0.1),
+    // Thatch: stepped courses of combed reed over the facets, a thick rounded roll round the eaves.
+    ...(f.roof === "thatch" ? [
+      ...[1, 2, 3].map((k) => group(`Course_${k}`, [
+        facetRoof(n, f.roof, 0.1),
+        cyl("CourseRoll_{i}", 0.05, `2 * $ra * tan(pi / ${n}) + 0.08`, { axis: "x", at: [0, "$ey + 0.03", "$ra - 0.04"], repeat: { count: n, around: "y" }, segments: 10, material: f.roof }),
+      ], { vars: { ey: `$ey + ${k} * $ra * 0.17 * tan($phi) + ${k * 0.05}`, ra: `$ra * (1 - ${k} * 0.17)` } })),
+      cyl("EaveRoll_{i}", 0.15, `2 * $ra * tan(pi / ${n}) + 0.2`, { axis: "x", at: [0, "$ey + 0.02", "$ra - 0.06"], repeat: { count: n, around: "y" }, segments: 12, material: "thatch_dark" }),
+    ] : []),
     lathe("Finial", [[0.12, "$ey + $rr - 0.2"], [0.14, "$ey + $rr + 0.05"], [0.08, "$ey + $rr + 0.25"], [0.1, "$ey + $rr + 0.4"], [0.02, "$ey + $rr + 0.7"]], { segments: 12, material: band ? f.trim : "brass" }),
     ...(band ? [
       lathe("Lantern", [[0.6, "$ey + $rr * 0.55"], [0.6, "$ey + $rr * 0.85"], [0.75, "$ey + $rr * 0.85"], [0.75, "$ey + $rr * 0.9"]], { segments: n, material: f.frame }),
@@ -99,24 +107,25 @@ function rectangular(style: "pergola" | "carport", f: (typeof FINISHES)["pergola
   const kids: SpecNode[] = [
     box("Floor", ["2 * $hw + 0.4", 0.1, "2 * $hl + 0.4"], { anchor: "bottom", material: f.floor, bevel: 0.01 }),
     group("Posts", [
-      box("Post_L{i}", [0.14, "$h", 0.14], { anchor: "bottom", at: ["-$hw", 0.1, "-$hl"], repeat: { count: "$spans + 1", step: [0, 0, "2 * $hl / $spans"] }, mirror: "Post_R{i}", material: f.frame, bevel: pergola ? 0.01 : 0.004 }),
+      box("Post_L{i}", [0.14, "$h", 0.14], { anchor: "bottom", at: ["-$hw", 0.1, "-$hl"], repeat: { count: "$spans + 1", step: [0, 0, "2 * $hl / $spans"] }, mirror: "Post_R{i}", material: solid(f.frame), bevel: pergola ? 0.01 : 0.004 }),
       box("Shoe_L{i}", [0.2, 0.15, 0.2], { anchor: "bottom", at: ["-$hw", 0.1, "-$hl"], repeat: { count: "$spans + 1", step: [0, 0, "2 * $hl / $spans"] }, mirror: "Shoe_R{i}", material: "galvanised" }),
     ]),
   ];
   if (pergola) {
     kids.push(group("Roof", [
-      box("Beam_L", [0.07, 0.24, "2 * $hl + 0.8"], { at: ["-$hw - 0.07", "$h + 0.1 - 0.12", 0], mirror: "Beam_R", material: f.roof, bevel: 0.006 }),
-      box("BeamIn_L", [0.07, 0.24, "2 * $hl + 0.8"], { at: ["-$hw + 0.07", "$h + 0.1 - 0.12", 0], mirror: "BeamIn_R", material: f.roof, bevel: 0.006 }),
-      box("Rafter_{i}", ["2 * $hw + 0.9", 0.2, 0.06], { at: [0, "$h + 0.1 + 0.08", "-$hl - 0.3"], repeat: { count: "floor((2 * $hl + 0.6) / 0.5) + 1", step: [0, 0, "(2 * $hl + 0.6) / floor((2 * $hl + 0.6) / 0.5)"] }, material: f.roof, bevel: 0.005 }),
-      box("Slat_{i}", [0.04, 0.04, "2 * $hl + 0.7"], { at: ["-$hw + 0.15", "$h + 0.1 + 0.19", 0], repeat: { count: "floor(2 * $hw / 0.3)", step: [0.3, 0, 0] }, material: f.roof }),
-      box("Knee_L{i}", [0.06, 0.5, 0.06], { at: ["-$hw", "$h - 0.2", "-$hl + 0.25"], rotate: [-45, 0, 0], repeat: { count: "$spans + 1", step: [0, 0, "(2 * $hl - 0.5) / $spans"] }, mirror: "Knee_R{i}", material: f.frame }),
+      box("Beam_L", [0.07, 0.24, "2 * $hl + 0.8"], { at: ["-$hw - 0.07", "$h + 0.1 - 0.12", 0], mirror: "Beam_R", material: solid(f.roof), bevel: 0.006 }),
+      box("BeamIn_L", [0.07, 0.24, "2 * $hl + 0.8"], { at: ["-$hw + 0.07", "$h + 0.1 - 0.12", 0], mirror: "BeamIn_R", material: solid(f.roof), bevel: 0.006 }),
+      box("Rafter_{i}", ["2 * $hw + 0.9", 0.2, 0.06], { at: [0, "$h + 0.1 + 0.08", "-$hl - 0.3"], repeat: { count: "floor((2 * $hl + 0.6) / 0.5) + 1", step: [0, 0, "(2 * $hl + 0.6) / floor((2 * $hl + 0.6) / 0.5)"] }, material: solid(f.roof), bevel: 0.005 }),
+      box("Slat_{i}", [0.04, 0.04, "2 * $hl + 0.7"], { at: ["-$hw + 0.15", "$h + 0.1 + 0.19", 0], repeat: { count: "floor(2 * $hw / 0.3)", step: [0.3, 0, 0] }, material: solid(f.roof) }),
+      box("Knee_L{i}", [0.06, 0.5, 0.06], { at: ["-$hw", "$h - 0.2", "-$hl + 0.25"], rotate: [-45, 0, 0], repeat: { count: "$spans + 1", step: [0, 0, "(2 * $hl - 0.5) / $spans"] }, mirror: "Knee_R{i}", material: solid(f.frame) }),
     ]));
     kids.push(box("Planter_L", [0.5, 0.5, 0.5], { anchor: "bottom", at: ["-$hw - 0.4", 0.1, "$hl"], mirror: "Planter_R", material: "terracotta", bevel: 0.03 }));
   } else {
     kids.push(group("Roof", [
-      box("Beam_L", [0.1, 0.25, "2 * $hl + 0.4"], { at: ["-$hw", "$h + 0.2", 0], mirror: "Beam_R", material: f.frame, bevel: 0.006 }),
-      box("Purlin_{i}", ["2 * $hw + 0.4", 0.15, 0.08], { at: [0, "$h + 0.39", "-$hl - 0.1"], repeat: { count: "floor(2 * $hl / 1.2) + 1", step: [0, 0, "(2 * $hl + 0.2) / floor(2 * $hl / 1.2)"] }, material: f.frame }),
+      box("Beam_L", [0.1, 0.25, "2 * $hl + 0.4"], { at: ["-$hw", "$h + 0.2", 0], mirror: "Beam_R", material: solid(f.frame), bevel: 0.006 }),
+      box("Purlin_{i}", ["2 * $hw + 0.4", 0.15, 0.08], { at: [0, "$h + 0.39", "-$hl - 0.1"], repeat: { count: "floor(2 * $hl / 1.2) + 1", step: [0, 0, "(2 * $hl + 0.2) / floor(2 * $hl / 1.2)"] }, material: solid(f.frame) }),
       box("Sheet", ["2 * $hw + 0.6", 0.04, "2 * $hl + 0.6"], { at: [0, "$h + 0.48", 0], material: f.roof }),
+      ...(sheetRib(f.roof) ? [box("SheetRib_{i}", [0.05, 0.04, "2 * $hl + 0.6"], { at: ["-$hw - 0.3 + 0.165", "$h + 0.52", 0], repeat: { count: "floor((2 * $hw + 0.6) / 0.33)", step: [0.33, 0, 0] }, material: f.roof })] : []),
       box("Fascia_F", ["2 * $hw + 0.64", 0.22, 0.04], { at: [0, "$h + 0.47", "$hl + 0.32"], material: f.trim }),
       box("Fascia_B", ["2 * $hw + 0.64", 0.22, 0.04], { at: [0, "$h + 0.47", "-$hl - 0.32"], material: f.trim }),
       box("Fascia_L", [0.04, 0.22, "2 * $hl + 0.64"], { at: ["-$hw - 0.32", "$h + 0.47", 0], mirror: "Fascia_R", material: f.trim }),

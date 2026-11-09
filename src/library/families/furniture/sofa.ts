@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats } from "./parts.js";
+import { board, cushion, fmats, pillow, shade, tufting } from "./parts.js";
 
 const STYLES = ["modern", "chesterfield", "midcentury", "lawson"] as const;
 type Style = (typeof STYLES)[number];
@@ -14,17 +14,15 @@ const FINISHES: Record<Style, Finish[]> = {
 };
 
 /** Seat cushions in a row across the seat: n of them, each $sw wide, top at $sh, from the back depth $bt to the front. */
-const seats = (bevel = 0.05): SpecNode =>
-  box("Seat_{i}", ["$sw - 0.008", 0.15, "$D - $bt + 0.01"], { at: ["-($n - 1) * $sw / 2", "$sh - 0.075", "$bt / 2 + 0.005"], repeat: { count: "$n", step: ["$sw", 0, 0] }, bevel, children: [
-    cyl("Piping_T", 0.0065, `$sw - 0.008 - ${2 * bevel}`, { axis: "x", at: [0, 0.075 - bevel * 0.3, `($D - $bt + 0.01) / 2 - ${bevel * 0.3}`], segments: 8 }),
-    cyl("Piping_B", 0.0065, `$sw - 0.008 - ${2 * bevel}`, { axis: "x", at: [0, -0.075 + bevel * 0.3, `($D - $bt + 0.01) / 2 - ${bevel * 0.3}`], segments: 8 }),
-  ] });
+const seats = (cover: string, bevel = 0.05, tufts = 0): SpecNode =>
+  cushion("Seat_{i}", "$sw - 0.008", 0.15, "$D - $bt + 0.01", cover, { at: ["-($n - 1) * $sw / 2", "$sh - 0.075 - 0.012", "$bt / 2 + 0.005"], repeat: { count: "$n", step: ["$sw", 0, 0] }, bevel, crown: 0.02, ...(tufts ? { tufts } : {}) });
 
-/** Loose back cushions leaning on the back, one per seat. */
-const backs = (buttons: boolean): SpecNode =>
-  box("Back_{i}", ["$sw - 0.02", "$bh - $sh - 0.04", 0.17], { at: ["-($n - 1) * $sw / 2", "$sh - 0.01", "-$D / 2 + $bt + 0.07"], anchor: "bottom", rotate: [-10, 0, 0], repeat: { count: "$n", step: ["$sw", 0, 0] }, bevel: 0.06, children: buttons ? [
-    ellipsoid("Button_{i}", [0.012, 0.012, 0.008], { at: [-0.1, "($bh - $sh - 0.04) * 0.55", 0.085], repeat: { count: 2, step: [0.2, 0, 0] }, segments: 8 }),
-  ] : [] });
+/** Loose back cushions leaning on the back, one per seat: plump, crowned on the face, optionally buttoned. */
+const backs = (cover: string, buttons: boolean): SpecNode =>
+  cushion("Back_{i}", "$sw - 0.02", 0.17, "$bh - $sh - 0.04", cover, {
+    at: ["-($n - 1) * $sw / 2", "$sh - 0.01 + ($bh - $sh - 0.04) / 2 * 0.985", "-$D / 2 + $bt + 0.07 - ($bh - $sh - 0.04) / 2 * 0.174"],
+    rotate: [80, 0, 0], repeat: { count: "$n", step: ["$sw", 0, 0] }, bevel: 0.06, crown: 0.025, ...(buttons ? { tufts: 2, pleats: false } : {}),
+  });
 
 function modern(f: Finish): SpecNode[] {
   return [
@@ -33,8 +31,8 @@ function modern(f: Finish): SpecNode[] {
       box("Back_Shell", ["$W", "$bh - $lh - 0.1", "$bt"], { at: [0, "$lh", "-$D / 2 + $bt / 2"], anchor: "bottom", bevel: 0.03 }),
     ]),
     box("Arm_L", ["$aw", "$sh + 0.17 - $lh", "$D"], { at: ["$W / 2 - $aw / 2", "$lh", 0], anchor: "bottom", bevel: 0.03, mirror: "Arm_R" }),
-    seats(),
-    backs(false),
+    seats(f.cover),
+    backs(f.cover, false),
     group("Legs", [
       lathe("Leg_FL", [[0.012, 0], [0.014, 0.01], [0.02, "$lh + 0.01"]], { at: ["$W / 2 - 0.06", 0, "$D / 2 - 0.06"], segments: 12, mirror: "Leg_FR" }),
       lathe("Leg_BL", [[0.012, 0], [0.014, 0.01], [0.02, "$lh + 0.01"]], { at: ["$W / 2 - 0.06", 0, "-$D / 2 + 0.06"], segments: 12, mirror: "Leg_BR" }),
@@ -51,17 +49,13 @@ function chesterfield(f: Finish): SpecNode[] {
     ]),
     box("Back", ["$W - 0.06", "$bh - $lh - 0.08", "$bt"], { at: [0, "$lh", "-$D / 2 + $bt / 2"], anchor: "bottom", bevel: 0.04, children: [
       cyl("Roll", 0.1, "$W - 0.08", { axis: "x", at: [0, "$bh - $lh - 0.1", -0.01], segments: 20, bevel: 0.03 }),
-      group("Tufting", [
-        ellipsoid("Button_A_{i}", [0.012, 0.012, 0.009], { at: ["-($nb - 1) * 0.15 / 2", "$sh - $lh + ($bh - $sh) * 0.22", "$bt / 2"], repeat: { count: "$nb", step: [0.15, 0, 0] }, segments: 8 }),
-        ellipsoid("Button_B_{i}", [0.012, 0.012, 0.009], { at: ["-($nb - 2) * 0.15 / 2", "$sh - $lh + ($bh - $sh) * 0.45", "$bt / 2 - 0.006"], repeat: { count: "$nb - 1", step: [0.15, 0, 0] }, segments: 8 }),
-        ellipsoid("Button_C_{i}", [0.012, 0.012, 0.009], { at: ["-($nb - 1) * 0.15 / 2", "$sh - $lh + ($bh - $sh) * 0.68", "$bt / 2 - 0.012"], repeat: { count: "$nb", step: [0.15, 0, 0] }, segments: 8 }),
-      ], { vars: { nb: "floor(($W - 2 * $aw - 0.1) / 0.15)" } }),
+      tufting("Tufting", f.cover, "$nb", 3, 0.15, "($bh - $sh) * 0.21", { at: [0, "$sh - $lh + ($bh - $sh) * 0.2", "$bt / 2"], vars: { nb: "floor(($W - 2 * $aw - 0.1) / 0.15)" } }),
     ] }),
     box("Arm_L", ["$aw", "$bh - $lh - 0.12", "$D - 0.02"], { at: ["$W / 2 - $aw / 2 - 0.01", "$lh", 0], anchor: "bottom", bevel: 0.03, mirror: "Arm_R", children: [
       cyl("Roll", "$aw / 2 + 0.035", "$D - 0.02", { axis: "z", at: [0.03, "$bh - $lh - 0.12", 0], segments: 20, bevel: 0.04 }),
       ellipsoid("Stud_{i}", [0.012, 0.012, 0.009], { at: [0, "$sh - $lh - 0.06", "($D - 0.02) / 2"], repeat: { count: 3, step: [0, 0.1, 0] }, segments: 8 }),
     ] }),
-    seats(0.04),
+    seats(f.cover, 0.04),
     group("Feet", [
       lathe("Foot_FL", [[0.03, 0], [0.04, 0.015], [0.045, "$lh * 0.6"], [0.035, "$lh + 0.01"]], { at: ["$W / 2 - 0.08", 0, "$D / 2 - 0.08"], segments: 14, mirror: "Foot_FR" }),
       lathe("Foot_BL", [[0.03, 0], [0.04, 0.015], [0.045, "$lh * 0.6"], [0.035, "$lh + 0.01"]], { at: ["$W / 2 - 0.08", 0, "-$D / 2 + 0.08"], segments: 14, mirror: "Foot_BR" }),
@@ -79,10 +73,10 @@ function midcentury(f: Finish): SpecNode[] {
       box("Back_Shell", ["$W - 0.04", "$bh - $lh - 0.12", 0.1], { at: [0, "$lh + 0.1", "-$D / 2 + 0.06"], anchor: "bottom", bevel: 0.02 }),
     ]),
     box("Arm_L", [0.09, "$sh + 0.14 - $lh - 0.1", "$D - 0.06"], { at: ["$W / 2 - 0.045", "$lh + 0.1", 0.01], anchor: "bottom", bevel: 0.02, mirror: "Arm_R", children: [
-      box("Arm_Cap", [0.1, 0.022, "$D - 0.04"], { at: [0, "$sh + 0.14 - $lh - 0.1", 0], bevel: 0.008, material: f.wood }),
+      board("Arm_Cap", [0.1, 0.022, "$D - 0.04"], "z", { at: [0, "$sh + 0.14 - $lh - 0.1", 0], bevel: 0.008, material: f.wood }),
     ] }),
-    seats(0.035),
-    backs(true),
+    seats(f.cover, 0.035),
+    backs(f.cover, true),
     group("Legs", [
       leg("Leg_FL", "$W / 2 - 0.08", "$D / 2 - 0.1", -6, "Leg_FR"),
       leg("Leg_BL", "$W / 2 - 0.08", "-$D / 2 + 0.1", 6, "Leg_BR"),
@@ -102,10 +96,10 @@ function lawson(f: Finish): SpecNode[] {
       cyl("Roll", "$aw / 2 + 0.03", "$D - 0.02", { axis: "z", at: [0.02, "$sh + 0.1", 0], segments: 20, bevel: 0.035 }),
       cyl("Piping", "$aw / 2 + 0.034", 0.012, { axis: "z", at: [0.02, "$sh + 0.1", "($D - 0.02) / 2 - 0.004"], segments: 20 }),
     ] }),
-    seats(0.055),
-    backs(false),
+    seats(f.cover, 0.055),
+    backs(f.cover, false),
     group("Throw_Pillows", [
-      box("Pillow_L", [0.4, 0.4, 0.12], { at: ["$W / 2 - $aw - 0.2", "$sh + 0.17", "-$D / 2 + $bt + 0.2"], rotate: [-15, -20, 8], bevel: 0.055, material: "pillow_accent", mirror: "Pillow_R" }),
+      group("Pillow_L", [pillow("Cushion_Fill", "0.42", 0.2, 0.075, "pillow_accent", { at: [0, 0, -0.05], rotate: [90, 0, 0] })], { at: ["$W / 2 - $aw - 0.2", "$sh + 0.17", "-$D / 2 + $bt + 0.2"], rotate: [-15, -20, 8], mirror: "Pillow_R" }),
     ]),
   ];
 }
@@ -143,7 +137,7 @@ function makeSofa(style: Style, f: Finish): AssetDraft {
       num("seatHeight", r.sh[0], r.sh[1], r.sh[2], "Height of the seat top in metres."),
       num("backHeight", r.bh[0], r.bh[1], r.bh[2], "Height of the back above the floor in metres."),
     ],
-    materials: { ...fmats(f.cover, f.wood), pillow_accent: { color: [0.42, 0.33, 0.2], metallic: 0, roughness: 0.94, texture: "fabric" } },
+    materials: { ...fmats(f.cover, f.wood), ...shade(f.cover), pillow_accent: { color: [0.42, 0.33, 0.2], metallic: 0, roughness: 0.94, texture: "fabric" }, pillow_accent_tuft: { color: [0.25, 0.19, 0.11], metallic: 0, roughness: 0.95, texture: "fabric" } },
     nodes: [group("Sofa", { modern, chesterfield, midcentury, lawson }[style](f), {
       material: f.cover,
       vars: { n: "$seats", sw: "$seatWidth", aw: ARM[style], W: `$seats * $seatWidth + 2 * ${ARM[style]}`, D: "$depth", sh: "$seatHeight", bh: "$backHeight", lh: LEG[style], bt: BACK[style] },

@@ -30,7 +30,8 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         box("Slot", [0.4, 0.06, 0.64], { at: [0, 0.035, 0], bevel: 0.01, material: "opening_dark" }),
         group("Loop_L", [tube("Bar", [[0, "$height - 0.25", 0.05], [0.06, "$height - 0.25", 0.05], [0.06, "$height - 0.25", -0.05], [0, "$height - 0.25", -0.05]], 0.012, { segments: 8 })], { at: ["$width / 2 - 0.01", 0, 0], material: "rust", mirror: "Loop_R" }),
         box("Reflector_{i}", [0.08, 0.02, 0.06], { at: ["-$width / 2 + 0.4", "$height", 0], repeat: { count: 2, step: ["$width - 0.8", 0, 0] }, bevel: 0.005, material: f.second }),
-        // Road spray and tyre scuffs along the foot: two see-through films that follow the safety shape.
+        // Road spray and tyre scuffs along the foot: three opaque films that follow the safety shape.
+        loft("Grime_0", [gsec("-$width / 2 - 0.001", 0.95, 0.0015, 0.31), gsec("-$width / 2 + 0.03", 1, 0.0015, 0.31), gsec("$width / 2 - 0.03", 1, 0.0015, 0.31), gsec("$width / 2 + 0.001", 0.95, 0.0015, 0.31)], { rotate: [0, 90, 0], material: "grime_light" }),
         loft("Grime_1", [gsec("-$width / 2 - 0.002", 0.95, 0.003, 0.26), gsec("-$width / 2 + 0.03", 1, 0.003, 0.26), gsec("$width / 2 - 0.03", 1, 0.003, 0.26), gsec("$width / 2 + 0.002", 0.95, 0.003, 0.26)], { rotate: [0, 90, 0], material: "grime" }),
         loft("Grime_2", [gsec("-$width / 2 - 0.003", 0.95, 0.0045, 0.14), gsec("-$width / 2 + 0.03", 1, 0.0045, 0.14), gsec("$width / 2 - 0.03", 1, 0.0045, 0.14), gsec("$width / 2 + 0.003", 0.95, 0.0045, 0.14)], { rotate: [0, 90, 0], material: "grime_heavy" }),
       ];
@@ -49,6 +50,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         box("ForkSlot_{i}", [0.25, 0.07, 0.53], { at: ["-$width / 4", 0.05, 0], repeat: { count: 2, step: ["$width / 2", 0, 0] }, bevel: 0.01, material: "opening_dark" }),
         cyl("Lug_L", 0.05, 0.16, { at: ["$width / 2 + 0.02", "$height * 0.75", 0], segments: 16, bevel: 0.01, material: f.second, mirror: "Lug_R" }),
         cyl("LugLow_L", 0.05, 0.16, { at: ["$width / 2 + 0.02", 0.18, 0], segments: 16, bevel: 0.01, material: f.second, mirror: "LugLow_R" }),
+        loft("Grime_0", [{ z: "-$width / 2 - 0.002", points: gprof(0.0015, 0.26) }, { z: "$width / 2 + 0.002", points: gprof(0.0015, 0.26) }], { rotate: [0, 90, 0], material: "grime_light" }),
         loft("Grime_1", [{ z: "-$width / 2 - 0.003", points: gprof(0.003, 0.22) }, { z: "$width / 2 + 0.003", points: gprof(0.003, 0.22) }], { rotate: [0, 90, 0], material: "grime" }),
         loft("Grime_2", [{ z: "-$width / 2 - 0.004", points: gprof(0.0045, 0.09) }, { z: "$width / 2 + 0.004", points: gprof(0.0045, 0.09) }], { rotate: [0, 90, 0], material: "grime_heavy" }),
       ];

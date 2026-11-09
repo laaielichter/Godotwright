@@ -144,14 +144,28 @@ function moto(st: Style, ci: number): AssetDraft {
       { z: "-$wb / 2 + 0.05", superellipse: { width: 0.2, height: 0.14, n: 2.6, count: 20, cy: "$sh + 0.06" } },
       { z: "-$wb / 2 - 0.22", superellipse: { width: 0.1, height: 0.07, n: 2.6, count: 20, cy: "$sh + 0.1" } },
     ], { material: "paint" }));
+    // Fairing: a nose cone from the headlamp back to the tank, a belly pan round the engine, a screen and the mirrors.
     frame.push(loft("Fairing", [
-      { z: "$hz - 0.55", superellipse: { width: 0.44, height: 0.42, n: 2.4, count: 24, cy: "$py + 0.08" } },
-      { z: "$hz - 0.15", superellipse: { width: 0.5, height: "$hy - $py + 0.25", n: 2.4, count: 24, cy: "($hy + $py) / 2 - 0.02" } },
-      { z: "$hz + 0.12", superellipse: { width: 0.36, height: "$hy - $py", n: 2.4, count: 24, cy: "($hy + $py) / 2 + 0.06" } },
-      { z: "$hz + 0.25", superellipse: { width: 0.12, height: 0.16, n: 2.4, count: 24, cy: "$hy - 0.12" } },
+      { z: "$hz + 0.19", superellipse: { width: 0.15, height: 0.1, n: 2.4, count: 24, cy: "$hy - 0.12" } },
+      { z: "$hz + 0.1", superellipse: { width: 0.3, height: 0.24, n: 2.4, count: 24, cy: "$hy - 0.13" } },
+      { z: "$hz - 0.05", superellipse: { width: 0.43, height: 0.36, n: 2.4, count: 24, cy: "$hy - 0.14" } },
+      { z: "$hz - 0.22", superellipse: { width: 0.44, height: 0.44, n: 2.4, count: 24, cy: "$hy - 0.18" } },
+      { z: "$hz - 0.4", superellipse: { width: 0.4, height: 0.42, n: 2.4, count: 24, cy: "$hy - 0.26" } },
     ], { material: "paint" }));
-    frame.push(box("Screen", [0.3, 0.02, 0.32], { at: [0, "$hy + 0.06", "$hz + 0.05"], rotate: [-30, 0, 0], bevel: 0.008, material: "screen_glass" }));
-    frame.push(box("Headlamp_L", [0.1, 0.05, 0.08], { at: [0.08, "$hy - 0.12", "$hz + 0.23"], rotate: [-20, 0, 0], bevel: 0.015, material: "lamp_lens", mirror: "Headlamp_R" }));
+    frame.push(loft("BellyPan", [
+      { z: "$hz - 0.1", superellipse: { width: 0.3, height: 0.12, n: 2.4, count: 20, cy: "$py - 0.02" } },
+      { z: "$hz - 0.35", superellipse: { width: 0.36, height: 0.2, n: 2.4, count: 20, cy: "$py + 0.02" } },
+      { z: "$pz + 0.1", superellipse: { width: 0.3, height: 0.2, n: 2.4, count: 20, cy: "$py + 0.04" } },
+      { z: "$pz - 0.1", superellipse: { width: 0.14, height: 0.12, n: 2.4, count: 20, cy: "$py + 0.04" } },
+    ], { material: "paint" }));
+    frame.push(box("Vent_L", [0.012, 0.1, 0.06], { at: ["0.215", "$hy - 0.22", "$hz - 0.2"], rotate: [0, 0, 0], bevel: 0.004, material: "engine_black", mirror: "Vent_R" }));
+    frame.push(box("Intake", [0.07, 0.025, 0.04], { at: [0, "$hy - 0.17", "$hz + 0.18"], bevel: 0.008, material: "engine_black" }));
+    frame.push(box("Screen", [0.32, 0.016, 0.3], { at: [0, "$hy + 0.02", "$hz - 0.1"], rotate: [-38, 0, 0], bevel: 0.006, material: "screen_glass" }));
+    frame.push(group("Mirror_L", [
+      tube("Stalk", [[0, 0, 0], [0.05, 0.1, -0.02]], 0.008, { segments: 6, material: "engine_black" }),
+      ellipsoid("Head", [0.055, 0.035, 0.015], { at: [0.05, 0.115, -0.025], segments: 12, material: "paint" }),
+    ], { at: ["0.2", "$hy - 0.02", "$hz - 0.02"], mirror: "Mirror_R" }));
+    frame.push(box("Headlamp_L", [0.1, 0.05, 0.07], { at: [0.07, "$hy - 0.13", "$hz + 0.14"], rotate: [-20, 0, 0], bevel: 0.015, material: "lamp_lens", mirror: "Headlamp_R" }));
     frame.push(box("Peg_L", [0.12, 0.025, 0.025], { at: [0.16, "$py + 0.02", "$pz - 0.05"], material: "aluminium", mirror: "Peg_R" }));
   } else {
     frame.push(loft("Tank", [
@@ -175,7 +189,10 @@ function moto(st: Style, ci: number): AssetDraft {
   }
   if (st === "cruiser" || st === "scooter") frame.push(box("TailLamp", [0.12, 0.05, 0.05], { at: [0, st === "scooter" ? "$sh - 0.2" : "$Rr * 2 + 0.03", st === "scooter" ? "-$wb / 2 - 0.2" : "-$wb / 2 - 0.3"], bevel: 0.015, material: "lamp_red" }));
   else frame.push(box("TailLamp", [0.1, 0.035, 0.04], { at: [0, "$sh + 0.06", st === "sport" ? "-$wb / 2 - 0.2" : "-$wb / 2 - 0.42"], bevel: 0.01, material: "lamp_red" }));
-  if (st === "scooter") frame.push(box("Stand", [0.3, "$R + 0.06", 0.04], { at: [0, "($R + 0.06) / 2", 0.2], bevel: 0.006, material: "steel" }));
+  if (st === "scooter") frame.push(group("Stand", [
+    tube("Leg_L", [[0.12, 0, 0], [0.12, "-($R + 0.04)", -0.12]], 0.012, { segments: 6, mirror: "Leg_R" }),
+    cyl("Foot", 0.012, 0.28, { axis: "x", at: [0, "-($R + 0.04)", -0.12], segments: 6 }),
+  ], { at: [0.0, "$R + 0.05", 0.2], material: "steel" }));
   else frame.push(cyl("Stand", 0.012, "$py - 0.02", { at: [0.12, "($py - 0.02) / 2 + 0.01", "$pz - 0.02"], rotate: [0, 0, 25], segments: 6, material: "steel" }));
 
   // Fork: pivots about the tilted steering axis at the top clamp; holds the front wheel, the bars and the lamp.

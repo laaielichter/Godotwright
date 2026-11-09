@@ -8,7 +8,8 @@ export const HOLE: MaterialDef = { color: [0.015, 0.014, 0.013], metallic: 0, ro
 
 const paintFin = (r: number, g: number, b: number, roughness = 0.5, metallic = 0.15): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
 const plasticFin = (r: number, g: number, b: number, roughness = 0.55): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "plastic" });
-const woodFin = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
+/** Sawn timber: storage woods are single boards, slats, battens, staves and handles, so solid grain without plank joints. */
+const woodFin = (r: number, g: number, b: number, roughness = 0.75): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
 /** Container paint: satin marine paint on steel; the weathering comes from darker oxidised valleys and rust run-offs. */
 const weatheredFin = (r: number, g: number, b: number, roughness = 0.6): MaterialDef => ({ color: [r, g, b], metallic: 0.2, roughness, texture: "painted" });
 
@@ -27,7 +28,7 @@ export const EXTRA: Record<string, MaterialDef> = {
   paint_forest: paintFin(0.028, 0.065, 0.034, 0.6),
   paint_yellow: paintFin(0.45, 0.3, 0.028),
   paint_orange: paintFin(0.42, 0.13, 0.024),
-  paint_white: paintFin(0.52, 0.52, 0.49, 0.5, 0.05),
+  paint_white: paintFin(0.45, 0.45, 0.425, 0.5, 0.05),
   paint_cream: paintFin(0.46, 0.41, 0.31, 0.55, 0),
   paint_black: paintFin(0.03, 0.03, 0.032, 0.5),
   paint_grey: paintFin(0.16, 0.17, 0.17, 0.55),
@@ -45,17 +46,17 @@ export const EXTRA: Record<string, MaterialDef> = {
   plastic_white: plasticFin(0.47, 0.47, 0.44, 0.5),
   plastic_black: plasticFin(0.03, 0.03, 0.032, 0.6),
   hdpe_blue: plasticFin(0.02, 0.05, 0.155, 0.6),
-  hdpe_white: plasticFin(0.45, 0.44, 0.39, 0.62),
+  hdpe_white: plasticFin(0.38, 0.375, 0.335, 0.62),
   hdpe_black: plasticFin(0.035, 0.035, 0.037, 0.62),
   hdpe_grey: plasticFin(0.14, 0.145, 0.145, 0.62),
   // Woods as they really are (the palette's are a little pale for rough warehouse timber).
-  pine: woodFin(0.36, 0.23, 0.11),
-  birch: woodFin(0.42, 0.32, 0.19, 0.7),
+  pine: woodFin(0.3, 0.19, 0.09), // fresh pine: the deck of a pallet in the sun reads pale, so keep it honest
+  birch: woodFin(0.34, 0.26, 0.15, 0.7),
   light_oak: woodFin(0.32, 0.2, 0.09, 0.7),
   oak: woodFin(0.26, 0.15, 0.065, 0.7),
   rough_timber: woodFin(0.26, 0.17, 0.085, 0.9),
   weathered_wood: woodFin(0.22, 0.19, 0.155, 0.92),
-  whitewash_wood: woodFin(0.42, 0.4, 0.35, 0.85),
+  whitewash_wood: woodFin(0.3, 0.285, 0.25, 0.85),
   // Corten and ISO container paints: weathered steel, mottled with oxide.
   corten: { color: [0.22, 0.075, 0.03], metallic: 0.15, roughness: 0.85, texture: "rust" },
   container_red: weatheredFin(0.17, 0.042, 0.03),
@@ -66,8 +67,8 @@ export const EXTRA: Record<string, MaterialDef> = {
   container_white: weatheredFin(0.44, 0.44, 0.41, 0.55),
   container_teal: weatheredFin(0.022, 0.08, 0.085),
   container_yellow: weatheredFin(0.38, 0.26, 0.03),
-  rope: { color: [0.3, 0.22, 0.12], metallic: 0, roughness: 0.95, texture: "fabric" },
-  canvas_beige: { color: [0.36, 0.31, 0.22], metallic: 0, roughness: 0.95, texture: "fabric" },
+  rope: { color: [0.24, 0.175, 0.095], metallic: 0, roughness: 0.95, texture: "fabric" },
+  canvas_beige: { color: [0.21, 0.18, 0.125], metallic: 0, roughness: 0.95, texture: "fabric" }, // jute: sack tops face the sun
   sand: { color: [0.5, 0.4, 0.25], metallic: 0, roughness: 1, texture: "sand" },
   /** Kraft corrugated board, a little mottled. */
   cardboard: { color: [0.3, 0.19, 0.095], metallic: 0, roughness: 0.92, texture: "painted" },
@@ -82,15 +83,17 @@ export const EXTRA: Record<string, MaterialDef> = {
   cable_blue: plasticFin(0.03, 0.065, 0.18, 0.45),
   cable_green: plasticFin(0.035, 0.11, 0.045, 0.45),
   copper_wire: { color: [0.85, 0.48, 0.32], metallic: 1, roughness: 0.35, texture: "brushed" },
-  tank_white: paintFin(0.5, 0.5, 0.47, 0.5, 0.1),
-  tank_silver: { color: [0.55, 0.56, 0.57], metallic: 0.6, roughness: 0.5, texture: "brushed" },
+  tank_white: paintFin(0.34, 0.34, 0.32, 0.5, 0.1), // a tank roof faces the sun: keep the white off-white
+  tank_silver: { color: [0.4, 0.41, 0.42], metallic: 0.6, roughness: 0.55, texture: "brushed" }, // aluminium paint, weathered
   /** Site concrete, weathered grey. */
-  concrete: { color: [0.3, 0.295, 0.28], metallic: 0, roughness: 0.92, texture: "concrete" },
-  concrete_dark: { color: [0.17, 0.17, 0.165], metallic: 0, roughness: 0.92, texture: "concrete" },
+  concrete: { color: [0.18, 0.177, 0.168], metallic: 0, roughness: 0.92, texture: "concrete" }, // plinth tops face the sun
+  concrete_dark: { color: [0.12, 0.12, 0.116], metallic: 0, roughness: 0.92, texture: "concrete" },
   gas_green: paintFin(0.03, 0.15, 0.06, 0.45),
   gas_maroon: paintFin(0.2, 0.03, 0.035, 0.45),
   /** Hot-dip galvanised steel: a dull spangled grey. */
-  galvanised: { color: [0.52, 0.54, 0.55], metallic: 0.75, roughness: 0.5, texture: "plastic" },
+  galvanised: { color: [0.3, 0.31, 0.315], metallic: 0.55, roughness: 0.62, texture: "plastic" },
+  /** Mill-finish aluminium sheet outdoors: duller than the palette's polished aluminium (a silo roof mirrors the sky). */
+  aluminium: { color: [0.55, 0.56, 0.57], metallic: 0.8, roughness: 0.5, texture: "brushed" },
   /** Oil, dust and grime: a dark smudge at the foot of things. */
   grime: { color: [0.05, 0.045, 0.04], metallic: 0, roughness: 0.9, texture: "rust" },
   /** A translucent film of road dust and grime over the lower part of a wall. */
@@ -102,7 +105,8 @@ export const EXTRA: Record<string, MaterialDef> = {
 /** A finish by name: the storage table, the palette, or a derived one ("<name>_worn", "<name>_dark"). */
 function resolve(n: string): MaterialDef {
   const direct = EXTRA[n] ?? PALETTE[n];
-  if (direct) return direct;
+  // Palette woods are planked ("wood"); storage timber is single boards and staves: solid grain.
+  if (direct) return direct.texture === "wood" ? { ...direct, texture: "grain" } : direct;
   const m = /^(.+)_(worn|dark|grime)$/.exec(n);
   const base = m ? (EXTRA[m[1] as string] ?? PALETTE[m[1] as string]) : undefined;
   if (!m || !base) return mats(n)[n] as MaterialDef;
@@ -110,7 +114,8 @@ function resolve(n: string): MaterialDef {
   const k = m[2] === "worn" ? 0.95 : m[2] === "dark" ? 0.7 : 0.5;
   return {
     color: [r * k, g * k, b * k],
-    metallic: Math.min(base.metallic, m[2] === "worn" ? 0.2 : base.metallic),
+    // Oxide, dirt and shade are matte: a darkened metal kept fully metallic would read as a black mirror.
+    metallic: Math.min(base.metallic, m[2] === "worn" ? 0.2 : 0.3),
     roughness: Math.min(0.95, base.roughness + (m[2] === "dark" ? 0.05 : 0.15)),
     texture: "rust",
   };
@@ -251,4 +256,37 @@ export function stencil(name: string, word: string, face: "+z" | "-z" | "+x" | "
     });
   });
   return group(name, strokes, { at, material });
+}
+
+type Raw = Record<string, unknown>;
+
+/**
+ * A box board laid along `axis` with its timber grain running along it. The "grain" texture runs up the side faces of
+ * an upright box, so the board is built standing and turned down onto the axis: all its long faces show long grain.
+ * Takes a node made by box(); a board with its own rotation or children becomes a group of the same name holding the
+ * turned "Solid" and the children, so names, pivots, part counts and child positions stay as they were.
+ */
+export function laid(axis: "x" | "z", n: SpecNode): SpecNode {
+  const r = n as Raw;
+  if (r["shape"] !== "box") throw new Error(`laid: ${String(r["name"])} is not a box`);
+  const [a, b, c] = r["size"] as [string | number, string | number, string | number];
+  const bottom = r["anchor"] === "bottom";
+  const [ox = 0, oy = 0, oz = 0] = (r["offset"] as (string | number)[] | undefined) ?? [];
+  const sum = (...t: (string | number)[]): string | number => {
+    const parts = t.filter((v) => v !== 0 && v !== "0");
+    return parts.length === 0 ? 0 : parts.length === 1 ? (parts[0] as string | number) : parts.map((v) => `(${v})`).join(" + ");
+  };
+  // The offset in the turned box's own frame: Rz(90) takes x to y and y to -x; Rx(90) takes y to z and z to -y.
+  const solid: Raw = axis === "x"
+    ? { shape: "box", size: [b, a, c], rotate: [0, 0, 90], offset: [sum(oy, bottom ? `(${b}) / 2` : 0), `-(${ox})`, oz] }
+    : { shape: "box", size: [a, c, b], rotate: [90, 0, 0], offset: [ox, oz, `-(${sum(oy, bottom ? `(${b}) / 2` : 0)})`] };
+  if (r["bevel"] !== undefined) solid["bevel"] = r["bevel"];
+  const off = solid["offset"] as (string | number)[];
+  if (off.every((v) => v === 0 || v === "-(0)")) delete solid["offset"];
+  if (r["rotate"] === undefined && r["children"] === undefined) {
+    const { size: _s, anchor: _a, offset: _o, bevel: _b, ...rest } = r;
+    return { ...rest, ...solid } as SpecNode;
+  }
+  const { shape: _sh, size: _s, anchor: _a, offset: _o, bevel: _b, children, ...rest } = r;
+  return { ...rest, children: [{ name: "Solid", ...solid }, ...((children as SpecNode[] | undefined) ?? [])] } as SpecNode;
 }

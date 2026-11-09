@@ -8,7 +8,7 @@
  * dusty and a heavily soiled version of an asset's foot finish for the grime bands.
  */
 import { PALETTE, type MaterialDef } from "../../palette.js";
-import { lathe, box, type Num, type SpecNode } from "../../kit.js";
+import { lathe, box, type NodeOpts, type Num, type SpecNode } from "../../kit.js";
 
 /** A powder coat or enamel on metal: a little metallic sheen, an orange-peel texture, outdoor-dull. */
 const coat = (r: number, g: number, b: number, roughness = 0.5, metallic = 0.2): MaterialDef => ({ color: [r, g, b], metallic, roughness, texture: "painted" });
@@ -16,8 +16,8 @@ const coat = (r: number, g: number, b: number, roughness = 0.5, metallic = 0.2):
 const pe = (r: number, g: number, b: number, roughness = 0.6): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "plastic" });
 /** Retroreflective sheeting (micro-prismatic): bright, a touch of sheen, a fine moulded pattern. */
 const sheeting = (r: number, g: number, b: number): MaterialDef => ({ color: [r, g, b], metallic: 0.25, roughness: 0.28, texture: "plastic" });
-/** Outdoor timber: unsealed, a bit grey and rough. */
-const timber = (r: number, g: number, b: number, roughness = 0.8): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "wood" });
+/** Outdoor timber: unsealed, a bit grey and rough. Street timber is single boards, posts and staves: solid grain, no plank joints. */
+const timber = (r: number, g: number, b: number, roughness = 0.8): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture: "grain" });
 const stone = (r: number, g: number, b: number, texture = "stone", roughness = 0.88): MaterialDef => ({ color: [r, g, b], metallic: 0, roughness, texture });
 
 /** Finishes for the street: palette names re-tuned to municipal reality, plus local ones. */
@@ -43,9 +43,9 @@ export const LOCAL: Record<string, MaterialDef> = {
   postal_blue: coat(0.016, 0.045, 0.15, 0.5, 0.15),
   postal_orange: coat(0.5, 0.15, 0.015, 0.5, 0.1), // PostNL orange
   postal_yellow: coat(0.56, 0.37, 0.016, 0.5, 0.1), // post horn yellow
-  screen_cyan: { color: [0.02, 0.15, 0.18], metallic: 0, roughness: 0.2, emissive: [0.03, 0.3, 0.36] }, // a dimmed LCD
+  screen_cyan: { color: [0.015, 0.09, 0.12], metallic: 0, roughness: 0.2, emissive: [0.01, 0.1, 0.14] }, // a dimmed LCD
   // --- Bare and weathered metals ---
-  galvanised: { color: [0.3, 0.315, 0.315], metallic: 0.55, roughness: 0.68, texture: "plastic" }, // dull hot-dip zinc
+  galvanised: { color: [0.16, 0.168, 0.168], metallic: 0.35, roughness: 0.78, texture: "plastic" }, // dull hot-dip zinc (thin tubes catch the sky: keep it dark)
   steel: { color: [0.42, 0.43, 0.44], metallic: 0.85, roughness: 0.55, texture: "brushed" }, // bolts, clamps
   brushed_steel: { color: [0.55, 0.56, 0.57], metallic: 1, roughness: 0.38 }, // satin stainless (brush marks would run round a post)
   aluminium: { color: [0.62, 0.63, 0.64], metallic: 0.9, roughness: 0.45, texture: "brushed" }, // anodised, matte
@@ -64,10 +64,10 @@ export const LOCAL: Record<string, MaterialDef> = {
   plastic_yellow: pe(0.58, 0.38, 0.02),
   plastic_green: pe(0.022, 0.085, 0.04), // municipal wheelie-bin green
   plastic_blue: pe(0.018, 0.06, 0.17),
-  plastic_grey: pe(0.15, 0.16, 0.16),
+  plastic_grey: pe(0.11, 0.115, 0.115),
   plastic_black: pe(0.035, 0.035, 0.037),
   plastic_white: pe(0.58, 0.58, 0.56, 0.5),
-  fibreglass_white: pe(0.56, 0.56, 0.54, 0.45),
+  fibreglass_white: pe(0.46, 0.46, 0.44, 0.45),
   water_barrier_red: pe(0.36, 0.03, 0.025, 0.65),
   water_barrier_white: pe(0.56, 0.56, 0.53, 0.65),
   rubber: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "plastic" },
@@ -82,11 +82,11 @@ export const LOCAL: Record<string, MaterialDef> = {
   sheet_grey: sheeting(0.2, 0.21, 0.21),
   sheet_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.55, texture: "painted" }, // printed ink
   // --- Stone and concrete ---
-  concrete: stone(0.25, 0.245, 0.23, "concrete", 0.92), // cast concrete
-  concrete_dark: stone(0.15, 0.15, 0.14, "concrete", 0.92),
-  granite: stone(0.2, 0.2, 0.19, "concrete", 0.75), // fine-grained cut stone
-  limestone: stone(0.4, 0.38, 0.32, "concrete"),
-  sandstone: stone(0.35, 0.24, 0.12, "concrete"),
+  concrete: stone(0.16, 0.157, 0.148, "concrete", 0.92), // cast concrete (tops in the sun read light: keep it mid grey)
+  concrete_dark: stone(0.1, 0.1, 0.095, "concrete", 0.92),
+  granite: stone(0.15, 0.15, 0.143, "concrete", 0.75), // fine-grained cut stone
+  limestone: stone(0.27, 0.255, 0.215, "concrete"),
+  sandstone: stone(0.27, 0.18, 0.09, "concrete"),
   terracotta: { color: [0.32, 0.1, 0.05], metallic: 0, roughness: 0.88, texture: "concrete" },
   slate: { color: [0.05, 0.055, 0.065], metallic: 0, roughness: 0.75, texture: "roof_slate" },
   ceramic_blue: { color: [0.03, 0.08, 0.24], metallic: 0, roughness: 0.2 },
@@ -94,13 +94,13 @@ export const LOCAL: Record<string, MaterialDef> = {
   ceramic_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.2 },
   // --- Outdoor timber ---
   oak: timber(0.3, 0.18, 0.08),
-  light_oak: timber(0.42, 0.29, 0.15, 0.75),
+  light_oak: timber(0.34, 0.22, 0.11, 0.75),
   teak: timber(0.3, 0.17, 0.075),
-  pine: timber(0.45, 0.3, 0.15),
+  pine: timber(0.36, 0.235, 0.115),
   walnut: timber(0.12, 0.062, 0.032, 0.7),
   weathered_wood: timber(0.25, 0.22, 0.18, 0.92),
   rough_timber: timber(0.24, 0.155, 0.08, 0.92),
-  bamboo: timber(0.44, 0.33, 0.15, 0.7),
+  bamboo: timber(0.36, 0.26, 0.12, 0.7),
   dark_stain: timber(0.1, 0.06, 0.035, 0.65),
   // --- Planting and logs ---
   bark_brown: { color: [0.12, 0.08, 0.05], metallic: 0, roughness: 0.95, texture: "bark" },
@@ -136,59 +136,93 @@ export function useMats(...names: (string | undefined)[]): Record<string, Materi
 }
 
 /** Road dirt: what splash and dust leave on the foot of street furniture. */
-const DIRT: [number, number, number] = [0.075, 0.06, 0.042];
+const DIRT: [number, number, number] = [0.05, 0.04, 0.03];
 
 /** The finish `body` soiled by road dirt: `k` of its own colour, the rest dirt, duller and less metallic. */
 function soiled(body: MaterialDef, k: number, heavy: boolean): MaterialDef {
-  const [r, g, b] = body.color;
+  // Bare metal looks darker than its albedo (it mirrors the ground and the shade); its dirt film is matte, so start
+  // from what the metal reads as, not from its albedo, or the band reads as a pale ring.
+  const bare = body.metallic >= 0.5;
+  const dim = bare ? 0.04 + 0.075 * Math.max(0, (k - 0.45) / 0.42) : (1 - 0.6 * body.metallic * body.metallic) * 0.7;
+  const [r, g, b] = body.color.map((c) => c * dim) as [number, number, number];
   // Heavy dirt on metal and paint reads as rust bloom; on plastic, wood and stone as blotchy road film.
   const onMetal = body.texture === undefined || body.texture === "painted" || body.texture === "brushed" || body.texture === "rust" || body.metallic >= 0.5;
-  const tex = heavy ? (onMetal ? "rust" : "concrete") : body.texture;
+  // Dirt on bare polished metal is darker than the mirror around it, matte and patchy (oxide texture), never a pale ring.
+  const dirt: [number, number, number] = bare ? [0.014, 0.012, 0.01] : DIRT;
+  // Only iron that is already rusting gets the oxide texture; on paint, plastic and stone the splash zone is a blotchy road film.
+  const tex = bare ? "rust" : heavy ? (body.texture === "rust" ? "rust" : "concrete") : body.texture;
   return {
-    color: [r * k + DIRT[0] * (1 - k), g * k + DIRT[1] * (1 - k), b * k + DIRT[2] * (1 - k)],
-    metallic: body.metallic * (heavy ? 0.3 : 0.6),
-    roughness: Math.max(body.roughness, heavy ? 0.88 : 0.75),
+    color: [r * k + dirt[0] * (1 - k), g * k + dirt[1] * (1 - k), b * k + dirt[2] * (1 - k)],
+    metallic: Math.min(bare ? 0.15 : 0.3, body.metallic * (heavy ? 0.3 : 0.6)), // a dirt film is matte
+    roughness: Math.max(body.roughness, heavy ? 0.9 : bare ? 0.85 : 0.75),
     ...(tex ? { texture: tex } : {}),
   };
 }
 
 /**
- * The grime finishes for an asset whose foot is in `body`: "grime" (a dulled, dusty band) and "grime_heavy" (the
- * splash zone right at the ground, blotchy with dirt). The grime shells are opaque, a few mm proud of the body: a
- * see-through film would cast a shadow onto the body just under it and break up into shadow acne.
+ * The grime finishes for an asset whose foot is in `body`: "grime_light" (a faint film that fades the band into the
+ * clean finish above), "grime" (a dulled, dusty band) and "grime_heavy" (the splash zone right at the ground, blotchy
+ * with dirt). The shells are opaque, a few mm proud of the body and nested, so the dirt steps up in three soft stages
+ * instead of ending in one hard line: a see-through film would cast a shadow onto the body just under it and break up
+ * into shadow acne.
  */
 export function GRIME(body: string): Record<string, MaterialDef> {
   const m = LOCAL[body] ?? PALETTE[body];
   if (!m) throw new Error(`street: no material "${body}"`);
-  return { grime: soiled(m, 0.72, false), grime_heavy: soiled(m, 0.45, true) };
+  return { grime_light: soiled(m, 0.87, false), grime: soiled(m, 0.7, false), grime_heavy: soiled(m, 0.45, true) };
 }
 
-/** Two grime shells around a round foot (radius rb at the ground, rt at height h, 2 mm proud): all of h and its lower 45%. */
+/** The share of the band height each stage covers: the faint film all of it, the dusty band, the splash zone. */
+const STAGES: [string, number, number][] = [["grime_light", 1, 0.002], ["grime", 0.68, 0.0035], ["grime_heavy", 0.38, 0.005]];
+
+/** Three grime shells around a round foot (radius rb at the ground, rt at height h): all of h, 68% and 38% of it. */
 export function grimeRound(name: string, rb: Num, rt: Num, h: Num, at: [Num, Num, Num] = [0, 0, 0], segments = 24): SpecNode[] {
-  const r = (k: number): string => `(${rb}) + ((${rt}) - (${rb})) * ${k} + 0.002`;
-  return [
-    lathe(`${name}_1`, [[r(0), 0.001], [r(1), h]], { at, segments, material: "grime" }),
-    lathe(`${name}_2`, [[`${r(0)} + 0.0015`, 0.001], [`${r(0.45)} + 0.0015`, `(${h}) * 0.45`]], { at, segments, material: "grime_heavy" }),
-  ];
+  const r = (k: number, d: number): string => `(${rb}) + ((${rt}) - (${rb})) * ${k} + ${d}`;
+  return STAGES.map(([material, k, d], i) => lathe(`${name}_${i + 1}`, [[r(0, d), 0.001], [r(k, d), `(${h}) * ${k}`]], { at, segments, material }));
 }
 
 /**
- * Grime shells that follow a lathe profile (radius, height) of the foot, 2 mm proud: the dusty one covers all the
- * points, the heavy one all but the last. Give at least three points, from the ground up.
+ * Grime shells that follow a lathe profile (radius, height) of the foot: the faint film covers all the points, the
+ * dusty band stops 40% of the way up the last segment, the splash zone at the second last point. At least three points,
+ * from the ground up.
  */
 export function grimeProfile(name: string, pts: [Num, Num][], o: { segments?: number; at?: [Num, Num, Num]; rotate?: [Num, Num, Num] } = {}): SpecNode[] {
   const shell = (n: string, p: [Num, Num][], d: number, material: string): SpecNode =>
     lathe(n, p.map(([r, y]) => [`(${r}) + ${d}`, y] as [Num, Num]), { segments: o.segments ?? 24, ...(o.at ? { at: o.at } : {}), ...(o.rotate ? { rotate: o.rotate } : {}), material });
-  return [shell(`${name}_1`, pts, 0.002, "grime"), shell(`${name}_2`, pts.slice(0, -1), 0.0035, "grime_heavy")];
+  const [ra, ya] = pts[pts.length - 2]!;
+  const [rb, yb] = pts[pts.length - 1]!;
+  const mid: [Num, Num] = [`(${ra}) + ((${rb}) - (${ra})) * 0.4`, `(${ya}) + ((${yb}) - (${ya})) * 0.4`];
+  return [
+    shell(`${name}_1`, pts, 0.002, "grime_light"),
+    shell(`${name}_2`, [...pts.slice(0, -1), mid], 0.0035, "grime"),
+    shell(`${name}_3`, pts.slice(0, -1), 0.005, "grime_heavy"),
+  ];
 }
 
 /** The same for a box foot w x d (centred at `at`), h tall. */
 export function grimeBox(name: string, w: Num, d: Num, h: Num, at: [Num, Num, Num] = [0, 0, 0], bevel: Num = 0): SpecNode[] {
   const b = bevel ? { bevel } : {};
-  return [
-    box(`${name}_1`, [`(${w}) + 0.004`, h, `(${d}) + 0.004`], { at: [at[0], `(${at[1]}) + 0.001`, at[2]], anchor: "bottom", material: "grime", ...b }),
-    box(`${name}_2`, [`(${w}) + 0.007`, `(${h}) * 0.45`, `(${d}) + 0.007`], { at: [at[0], `(${at[1]}) + 0.001`, at[2]], anchor: "bottom", material: "grime_heavy", ...b }),
-  ];
+  return STAGES.map(([material, k, p], i) =>
+    box(`${name}_${i + 1}`, [`(${w}) + ${2 * p}`, `(${h}) * ${k}`, `(${d}) + ${2 * p}`], { at: [at[0], `(${at[1]}) + 0.001`, at[2]], anchor: "bottom", material, ...b }),
+  );
+}
+
+/**
+ * A timber board along x (size: length, thickness, width) with the grain running along it. The "grain" texture runs
+ * up the side faces of an upright box, so the board is built standing and laid down (rotate z 90): its long faces then
+ * all show long grain. Takes the box options except rotate (put a tilt on a parent group).
+ */
+export function boardX(name: string, size: [Num, Num, Num], o: Omit<NodeOpts, "rotate" | "offset"> & { bevel?: Num; anchor?: "center" | "bottom" } = {}): SpecNode {
+  const [l, h, d] = size;
+  const { anchor, ...rest } = o;
+  return box(name, [h, l, d], { ...rest, rotate: [0, 0, 90], ...(anchor === "bottom" ? { offset: [`(${h}) / 2`, 0, 0] } : {}) });
+}
+
+/** The same for a board along z (size: width, thickness, length), built standing and laid down (rotate x 90). */
+export function boardZ(name: string, size: [Num, Num, Num], o: Omit<NodeOpts, "rotate" | "offset"> & { bevel?: Num; anchor?: "center" | "bottom" } = {}): SpecNode {
+  const [w, h, l] = size;
+  const { anchor, ...rest } = o;
+  return box(name, [w, l, h], { ...rest, rotate: [90, 0, 0], ...(anchor === "bottom" ? { offset: [0, 0, `-(${h}) / 2`] } : {}) });
 }
 
 /** A readable name for a finish. */

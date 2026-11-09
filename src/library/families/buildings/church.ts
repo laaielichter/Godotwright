@@ -3,6 +3,8 @@ import { mats, type MaterialDef } from "../../palette.js";
 import { BMATS, gableRoof, slab, swanDownpipe } from "./shared.js";
 
 const LOCAL: Record<string, MaterialDef> = {
+  // Grey volcanic tuff blocks, as on Rhineland and Dutch Romanesque churches.
+  tuff: { color: [0.115, 0.11, 0.098], metallic: 0, roughness: 0.92, texture: "stone" },
   stained_glass: { color: [0.035, 0.032, 0.055], metallic: 0.3, roughness: 0.08, emissive: [0.018, 0.012, 0.03] },
   clock_face: { color: [0.6, 0.58, 0.52], metallic: 0, roughness: 0.4, texture: "painted" },
   bell_bronze: { color: [0.55, 0.36, 0.17], metallic: 1, roughness: 0.35 },
@@ -27,7 +29,7 @@ const FINISHES: Record<Style, { id: string; wall: string; dress: string; roof: s
   ],
   basilica: [
     { id: "sandstone", wall: "sandstone", dress: "limestone", roof: "tile_orange", spire: "tile_orange", text: "sandstone", nl: "zandsteen" },
-    { id: "tuff", wall: "render_grey", dress: "basalt", roof: "slate_blue", spire: "aged_copper", text: "grey tuff", nl: "tufsteen" },
+    { id: "tuff", wall: "tuff", dress: "basalt", roof: "slate_blue", spire: "aged_copper", text: "grey tuff", nl: "tufsteen" },
   ],
   modern: [
     { id: "concrete", wall: "concrete", dress: "brushed_steel", roof: "zinc_quartz", spire: "concrete", text: "concrete and zinc", nl: "beton" },

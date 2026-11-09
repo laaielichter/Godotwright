@@ -112,6 +112,18 @@ function rowboat(shape: Shape, fi: number): AssetDraft {
       { z: `${out}`, superellipse: { width: bw - 0.04, height: 0.016, n: 3, count: 16 } },
     ], { rotate: [0, 90, 0], material: F.wood ? "oar_wood" : "oar_tip" }),
   ], { at: [xo, `${yo} + 0.08`, zs(so)], mirror: "Oar_R" }));
+  // A breasthook at the bow, a cleat on the stern sheets and a coiled painter hanging from the bow ring.
+  {
+    const sB = S.end < 0.96 ? 0.97 : S.end - 0.03;
+    kids.push(box("Breasthook", [`${xb(h, sB, 1.7)}`, 0.025, 0.2], { at: [0, `${ysh(h, sB)} - 0.02`, `${zs(sB)} - 0.1`], bevel: 0.006, material: "trim_wood" }));
+    kids.push(group("Cleat_Bow", [
+      box("Base", [0.04, 0.008, 0.13], { at: [0, 0.004, 0], bevel: 0.003 }),
+      box("Foot_{i}", [0.022, 0.02, 0.025], { at: [0, 0.018, -0.035], repeat: { count: 2, step: [0, 0, 0.07] } }),
+      box("Horn", [0.024, 0.016, 0.13], { at: [0, 0.036, 0], bevel: 0.005 }),
+    ], { at: [0, `${ysh(h, sB)} - 0.005`, `${zs(sB)} - 0.1`], material: "brass" }));
+    kids.push(tube("Painter", [[0, `${ysh(h, S.end < 0.96 ? 1 : S.end)} - 0.06`, `${zs(S.end < 0.96 ? 1 : S.end)} + 0.02`], [0.04, `${ysh(h, S.end < 0.96 ? 1 : S.end)} - 0.2`, `${zs(S.end < 0.96 ? 1 : S.end)} + 0.05`], [0.1, `${ysh(h, S.end < 0.96 ? 1 : S.end)} - 0.32`, `${zs(S.end < 0.96 ? 1 : S.end)} + 0.02`]], 0.009, { segments: 6, material: "rope" }));
+  }
+  kids.push(cyl("Bailer", 0.06, 0.13, { at: [`${xb(h, S.thwarts[1] ?? 0.5, 0.5)}`, `${ysh(h, 0.5)} - 0.5`, zs(S.thwarts[1] ?? 0.5) ], segments: 12, material: "bailer_plastic" }));
   kids.push(cyl("PainterRing", 0.025, 0.012, { axis: "z", at: [0, `${ysh(h, S.end < 0.96 ? 1 : S.end)} - 0.06`, `${zs(S.end < 0.96 ? 1 : S.end)} + 0.01`], segments: 10, material: "brass" }));
 
   const dims = SHAPES[shape];
@@ -133,6 +145,8 @@ function rowboat(shape: Shape, fi: number): AssetDraft {
       oar_wood: { color: [0.45, 0.31, 0.15], metallic: 0, roughness: 0.55, texture: "wood" },
       oar_tip: F.wood ? { color: [0.34, 0.022, 0.02], metallic: 0, roughness: 0.4, texture: "painted" } : { color: [0.035, 0.11, 0.06], metallic: 0, roughness: 0.4, texture: "painted" },
       leather: { color: [0.22, 0.11, 0.045], metallic: 0, roughness: 0.6, texture: "leather" },
+      rope: { color: [0.55, 0.5, 0.38], metallic: 0, roughness: 0.9, texture: "fabric" },
+      bailer_plastic: { color: [0.5, 0.1, 0.02], metallic: 0, roughness: 0.5, texture: "plastic" },
       ...mats("brass"),
     },
     nodes: [group("RowingBoat", kids, { vars: { L2: "$length / 2", B2: "$beam / 2", fb: "$freeboard", d: "0.1 + $beam * 0.04", oar: `min(2.9, $beam * ${shape === "pram" ? 1.2 : 1.6} + ${shape === "pram" ? 0.1 : 0.15})`, inb: `$beam * ${f(0.42 * beamAt(h, so))}` } })],

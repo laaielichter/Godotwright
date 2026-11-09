@@ -1,6 +1,21 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, rng, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats } from "../../palette.js";
-import { lumpExtent, n4, natureMats } from "./common.js";
+import { LOCAL, lumpExtent, n4, natureMats } from "./common.js";
+import type { MaterialDef } from "../../palette.js";
+
+/**
+ * The big, lumpy leaf masses wear a fine, even foliage grain (the "ground" pattern in the leaf colour): the clustered
+ * "leaf" pattern stretched into streaks over their bulges. The small tufts on top keep the leaf pattern, where it reads.
+ */
+const dense = (name: string): string => `${name}_dense`;
+function denseMats(used: string[]): Record<string, MaterialDef> {
+  const out: Record<string, MaterialDef> = {};
+  for (const n of used) if (n.endsWith("_dense")) {
+    const base = LOCAL[n.slice(0, -6)];
+    if (base) out[n] = { ...base, texture: "leaf", roughness: Math.min(1, base.roughness + 0.05) };
+  }
+  return out;
+}
 
 type Style = "round" | "hedge" | "flowering" | "topiary" | "spiky" | "berry";
 
@@ -74,18 +89,22 @@ function dome(b: Bush, r: () => number, ringCount: string, maxCount: number): Sp
   const phase = Math.round(r() * 60);
   const shadeLow = maxLow(12, lumps, s0 + 4, 5, 5);
   return [
-    ellipsoid("Core", ["$width * 0.4", "$height * 0.45", "$width * 0.4"], { at: [0, `max($height * 0.5, $height * 0.45 * ${n4(coreLow)} + 0.02)`, 0], segments: 18, lumps, seed: s0 }),
+    ellipsoid("Core", ["$width * 0.4", "$height * 0.45", "$width * 0.4"], { at: [0, `max($height * 0.5, $height * 0.45 * ${n4(coreLow)} + 0.02)`, 0], segments: 18, lumps, seed: s0, material: dense(SHADE[b.leaf] ?? b.leaf) }),
     ellipsoid("Mass_{i}", ["$width * 0.27", "$height * 0.3", "$width * 0.25"], {
       at: [`$width * (0.26 + 0.03 * sin($i * 2.1))`, `max($height * (0.36 + 0.05 * sin($i * 1.7)), $height * 0.3 * ${n4(ringLow)} + 0.03)`, 0],
       segments: 14,
       lumps,
       seed: `$i * 11 + ${s0 + 1}`,
+      material: dense(b.leaf),
       repeat: { count: ringCount, around: "y", phase },
     }),
-    ellipsoid("Top_{i}", ["$width * 0.24", "$height * 0.24", "$width * 0.22"], { at: ["$width * 0.12", "$height * 0.7", 0], segments: 14, lumps, seed: `$i * 7 + ${s0 + 2}`, material: b.sun, repeat: { count: 3, around: "y", phase: phase + 50 } }),
+    ellipsoid("Top_{i}", ["$width * 0.24", "$height * 0.24", "$width * 0.22"], { at: ["$width * 0.12", "$height * 0.7", 0], segments: 14, lumps, seed: `$i * 7 + ${s0 + 2}`, material: dense(b.sun), repeat: { count: 3, around: "y", phase: phase + 50 } }),
     // Small, ragged tufts of light new growth on the upper shoulder, and dark, shaded masses low down.
-    ellipsoid("Tuft_{i}", ["$width * 0.11", "$height * 0.1", "$width * 0.1"], { at: ["$width * 0.3", `$height * (0.66 + 0.08 * sin($i * 2.3))`, 0], segments: 10, lumps: 0.6, seed: `$i * 13 + ${s0 + 3}`, material: TIP[b.sun] ?? b.sun, repeat: { count: 7, around: "y", phase: phase + 20 } }),
-    ellipsoid("Shade_{i}", ["$width * 0.24", "$height * 0.2", "$width * 0.22"], { at: ["$width * 0.2", `max($height * 0.24, $height * 0.2 * ${n4(shadeLow)} + 0.02)`, 0], segments: 12, lumps, seed: `$i * 5 + ${s0 + 4}`, material: SHADE[b.leaf] ?? b.leaf, repeat: { count: 5, around: "y", phase: phase + 35 } }),
+    // Small leafy tufts of all sizes over the shoulder and the sides, in the leaf pattern: light new growth up top,
+    // the plant's own green lower down.
+    ellipsoid("Tuft_{i}", ["$width * 0.1 * (0.6 + 0.6 * (0.5 + 0.5 * sin($i * 2.9)))", "$height * 0.09 * (0.6 + 0.6 * (0.5 + 0.5 * sin($i * 2.9)))", "$width * 0.09 * (0.6 + 0.6 * (0.5 + 0.5 * sin($i * 2.9)))"], { at: ["$width * (0.32 + 0.06 * sin($i * 1.7))", `$height * (0.72 + 0.1 * sin($i * 2.3))`, 0], segments: 10, lumps: 0.6, seed: `$i * 13 + ${s0 + 3}`, material: TIP[b.sun] ?? b.sun, repeat: { count: 13, around: "y", phase: phase + 20 } }),
+    ellipsoid("Sprig_{i}", ["$width * 0.095 * (0.6 + 0.7 * (0.5 + 0.5 * sin($i * 3.7 + 1)))", "$height * 0.095 * (0.6 + 0.7 * (0.5 + 0.5 * sin($i * 3.7 + 1)))", "$width * 0.09 * (0.6 + 0.7 * (0.5 + 0.5 * sin($i * 3.7 + 1)))"], { at: ["$width * (0.48 + 0.04 * sin($i * 2.2))", `$height * (0.46 + 0.12 * sin($i * 1.9 + 0.7))`, 0], segments: 10, lumps: 0.6, seed: `$i * 17 + ${s0 + 6}`, material: b.sun, repeat: { count: 14, around: "y", phase: phase + 5 } }),
+    ellipsoid("Shade_{i}", ["$width * 0.24", "$height * 0.2", "$width * 0.22"], { at: ["$width * 0.2", `max($height * 0.24, $height * 0.2 * ${n4(shadeLow)} + 0.02)`, 0], segments: 12, lumps, seed: `$i * 5 + ${s0 + 4}`, material: dense(SHADE[b.leaf] ?? b.leaf), repeat: { count: 5, around: "y", phase: phase + 35 } }),
   ];
 }
 
@@ -126,17 +145,17 @@ function bushAsset(b: Bush, index: number): AssetDraft {
         box("Body", ["$width * 0.9", "$height * 0.84", "$length"], { at: [0, "$height * 0.1", 0], anchor: "bottom", bevel: "min($width, $height) * 0.2", material: SHADE[b.leaf] ?? b.leaf }),
         ellipsoid("Bulge_{i}", ["$width * 0.18", "$height * 0.2", "min($length / $bulges * 0.6, $width * 0.6)"], {
           at: ["$width * 0.37", `$height * (0.5 + 0.18 * sin($i * 2.3 + ${n4(r() * 3)}))`, "-$length / 2 + $length / $bulges * ($i + 0.5)"],
-          segments: 12, lumps, seed: `$i * 5 + ${s0}`,
+          segments: 12, lumps, seed: `$i * 5 + ${s0}`, material: dense(b.leaf),
           repeat: { count: "$bulges", step: [0, 0, 0] },
         }),
         ellipsoid("BulgeR_{i}", ["$width * 0.17", "$height * 0.19", "min($length / $bulges * 0.55, $width * 0.6)"], {
           at: ["-$width * 0.36", `$height * (0.48 + 0.18 * sin($i * 1.7 + ${n4(r() * 3)}))`, "-$length / 2 + $length / $bulges * ($i + 0.9) * 0.97"],
-          segments: 12, lumps, seed: `$i * 7 + ${s0 + 2}`,
+          segments: 12, lumps, seed: `$i * 7 + ${s0 + 2}`, material: dense(b.leaf),
           repeat: { count: "$bulges", step: [0, 0, 0] },
         }),
         ellipsoid("Crest_{i}", ["$width * 0.42", "$height * 0.08", "min($length / $bulges * 0.62, $width * 1.2)"], {
           at: [0, "$height * 0.92", "-$length / 2 + $length / $bulges * ($i + 0.5)"],
-          segments: 12, lumps, seed: `$i * 3 + ${s0 + 1}`, material: b.sun,
+          segments: 12, lumps, seed: `$i * 3 + ${s0 + 1}`, material: dense(b.sun),
           repeat: { count: "$bulges", step: [0, 0, 0] },
         }),
       ], { material: b.leaf }), group("Stems", [
@@ -214,8 +233,8 @@ function bushAsset(b: Bush, index: number): AssetDraft {
           children: flower ? [ellipsoid("Flower", ["$width * 0.022 + 0.006", "$height * 0.11", "$width * 0.022 + 0.006"], { at: [`$width * ${n4(lean)}`, `$height * ${n4(0.12 + len - 0.06)}`, 0], segments: 8, lumps: 0.3, seed: 3, material: flower })] : [],
         });
       nodes.push(group("Foliage", [
-        ellipsoid("Mound", ["$width * 0.42", "$height * 0.25", "$width * 0.42"], { at: [0, `$height * 0.25 * ${n4(low)} + 0.01`, 0], segments: 16, lumps: 0.35, seed: s0 }),
-        ellipsoid("Mound_Top", ["$width * 0.3", "$height * 0.2", "$width * 0.3"], { at: [0, "$height * 0.35", 0], segments: 14, lumps: 0.35, seed: s0 + 1, material: b.sun }),
+        ellipsoid("Mound", ["$width * 0.42", "$height * 0.25", "$width * 0.42"], { at: [0, `$height * 0.25 * ${n4(low)} + 0.01`, 0], segments: 16, lumps: 0.35, seed: s0, material: dense(b.leaf) }),
+        ellipsoid("Mound_Top", ["$width * 0.3", "$height * 0.2", "$width * 0.3"], { at: [0, "$height * 0.35", 0], segments: 14, lumps: 0.35, seed: s0 + 1, material: dense(b.sun) }),
       ], { material: b.leaf }), group("Stems", [
         spike("Stem_{i}", 0.4, b.key === "heather" ? 0.45 : 0.82, "$spikes", phase),
         spike("StemInner_{i}", 0.16, b.key === "heather" ? 0.5 : 0.86, 7, phase + 25),
@@ -251,7 +270,12 @@ function bushAsset(b: Bush, index: number): AssetDraft {
     description: `${b.text.charAt(0).toUpperCase()}${b.text.slice(1)}.${countText} It stands on y = 0; the front faces +z.`,
     tags: [b.key.replace("-", " "), b.dutch, b.style, ...(b.style === "hedge" ? ["hedge", "haag", "heg"] : []), ...(b.style === "topiary" ? ["topiary", "vormsnoei", "pot", "pot plant", "potplant"] : [])],
     params,
-    materials: natureMats(mats, ...m, ...(b.style === "round" || b.style === "flowering" || b.style === "berry" ? tones(b) : b.style === "hedge" ? [SHADE[b.leaf] ?? b.leaf] : [])),
+    materials: (() => {
+      const all = natureMats(mats, ...m, ...(b.style === "round" || b.style === "flowering" || b.style === "berry" ? tones(b) : b.style === "hedge" ? [SHADE[b.leaf] ?? b.leaf] : []));
+      const json = JSON.stringify(nodes);
+      const used = [...new Set([...json.matchAll(/"material":"([a-z_]+_dense)"/g)].map((x) => x[1]!))];
+      return { ...all, ...denseMats(used) };
+    })(),
     nodes: [group("Shrub", nodes)],
   };
 }

@@ -1,4 +1,4 @@
-import { box, cyl, ellipsoid, group, lathe, loft, num, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
+import { box, cyl, ellipsoid, extrude, group, lathe, loft, num, rng, roof, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { finish } from "./finishes.js";
 
 /**
@@ -42,11 +42,39 @@ const FINISHES: Record<Style, [Finish, Finish]> = {
   ],
 };
 
-/** Weathering on a plinth face at z = zf: a dark grime band at the foot and (copper alloys) green run-off streaks. */
+/**
+ * One run-off drip of patina, hanging from y = 0 down a face at z = 0 (towards +z, 3 mm thick): wide where the water
+ * leaves the bronze, wandering and narrowing to a thin tip, with a bulge where a drop hung. Plan in (x, depth down).
+ */
+function drip(name: string, x: Num, top: Num, z: Num, len: Num, k: number): SpecNode {
+  const r = rng(101 + k * 17);
+  const w = 0.03 + 0.04 * r();
+  const ts = [0, 0.06, 0.16, 0.28, 0.4, 0.52, 0.63, 0.74, 0.84, 0.92, 1];
+  // The run wanders more the further it gets; one or two drops hung on the way down and left a bulge.
+  let cx = 0;
+  const centre = ts.map((t) => (cx += (r() - 0.5) * 0.006 * (0.3 + t)));
+  const bulges = new Set([2 + Math.floor(r() * 4), 6 + Math.floor(r() * 3)]);
+  const left: [Num, Num][] = [], right: [Num, Num][] = [];
+  ts.forEach((t, i) => {
+    const taper = Math.pow(1 - t, 0.55) * (bulges.has(i) ? 1.35 : 1);
+    const hl = Math.max(0.0012, (w / 2) * taper * (0.8 + 0.4 * r()));
+    const hr = Math.max(0.0012, (w / 2) * taper * (0.8 + 0.4 * r()));
+    const d = `(${len}) * ${t.toFixed(3)}`;
+    left.push([Number((centre[i]! - hl).toFixed(4)), d]);
+    right.push([Number((centre[i]! + hr).toFixed(4)), d]);
+  });
+  return extrude(name, [...left, ...right.reverse()], 0, 0.003, { at: [x, top, z], rotate: [90, 0, 0], material: k % 2 ? "patina_run" : "verdigris" });
+}
+
+/** Weathering on a plinth face at z = zf: a dark grime band at the foot and (copper alloys) green run-off drips. */
 const weather = (f: Finish, wx: Num, wz: Num, streak?: { w: Num; z: Num; top: Num; len: Num }): SpecNode[] => [
   box("Grime", [`${wx} + 0.004`, 0.07, `${wz} + 0.004`], { anchor: "bottom", material: "wet_stain" }),
   ...(f.streaks && streak
-    ? [box("Streak_{i}", [0.022, `(${streak.len}) * (0.45 + 0.4 * abs(sin($i * 2.1 + 0.3)))`, 0.004], { at: [`(${streak.w}) * (-0.33 + $i * 0.22)`, `${streak.top} - (${streak.len}) * (0.45 + 0.4 * abs(sin($i * 2.1 + 0.3))) / 2`, `${streak.z} + 0.001`], material: "verdigris", repeat: { count: 4, step: [0, 0, 0] } })]
+    ? [-0.36, -0.2, -0.05, 0.13, 0.3].map((u, k) => {
+        const r = rng(7 + k * 31);
+        const lf = 0.55 + 0.45 * r();
+        return drip(`Streak_${k + 1}`, `(${streak.w}) * ${(u + (r() - 0.5) * 0.06).toFixed(3)}`, `${streak.top} - ${(0.002 + 0.02 * r()).toFixed(3)}`, `${streak.z} + ${(0.001 + 0.0006 * k).toFixed(4)}`, `(${streak.len}) * ${lf.toFixed(3)}`, k);
+      })
     : []),
 ];
 
@@ -65,13 +93,18 @@ function bust(f: Finish): SpecNode[] {
       ], { material: f.plinth }),
       group("Figure", [
         lathe("Socle", [[0.02, 0], [S(0.085), 0], [S(0.1), S(0.02)], [S(0.06), S(0.08)], [S(0.07), S(0.1)], [0.02, S(0.1)]], { segments: 20 }),
-        ellipsoid("Chest", [S(0.27), S(0.15), S(0.12)], { at: [0, S(0.23), 0], segments: 24 }),
-        cyl("Neck", S(0.055), S(0.16), { at: [0, S(0.43), S(0.005)], segments: 16 }),
-        ellipsoid("Head", [S(0.09), S(0.12), S(0.105)], { at: [0, S(0.56), S(0.01)], segments: 24 }),
-        ellipsoid("Hair", [S(0.096), S(0.085), S(0.105)], { at: [0, S(0.6), S(-0.008)], segments: 20 }),
-        ellipsoid("Nose", [S(0.014), S(0.032), S(0.02)], { at: [0, S(0.545), S(0.108)], segments: 10 }),
-        ellipsoid("Ear_L", [S(0.012), S(0.03), S(0.02)], { at: [S(0.088), S(0.555), 0], segments: 10, mirror: "Ear_R" }),
-        ellipsoid("Brow", [S(0.07), S(0.012), S(0.02)], { at: [0, S(0.585), S(0.092)], segments: 12 }),
+        ellipsoid("Chest", [S(0.22), S(0.16), S(0.115)], { at: [0, S(0.22), 0], segments: 24 }),
+        ellipsoid("Shoulder_L", [S(0.085), S(0.065), S(0.095)], { at: [S(0.2), S(0.2), 0], segments: 14, mirror: "Shoulder_R" }),
+        ellipsoid("Drape", [S(0.2), S(0.05), S(0.12)], { at: [0, S(0.1), S(0.01)], segments: 16 }),
+        cyl("Neck", S(0.062), S(0.16), { at: [0, S(0.43), S(0.005)], segments: 16 }),
+        ellipsoid("Head", [S(0.1), S(0.135), S(0.11)], { at: [0, S(0.57), S(0.01)], segments: 24 }),
+        ellipsoid("Chin", [S(0.05), S(0.035), S(0.05)], { at: [0, S(0.485), S(0.07)], segments: 12 }),
+        ellipsoid("Lips", [S(0.03), S(0.01), S(0.016)], { at: [0, S(0.52), S(0.105)], segments: 10 }),
+        ellipsoid("Eye_L", [S(0.019), S(0.011), S(0.014)], { at: [S(0.04), S(0.58), S(0.1)], segments: 10, mirror: "Eye_R", material: "gap_dark" }),
+        ellipsoid("Hair", [S(0.106), S(0.09), S(0.112)], { at: [0, S(0.62), S(-0.012)], segments: 20 }),
+        ellipsoid("Nose", [S(0.014), S(0.032), S(0.02)], { at: [0, S(0.55), S(0.112)], segments: 10 }),
+        ellipsoid("Ear_L", [S(0.012), S(0.03), S(0.02)], { at: [S(0.098), S(0.565), 0], segments: 10, mirror: "Ear_R" }),
+        ellipsoid("Brow", [S(0.07), S(0.012), S(0.02)], { at: [0, S(0.6), S(0.098)], segments: 12 }),
       ], { at: [0, "$ph", 0], material: f.figure, vars: { s: "$figureHeight / 0.68" } }),
     ], { vars: { ph: "$plinthHeight", pw: "$plinthWidth", pr: "$plinthWidth / 2" } }),
   ];
@@ -234,7 +267,7 @@ function statue(style: Style, f: Finish): AssetDraft {
     description: `${s.text}, in ${f.text}, with a dark weathering band at its foot. It faces +z.`,
     tags: [style, f.key, ...f.text.split(" ").filter((w) => w.length > 3), ...s.tags],
     params: s.params(),
-    materials: finish(...new Set([f.figure, f.plinth, f.accent, "granite_dark", "wet_stain", "verdigris", "corten"])),
+    materials: finish(...new Set([f.figure, f.plinth, f.accent, "granite_dark", "wet_stain", "gap_dark", "verdigris", "patina_run", "corten"])),
     nodes: s.build(f),
   };
 }

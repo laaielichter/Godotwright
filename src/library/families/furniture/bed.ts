@@ -1,6 +1,6 @@
-import { box, combos, cyl, ellipsoid, group, lathe, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
+import { box, combos, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats } from "./parts.js";
+import { board, fmats, pillow, shade, tufting } from "./parts.js";
 
 const STYLES = ["platform", "panel", "upholstered", "iron"] as const;
 type Style = (typeof STYLES)[number];
@@ -16,16 +16,87 @@ const FINISHES: Record<Style, Finish[]> = {
   iron: [{ frame: "cast_iron", bedding: "velvet_green", wood: "pine" }, { frame: "paint_white", bedding: "fabric_teal", wood: "birch" }],
 };
 
+const r4 = (v: number): number => Math.round(v * 10000) / 10000;
+
+/**
+ * The draped section of the duvet (or of its turned-back top), across x, in mattress-local coordinates: it lies on the
+ * mattress top ($mt / 2) and hangs `hang` down both sides with a soft rounded edge. `lift` raises it off the mattress (a
+ * layer on top of the duvet), `t` is its thickness and `s` (0-1) thins it toward a rounded end.
+ */
+function drape(lift: number, t: number, s: number, hang: string): (string | number)[][] {
+  const ri = 0.04 + lift;
+  const xi = `$W / 2 + 0.006 + ${lift}`;
+  const cx = `$W / 2 + 0.006 - 0.04`;
+  const cy = `$mt / 2 + 0.002 - 0.04`;
+  const yb = `$mt / 2 - (${hang}) * ${r4(0.6 + 0.4 * s)}`;
+  const th = r4(t * s);
+  const arc = (R: number, from: number, to: number, side: number): (string | number)[][] =>
+    Array.from({ length: 5 }, (_, k) => {
+      const a = ((from + ((to - from) * k) / 4) * Math.PI) / 180;
+      return [`${side > 0 ? "" : "-"}(${cx} + ${r4(R * Math.cos(a))})`, `${cy} + ${r4(R * Math.sin(a))}`];
+    });
+  const dome = r4(0.012 * s);
+  return [
+    [`${xi} + ${th}`, `${yb} + 0.012`],
+    ...arc(ri + th, 0, 90, 1),
+    [0, `${cy} + ${r4(ri + th + dome)}`],
+    ...arc(ri + th, 90, 0, -1),
+    [`-(${xi} + ${th})`, `${yb} + 0.012`],
+    [`-(${xi} + ${r4(th / 2)})`, `${yb}`],
+    [`-(${xi})`, `${yb} + 0.012`],
+    ...arc(ri, 0, 90, -1),
+    ...arc(ri, 90, 0, 1),
+    [`${xi}`, `${yb} + 0.012`],
+    [`${xi} + ${r4(th / 2)}`, `${yb}`],
+  ];
+}
+
 /** Mattress, duvet and pillows, lying on a deck whose top is at $dk. */
 function bedding(f: Finish, size: Size): SpecNode[] {
+  const T = 0.034;
+  const hang = "$mt * 0.62";
+  const zh = "-$L / 2 + 0.44";
+  const zf = "$L / 2 + 0.025";
+  const sec = (z: string, lift: number, t: number, s: number, h = hang) => ({ z, points: drape(lift, t, s, h) });
+  const quilt = `${f.bedding}_tuft`;
   const pillows = size === "double"
-    ? [ellipsoid("Pillow_L", ["$W * 0.21", 0.07, 0.19], { at: ["$W / 4", "$mt / 2 + 0.05", "-$L / 2 + 0.26"], segments: 16, material: "fabric_white", mirror: "Pillow_R" })]
-    : [ellipsoid("Pillow", ["$W * 0.36", 0.07, 0.19], { at: [0, "$mt / 2 + 0.05", "-$L / 2 + 0.26"], segments: 16, material: "fabric_white" })];
+    ? [pillow("Pillow_L", "$W * 0.43", 0.21, 0.07, "fabric_white", { at: ["$W / 4 + 0.005", "$mt / 2 - 0.012", "-$L / 2 + 0.25"], rotate: [9, 0, 0], mirror: "Pillow_R" })]
+    : [pillow("Pillow", "$W * 0.74", 0.21, 0.07, "fabric_white", { at: [0, "$mt / 2 - 0.012", "-$L / 2 + 0.25"], rotate: [9, 0, 0] })];
+  // A quilting line over the duvet from side to side, following its rounded edge and the dome of its top.
+  const yTop = `$mt / 2 + 0.002 + ${T}`;
+  const R = 0.04 + T + 0.0008;
+  const arcPts = (side: number): [string, string, number][] => Array.from({ length: 5 }, (_, k) => {
+    const a = ((side < 0 ? 180 - 90 * (k / 4) : 90 - 90 * (k / 4)) * Math.PI) / 180;
+    return [`${side} * ($W / 2 - 0.034) + ${r4(R * Math.cos(a))}`, `$mt / 2 - 0.038 + ${r4(R * Math.sin(a))}`, 0];
+  });
+  const across: [string | number, string | number, number][] = [
+    [`-($W / 2 + 0.006 + ${r4(T + 0.0008)})`, `$mt / 2 - (${hang}) + 0.05`, 0],
+    ...arcPts(-1),
+    [0, `${yTop} + 0.0128`, 0],
+    ...arcPts(1),
+    [`$W / 2 + 0.006 + ${r4(T + 0.0008)}`, `$mt / 2 - (${hang}) + 0.05`, 0],
+  ];
   return [
     box("Mattress", ["$W", "$mt", "$L"], { at: [0, "$dk + $mt / 2", 0], bevel: 0.04, material: "mattress_ticking", children: [
-      box("Duvet", ["$W + 0.05", "$mt * 0.55 + 0.05", "$L * 0.7"], { at: [0, "$mt * 0.5 - ($mt * 0.55 + 0.05) / 2 + 0.035", "$L * 0.15 + 0.01"], bevel: 0.03, material: f.bedding, children: [
-        box("Fold", ["$W + 0.06", 0.05, 0.22], { at: [0, "($mt * 0.55 + 0.05) / 2 + 0.005", "-$L * 0.35 + 0.1"], bevel: 0.024, material: "fabric_white" }),
+      loft("Duvet", [
+        sec(`${zh} - 0.002`, 0, T, 0.35),
+        sec(`${zh} + 0.012`, 0, T, 0.85),
+        sec(`${zh} + 0.03`, 0, T, 1),
+        sec(`${zf} - 0.035`, 0, T, 1),
+        sec(`${zf} - 0.012`, 0, T, 0.8),
+        sec(`${zf}`, 0, T, 0.35),
+      ], { material: f.bedding, children: [
+        tube("Quilting_{i}", across, 0.0032, { at: [0, 0, `${zh} + 0.5`], repeat: { count: "floor(($L - 1) / 0.26) + 1", step: [0, 0, 0.26] }, segments: 6, material: quilt }),
+        ...[-1, 1].map((sx) => tube(sx < 0 ? "Quilting_Long_R" : "Quilting_Long_L", [[`${sx} * $W / 6`, `${yTop} + 0.0088`, `${zh} + 0.34`], [`${sx} * $W / 6`, `${yTop} + 0.0088`, `${zf} - 0.05`]], 0.0032, { segments: 6, material: quilt })),
       ] }),
+      loft("Fold", [
+        sec(`${zh} - 0.018`, T - 0.004, T, 0.3, "$mt * 0.5"),
+        sec(`${zh} - 0.004`, T - 0.004, T, 0.85, "$mt * 0.5"),
+        sec(`${zh} + 0.02`, T - 0.004, T, 1, "$mt * 0.5"),
+        sec(`${zh} + 0.24`, T - 0.004, T, 1, "$mt * 0.5"),
+        sec(`${zh} + 0.27`, T - 0.004, T, 0.6, "$mt * 0.5"),
+        sec(`${zh} + 0.28`, T - 0.004, T, 0.3, "$mt * 0.5"),
+      ], { material: "fabric_white" }),
       ...pillows,
     ] }),
   ];
@@ -36,7 +107,7 @@ function platform(f: Finish, size: Size): SpecNode[] {
     group("Frame", [
       box("Plinth", ["$W - 0.1", 0.09, "$L - 0.1"], { at: [0, 0, 0], anchor: "bottom", material: "paint_anthracite" }),
       box("Base", ["$W + 0.12", "$dk - 0.085", "$L + 0.1"], { at: [0, 0.085, 0.01], anchor: "bottom", bevel: 0.012 }),
-      box("Bench", ["$W + 0.12", 0.03, 0.14], { at: [0, "$dk - 0.015", "$L / 2 - 0.02"], bevel: 0.008 }),
+      board("Bench", ["$W + 0.12", 0.03, 0.14], "x", { at: [0, "$dk - 0.015", "$L / 2 - 0.02"], bevel: 0.008 }),
     ]),
     box("Headboard", ["$W + 0.5", "$hb - 0.085", 0.06], { at: [0, 0.085, "-$L / 2 - 0.07"], anchor: "bottom", bevel: 0.01, children: [
       box("Panel_{i}", ["($W + 0.46) / 3 - 0.01", "$hb - $dk - 0.08", 0.02], { at: ["-($W + 0.46) / 3", "$dk - 0.05", 0.035], anchor: "bottom", repeat: { count: 3, step: ["($W + 0.46) / 3", 0, 0] }, bevel: 0.006, material: "paint_anthracite" }),
@@ -51,10 +122,10 @@ function panel(f: Finish, size: Size): SpecNode[] {
     box(name, [0.065, h, 0.065], { at: ["$W / 2 + 0.03", 0, z], anchor: "bottom", bevel: 0.008, mirror, children: [
       lathe("Finial", [[0.022, 0], [0.03, 0.01], [0.034, 0.03], [0.02, 0.05], [0.026, 0.065], [0.006, 0.08]], { at: [0, h, 0], segments: 14 }),
     ] });
-  const board = (name: string, z: string, top: string): SpecNode =>
+  const endBoard = (name: string, z: string, top: string): SpecNode =>
     group(name, [
-      box("Crest", ["$W + 0.02", 0.08, 0.04], { at: [0, `${top} - 0.06`, 0], bevel: 0.01 }),
-      box("Lower", ["$W + 0.02", 0.07, 0.035], { at: [0, "$dk - 0.07", 0], bevel: 0.006 }),
+      board("Crest", ["$W + 0.02", 0.08, 0.04], "x", { at: [0, `${top} - 0.06`, 0], bevel: 0.01 }),
+      board("Lower", ["$W + 0.02", 0.07, 0.035], "x", { at: [0, "$dk - 0.07", 0], bevel: 0.006 }),
       box("Panel_{i}", ["$W / $np - 0.06", `${top} - $dk - 0.06`, 0.018], { at: ["-$W / 2 + $W / $np / 2", "$dk - 0.04", 0], anchor: "bottom", repeat: { count: "$np", step: ["$W / $np", 0, 0] }, bevel: 0.004 }),
       box("Muntin_{i}", [0.045, `${top} - $dk - 0.05`, 0.03], { at: ["-$W / 2 + $W / $np", "$dk - 0.045", 0], anchor: "bottom", repeat: { count: "$np - 1", step: ["$W / $np", 0, 0] }, bevel: 0.005 }),
     ], { at: [0, 0, z], vars: { np: size === "double" ? 3 : 2 } });
@@ -67,8 +138,8 @@ function panel(f: Finish, size: Size): SpecNode[] {
       post("Leg_HL", "-$L / 2 - 0.03", "$hb - 0.08", "Leg_HR"),
       post("Leg_FL", "$L / 2 + 0.03", "$fb - 0.08", "Leg_FR"),
     ]),
-    board("Headboard", "-$L / 2 - 0.03", "$hb - 0.08"),
-    board("Footboard", "$L / 2 + 0.03", "$fb - 0.08"),
+    endBoard("Headboard", "-$L / 2 - 0.03", "$hb - 0.08"),
+    endBoard("Footboard", "$L / 2 + 0.03", "$fb - 0.08"),
     ...bedding(f, size),
   ];
 }
@@ -86,8 +157,7 @@ function upholstered(f: Finish, size: Size): SpecNode[] {
     ]),
     group("Legs", legs),
     box("Headboard", ["$W + 0.16", "$hb - 0.1", 0.11], { at: [0, 0.1, "-$L / 2 - 0.07"], anchor: "bottom", bevel: 0.045, children: [
-      ellipsoid("Button_{i}", [0.012, 0.012, 0.008], { at: ["-($nb - 1) * 0.16 / 2", "$hb - 0.25", 0.056], repeat: { count: "$nb", step: [0.16, 0, 0] }, segments: 8, children: [] }),
-      ellipsoid("Lower_Button_{i}", [0.012, 0.012, 0.008], { at: ["-($nb - 2) * 0.16 / 2", "$hb - 0.4", 0.056], repeat: { count: "$nb - 1", step: [0.16, 0, 0] }, segments: 8 }),
+      tufting("Tufting", f.frame, "$nb", 3, 0.16, 0.12, { at: [0, "$hb - 0.47", 0.055] }),
       box("Piping", ["$W + 0.17", 0.016, 0.12], { at: [0, "$hb - 0.105", 0], bevel: 0.008 }),
     ], vars: { nb: "floor(($W + 0.04) / 0.16)" } }),
     ...bedding(f, size),
@@ -148,6 +218,9 @@ function makeBed(style: Style, size: Size, f: Finish): AssetDraft {
       ...fmats(...new Set([f.frame, f.bedding, f.wood, "paint_anthracite", "rough_timber", "brass", "rubber"])),
       mattress_ticking: { color: [0.44, 0.42, 0.38], metallic: 0, roughness: 0.92, texture: "fabric" },
       fabric_white: { color: [0.5, 0.49, 0.46], metallic: 0, roughness: 0.95, texture: "fabric" },
+      fabric_white_tuft: { color: [0.3, 0.29, 0.27], metallic: 0, roughness: 0.95, texture: "fabric" },
+      ...shade(f.bedding, 0.66),
+      ...(style === "upholstered" ? shade(f.frame) : {}),
     },
     nodes: [group("Bed", { platform, panel, upholstered, iron }[style](f, size), {
       material: f.frame,

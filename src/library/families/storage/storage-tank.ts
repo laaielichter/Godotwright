@@ -1,3 +1,4 @@
+import type { MaterialDef } from "../../palette.js";
 import { box, cap, cyl, ellipsoid, group, int, lathe, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import type { ParamDef } from "../../../build/params.js";
 import { an, finishName, finishTags, ring, useMats } from "./common.js";
@@ -102,7 +103,7 @@ function sphere(f: Finish): SpecNode[] {
   const rails = [0, 15, 30, 45, 60, 75, 82].map(arc);
   return [
     group("Sphere", [
-      ellipsoid("Shell", ["$R", "$R", "$R"], { at: [0, "$C", 0], segments: 40 }),
+      ellipsoid("Shell", ["$R", "$R", "$R"], { at: [0, "$C", 0], segments: 40, material: "shell_paint" }),
       lathe("Seam", [["$R - 0.02", "$C - 0.04"], ["$R + 0.02", "$C - 0.04"], ["$R + 0.02", "$C + 0.04"], ["$R - 0.02", "$C + 0.04"]], { segments: 40, material: f.trim }),
       group("Leg_{i}", [
         cyl("Column", 0.22, "$C + 0.3", { anchor: "base", at: ["$R", 0, 0], segments: 12 }),
@@ -180,7 +181,11 @@ function tank(style: Style, f: Finish): AssetDraft {
     description: `${cap(an(fin))} ${style.title}: ${style.text}. Its ladder faces +z.`,
     tags: [...style.tags, ...finishTags(f.main)],
     params: style.params,
-    materials: useMats(f.main, f.trim, f.base, "rust_streak"),
+    materials: {
+      ...useMats(f.main, f.trim, f.base, "rust_streak"),
+      // A big sphere mirrors the sun as one white blob when its paint is semi-gloss: weathered eggshell paint instead.
+      ...(style.name === "sphere" ? (() => { const m = useMats(f.main)[f.main] as MaterialDef; return { shell_paint: { ...m, metallic: Math.min(m.metallic, 0.2), roughness: Math.max(m.roughness, 0.82) } }; })() : {}),
+    },
     nodes: style.build(f),
   };
 }

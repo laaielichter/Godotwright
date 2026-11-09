@@ -1,14 +1,15 @@
 import { box, combos, group, int, lathe, num, slugify, cap, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { barHandle, cupPull, fmats, knob, labelHolder, squareLeg } from "./parts.js";
+import { barHandle, board, cupPull, ringPull, fmats, knob, labelHolder, squareLeg } from "./parts.js";
 
 const STYLES = ["dresser", "nightstand", "filing", "tallboy"] as const;
 type Style = (typeof STYLES)[number];
 
-interface Finish { body: string; front: string; metal: string }
+type Pull = "knob" | "bar" | "cup" | "ring";
+interface Finish { body: string; front: string; metal: string; pull?: Pull }
 const FINISHES: Record<Style, Finish[]> = {
-  dresser: [{ body: "oak", front: "oak", metal: "brass" }, { body: "paint_white", front: "paint_white", metal: "brass" }, { body: "walnut", front: "walnut", metal: "bronze" }, { body: "paint_mint", front: "paint_mint", metal: "ceramic_white" }],
-  nightstand: [{ body: "walnut", front: "walnut", metal: "brass" }, { body: "light_oak", front: "paint_white", metal: "brushed_steel" }, { body: "teak", front: "teak", metal: "black_steel" }, { body: "paint_navy", front: "paint_navy", metal: "brass" }],
+  dresser: [{ body: "oak", front: "oak", metal: "brass" }, { body: "paint_white", front: "paint_white", metal: "brass", pull: "bar" }, { body: "walnut", front: "walnut", metal: "bronze", pull: "ring" }, { body: "paint_mint", front: "paint_mint", metal: "ceramic_white" }],
+  nightstand: [{ body: "walnut", front: "walnut", metal: "brass" }, { body: "light_oak", front: "paint_white", metal: "brushed_steel", pull: "bar" }, { body: "teak", front: "teak", metal: "black_steel", pull: "cup" }, { body: "paint_navy", front: "paint_navy", metal: "brass" }],
   filing: [{ body: "paint_grey", front: "paint_grey", metal: "brushed_steel" }, { body: "paint_anthracite", front: "paint_anthracite", metal: "chrome" }, { body: "paint_olive", front: "paint_olive", metal: "aluminium" }, { body: "oak", front: "oak", metal: "brass" }],
   tallboy: [{ body: "mahogany", front: "mahogany", metal: "brass" }, { body: "pine", front: "pine", metal: "cast_iron" }, { body: "cherry", front: "cherry", metal: "brass" }, { body: "dark_stain", front: "dark_stain", metal: "bronze" }],
 };
@@ -24,9 +25,8 @@ function drawer(name: string, at: [Num, Num, Num], fw: string, fh: string, handl
   const { proud: _p, field, ...rest } = o;
   return group(name, [
     group("Parts", [
-      box("Front", [`${fw} - 0.007`, `${fh} - 0.007`, 0.02], { at: [0, 0, "$fz"], bevel: 0.005, material: f.front, children: field ? [
-        box("Field", [`${fw} - 0.07`, `${fh} - 0.06`, 0.006], { at: [0, 0, 0.011], bevel: 0.004 }),
-      ] : [] }),
+      board("Front", [`${fw} - 0.007`, `${fh} - 0.007`, 0.02], "x", { at: [0, 0, "$fz"], bevel: 0.005, material: f.front }),
+      ...(field ? [board("Field", [`${fw} - 0.07`, `${fh} - 0.06`, 0.006], "x", { at: [0, 0, "$fz + 0.011"], bevel: 0.004, material: f.front })] : []),
       box("Reveal", [fw, fh, 0.004], { at: [0, 0, "$fz - 0.012"], material: "reveal" }),
       box("Tray", [`${fw} - 0.05`, `${fh} - 0.04`, "$D - 0.06"], { at: [0, -0.008, "$fz - ($D - 0.06) / 2 - 0.008"] }),
       ...handles,
@@ -34,15 +34,23 @@ function drawer(name: string, at: [Num, Num, Num], fw: string, fh: string, handl
   ], { at: [at[0], at[1], `${at[2]} + ${c}`], ...rest });
 }
 
+/** A drawer pull of the finish's kind, centred on x on the drawer front. */
+function pull(name: string, x: Num, f: Finish, size: number): SpecNode {
+  if (f.pull === "bar") return barHandle(name, 0.1, [x, 0, "$fz + 0.008"], f.metal, { standoff: 0.026, radius: 0.0055 });
+  if (f.pull === "cup") return cupPull(name, [x, 0.004, "$fz + 0.014"], f.metal);
+  if (f.pull === "ring") return ringPull(name, [x, 0, "$fz + 0.008"], f.metal);
+  return knob(name, [x, 0, "$fz + 0.01"], f.metal, size);
+}
+
 /** Front plane of the carcass is z = D/2; a drawer's centre is halfway between its front face and its back. */
 const DRAWER_VARS = { fz: "($D - 0.03) / 2 - 0.01", zc: "0.015" };
 
 function dresser(f: Finish): SpecNode[] {
-  const k = (name: string, x: Num): SpecNode => knob(name, [x, 0, "$fz + 0.01"], f.metal, 1.1);
+  const k = (name: string, x: Num): SpecNode => pull(name, x, f, 1.1);
   return [
     group("Body", [
       box("Side_L", ["$s", "$H - 0.1 - 0.03", "$D"], { at: ["$W / 2 - $s / 2", 0.1, 0], anchor: "bottom", bevel: 0.004, mirror: "Side_R" }),
-      box("Top", ["$W + 0.03", 0.03, "$D + 0.02"], { at: [0, "$H - 0.015", 0.01], bevel: 0.01 }),
+      board("Top", ["$W + 0.03", 0.03, "$D + 0.02"], "x", { at: [0, "$H - 0.015", 0.01], bevel: 0.01 }),
       box("Bottom", ["$W", "$s", "$D"], { at: [0, "0.1 + $s / 2", 0] }),
       box("Back", ["$W - 0.02", "$H - 0.13", 0.008], { at: [0, 0.1, "-$D / 2 + 0.004"], anchor: "bottom" }),
       box("Plinth", ["$W + 0.01", 0.06, "$D + 0.006"], { at: [0, 0.07, 0.003], bevel: 0.006 }),
@@ -58,14 +66,14 @@ function nightstand(f: Finish): SpecNode[] {
   return [
     group("Body", [
       box("Side_L", ["$s", "$H - 0.2", "$D"], { at: ["$W / 2 - $s / 2", 0.18, 0], anchor: "bottom", bevel: 0.004, mirror: "Side_R" }),
-      box("Top", ["$W + 0.01", 0.022, "$D + 0.01"], { at: [0, "$H - 0.011", 0.005], bevel: 0.006 }),
+      board("Top", ["$W + 0.01", 0.022, "$D + 0.01"], "x", { at: [0, "$H - 0.011", 0.005], bevel: 0.006 }),
       box("Bottom", ["$W", 0.022, "$D"], { at: [0, 0.191, 0], bevel: 0.004 }),
       box("Back", ["$W - 0.02", "$H - 0.2", 0.008], { at: [0, 0.18, "-$D / 2 + 0.004"], anchor: "bottom" }),
       box("Shelf", ["$W - 2 * $s + 0.004", "$s", "$D - 0.03"], { at: [0, "$H - 0.022 - $r * $rh - $s / 2", -0.01] }),
       squareLeg("Leg_FL", ["$W / 2 - 0.03", 0, "$D / 2 - 0.03"], 0.185, 0.034, 0.022, "Leg_FR"),
       squareLeg("Leg_BL", ["$W / 2 - 0.03", 0, "-$D / 2 + 0.03"], 0.185, 0.034, 0.022, "Leg_BR"),
     ]),
-    drawer("Drawer_{i}", [0, "$H - 0.022 - $rh / 2", "$zc"], "$W - 2 * $s", "$rh", [knob("Knob", [0, 0, "$fz + 0.01"], f.metal)], f, { repeat: { count: "$r", step: [0, "-$rh", 0] } }),
+    drawer("Drawer_{i}", [0, "$H - 0.022 - $rh / 2", "$zc"], "$W - 2 * $s", "$rh", [pull("Knob", 0, f, 1)], f, { repeat: { count: "$r", step: [0, "-$rh", 0] } }),
   ];
 }
 
@@ -90,9 +98,9 @@ function tallboy(f: Finish): SpecNode[] {
   return [
     group("Body", [
       box("Side_L", ["$s", "$H - 0.08 - 0.05", "$D"], { at: ["$W / 2 - $s / 2", 0.08, 0], anchor: "bottom", bevel: 0.004, mirror: "Side_R" }),
-      box("Cornice", ["$W + 0.04", 0.05, "$D + 0.025"], { at: [0, "$H - 0.025", 0.012], bevel: 0.01 }),
-      box("Bead", ["$W + 0.014", 0.015, "$D + 0.01"], { at: [0, "$H - 0.055", 0.005], bevel: 0.006 }),
-      box("Base_Moulding", ["$W + 0.02", 0.045, "$D + 0.012"], { at: [0, 0.1, 0.006], bevel: 0.008 }),
+      board("Cornice", ["$W + 0.04", 0.05, "$D + 0.025"], "x", { at: [0, "$H - 0.025", 0.012], bevel: 0.01 }),
+      board("Bead", ["$W + 0.014", 0.015, "$D + 0.01"], "x", { at: [0, "$H - 0.055", 0.005], bevel: 0.006 }),
+      board("Base_Moulding", ["$W + 0.02", 0.045, "$D + 0.012"], "x", { at: [0, 0.1, 0.006], bevel: 0.008 }),
       box("Back", ["$W - 0.02", "$H - 0.13", 0.008], { at: [0, 0.08, "-$D / 2 + 0.004"], anchor: "bottom" }),
       foot("Foot_FL", "$D / 2 - 0.05", "Foot_FR"),
       foot("Foot_BL", "-$D / 2 + 0.05", "Foot_BR"),

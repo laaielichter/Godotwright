@@ -1,5 +1,5 @@
 import { box, cap, cyl, group, int, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { an, finishName, finishTags, frontBack, stencil, useMats, worn } from "./common.js";
+import { an, finishName, finishTags, frontBack, laid, stencil, useMats, worn } from "./common.js";
 
 /** One crate: its shape style and four finishes. */
 type Finish = { main: string; trim: string; accent: string };
@@ -24,10 +24,10 @@ function slatCrate(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof nu
   const nodes = [
     group("SlatCrate", [
       group("Body", [
-        box("Bottom_{i}", ["$W - 2 * $t", "$t", "($D - 2 * $t) / 3 - 0.012"], { at: [0, "$t / 2", "-($D - 2 * $t) / 3"], repeat: { count: 3, step: [0, 0, "($D - 2 * $t) / 3"] }, bevel: 0.002 }),
-        box("Slat_L{i}", ["$t", "$sh", "$D"], { at: ["$W / 2 - $t / 2", "$sh / 2", 0], repeat: { count: "$slats", step: [0, "($H - $sh) / ($slats - 1)", 0] }, bevel: 0.003, mirror: "Slat_R{i}", children: nails("x") }),
+        laid("x", box("Bottom_{i}", ["$W - 2 * $t", "$t", "($D - 2 * $t) / 3 - 0.012"], { at: [0, "$t / 2", "-($D - 2 * $t) / 3"], repeat: { count: 3, step: [0, 0, "($D - 2 * $t) / 3"] }, bevel: 0.002 })),
+        laid("z", box("Slat_L{i}", ["$t", "$sh", "$D"], { at: ["$W / 2 - $t / 2", "$sh / 2", 0], repeat: { count: "$slats", step: [0, "($H - $sh) / ($slats - 1)", 0] }, bevel: 0.003, mirror: "Slat_R{i}", children: nails("x") })),
         ...frontBack((s, tag) => [
-          box(`Slat_${tag}{i}`, ["$W - 2 * $t + 0.002", "$sh", "$t"], { at: [0, "$sh / 2", `${s} * ($D / 2 - $t / 2)`], repeat: { count: "$slats", step: [0, "($H - $sh) / ($slats - 1)", 0] }, bevel: 0.003, children: nails("z").map((n) => ({ ...n, at: (n["at"] as unknown[]).map((v, k) => (k === 2 ? `${s} * $t / 2` : v)) })) }),
+          laid("x", box(`Slat_${tag}{i}`, ["$W - 2 * $t + 0.002", "$sh", "$t"], { at: [0, "$sh / 2", `${s} * ($D / 2 - $t / 2)`], repeat: { count: "$slats", step: [0, "($H - $sh) / ($slats - 1)", 0] }, bevel: 0.003, children: nails("z").map((n) => ({ ...n, at: (n["at"] as unknown[]).map((v, k) => (k === 2 ? `${s} * $t / 2` : v)) })) })),
           box(`Grip_${tag}`, [0.11, "min(0.032, $sh * 0.55)", "$t + 0.004"], { at: [0, "$H - $sh / 2", `${s} * ($D / 2 - $t / 2)`], material: "hole" }),
         ]),
         box("Post_FL", ["$p", "$H", "$p"], { at: ["$W / 2 - $t - $p / 2 + 0.001", 0, "$D / 2 - $t - $p / 2 + 0.001"], anchor: "bottom", bevel: 0.003, mirror: "Post_FR" }),
@@ -51,36 +51,36 @@ function framedCrate(f: Finish): { nodes: SpecNode[]; params: ReturnType<typeof 
   // One face of cleats: a frame of four battens and a diagonal brace. `len` is the face length, `axis` its direction.
   const sideX: SpecNode[] = [
     group("Cleats_L", [
-      box("CleatTop", ["$ct", "$cw", "$D"], { at: ["$W / 2 - $ct / 2", "$s + $bh - $cw / 2", 0], bevel: 0.004 }),
-      box("CleatLow", ["$ct", "$cw", "$D"], { at: ["$W / 2 - $ct / 2", "$s + $cw / 2", 0], bevel: 0.004 }),
+      laid("z", box("CleatTop", ["$ct", "$cw", "$D"], { at: ["$W / 2 - $ct / 2", "$s + $bh - $cw / 2", 0], bevel: 0.004 })),
+      laid("z", box("CleatLow", ["$ct", "$cw", "$D"], { at: ["$W / 2 - $ct / 2", "$s + $cw / 2", 0], bevel: 0.004 })),
       box("CleatF", ["$ct", "$bh - 2 * $cw + 0.004", "$cw"], { at: ["$W / 2 - $ct / 2", "$s + $bh / 2", "$D / 2 - $cw / 2"], bevel: 0.004 }),
       box("CleatB", ["$ct", "$bh - 2 * $cw + 0.004", "$cw"], { at: ["$W / 2 - $ct / 2", "$s + $bh / 2", "-$D / 2 + $cw / 2"], bevel: 0.004 }),
-      box("Brace", ["$ct * 0.9", "$cw * 0.9", "hypot($D - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7"], { at: ["$W / 2 - $ct / 2", "$s + $bh / 2", 0], rotate: ["deg(atan2($bh - 2 * $cw, $D - 2 * $cw))", 0, 0], bevel: 0.004 }),
+      laid("z", box("Brace", ["$ct * 0.9", "$cw * 0.9", "hypot($D - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7"], { at: ["$W / 2 - $ct / 2", "$s + $bh / 2", 0], rotate: ["deg(atan2($bh - 2 * $cw, $D - 2 * $cw))", 0, 0], bevel: 0.004 })),
     ], { mirror: "Cleats_R" }),
   ];
   const faceZ = frontBack((s, tag) => [
     group(`Cleats_${tag}`, [
-      box("CleatTop", ["$W - 2 * $ct", "$cw", "$ct"], { at: [0, "$s + $bh - $cw / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 }),
-      box("CleatLow", ["$W - 2 * $ct", "$cw", "$ct"], { at: [0, "$s + $cw / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 }),
+      laid("x", box("CleatTop", ["$W - 2 * $ct", "$cw", "$ct"], { at: [0, "$s + $bh - $cw / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 })),
+      laid("x", box("CleatLow", ["$W - 2 * $ct", "$cw", "$ct"], { at: [0, "$s + $cw / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 })),
       box("CleatL", ["$cw", "$bh - 2 * $cw + 0.004", "$ct"], { at: ["$W / 2 - $ct - $cw / 2", "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 }),
       box("CleatR", ["$cw", "$bh - 2 * $cw + 0.004", "$ct"], { at: ["-$W / 2 + $ct + $cw / 2", "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], bevel: 0.004 }),
-      box("Brace", ["hypot($W - 2 * $ct - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7", "$cw * 0.9", "$ct * 0.9"], { at: [0, "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], rotate: [0, 0, `${s} * deg(atan2($bh - 2 * $cw, $W - 2 * $ct - 2 * $cw))`], bevel: 0.004 }),
-      box("BraceX", ["hypot($W - 2 * $ct - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7", "$cw * 0.9", "$ct * 0.9"], { at: [0, "$s + $bh / 2", `${s} * ($D / 2 - $ct * 0.45)`], rotate: [0, 0, `${-s} * deg(atan2($bh - 2 * $cw, $W - 2 * $ct - 2 * $cw))`], bevel: 0.004 }),
+      laid("x", box("Brace", ["hypot($W - 2 * $ct - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7", "$cw * 0.9", "$ct * 0.9"], { at: [0, "$s + $bh / 2", `${s} * ($D / 2 - $ct / 2)`], rotate: [0, 0, `${s} * deg(atan2($bh - 2 * $cw, $W - 2 * $ct - 2 * $cw))`], bevel: 0.004 })),
+      laid("x", box("BraceX", ["hypot($W - 2 * $ct - 2 * $cw, $bh - 2 * $cw) - $cw * 0.7", "$cw * 0.9", "$ct * 0.9"], { at: [0, "$s + $bh / 2", `${s} * ($D / 2 - $ct * 0.45)`], rotate: [0, 0, `${-s} * deg(atan2($bh - 2 * $cw, $W - 2 * $ct - 2 * $cw))`], bevel: 0.004 })),
     ]),
-    box(`Plank_${tag}{i}`, ["$W - 2 * $ct", "$bh / $nb - 0.006", "$bt"], { at: [0, "$s + $bh / $nb / 2", `${s} * ($D / 2 - $ct - $bt / 2 + 0.002)`], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] } }),
+    laid("x", box(`Plank_${tag}{i}`, ["$W - 2 * $ct", "$bh / $nb - 0.006", "$bt"], { at: [0, "$s + $bh / $nb / 2", `${s} * ($D / 2 - $ct - $bt / 2 + 0.002)`], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] } })),
   ]);
   const nodes = [
     group("ShippingCrate", [
-      box("Skid_L", [0.08, "$s", "$D"], { at: ["$W / 2 - 0.12", "$s / 2", 0], bevel: 0.006, mirror: "Skid_R" }),
+      laid("z", box("Skid_L", [0.08, "$s", "$D"], { at: ["$W / 2 - 0.12", "$s / 2", 0], bevel: 0.006, mirror: "Skid_R" })),
       group("Body", [
         box("Core", ["$W - 2 * $ct - 2 * $bt + 0.004", "$bh", "$D - 2 * $ct - 2 * $bt + 0.004"], { at: [0, "$s + $bh / 2", 0] }),
-        box("Plank_L{i}", ["$bt", "$bh / $nb - 0.006", "$D - 2 * $ct"], { at: ["$W / 2 - $ct - $bt / 2 + 0.002", "$s + $bh / $nb / 2", 0], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] }, mirror: "Plank_R{i}" }),
+        laid("z", box("Plank_L{i}", ["$bt", "$bh / $nb - 0.006", "$D - 2 * $ct"], { at: ["$W / 2 - $ct - $bt / 2 + 0.002", "$s + $bh / $nb / 2", 0], repeat: { count: "$nb", step: [0, "$bh / $nb", 0] }, mirror: "Plank_R{i}" })),
         ...sideX,
         ...faceZ,
       ]),
       group("Lid", [
-        box("Panel", ["$W", "$lt * 0.55", "$D"], { at: [0, "$lt * 0.275", 0], bevel: 0.004 }),
-        box("Batten_{i}", ["$W - 0.02", "$lt * 0.5", "$cw"], { at: [0, "$lt * 0.7", "-$D / 2 + $cw"], repeat: { count: 3, step: [0, 0, "($D - 2 * $cw) / 2"] }, bevel: 0.004 }),
+        laid("x", box("Panel", ["$W", "$lt * 0.55", "$D"], { at: [0, "$lt * 0.275", 0], bevel: 0.004 })),
+        laid("x", box("Batten_{i}", ["$W - 0.02", "$lt * 0.5", "$cw"], { at: [0, "$lt * 0.7", "-$D / 2 + $cw"], repeat: { count: 3, step: [0, 0, "($D - 2 * $cw) / 2"] }, bevel: 0.004 })),
         stencil("Stencil", "FRAGILE", "top", [0, "$lt * 0.55 + 0.001", "($D - 2 * $cw) / 4"], 0.014, f.accent, 0.003),
         stencil("Lot", "LOT 2417", "top", [0, "$lt * 0.55 + 0.001", "-($D - 2 * $cw) / 4"], 0.01, f.accent, 0.003),
       ], { at: [0, "$s + $bh - 0.002", 0] }),

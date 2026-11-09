@@ -1,5 +1,5 @@
 import { box, cyl, group, int, num, roof, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { GRIME, LOCAL, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, boardX, boardZ, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "glass" | "cantilever" | "wooden" | "canopy";
 interface Finish { frame: string; accent: string }
@@ -17,11 +17,36 @@ const sign = (): SpecNode =>
     cyl("Mast", 0.04, 2.95, { anchor: "base", segments: 16, material: "galvanised" }),
     cyl("Footing", 0.1, 0.04, { anchor: "base", segments: 16, material: "galvanised" }),
     box("Board", [0.46, 0.46, 0.025], { at: [0, 2.6, 0.05], bevel: 0.006, material: "paint_yellow" }),
-    box("Pictogram", [0.3, 0.16, 0.006], { at: [0, 2.62, 0.064], bevel: 0.003, material: "paint_black" }),
+    group("Pictogram", [
+      box("BusBody", [0.3, 0.15, 0.006], { at: [0, 2.6, 0.064], bevel: 0.01 }),
+      box("Window_{i}", [0.05, 0.05, 0.007], { at: [-0.1, 2.63, 0.064], repeat: { count: 3, step: [0.1, 0, 0] }, material: "paint_yellow" }),
+      cyl("Wheel_{i}", 0.026, 0.01, { axis: "z", at: [-0.09, 2.52, 0.066], repeat: { count: 2, step: [0.18, 0, 0] }, segments: 12 }),
+    ], { material: "paint_black" }),
     box("RouteBand", [0.46, 0.08, 0.03], { at: [0, 2.32, 0.05], bevel: 0.004, material: "paint_white" }),
-    box("Timetable", [0.36, 0.5, 0.06], { at: [0, 1.5, 0.06], bevel: 0.01, material: "galvanised" }),
-    box("TimetableGlass", [0.3, 0.42, 0.006], { at: [0, 1.5, 0.092], material: "glass_clear" }),
+    box("RouteNumber_{i}", [0.05, 0.045, 0.006], { at: [-0.12, 2.32, 0.068], repeat: { count: 3, step: [0.12, 0, 0] }, material: "paint_black" }),
+    group("Timetable", [
+      box("Case", [0.38, 0.56, 0.06], { bevel: 0.01, material: "galvanised" }),
+      box("Paper", [0.32, 0.48, 0.006], { at: [0, 0, 0.031], material: "paint_white" }),
+      box("Header", [0.32, 0.07, 0.008], { at: [0, 0.205, 0.032], material: "paint_yellow" }),
+      box("Row_{i}", [0.26, 0.012, 0.008], { at: [0, 0.12, 0.032], repeat: { count: 10, step: [0, -0.032, 0] }, material: "paint_black" }),
+      box("Glass", [0.34, 0.5, 0.004], { at: [0, 0, 0.037], material: "glass_clear" }),
+    ], { at: [0, 1.5, 0.06] }),
   ], { at: ["$width / 2 + 0.6", 0, "$depth / 2 - 0.1"] });
+
+/** A backlit advertising panel standing left of the shelter: a dark frame holding a lit poster (sky, sun, hills, a headline and copy lines). */
+const adPanel = (): SpecNode =>
+  group("AdPanel", [
+    box("Frame", [1.16, 1.9, 0.12], { at: [0, 0.97, 0], bevel: 0.012 }),
+    box("Foot", [1.0, 0.05, 0.3], { at: [0, 0.025, 0], bevel: 0.01 }),
+    group("Poster", [
+      box("Sky", [1.04, 1.58, 0.01], { material: "poster_sky" }),
+      cyl("Sun", 0.17, 0.012, { axis: "z", at: [0.2, 0.36, 0.002], segments: 24, material: "poster_sun" }),
+      box("Hills", [1.04, 0.46, 0.012], { at: [0, -0.56, 0.001], material: "poster_hill" }),
+      box("Headline", [0.72, 0.1, 0.012], { at: [-0.1, 0.05, 0.002], material: "poster_ink" }),
+      box("Copy_{i}", [0.5, 0.03, 0.012], { at: [-0.19, -0.1, 0.002], repeat: { count: 3, step: [0, -0.06, 0] }, material: "poster_ink" }),
+    ], { at: [0, 0.97, 0.064] }),
+    box("Header", [1.16, 0.08, 0.13], { at: [0, 1.86, 0], bevel: 0.01, material: "paint_yellow" }),
+  ], { at: ["-$width / 2 - 0.72", 0, "$depth / 2 - 0.3"], material: "paint_anthracite" });
 
 const backBays = (z: string, y0: number, top: string): SpecNode[] => [
   box("BackGlass_{i}", ["$width / $bays - 0.09", `${top} - ${y0}`, 0.012], { at: ["-$width / 2 + $width / (2 * $bays)", y0, z], anchor: "bottom", repeat: { count: "$bays", step: ["$width / $bays", 0, 0] }, material: "glass_clear" }),
@@ -32,7 +57,7 @@ const backBays = (z: string, y0: number, top: string): SpecNode[] => [
 
 const plankBench = (z: string, len: string, wood: string, legs: string): SpecNode =>
   group("Bench", [
-    box("Plank", [len, 0.045, 0.34], { at: [0, 0.45, 0], bevel: 0.008, material: wood }),
+    boardX("Plank", [len, 0.045, 0.34], { at: [0, 0.45, 0], bevel: 0.008, material: wood }),
     box("Bracket_L", [0.04, 0.43, 0.3], { at: [`${len} * 0.4`, 0, -0.01], anchor: "bottom", bevel: 0.005, material: legs, mirror: "Bracket_R" }),
   ], { at: [0, 0, z] });
 
@@ -58,6 +83,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         ]),
         plankBench("-$depth / 2 + 0.24", "$width * 0.6", "light_oak", f.frame),
         sign(),
+        adPanel(),
       ];
     case "cantilever":
       return [
@@ -72,6 +98,7 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         ]),
         plankBench("-$depth / 2 + 0.25", "$width * 0.8", "teak", f.frame),
         sign(),
+        adPanel(),
       ];
     case "wooden":
       return [
@@ -82,18 +109,19 @@ function nodes(style: Style, f: Finish): SpecNode[] {
           ...grimeBox("Grime_FR", 0.12, 0.12, 0.25, ["-$width / 2 + 0.06", 0.03, "$depth / 2 - 0.06"], 0.008),
           ...grimeBox("Grime_BL", 0.12, 0.12, 0.25, ["$width / 2 - 0.06", 0.03, "-$depth / 2 + 0.06"], 0.008),
           ...grimeBox("Grime_BR", 0.12, 0.12, 0.25, ["-$width / 2 + 0.06", 0.03, "-$depth / 2 + 0.06"], 0.008),
-          box("Weatherboard_{i}", ["$width - 0.1", 0.15, 0.025], { at: [0, 0.1, "-$depth / 2 + 0.05"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } }),
-          group("Side_L", [box("Weatherboard_{i}", [0.025, 0.15, "$depth * 0.5"], { at: [0, 0.1, "-$depth / 4 + 0.06"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } })], { at: ["$width / 2 - 0.05", 0, 0], mirror: "Side_R" }),
-          box("Plate_F", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "$depth / 2 - 0.06"], bevel: 0.01 }),
-          box("Plate_B", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "-$depth / 2 + 0.06"], bevel: 0.01 }),
-          box("TieBeam_L", [0.1, 0.1, "$depth"], { at: ["$width / 2 - 0.06", "$height", 0], bevel: 0.01, mirror: "TieBeam_R" }),
+          boardX("Weatherboard_{i}", ["$width - 0.1", 0.15, 0.025], { at: [0, 0.1, "-$depth / 2 + 0.05"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } }),
+          group("Side_L", [boardZ("Weatherboard_{i}", [0.025, 0.15, "$depth * 0.5"], { at: [0, 0.1, "-$depth / 4 + 0.06"], anchor: "bottom", bevel: 0.004, repeat: { count: "$boards", step: [0, 0.155, 0] } })], { at: ["$width / 2 - 0.05", 0, 0], mirror: "Side_R" }),
+          boardX("Plate_F", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "$depth / 2 - 0.06"], bevel: 0.01 }),
+          boardX("Plate_B", ["$width + 0.1", 0.12, 0.14], { at: [0, "$height", "-$depth / 2 + 0.06"], bevel: 0.01 }),
+          boardZ("TieBeam_L", [0.1, 0.1, "$depth"], { at: ["$width / 2 - 0.06", "$height", 0], bevel: 0.01, mirror: "TieBeam_R" }),
         ], { vars: { boards: "floor(($height - 0.5) / 0.155)" } }),
         group("Roof", [
           roof("Covering", { x0: "-$width / 2 - 0.25", x1: "$width / 2 + 0.25", z0: "-$depth / 2 - 0.3", z1: "$depth / 2 + 0.3", y: "$height + 0.05", rise: "$depth * 0.4" }, { material: f.accent }),
-          box("Ridge", ["$width + 0.55", 0.06, 0.08], { at: [0, "$height + 0.05 + $depth * 0.4", 0], bevel: 0.01, material: f.frame }),
+          boardX("Ridge", ["$width + 0.55", 0.06, 0.08], { at: [0, "$height + 0.05 + $depth * 0.4", 0], bevel: 0.01, material: f.frame }),
         ]),
         plankBench("-$depth / 2 + 0.24", "$width * 0.7", f.frame, f.frame),
         sign(),
+        adPanel(),
       ];
     case "canopy":
       return [
@@ -110,10 +138,11 @@ function nodes(style: Style, f: Finish): SpecNode[] {
           cyl("Gutter", 0.04, "$width", { axis: "x", at: [0, "$height + 0.06 + ($depth / 2 + 0.1) * 0.105", "$depth / 2 + 0.1"], segments: 14 }),
         ]),
         group("Bench", [
-          box("Perch", ["$width * 0.6 - 0.1", 0.05, 0.14], { at: [0, 0.75, 0.07], bevel: 0.015, material: "teak" }),
+          boardX("Perch", ["$width * 0.6 - 0.1", 0.05, 0.14], { at: [0, 0.75, 0.07], bevel: 0.015, material: "teak" }),
           box("Bracket_L", [0.03, 0.05, 0.12], { at: ["$width * 0.2", 0.72, 0.05], bevel: 0.004, mirror: "Bracket_R" }),
         ], { at: [0, 0, "-$depth / 2 + 0.12"] }),
         sign(),
+        adPanel(),
       ];
   }
 }
@@ -132,8 +161,13 @@ function makeStop(style: Style, f: Finish): AssetDraft {
     description: `A ${fr} ${s.title}: ${s.text}, with a bus stop sign and timetable on a mast to its right. The open boarding side faces +z.`,
     tags: [style, fr, ac, "bushalte", "abri", "wachthuisje", "shelter", "halte"],
     params: params(style),
-    materials: { ...useMats(f.frame, f.accent, "galvanised", "paint_yellow", "paint_black", "paint_white", "glass_clear", "glass_frosted", "bulb_cool", "light_oak", "teak", "concrete"), ...GRIME(f.frame), ...(f.accent === "terracotta" ? { terracotta: { ...LOCAL["terracotta"]!, color: [0.25, 0.075, 0.035] as [number, number, number], texture: "roof_tile" } } : {}) },
-    nodes: [group("BusStop", [...nodes(style, f), box("Platform", ["$width + 1.2", 0.03, "$depth + 0.5"], { at: [0.3, 0, 0.05], anchor: "bottom", bevel: 0.01, material: "concrete" })], { material: f.frame })],
+    materials: {
+      poster_sky: { color: [0.2, 0.42, 0.62], metallic: 0, roughness: 0.4, emissive: [0.1, 0.22, 0.34] },
+      poster_sun: { color: [0.62, 0.45, 0.06], metallic: 0, roughness: 0.4, emissive: [0.3, 0.2, 0.02] },
+      poster_hill: { color: [0.05, 0.22, 0.08], metallic: 0, roughness: 0.4, emissive: [0.02, 0.1, 0.04] },
+      poster_ink: { color: [0.62, 0.6, 0.55], metallic: 0, roughness: 0.4, emissive: [0.3, 0.3, 0.28] },
+      ...useMats(f.frame, f.accent, "galvanised", "paint_yellow", "paint_black", "paint_white", "glass_clear", "glass_frosted", "bulb_cool", "paint_anthracite", "light_oak", "teak", "concrete"), ...GRIME(f.frame), ...(f.accent === "terracotta" ? { terracotta: { ...LOCAL["terracotta"]!, color: [0.25, 0.075, 0.035] as [number, number, number], texture: "roof_tile" } } : {}) },
+    nodes: [group("BusStop", [...nodes(style, f), box("Platform", ["$width + 2.2", 0.03, "$depth + 0.5"], { at: [-0.2, 0, 0.05], anchor: "bottom", bevel: 0.01, material: "concrete" })], { material: f.frame })],
   };
 }
 

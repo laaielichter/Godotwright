@@ -1,6 +1,6 @@
 import { box, combos, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats } from "./parts.js";
+import { board, cushion, fmats, shade } from "./parts.js";
 
 /** The silhouettes, each with its own parts and sizes. */
 const STYLES = ["club", "wingback", "lounge", "rocking"] as const;
@@ -33,13 +33,14 @@ const turnedLeg = (name: string, at: [string, number, string], mirror: string, w
 const taperLeg = (name: string, at: [string, number, string], mirror: string, wood: string, front: boolean): SpecNode =>
   lathe(name, [[0.012, 0], [0.014, 0.01], [0.022, "$lh * 0.92"], [0.024, "$lh + 0.012"]], { at, mirror, rotate: [front ? -3 : 3, 0, 4], segments: 14, material: wood });
 
-/** Upholstered seat cushion and back pillow between the arms (inner width $iw). */
-function cushions(): SpecNode[] {
+/** Upholstered seat cushion and back pillow between the arms (inner width $iw): crowned, piped, optionally buttoned. */
+function cushions(cover: string, tufts = 0): SpecNode[] {
+  const bh = "$bh - $sh - 0.1";
   return [
-    box("Seat", ["$iw - 0.01", 0.13, "$D - $bt - 0.01"], { at: [0, "$sh - 0.065", "$bt / 2 + 0.012"], bevel: 0.045, children: [
-      tube("Welt", [["-$iw / 2 + 0.02", 0.062, "($D - $bt) / 2 - 0.006"], ["$iw / 2 - 0.02", 0.062, "($D - $bt) / 2 - 0.006"]], 0.006, { segments: 8 }),
-    ] }),
-    box("Back_Pillow", ["$iw - 0.02", "$bh - $sh - 0.1", 0.15], { at: [0, "$sh - 0.02", "-$D / 2 + $bt + 0.05"], anchor: "bottom", rotate: [-8, 0, 0], bevel: 0.05 }),
+    cushion("Seat", "$iw - 0.01", 0.13, "$D - $bt - 0.01", cover, { at: [0, "$sh - 0.065 - 0.01", "$bt / 2 + 0.012"], bevel: 0.045, crown: 0.02 }),
+    cushion("Back_Pillow", "$iw - 0.02", 0.15, bh, cover, {
+      at: [0, `$sh - 0.02 + (${bh}) / 2 * 0.99`, `-$D / 2 + $bt + 0.05 - (${bh}) / 2 * 0.139`], rotate: [82, 0, 0], bevel: 0.05, crown: 0.024, ...(tufts ? { tufts, pleats: false } : {}),
+    }),
   ];
 }
 
@@ -52,7 +53,7 @@ function club(f: { cover: string; wood: string }): SpecNode[] {
     box("Back", ["$W - 0.02", "$bh - $lh - $bt / 2", "$bt"], { at: [0, "$lh", "-$D / 2 + $bt / 2"], anchor: "bottom", bevel: 0.05, children: [
       cyl("Crown", "$bt / 2", "$W - 0.03", { axis: "x", at: [0, "$bh - $lh - $bt / 2 - 0.01", 0], segments: 20, bevel: 0.03 }),
     ] }),
-    ...cushions(),
+    ...cushions(f.cover),
     box("Plinth", ["$W - 0.03", 0.03, "$D - 0.03"], { at: [0, "$lh - 0.004", 0], anchor: "bottom", bevel: 0.01, material: f.wood }),
     group("Legs", [
       bunFoot("Leg_FL", ["$W / 2 - 0.07", 0, "$D / 2 - 0.07"], "Leg_FR", f.wood),
@@ -62,11 +63,17 @@ function club(f: { cover: string; wood: string }): SpecNode[] {
 }
 
 function wingback(f: { cover: string; wood: string }): SpecNode[] {
+  // A wing is a soft slab on the side of the back: rounded sections, tall and thick at the back, lower and thinner at the front.
+  const rr = (xa: string, xb: string, y0: string, y1: string, c: number): [string, string][] => [
+    [`${xa} + ${c}`, y0], [`${xb} - ${c}`, y0], [xb, `${y0} + ${c}`], [xb, `${y1} - ${c}`], [`${xb} - ${c}`, y1], [`${xa} + ${c}`, y1], [xa, `${y1} - ${c}`], [xa, `${y0} + ${c}`],
+  ];
   const wing = (z0: string, z1: string, x: string): SpecNode =>
     loft("Wing_L", [
-      { z: z0, points: [[`${x} - 0.05`, "$ah - 0.06"], [`${x} + 0.035`, "$ah - 0.06"], [`${x} + 0.035`, "$bh - 0.07"], [`${x} - 0.05`, "$bh - 0.07"]] },
-      { z: `(${z0} + ${z1}) / 2`, points: [[`${x} - 0.045`, "$ah - 0.06"], [`${x} + 0.035`, "$ah - 0.06"], [`${x} + 0.035`, "$bh - 0.16"], [`${x} - 0.045`, "$bh - 0.16"]] },
-      { z: z1, points: [[`${x} - 0.035`, "$ah - 0.06"], [`${x} + 0.03`, "$ah - 0.06"], [`${x} + 0.03`, "$ah + 0.16"], [`${x} - 0.035`, "$ah + 0.16"]] },
+      { z: z0, points: rr(`${x} - 0.05`, `${x} + 0.035`, "$ah - 0.06", "$bh - 0.07", 0.02) },
+      { z: `${z0} + 0.06`, points: rr(`${x} - 0.05`, `${x} + 0.035`, "$ah - 0.06", "$bh - 0.075", 0.024) },
+      { z: `(${z0} + ${z1}) / 2`, points: rr(`${x} - 0.045`, `${x} + 0.035`, "$ah - 0.06", "$bh - 0.16", 0.022) },
+      { z: `${z1} - 0.05`, points: rr(`${x} - 0.04`, `${x} + 0.032`, "$ah - 0.06", "$ah + 0.2", 0.022) },
+      { z: z1, points: rr(`${x} - 0.034`, `${x} + 0.03`, "$ah - 0.06", "$ah + 0.15", 0.018) },
     ], { mirror: "Wing_R" });
   return [group("Armchair", [
     box("Body", ["$W - 0.02", "$sh - 0.12 - $lh", "$D - 0.02"], { at: [0, "$lh", 0], anchor: "bottom", bevel: 0.02 }),
@@ -77,7 +84,7 @@ function wingback(f: { cover: string; wood: string }): SpecNode[] {
       cyl("Crown", 0.065, "$W - 0.1", { axis: "x", at: [0, "$bh - $sh + 0.13 - 0.068", -0.01], segments: 20, bevel: 0.03 }),
     ] }),
     wing("-$D / 2 + $bt - 0.02", "-$D / 2 + $bt + 0.27", "$W / 2 - 0.05"),
-    ...cushions(),
+    ...cushions(f.cover),
     group("Nailheads", [
       ellipsoid("Nail_{i}", [0.006, 0.006, 0.004], { at: ["-($n - 1) * 0.028 / 2", "$lh + 0.025", "$D / 2 - 0.009"], repeat: { count: "$n", step: [0.028, 0, 0] }, segments: 8 }),
     ], { material: "brass", vars: { n: "floor(($W - 0.08) / 0.028)" } }),
@@ -91,9 +98,7 @@ function wingback(f: { cover: string; wood: string }): SpecNode[] {
 function lounge(f: { cover: string; wood: string }): SpecNode[] {
   return [group("Armchair", [
     box("Apron", ["$W - 0.08", 0.05, "$D - 0.12"], { at: [0, "$sh - 0.135", 0], bevel: 0.008, material: f.wood }),
-    box("Seat", ["$W - 0.2", 0.12, "$D - 0.2"], { at: [0, "$sh - 0.06", 0.03], bevel: 0.04, children: [
-      box("Button_{i}", [0.03, 0.012, 0.03], { at: [-0.08, 0.058, 0], repeat: { count: 2, step: [0.16, 0, 0] }, bevel: 0.006 }),
-    ] }),
+    cushion("Seat", "$W - 0.2", 0.12, "$D - 0.2", f.cover, { at: [0, "$sh - 0.06 - 0.008", 0.03], bevel: 0.04, crown: 0.022, tufts: 2, pleats: false, seam: true }),
     group("Legs", [
       taperLeg("Leg_FL", ["$W / 2 - 0.07", 0, "$D / 2 - 0.09"], "Leg_FR", f.wood, true),
       taperLeg("Leg_BL", ["$W / 2 - 0.07", 0, "-$D / 2 + 0.09"], "Leg_BR", f.wood, false),
@@ -104,8 +109,8 @@ function lounge(f: { cover: string; wood: string }): SpecNode[] {
     ] }),
     group("Back", [
       box("Stile_L", [0.04, "$hb", 0.035], { at: ["$W / 2 - 0.06", 0, 0], anchor: "bottom", bevel: 0.008, mirror: "Stile_R", material: f.wood }),
-      box("Crest", ["$W - 0.1", 0.05, 0.03], { at: [0, "$hb - 0.03", 0], bevel: 0.01, material: f.wood }),
-      box("Back_Pillow", ["$W - 0.2", "$hb - 0.16", 0.12], { at: [0, 0.09, 0.07], anchor: "bottom", bevel: 0.045 }),
+      board("Crest", ["$W - 0.1", 0.05, 0.03], "x", { at: [0, "$hb - 0.03", 0], bevel: 0.01, material: f.wood }),
+      cushion("Back_Pillow", "$W - 0.2", 0.12, "$hb - 0.16", f.cover, { at: [0, "0.09 + ($hb - 0.16) / 2", 0.07], rotate: [90, 0, 0], bevel: 0.045, crown: 0.022, tufts: 3, pleats: false }),
     ], { at: [0, "$sh - 0.12", "-$D / 2 + 0.07"], rotate: [-14, 0, 0], vars: { hb: "($bh - $sh + 0.12) / 0.97" } }),
   ], { material: f.cover, vars: { lh: "$sh - 0.16" } })];
 }
@@ -115,7 +120,7 @@ function rocking(f: { cover: string; wood: string }): SpecNode[] {
   return [group("Armchair", [
     tube("Rocker_L", pts.map((t) => [0, `0.022 + 0.085 * ${t * t}`, `($D / 2 + 0.1) * ${t}`] as [number, string, string]), 0.022, { at: ["$W / 2 - 0.05", 0, 0], segments: 10, mirror: "Rocker_R" }),
     box("Seat", ["$W - 0.04", 0.035, "$D - 0.03"], { at: [0, "$sh - 0.0175 - 0.05", 0], bevel: 0.01, children: [
-      box("Seat_Pad", ["$W - 0.12", 0.055, "$D - 0.1"], { at: [0, 0.042, 0.01], bevel: 0.022, material: f.cover }),
+      cushion("Seat_Pad", "$W - 0.12", 0.06, "$D - 0.1", f.cover, { at: [0, 0.042, 0.01], bevel: 0.026, crown: 0.016, seam: true, material: f.cover }),
     ] }),
     group("Legs", [
       lathe("Leg_FL", [[0.016, 0], [0.019, 0.02], [0.014, "$lf * 0.3"], [0.02, "$lf * 0.5"], [0.015, "$lf * 0.7"], [0.019, "$lf + 0.01"]], { at: ["$W / 2 - 0.05", "$ry - 0.012", "$D / 2 - 0.07"], segments: 12, mirror: "Leg_FR" }),
@@ -127,8 +132,8 @@ function rocking(f: { cover: string; wood: string }): SpecNode[] {
     ] }),
     group("Back", [
       box("Post_L", [0.035, "$hb", 0.035], { at: ["$W / 2 - 0.06", 0, 0], anchor: "bottom", bevel: 0.008, mirror: "Post_R" }),
-      box("Crest", ["$W - 0.08", 0.08, 0.03], { at: [0, "$hb - 0.05", 0], bevel: 0.012 }),
-      box("Bottom_Bar", ["$W - 0.1", 0.04, 0.025], { at: [0, 0.07, 0], bevel: 0.006 }),
+      board("Crest", ["$W - 0.08", 0.08, 0.03], "x", { at: [0, "$hb - 0.05", 0], bevel: 0.012 }),
+      board("Bottom_Bar", ["$W - 0.1", 0.04, 0.025], "x", { at: [0, 0.07, 0], bevel: 0.006 }),
       cyl("Spindle_{i}", 0.009, "$hb - 0.16", { at: ["-($W - 0.2) / 2", "($hb - 0.16) / 2 + 0.08", 0], repeat: { count: 7, step: ["($W - 0.2) / 6", 0, 0] }, segments: 8 }),
     ], { at: [0, "$sh - 0.08", "-$D / 2 + 0.04"], rotate: [-12, 0, 0], vars: { hb: "($bh - $sh + 0.08) / 0.98" } }),
   ], { material: f.wood, vars: { ry: `0.022 + 0.085 * pow(($D / 2 - 0.07) / ($D / 2 + 0.1), 2)`, lf: "$sh - 0.085 - $ry + 0.012" } })];
@@ -159,7 +164,7 @@ function makeArmchair(style: Style, f: { cover: string; wood: string }): AssetDr
       num("seatHeight", r.sh[0], r.sh[1], r.sh[2], "Height of the seat top in metres."),
       num("backHeight", r.bh[0], r.bh[1], r.bh[2], "Height of the top of the back above the floor in metres."),
     ],
-    materials: fmats(f.cover, f.wood, ...(style === "wingback" ? ["brass"] : [])),
+    materials: { ...fmats(f.cover, f.wood, ...(style === "wingback" ? ["brass"] : [])), ...shade(f.cover) },
     nodes: wrap,
   };
 }

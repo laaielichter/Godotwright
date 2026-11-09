@@ -27,7 +27,8 @@ function nodes(style: Style): SpecNode[] {
           lathe("Rim", [["$r + 0.01", 0.02], ["$r + 0.01", 0.045], ["$r - 0.005", 0.05]], { segments: 24 }),
         ], { material: "rubber" }),
         lathe("Cone", [["$r", 0.035], ["0.022", "$height - 0.01"], [0.012, "$height"]], { segments: 24 }),
-        // Scuffs and road dirt on the lower cone: two see-through films that follow its taper.
+        // Scuffs and road dirt on the lower cone: three thin films that follow its taper.
+        lathe("Grime_0", [[`${rc("0.036")} + 0.0015`, 0.036], [`${rc("$height * 0.28")} + 0.0015`, "$height * 0.28"]], { segments: 24, material: "grime_light" }),
         lathe("Grime_1", [[`${rc("0.036")} + 0.003`, 0.036], [`${rc("$height * 0.2")} + 0.003`, "$height * 0.2"]], { segments: 24, material: "grime" }),
         lathe("Grime_2", [[`${rc("0.036")} + 0.0045`, 0.036], [`${rc("0.036 + $height * 0.06")} + 0.0045`, "0.036 + $height * 0.06"]], { segments: 24, material: "grime_heavy" }),
         ...(lamp

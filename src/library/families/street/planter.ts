@@ -1,5 +1,5 @@
 import { box, cyl, ellipsoid, group, int, lathe, num, rng, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { GRIME, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
+import { GRIME, boardX, boardZ, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "pot" | "square" | "trough" | "wooden";
 type PlantKind = "shrub" | "flowers" | "grass" | "topiary";
@@ -114,13 +114,13 @@ function makePlanter(style: Style, finish: string, idx: number): AssetDraft {
       body = [group("Body", [
         box("CornerPost_L", [0.07, "$height", 0.07], { at: ["$width / 2 - 0.035", 0, "$depth / 2 - 0.035"], anchor: "bottom", bevel: 0.006, mirror: "CornerPost_R" }),
         box("CornerPost_BL", [0.07, "$height", 0.07], { at: ["$width / 2 - 0.035", 0, "-$depth / 2 + 0.035"], anchor: "bottom", bevel: 0.006, mirror: "CornerPost_BR" }),
-        box("Board_F{i}", ["$width - 0.08", "$bh", 0.022], { at: [0, "0.06 + $bh / 2", "$depth / 2 - 0.02"], repeat: { count: "$boards", step: [0, "$bh + 0.004", 0] }, bevel: 0.004 }),
-        box("Board_B{i}", ["$width - 0.08", "$bh", 0.022], { at: [0, "0.06 + $bh / 2", "-$depth / 2 + 0.02"], repeat: { count: "$boards", step: [0, "$bh + 0.004", 0] }, bevel: 0.004 }),
-        group("Side_L", [box("Board_{i}", [0.022, "$bh", "$depth - 0.08"], { at: [0, "0.06 + $bh / 2", 0], repeat: { count: "$boards", step: [0, "$bh + 0.004", 0] }, bevel: 0.004 })], { at: ["$width / 2 - 0.02", 0, 0], mirror: "Side_R" }),
+        boardX("Board_F{i}", ["$width - 0.08", "$bh", 0.022], { at: [0, "0.06 + $bh / 2", "$depth / 2 - 0.02"], repeat: { count: "$boards", step: [0, "$bh + 0.004", 0] }, bevel: 0.004 }),
+        boardX("Board_B{i}", ["$width - 0.08", "$bh", 0.022], { at: [0, "0.06 + $bh / 2", "-$depth / 2 + 0.02"], repeat: { count: "$boards", step: [0, "$bh + 0.004", 0] }, bevel: 0.004 }),
+        group("Side_L", [boardZ("Board_{i}", [0.022, "$bh", "$depth - 0.08"], { at: [0, "0.06 + $bh / 2", 0], repeat: { count: "$boards", step: [0, "$bh + 0.004", 0] }, bevel: 0.004 })], { at: ["$width / 2 - 0.02", 0, 0], mirror: "Side_R" }),
         box("Liner", ["$width - 0.1", "$height - 0.1", "$depth - 0.1"], { at: [0, 0.06, 0], anchor: "bottom", material: "rubber" }),
-        box("Cap_F", ["$width + 0.02", 0.025, 0.09], { at: [0, "$height", "$depth / 2 - 0.035"], bevel: 0.006 }),
-        box("Cap_B", ["$width + 0.02", 0.025, 0.09], { at: [0, "$height", "-$depth / 2 + 0.035"], bevel: 0.006 }),
-        box("Cap_L", [0.09, 0.025, "$depth - 0.16"], { at: ["$width / 2 - 0.035", "$height", 0], bevel: 0.006, mirror: "Cap_R" }),
+        boardX("Cap_F", ["$width + 0.02", 0.025, 0.09], { at: [0, "$height", "$depth / 2 - 0.035"], bevel: 0.006 }),
+        boardX("Cap_B", ["$width + 0.02", 0.025, 0.09], { at: [0, "$height", "-$depth / 2 + 0.035"], bevel: 0.006 }),
+        boardZ("Cap_L", [0.09, 0.025, "$depth - 0.16"], { at: ["$width / 2 - 0.035", "$height", 0], bevel: 0.006, mirror: "Cap_R" }),
       ], { vars: { bh: "($height - 0.07) / $boards - 0.004" } }),
       ...grimeBox("Grime_FL", 0.07, 0.07, 0.14, ["$width / 2 - 0.035", 0, "$depth / 2 - 0.035"], 0.006),
       ...grimeBox("Grime_FR", 0.07, 0.07, 0.14, ["-$width / 2 + 0.035", 0, "$depth / 2 - 0.035"], 0.006),

@@ -1,4 +1,4 @@
-import { box, cyl, extrude, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
+import { box, cyl, ellipsoid, extrude, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode, type Vec } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
 
 const LOCAL: Record<string, MaterialDef> = {
@@ -7,6 +7,7 @@ const LOCAL: Record<string, MaterialDef> = {
   nylon_blue: { color: [0.03, 0.075, 0.22], metallic: 0, roughness: 0.6, texture: "fabric" },
   nylon_red: { color: [0.33, 0.035, 0.03], metallic: 0, roughness: 0.6, texture: "fabric" },
   nylon_grey: { color: [0.11, 0.115, 0.125], metallic: 0, roughness: 0.65, texture: "fabric" },
+  nylon_lime: { color: [0.2, 0.3, 0.04], metallic: 0, roughness: 0.6, texture: "fabric" },
   nylon_yellow: { color: [0.5, 0.33, 0.025], metallic: 0, roughness: 0.6, texture: "fabric" },
   cotton_canvas: { color: [0.5, 0.45, 0.34], metallic: 0, roughness: 0.95, texture: "fabric" },
   canvas_olive: { color: [0.1, 0.105, 0.05], metallic: 0, roughness: 0.95, texture: "fabric" },
@@ -28,12 +29,12 @@ const STYLES = {
 } as const;
 type Style = keyof typeof STYLES;
 
-const FINISHES: Record<Style, { id: string; a: string; b: string; text: string; nl: string }[]> = {
+const FINISHES: Record<Style, { id: string; a: string; b: string; s?: string; text: string; nl: string }[]> = {
   dome: [
-    { id: "orange", a: "nylon_orange", b: "nylon_grey", text: "orange", nl: "oranje" },
-    { id: "green", a: "nylon_green", b: "nylon_grey", text: "green", nl: "groen" },
-    { id: "blue", a: "nylon_blue", b: "nylon_yellow", text: "blue", nl: "blauw" },
-    { id: "red", a: "nylon_red", b: "nylon_grey", text: "red", nl: "rood" },
+    { id: "orange", a: "nylon_orange", b: "nylon_grey", s: "nylon_grey", text: "orange", nl: "oranje" },
+    { id: "green", a: "nylon_green", b: "nylon_grey", s: "nylon_lime", text: "green", nl: "groen" },
+    { id: "blue", a: "nylon_blue", b: "nylon_grey", s: "nylon_yellow", text: "blue", nl: "blauw" },
+    { id: "red", a: "nylon_red", b: "nylon_grey", s: "nylon_grey", text: "red", nl: "rood" },
   ],
   ridge: [
     { id: "canvas", a: "cotton_canvas", b: "canvas_khaki", text: "canvas", nl: "katoen" },
@@ -77,32 +78,79 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
   const s = STYLES[style];
   const kids: SpecNode[] = [];
   if (style === "dome") {
-    const ks = [-1, -0.85, -0.6, -0.3, 0, 0.3, 0.6, 0.85, 1];
-    const front = "$hw + 0.5";
+    // A taut two-pole dome: the fly is a superellipse dome (n = 8), so the four panels between the crossing poles pull
+    // nearly straight across (flatter than a balloon) and the pole sleeves stand out as ridges along the diagonals.
+    const N = 8, C = Math.pow(Math.SQRT1_2, 2 / N);
+    // The plan of the fly is a rounded rectangle with a real corner on each pole line and a gently bowed, taut panel
+    // between the corners. The ring has two points at every corner a few millimetres apart (a sliver of fabric that the
+    // pole sleeve covers), so each panel shades as its own surface with a sharp crease along the poles.
+    const M = 6, bow = 1 - C, P = 2.3, eps = 0.01;
+    const panelRing = (d: number, k: number, lift: number) => {
+      const pts: [string, string][] = [];
+      for (let q = 0; q < 4; q++) {
+        for (let j = 0; j <= M; j++) {
+          const u = -1 + eps + ((2 - 2 * eps) * j) / M;
+          const e = 1 - bow * Math.pow(Math.abs(u), P), a = C * u;
+          const [px, py] = q === 0 ? [e, a] : q === 1 ? [-a, e] : q === 2 ? [-e, -a] : [a, -e];
+          pts.push([`$hl * ${(d * k * px).toFixed(5)}`, `$hw * ${(d * k * py).toFixed(5)}`]);
+        }
+      }
+      return { z: y(d, lift), points: pts };
+    };
+    const g = (d: number): number => Math.pow(Math.max(0, 1 - d * d), 0.58);
+    const y = (d: number, lift = 0): string => `${(0.05 + lift).toFixed(4)} + ($h - 0.05) * ${g(d).toFixed(5)}`;
+    const levels = [1, 0.985, 0.95, 0.89, 0.8, 0.68, 0.53, 0.37, 0.21, 0.05];
+    const front = "$hw + 0.45";
+    // Points along the pole on the (+x, +z) diagonal, foot to top, just proud of the fly.
+    const diag = (d: number, out: number): [string, string, string] => [`$hl * ${(C * d).toFixed(5)} + ${out}`, y(d, 0.006), `$hw * ${(C * d).toFixed(5)} + ${out}`];
+    const half = levels.slice(1).map((d) => diag(d, 0.004));
+    const pole: Vec[] = [[`-$hl * ${(C * 1.02).toFixed(5)}`, "0.012", `-$hw * ${(C * 1.02).toFixed(5)}`], ...[...half].reverse().map(([a, b, c]) => [`-(${a})`, b, `-(${c})`] as [string, string, string]), [0, "$h + 0.012", 0], ...half.reverse(), [`$hl * ${(C * 1.02).toFixed(5)}`, "0.012", `$hw * ${(C * 1.02).toFixed(5)}`]];
+    half.reverse();
+    const sleeve = pole.slice(2, -2);
+    // A slope tilt for a part on the end panel (x side) at level d: 90 deg minus the slope of the fly there.
+    const tilt = (d: number) => `90 - deg(atan(${(0.58 * 2 * d * Math.pow(1 - d * d, -0.42)).toFixed(4)} * ($h - 0.05) / $hl))`;
     kids.push(group("Canvas", [
-      loft("Fly", ks.map((k) => ({ z: `$hl * ${k}`, points: archPoints("$hw", "$h", Math.sqrt(1 - 0.9 * k * k), 10) })), { material: f.a, rotate: [0, 90, 0] }),
-      // The darker bathtub groundsheet and skirt showing as a band round the foot of the fly.
-      extrude("Skirt", [...ks.map((k) => [`$hl * ${(k * 1.012).toFixed(4)}`, `$hw * ${(1.012 * Math.sqrt(1 - 0.9 * k * k)).toFixed(4)}`] as [string, string]), ...[...ks].reverse().map((k) => [`$hl * ${(k * 1.012).toFixed(4)}`, `-$hw * ${(1.012 * Math.sqrt(1 - 0.9 * k * k)).toFixed(4)}`] as [string, string])], 0, 0.15, { material: f.b }),
-      box("Groundsheet", ["2 * $hl * 0.72", 0.01, "2 * $hw * 0.68"], { at: [0, 0.005, 0], material: f.b }),
-      cyl("Vent_{i}", 0.09, 0.05, { axis: "z", at: ["$hl * 0.42", "$h * 0.78", "$hw * 0.42"], rotate: [-38, 0, 0], repeat: { count: 2, around: "y" }, segments: 10, material: f.b }),
+      loft("Fly", levels.map((d) => panelRing(d, 1, 0)), { material: f.a, rotate: [-90, 0, 0] }),
+      // The pegged skirt: a darker band round the hem, a little proud of the fly, with webbing loops to the pegs.
+      loft("Skirt", [panelRing(1, 1.012, -0.012), panelRing(0.985, 1.012, 0.004)], { material: f.b, rotate: [-90, 0, 0] }),
+      tube("Sleeve_A", sleeve, 0.017, { mirror: "Sleeve_B", segments: 8, material: f.s ?? f.b }),
+      box("Groundsheet", ["2 * $hl * 0.8", 0.01, "2 * $hw * 0.8"], { at: [0, 0.005, 0], material: f.b }),
+      box("Vent_{i}", [0.05, 0.13, "min(0.3, $hw * 0.36)"], { at: [`$hl * 0.45 + 0.012`, y(0.45), 0], rotate: [0, 0, tilt(0.45)], repeat: { count: 2, around: "y" }, material: f.b, bevel: 0.012 }),
+      ellipsoid("GuyPoint_{i}", [0.035, 0.035, 0.035], { at: diag(0.6, 0.02), repeat: { count: 2, around: "y" }, mirror: "GuyPointB_{i}", segments: 8, material: f.b }),
+      ellipsoid("GuyPointEnd_{i}", [0.035, 0.035, 0.035], { at: [`$hl * 0.66 + 0.012`, y(0.66), 0], repeat: { count: 2, around: "y" }, segments: 8, material: f.b }),
+      ellipsoid("GuyPointBack", [0.035, 0.035, 0.035], { at: [0, y(0.66), `-$hw * 0.66 - 0.012`], segments: 8, material: f.b }),
     ]));
     kids.push(group("Poles", [
-      tube("Pole_A", [-1, -0.7, -0.35, 0, 0.35, 0.7, 1].map((t) => [`$hl * 0.62 * ${t}`, `0.01 + ($h + 0.03) * ${Math.pow(1 - t * t * 0.995, 0.5).toFixed(5)}`, `$hw * 0.92 * ${t}`] as [string, string, string]), 0.011, { mirror: "Pole_B", segments: 8, material: "pole_black" }),
-      cyl("Hub", 0.035, 0.03, { anchor: "base", at: [0, "$h + 0.03", 0], segments: 10, material: "pole_black" }),
+      tube("Pole_A", pole, 0.011, { mirror: "Pole_B", segments: 8, material: "pole_black" }),
+      cyl("Hub", 0.04, 0.035, { anchor: "base", at: [0, "$h + 0.005", 0], segments: 12, material: "pole_black" }),
+      cyl("Tip_{i}", 0.016, 0.06, { anchor: "base", at: [`$hl * ${(C * 1.02).toFixed(5)}`, 0, `$hw * ${(C * 1.02).toFixed(5)}`], repeat: { count: 2, around: "y" }, mirror: "TipB_{i}", segments: 8, material: "aluminium" }),
     ]));
     kids.push(group("Entrance", [
-      // A vestibule over the door: a smaller arch that ends in a near-upright D-shaped front with a zipped door.
-      loft("Porch", [0, 0.35, 0.7, 1].map((t, j) => ({ z: `$hw * 0.55 + (${front} - $hw * 0.55) * ${t}`, points: archPoints("0.55", "$h * 0.86", [1, 0.96, 0.87, 0.74][j] as number, 10) })), { material: f.a }),
-      extrude("DoorPanel", archPoints("0.33", "$h * 0.86 * 0.74 * 0.86", 1, 10), `-(${front}) - 0.012`, `-(${front}) + 0.004`, { rotate: [-90, 0, 0], material: "mesh_dark" }),
-      box("Zip", [0.018, "$h * 0.86 * 0.74 * 0.82", 0.012], { anchor: "bottom", at: [0, 0.02, `${front} + 0.014`], material: f.b }),
-      box("Toggle", [0.12, 0.03, 0.02], { at: [0, "$h * 0.86 * 0.74 * 0.62", `${front} + 0.016`], material: "rope" }),
+      // A vestibule over the door: a hoop pole holds a short tunnel that ends in a near-upright D-shaped front.
+      extrude("Porch", archPoints("0.55", "$h * 0.74", 1, 6), `-(${front})`, "-$hw * 0.55", { rotate: [-90, 0, 0], material: f.a }),
+      tube("Hoop", [-1, -0.9, -0.7, -0.4, 0, 0.4, 0.7, 0.9, 1].map((c): Vec => [`0.566 * ${c}`, `0.012 + ($h * 0.74 + 0.01) * ${Math.pow(Math.max(0, 1 - Math.pow(Math.abs(c), 2.4)), 0.7).toFixed(4)}`, `$hw * 0.55 + (${front} - $hw * 0.55) * 0.75`]), 0.016, { segments: 8, material: f.s ?? f.b }),
+      extrude("DoorPanel", archPoints("0.34", "$h * 0.74 * 0.78 * 0.86", 1, 10), `-(${front}) - 0.012`, `-(${front}) + 0.004`, { rotate: [-90, 0, 0], material: "mesh_dark" }),
+      box("Zip", [0.018, "$h * 0.74 * 0.78 * 0.82", 0.012], { anchor: "bottom", at: [0, 0.02, `${front} + 0.014`], material: f.b }),
+      box("Toggle", [0.12, 0.03, 0.02], { at: [0, "$h * 0.74 * 0.78 * 0.62", `${front} + 0.016`], material: "rope" }),
     ]));
+    const ext = 0.75;
     kids.push(group("GuyRopes", [
-      tube("GuyRope_{i}", [["$hl * 0.8", "$h * 0.55", 0], ["$hl + 0.7", 0.01, 0]], 0.005, { repeat: { count: 2, around: "y" }, segments: 5, material: "rope" }),
-      tube("GuyRopeBack", [[0, "$h * 0.5", "-$hw * 0.85"], [0, 0.01, "-$hw - 0.6"]], 0.005, { segments: 5, material: "rope" }),
+      tube("GuyCorner_{i}", [diag(0.6, 0.04), [`$hl * ${C.toFixed(5)} + ${ext}`, 0.01, `$hw * ${C.toFixed(5)} + ${ext}`]], 0.005, { repeat: { count: 2, around: "y" }, mirror: "GuyCornerB_{i}", segments: 5, material: "rope" }),
+      tube("GuyEnd_{i}", [[`$hl * 0.66 + 0.04`, y(0.66), 0], ["$hl + 0.7", 0.01, 0]], 0.005, { repeat: { count: 2, around: "y" }, segments: 5, material: "rope" }),
+      tube("GuyBack", [[0, y(0.66), "-$hw * 0.66 - 0.04"], [0, 0.01, "-$hw - 0.65"]], 0.005, { segments: 5, material: "rope" }),
+      tube("GuyPorch", [[0, "$h * 0.74 * 0.9 + 0.02", `$hw * 0.55 + (${front} - $hw * 0.55) * 0.75`], [0, 0.01, `${front} + 0.55`]], 0.005, { segments: 5, material: "rope" }),
+      peg("PegCorner_{i}", [`$hl * ${C.toFixed(5)} + ${ext}`, 0, `$hw * ${C.toFixed(5)} + ${ext}`], { repeat: { count: 2, around: "y" } }),
+      peg("PegCornerB_{i}", [`-$hl * ${C.toFixed(5)} - ${ext}`, 0, `$hw * ${C.toFixed(5)} + ${ext}`], { repeat: { count: 2, around: "y" } }),
       peg("Peg_{i}", ["$hl + 0.7", 0, 0], { repeat: { count: 2, around: "y" } }),
-      peg("PegBack", [0, 0, "-$hw - 0.6"]),
-      peg("PegPorch", [0, 0, `${front} + 0.1`]),
+      peg("PegBack", [0, 0, "-$hw - 0.65"]),
+      peg("PegPorch", [0, 0, `${front} + 0.55`]),
+      // Hem pegs through webbing loops on the skirt: at the pole feet and halfway along the sides.
+      tube("Loop_{i}", [[`$hl * 1.0`, 0.06, 0], [`$hl * 1.0 + 0.1`, 0.012, 0]], 0.008, { repeat: { count: 2, around: "y" }, segments: 5, material: f.b }),
+      peg("HemPeg_{i}", ["$hl * 1.0 + 0.1", 0, 0], { repeat: { count: 2, around: "y" } }),
+      tube("LoopBack", [[0, 0.06, "-$hw * 1.0"], [0, 0.012, "-$hw * 1.0 - 0.1"]], 0.008, { segments: 5, material: f.b }),
+      peg("HemPegBack", [0, 0, "-$hw * 1.0 - 0.1"]),
+      peg("FootPeg_{i}", [`$hl * ${(C * 1.02).toFixed(5)} + 0.06`, 0, `$hw * ${(C * 1.02).toFixed(5)} + 0.06`], { repeat: { count: 2, around: "y" } }),
+      peg("FootPegB_{i}", [`-$hl * ${(C * 1.02).toFixed(5)} - 0.06`, 0, `$hw * ${(C * 1.02).toFixed(5)} + 0.06`], { repeat: { count: 2, around: "y" } }),
     ]));
   } else if (style === "ridge") {
     kids.push(group("Canvas", [
@@ -111,9 +159,9 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       box("Patch_L", [0.03, 0.18, 0.18], { at: ["-$hw * 0.5", "$h * 0.5", "$hl * 0.5"], rotate: [0, 0, "deg(atan($h / $hw))"], mirror: "Patch_R", material: f.b }),
     ]));
     kids.push(group("Poles", [
-      cyl("Upright_F", 0.015, "$h + 0.12", { anchor: "base", at: [0, 0, "$hl + 0.02"], segments: 8, material: "oak" }),
-      cyl("Upright_B", 0.015, "$h + 0.12", { anchor: "base", at: [0, 0, "-$hl - 0.02"], segments: 8, material: "oak" }),
-      cyl("Ridge", 0.015, "2 * $hl + 0.06", { axis: "z", at: [0, "$h + 0.01", 0], segments: 8, material: "oak" }),
+      cyl("Upright_F", 0.015, "$h + 0.12", { anchor: "base", at: [0, 0, "$hl + 0.02"], segments: 8, material: "oak_grain" }),
+      cyl("Upright_B", 0.015, "$h + 0.12", { anchor: "base", at: [0, 0, "-$hl - 0.02"], segments: 8, material: "oak_grain" }),
+      cyl("Ridge", 0.015, "2 * $hl + 0.06", { axis: "z", at: [0, "$h + 0.01", 0], segments: 8, material: "oak_grain" }),
     ]));
     kids.push(group("Entrance", [
       extrude("Flap_L", [[0, 0], ["-$hw * 0.9", 0], [0, "$h * 0.9"]], 0, 0.02, { rotate: [-90, 25, 0], at: [-0.02, 0.01, 0.05], material: f.b }),
@@ -137,11 +185,11 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       box("Lacing_{i}", [0.04, 0.02, 0.02], { at: [0, "$h * 0.35 + $i * $h * 0.08", "$r * (0.97 - 0.85 * (0.35 + $i * 0.08)) + 0.01"], repeat: { count: 6, step: [0, 0, 0] }, material: "rope" }),
     ]));
     kids.push(group("Poles", [
-      tube("Pole_{i}", [["$r * 0.95", 0.01, 0], ["-$r * 0.12", "$h * 1.08", 0]], 0.025, { repeat: { count: 10, around: "y", phase: 18 }, segments: 6, material: "rough_timber" }),
+      tube("Pole_{i}", [["$r * 0.95", 0.01, 0], ["-$r * 0.12", "$h * 1.08", 0]], 0.025, { repeat: { count: 10, around: "y", phase: 18 }, segments: 6, material: "rough_timber_grain" }),
     ]));
     kids.push(group("Entrance", [
       box("Flap", [0.75, 1.05, 0.03], { at: [0, 0.6, "$r - 0.6 * $r / $h + 0.03"], rotate: ["-deg(atan($r / $h))", 0, 0], material: f.b }),
-      box("Pin_{i}", [0.02, 0.02, 0.08], { at: [0, "1.25 + $i * 0.15", "$r - (1.25 + $i * 0.15) * $r / $h + 0.02"], repeat: { count: 3, step: [0, 0, 0] }, material: "oak" }),
+      box("Pin_{i}", [0.02, 0.02, 0.08], { at: [0, "1.25 + $i * 0.15", "$r - (1.25 + $i * 0.15) * $r / $h + 0.02"], repeat: { count: 3, step: [0, 0, 0] }, material: "oak_grain" }),
     ]));
     kids.push(group("GuyRopes", [
       peg("Peg_{i}", [0, 0, "$r + 0.06"], { repeat: { count: 12, around: "y", phase: 15 } }),
@@ -164,7 +212,7 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
     ], { at: [0, 0, "$r"] }));
     kids.push(group("GuyRopes", [
       tube("GuyRope_{i}", [[0, "$wall + 0.05", "$r + 0.04"], [0, 0.01, "$r + 0.7"]], 0.006, { repeat: { count: 8, around: "y", phase: 22.5 }, segments: 5, material: "rope" }),
-      box("Runner_{i}", [0.03, 0.02, 0.08], { at: [0, "($wall + 0.05) * 0.4", "$r + 0.43"], rotate: ["deg(atan(($wall + 0.05) / 0.66))", 0, 0], repeat: { count: 8, around: "y", phase: 22.5 }, material: "oak" }),
+      box("Runner_{i}", [0.03, 0.02, 0.08], { at: [0, "($wall + 0.05) * 0.4", "$r + 0.43"], rotate: ["deg(atan(($wall + 0.05) / 0.66))", 0, 0], repeat: { count: 8, around: "y", phase: 22.5 }, material: "oak_grain" }),
       peg("Peg_{i}", [0, 0, "$r + 0.7"], { repeat: { count: 8, around: "y", phase: 22.5 } }),
       peg("Hem_{i}", [0, 0, "$r + 0.02"], { repeat: { count: 12, around: "y", phase: 15 } }),
     ]));
@@ -183,7 +231,7 @@ function tent(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
       num("height", s.h[2], s.h[0], s.h[1], "Height of the top in metres."),
     ];
   const vars: Record<string, string> = round ? { r: "$diameter / 2", h: "$height", ...(style === "bell" ? { wall: "$wallHeight" } : {}) } : { hl: "$length / 2", hw: "$width / 2", h: "$height" };
-  const names = [f.a, f.b, "rope", "aluminium", "oak", "rough_timber", "galvanised", ...(style === "dome" ? ["pole_black", "mesh_dark"] : [])];
+  const names = [f.a, f.b, "rope", "aluminium", "oak", "rough_timber", "galvanised", ...(style === "dome" ? ["pole_black", "mesh_dark", f.s ?? f.b] : [])];
   const materials: Record<string, MaterialDef> = {};
   for (const n of names) materials[n] = LOCAL[n] ?? (mats(n)[n] as MaterialDef);
   const title = { dome: "dome tent", ridge: "ridge tent", tipi: "tipi", bell: "bell tent" }[style];

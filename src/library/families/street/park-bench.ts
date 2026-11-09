@@ -1,5 +1,5 @@
 import { box, cyl, group, int, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
-import { GRIME, LOCAL, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
+import { GRIME, LOCAL, boardX, grimeBox, grimeProfile, nice, up, useMats } from "./common.js";
 
 type Style = "victorian" | "concrete" | "modern" | "rustic" | "tubular";
 
@@ -56,7 +56,7 @@ const DEPTH = 0.44;
 /** The seat boards, front to back, with bolt heads over the supports. */
 function slatSeat(boltX: string): SpecNode {
   return group("Seat", [
-    box("Board_{i}", ["$length", 0.035, "$bw"], { at: [0, 0, `${DEPTH / 2} - $bw / 2`], anchor: "bottom", bevel: 0.006, repeat: { count: "$boards", step: [0, 0, "-($bw + 0.012)"] } }),
+    boardX("Board_{i}", ["$length", 0.035, "$bw"], { at: [0, 0, `${DEPTH / 2} - $bw / 2`], anchor: "bottom", bevel: 0.006, repeat: { count: "$boards", step: [0, 0, "-($bw + 0.012)"] } }),
     group("Fix_{i}", [cyl("Bolt_L", 0.008, 0.008, { at: [boltX, 0.035, 0], segments: 8, material: "steel", mirror: "Bolt_R" })], {
       at: [0, 0, `${DEPTH / 2} - $bw / 2`],
       repeat: { count: "$boards", step: [0, 0, "-($bw + 0.012)"] },
@@ -66,7 +66,7 @@ function slatSeat(boltX: string): SpecNode {
 
 /** Back boards in a group whose y axis follows the back posts. */
 const backBoards = (count: number, from: string, z: number): SpecNode[] => [
-  box("Board_{i}", ["$length", "$bh", 0.024], { at: [0, `${from} + $bh / 2`, z], bevel: 0.006, repeat: { count, step: [0, "$bh + 0.02", 0] } }),
+  boardX("Board_{i}", ["$length", "$bh", 0.024], { at: [0, `${from} + $bh / 2`, z], bevel: 0.006, repeat: { count, step: [0, "$bh + 0.02", 0] } }),
 ];
 
 function nodes(style: Style, metal: string): SpecNode[] {
@@ -136,7 +136,7 @@ function nodes(style: Style, metal: string): SpecNode[] {
     case "rustic":
       return [
         group("Seat", [
-          box("Plank", ["$length", "$thick", 0.38], { at: [0, "$seatHeight - $thick", 0], anchor: "bottom", bevel: 0.02 }),
+          boardX("Plank", ["$length", "$thick", 0.38], { at: [0, "$seatHeight - $thick", 0], anchor: "bottom", bevel: 0.02 }),
           cyl("Peg_L", 0.018, 0.012, { at: ["$sx", "$seatHeight", 0.08], segments: 10, material: "dark_stain", mirror: "Peg_R" }),
           cyl("Peg_L2", 0.018, 0.012, { at: ["$sx", "$seatHeight", -0.08], segments: 10, material: "dark_stain", mirror: "Peg_R2" }),
         ]),

@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats, knob, ring, squareLeg } from "./parts.js";
+import { board, fmats, knob, ring, squareLeg, tubular } from "./parts.js";
 
 const STYLES = ["tripod", "square", "drum", "c-frame"] as const;
 type Style = (typeof STYLES)[number];
@@ -15,12 +15,12 @@ const FINISHES: Record<Style, Finish[]> = {
 
 /** A round top with a soft edge, surface at $H. */
 const roundTop = (f: Finish): SpecNode =>
-  lathe("Top", [[0.004, "$H - $t"], ["$R - 0.01", "$H - $t"], ["$R", "$H - $t + 0.008"], ["$R", "$H - 0.005"], ["$R - 0.005", "$H"], [0.004, "$H"]], { segments: 40, material: f.top });
+  lathe("Top", [["$R - 0.01", "$H - $t"], ["$R", "$H - $t + 0.008"], ["$R", "$H - 0.005"], ["$R - 0.005", "$H"]], { segments: 40, material: f.top });
 
 function tripod(f: Finish): SpecNode[] {
   return [
     roundTop(f),
-    lathe("Pedestal", [[0.03, 0.12], [0.045, 0.15], [0.03, 0.2], [0.026, "$H * 0.5"], [0.04, "$H * 0.6"], [0.028, "$H * 0.72"], [0.03, "$H - $t - 0.03"], [0.08, "$H - $t - 0.015"], [0.08, "$H - $t + 0.002"], [0.01, "$H - $t + 0.002"]], { segments: 18 }),
+    lathe("Pedestal", [[0.0480, "0.12 + 0.0000 * ($H - $t - 0.15)"], [0.0385, "0.12 + 0.0625 * ($H - $t - 0.15)"], [0.0331, "0.12 + 0.1250 * ($H - $t - 0.15)"], [0.0301, "0.12 + 0.1875 * ($H - $t - 0.15)"], [0.0284, "0.12 + 0.2500 * ($H - $t - 0.15)"], [0.0276, "0.12 + 0.3125 * ($H - $t - 0.15)"], [0.0280, "0.12 + 0.3750 * ($H - $t - 0.15)"], [0.0300, "0.12 + 0.4375 * ($H - $t - 0.15)"], [0.0337, "0.12 + 0.5000 * ($H - $t - 0.15)"], [0.0376, "0.12 + 0.5625 * ($H - $t - 0.15)"], [0.0391, "0.12 + 0.6250 * ($H - $t - 0.15)"], [0.0369, "0.12 + 0.6875 * ($H - $t - 0.15)"], [0.0327, "0.12 + 0.7500 * ($H - $t - 0.15)"], [0.0291, "0.12 + 0.8125 * ($H - $t - 0.15)"], [0.0270, "0.12 + 0.8750 * ($H - $t - 0.15)"], [0.0263, "0.12 + 0.9375 * ($H - $t - 0.15)"], [0.0260, "0.12 + 1.0000 * ($H - $t - 0.15)"], [0.03, "$H - $t - 0.03"], [0.08, "$H - $t - 0.015"], [0.08, "$H - $t + 0.002"], [0.01, "$H - $t + 0.002"]], { segments: 22 }),
     group("Feet", [
       tube("Foot_{i}", [[0.02, 0.17, 0], [0.09, 0.13, 0], ["$R * 0.62", 0.04, 0], ["$R * 0.75", 0.014, 0], ["$R * 0.8", 0.014, 0]], [0.022, 0.02, 0.015, 0.013, 0.013], { segments: 10, repeat: { count: 3, around: "y", phase: 90 } }),
     ]),
@@ -30,8 +30,8 @@ function tripod(f: Finish): SpecNode[] {
 function square(f: Finish): SpecNode[] {
   return [
     box("Top", ["$S", "$t", "$S"], { at: [0, "$H - $t / 2", 0], bevel: 0.006, material: f.top }),
-    box("Apron_B", ["2 * $xl", 0.12, 0.018], { at: [0, "$H - $t - 0.06", "-$xl"], bevel: 0.003 }),
-    box("Apron_L", [0.018, 0.12, "2 * $xl"], { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.003, mirror: "Apron_R" }),
+    board("Apron_B", ["2 * $xl", 0.12, 0.018], "x", { at: [0, "$H - $t - 0.06", "-$xl"], bevel: 0.003 }),
+    board("Apron_L", [0.018, 0.12, "2 * $xl"], "z", { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.003, mirror: "Apron_R" }),
     group("Drawer", [
       box("Front", ["2 * $xl - 0.03", 0.1, 0.018], { bevel: 0.004, material: f.top }),
       knob("Knob", [0, 0, 0.008], "brass"),
@@ -62,7 +62,7 @@ function cframe(f: Finish): SpecNode[] {
       tube("Brace", [["-$R * 0.95", "$H - $t - 0.012", "-$R * 0.3"], ["-$R * 0.95", "$H - $t - 0.012", "$R * 0.3"]], 0.01, { segments: 10 }),
       cyl("Plate", 0.08, 0.008, { at: [0, "$H - $t - 0.004", 0], segments: 20 }),
       tube("Arm", [["-$R * 0.95", "$H - $t - 0.012", 0], [0, "$H - $t - 0.012", 0]], 0.01, { segments: 10 }),
-    ], { material: f.base, at: ["$R * 0.25", 0, 0] }),
+    ], { material: tubular(f.base), at: ["$R * 0.25", 0, 0] }),
   ];
 }
 
@@ -87,7 +87,7 @@ function makeSideTable(style: Style, f: Finish): AssetDraft {
       round ? num("diameter", 0.45, 0.36, 0.6, "Diameter of the round top in metres.") : num("size", 0.48, 0.38, 0.6, "Width and depth of the square top."),
       num("height", style === "c-frame" ? 0.6 : 0.55, 0.45, 0.66, "Height of the top surface above the floor."),
     ],
-    materials: fmats(...new Set([f.top, f.base, "brass", "rubber"])),
+    materials: fmats(...new Set([f.top, f.base, tubular(f.base), "brass", "rubber"])),
     nodes: [group("SideTable", { tripod, square, drum, "c-frame": cframe }[style](f), { material: f.base, vars })],
   };
 }

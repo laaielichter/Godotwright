@@ -12,7 +12,13 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **`model lint`: `model/albedo`** (info): a base colour real surfaces do not have, a non-metal brighter than snow or
   darker than charcoal, or a dark "metal" that renders as a black mirror; a textured material is judged by the mean of
   its colour map.
-- **Six new texture patterns for finishes:** `fabric` (woven), `leather` (grain), `painted` (orange peel), `plastic`
+- **Ellipsoids with fractures (`"cuts": 0-24`)**: seeded planes slice caps off a (lumpy) ellipsoid, so rocks and broken
+  stone get flat faces with sharp edges while the rest stays smooth.
+- **Brick and stone textures keep their colour:** the mortar now follows the colour of the wall, a little lighter, instead
+  of a fixed light grey that made dark brick and stone look up to 1.8 times as light as their colour.
+- **Better bark, and granite.** The `bark` texture is now tall plates separated by dark fissures (it looked like a giraffe
+  coat), and the new `granite` texture is a grey ground with dense light and dark mineral flecks.
+- **Seven new texture patterns for finishes:** `grain` (solid timber without plank joints), `fabric` (woven), `leather` (grain), `painted` (orange peel), `plastic`
   (moulded), `brushed` (metal streaks) and `rust`, for any material in a spec (`"texture": "fabric"`).
 
 - **Asset library: a thousand base recipes (`godotwright model library`, MCP `godot_model_library`).** Over a thousand

@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, num, slugify, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { barHandle, fmats, knob, squareLeg } from "./parts.js";
+import { board, barHandle, fmats, knob, squareLeg, tubular } from "./parts.js";
 
 const STYLES = ["writing", "pedestal", "standing", "steel"] as const;
 type Style = (typeof STYLES)[number];
@@ -14,16 +14,16 @@ const FINISHES: Record<Style, Finish[]> = {
   steel: [{ top: "rough_timber", frame: "black_steel", trim: "black_steel" }, { top: "oak", frame: "gunmetal", trim: "brushed_steel" }, { top: "pine", frame: "paint_anthracite", trim: "black_steel" }],
 };
 
-const top = (f: Finish, bevel = 0.008): SpecNode => box("Top", ["$W", "$t", "$D"], { at: [0, "$H - $t / 2", 0], bevel, material: f.top });
+const top = (f: Finish, bevel = 0.008): SpecNode => board("Top", ["$W", "$t", "$D"], "x", { at: [0, "$H - $t / 2", 0], bevel, material: f.top });
 
 function writing(f: Finish): SpecNode[] {
   return [
     top(f),
     box("Inlay", ["$W - 0.16", 0.004, "$D - 0.16"], { at: [0, "$H + 0.001", 0], bevel: 0.0015, material: f.trim }),
     group("Aprons", [
-      box("Apron_B", ["2 * $xl", 0.12, 0.022], { at: [0, "$H - $t - 0.06", "-$zl"], bevel: 0.004 }),
-      box("Apron_L", [0.022, 0.12, "2 * $zl"], { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.004, mirror: "Apron_R" }),
-      box("Apron_F", ["2 * $xl", 0.12, 0.022], { at: [0, "$H - $t - 0.06", "$zl"], bevel: 0.004 }),
+      board("Apron_B", ["2 * $xl", 0.12, 0.022], "x", { at: [0, "$H - $t - 0.06", "-$zl"], bevel: 0.004 }),
+      board("Apron_L", [0.022, 0.12, "2 * $zl"], "z", { at: ["$xl", "$H - $t - 0.06", 0], bevel: 0.004, mirror: "Apron_R" }),
+      board("Apron_F", ["2 * $xl", 0.12, 0.022], "x", { at: [0, "$H - $t - 0.06", "$zl"], bevel: 0.004 }),
       group("Drawer_{i}", [
         box("Front", ["$dw - 0.012", 0.095, 0.02], { at: [0, 0, 0], bevel: 0.005 }),
         knob("Knob", [0, 0, 0.009], "brass"),
@@ -52,13 +52,13 @@ function pedestal(f: Finish): SpecNode[] {
       squareLeg("Leg_BL", ["-$xl", 0, "-$zl"], "$H - $t + 0.003", 0.045, 0.045),
     ]),
     box("Modesty_Panel", ["$W - $pw - 0.06", 0.32, 0.018], { at: ["-$pw / 2 + 0.01", "$H - $t - 0.16", "-$zl"], bevel: 0.004 }),
-    box("Apron_L", [0.02, 0.08, "2 * $zl"], { at: ["-$xl", "$H - $t - 0.04", 0], bevel: 0.004 }),
+    board("Apron_L", [0.02, 0.08, "2 * $zl"], "z", { at: ["-$xl", "$H - $t - 0.04", 0], bevel: 0.004 }),
   ];
 }
 
 function standing(f: Finish): SpecNode[] {
   const leg = group("Leg_L", [
-    box("Foot", [0.07, 0.035, "$D - 0.08"], { at: [0, 0.008, 0], anchor: "bottom", bevel: 0.01 }),
+    board("Foot", [0.07, 0.035, "$D - 0.08"], "z", { at: [0, 0.008, 0], anchor: "bottom", bevel: 0.01 }),
     box("Glide_F", [0.05, 0.01, 0.05], { at: [0, 0, "$D / 2 - 0.08"], anchor: "bottom", material: "rubber", bevel: 0.003 }),
     box("Glide_B", [0.05, 0.01, 0.05], { at: [0, 0, "-$D / 2 + 0.08"], anchor: "bottom", material: "rubber", bevel: 0.003 }),
     box("Sleeve", [0.08, 0.5, 0.06], { at: [0, 0.04, 0], anchor: "bottom", bevel: 0.006 }),
@@ -67,8 +67,8 @@ function standing(f: Finish): SpecNode[] {
   ], { at: ["$W / 2 - 0.13", 0, 0], mirror: "Leg_R" });
   return [
     top(f, 0.014),
-    group("Legs", [leg], { material: f.frame }),
-    box("Frame", ["$W - 0.3", 0.05, 0.05], { at: [0, "$H - $t - 0.03", -0.06], bevel: 0.004, material: f.frame }),
+    group("Legs", [leg], { material: tubular(f.frame) }),
+    box("Frame", ["$W - 0.3", 0.05, 0.05], { at: [0, "$H - $t - 0.03", -0.06], bevel: 0.004, material: tubular(f.frame) }),
     box("Controller", [0.12, 0.025, 0.06], { at: ["$W / 2 - 0.35", "$H - $t - 0.012", "$D / 2 - 0.05"], bevel: 0.006, material: f.trim, children: [
       box("Button_{i}", [0.016, 0.006, 0.012], { at: [-0.035, -0.012, 0.01], repeat: { count: 4, step: [0.023, 0, 0] }, bevel: 0.002 }),
       cyl("Display", 0.006, 0.004, { axis: "z", at: [0.04, 0, 0.031], material: "led_blue", segments: 10 }),
@@ -81,16 +81,16 @@ function steel(f: Finish): SpecNode[] {
   const frame = group("Leg_L", [
     box("Post_F", [0.04, "$H - $t", 0.04], { at: [0, 0, "$zl"], anchor: "bottom", bevel: 0.004 }),
     box("Post_B", [0.04, "$H - $t", 0.04], { at: [0, 0, "-$zl"], anchor: "bottom", bevel: 0.004 }),
-    box("Foot_Bar", [0.04, 0.04, "2 * $zl"], { at: [0, 0.02, 0], bevel: 0.004 }),
+    board("Foot_Bar", [0.04, 0.04, "2 * $zl"], "z", { at: [0, 0.02, 0], bevel: 0.004 }),
     box("Top_Bar", [0.04, 0.04, "2 * $zl"], { at: [0, "$H - $t - 0.02", 0], bevel: 0.004 }),
     cyl("Bolt_{i}", 0.006, 0.006, { axis: "x", at: [0.022, "$H - $t - 0.02", "-$zl + 0.1"], repeat: { count: 2, step: [0, 0, "2 * $zl - 0.2"] }, segments: 8 }),
   ], { at: ["$xl", 0, 0], mirror: "Leg_R" });
   return [
     group("Top", [
-      box("Plank_{i}", ["$W", "$t", "$D / 2 - 0.002"], { at: [0, "$H - $t / 2", "-$D / 4"], repeat: { count: 2, step: [0, 0, "$D / 2"] }, bevel: 0.006 }),
+      board("Plank_{i}", ["$W", "$t", "$D / 2 - 0.002"], "x", { at: [0, "$H - $t / 2", "-$D / 4"], repeat: { count: 2, step: [0, 0, "$D / 2"] }, bevel: 0.006 }),
     ], { material: f.top }),
-    group("Legs", [frame], { material: f.frame }),
-    box("Stretcher", ["2 * $xl", 0.04, 0.02], { at: [0, 0.3, "-$zl"], bevel: 0.003, material: f.frame }),
+    group("Legs", [frame], { material: tubular(f.frame) }),
+    board("Stretcher", ["2 * $xl", 0.04, 0.02], "x", { at: [0, 0.3, "-$zl"], bevel: 0.003, material: f.frame }),
     box("Drawer", ["$W * 0.4", 0.09, "$D - 0.14"], { at: [0, "$H - $t - 0.045", 0], bevel: 0.004, material: f.top, children: [
       barHandle("Handle", 0.14, [0, 0, "($D - 0.14) / 2"], f.trim, { standoff: 0.025 }),
       box("Runner_L", [0.03, 0.02, "$D - 0.14"], { at: ["$W * 0.2 + 0.014", 0.035, 0], material: f.frame, mirror: "Runner_R" }),
@@ -119,7 +119,7 @@ function makeDesk(style: Style, f: Finish): AssetDraft {
       num("depth", 0.7, 0.58, 0.8, "Depth of the top along z in metres."),
       style === "standing" ? num("height", 0.74, 0.7, 1.2, "Height of the top surface; the columns telescope.") : num("height", 0.75, 0.72, 0.78, "Height of the top surface above the floor."),
     ],
-    materials: fmats(...new Set([f.top, f.frame, f.trim, "brass", "rubber", "led_blue", "paint_anthracite", "reveal"])),
+    materials: fmats(...new Set([f.top, f.frame, tubular(f.frame), f.trim, "brass", "rubber", "led_blue", "paint_anthracite", "reveal"])),
     nodes: [group("Desk", { writing, pedestal, standing, steel }[style](f), { material: f.frame, vars })],
   };
 }

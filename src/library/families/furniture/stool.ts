@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, tube, cap, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats, ring } from "./parts.js";
+import { board, fmats, ring, tubular } from "./parts.js";
 
 const STYLES = ["bar", "kitchen", "milking", "swivel"] as const;
 type Style = (typeof STYLES)[number];
@@ -36,11 +36,11 @@ const FINISHES: Record<Style, Finish[]> = {
 /** A round seat at the top of the stool: a dished wooden disc or an upholstered cushion on a metal pan. Top at $sh. */
 function roundSeat(f: Finish): SpecNode {
   if (f.soft) {
-    return lathe("Seat", [[0.02, "$sh - 0.075"], ["$sr - 0.02", "$sh - 0.075"], ["$sr", "$sh - 0.06"], ["$sr + 0.004", "$sh - 0.03"], ["$sr - 0.02", "$sh - 0.004"], ["$sr * 0.6", "$sh"], [0.004, "$sh - 0.004"]], { segments: 24, material: f.seat, children: [
+    return lathe("Seat", [["$sr - 0.02", "$sh - 0.075"], ["$sr", "$sh - 0.06"], ["$sr + 0.004", "$sh - 0.03"], ["$sr - 0.02", "$sh - 0.004"], ["$sr * 0.6", "$sh"]], { segments: 24, material: f.seat, children: [
       lathe("Pan", [[0.06, "$sh - 0.09"], ["$sr - 0.03", "$sh - 0.085"], ["$sr - 0.02", "$sh - 0.07"], [0.06, "$sh - 0.07"]], { segments: 24, material: "black_steel" }),
     ] });
   }
-  return lathe("Seat", [[0.02, "$sh - 0.04"], ["$sr - 0.012", "$sh - 0.04"], ["$sr", "$sh - 0.028"], ["$sr", "$sh - 0.01"], ["$sr - 0.015", "$sh"], ["$sr * 0.5", "$sh - 0.006"], [0.004, "$sh - 0.005"]], { segments: 28, material: f.seat });
+  return lathe("Seat", [["$sr - 0.012", "$sh - 0.04"], ["$sr", "$sh - 0.028"], ["$sr", "$sh - 0.01"], ["$sr - 0.015", "$sh"]], { segments: 28, material: f.seat });
 }
 
 function bar(f: Finish): SpecNode[] {
@@ -51,8 +51,8 @@ function bar(f: Finish): SpecNode[] {
       tube("Leg_{i}", [["$rt", "$sh - 0.07", 0], ["$rb", 0.016, 0]], 0.013, { segments: 12, repeat: { count: 4, around: "y", phase: 45 }, children: [
         cyl("Glide", 0.016, 0.016, { at: ["$rb", 0, 0], anchor: "base", material: "rubber", segments: 12 }),
       ] }),
-    ], { material: f.frame }),
-    ring("Footrest_Ring", "$rb + ($rt - $rb) * ($fh - 0.016) / ($sh - 0.086)", 0.011, "$fh", { material: f.frame, segments: 28 }),
+    ], { material: tubular(f.frame) }),
+    ring("Footrest_Ring", "$rb + ($rt - $rb) * ($fh - 0.016) / ($sh - 0.086)", 0.011, "$fh", { material: tubular(f.frame), segments: 28 }),
   ];
 }
 
@@ -63,23 +63,23 @@ function kitchen(f: Finish): SpecNode[] {
     ], { at: ["$xl", 0.002, z], rotate: [rx, 0, 4], mirror });
   return [
     box("Seat", ["$sw", 0.035, "$sw"], { at: [0, "$sh - 0.0175", 0], bevel: 0.012, material: f.seat, children: [
-      box("Apron_F", ["2 * $ap + 0.03", 0.05, 0.02], { at: [0, -0.04, "$ap"], bevel: 0.004, material: f.frame }),
-      box("Apron_B", ["2 * $ap + 0.03", 0.05, 0.02], { at: [0, -0.04, "-$ap"], bevel: 0.004, material: f.frame }),
-      box("Apron_L", [0.02, 0.05, "2 * $ap + 0.03"], { at: ["$ap", -0.04, 0], bevel: 0.004, material: f.frame, mirror: "Apron_R" }),
+      board("Apron_F", ["2 * $ap + 0.03", 0.05, 0.02], "x", { at: [0, -0.04, "$ap"], bevel: 0.004, material: f.frame }),
+      board("Apron_B", ["2 * $ap + 0.03", 0.05, 0.02], "x", { at: [0, -0.04, "-$ap"], bevel: 0.004, material: f.frame }),
+      board("Apron_L", [0.02, 0.05, "2 * $ap + 0.03"], "z", { at: ["$ap", -0.04, 0], bevel: 0.004, material: f.frame, mirror: "Apron_R" }),
     ] }),
     leg("Leg_FL", "$xl", -4, "Leg_FR"),
     leg("Leg_BL", "-$xl", 4, "Leg_BR"),
     group("Stretchers", [
-      box("Stretcher_F", ["2 * ($xl - 0.07 * $hs) + 0.02", 0.025, 0.022], { at: [0, "$hs", "$xl - 0.07 * $hs"], bevel: 0.004 }),
-      box("Stretcher_B", ["2 * ($xl - 0.07 * $hs) + 0.02", 0.025, 0.022], { at: [0, "$hs", "-$xl + 0.07 * $hs"], bevel: 0.004 }),
-      box("Stretcher_L", [0.022, 0.025, "2 * ($xl - 0.07 * $hs2) + 0.02"], { at: ["$xl - 0.07 * $hs2", "$hs2", 0], bevel: 0.004, mirror: "Stretcher_R" }),
+      board("Stretcher_F", ["2 * ($xl - 0.07 * $hs) + 0.02", 0.025, 0.022], "x", { at: [0, "$hs", "$xl - 0.07 * $hs"], bevel: 0.004 }),
+      board("Stretcher_B", ["2 * ($xl - 0.07 * $hs) + 0.02", 0.025, 0.022], "x", { at: [0, "$hs", "-$xl + 0.07 * $hs"], bevel: 0.004 }),
+      board("Stretcher_L", [0.022, 0.025, "2 * ($xl - 0.07 * $hs2) + 0.02"], "z", { at: ["$xl - 0.07 * $hs2", "$hs2", 0], bevel: 0.004, mirror: "Stretcher_R" }),
     ], { vars: { hs: "$sh * 0.42", hs2: "$sh * 0.3" } }),
   ];
 }
 
 function milking(f: Finish): SpecNode[] {
   return [
-    lathe("Seat", [[0.02, "$sh - $st"], ["$sr - 0.008", "$sh - $st"], ["$sr", "$sh - $st + 0.008"], ["$sr", "$sh - 0.008"], ["$sr - 0.01", "$sh"], [0.004, "$sh"]], { segments: 28, material: f.seat, children: [
+    lathe("Seat", [["$sr - 0.008", "$sh - $st"], ["$sr", "$sh - $st + 0.008"], ["$sr", "$sh - 0.008"], ["$sr - 0.01", "$sh"]], { segments: 28, material: f.seat, children: [
       box("Hand_Grip", [0.07, "$st + 0.004", 0.02], { at: [0, "$sh - $st / 2", "-$sr * 0.55"], bevel: 0.006, material: "dark_stain" }),
     ] }),
     group("Legs", [
@@ -104,7 +104,7 @@ function swivel(f: Finish): SpecNode[] {
       ring("Footrest_Ring", "$sr * 0.95", 0.011, "$fh", { segments: 32 }),
       cyl("Spoke_{i}", 0.008, "$sr * 0.95 - 0.02", { axis: "x", at: ["$sr * 0.475 + 0.01", "$fh", 0], repeat: { count: 3, around: "y", phase: 30 }, segments: 8 }),
       cyl("Collar", 0.042, 0.04, { at: [0, "$fh", 0], segments: 16 }),
-    ], { material: f.frame }),
+    ], { material: tubular(f.frame) }),
   ];
 }
 
@@ -139,7 +139,7 @@ function makeStool(style: Style, f: Finish): AssetDraft {
     description: `${TEXT[style]}, in ${frame}${f.seat !== f.frame ? ` with a ${seat} seat` : ""}. It has no back and faces +z.`,
     tags: [style, f.frame.replace(/^paint_/, ""), f.seat.split("_").pop() ?? f.seat, ...(style === "bar" ? ["barkruk", "bar stool"] : style === "milking" ? ["melkkrukje", "milking stool"] : style === "swivel" ? ["draaikruk", "swivel"] : ["keukenkruk", "kitchen stool"])],
     params: PARAMS[style](),
-    materials: fmats(...new Set([f.frame, f.seat, "rubber", "black_steel", "chrome", "dark_stain"])),
+    materials: fmats(...new Set([f.frame, tubular(f.frame), f.seat, "rubber", "black_steel", "chrome", "dark_stain"])),
     nodes,
   };
 }

@@ -39,17 +39,22 @@ const GLASS = "window_glass";
  * A flat-fronted window (no bevels, to keep the triangle count of a whole facade low): a dark reveal round the opening,
  * a frame (with a mullion), dark reflecting glass and, on the mansion blocks, a stone sill and lintel.
  */
-function flatWindow(name: string, w: string, h: string, frame: string, sill: string, o: { at: Vec; repeat?: { count: string | number; step: Vec }; lintel?: string; bars?: boolean }): SpecNode {
-  const kids: SpecNode[] = [
-    box("Reveal", [`${w} + 0.24`, `${h} + 0.2`, 0.02], { at: [0, 0, 0.002], material: "reveal_dark" }),
-    box("Pane", [w, h, 0.03], { at: [0, 0, 0.012], material: GLASS }),
-    box("Surround", [`${w} + 0.12`, `${h} + 0.12`, 0.03], { at: [0, 0, 0.008], material: frame }),
-  ];
+function flatWindow(name: string, w: string, h: string, frame: string, sill: string, o: { at: Vec; repeat?: { count: string | number; step: Vec }; lintel?: string; bars?: boolean; reveal?: boolean }): SpecNode {
+  // The parts of a row of windows repeat themselves (one repeat per part, no group per window): far fewer nodes.
+  const rep = o.repeat;
+  const kids: SpecNode[] = [];
+  // The dark reveal round the opening only shows from the front, so the sides and the back leave it out.
+  if (o.reveal !== false) kids.push(box("Reveal_{i}", [`${w} + 0.24`, `${h} + 0.2`, 0.02], { at: [0, 0, 0.002], repeat: rep, material: "reveal_dark" }));
+  kids.push(
+    box("Pane_{i}", [w, h, 0.03], { at: [0, 0, 0.012], repeat: rep, material: GLASS }),
+    box("Surround_{i}", [`${w} + 0.12`, `${h} + 0.12`, 0.03], { at: [0, 0, 0.008], repeat: rep, material: frame }),
+  );
   // Stone sills on the old mansion blocks; the modern frames have a flush sill (the bottom of the frame).
-  if (o.lintel) kids.push(box("Sill", [`${w} + 0.2`, 0.05, 0.16], { at: [0, `-${h} / 2 - 0.06`, 0.08], material: sill }));
-  if (o.bars) kids.push(box("Mullion", [0.05, h, 0.05], { at: [0, 0, 0.03], material: frame }));
-  if (o.lintel) kids.push(box("Lintel", [`${w} + 0.3`, 0.18, 0.05], { at: [0, `${h} / 2 + 0.14`, 0.015], material: o.lintel }));
-  return group(name, kids, { at: o.at, repeat: o.repeat });
+  if (o.lintel) kids.push(box("Sill_{i}", [`${w} + 0.2`, 0.05, 0.16], { at: [0, `-${h} / 2 - 0.06`, 0.08], repeat: rep, material: sill }));
+  if (o.bars) kids.push(box("Mullion_{i}", [0.05, h, 0.05], { at: [0, 0, 0.03], repeat: rep, material: frame }));
+  if (o.lintel) kids.push(box("Lintel_{i}", [`${w} + 0.3`, 0.18, 0.05], { at: [0, `${h} / 2 + 0.14`, 0.015], repeat: rep, material: o.lintel }));
+  const at = o.at;
+  return group(name, kids.map((k) => ({ ...k, at: [`${at[0]} + ${(k.at as Vec)[0]}`, `${at[1]} + ${(k.at as Vec)[1]}`, `${at[2]} + ${(k.at as Vec)[2]}`] as Vec })));
 }
 
 function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraft {
@@ -63,7 +68,7 @@ function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraf
   const row = (z: string, cols: string, sp: string, rot: number, at: Vec, skipGround: boolean, name: string): SpecNode =>
     group(name, [
       group("Storey{i}", [
-        flatWindow("W{i}", winW, winH, f.frame, style === "mansion" ? f.accent : "aluminium", { at: [`-(${cols} - 1) * ${sp} / 2`, `$st * 0.55 + 0.6`, z], repeat: { count: cols, step: [sp, 0, 0] }, lintel: style === "mansion" ? f.accent : undefined, bars: style === "mansion" || style === "slab" }),
+        flatWindow("Row", winW, winH, f.frame, style === "mansion" ? f.accent : "aluminium", { at: [`-(${cols} - 1) * ${sp} / 2`, `$st * 0.55 + 0.6`, z], repeat: { count: cols, step: [sp, 0, 0] }, lintel: style === "mansion" ? f.accent : undefined, bars: style === "mansion", reveal: name === "Front" }),
       ], { at: [0, skipGround ? "$st" : 0, 0], repeat: { count: skipGround ? "$floors - 1" : "$floors", step: [0, "$st", 0] } }),
     ], { at, rotate: [0, rot, 0] });
 
@@ -82,7 +87,7 @@ function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraf
   }
   if (style !== "tower" && style !== "gallery") {
     // Ground floor front windows, either side of the entrance bay(s).
-    windows.push(flatWindow("Ground_{i}", winW, winH, f.frame, "aluminium", { at: ["-($bays - 1) * $sp / 2", "$st * 0.55 + 0.6", "$hd"], repeat: { count: "$bays", step: ["$sp", 0, 0] }, lintel: style === "mansion" ? f.accent : undefined }));
+    windows.push(flatWindow("Ground", winW, winH, f.frame, "aluminium", { at: ["-($bays - 1) * $sp / 2", "$st * 0.55 + 0.6", "$hd"], repeat: { count: "$bays", step: ["$sp", 0, 0] }, lintel: style === "mansion" ? f.accent : undefined }));
   }
   kids.push(group("Windows", windows));
 
@@ -93,8 +98,8 @@ function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraf
     kids.push(box("Course_{i}", ["2 * $hw + 0.1", 0.18, "2 * $hd + 0.1"], { at: [0, "0.6 + ($i + 1) * $st", 0], repeat: { count: "$floors - 1", step: [0, 0, 0] }, material: f.accent, bevel: 0.02 }));
     kids.push(group("Bays", [
       box("Bay_{i}", [2.6, `${H} - 1.2`, 0.7], { anchor: "bottom", at: ["-$hw * 0.62", 0.6, 0.3], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] }, material: f.wall, bevel: 0.02 }),
-      flatWindow("BayGlass_{i}", "1.6", "$st * 0.55", f.frame, f.accent, { at: ["-$hw * 0.62", "$st * 0.55 + 0.6", 0.66], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] } }),
-      flatWindow("BayUpper_{i}", "1.6", "$st * 0.55", f.frame, f.accent, { at: ["-$hw * 0.62", "$st * 1.55 + 0.6", 0.66], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] } }),
+      flatWindow("BayGlass", "1.6", "$st * 0.55", f.frame, f.accent, { at: ["-$hw * 0.62", "$st * 0.55 + 0.6", 0.66], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] } }),
+      flatWindow("BayUpper", "1.6", "$st * 0.55", f.frame, f.accent, { at: ["-$hw * 0.62", "$st * 1.55 + 0.6", 0.66], repeat: { count: 2, step: ["$hw * 1.24", 0, 0] } }),
     ], { at: [0, 0, "$hd"] }));
   }
   // Rainwater downpipes at the four corners, with brackets.
@@ -128,7 +133,6 @@ function apartment(style: Style, f: (typeof FINISHES)[Style][number]): AssetDraf
         group("Balcony_{i}", [
           box("Floor", ["$sp * 0.8", 0.2, 1.4], { at: [0, 0, 0.7], material: f.accent, bevel: 0.02 }),
           box("Balustrade", ["$sp * 0.8", 1.0, 0.03], { anchor: "bottom", at: [0, 0.1, 1.38], material: "glass_frosted" }),
-          box("Handrail", ["$sp * 0.8", 0.05, 0.06], { at: [0, 1.12, 1.38], material: f.frame }),
           box("Side_L", [0.03, 1.0, 1.4], { anchor: "bottom", at: ["-$sp * 0.4", 0.1, 0.7], material: "glass_frosted" }),
         ], { at: ["-($bays - 1) * $sp / 2", 0, 0], repeat: { count: "$bays", step: ["$sp", 0, 0] } }),
       ], { at: [0, "0.6 + $st", 0], repeat: { count: "$floors - 1", step: [0, "$st", 0] } }),

@@ -1,6 +1,6 @@
 import { box, cyl, ellipsoid, group, lathe, loft, num, slugify, tube, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { mats, type MaterialDef } from "../../palette.js";
-import { VMATS } from "./parts.js";
+import { f, VMATS } from "./parts.js";
 
 type Kind = "camera" | "racer" | "hexa" | "octo";
 
@@ -33,6 +33,34 @@ const DRONES: DroneDef[] = [
   { kind: "octo", name: "heavy-lift octocopter", text: "a heavy-lift octocopter with eight carbon tube arms, big props, tall landing gear, twin batteries and a camera gimbal", arms: 8, blades: 2, span: [1.1, 0.95, 1.3], prop: [0.22, 0.19, 0.25], leg: [0.26, 0.2, 0.32], colour: "white", nl: "wit", shell: P(0.6, 0.6, 0.58, 0, 0.42), accent: P(0.02, 0.07, 0.25) },
 ];
 
+/**
+ * A propeller blade as a loft from root to tip (local z, turned to +x): a thin cambered airfoil whose chord widens
+ * from the root, peaks at a third of the span and narrows to a rounded tip, with the pitch twisting from steep at the
+ * root to flat at the tip. Everything scales with $pr.
+ */
+function bladeSections(wide: boolean): Record<string, unknown>[] {
+  // [span fraction, chord fraction, twist degrees]
+  const rows: [number, number, number][] = wide
+    ? [[0.14, 0.1, 24], [0.22, 0.2, 22], [0.4, 0.26, 18], [0.6, 0.25, 14], [0.8, 0.21, 11], [0.93, 0.15, 9], [0.985, 0.08, 8], [1.0, 0.03, 8]]
+    : [[0.14, 0.07, 26], [0.22, 0.12, 24], [0.36, 0.15, 19], [0.55, 0.14, 14], [0.75, 0.115, 10], [0.9, 0.085, 8], [0.975, 0.05, 7], [1.0, 0.02, 7]];
+  const N = 10;
+  return rows.map(([r, c, tw]) => {
+    const t = (tw * Math.PI) / 180;
+    const pts: [string, string][] = [];
+    for (let k = 0; k < N; k++) {
+      // Around the airfoil: x from the leading edge (+0.5c) to the trailing edge (-0.5c); upper surface cambered.
+      const a = (k / N) * Math.PI * 2;
+      const x = 0.5 * Math.cos(a);
+      const th = Math.sin(a) >= 0 ? 0.11 * Math.sin(a) * (0.75 + 0.5 * Math.cos(a) * 0.5) : 0.035 * Math.sin(a);
+      const camber = 0.04 * (1 - 4 * x * x);
+      const lx = x * c, ly = (th + camber) * c;
+      const rx = lx * Math.cos(t) - ly * Math.sin(t), ry = lx * Math.sin(t) + ly * Math.cos(t);
+      pts.push([`${f(rx)} * $pr`, `${f(ry)} * $pr`]);
+    }
+    return { z: r < 0.15 ? "$mr * 0.3" : `${f(r)} * $pr`, points: pts };
+  });
+}
+
 function buildDrone(d: DroneDef): AssetDraft {
   const n = d.arms;
   const phase = n === 4 ? 45 : n === 6 ? 30 : 22.5;
@@ -48,10 +76,18 @@ function buildDrone(d: DroneDef): AssetDraft {
       ], { material: "shell" }));
       kids.push(box("Battery", ["$bw * 0.75", "$bh * 0.3", "$bl * 0.55"], { at: [0, "$by + $bh * 0.42", "-$bl * 0.12"], bevel: 0.005, material: "plastic_dark" }));
       kids.push(box("Sensor_L", [0.015, 0.012, 0.005], { at: ["$bw * 0.18", "$by", "$bl * 0.5 - 0.004"], material: "dark_glass", mirror: "Sensor_R" }));
+      // A three-axis gimbal on rubber dampers: yaw motor, C-bracket, roll motor, camera with a lens barrel.
       kids.push(group("Gimbal", [
-        box("Yoke", [0.04, 0.03, 0.02], { at: [0, -0.012, 0], bevel: 0.004, material: "plastic_dark" }),
-        ellipsoid("Camera", [0.022, 0.02, 0.022], { at: [0, -0.035, 0.005], segments: 14, material: "plastic_dark" }),
-        cyl("Lens", 0.01, 0.01, { axis: "z", at: [0, -0.035, 0.026], segments: 12, material: "dark_glass" }),
+        box("Plate", [0.05, 0.005, 0.042], { at: [0, -0.003, 0], bevel: 0.002, material: "plastic_dark" }),
+        cyl("Damper_{i}", 0.0045, 0.012, { at: [-0.016, 0.004, -0.013], repeat: { count: 2, step: [0.032, 0, 0] }, segments: 8, material: "accent" }),
+        cyl("DamperFront_{i}", 0.0045, 0.012, { at: [-0.016, 0.004, 0.013], repeat: { count: 2, step: [0.032, 0, 0] }, segments: 8, material: "accent" }),
+        cyl("YawMotor", 0.011, 0.014, { at: [0, -0.013, 0], segments: 14, material: "plastic_dark" }),
+        tube("Bracket", [[-0.03, -0.02, 0], [-0.03, -0.045, 0], [0.03, -0.045, 0], [0.03, -0.02, 0]], 0.0032, { segments: 6, material: "plastic_dark" }),
+        cyl("RollMotor_{i}", 0.0085, 0.008, { axis: "x", at: [-0.03, -0.043, 0], repeat: { count: 2, step: [0.06, 0, 0] }, segments: 12, material: "plastic_dark" }),
+        box("Camera", [0.036, 0.03, 0.036], { at: [0, -0.043, 0.003], bevel: 0.007, material: "plastic_dark" }),
+        cyl("Barrel", 0.0115, 0.013, { axis: "z", at: [0, -0.043, 0.027], segments: 14, material: "plastic_dark" }),
+        cyl("Lens", 0.0085, 0.004, { axis: "z", at: [0, -0.043, 0.035], segments: 14, material: "dark_glass" }),
+        cyl("Ring", 0.0105, 0.003, { axis: "z", at: [0, -0.043, 0.0335], segments: 14, material: "aluminium" }),
       ], { at: [0, "$by - $bh * 0.4", "$bl * 0.35"] }));
       break;
     case "racer":
@@ -78,9 +114,17 @@ function buildDrone(d: DroneDef): AssetDraft {
         tube("Skid", [["$bw * 0.55", 0.012, "-$bw * 0.55"], ["$bw * 0.55", 0.012, "$bw * 0.55"]], 0.012, { segments: 8 }),
       ], { material: "carbon", mirror: "Gear_R" }));
       if (big) kids.push(group("Gimbal", [
-        box("Mount", [0.08, 0.04, 0.08], { at: [0, -0.02, 0], bevel: 0.006, material: "plastic_dark" }),
-        box("Camera", [0.1, 0.08, 0.12], { at: [0, -0.09, 0.02], bevel: 0.012, material: "plastic_dark" }),
-        cyl("Lens", 0.03, 0.05, { axis: "z", at: [0, -0.09, 0.1], segments: 16, material: "dark_glass" }),
+        box("Plate", [0.12, 0.008, 0.1], { at: [0, -0.004, 0], bevel: 0.003, material: "plastic_dark" }),
+        cyl("Damper_{i}", 0.011, 0.02, { at: [-0.045, -0.014, -0.035], repeat: { count: 2, step: [0.09, 0, 0] }, segments: 10, material: "accent" }),
+        cyl("DamperFront_{i}", 0.011, 0.02, { at: [-0.045, -0.014, 0.035], repeat: { count: 2, step: [0.09, 0, 0] }, segments: 10, material: "accent" }),
+        cyl("YawMotor", 0.03, 0.03, { at: [0, -0.025, 0], segments: 18, material: "plastic_dark" }),
+        tube("Bracket", [[-0.085, -0.035, 0], [-0.085, -0.13, 0], [0.085, -0.13, 0], [0.085, -0.035, 0]], 0.008, { segments: 8, material: "plastic_dark" }),
+        cyl("RollMotor_{i}", 0.02, 0.016, { axis: "x", at: [-0.085, -0.1, 0], repeat: { count: 2, step: [0.17, 0, 0] }, segments: 14, material: "plastic_dark" }),
+        box("Camera", [0.11, 0.09, 0.12], { at: [0, -0.1, 0.01], bevel: 0.014, material: "plastic_dark" }),
+        cyl("Barrel", 0.036, 0.05, { axis: "z", at: [0, -0.1, 0.095], segments: 20, material: "plastic_dark" }),
+        cyl("Ring", 0.039, 0.008, { axis: "z", at: [0, -0.1, 0.122], segments: 20, material: "aluminium" }),
+        cyl("Lens", 0.03, 0.01, { axis: "z", at: [0, -0.1, 0.13], segments: 20, material: "dark_glass" }),
+        box("Led", [0.012, 0.006, 0.004], { at: [0.035, -0.065, 0.071], material: "accent" }),
       ], { at: [0, "$by - $bh * 0.2", "$bw * 0.25"] }));
       else kids.push(box("Payload", ["$bw * 0.5", "$bh * 0.6", "$bw * 0.5"], { at: [0, "$by - $bh * 0.75", 0], bevel: 0.01, material: "accent" }));
       break;
@@ -102,7 +146,8 @@ function buildDrone(d: DroneDef): AssetDraft {
   // Each propeller pivots on its motor shaft (spins about y).
   kids.push(group("Propeller_{i}", [
     cyl("Spinner", "$mr * 0.45", 0.012, { at: [0, 0.006, 0], segments: 12, material: "aluminium" }),
-    box("Blade_{i}", ["$pr", "max(0.002, $pr * 0.025)", "$pr * 0.16"], { at: ["$pr / 2", 0, 0], rotate: [10, 0, 0], repeat: { count: d.blades, around: "y" }, bevel: 0.001, material: "prop" }),
+    loft("Blade_{i}", bladeSections(d.kind === "racer"), { rotate: [0, 90, 0], repeat: { count: d.blades, around: "y" }, material: "prop" }),
+    cyl("Hub", "$mr * 0.5", 0.008, { at: [0, -0.002, 0], segments: 14, material: "prop" }),
   ], { at: ["$R", "$by + $ay + $mh", 0], repeat: { count: n, around: "y", phase } }));
 
   const bodyW = d.kind === "camera" ? "$span * 0.3" : d.kind === "racer" ? "$span * 0.28" : "$span * 0.24";

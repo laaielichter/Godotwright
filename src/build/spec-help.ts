@@ -74,6 +74,7 @@ Shapes and their keys:
   box        size [w, h, d], anchor "center" | "bottom", bevel (metres: rounded edges that catch the light; 0.01-0.05 for most things)
   cylinder   radius, height, axis "x" | "y" | "z", segments, anchor "center" | "base", bevel (rounded rim edges)
   ellipsoid  radii [rx, ry, rz], segments, lumps (0-0.6: a bumpy, organic outline for crowns, bushes, rocks), seed
+             cuts (0-24: flat fractures with sharp edges, for broken stone and rocks)
   lathe      profile [[radius, y], ...], segments, caps   (a surface of revolution around y: wheels, tanks, masts)
   loft       sections [{ "z": z, "superellipse": { width, height, n, count, cx, cy } }  or  { "z": z, "points": [[x, y], ...] }]
              Every section has the same number of points. Hulls, fuselages, car bodies.
@@ -87,7 +88,7 @@ Functions: min max abs sqrt sin cos tan asin acos atan atan2 hypot floor ceil ro
 Conventions: +y is up, the front of a model faces +z (Godot's Vector3.MODEL_FRONT, also the glTF convention; the model's left is then +x), the model stands on y = 0, a moving part gets its own node with its pivot at its origin
 (a wheel at its hub). A custom material may also have "emissive": [r, g, b] (a lamp that glows), "alpha": "BLEND", and "texture": a
 pattern drawn in its colour with a matching normal map (brick roof_tile roof_slate wood bark concrete asphalt plaster leaf grass stone
-sand water ground, and for finishes: fabric leather painted plastic brushed rust), so a blue door can be "wood" and a yellow wall "brick". Presets: plaster brick concrete stone asphalt roof_tile roof_slate wood frame_white glass glass_tinted metal steel chrome aluminium brass plastic plastic_white rubber paint canvas light light_red light_amber bark leaf grass soil sand water.
+sand water ground, granite, and for finishes: grain fabric leather painted plastic brushed rust), so a blue door can be "wood" and a yellow wall "brick". Presets: plaster brick concrete stone asphalt roof_tile roof_slate wood frame_white glass glass_tinted metal steel chrome aluminium brass plastic plastic_white rubber paint canvas light light_red light_amber bark leaf grass soil sand water.
 Presets with a texture: plaster brick concrete stone asphalt roof_tile roof_slate wood bark leaf grass soil sand water. Lights (light,
 light_red, light_amber) glow a little.
 
@@ -100,7 +101,7 @@ Example (a car); save it, then: godotwright model build --spec car.json --set wi
 /** The spec format in a dozen lines, for small models that lose the thread in the full help. Kept in step with SPEC_HELP by a test. */
 export const SPEC_CHEAT = `  { "version": 1, "name": "x", "archetype": "<id>", "params": [{ "name": "w", "type": "number", "default": 2, "min": 1, "max": 4 }], "nodes": [ <node> ] }
   node: { "name": "Wheel_FL", "shape": "cylinder", "material": "rubber", "at": [x, y, z], "rotate": [rx, ry, rz], "mirror": "Wheel_FR", "repeat": {...}, "vars": {...}, "children": [ <node> ] }
-  shapes: box {size:[w,h,d], anchor, bevel} | cylinder {radius,height,axis,bevel} | ellipsoid {radii,lumps} | lathe {profile:[[r,y],...]} | loft {sections} | extrude {plan,y0,y1} | roof {x0,x1,z0,z1,y,rise,kind} | tube {path:[[x,y,z],...],radius}
+  shapes: box {size:[w,h,d], anchor, bevel} | cylinder {radius,height,axis,bevel} | ellipsoid {radii,lumps,cuts} | lathe {profile:[[r,y],...]} | loft {sections} | extrude {plan,y0,y1} | roof {x0,x1,z0,z1,y,rise,kind} | tube {path:[[x,y,z],...],radius}
   numbers may be expressions: "$w / 2 - 0.1"; $i inside repeat. +y up, front +z, metres, stand on y = 0.
   a moving part = its own node with "at" on its pivot (a wheel at its hub, a door on its hinge); use "offset" to move the shape away from the pivot.
   every part must touch another part or the ground: overlap parts by a few cm instead of leaving gaps.

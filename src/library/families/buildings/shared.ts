@@ -4,7 +4,7 @@
  * wall surface at z = 0 and faces +z; turn its group to put it on another wall.
  */
 import { box, cyl, extrude, group, roof, tube, type Family, type Num, type SpecNode, type Vec } from "../../kit.js";
-import type { MaterialDef } from "../../palette.js";
+import { PALETTE, type MaterialDef } from "../../palette.js";
 
 /**
  * Building materials the palette does not have (roofing, glazing, render), in real-world linear albedos: Dutch clay
@@ -19,13 +19,18 @@ export const BMATS: Record<string, MaterialDef> = {
   slate_blue: { color: [0.034, 0.04, 0.054], metallic: 0, roughness: 0.78, texture: "roof_slate" },
   shingle_wood: { color: [0.14, 0.1, 0.068], metallic: 0, roughness: 0.9, texture: "roof_slate" },
   shingle_green: { color: [0.032, 0.065, 0.042], metallic: 0, roughness: 0.85, texture: "roof_slate" },
-  thatch: { color: [0.2, 0.15, 0.08], metallic: 0, roughness: 1, texture: "grass" },
+  // Combed reed thatch weathers to a dull grey-brown; the grain pattern gives straight stems running down the slope.
+  thatch: { color: [0.13, 0.095, 0.055], metallic: 0, roughness: 1, texture: "grain" },
+  thatch_dark: { color: [0.1, 0.075, 0.046], metallic: 0, roughness: 1, texture: "grain" },
+  thatch_light: { color: [0.165, 0.125, 0.07], metallic: 0, roughness: 1, texture: "grain" },
   felt_black: { color: [0.03, 0.03, 0.032], metallic: 0, roughness: 0.9, texture: "asphalt" },
-  zinc: { color: [0.3, 0.31, 0.32], metallic: 0.3, roughness: 0.62, texture: "brushed" },
-  zinc_quartz: { color: [0.11, 0.115, 0.12], metallic: 0.25, roughness: 0.62, texture: "brushed" },
-  corrugated: { color: [0.17, 0.175, 0.18], metallic: 0.25, roughness: 0.72, texture: "brushed" },
-  corrugated_red: { color: [0.19, 0.035, 0.025], metallic: 0.25, roughness: 0.55, texture: "painted" },
-  corrugated_green: { color: [0.03, 0.085, 0.045], metallic: 0.25, roughness: 0.55, texture: "painted" },
+  // Sheet metal: coated or weathered, matt enough that a low roof does not mirror the sky.
+  zinc: { color: [0.13, 0.135, 0.14], metallic: 0.2, roughness: 0.76, texture: "painted" },
+  zinc_quartz: { color: [0.09, 0.095, 0.1], metallic: 0.2, roughness: 0.72, texture: "painted" },
+  corrugated: { color: [0.11, 0.115, 0.12], metallic: 0.2, roughness: 0.82, texture: "painted" },
+  roof_steel: { color: [0.07, 0.075, 0.08], metallic: 0.2, roughness: 0.75, texture: "painted" },
+  corrugated_red: { color: [0.17, 0.032, 0.024], metallic: 0.15, roughness: 0.72, texture: "painted" },
+  corrugated_green: { color: [0.03, 0.08, 0.045], metallic: 0.15, roughness: 0.72, texture: "painted" },
   window_glass: { color: [0.028, 0.036, 0.046], metallic: 0.4, roughness: 0.04 },
   reveal_dark: { color: [0.045, 0.043, 0.04], metallic: 0, roughness: 0.9, texture: "plaster" },
   render_white: { color: [0.5, 0.49, 0.45], metallic: 0, roughness: 0.92, texture: "plaster" },
@@ -49,12 +54,14 @@ export const BMATS: Record<string, MaterialDef> = {
  * index applies these to every asset of the category (see `tuneBuildings`).
  */
 export const BUILDING_OVERRIDES: Record<string, MaterialDef> = {
-  brick_red: { color: [0.19, 0.058, 0.034], metallic: 0, roughness: 0.88, texture: "brick" },
-  brick_brown: { color: [0.095, 0.045, 0.028], metallic: 0, roughness: 0.88, texture: "brick" },
-  brick_yellow: { color: [0.38, 0.28, 0.14], metallic: 0, roughness: 0.88, texture: "brick" },
-  limestone: { color: [0.4, 0.385, 0.34], metallic: 0, roughness: 0.85, texture: "stone" },
-  sandstone: { color: [0.34, 0.24, 0.13], metallic: 0, roughness: 0.9, texture: "stone" },
-  granite: { color: [0.19, 0.185, 0.18], metallic: 0, roughness: 0.8, texture: "stone" },
+  // The brick and stone textures keep the colour as their mean (the mortar follows it), so these are the real albedos.
+  brick_red: { color: [0.25, 0.075, 0.045], metallic: 0, roughness: 0.88, texture: "brick" },
+  brick_brown: { color: [0.15, 0.072, 0.045], metallic: 0, roughness: 0.88, texture: "brick" },
+  brick_yellow: { color: [0.33, 0.23, 0.1], metallic: 0, roughness: 0.88, texture: "brick" },
+  limestone: { color: [0.235, 0.22, 0.19], metallic: 0, roughness: 0.85, texture: "stone" },
+  sandstone: { color: [0.235, 0.155, 0.08], metallic: 0, roughness: 0.9, texture: "stone" },
+  mossy_rock: { color: [0.13, 0.15, 0.09], metallic: 0, roughness: 0.95, texture: "stone" },
+  granite: { color: [0.095, 0.093, 0.09], metallic: 0, roughness: 0.8, texture: "stone" },
   slate: { color: [0.06, 0.065, 0.075], metallic: 0, roughness: 0.7, texture: "stone" },
   plaster_white: { color: [0.5, 0.49, 0.45], metallic: 0, roughness: 0.92, texture: "plaster" },
   terracotta: { color: [0.26, 0.08, 0.04], metallic: 0, roughness: 0.85, texture: "plaster" },
@@ -70,7 +77,7 @@ export const BUILDING_OVERRIDES: Record<string, MaterialDef> = {
   light_oak: { color: [0.38, 0.25, 0.12], metallic: 0, roughness: 0.7, texture: "wood" },
   oak: { color: [0.28, 0.16, 0.07], metallic: 0, roughness: 0.7, texture: "wood" },
   teak: { color: [0.26, 0.14, 0.06], metallic: 0, roughness: 0.75, texture: "wood" },
-  aged_copper: { color: [0.075, 0.17, 0.13], metallic: 0.15, roughness: 0.75, texture: "rust" },
+  aged_copper: { color: [0.075, 0.17, 0.13], metallic: 0.15, roughness: 0.75, texture: "painted" },
   aluminium: { color: [0.62, 0.63, 0.64], metallic: 0.8, roughness: 0.42, texture: "brushed" },
   galvanised: { color: [0.32, 0.33, 0.34], metallic: 0.3, roughness: 0.65, texture: "brushed" },
   glass_frosted: { color: [0.35, 0.42, 0.45, 0.45], metallic: 0, roughness: 0.15, alpha: "BLEND" },
@@ -84,13 +91,30 @@ export function tuneBuildings(family: Family): Family {
     ...family,
     assets: () => family.assets().map((a) => {
       const materials = Object.fromEntries(Object.entries(a.materials).map(([k, m]) => [k, BUILDING_OVERRIDES[k] ?? m]));
-      // The shared builders (window reveals, ...) may use building materials the family did not list.
+      // The shared builders (window reveals, ...) may use building materials the family did not list; "<wood>_grain"
+      // is that wood as solid timber (posts, beams, single boards) instead of jointed planks.
       for (const [, name] of JSON.stringify(a.nodes).matchAll(/"material":"([a-z0-9_]+)"/g)) {
-        if (name && !materials[name] && BMATS[name]) materials[name] = BMATS[name];
+        if (!name || materials[name]) continue;
+        if (BMATS[name]) materials[name] = BMATS[name];
+        const base = name.endsWith("_grain") ? name.slice(0, -6) : undefined;
+        const def = base ? materials[base] ?? lookup(base) : undefined;
+        if (def) materials[name] = { ...def, texture: "grain" };
       }
       return { ...a, materials };
     }),
   };
+}
+
+function lookup(name: string, local?: Record<string, MaterialDef>): MaterialDef | undefined {
+  return local?.[name] ?? BUILDING_OVERRIDES[name] ?? BMATS[name] ?? PALETTE[name];
+}
+
+/**
+ * The solid-timber version of a material for posts, beams, poles and single boards: "<name>_grain" when it is a
+ * planked wood (tuneBuildings adds the material), the material itself otherwise (paint, steel, stone).
+ */
+export function solid(name: string, local?: Record<string, MaterialDef>): string {
+  return lookup(name, local)?.texture === "wood" ? `${name}_grain` : name;
 }
 
 /** Picks materials from BMATS by name. */
@@ -141,6 +165,13 @@ export function gableRoof(name: string, o: GableOpts): SpecNode {
     box("Barge_BL", ["$gS + 0.04", "$gt + 0.12", 0.05], { at: [`${slabX} + 0.06 * sin($gth)`, `${slabY} - 0.06 * cos($gth)`, "-$gd - $gg - 0.02"], rotate: [0, 0, "deg($gth)"], mirror: "Barge_BR", material: o.trim, bevel: 0.008 }),
     box("Fascia_L", [0.04, "0.12 + $gt * 0.8", len], { at: ["-$gw - $go - 0.02", `${eave} - 0.06 + $gt * 0.4`, 0], mirror: "Fascia_R", material: o.trim, bevel: 0.006 }),
   ];
+  const ribs = sheetRib(o.roof);
+  if (ribs) {
+    // Profiled sheet: upstanding ribs running down each slope, so a metal roof reads as metal from far away. The pitch
+    // grows with the length of the roof (about 16 ribs along it at most): a fine pitch on a 40 m shed aliases into
+    // moire when it is shown small.
+    kids.push(box("SheetRib_L{i}", ["$gS", ribs.h, "$gsw"], { at: [`${slabX} - ($gt / 2 + ${ribs.h / 2 - 0.004}) * sin($gth)`, `${slabY} + ($gt / 2 + ${ribs.h / 2 - 0.004}) * cos($gth)`, `-${len} / 2 + $gsp / 2`], rotate: [0, 0, "deg($gth)"], repeat: { count: `floor(${len} / $gsp)`, step: [0, 0, "$gsp"] }, mirror: "SheetRib_R{i}", material: o.roof }));
+  }
   if (o.gutter) {
     kids.push(cyl("Gutter_L", 0.06, len, { axis: "z", at: ["-$gw - $go - 0.09", `${eave} - 0.04`, 0], segments: 10, mirror: "Gutter_R", material: o.gutter }));
   }
@@ -150,8 +181,66 @@ export function gableRoof(name: string, o: GableOpts): SpecNode {
   return group(name, kids, {
     at: o.at,
     rotate: o.along === "x" ? [0, 90, 0] : undefined,
-    vars: { gw: o.hw, gd: o.hd, gy: o.y, gr: o.rise, go: o.oh ?? 0.35, gg: o.ohg ?? 0.3, gt: o.t ?? 0.14, gth: "atan($gr / $gw)", gS: "($gw + $go) / cos($gth)" },
+    vars: { gw: o.hw, gd: o.hd, gy: o.y, gr: o.rise, go: o.oh ?? 0.35, gg: o.ohg ?? 0.3, gt: o.t ?? 0.14, gth: "atan($gr / $gw)", gS: "($gw + $go) / cos($gth)", ...ribVars("g", ribs, len) },
   });
+}
+
+/**
+ * Rib profile of a sheet-metal roof finish (standing seams or a trapezoid profile); none for other roofs. `sp` is the
+ * pitch on a small roof and `div` the number of ribs along the longest roofs: the pitch grows with the length.
+ */
+export function sheetRib(material: string): { w: number; h: number; sp: number; div: number } | undefined {
+  if (material.startsWith("zinc")) return { w: 0.05, h: 0.06, sp: 0.55, div: 18 };
+  if (material.startsWith("corrugated") || material === "roof_steel") return { w: 0.1, h: 0.06, sp: 0.5, div: 16 };
+  return undefined;
+}
+
+/** Variables `<p>sp` (rib pitch) and `<p>sw` (rib width) for a roof of the given length expression. */
+export function ribVars(p: string, ribs: ReturnType<typeof sheetRib>, len: string): Record<string, string> {
+  if (!ribs) return {};
+  return { [`${p}sp`]: `max(${ribs.sp}, (${len}) / ${ribs.div})`, [`${p}sw`]: `clamp($${p}sp * 0.2, ${ribs.w}, 0.2)` };
+}
+
+/**
+ * Thatch on a hipped plan: a thick eaves roll, five courses of combed reed that lie on the slope (each a little proud of
+ * the one below, with its own rolled lower edge and a slightly different tone, thicker at the eaves like real thatch),
+ * rounded hip rolls and a fat ridge finished with a row of pecked bundles. Same frame as hipRoof (walls of half-size
+ * hw x hd, eaves at y). The courses follow the slope, they do not stick out per tier, so it does not read as a pagoda.
+ */
+export function thatchHip(name: string, o: { hw: Num; hd: Num; y: Num; rise: Num; oh?: Num; roof: string; at?: Vec }): SpecNode {
+  const kids: SpecNode[] = [];
+  const N = 6;
+  const th = o.roof === "thatch";
+  const tones = [th ? "thatch_dark" : o.roof, o.roof, th ? "thatch_light" : o.roof, o.roof, o.roof, th ? "thatch_light" : o.roof];
+  for (let k = 0; k < N; k++) {
+    const c = `${k} * $tc`;
+    const m = tones[k] as string;
+    // Plane of the course: the slope through the eaves, lifted by the thickness stacked so far.
+    const yb = `$ty + ${c} * $tk + ${k} * $tl`;
+    const r = k === 0 ? "$te" : "$tl * 1.3";
+    const inset = k === 0 ? "$te * 0.55" : "$tl * 0.9";
+    const ex = `$tw + $to - ${c} - ${inset}`, ez = `$td + $to - ${c} - ${inset}`;
+    const ry = `${yb} + ${k === 0 ? "$te * 0.15" : "$tl * 0.45"}`;
+    kids.push(roof(`Course_${k + 1}`, {
+      x0: `-$tw - $to + ${c}`, x1: `$tw + $to - ${c}`, z0: `-$td - $to + ${c}`, z1: `$td + $to - ${c}`,
+      y: yb, rise: `$tr * (1 - ${c} / ($tw + $to))`, kind: "hip",
+    }, { material: m }));
+    kids.push(
+      cyl(`Eave${k + 1}_L`, r, `2 * (${ez}) + ${r}`, { axis: "z", at: [`-(${ex})`, ry, 0], segments: 12, mirror: `Eave${k + 1}_R`, material: m }),
+      cyl(`Eave${k + 1}_F`, r, `2 * (${ex}) + ${r}`, { axis: "x", at: [0, ry, ez], segments: 12, material: m }),
+      cyl(`Eave${k + 1}_B`, r, `2 * (${ex}) + ${r}`, { axis: "x", at: [0, ry, `-(${ez})`], segments: 12, material: m }),
+    );
+  }
+  const ridgeLen = "max(0.4, 2 * ($td - $tw))";
+  kids.push(
+    box("Soffit", ["2 * ($tw + $to) - 0.1", 0.06, "2 * ($td + $to) - 0.1"], { at: [0, "$ty - 0.1", 0], material: "thatch_dark" }),
+    cyl("Ridge", 0.42, `${ridgeLen} + 0.6`, { axis: "z", at: [0, "$ty + $tr + 0.1", 0], segments: 14, material: "thatch_dark" }),
+    // The ridge is finished with a row of pecked bundles (a sparrow-pecked ridge): short thick rolls across it.
+    cyl("Peck_{i}", 0.13, 1.3, { axis: "x", at: [0, "$ty + $tr + 0.42", `-(${ridgeLen}) / 2 - 0.2`], repeat: { count: `floor((${ridgeLen} + 0.4) / 0.4) + 1`, step: [0, 0, 0.4] }, segments: 8, material: "thatch_light" }),
+    // Hip rolls: a rounded bundle down each hip line, from the ridge end to the eaves corner.
+    tube("HipRoll_{i}", [["$tw + $to - $te * 0.6", "$ty + $te * 0.3", "$td + $to - $te * 0.6"], [0, "$ty + $tr + 0.12", `${ridgeLen} / 2`]], 0.17, { repeat: { count: 2, around: "y" }, mirror: "HipRollM_{i}", segments: 8, material: "thatch_dark" }),
+  );
+  return group(name, kids, { at: o.at, vars: { tw: o.hw, td: o.hd, ty: o.y, tr: o.rise, to: o.oh ?? 0.6, tk: "$tr / ($tw + $to)", tc: "($tw + $to) / 6.5", tl: "clamp(0.025 + ($tw + $to) * 0.005, 0.045, 0.08)", te: "clamp(0.12 + ($tw + $to) * 0.025, 0.2, 0.34)" } });
 }
 
 /** A hipped roof (four slopes) on walls of half-size hw x hd, with fascia boards and gutters round the eaves. */
@@ -323,7 +412,13 @@ export function swanDownpipe(name: string, x: Num, z: Num, gutterY: Num, reach: 
  * running len along z. Mirror it for the other side of a symmetric roof.
  */
 export function slab(name: string, a: [Num, Num], b: [Num, Num], t: Num, len: Num, material: string, o: { mirror?: string; z?: Num; ext?: Num } = {}): SpecNode {
-  return group(name, [
+  const kids: SpecNode[] = [
     box("Sheet", ["hypot($sbx - $sax, $sby - $say) + $sext", "$st", "$slen"], { at: ["($sax + $sbx) / 2 - $st / 2 * sin($sth)", "($say + $sby) / 2 + $st / 2 * cos($sth)", o.z ?? 0], rotate: [0, 0, "deg($sth)"], material, bevel: 0.01 }),
-  ], { mirror: o.mirror, vars: { sax: a[0], say: a[1], sbx: b[0], sby: b[1], st: t, slen: len, sext: o.ext ?? 0, sth: "atan2($sby - $say, $sbx - $sax)" } });
+  ];
+  const ribs = sheetRib(material);
+  if (ribs) {
+    const up = `($st + ${ribs.h / 2 - 0.004})`;
+    kids.push(box("SheetRib_{i}", ["hypot($sbx - $sax, $sby - $say) + $sext", ribs.h, "$ssw"], { at: [`($sax + $sbx) / 2 - ${up} * sin($sth)`, `($say + $sby) / 2 + ${up} * cos($sth)`, `${o.z ?? 0} - $slen / 2 + $ssp / 2`], rotate: [0, 0, "deg($sth)"], repeat: { count: "floor($slen / $ssp)", step: [0, 0, "$ssp"] }, material }));
+  }
+  return group(name, kids, { mirror: o.mirror, vars: { sax: a[0], say: a[1], sbx: b[0], sby: b[1], st: t, slen: len, sext: o.ext ?? 0, sth: "atan2($sby - $say, $sbx - $sax)", ...ribVars("s", ribs, "$slen") } });
 }

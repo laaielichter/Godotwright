@@ -77,13 +77,13 @@ function nodes(style: Style, f: Finish): SpecNode[] {
         ], { at: ["$width / 2 + 0.02", 0.1, "-$depth / 2 + 0.01"], mirror: "Wheel_R" }),
         box("Foot", ["$width * 0.6", 0.06, 0.05], { at: [0, 0, "$depth * 0.18"], anchor: "bottom", bevel: 0.01 }),
         box("Number", ["$width * 0.32", 0.07, 0.006], { at: [0, "$height * 0.62", "$depth * 0.47"], rotate: [-1.5, 0, 0], bevel: 0.002, material: "paint_white" }),
-        // Road dirt on the lower body: two thin lofts that follow its taper, 4 mm proud.
-        ...([["Grime_1", 0.26, "grime"], ["Grime_2", 0.15, "grime_heavy"]] as const).map(([n, top, material]) => {
+        // Road dirt on the lower body: three thin lofts that follow its taper, 3-7 mm proud.
+        ...([["Grime_1", 0.34, "grime_light", 0.006], ["Grime_2", 0.25, "grime", 0.01], ["Grime_3", 0.15, "grime_heavy", 0.014]] as const).map(([n, top, material, d]) => {
           const k = `((${top} - 0.12) / ($height - 0.24))`;
           return loft(n, [
-            sec("0.051", "$width * 0.86 + 0.008", "$depth * 0.8 + 0.008", "$depth * 0.1"),
-            sec("0.12", "$width * 0.88 + 0.008", "$depth * 0.83 + 0.008", "$depth * 0.085"),
-            sec(`${top}`, `$width * (0.88 + 0.12 * ${k}) + 0.008`, `$depth * (0.83 + 0.17 * ${k}) + 0.008`, `$depth * 0.085 * (1 - ${k})`),
+            sec("0.051", `$width * 0.86 + ${d}`, `$depth * 0.8 + ${d}`, "$depth * 0.1"),
+            sec("0.12", `$width * 0.88 + ${d}`, `$depth * 0.83 + ${d}`, "$depth * 0.085"),
+            sec(`${top}`, `$width * (0.88 + 0.12 * ${k}) + ${d}`, `$depth * (0.83 + 0.17 * ${k}) + ${d}`, `$depth * 0.085 * (1 - ${k})`),
           ], { rotate: [-90, 0, 0], material });
         }),
       ];

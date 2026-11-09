@@ -65,6 +65,9 @@ node dist/cli.js --help
   `format.ts` prints them and makes `LIBRARY.md` (`npm run build:library`; a test keeps it in sync). Every asset must
   build clean against its archetype at its defaults and parameter extremes (`test/library/`; run one family with
   `LIBRARY_FAMILY=<id>`, every extreme with `LIBRARY_EXTREMES=all`, and keep the .glbs with `LIBRARY_DUMP=<dir>`).
+  `test/integration/library-godot.test.ts` imports and loads them in Godot (`LIBRARY_GODOT=all` for every asset), and
+  `scripts/render-library.mjs` renders contact sheets in Godot (`--out <dir> [category] [family]`), or the README gallery
+  `docs/library.png` (`npm run render:library`): look at them, a clean lint does not mean a model looks good.
 - `src/archetype/`: what a thing is, from `data/archetypes/` (`library.ts` loads it).
   `identify.ts` matches a name in English or Dutch, `check.ts` checks a model against
   its archetype, and `format.ts` prints the results.

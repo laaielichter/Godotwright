@@ -12,6 +12,9 @@ import { sha, writeScene } from "../build/helpers.js";
 
 const archetypes = loadLibrary();
 
+/** An asset builds in well under a second here, but CI is several times slower and a large one is built nine times in the extremes test. */
+const TIMEOUT = 90_000;
+
 /** Triangle budgets per category: a library asset is placed many times, so it must stay light. */
 export const BUDGET: Record<Category, number> = { furniture: 40_000, street: 40_000, storage: 40_000, nature: 80_000, buildings: 200_000, vehicles: 200_000, props: 60_000 };
 
@@ -52,7 +55,7 @@ export function testCategory(category: Category): void {
     });
 
     describe.each(assets.map((a) => [a.id, a] as const))("%s", (_id, asset) => {
-      it("builds clean, on y = 0, within its archetype's size and the budget", () => {
+      it("builds clean, on y = 0, within its archetype's size and the budget", { timeout: TIMEOUT }, () => {
         const r = problems(asset);
         expect(r.findings).toEqual([]);
         expect(r.triangles).toBeLessThanOrEqual(BUDGET[category]);
@@ -69,7 +72,7 @@ export function testCategory(category: Category): void {
         }
       });
 
-      it.runIf(allExtremes || firsts.has(asset.id))("stays clean at the extremes of its parameters, and builds the same bytes twice", () => {
+      it.runIf(allExtremes || firsts.has(asset.id))("stays clean at the extremes of its parameters, and builds the same bytes twice", { timeout: TIMEOUT }, () => {
         const params = (asset.spec["params"] as { name: string; type: string; min?: number; max?: number }[]).filter((p) => p.type === "number" || p.type === "integer");
         const cases: Record<string, unknown>[] = [];
         for (const p of params) cases.push({ [p.name]: p.min }, { [p.name]: p.max });

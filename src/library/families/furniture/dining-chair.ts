@@ -1,6 +1,6 @@
 import { box, combos, cyl, group, lathe, num, slugify, type AssetDraft, type Family, type SpecNode } from "../../kit.js";
 import { label } from "../../palette.js";
-import { fmats } from "./parts.js";
+import { board, fmats } from "./parts.js";
 
 /** The back of the chair, from its rails to its filling. */
 const STYLES = {
@@ -40,7 +40,7 @@ const squareLeg = (name: string, at: [string, number, string], mirror?: string):
 function backFilling(style: keyof typeof STYLES): SpecNode[] {
   switch (style) {
     case "ladder":
-      return [box("Slat_{i}", ["2 * $lx", 0.045, 0.016], { at: [0, "$b * 0.3", 0], repeat: { count: 3, step: [0, "$b * 0.19", 0] }, bevel: 0.005 })];
+      return [board("Slat_{i}", ["2 * $lx", 0.045, 0.016], "x", { at: [0, "$b * 0.3", 0], repeat: { count: 3, step: [0, "$b * 0.19", 0] }, bevel: 0.005 })];
     case "spindle":
       return [cyl("Spindle_{i}", 0.009, "$b - 0.09", { at: ["-$lx * 0.66", "($b - 0.09) / 2 + 0.03", 0], repeat: { count: 5, step: ["$lx * 0.33", 0, 0] }, segments: 10 })];
     case "panel":
@@ -66,9 +66,9 @@ function chair(style: keyof typeof STYLES, finish: (typeof FINISHES)[number]): A
         leg("Leg_BL", ["$lx", 0, "-$lz"], "Leg_BR"),
       ], { vars: { h: "$seatHeight - $st + 0.002" } }),
       group("Apron", [
-        box("Apron_F", ["2 * $lx", 0.07, 0.02], { at: [0, "$seatHeight - $st - 0.034", "$lz"], bevel: 0.003 }),
-        box("Apron_B", ["2 * $lx", 0.07, 0.02], { at: [0, "$seatHeight - $st - 0.034", "-$lz"], bevel: 0.003 }),
-        box("Apron_L", [0.02, 0.07, "2 * $lz"], { at: ["$lx", "$seatHeight - $st - 0.034", 0], bevel: 0.003, mirror: "Apron_R" }),
+        board("Apron_F", ["2 * $lx", 0.07, 0.02], "x", { at: [0, "$seatHeight - $st - 0.034", "$lz"], bevel: 0.003 }),
+        board("Apron_B", ["2 * $lx", 0.07, 0.02], "x", { at: [0, "$seatHeight - $st - 0.034", "-$lz"], bevel: 0.003 }),
+        board("Apron_L", [0.02, 0.07, "2 * $lz"], "z", { at: ["$lx", "$seatHeight - $st - 0.034", 0], bevel: 0.003, mirror: "Apron_R" }),
       ]),
       group("Stretchers", [
         cyl("Stretcher_L", 0.011, "2 * $lz", { axis: "z", at: ["$lx", 0.16, 0], segments: 12, mirror: "Stretcher_R" }),
@@ -76,7 +76,7 @@ function chair(style: keyof typeof STYLES, finish: (typeof FINISHES)[number]): A
       ]),
       group("Backrest", [
         box("Upright_L", ["$t * 0.9", "$b", "$t * 0.9"], { at: ["$lx", -0.025, 0], anchor: "bottom", bevel: 0.005, mirror: "Upright_R" }),
-        box("BackRail", ["2 * $lx + 0.02", 0.075, 0.024], { at: [0, "$b - 0.045", 0], bevel: 0.008 }),
+        board("BackRail", ["2 * $lx + 0.02", 0.075, 0.024], "x", { at: [0, "$b - 0.045", 0], bevel: 0.008 }),
         ...backFilling(style),
       ], { at: [0, "$seatHeight", "-$lz"], rotate: [-8, 0, 0], vars: { b: "$backHeight" } }),
     ], { material: wood, vars: { t: 0.038, st: 0.03, lx: "$seatWidth / 2 - 0.024", lz: "$seatDepth / 2 - 0.024" } }),
