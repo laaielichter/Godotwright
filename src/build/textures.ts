@@ -410,7 +410,7 @@ export const PATTERNS: Record<string, Pattern> = {
   },
   painted: {
     tile: 1.0,
-    relief: 0.35,
+    relief: 0.12,
     description: "painted surface: a faint orange-peel ripple and slightly uneven gloss",
     make: (n, c) =>
       paint(n, (u, v) => {
