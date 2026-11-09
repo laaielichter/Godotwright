@@ -366,7 +366,7 @@ export function cushion(name: string, w: Num, h: number, d: Num, cover: string, 
         const cf = Math.sign(cs) * Math.abs(cs) ** (2 / 5);
         const sf = Math.sign(sn) * Math.abs(sn) ** (2 / 5);
         const y = (h / 2 - st.d) * sf + (sf > 0 ? crown * c * (1 - cf * cf) * sf : 0);
-        pts.push([W2(cf, st.d * Math.sign(cf)), r4n(y)]);
+        pts.push([W2(cf, st.d * Math.abs(cf)), r4n(y)]);
       }
       return { z: st.z, points: pts };
     });

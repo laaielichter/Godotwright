@@ -1,3 +1,4 @@
+import type { MaterialDef } from "../../palette.js";
 import { box, cyl, ellipsoid, group, int, lathe, num, slugify, tube, type AssetDraft, type Family, type Num, type SpecNode } from "../../kit.js";
 import { finish } from "./finishes.js";
 import { cycle, sinkByIndex, stone } from "./rocks.js";
@@ -60,6 +61,10 @@ const flame = (f: Finish, h: Num, spread: Num, y: Num = 0): SpecNode[] =>
     ? [group("Flame", [
       tube("Tongue_{i}", [[`${spread} * 0.7`, 0, 0], [`${spread} * 0.95`, `${h} * (0.55 + 0.45 * pow(sin($i * 2.3 + 0.7), 2)) * 0.25`, 0.02], [`${spread} * 0.45`, `${h} * (0.55 + 0.45 * pow(sin($i * 2.3 + 0.7), 2)) * 0.6`, -0.02], [`${spread} * 0.15`, `${h} * (0.55 + 0.45 * pow(sin($i * 2.3 + 0.7), 2))`, 0.03]], [`${spread} * 0.45 + 0.01`, `${spread} * 0.35 + 0.008`, `${spread} * 0.16 + 0.004`, 0.003], { segments: 8, repeat: { count: 7, around: "y", phase: 15 }, material: "flame_outer" }),
       tube("Core", [[0, 0, 0], [0.01, `${h} * 0.3`, 0], [-0.01, `${h} * 0.55`, 0.01], [0, `${h} * 0.7`, 0]], [`${spread} * 0.6 + 0.01`, `${spread} * 0.45 + 0.008`, `${spread} * 0.2 + 0.004`, 0.003], { segments: 10, material: "flame_inner" }),
+      // A second ring of shorter, wider tongues between the tall ones, a tall licking centre tongue and a hot core.
+      tube("Lick_{i}", [[`${spread} * 0.9`, 0, 0], [`${spread} * 1.1`, `${h} * 0.18`, 0.02], [`${spread} * 0.7`, `${h} * 0.42`, -0.02], [`${spread} * 0.45`, `${h} * (0.5 + 0.2 * pow(sin($i * 1.7 + 2), 2))`, 0.01]], [`${spread} * 0.4 + 0.012`, `${spread} * 0.3 + 0.01`, `${spread} * 0.12 + 0.004`, 0.003], { segments: 8, repeat: { count: 5, around: "y", phase: 40 }, material: "flame_inner" }),
+      tube("Central", [[0, 0, 0], [`${spread} * 0.15`, `${h} * 0.35`, 0.01], [`-${spread} * 0.1`, `${h} * 0.7`, -0.01], [`${spread} * 0.08`, `${h} * 1.15`, 0.02]], [`${spread} * 0.5 + 0.012`, `${spread} * 0.36 + 0.008`, `${spread} * 0.14 + 0.004`, 0.003], { segments: 10, material: "flame_outer" }),
+      tube("HotCore", [[0, 0, 0], [0, `${h} * 0.2`, 0], [`${spread} * 0.05`, `${h} * 0.4`, 0]], [`${spread} * 0.38 + 0.01`, `${spread} * 0.24 + 0.006`, 0.003], { segments: 10, material: "flame_core" }),
       group("ParticleOrigin", [], { at: [0, 0.05, 0] }),
     ], { at: [0, y, 0] })]
     : [];
@@ -225,12 +230,20 @@ function campfire(style: Style, f: Finish): AssetDraft {
     description: `A ${f.lit ? "burning" : "burnt-out"} campfire: ${s.text.replace("{bed}", f.lit ? "glowing embers, with translucent flame tongues and a particle origin" : "grey ash, the log ends charred")}. ${f.lit ? "Logs" : "Cold logs"} with ${wood} bark; it faces +z.`,
     tags: [style, state, wood, ...(f.lit ? ["lit", "brandend", "flames", "vlammen"] : ["cold", "uitgebrand", "ash", "as"]), ...s.tags],
     params: s.params(),
-    materials: finish(...new Set([BARK[f.bark]!, ROCK[f.stone]!, "wood_cut", "charred", "scorched_wood", "dirt", "scorched_earth", "soot_iron", "ember_glow", "ember_bed", "ember_tip", "ash_grey", "ash_white", "flame_outer", "flame_inner"])),
+    materials: sooty(f, finish(...new Set([BARK[f.bark]!, ROCK[f.stone]!, "wood_cut", "charred", "scorched_wood", "dirt", "scorched_earth", "soot_iron", "ember_glow", "ember_bed", "ember_tip", "ash_grey", "ash_white", "flame_outer", "flame_inner", "flame_core"]))),
     nodes: s.build(f),
   };
 }
 
 const ORDER: Style[] = ["teepee", "cabin", "brazier", "star", "leanto"];
+
+/** Stones of a burning fire are blackened by smoke: darker, drier, with the soot texture of old iron. */
+function sooty(f: Finish, m: Record<string, MaterialDef>): Record<string, MaterialDef> {
+  if (!f.lit) return m;
+  const k = ROCK[f.stone]!;
+  const r = m[k]!;
+  return { ...m, [k]: { ...r, color: [r.color[0] * 0.5, r.color[1] * 0.48, r.color[2] * 0.45], roughness: 0.97 } };
+}
 
 export const campfireFamily: Family = {
   id: "campfire",

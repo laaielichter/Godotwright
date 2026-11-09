@@ -191,7 +191,15 @@ function buildTruck(t: TruckDef): AssetDraft {
     box("Battery", [0.5, 0.45, 0.6], { at: [-0.78, "$ry - 0.4", "$zf - $wr - 0.85"], bevel: 0.02, material: "chassis_black" }),
     box("Underrun", ["$width - 0.15", 0.12, 0.12], { at: [0, "$ry - 0.55", "-$L2 + 0.2"], bevel: 0.02, material: "chassis_black" }),
     box("UnderrunPost_L", [0.08, 0.5, 0.08], { at: [0.45, "$ry - 0.3", "-$L2 + 0.2"], material: "chassis_black", mirror: "UnderrunPost_R" }),
-    box("RearLamp_L", [0.36, 0.12, 0.06], { at: ["$width / 2 - 0.3", "$ry - 0.47", "-$L2 + 0.13"], bevel: 0.015, material: "lamp_red", mirror: "RearLamp_R" }),
+    group("RearLamp_L", [
+      box("Housing", [0.4, 0.16, 0.06], { bevel: 0.02, material: "trim_black" }),
+      box("Brake", [0.13, 0.12, 0.03], { at: [-0.13, 0, -0.025], bevel: 0.01, material: "lamp_red" }),
+      box("Indicator", [0.1, 0.12, 0.03], { at: [0, 0, -0.025], bevel: 0.01, material: "lamp_amber" }),
+      box("Reverse", [0.1, 0.12, 0.03], { at: [0.13, 0, -0.025], bevel: 0.01, material: "lamp_lens" }),
+    ], { at: ["$width / 2 - 0.3", "$ry - 0.47", "-$L2 + 0.13"], mirror: "RearLamp_R" }),
+    // Conspicuity tape on the under-run bar.
+    box("UnderrunTapeRed_{i}", [0.18, 0.07, 0.01], { at: ["-$width / 2 + 0.3", "$ry - 0.55", "-$L2 + 0.14"], repeat: { count: 5, step: ["($width - 0.6) / 4.5", 0, 0] }, material: "tape_red" }),
+    box("UnderrunTapeWhite_{i}", [0.18, 0.07, 0.01], { at: ["-$width / 2 + 0.3 + ($width - 0.6) / 9", "$ry - 0.55", "-$L2 + 0.14"], repeat: { count: 4, step: ["($width - 0.6) / 4.5", 0, 0] }, material: "tape_white" }),
     box("PlateRear", [0.52, 0.11, 0.012], { at: [0, "$ry - 0.47", "-$L2 + 0.13"], material: "plate_yellow" }),
   ];
   // Mudguards over the rear axles.
@@ -200,6 +208,23 @@ function buildTruck(t: TruckDef): AssetDraft {
   ch.push(tube("GuardStay_L", [["0.5", "$ry - 0.2", "$zr"], ["$width / 2 - 0.7", "2 * $wr + 0.08", "$zr"]], 0.025, { material: "chassis_black", segments: 6, mirror: "GuardStay_R" }));
   ch.push(box("SideGuard_L", [0.04, 0.32, "max(0.5, $zf - $zr - 2 * $wr - 1.0 - ($zf - $wr - 0.4 - $cz0))"], { at: ["$width / 2 - 0.05", "$ry - 0.35", "($cz0 - 0.15 + $zr + $wr + 0.4 + 0.65) / 2"], bevel: 0.01, material: "aluminium", mirror: "SideGuard_R" }));
   ch.push(box("SideMount_{i}", ["$width - 0.1", 0.06, 0.06], { at: [0, "$ry - 0.35", "$zr + $wr + 0.8"], repeat: { count: 2, step: [0, 0, 0.8] }, material: "chassis_black" }));
+  // Mud flaps behind the front wheels and behind the last rear axle: a black plate with a reflective strip.
+  const flap = (name: string, x: string, w: number, z: string, mirror: string): SpecNode => group(name, [
+    box("Plate", [w, 0.46, 0.022], { bevel: 0.008, material: "trim_black" }),
+    box("Strip", [w * 0.78, 0.05, 0.026], { at: [0, -0.15, 0], material: "tape_white" }),
+    box("Bar", [w + 0.02, 0.04, 0.05], { at: [0, 0.22, 0.02], material: "chassis_black" }),
+  ], { at: [x, "$wr * 0.85", z], rotate: [4, 0, 0], mirror });
+  ch.push(flap("MudFlap_F_L", "$width / 2 - 0.2", 0.42, "$zf - $wr - 0.09", "MudFlap_F_R"));
+  ch.push(flap("MudFlap_R_L", "$width / 2 - 0.32", 0.52, t.rear === 2 ? "$zr - 0.68 - $wr - 0.09" : "$zr - $wr - 0.09", "MudFlap_R_R"));
+  // Exhaust: a silencer on the chassis with a tail pipe turning out to the side (bonneted trucks have stacks instead).
+  if (!bonnet) {
+    ch.push(group("Silencer", [
+      cyl("Drum", 0.17, 0.8, { axis: "z", segments: 18, material: "stainless_dull", bevel: 0.02 }),
+      cyl("Clamp_{i}", 0.178, 0.05, { axis: "z", at: [0, 0, -0.28], repeat: { count: 2, step: [0, 0, 0.56] }, segments: 18, material: "chassis_black" }),
+      tube("Tail", [[0, 0, -0.4], [0, 0, -0.55], [-0.12, 0, -0.7], [-0.4, 0, -0.78]], 0.045, { material: "stainless_dull", segments: 10 }),
+    ], { at: ["-0.78", "$ry - 0.5", "$zf - $wr - 1.65"] }));
+    ch.push(cyl("AirTank_{i}", 0.12, 0.72, { axis: "x", at: [0, "$ry - 0.38", "$zr + $wr + 1.5"], repeat: { count: 2, step: [0, 0, 0.45] }, segments: 14, material: "aluminium", bevel: 0.015 }));
+  }
   kids.push(group("Chassis", ch));
 
   // Cargo.
@@ -220,6 +245,14 @@ function buildTruck(t: TruckDef): AssetDraft {
         box("Hinge_{i}", [0.08, 0.06, 0.05], { at: [0, "-($cargoHeight - 0.3) / 2", 0.01], repeat: { count: 3, step: [0, "($cargoHeight - 0.3) / 2", 0] }, material: "aluminium" }),
       ], { at: ["$width / 2 - 0.05", "$ry + 0.18 + $cargoHeight / 2", "-$L2 + 0.03"], mirror: "RearDoor_R" }));
       cargo.push(box("Marker_L", [0.04, 0.08, 0.08], { at: ["$width / 2 - 0.01", "$ry + 0.18 + $cargoHeight - 0.15", "-$L2 + 0.4"], material: "lamp_amber", mirror: "Marker_R" }));
+      // A bottom rail, rivet rows along both rails, the door seal and handles, and tape on the doors.
+      cargo.push(box("BottomRail_L", [0.05, 0.1, blen], { at: ["$width / 2 - 0.015", "$ry + 0.18 + 0.07", bz], material: "aluminium", mirror: "BottomRail_R" }));
+      cargo.push(cyl("RivetTop_L{i}", 0.012, 0.012, { axis: "x", at: ["$width / 2 + 0.012", "$ry + 0.18 + $cargoHeight - 0.04", `${cz0} - 0.25`], repeat: { count: 42, step: [0, 0, `-(${blen} - 0.5) / 41`] }, segments: 6, material: "rivet", mirror: "RivetTop_R" }));
+      cargo.push(cyl("RivetBottom_L{i}", 0.012, 0.012, { axis: "x", at: ["$width / 2 + 0.012", "$ry + 0.18 + 0.07", `${cz0} - 0.25`], repeat: { count: 42, step: [0, 0, `-(${blen} - 0.5) / 41`] }, segments: 6, material: "rivet", mirror: "RivetBottom_R" }));
+      cargo.push(box("DoorSeal", [0.03, "$cargoHeight - 0.12", 0.03], { at: [0, "$ry + 0.18 + $cargoHeight / 2", "-$L2"], material: "trim_black" }));
+      cargo.push(box("DoorHandle_L", [0.06, 0.16, 0.035], { at: ["0.12", "$ry + 0.18 + $cargoHeight * 0.45", "-$L2"], bevel: 0.01, material: "aluminium", mirror: "DoorHandle_R" }));
+      cargo.push(box("DoorTapeRed_{i}", [0.18, 0.08, 0.012], { at: ["-$width / 2 + 0.2", "$ry + 0.18 + 0.28", "-$L2 + 0.0055"], repeat: { count: 6, step: ["($width - 0.4) / 5.5", 0, 0] }, material: "tape_red" }));
+      cargo.push(box("DoorTapeWhite_{i}", [0.18, 0.08, 0.012], { at: ["-$width / 2 + 0.2 + ($width - 0.4) / 11", "$ry + 0.18 + 0.28", "-$L2 + 0.0055"], repeat: { count: 5, step: ["($width - 0.4) / 5.5", 0, 0] }, material: "tape_white" }));
       break;
     }
     case "flatbed": {
@@ -269,7 +302,10 @@ function buildTruck(t: TruckDef): AssetDraft {
       cargo.push(loft("Tank", [
         sec(`-$L2 + 0.12`, 0.86), sec(`-$L2 + 0.2`, 0.97), sec(`-$L2 + 0.32`, 1), sec(`${cz0} - 0.22`, 1), sec(`${cz0} - 0.1`, 0.97), sec(cz0, 0.86),
       ], { material: "body_paint" }));
-      cargo.push(box("Hoop_{i}", ["$width - 0.06", "$cargoHeight + 0.04", 0.06], { at: [0, `$ry + 0.22 + ${R}`, `${cz0} - 0.5`], repeat: { count: 4, step: [0, 0, `-(${blen} - 1.0) / 3`] }, bevel: 0.03, material: "chassis_black" }));
+      // Stiffening rings round the tank, slightly proud, with a row of bolts along each.
+      const ringAt = (z: string) => [sec(`${z} + 0.04`, 1), sec(`${z} + 0.035`, 1.025), sec(`${z} - 0.035`, 1.025), sec(`${z} - 0.04`, 1)].map((q) => ({ ...q, z: q.z }));
+      cargo.push(loft("Ring_{i}", ringAt("0"), { at: [0, 0, `${cz0} - 0.5`], repeat: { count: 4, step: [0, 0, `-(${blen} - 1.0) / 3`] }, material: "ring_paint" }));
+      cargo.push(cyl("RingBolt_{i}", 0.014, 0.012, { axis: "x", at: [`($width - 0.1) / 2 * 1.025`, `$ry + 0.22 + ${R}`, `${cz0} - 0.5`], repeat: { count: 4, step: [0, 0, `-(${blen} - 1.0) / 3`] }, segments: 6, material: "rivet", mirror: "RingBoltR_{i}" }));
       cargo.push(box("Walkway", [0.5, 0.05, `${blen} - 0.8`], { at: [0, `$ry + 0.22 + $cargoHeight + 0.01`, bz], material: "aluminium" }));
       cargo.push(cyl("Hatch_{i}", 0.25, 0.12, { at: [0, `$ry + 0.22 + $cargoHeight + 0.04`, `${cz0} - 0.8`], repeat: { count: 3, step: [0, 0, `-(${blen} - 1.6) / 2`] }, segments: 20, material: "aluminium", bevel: 0.02 }));
       cargo.push(tube("Handrail_L", [["0.3", `$ry + 0.22 + $cargoHeight`, `${cz0} - 0.5`], ["0.3", `$ry + 0.22 + $cargoHeight + 0.35`, `${cz0} - 0.6`], ["0.3", `$ry + 0.22 + $cargoHeight + 0.35`, `-$L2 + 0.6`], ["0.3", `$ry + 0.22 + $cargoHeight`, `-$L2 + 0.5`]], 0.02, { material: "aluminium", segments: 8, mirror: "Handrail_R" }));
@@ -328,6 +364,11 @@ function buildTruck(t: TruckDef): AssetDraft {
       cab_paint: t.cab_, body_paint: BODY_MATS[t.body]!, deck_wood: BODY_MATS["deck_wood"]!,
       ...WHEEL_MATS(),
       rim_grey: { color: [0.5, 0.51, 0.52], metallic: 0.4, roughness: 0.45, texture: "painted" },
+      ring_paint: { color: [0.08, 0.085, 0.09], metallic: 0.3, roughness: 0.45, texture: "painted" },
+      tape_red: { color: [0.36, 0.02, 0.015], metallic: 0, roughness: 0.3 },
+      tape_white: { color: [0.62, 0.62, 0.58], metallic: 0, roughness: 0.3 },
+      rivet: { color: [0.55, 0.56, 0.57], metallic: 1, roughness: 0.35 },
+      stainless_dull: { color: [0.5, 0.5, 0.5], metallic: 1, roughness: 0.4, texture: "brushed" },
       wrap: { color: [0.42, 0.44, 0.46], metallic: 0, roughness: 0.25, texture: "plastic" },
       strap: { color: [0.5, 0.2, 0.012], metallic: 0, roughness: 0.75, texture: "fabric" },
       spoil: { color: [0.2, 0.15, 0.1], metallic: 0, roughness: 1, texture: "ground" },

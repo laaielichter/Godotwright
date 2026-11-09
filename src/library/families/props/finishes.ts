@@ -113,8 +113,8 @@ export const FINISH: Record<string, MaterialDef> = {
   wood_rough: wood(0.22, 0.14, 0.07, 0.92),
   wood_whitewash: wood(0.45, 0.43, 0.39, 0.88),
   wood_cut: wood(0.48, 0.34, 0.18, 0.85),
-  wood_weathered_planks: planks(0.25, 0.22, 0.18, 0.92),
-  wood_whitewash_planks: planks(0.45, 0.43, 0.39, 0.88),
+  wood_weathered_planks: planks(0.17, 0.145, 0.115, 0.92),
+  wood_whitewash_planks: planks(0.32, 0.305, 0.27, 0.88),
 
   // Loose rocks (weathered, no block joints).
   rock_grey: stone(0.17, 0.17, 0.16, "concrete", 0.85),
@@ -142,6 +142,7 @@ export const FINISH: Record<string, MaterialDef> = {
   ember_tip: { color: [0.05, 0.02, 0.01], metallic: 0, roughness: 0.9, texture: "bark", emissive: [0.7, 0.14, 0.01] },
   flame_outer: { color: [0.5, 0.1, 0.01, 0.45], metallic: 0, roughness: 0.4, emissive: [0.95, 0.2, 0.012], alpha: "BLEND" },
   flame_inner: { color: [0.7, 0.3, 0.05, 0.65], metallic: 0, roughness: 0.4, emissive: [1, 0.46, 0.08], alpha: "BLEND" },
+  flame_core: { color: [0.8, 0.6, 0.2, 0.85], metallic: 0, roughness: 0.4, emissive: [1, 0.85, 0.4], alpha: "BLEND" },
   scorched_wood: { color: [0.06, 0.04, 0.026], metallic: 0, roughness: 0.92, texture: "bark" },
   soot_iron: { color: [0.03, 0.028, 0.027], metallic: 0.2, roughness: 0.8, texture: "rust" },
   rope_hemp: { color: [0.36, 0.28, 0.16], metallic: 0, roughness: 0.95, texture: "fabric" },

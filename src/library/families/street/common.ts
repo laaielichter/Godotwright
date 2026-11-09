@@ -143,7 +143,7 @@ function soiled(body: MaterialDef, k: number, heavy: boolean): MaterialDef {
   // Bare metal looks darker than its albedo (it mirrors the ground and the shade); its dirt film is matte, so start
   // from what the metal reads as, not from its albedo, or the band reads as a pale ring.
   const bare = body.metallic >= 0.5;
-  const dim = bare ? 0.04 + 0.075 * Math.max(0, (k - 0.45) / 0.42) : 1 - 0.6 * body.metallic * body.metallic;
+  const dim = bare ? 0.04 + 0.075 * Math.max(0, (k - 0.45) / 0.42) : (1 - 0.6 * body.metallic * body.metallic) * 0.78;
   const [r, g, b] = body.color.map((c) => c * dim) as [number, number, number];
   // Heavy dirt on metal and paint reads as rust bloom; on plastic, wood and stone as blotchy road film.
   const onMetal = body.texture === undefined || body.texture === "painted" || body.texture === "brushed" || body.texture === "rust" || body.metallic >= 0.5;
