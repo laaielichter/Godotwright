@@ -88,18 +88,55 @@ function tufts(prefix: string, x: string, y: string, z: string, seed: string, to
     [0.12, -0.36, 0.72, 0.24, 2],
     [-0.8, -0.1, -0.28, 0.2, 2],
     [0.62, 0.6, -0.18, 0.16, 0],
+    // Fringe: many small leaf clumps out on the rim, breaking the outline into ragged, scalloped edges.
+    [0.80, 0.12, 0.08, 0.15, 1],
+    [-0.74, 0.31, 0.12, 0.14, 1],
+    [0.23, 0.78, 0.23, 0.14, 0],
+    [-0.16, 0.70, -0.55, 0.14, 0],
+    [0.08, -0.48, -0.66, 0.16, 2],
+    [0.5, -0.17, 0.3, 0.15, 2],
+    [-0.43, -0.35, 0.62, 0.14, 2],
+    [0.43, 0.66, 0.47, 0.13, 0],
   ];
   return spots.map(([dx, dy, dz, size, tone], n) => {
     // Each copy grows between 55 % and 130 % of its size, with its own rhythm per spot.
     const f = `(${n4(size * scale)} * (0.55 + 0.75 * (0.5 + 0.5 * sin(${v} * ${n4(1.9 + n * 0.83)} + ${n4(n * 2.17)}))))`;
     return ellipsoid(`${prefix}_${n + 1}`, [`$c * ${f}`, `$c * ${f} * ${n4(0.78 + 0.04 * (n % 3))}`, `$c * ${f} * 0.9`], {
       at: [`${x} + $c * ${n4(dx)} * ${k}`, `${y} + $c * ${n4(dy)} * ${k}`, `${z} + $c * ${n4(dz)} * ${k}`],
-      segments: size > 0.3 ? 14 : 10,
+      segments: size > 0.3 ? 14 : size > 0.13 ? 10 : 8,
       lumps: size > 0.3 ? 0.5 : 0.6,
       seed: `${seed} + ${n * 31 + 3}`,
       material: tone === 0 ? tones.up : tone === 1 ? tones.out : tones.low,
     });
   });
+}
+
+/**
+ * A row of hanging twigs: each a thin tube swaying on its way down, with narrow leaf clusters along it. Lengths differ
+ * from strand to strand (`len` is the longest, in metres); `ph` is a phase expression in $i. With `ring`, the strands
+ * are spread round the crown instead of along a limb.
+ */
+function strands(name: string, at: [string, string, string], step: [string, string, string], count: number, len: string, c: string, ph: string, mainLeaf: string, altLeaf: string, ringCount = 0, ring = false): SpecNode[] {
+  const L = `(${len} * (0.62 + 0.38 * pow(0.5 + 0.5 * sin(${ph} * 2.9), 1.3)))`;
+  const sw = `(${c} * 0.22 * sin(${ph} * 1.7))`;
+  const sz = `(${c} * 0.12 * sin(${ph} * 2.3 + 1))`;
+  const rep = ring ? { count: ringCount, around: "y" as const, phase: 7 } : { count, step };
+  const base: Record<string, unknown> = { repeat: rep };
+  const nodes: SpecNode[] = [
+    tube(name, [
+      [at[0], at[1], at[2]],
+      [`${at[0]} + ${sw} * 0.5`, `${at[1]} - ${L} * 0.3`, `${at[2]} + ${sz} * 0.5`],
+      [`${at[0]} + ${sw}`, `${at[1]} - ${L} * 0.65`, `${at[2]} + ${sz}`],
+      [`${at[0]} + ${sw} * 1.2`, `${at[1]} - ${L}`, `${at[2]} + ${sz} * 1.2`],
+    ], ["0.03", "0.022", "0.016", "0.008"], { segments: 5, material: "bark_grey", ...base }),
+  ];
+  [0.38, 0.62, 0.86].forEach((t, n) => {
+    nodes.push(ellipsoid(`${name}Leaf_${n + 1}`, [`${c} * ${n4(0.13 - 0.04 * t)}`, `${L} * 0.13`, `${c} * ${n4(0.12 - 0.04 * t)}`], {
+      at: [`${at[0]} + ${sw} * ${n4(t * 1.1)}`, `${at[1]} - ${L} * ${n4(t)}`, `${at[2]} + ${sz} * ${n4(t * 1.1)}`],
+      segments: 8, lumps: 0.3, seed: `$i * 4 + ${n * 5 + 1}`, material: n % 2 ? altLeaf : mainLeaf, ...base,
+    }));
+  });
+  return nodes;
 }
 
 const clampRange = (v: number, r: [number, number, number]): number => Math.min(r[2], Math.max(r[1], Math.round(v * 100) / 100));
@@ -158,17 +195,9 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
     extraText = " Heavy outer clusters hang low at the limb ends.";
   }
   if (sp.extra === "weep") {
-    for (const [k, dz] of [[1, -0.3], [2, 0], [3, 0.3]] as const) {
-      // A curtain of hanging leaf clumps, narrowing toward its ragged lower end.
-      const bottom = `($db + ($ye - $db) * ${n4(0.05 + 0.08 * k)})`;
-      [0.12, 0.36, 0.6, 0.84].forEach((t, n) => {
-        armChildren.push(ellipsoid(`Drape_${k}_${n + 1}`, [`$c * ${n4(0.34 - 0.13 * t)}`, `min(($ye - ${bottom}) * 0.16, $c * 1.1)`, `$c * ${n4(0.3 - 0.12 * t)}`], {
-          at: [`$L * ${n4(0.95 + 0.19 * t)}`, `$ye - ($ye - ${bottom}) * ${n4(t)}`, `$L * ${n4(dz * (1 + 0.15 * t))}`],
-          segments: 10, lumps: 0.35, seed: `$i * 23 + ${k * 7 + n}`, material: n % 2 ? leaf : sun,
-        }));
-      });
-    }
-    extraText = " Three long curtains of leaves hang from every limb end.";
+    // Curtains: many thin hanging twigs of different lengths, each carrying a few narrow leaf clusters.
+    armChildren.push(...strands("Strand", ["$L * 0.85", "$ye", "-$c * 0.72"], ["$L * 0.025", "0", "$c * 0.13"], 12, "($ye - $db)", "$c", `$i * 3.1 + ${s}`, leaf, sun));
+    extraText = " Many thin twigs with leaf strands hang from every limb end in long, ragged curtains.";
   }
   if (sp.extra === "fruit" && v.fruit) {
     for (const [k, dx, dz] of [[1, 0.2, 0.4], [2, -0.3, 0.5], [3, 0.5, -0.3], [4, -0.1, -0.6]] as const) {
@@ -204,12 +233,7 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
     extraText = " A second, leaning stem carries its own leaf cluster.";
   }
   if (sp.extra === "weep") {
-    [0.15, 0.42, 0.7].forEach((t, n) => {
-      crown.push(ellipsoid(`Drape_Top_${n + 1}_{i}`, [`$c * ${n4(0.34 - 0.12 * t)}`, "min(($yc - $db) * 0.2, $c * 1.1)", `$c * ${n4(0.3 - 0.1 * t)}`], {
-        at: [`$cr * ${n4(0.5 + 0.16 * t)}`, `$yc + $ry * 0.2 - ($yc + $ry * 0.2 - $db) * ${n4(t)}`, `$cr * ${n4(0.08 * t)}`],
-        segments: 10, lumps: 0.35, seed: `$i * 29 + ${n + 3}`, material: n % 2 ? shade : leaf, repeat: { count: 6, around: "y", phase: phase + 30 },
-      }));
-    });
+    crown.push(...strands("Strand_Top", ["$cr * 0.42", "$yc + $ry * 0.05", "0"], ["0", "0", "0"], 1, "($yc - $db)", "$c", "$i * 2.3", leaf, shade, 20, true));
   }
 
   const height = clampRange(sp.height[0] * v.scale, sp.height);
@@ -244,7 +268,7 @@ function tree(key: string, sp: Species, v: Variant, index: number): AssetDraft {
       num("trunkRadius", trunkR, sp.trunk[1], sp.trunk[2], "Trunk radius just above the root flare, in metres."),
       int("branches", branches, sp.limbs[1], sp.limbs[2], "Number of main limbs, each ending in leaf clusters."),
     ],
-    materials: natureMats(mats, sp.bark, leaf, sun, shade, tip, ...extraMats),
+    materials: natureMats(mats, sp.bark, ...(sp.extra === "weep" ? ["bark_grey"] : []), leaf, sun, shade, tip, ...extraMats),
     nodes,
   };
 }

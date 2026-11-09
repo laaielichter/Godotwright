@@ -70,12 +70,17 @@ function stumpAsset(s: Stump): AssetDraft {
     case "cut":
     case "broken": {
       const tall = s.style === "broken";
-      const roots = tube("Root_{i}", [["$r * 0.55", "$h * 0.3", 0], ["$r * 1.25", "$h * 0.12 + $r * 0.12", "$r * 0.08"], ["$r * 2", "$r * 0.1", "$r * 0.05"], ["$r * 2.6", "$r * 0.05", "-$r * 0.05"]], ["$r * 0.36", "$r * 0.24", "$r * 0.1", "$r * 0.045"], {
+      const roots = tube("Root_{i}", [["$r * 0.6", "$h * 0.42 + $r * 0.1", 0], ["$r * 1.15", "$h * 0.14 + $r * 0.26", "$r * 0.1"], ["$r * (1.8 + 0.5 * sin($i * 2.7))", "$r * 0.2", "$r * 0.12"], ["$r * (2.4 + 0.8 * sin($i * 2.7))", "$r * 0.04", "-$r * 0.1"]], ["$r * 0.5", "$r * 0.36", "$r * 0.17", "$r * 0.05"], {
         segments: 8,
-        rotate: [0, "11 * sin($i * 2.3)", 0],
+        rotate: [0, "14 * sin($i * 2.3)", 0],
         repeat: { count: "$roots", around: "y", phase: 15 },
       });
-      const body = lathe("Wood", [["$r * 1.32", 0], ["$r * 1.12", "$h * 0.12"], ["$r * 1.02", "$h * 0.4"], ["$r", tall ? "$h * 0.75" : "$h"], ...(tall ? [["$r * 0.97", "$h * 0.8"] as [string, string]] : [])], { segments: 20, material: s.bark });
+      const rootlets = tube("Rootlet_{i}", [["$r * 0.9", "$r * 0.35", 0], ["$r * 1.35", "$r * 0.12", "$r * 0.05"], ["$r * (1.75 + 0.35 * sin($i * 1.9))", "$r * 0.03", "-$r * 0.04"]], ["$r * 0.2", "$r * 0.11", "$r * 0.035"], {
+        segments: 6,
+        rotate: [0, "20 * sin($i * 3.1)", 0],
+        repeat: { count: "$roots * 2", around: "y", phase: 40 },
+      });
+      const body = lathe("Wood", [["$r * 1.5", 0], ["$r * 1.25", "$h * 0.1"], ["$r * 1.07", "$h * 0.3"], ["$r * 1.02", "$h * 0.5"], ["$r", tall ? "$h * 0.75" : "$h"], ...(tall ? [["$r * 0.97", "$h * 0.8"] as [string, string]] : [])], { segments: 20, material: s.bark });
       const top: SpecNode[] = tall
         ? [
             group("Break", [
@@ -97,7 +102,7 @@ function stumpAsset(s: Stump): AssetDraft {
       if (s.moss) extras.push(ellipsoid("Moss", ["$r * 1.15", "$r * 0.2", "$r * 1.05"], { at: ["$r * 0.4", "$r * 0.26", "$r * 0.3"], segments: 14, lumps: 0.3, seed: 11, material: "moss" }));
       if (s.moss && !tall) extras.push(ellipsoid("MossTop", ["$r * 0.55", "$r * 0.08", "$r * 0.45"], { at: ["$r * 0.3", "$h + 0.01", "-$r * 0.2"], segments: 12, lumps: 0.3, seed: 12, material: "moss" }));
       if (fungus) extras.push(ellipsoid("Fungus_{i}", ["$r * 0.3", "$r * 0.07", "$r * 0.22"], { at: ["$r * 0.98", "$h * (0.35 + 0.12 * $i)", "$r * 0.1 * $i"], rotate: [0, "$i * 25", -8], segments: 12, material: "fungus_shelf", repeat: { count: 3, step: [0, 0, 0] } }));
-      nodes = [group("Stump", [body, ...top, group("Roots", [roots], { material: s.bark }), ...extras], { vars: { r: "$radius", h: "$height" } })];
+      nodes = [group("Stump", [body, ...top, group("Roots", [roots, rootlets], { material: s.bark }), ...extras], { vars: { r: "$radius", h: "$height" } })];
       params = [
         num("radius", s.key === "birch" ? 0.18 : tall ? 0.35 : 0.3, 0.1, 0.6, "Radius of the trunk at the cut, in metres."),
         num("height", tall ? 1.1 : 0.4, tall ? 0.6 : 0.2, tall ? 1.5 : 0.8, "Height of the stump in metres."),

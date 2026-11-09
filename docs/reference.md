@@ -208,7 +208,7 @@ lathe, loft, extrude, roof, tube) with `at`, `rotate`, `mirror`, `repeat`, varia
 expressions (`"$width / 2 - 0.1"`, never executed as code). Boxes and cylinders can have rounded edges (`bevel`),
 ellipsoids an organic, lumpy outline (`lumps`) and flat fractures with sharp edges (`cuts`, for broken stone), a tube follows a path (frames, rails, pipes, branches), and a material
 of your own can use any of the texture patterns in its own colour (`"texture": "wood"`): brick, roof_tile, roof_slate, wood, bark,
-concrete, asphalt, plaster, leaf, grass, stone, sand, water, ground, and for finishes grain (solid timber without plank joints), fabric, leather, painted, plastic, brushed and rust. `model spec` explains the format and prints a
+concrete, asphalt, plaster, leaf, grass, stone, sand, water, ground, granite, and for finishes grain (solid timber without plank joints), fabric, leather, painted, plastic, brushed and rust. `model spec` explains the format and prints a
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).

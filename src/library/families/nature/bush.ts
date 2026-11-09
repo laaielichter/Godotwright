@@ -12,7 +12,7 @@ function denseMats(used: string[]): Record<string, MaterialDef> {
   const out: Record<string, MaterialDef> = {};
   for (const n of used) if (n.endsWith("_dense")) {
     const base = LOCAL[n.slice(0, -6)];
-    if (base) out[n] = { ...base, texture: "ground", roughness: Math.min(1, base.roughness + 0.05) };
+    if (base) out[n] = { ...base, texture: "leaf", roughness: Math.min(1, base.roughness + 0.05) };
   }
   return out;
 }

@@ -229,16 +229,39 @@ export const PATTERNS: Record<string, Pattern> = {
   bark: {
     tile: 1.0,
     relief: 4,
-    description: "furrowed bark, ridges running up the trunk",
+    description: "furrowed bark: tall plates separated by dark fissures running up the trunk, with finer cracks",
     make: (n, c) =>
       paint(n, (u, v) => {
-        const wu = u + 0.03 * fbm(u, v, 4, 2, 2, 41);
-        const cell = cells(wu, v, 10, 3, 42, 0.9);
-        const ridge = smooth(clamp01((cell.f2 - cell.f1) / 0.35));
-        const fine = fbm(u, v, 16, 4, 3, 43);
-        const tone = 0.55 + 0.55 * ridge + 0.15 * fine;
-        const bark = blend(scale(c, tone), [c[0] * 0.5, c[1] * 0.45, c[2] * 0.42], (1 - ridge) * 0.4);
-        return [bark, clamp01(0.15 + 0.75 * ridge + 0.1 * fine)];
+        // Tall narrow plates (cellular noise stretched along the trunk and warped sideways) with a finer layer of cracks.
+        const wu = u + 0.035 * fbm(u, v, 3, 2, 3, 41);
+        const a = cells(wu, v, 12, 2, 42, 0.95);
+        const b = cells(wu + 0.3, v + 0.1, 28, 6, 46, 0.9);
+        const plate = smooth(clamp01((a.f2 - a.f1) / 0.3));
+        const crack = smooth(clamp01((b.f2 - b.f1) / 0.32));
+        const ridge = 0.68 * plate + 0.32 * crack;
+        const shade = 0.86 + 0.28 * ((a.id >>> 8 & 0xff) / 255);
+        const fine = fbm(u, v, 30, 8, 3, 44);
+        const tone = (0.45 + 0.75 * ridge) * shade * (1 + 0.14 * fine);
+        return [blend(scale(c, tone), [c[0] * 0.5, c[1] * 0.46, c[2] * 0.43], (1 - ridge) * 0.35), clamp01(0.08 + 0.8 * ridge + 0.1 * fine)];
+      }),
+  },
+  granite: {
+    tile: 1.0,
+    relief: 1.0,
+    description: "granite and similar crystalline stone: a grey ground with dense light and dark mineral flecks",
+    make: (n, c) =>
+      paint(n, (u, v) => {
+        // Three scales of flecks: quartz and feldspar (light), mica and hornblende (dark), each a cell with its own tone.
+        const a = cells(u, v, 70, 70, 201, 1), b = cells(u + 0.31, v + 0.17, 110, 110, 202, 1), d = cells(u + 0.62, v + 0.43, 40, 40, 203, 1);
+        const speck = (cell: { f1: number; id: number }, size: number): number => {
+          const k = (cell.id >>> 8 & 0xff) / 255;
+          const inside = 1 - smooth(clamp01((cell.f1 - size) / (size * 0.35)));
+          return (k > 0.62 ? 0.5 : k < 0.3 ? -0.6 : 0) * inside;
+        };
+        const flecks = speck(a, 0.34) + 0.8 * speck(b, 0.3) + 0.7 * speck(d, 0.38);
+        const blotch = fbm(u, v, 5, 5, 4, 204);
+        const grain = fbm(u, v, 96, 96, 2, 205);
+        return [scale(c, Math.max(0.3, 0.95 + 0.14 * blotch + 0.05 * grain + 0.4 * flecks)), clamp01(0.5 + 0.25 * grain + 0.2 * flecks)];
       }),
   },
   concrete: {

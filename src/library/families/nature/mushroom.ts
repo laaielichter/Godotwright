@@ -70,6 +70,11 @@ function mushroom(s: Shroom): SpecNode[] {
     const under = s.shape === "bell" ? "-$C * 0.33" : s.shape === "bun" ? "-$C * 0.06" : "-$C * 0.04";
     parts.push(lathe("Gills", [["$sr * 1.1", `${under} - $C * 0.02`], ["$R * 0.92", `${under} - $C * 0.03`], ["$R * 0.9", `${under} + $C * 0.02`], ["$sr * 1.2", `${under} + $C * 0.03`]], { at: [0, capLift, 0], segments: 20, material: s.gill }));
   }
+  if (s.shape !== "funnel" && s.shape !== "button") {
+    // Radial gill blades hanging under the cap, so the underside reads as real gills (or pores) from below.
+    const under = s.shape === "bell" ? "-$C * 0.33" : s.shape === "bun" ? "-$C * 0.06" : "-$C * 0.04";
+    parts.push(ellipsoid("GillRib_{i}", ["$R * 0.36", "$C * 0.08 + 0.002", "$R * 0.012 + 0.0015"], { at: ["$R * 0.56", `${capLift} + ${under} - $C * 0.04`, 0], segments: 6, material: s.gill === "pear_yellow" ? "gill_cream" : "gill_dark", repeat: { count: 30, around: "y", phase: 0 } }));
+  }
   if (s.skirt) parts.push(lathe("Skirt", [["$sr * 0.95", "$H * 0.78"], ["$sr * 1.7", "$H * 0.7"], ["$sr * 1.75", "$H * 0.73"], ["$sr * 1.05", "$H * 0.84"]], { segments: 14, material: s.stem }));
   if (s.spots) {
     const ring = (name: string, a: number, count: number, phase: number, size: number): SpecNode => {
@@ -111,7 +116,7 @@ function asset(s: Shroom): AssetDraft {
     description: `${s.text.charAt(0).toUpperCase()}${s.text.slice(1)}. It stands on y = 0; the front faces +z.`,
     tags: [s.key.replace(/-/g, " "), s.dutch, ...(s.key.startsWith("giant") ? ["fantasy", "giant", "reus", "sprookje"] : ["forest floor", "bosgrond"]), ...(s.cluster ? ["cluster", "groep"] : [])],
     params,
-    materials: natureMats(mats, s.cap, s.stem, s.gill, ...(s.spots ? [s.spots] : []), ...(s.cluster ? ["soil"] : [])),
+    materials: natureMats(mats, s.cap, s.stem, s.gill, ...(s.spots ? [s.spots] : []), "gill_dark", "gill_cream", ...(s.cluster ? ["soil"] : [])),
     nodes,
   };
 }

@@ -140,23 +140,23 @@ function splitHalf(start: number, cuts: number, faceTo: 1 | -1): { seed: number;
  * little under the low end of the real ranges (real chalk at 0.4 renders near white there).
  */
 const ROCK: Record<string, { color: [number, number, number]; texture: string; roughness: number }> = {
-  granite: { color: [0.095, 0.092, 0.087], texture: "asphalt", roughness: 0.88 },
-  basalt: { color: [0.042, 0.041, 0.04], texture: "asphalt", roughness: 0.85 },
-  sandstone: { color: [0.14, 0.097, 0.054], texture: "asphalt", roughness: 0.95 },
-  limestone: { color: [0.12, 0.114, 0.1], texture: "asphalt", roughness: 0.9 },
-  slate: { color: [0.05, 0.054, 0.061], texture: "concrete", roughness: 0.8 },
-  red_rock: { color: [0.12, 0.052, 0.03], texture: "asphalt", roughness: 0.95 },
-  mossy_rock: { color: [0.068, 0.07, 0.058], texture: "asphalt", roughness: 0.95 },
-  lichen: { color: [0.09, 0.094, 0.075], texture: "asphalt", roughness: 0.97 },
-  sandstone_red: { color: [0.13, 0.06, 0.034], texture: "asphalt", roughness: 0.95 },
-  chalk: { color: [0.17, 0.164, 0.146], texture: "concrete", roughness: 0.92 },
-  quartz: { color: [0.15, 0.148, 0.142], texture: "concrete", roughness: 0.55 },
+  granite: { color: [0.11, 0.107, 0.1], texture: "granite", roughness: 0.88 },
+  basalt: { color: [0.056, 0.056, 0.058], texture: "granite", roughness: 0.82 },
+  sandstone: { color: [0.14, 0.11, 0.072], texture: "sand", roughness: 0.95 },
+  limestone: { color: [0.122, 0.114, 0.097], texture: "plaster", roughness: 0.9 },
+  slate: { color: [0.062, 0.067, 0.076], texture: "concrete", roughness: 0.75 },
+  red_rock: { color: [0.125, 0.066, 0.045], texture: "sand", roughness: 0.95 },
+  mossy_rock: { color: [0.075, 0.077, 0.063], texture: "concrete", roughness: 0.95 },
+  lichen: { color: [0.1, 0.103, 0.082], texture: "ground", roughness: 0.97 },
+  sandstone_red: { color: [0.135, 0.07, 0.047], texture: "sand", roughness: 0.95 },
+  chalk: { color: [0.155, 0.148, 0.13], texture: "plaster", roughness: 0.92 },
+  quartz: { color: [0.115, 0.107, 0.095], texture: "plaster", roughness: 0.6 },
 };
 
 function rockMaterials(stone: string, fine: boolean): Record<string, MaterialDef> {
   const base = ROCK[stone] ?? ROCK.granite!;
   // Small pebbles are worn smooth: no coarse crystal speckle.
-  const r = fine ? { ...base, texture: "concrete" } : base;
+  const r = fine ? { ...base, texture: base.texture === "sand" ? "sand" : base.texture === "granite" ? "granite" : "concrete" } : base;
   const [cr, cg, cb] = r.color;
   const q = (v: number): number => Math.round(v * 1000) / 1000;
   return {
