@@ -167,8 +167,7 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
         if (opensLambda) lambdaIndents.push(ll.indent);
         if (inLambda) continue;
         const code = withoutInlineLambdaBodies(ll.code);
-        const value = /(?<![\p{XID_Continue}.])return(?![\p{XID_Continue}])\s*(.+)$/u
-          .exec(code)?.[1]?.replace(/;\s*$/, "").trim();
+        const value = returnValueOnLine(code);
         if (!value || isDirectCall(value)) continue;
         out.push(
           finding(
@@ -185,7 +184,7 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
 }
 
 function opensMultilineLambda(code: string): boolean {
-  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*\(/gu;
+  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*(?:[\p{XID_Start}_][\p{XID_Continue}_]*\s*)?\(/gu;
   for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
     let depth = 0;
     let close = -1;
@@ -206,7 +205,7 @@ function opensMultilineLambda(code: string): boolean {
 /** Masks inline lambda bodies so their returns do not hide or impersonate enclosing-function returns. */
 function withoutInlineLambdaBodies(code: string): string {
   const masked = code.split("");
-  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*\(/gu;
+  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*(?:[\p{XID_Start}_][\p{XID_Continue}_]*\s*)?\(/gu;
   for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
     let depth = 0;
     let close = -1;
@@ -247,6 +246,42 @@ function inlineLambdaBodyEnd(code: string, bodyStart: number): number {
     if ((char === "," || char === ";") && openers.length === enclosingDepth) return index;
     if (closes.has(char) && openers.length === enclosingDepth) return index;
     updateStack(index);
+  }
+  return code.length;
+}
+
+/** Reads only the current return statement, stopping at a top-level semicolon. */
+function returnValueOnLine(code: string): string | undefined {
+  const returned = /(?<![\p{XID_Continue}.])return(?![\p{XID_Continue}])\s*/u.exec(code);
+  if (!returned) return undefined;
+
+  const start = returned.index + returned[0].length;
+  const openers: string[] = [];
+  const closes = new Map([
+    [")", "("],
+    ["]", "["],
+    ["}", "{"],
+  ]);
+  for (let index = start; index < code.length; index++) {
+    const char = code[index]!;
+    if (char === "\"" || char === "'") {
+      index = afterQuotedString(code, index) - 1;
+      continue;
+    }
+    if (char === ";" && openers.length === 0) return code.slice(start, index).trim() || undefined;
+    if (char === "(" || char === "[" || char === "{") openers.push(char);
+    else if (closes.get(char) === openers.at(-1)) openers.pop();
+  }
+  return code.slice(start).trim() || undefined;
+}
+
+function afterQuotedString(code: string, start: number): number {
+  const quote = code[start]!;
+  const delimiter = code.startsWith(quote.repeat(3), start) ? quote.repeat(3) : quote;
+  for (let index = start + delimiter.length; index < code.length; ) {
+    if (code[index] === "\\") index += 2;
+    else if (code.startsWith(delimiter, index)) return index + delimiter.length;
+    else index++;
   }
   return code.length;
 }

@@ -286,6 +286,39 @@ describe("api/void-return-value edge cases", () => {
     expect(lines(code)).toEqual([7]);
   });
 
+  it("ignores named lambda returns and keeps following enclosing returns", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func inline_named() -> void:",
+      "\tvar callback = func double(x): return x * 2",
+      "",
+      "func multiline_named() -> void:",
+      "\tvar callback = func double(x):",
+      "\t\treturn x * 2",
+      "\treturn 5",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([9]);
+  });
+
+  it("ends return expressions at semicolon statement boundaries", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func bare_return(done: bool) -> void:",
+      "\tif done: return; print(\"continuing\")",
+      "",
+      "func void_call_return() -> void:",
+      "\treturn queue_free(); print(\"done\")",
+      "",
+      "func value_return() -> void:",
+      "\treturn 5; print(\"unreachable\")",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([10]);
+  });
+
   it("reports return(5) and awaited values", () => {
     // Godot 4.7.2 accepts print(), queue_free(), and chained quit calls; it rejects
     // `return await get_tree().process_frame` and `return(5)`.
