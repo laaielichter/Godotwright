@@ -390,6 +390,17 @@ describe("api/void-return-value edge cases", () => {
     expect(lines(code)).toEqual([4]);
   });
 
+  it("keeps semicolon-separated inline lambda statements inside the lambda", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func callback() -> void:",
+      "\tvar cb = func(x): print(x); return x * 2",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([]);
+  });
+
   it("does not treat Unicode identifiers containing return as return statements", () => {
     const code = [
       "extends Node",

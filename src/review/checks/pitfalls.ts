@@ -226,7 +226,7 @@ function withoutInlineLambdaBodies(code: string): string {
   return masked.join("");
 }
 
-/** Ends an inline lambda before its containing delimiter, sibling argument, or statement. */
+/** Ends an inline lambda before its containing delimiter or sibling argument. */
 function inlineLambdaBodyEnd(code: string, bodyStart: number): number {
   const openers: string[] = [];
   const closes = new Map([
@@ -243,7 +243,7 @@ function inlineLambdaBodyEnd(code: string, bodyStart: number): number {
   const enclosingDepth = openers.length;
   for (let index = bodyStart; index < code.length; index++) {
     const char = code[index]!;
-    if ((char === "," || char === ";") && openers.length === enclosingDepth) return index;
+    if (char === "," && openers.length === enclosingDepth) return index;
     if (closes.has(char) && openers.length === enclosingDepth) return index;
     updateStack(index);
   }
