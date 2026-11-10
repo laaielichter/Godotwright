@@ -24,6 +24,7 @@ export const GODOT_CHECKED_RULES = new Set([
   "api/duplicate-declaration",
   "api/redefines-native-member",
   "api/override-signature",
+  "api/void-return-value",
 ]);
 
 /** After this many contradictions and no confirmation, a rule's errors become warnings here. */

@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Review value returns from `-> void` functions** (`api/void-return-value`, error): Godot cannot load a script that returns a value from a void function.
+
 ## 0.7.0 (an asset library of a thousand models, dreaming, and seven specialist agents)
 
 - **Asset library tested in Godot, and made to look real.** All 1000 assets import, load and instantiate in Godot 4.7

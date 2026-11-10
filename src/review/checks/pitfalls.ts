@@ -137,6 +137,7 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
   out.push(...treeTestReadsTooEarly(pm, path, lines));
   out.push(...overrideSignatures(pm, path));
   out.push(...duplicateDeclarations(pm, path));
+  out.push(...voidReturnValues(pm, path, lines));
   return out;
 }
 
@@ -149,6 +150,64 @@ function insideLoop(body: LogicalLine[], ll: LogicalLine): boolean {
     indent = prev.indent;
   }
   return false;
+}
+
+/** A value returned from a function declared `-> void` prevents the script from loading. */
+function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]): Finding[] {
+  const out: Finding[] = [];
+  for (const model of pm.modelsOf(path)) {
+    for (const fn of model.outline.functions) {
+      if (fn.returnType !== "void") continue;
+      for (const ll of bodyOf(lines, fn)) {
+        const lambda = /\bfunc\b/.exec(ll.code);
+        const prefix = lambda ? ll.code.slice(0, lambda.index) : ll.code;
+        const returnsLambda = lambda !== null && /(?:^|[^\w.])return\s*$/.test(prefix);
+        const code = returnsLambda ? `${prefix} <lambda>` : prefix;
+        const value = /(?:^|[^\w.])return\s+(.+)$/.exec(code)?.[1]?.trim();
+        if (!value || isDirectCall(value)) continue;
+        out.push(
+          finding(
+            "api/void-return-value",
+            path,
+            ll.line,
+            `${fn.name}() is declared \"-> void\", so Godot cannot return a value from it. Remove the value, or give the function a return type.`,
+          ),
+        );
+      }
+    }
+  }
+  return out;
+}
+
+/** Calls can themselves be void, so leave direct call returns for a separate check. */
+function isDirectCall(value: string): boolean {
+  let expression = value.trim();
+  while (isWrappedInParentheses(expression)) expression = expression.slice(1, -1).trim();
+  const callee = /^[\p{XID_Start}_][\p{XID_Continue}_]*(?:\s*\.\s*[\p{XID_Start}_][\p{XID_Continue}_]*)*\(/u.exec(expression);
+  if (!callee) return false;
+  let depth = 0;
+  for (let i = callee[0].length - 1; i < expression.length; i++) {
+    if (expression[i] === "(") depth++;
+    else if (expression[i] === ")") {
+      depth--;
+      if (depth === 0) return expression.slice(i + 1).replace(/;\s*$/, "").trim() === "";
+    }
+  }
+  return false;
+}
+
+function isWrappedInParentheses(value: string): boolean {
+  if (!value.startsWith("(") || !value.endsWith(")")) return false;
+  let depth = 0;
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === "(") depth++;
+    else if (value[i] === ")") {
+      depth--;
+      if (depth === 0 && i !== value.length - 1) return false;
+      if (depth < 0) return false;
+    }
+  }
+  return depth === 0;
 }
 
 /**

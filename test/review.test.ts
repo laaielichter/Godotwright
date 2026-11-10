@@ -179,6 +179,65 @@ describe("godotwright review", () => {
   });
 });
 
+describe("api/void-return-value", () => {
+  const rule = "api/void-return-value";
+
+  it("reports each value return on its own line in a void function", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func heal() -> void:",
+      "\treturn 5",
+      "",
+      "func log_hit() -> void:",
+      "\treturn true",
+      "",
+      "func score() -> void:",
+      "\treturn health + 1",
+      "",
+      "func parenthesized_score() -> void:",
+      "\treturn (health + 1)",
+      "",
+      "func score_call() -> void:",
+      "\treturn some_call() + 1",
+    ].join("\n");
+    const actual = findings({ "main.gd": code }).filter((line) => line.includes(`[${rule}]`));
+    expect(actual).toEqual([
+      'res://main.gd:4: error [api/void-return-value] heal() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:7: error [api/void-return-value] log_hit() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:10: error [api/void-return-value] score() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:13: error [api/void-return-value] parenthesized_score() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:16: error [api/void-return-value] score_call() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+    ]);
+  });
+
+  it("stays quiet for bare returns, comments, other return types, calls, and inline lambdas", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func bare() -> void:",
+      "\treturn",
+      "",
+      "func commented() -> void:",
+      "\treturn # no value",
+      "",
+      "func typed() -> int:",
+      "\treturn 5",
+      "",
+      "func untyped():",
+      "\treturn 5",
+      "",
+      "func calls() -> void:",
+      "\treturn some_call()",
+      "",
+      "func lambda() -> void:",
+      "\tvar callback = func(x): return x * 2",
+      "\tprint(\"return 5\")",
+    ].join("\n");
+    expect(findings({ "main.gd": code }).filter((line) => line.includes(`[${rule}]`))).toEqual([]);
+  });
+});
+
 
 describe("moved Godot 3 window properties", () => {
   const cases = [
