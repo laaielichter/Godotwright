@@ -158,12 +158,18 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
   for (const model of pm.modelsOf(path)) {
     for (const fn of model.outline.functions) {
       if (fn.returnType !== "void") continue;
+      const lambdaIndents: number[] = [];
       for (const ll of bodyOf(lines, fn)) {
+        while (lambdaIndents.length > 0 && ll.indent <= lambdaIndents[lambdaIndents.length - 1]!) lambdaIndents.pop();
         const lambda = /\bfunc\b/.exec(ll.code);
+        const opensLambda = lambda !== null && /:\s*$/.test(ll.code);
+        const inLambda = lambdaIndents.length > 0;
+        if (opensLambda) lambdaIndents.push(ll.indent);
+        if (inLambda) continue;
         const prefix = lambda ? ll.code.slice(0, lambda.index) : ll.code;
         const returnsLambda = lambda !== null && /(?:^|[^\w.])return\s*$/.test(prefix);
         const code = returnsLambda ? `${prefix} <lambda>` : prefix;
-        const value = /(?:^|[^\w.])return\s+(.+)$/.exec(code)?.[1]?.trim();
+        const value = /(?:^|[^\w.])return(?![\w.])\s*(.+)$/.exec(code)?.[1]?.replace(/;\s*$/, "").trim();
         if (!value || isDirectCall(value)) continue;
         out.push(
           finding(
@@ -183,17 +189,45 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
 function isDirectCall(value: string): boolean {
   let expression = value.trim();
   while (isWrappedInParentheses(expression)) expression = expression.slice(1, -1).trim();
-  const callee = /^[\p{XID_Start}_][\p{XID_Continue}_]*(?:\s*\.\s*[\p{XID_Start}_][\p{XID_Continue}_]*)*\(/u.exec(expression);
-  if (!callee) return false;
-  let depth = 0;
-  for (let i = callee[0].length - 1; i < expression.length; i++) {
-    if (expression[i] === "(") depth++;
-    else if (expression[i] === ")") {
-      depth--;
-      if (depth === 0) return expression.slice(i + 1).replace(/;\s*$/, "").trim() === "";
+  let index = 0;
+  const readIdentifier = (): boolean => {
+    const identifier = /^[\p{XID_Start}_][\p{XID_Continue}_]*/u.exec(expression.slice(index));
+    if (!identifier) return false;
+    index += identifier[0].length;
+    return true;
+  };
+  const skipWhitespace = (): void => {
+    while (/\s/.test(expression[index] ?? "")) index++;
+  };
+  if (!readIdentifier()) return false;
+
+  let called = false;
+  let endsInCall = false;
+  for (;;) {
+    skipWhitespace();
+    if (expression[index] === ".") {
+      index++;
+      skipWhitespace();
+      if (!readIdentifier()) return false;
+      endsInCall = false;
+      continue;
     }
+    if (expression[index] !== "(") break;
+
+    let depth = 0;
+    for (; index < expression.length; index++) {
+      if (expression[index] === "(") depth++;
+      else if (expression[index] === ")" && --depth === 0) {
+        index++;
+        break;
+      }
+    }
+    if (depth !== 0) return false;
+    called = true;
+    endsInCall = true;
   }
-  return false;
+
+  return called && endsInCall && expression.slice(index).trim() === "";
 }
 
 function isWrappedInParentheses(value: string): boolean {

@@ -238,6 +238,74 @@ describe("api/void-return-value", () => {
   });
 });
 
+describe("api/void-return-value edge cases", () => {
+  const lines = (code: string) =>
+    findings({ "main.gd": code })
+      .filter((finding) => finding.includes("[api/void-return-value]"))
+      .map((finding) => Number(/main\.gd:(\d+):/.exec(finding)?.[1]));
+
+  it("keeps bare and semicolon returns and chained calls quiet", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func bare() -> void:",
+      "\treturn",
+      "\treturn;",
+      "\treturn ;",
+      "",
+      "func calls() -> void:",
+      "\treturn some_call()",
+      "\treturn get_tree().quit()",
+      "\treturn a.b().c()",
+      "\treturn a().b()",
+      "\treturn print(\"x\")",
+      "\treturn queue_free()",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([]);
+  });
+
+  it("ignores typed and untyped multiline lambda bodies", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func typed() -> void:",
+      "\tvar callback: Callable = func(x: int) -> int:",
+      "\t\treturn x * 2",
+      "\tcallback.call(1)",
+      "\treturn 5",
+      "",
+      "func untyped() -> void:",
+      "\tvar callback = func(a, b):",
+      "\t\tif a:",
+      "\t\t\treturn a",
+      "\t\treturn b",
+      "\tcallback.call(1, 2)",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([7]);
+  });
+
+  it("reports return(5) and awaited values", () => {
+    // Godot 4.7.2 accepts print(), queue_free(), and chained quit calls; it rejects
+    // `return await get_tree().process_frame` and `return(5)`.
+    const code = [
+      "extends Node",
+      "",
+      "func invalid() -> void:",
+      "\treturn(5)",
+      "\treturn await get_tree().process_frame",
+      "",
+      "func calls() -> void:",
+      "\treturn print(\"x\")",
+      "\treturn queue_free()",
+      "\treturn get_tree().quit()",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([4, 5]);
+  });
+});
+
 
 describe("moved Godot 3 window properties", () => {
   const cases = [

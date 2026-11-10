@@ -1020,7 +1020,8 @@ projects (helicopters and ships landing on moving decks, open worlds tens of kil
 displays, streaming and levels of detail, VFX and shaders, runtime-loaded models, audio, UI, installers for shipped
 games, headless test rigs and frame-time measurement): no code, no names, no paths, and a test runs every one through
 the same scrubber that local lessons go through. The ones a review can catch are rules, such as `api/infer-variant`
-on loop variables over untyped arrays, `api/override-signature`, `api/freed-check-order`, `api/parse-into-typed`,
+on loop variables over untyped arrays, `api/override-signature`, `api/void-return-value`,
+`api/freed-check-order`, `api/parse-into-typed`,
 `api/duplicate-declaration`, `api/coroutine-without-await`, `api/timer-start-outside-tree`,
 `api/multimesh-format-after-count`, `performance/runtime-gltf-mipmaps`, `performance/subviewport-always`,
 `quality/shader-reads-own-depth`, `quality/time-modulo-window`, `quality/worker-task-not-waited` and
