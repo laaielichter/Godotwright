@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Review: `api/connect-called-handler`** (error): catches a call to a local no-value handler passed to `Signal.connect()`; pass the function itself so the signal can call it later.
+
 ## 0.7.0 (an asset library of a thousand models, dreaming, and seven specialist agents)
 
 - **Asset library tested in Godot, and made to look real.** All 1000 assets import, load and instantiate in Godot 4.7
