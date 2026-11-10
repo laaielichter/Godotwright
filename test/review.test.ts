@@ -342,6 +342,34 @@ describe("api/void-return-value edge cases", () => {
 
     expect(lines(code)).toEqual([14]);
   });
+
+  it("checks an enclosing return after a same-line inline lambda", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func invalid(items: Array[int]) -> void:",
+      "\tif items.any(func(x): return x > 0): return 5",
+      "",
+      "func valid(items: Array[int]) -> void:",
+      "\tif items.any(func(x): return x > 0): print(\"matched\")",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([4]);
+  });
+
+  it("does not treat Unicode identifiers containing return as return statements", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func names() -> void:",
+      "\tvar return値: int = 1",
+      "\tprint(return値)",
+      "\tvar 値return: int = 2",
+      "\tprint(値return)",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([]);
+  });
 });
 
 

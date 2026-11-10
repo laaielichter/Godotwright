@@ -161,17 +161,14 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
       const lambdaIndents: number[] = [];
       for (const ll of bodyOf(lines, fn)) {
         while (lambdaIndents.length > 0 && ll.indent <= lambdaIndents[lambdaIndents.length - 1]!) lambdaIndents.pop();
-        const lambda = /\bfunc\b/.exec(ll.code);
+        const lambda = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])/u.exec(ll.code);
         const opensLambda = lambda !== null && opensMultilineLambda(ll.code);
         const inLambda = lambdaIndents.length > 0;
         if (opensLambda) lambdaIndents.push(ll.indent);
         if (inLambda) continue;
-        const prefix = lambda ? ll.code.slice(0, lambda.index) : ll.code;
-        const returnsLambda = lambda !== null && /(?:^|[^\w.])return\s*$/.test(prefix);
-        const hasReturnBeforeLambda = lambda !== null && /(?:^|[^\w.])return(?![\w.])/.test(prefix);
-        if (lambda !== null && !hasReturnBeforeLambda) continue;
-        const code = returnsLambda ? `${prefix} <lambda>` : ll.code;
-        const value = /(?:^|[^\w.])return(?![\w.])\s*(.+)$/.exec(code)?.[1]?.replace(/;\s*$/, "").trim();
+        const code = withoutInlineLambdaBodies(ll.code);
+        const value = /(?<![\p{XID_Continue}.])return(?![\p{XID_Continue}])\s*(.+)$/u
+          .exec(code)?.[1]?.replace(/;\s*$/, "").trim();
         if (!value || isDirectCall(value)) continue;
         out.push(
           finding(
@@ -188,7 +185,7 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
 }
 
 function opensMultilineLambda(code: string): boolean {
-  const declaration = /\bfunc\s*\(/g;
+  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*\(/gu;
   for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
     let depth = 0;
     let close = -1;
@@ -204,6 +201,54 @@ function opensMultilineLambda(code: string): boolean {
     if (bodyColon >= 0 && code.slice(bodyColon + 1).trim() === "") return true;
   }
   return false;
+}
+
+/** Masks inline lambda bodies so their returns do not hide or impersonate enclosing-function returns. */
+function withoutInlineLambdaBodies(code: string): string {
+  const masked = code.split("");
+  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*\(/gu;
+  for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
+    let depth = 0;
+    let close = -1;
+    for (let index = declaration.lastIndex - 1; index < code.length; index++) {
+      if (code[index] === "(") depth++;
+      else if (code[index] === ")" && --depth === 0) {
+        close = index;
+        break;
+      }
+    }
+    if (close < 0) continue;
+    const bodyColon = code.indexOf(":", close + 1);
+    if (bodyColon < 0 || code.slice(bodyColon + 1).trim() === "") continue;
+    const bodyStart = bodyColon + 1;
+    const bodyEnd = inlineLambdaBodyEnd(code, bodyStart);
+    for (let index = bodyStart; index < bodyEnd; index++) masked[index] = " ";
+  }
+  return masked.join("");
+}
+
+/** Ends an inline lambda before its containing delimiter, sibling argument, or statement. */
+function inlineLambdaBodyEnd(code: string, bodyStart: number): number {
+  const openers: string[] = [];
+  const closes = new Map([
+    [")", "("],
+    ["]", "["],
+    ["}", "{"],
+  ]);
+  const updateStack = (index: number): void => {
+    const char = code[index]!;
+    if (char === "(" || char === "[" || char === "{") openers.push(char);
+    else if (closes.get(char) === openers.at(-1)) openers.pop();
+  };
+  for (let index = 0; index < bodyStart; index++) updateStack(index);
+  const enclosingDepth = openers.length;
+  for (let index = bodyStart; index < code.length; index++) {
+    const char = code[index]!;
+    if ((char === "," || char === ";") && openers.length === enclosingDepth) return index;
+    if (closes.has(char) && openers.length === enclosingDepth) return index;
+    updateStack(index);
+  }
+  return code.length;
 }
 
 /** Calls can themselves be void, so leave direct call returns for a separate check. */
