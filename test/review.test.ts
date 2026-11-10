@@ -849,6 +849,37 @@ describe("api/connect-called-handler", () => {
     expect(run(code).map((finding) => finding.line)).toEqual([4]);
   });
 
+  it("keeps abstract Callable factories out of body-based no-value inference", () => {
+    const code = [
+      "@abstract class_name Base extends Node",
+      "",
+      "func _ready() -> void:",
+      "\t$Button.pressed.connect(make_handler())",
+      "",
+      "@abstract func make_handler() -> Callable",
+    ].join("\n");
+
+    expect(run(code)).toEqual([]);
+  });
+
+  it("preserves explicitly passed handler arguments in the Callable recommendation", () => {
+    const code = [
+      "extends Control",
+      "",
+      "func _ready() -> void:",
+      "\t$Button.pressed.connect(_on_pressed(1, Vector2(2, 3)))",
+      "",
+      "func _on_pressed(id: int, position: Vector2) -> void:",
+      "\tprint(id, position)",
+    ].join("\n");
+
+    const findings = run(code);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain(
+      "Preserve the arguments in a Callable binding: connect(_on_pressed.bind(1, Vector2(2, 3))).",
+    );
+  });
+
   it("stays quiet for Callables, values, foreign methods, bindings, lambdas, strings, and comments", () => {
     const code = [
       "extends Control",

@@ -126,6 +126,17 @@ describe("outlineScript", () => {
     ]);
   });
 
+  it("keeps declared return types on abstract functions without bodies", () => {
+    const script = outlineScript(
+      "@abstract class_name Base extends Node\n@abstract func make_handler() -> Callable\n",
+    );
+
+    expect(script.abstract).toBe(true);
+    expect(script.functions.map((fn) => [fn.name, fn.returnType, fn.annotations])).toEqual([
+      ["make_handler", "Callable", ["@abstract"]],
+    ]);
+  });
+
   it("reads inner classes", () => {
     expect(outline.innerClasses).toHaveLength(1);
     const inner = outline.innerClasses[0]!;

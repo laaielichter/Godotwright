@@ -157,12 +157,16 @@ function connectCalledHandlers(pm: ProjectModel, path: string, lines: LogicalLin
           const called = argument === undefined ? undefined : exactHandlerCall(argument);
           if (!called || !handlers.has(called.name)) continue;
           const handler = `${called.onSelf ? "self." : ""}${called.name}`;
+          const recommendation =
+            called.args === undefined
+              ? `Pass the function itself: connect(${handler}).`
+              : `Preserve the arguments in a Callable binding: connect(${handler}.bind(${called.args})).`;
           out.push(
             finding(
               "api/connect-called-handler",
               path,
               ll.line,
-              `connect() gets the result of ${handler}(), not the function: the handler runs now, and the signal has nothing to call. Pass the function itself: connect(${handler}).`,
+              `connect() gets the result of ${handler}(), not the function: the handler runs now, and the signal has nothing to call. ${recommendation}`,
             ),
           );
         }
@@ -337,13 +341,14 @@ function firstCallArgument(code: string, open: number): string | undefined {
   return undefined;
 }
 
-function exactHandlerCall(argument: string): { name: string; onSelf: boolean } | undefined {
+function exactHandlerCall(argument: string): { name: string; onSelf: boolean; args?: string } | undefined {
   const match = /^(?:(self)\s*\.\s*)?([\p{XID_Start}_][\p{XID_Continue}_]*)\s*\(/u.exec(argument);
   if (!match) return undefined;
   const open = match[0].lastIndexOf("(");
   const close = matchingCallParen(argument, open);
   if (close < 0 || argument.slice(close + 1).trim() !== "") return undefined;
-  return { name: match[2]!, onSelf: match[1] !== undefined };
+  const args = argument.slice(open + 1, close).trim();
+  return { name: match[2]!, onSelf: match[1] !== undefined, args: args || undefined };
 }
 
 function matchingCallParen(code: string, open: number): number {
