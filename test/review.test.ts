@@ -286,6 +286,27 @@ describe("api/void-return-value edge cases", () => {
     expect(lines(code)).toEqual([7]);
   });
 
+  it("keeps match-pattern commas inside multiline lambda bodies", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func consume(_callback: Callable) -> void:",
+      "\tpass",
+      "",
+      "func match_argument() -> void:",
+      "\tconsume(func(x: int) -> bool:",
+      "\t\tmatch x:",
+      "\t\t\t1, 2:",
+      "\t\t\t\treturn true",
+      "\t\t\t_:",
+      "\t\t\t\treturn false",
+      "\t)",
+      "\treturn 5",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([14]);
+  });
+
   it("ignores named lambda returns and keeps following enclosing returns", () => {
     const code = [
       "extends Node",

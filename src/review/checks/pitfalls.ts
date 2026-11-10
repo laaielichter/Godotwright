@@ -241,13 +241,64 @@ function inlineLambdaBodyEnd(code: string, bodyStart: number): number {
   };
   for (let index = 0; index < bodyStart; index++) updateStack(index);
   const enclosingDepth = openers.length;
+  let matchHeader = false;
+  let matchBody = false;
   for (let index = bodyStart; index < code.length; index++) {
     const char = code[index]!;
-    if (char === "," && openers.length === enclosingDepth) return index;
+    if (char === "\"" || char === "'") {
+      index = afterQuotedString(code, index) - 1;
+      continue;
+    }
+    if (
+      openers.length === enclosingDepth &&
+      code.startsWith("match", index) &&
+      !/[\p{XID_Continue}_]/u.test(code[index - 1] ?? "") &&
+      !/[\p{XID_Continue}_]/u.test(code[index + 5] ?? "")
+    ) {
+      matchHeader = true;
+      index += "match".length - 1;
+      continue;
+    }
+    if (
+      char === "," &&
+      openers.length === enclosingDepth &&
+      (!matchBody || !isMatchPatternComma(code, index))
+    ) {
+      return index;
+    }
     if (closes.has(char) && openers.length === enclosingDepth) return index;
+    if (char === ":" && openers.length === enclosingDepth && matchHeader) {
+      matchHeader = false;
+      matchBody = true;
+    } else if (char === ";" && openers.length === enclosingDepth) {
+      matchHeader = false;
+      matchBody = false;
+    }
     updateStack(index);
   }
   return code.length;
+}
+
+/** A comma in a match arm's pattern list is not an argument separator. */
+function isMatchPatternComma(code: string, comma: number): boolean {
+  const openers: string[] = [];
+  const closes = new Map([
+    [")", "("],
+    ["]", "["],
+    ["}", "{"],
+  ]);
+  for (let index = comma + 1; index < code.length; index++) {
+    const char = code[index]!;
+    if (char === "\"" || char === "'") {
+      index = afterQuotedString(code, index) - 1;
+      continue;
+    }
+    if (char === ":" && openers.length === 0) return code.slice(comma + 1, index).trim().length > 0;
+    if ((char === ";" || closes.has(char)) && openers.length === 0) return false;
+    if (char === "(" || char === "[" || char === "{") openers.push(char);
+    else if (closes.get(char) === openers.at(-1)) openers.pop();
+  }
+  return false;
 }
 
 /** Reads only the current return statement, stopping at a top-level semicolon. */
