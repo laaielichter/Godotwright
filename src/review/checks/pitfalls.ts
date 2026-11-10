@@ -162,13 +162,15 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
       for (const ll of bodyOf(lines, fn)) {
         while (lambdaIndents.length > 0 && ll.indent <= lambdaIndents[lambdaIndents.length - 1]!) lambdaIndents.pop();
         const lambda = /\bfunc\b/.exec(ll.code);
-        const opensLambda = lambda !== null && /:\s*$/.test(ll.code);
+        const opensLambda = lambda !== null && opensMultilineLambda(ll.code);
         const inLambda = lambdaIndents.length > 0;
         if (opensLambda) lambdaIndents.push(ll.indent);
         if (inLambda) continue;
         const prefix = lambda ? ll.code.slice(0, lambda.index) : ll.code;
         const returnsLambda = lambda !== null && /(?:^|[^\w.])return\s*$/.test(prefix);
-        const code = returnsLambda ? `${prefix} <lambda>` : prefix;
+        const hasReturnBeforeLambda = lambda !== null && /(?:^|[^\w.])return(?![\w.])/.test(prefix);
+        if (lambda !== null && !hasReturnBeforeLambda) continue;
+        const code = returnsLambda ? `${prefix} <lambda>` : ll.code;
         const value = /(?:^|[^\w.])return(?![\w.])\s*(.+)$/.exec(code)?.[1]?.replace(/;\s*$/, "").trim();
         if (!value || isDirectCall(value)) continue;
         out.push(
@@ -185,6 +187,25 @@ function voidReturnValues(pm: ProjectModel, path: string, lines: LogicalLine[]):
   return out;
 }
 
+function opensMultilineLambda(code: string): boolean {
+  const declaration = /\bfunc\s*\(/g;
+  for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
+    let depth = 0;
+    let close = -1;
+    for (let index = declaration.lastIndex - 1; index < code.length; index++) {
+      if (code[index] === "(") depth++;
+      else if (code[index] === ")" && --depth === 0) {
+        close = index;
+        break;
+      }
+    }
+    if (close < 0) continue;
+    const bodyColon = code.indexOf(":", close + 1);
+    if (bodyColon >= 0 && code.slice(bodyColon + 1).trim() === "") return true;
+  }
+  return false;
+}
+
 /** Calls can themselves be void, so leave direct call returns for a separate check. */
 function isDirectCall(value: string): boolean {
   let expression = value.trim();
@@ -199,7 +220,45 @@ function isDirectCall(value: string): boolean {
   const skipWhitespace = (): void => {
     while (/\s/.test(expression[index] ?? "")) index++;
   };
-  if (!readIdentifier()) return false;
+  const readBalanced = (open: string, close: string): boolean => {
+    if (expression[index] !== open) return false;
+    let depth = 0;
+    for (; index < expression.length; index++) {
+      if (expression[index] === open) depth++;
+      else if (expression[index] === close && --depth === 0) {
+        index++;
+        return true;
+      }
+    }
+    return false;
+  };
+  const readQuotedString = (): boolean => {
+    const quote = expression[index];
+    if (quote !== "\"" && quote !== "'") return false;
+    index++;
+    while (index < expression.length) {
+      if (expression[index] === "\\") index += 2;
+      else if (expression[index++] === quote) return true;
+    }
+    return false;
+  };
+  const readPrimary = (): boolean => {
+    skipWhitespace();
+    if (expression[index] === "(") return readBalanced("(", ")");
+    if (expression[index] === "\"" || expression[index] === "'") return readQuotedString();
+    if (expression[index] === "$" || expression[index] === "%") {
+      index++;
+      if (expression[index] === "\"" || expression[index] === "'") return readQuotedString();
+      if (!readIdentifier()) return false;
+      while (expression[index] === "/") {
+        index++;
+        if (!readIdentifier()) return false;
+      }
+      return true;
+    }
+    return readIdentifier();
+  };
+  if (!readPrimary()) return false;
 
   let called = false;
   let endsInCall = false;
@@ -212,17 +271,13 @@ function isDirectCall(value: string): boolean {
       endsInCall = false;
       continue;
     }
-    if (expression[index] !== "(") break;
-
-    let depth = 0;
-    for (; index < expression.length; index++) {
-      if (expression[index] === "(") depth++;
-      else if (expression[index] === ")" && --depth === 0) {
-        index++;
-        break;
-      }
+    if (expression[index] === "[") {
+      if (!readBalanced("[", "]")) return false;
+      endsInCall = false;
+      continue;
     }
-    if (depth !== 0) return false;
+    if (expression[index] !== "(") break;
+    if (!readBalanced("(", ")")) return false;
     called = true;
     endsInCall = true;
   }

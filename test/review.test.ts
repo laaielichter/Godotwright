@@ -304,6 +304,44 @@ describe("api/void-return-value edge cases", () => {
 
     expect(lines(code)).toEqual([4, 5]);
   });
+
+  it("accepts node-path and indexed calls without exempting combined values", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func node_path_call() -> void:",
+      "\treturn $Child.queue_free()",
+      "",
+      "func indexed_call(children: Array[Node]) -> void:",
+      "\treturn children[0].queue_free()",
+      "",
+      "func combined_value(children: Array[Node]) -> void:",
+      "\treturn $Child.get_instance_id() + children[0].get_instance_id()",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([10]);
+  });
+
+  it("preserves enclosing calls around inline lambdas and checks following branch returns", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func consume(_callback: Callable) -> void:",
+      "\tpass",
+      "",
+      "func lambda_argument() -> void:",
+      "\treturn consume(func(x): return x * 2)",
+      "",
+      "func lambda_assignment() -> void:",
+      "\tvar callback = func(x): return x * 2",
+      "",
+      "func branch_return(items: Array[int]) -> void:",
+      "\tif items.any(func(x): return x > 0):",
+      "\t\treturn 5",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([14]);
+  });
 });
 
 
