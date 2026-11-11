@@ -21,7 +21,10 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
    error before saving it.
 4. **Review after every edit.** Call `godot_review` with the changed `files`; in a fix loop pass
    `only_new: true` to see only what changed.
-5. **Check with Godot before you finish**, when it is installed: `godot_check`, and `godot_test` when the
+5. **Look at the whole change before you finish.** `godot_impact` lists the scenes, tests and saved scenarios your
+   edits reach and the checks to run for them; `godot_diff` shows what changed by meaning, and every line marked `!`
+   is something the change broke elsewhere (a scene connection to a removed function, a saved `@export` value).
+6. **Check with Godot before you finish**, when it is installed: `godot_check`, and `godot_test` when the
    project has GUT or GdUnit4 tests.
 
 ## Change the project with the tools, not by hand
@@ -35,6 +38,8 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
   lists the built-ins of a shader type and function.
 - Mechanical findings (a freed check in the wrong order, `get_meta()` with a null default, a lone ternary, garbled
   text, `emit_signal()`, MultiMesh or Timer order): `godot_fix` (report, then `write: true`), not by hand.
+- Collision layers and masks: `godot_collisions` before you set one, and when something falls through or is not
+  detected; `between: ["Player", "Enemy"]` says who detects whom and the mask value to set (layer 3 is the value 4).
 - Before deleting or moving a file: `godot_deps` op `why` (also paths the code builds); `op unused` lists what can go.
 - A Godotwright write that made things worse: `godot_undo` puts the files back (newest write first).
 

@@ -38,7 +38,7 @@
     "tools": {
       "type": "string",
       "title": "Tool sets (optional)",
-      "description": "Which Godotwright tools Claude sees, comma separated: core, edit, run, game, export, model, or tool names. Empty means all.",
+      "description": "Which Godotwright tools Claude sees, comma separated: core, edit, verify, run, game, export, model, or tool names. Empty means all.",
       "required": false
     },
     "read_only": {
