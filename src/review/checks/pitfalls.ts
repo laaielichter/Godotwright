@@ -340,6 +340,7 @@ function afterQuotedString(code: string, start: number): number {
 /** Calls can themselves be void, so leave direct call returns for a separate check. */
 function isDirectCall(value: string): boolean {
   let expression = value.trim();
+  expression = expression.replace(/^await(?![\p{XID_Continue}_])\s+/u, "");
   while (isWrappedInParentheses(expression)) expression = expression.slice(1, -1).trim();
   let index = 0;
   const readIdentifier = (): boolean => {

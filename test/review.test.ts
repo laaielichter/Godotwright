@@ -359,6 +359,23 @@ describe("api/void-return-value edge cases", () => {
     expect(lines(code)).toEqual([4, 5]);
   });
 
+  it("keeps awaited void helpers quiet but reports awaited signal values", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func helper() -> void:",
+      "\tawait get_tree().process_frame",
+      "",
+      "func valid() -> void:",
+      "\treturn await helper()",
+      "",
+      "func invalid() -> void:",
+      "\treturn await get_tree().process_frame",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([10]);
+  });
+
   it("accepts node-path and indexed calls without exempting combined values", () => {
     const code = [
       "extends Node",
