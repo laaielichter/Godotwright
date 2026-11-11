@@ -784,6 +784,148 @@ describe("api/open-compressed-gzip and quality/visibility-margin-hysteresis", ()
   });
 });
 
+describe("api/connect-called-handler", () => {
+  const rule = "api/connect-called-handler";
+  const run = (code: string) => {
+    const root = makeProject({ "project.godot": PROJECT, "a.gd": code });
+    return reviewProject(root).findings.filter((finding) => finding.rule === rule && finding.file === "res://a.gd");
+  };
+
+  it("flags called local void and untyped handlers with no value return", () => {
+    const code = [
+      "extends Control",
+      "",
+      "func _ready() -> void:",
+      "\t$Button.pressed.connect(_on_pressed())",
+      "\t$Timer.timeout.connect(self._on_timeout())",
+      "\t$Button.pressed.connect(_lambda_only())",
+      "\t$Button.pressed.connect(_semicolon_lambda())",
+      "\t$Button.pressed.connect(_named_inline_lambda())",
+      "\t$Button.pressed.connect(_named_multiline_lambda())",
+      "\t$Button.pressed.connect(_on_pressed)",
+      "",
+      "func _on_pressed() -> void:",
+      "\tpass",
+      "",
+      "func _on_timeout():",
+      "\tif true: return; print(\"after bare return\")",
+      "",
+      "func _lambda_only():",
+      "\tvar callback = func():",
+      "\t\treturn 1",
+      "",
+      "func _semicolon_lambda():",
+      "\tvar callback = func(x): print(x); return x",
+      "",
+      "func _named_inline_lambda():",
+      "\tvar callback = func identity(x): return x",
+      "",
+      "func _named_multiline_lambda():",
+      "\tvar callback = func identity(x):",
+      "\t\treturn x",
+    ].join("\n");
+    const actual = run(code);
+
+    expect(actual.map((finding) => finding.line)).toEqual([4, 5, 6, 7, 8, 9]);
+    expect(actual.every((finding) => finding.severity === "error")).toBe(true);
+    expect(actual[0]?.message).toContain("Pass the function itself: connect(_on_pressed).");
+    expect(actual[1]?.message).toContain("Pass the function itself: connect(self._on_timeout).");
+  });
+
+  it("keeps Unicode identifiers containing return from hiding an untyped no-value handler", () => {
+    const code = [
+      "extends Control",
+      "",
+      "func _ready() -> void:",
+      "\t$Button.pressed.connect(_on_pressed())",
+      "",
+      "func _on_pressed():",
+      "\tvar return値: int = 1",
+      "\tprint(return値)",
+      "\tvar 値return: int = 2",
+      "\tprint(値return)",
+    ].join("\n");
+
+    expect(run(code).map((finding) => finding.line)).toEqual([4]);
+  });
+
+  it("keeps abstract Callable factories out of body-based no-value inference", () => {
+    const code = [
+      "@abstract class_name Base extends Node",
+      "",
+      "func _ready() -> void:",
+      "\t$Button.pressed.connect(make_handler())",
+      "",
+      "@abstract func make_handler() -> Callable",
+    ].join("\n");
+
+    expect(run(code)).toEqual([]);
+  });
+
+  it("uses signal-aware guidance for calls with explicit handler arguments", () => {
+    const code = [
+      "extends Control",
+      "",
+      "func _ready() -> void:",
+      "\t$CheckBox.toggled.connect(_on_toggled(true))",
+      "\t$Button.pressed.connect(_on_text(\"confirm\"))",
+      "",
+      "func _on_toggled(enabled: bool) -> void:",
+      "\tprint(enabled)",
+      "",
+      "func _on_text(message: String) -> void:",
+      "\tprint(message)",
+    ].join("\n");
+
+    const findings = run(code);
+    expect(findings.map((finding) => finding.line)).toEqual([4, 5]);
+    for (const finding of findings) {
+      expect(finding.message).toContain("Pass a Callable, not the function result.");
+      expect(finding.message).toContain("signal's emitted arguments");
+      expect(finding.message).not.toContain(".bind(");
+    }
+    // The diagnostic never builds a binding from the blanked code representation.
+    expect(findings[1]?.message).not.toContain("confirm");
+  });
+
+  it("stays quiet for Callables, values, foreign methods, bindings, lambdas, strings, and comments", () => {
+    const code = [
+      "extends Control",
+      "",
+      "func _ready() -> void:",
+      "\t$Button.pressed.connect(_on_pressed)",
+      "\t$Button.pressed.connect(_on_pressed.bind(1))",
+      "\t$Button.pressed.connect(func(): _on_pressed())",
+      "\t$Button.pressed.connect(make_handler())",
+      "\t$Button.pressed.connect(value_handler())",
+      "\t$Button.pressed.connect(inline_branch_value([1]))",
+      "\t$Button.pressed.connect(semicolon_value())",
+      "\t$Button.pressed.connect(other._on_pressed())",
+      "\t$Button.pressed.connect(_foreign_handler())",
+      "\tprint(\"$Button.pressed.connect(_on_pressed())\")",
+      "\t# $Button.pressed.connect(_on_pressed())",
+      "",
+      "func _on_pressed() -> void:",
+      "\tpass",
+      "",
+      "func make_handler() -> Callable:",
+      "\treturn _on_pressed",
+      "",
+      "func value_handler():",
+      "\treturn 1",
+      "",
+      "func inline_branch_value(items: Array[int]):",
+      "\tif items.any(func(x): return x > 0): return 2",
+      "",
+      "func semicolon_value():",
+      "\tvar callback = func(x): return x",
+      "\treturn 2",
+    ].join("\n");
+
+    expect(run(code)).toEqual([]);
+  });
+});
+
 describe("runtime pitfalls from real projects", () => {
   const run = (code: string, rule: string) => {
     const root = makeProject({ "project.godot": PROJECT, "a.gd": code });

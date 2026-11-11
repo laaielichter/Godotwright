@@ -1,5 +1,5 @@
 import type { ApiMethod } from "../../api/types.js";
-import type { LogicalLine } from "../../godot/gdscript.js";
+import type { FunctionInfo, LogicalLine } from "../../godot/gdscript.js";
 import { finding, type Finding } from "../rules.js";
 import type { ClassModel, ProjectModel } from "../model.js";
 import { bodyOf } from "./performance.js";
@@ -137,7 +137,250 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
   out.push(...treeTestReadsTooEarly(pm, path, lines));
   out.push(...overrideSignatures(pm, path));
   out.push(...duplicateDeclarations(pm, path));
+  out.push(...connectCalledHandlers(pm, path, lines));
   return out;
+}
+
+/** A signal needs a Callable, not the result of immediately calling a local no-value handler. */
+function connectCalledHandlers(pm: ProjectModel, path: string, lines: LogicalLine[]): Finding[] {
+  const out: Finding[] = [];
+  for (const model of pm.modelsOf(path)) {
+    const handlers = new Set(model.outline.functions.filter((fn) => returnsNoValue(lines, fn)).map((fn) => fn.name));
+    if (handlers.size === 0) continue;
+
+    for (const fn of model.outline.functions) {
+      for (const ll of bodyOf(lines, fn)) {
+        const connect = /\.\s*connect\s*\(/g;
+        for (let match = connect.exec(ll.code); match !== null; match = connect.exec(ll.code)) {
+          const open = match.index + match[0].lastIndexOf("(");
+          const argument = firstCallArgument(ll.code, open);
+          const called = argument === undefined ? undefined : exactHandlerCall(argument);
+          // `code` keeps quote positions but blanks their contents. Match the call
+          // there, then inspect the original text to tell whether it had explicit
+          // arguments without ever copying masked spaces into a recommendation.
+          const sourceArgument = firstCallArgument(ll.text, open);
+          const sourceCall = sourceArgument === undefined ? undefined : exactHandlerCall(sourceArgument);
+          if (!called || !sourceCall || !handlers.has(called.name)) continue;
+          const handler = `${called.onSelf ? "self." : ""}${called.name}`;
+          const recommendation =
+            sourceCall.args === undefined
+              ? `Pass the function itself: connect(${handler}).`
+              : "Pass a Callable, not the function result. Match its parameters to the signal's emitted arguments; bind only fixed values the signal does not provide.";
+          out.push(
+            finding(
+              "api/connect-called-handler",
+              path,
+              ll.line,
+              `connect() gets the result of ${handler}(), not the function: the handler runs now, and the signal has nothing to call. ${recommendation}`,
+            ),
+          );
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function returnsNoValue(lines: LogicalLine[], fn: FunctionInfo): boolean {
+  if (fn.returnType !== undefined) return fn.returnType.trim() === "void";
+  return !hasValueReturn(lines, fn);
+}
+
+function hasValueReturn(lines: LogicalLine[], fn: FunctionInfo): boolean {
+  const lambdaIndents: number[] = [];
+  for (const ll of bodyOf(lines, fn)) {
+    while (lambdaIndents.length > 0 && ll.indent <= lambdaIndents[lambdaIndents.length - 1]!) lambdaIndents.pop();
+    const lambda = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])/u.exec(ll.code);
+    const opensLambda = lambda !== null && opensMultilineLambda(ll.code);
+    const inLambda = lambdaIndents.length > 0;
+    if (opensLambda) lambdaIndents.push(ll.indent);
+    if (inLambda) continue;
+
+    const code = withoutInlineLambdaBodies(ll.code);
+    if (hasValueReturnOnLine(code)) return true;
+  }
+  return false;
+}
+
+function hasValueReturnOnLine(code: string): boolean {
+  const returned = /(?<![\p{XID_Continue}.])return(?![\p{XID_Continue}])/gu;
+  for (let match = returned.exec(code); match !== null; match = returned.exec(code)) {
+    let index = match.index + match[0].length;
+    const openers: string[] = [];
+    const closers: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+    for (; index < code.length; index++) {
+      const char = code[index]!;
+      if (char === "\"" || char === "'") {
+        index = afterString(code, index) - 1;
+        continue;
+      }
+      if (char === ";" && openers.length === 0) break;
+      const close = closers[char];
+      if (close) openers.push(close);
+      else if (char === ")" || char === "]" || char === "}") {
+        if (openers.at(-1) === char) openers.pop();
+      }
+    }
+    if (code.slice(match.index + match[0].length, index).trim()) return true;
+    returned.lastIndex = index < code.length ? index + 1 : code.length;
+  }
+  return false;
+}
+
+function withoutInlineLambdaBodies(code: string): string {
+  const masked = code.split("");
+  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*(?:[\p{XID_Start}_][\p{XID_Continue}_]*\s*)?\(/gu;
+  for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
+    const start = match.index;
+    const end = inlineLambdaBodyEnd(code, start);
+    if (end < 0) continue;
+    const returnsLambda = /(?<![\p{XID_Continue}.])return\s*$/u.test(code.slice(0, start));
+    for (let index = start; index < end; index++) masked[index] = " ";
+    if (returnsLambda) {
+      for (let offset = 0; offset < "lambda".length && start + offset < end; offset++) masked[start + offset] = "lambda"[offset]!;
+    }
+    declaration.lastIndex = Math.max(declaration.lastIndex, end);
+  }
+  return masked.join("");
+}
+
+function inlineLambdaBodyEnd(code: string, start: number): number {
+  const open = code.indexOf("(", start);
+  if (open < 0) return -1;
+  const paramsEnd = matchingCallParen(code, open);
+  if (paramsEnd < 0) return -1;
+  const colon = code.indexOf(":", paramsEnd + 1);
+  if (colon < 0) return -1;
+  if (code.slice(colon + 1).trim() === "") return code.length;
+
+  const closers: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+  const stack = delimiterStackAt(code, start);
+  const baseDepth = stack.length;
+  for (let index = colon + 1; index < code.length; ) {
+    const char = code[index]!;
+    if (char === "\"" || char === "'") {
+      index = afterString(code, index);
+      continue;
+    }
+    const close = closers[char];
+    if (close) {
+      stack.push(close);
+      index++;
+      continue;
+    }
+    if (char === ")" || char === "]" || char === "}") {
+      if (stack.length === baseDepth && stack[stack.length - 1] === char) return index;
+      if (stack.pop() !== char) return code.length;
+      index++;
+      continue;
+    }
+    if (char === "," && stack.length === baseDepth) return index;
+    index++;
+  }
+  return code.length;
+}
+
+function delimiterStackAt(code: string, end: number): string[] {
+  const closers: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+  const stack: string[] = [];
+  for (let index = 0; index < end; ) {
+    const char = code[index]!;
+    if (char === "\"" || char === "'") {
+      index = afterString(code, index);
+      continue;
+    }
+    const close = closers[char];
+    if (close) stack.push(close);
+    else if (char === ")" || char === "]" || char === "}") {
+      if (stack[stack.length - 1] === char) stack.pop();
+    }
+    index++;
+  }
+  return stack;
+}
+
+function opensMultilineLambda(code: string): boolean {
+  const declaration = /(?<![\p{XID_Continue}.])func(?![\p{XID_Continue}])\s*(?:[\p{XID_Start}_][\p{XID_Continue}_]*\s*)?\(/gu;
+  for (let match = declaration.exec(code); match !== null; match = declaration.exec(code)) {
+    let depth = 0;
+    let close = -1;
+    for (let index = declaration.lastIndex - 1; index < code.length; index++) {
+      if (code[index] === "(") depth++;
+      else if (code[index] === ")" && --depth === 0) {
+        close = index;
+        break;
+      }
+    }
+    if (close < 0) continue;
+    const bodyColon = code.indexOf(":", close + 1);
+    if (bodyColon >= 0 && code.slice(bodyColon + 1).trim() === "") return true;
+  }
+  return false;
+}
+
+function firstCallArgument(code: string, open: number): string | undefined {
+  const closers: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+  const stack: string[] = [];
+  const start = open + 1;
+  for (let index = start; index < code.length; ) {
+    const char = code[index]!;
+    if (char === "\"" || char === "'") {
+      index = afterString(code, index);
+      continue;
+    }
+    const close = closers[char];
+    if (close) {
+      stack.push(close);
+      index++;
+      continue;
+    }
+    if (char === ")" || char === "]" || char === "}") {
+      if (stack.length === 0) return char === ")" ? code.slice(start, index).trim() || undefined : undefined;
+      if (stack.pop() !== char) return undefined;
+      index++;
+      continue;
+    }
+    if (char === "," && stack.length === 0) return code.slice(start, index).trim() || undefined;
+    index++;
+  }
+  return undefined;
+}
+
+function exactHandlerCall(argument: string): { name: string; onSelf: boolean; args?: string } | undefined {
+  const match = /^(?:(self)\s*\.\s*)?([\p{XID_Start}_][\p{XID_Continue}_]*)\s*\(/u.exec(argument);
+  if (!match) return undefined;
+  const open = match[0].lastIndexOf("(");
+  const close = matchingCallParen(argument, open);
+  if (close < 0 || argument.slice(close + 1).trim() !== "") return undefined;
+  const args = argument.slice(open + 1, close).trim();
+  return { name: match[2]!, onSelf: match[1] !== undefined, args: args || undefined };
+}
+
+function matchingCallParen(code: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < code.length; ) {
+    const char = code[index]!;
+    if (char === "\"" || char === "'") {
+      index = afterString(code, index);
+      continue;
+    }
+    if (char === "(") depth++;
+    else if (char === ")" && --depth === 0) return index;
+    index++;
+  }
+  return -1;
+}
+
+function afterString(code: string, start: number): number {
+  const quote = code[start]!;
+  const triple = code.startsWith(quote.repeat(3), start);
+  const delimiter = triple ? quote.repeat(3) : quote;
+  for (let index = start + delimiter.length; index < code.length; ) {
+    if (code[index] === "\\") index += 2;
+    else if (code.startsWith(delimiter, index)) return index + delimiter.length;
+    else index++;
+  }
+  return code.length;
 }
 
 /** True when a line runs inside a for or while loop of its function. */
