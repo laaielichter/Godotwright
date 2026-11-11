@@ -111,6 +111,7 @@ import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycle
 import { diffProject, formatDiff } from "../diff/diff.js";
 import { formatImpact, impactOf } from "../impact/impact.js";
 import { collisionMap, formatBetween, formatBits, formatCollisions } from "../collisions/collisions.js";
+import { LEAN_NOTE, catalogue, checkArgs, findTool, help, unknownTool, type LeanTool } from "./lean.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import {
   ScenarioError,
@@ -173,6 +174,11 @@ export interface ServerOptions {
   tools?: string | readonly string[];
   /** Leave out the tools that always write, and refuse the write options of the others. */
   readOnly?: boolean;
+  /**
+   * Offer two tools instead of all of them: `godot` runs any tool by name and `godot_help` gives a tool's
+   * parameters. The tool list the model pays for on every turn shrinks by about 95%.
+   */
+  lean?: boolean;
 }
 
 interface Profile {
@@ -243,12 +249,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
   if (options.readOnly) for (const name of WRITE_ONLY_TOOLS) enabled.delete(name);
   const server = new McpServer(
     { name: "godotwright", title: "Godotwright", version: VERSION },
-    { instructions: renderInstructions(tier, enabled, options.readOnly === true) },
+    { instructions: `${options.lean ? `${LEAN_NOTE}\n` : ""}${renderInstructions(tier, enabled, options.readOnly === true)}` },
   );
   // Registers a tool only when its set is enabled; a read-only server refuses the options that write. Every call
   // runs in a run context: Godot runs it starts report progress (when the client sent a progressToken) and are
   // stopped, with what they started, when the client cancels the call.
   const registerTool = server.registerTool.bind(server);
+  // Lean mode keeps the tools here instead of in the tool list; `godot` runs them.
+  const leanTools = new Map<string, LeanTool>();
   const tool = ((name: string, config: never, cb: (args: Record<string, unknown>, extra: Extra) => unknown) => {
     if (!ALL_TOOLS.includes(name)) throw new Error(`${name} is in no tool set (src/mcp/toolsets.ts)`);
     if (!enabled.has(name)) return undefined;
@@ -257,6 +265,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
       if (why) return failure(why);
       return withRun(runContext(extra), async () => cb(args, extra));
     };
+    if (options.lean) {
+      const c = config as { title?: string; description?: string; inputSchema?: Record<string, z.ZodType> };
+      leanTools.set(name, { name, title: c.title ?? name, description: c.description ?? "", shape: c.inputSchema ?? {}, run: run as never });
+      return undefined;
+    }
     return registerTool(name, config, run as never);
   }) as typeof server.registerTool;
 
@@ -2390,6 +2403,44 @@ export function createServer(options: ServerOptions = {}): McpServer {
       ),
   );
 
+  if (options.lean) {
+    registerTool(
+      "godot",
+      {
+        title: "Run a Godotwright tool",
+        description: `Run one of Godotwright's Godot 4.7 tools by name: {"tool": "review", "args": {"files": ["res://player.gd"]}}. The tools, by set, as name (what it is for):\n${catalogue(leanTools)}\nRead a tool's parameters first with godot_help {"tool": name}; a call with a wrong or missing argument answers with the parameters. Results are the tool's own.`,
+        inputSchema: {
+          tool: z.string().describe("the tool to run, e.g. review, check, api, scan, diff (with or without godot_)"),
+          args: z.record(z.string(), z.unknown()).optional().describe("the tool's arguments, as godot_help lists them"),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: options.readOnly !== true, idempotentHint: false, openWorldHint: false },
+      },
+      (async ({ tool: name, args }: { tool: string; args?: Record<string, unknown> }, extra: Extra) => {
+        const found = findTool(leanTools, name);
+        if (!found) return failure(unknownTool(leanTools, name));
+        const checked = checkArgs(found, args);
+        if (!checked.ok) return failure(checked.message);
+        return found.run(checked.args, extra as never);
+      }) as never,
+    );
+    registerTool(
+      "godot_help",
+      {
+        title: "Godotwright tools and their parameters",
+        description:
+          'What a Godotwright tool does and takes. {"tool": "review"}: its description and parameters, to read before the first call. {"query": "collision layers"}: the tools that match the words, the best one in full. No arguments: every tool, by set. Read-only.',
+        inputSchema: {
+          tool: z.string().optional().describe("a tool name, e.g. review or godot_review"),
+          query: z.string().optional().describe("words for what you want to do"),
+        },
+        annotations: readOnly,
+      },
+      (async (input: { tool?: string; query?: string }) => {
+        const answer = help(leanTools, input);
+        return answer.ok ? text(answer.text) : failure(answer.text);
+      }) as never,
+    );
+  }
   return server;
 }
 
