@@ -32,7 +32,9 @@ describe("MCP server (cheap profile)", () => {
       "godot_check",
       "godot_checklist",
       "godot_code",
+      "godot_collisions",
       "godot_deps",
+      "godot_diff",
       "godot_doctor",
       "godot_dream",
       "godot_export",
@@ -40,6 +42,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_feedback",
       "godot_fix",
       "godot_game",
+      "godot_impact",
       "godot_leaks",
       "godot_lesson_add",
       "godot_lessons",
@@ -101,6 +104,43 @@ describe("MCP server (cheap profile)", () => {
     const bad = (await call({ ops: [{ op: "set", key: "edit/loop", value: "1" }] })) as Result;
     expect(bad.isError).toBe(true);
     expect(textOf(bad)).toMatch(/no option edit\/loop; did you mean .*edit\/loop_mode/);
+    await Promise.all([local.close(), server.close()]);
+  });
+
+  it("answers godot_collisions, godot_impact and godot_diff from the project's files", async () => {
+    const body = '[node name="Shape" type="CollisionShape2D" parent="."]\nshape = SubResource("c")\n';
+    const head = '[gd_scene load_steps=2 format=3]\n\n[sub_resource type="CircleShape2D" id="c"]\n\n';
+    const root = makeProject({
+      "project.godot": 'config_version=5\n\n[application]\nrun/main_scene="res://coin.tscn"\n',
+      "coin.tscn": `${head}[node name="Coin" type="Area2D"]\ncollision_mask = 2\n\n${body}`,
+      "hero.tscn": `${head}[node name="Hero" type="CharacterBody2D"]\n\n${body}`,
+      "old.tscn": '[gd_scene format=3]\n\n[node name="Coin" type="Area2D"]\n',
+    });
+    const server = createServer({ tier: "cheap", root, godot: "/no/such/godot" });
+    const local = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), local.connect(b)]);
+    const call = async (name: string, args: Record<string, unknown> = {}) => (await local.callTool({ name, arguments: args })) as Result;
+
+    const map = await call("godot_collisions");
+    expect(map.isError).toBe(true);
+    expect(textOf(map)).toContain("res://coin.tscn:5 Coin: its mask scans layer 2, but nothing in the project is on that layer [mask-empty-layer]");
+    const pair = await call("godot_collisions", { between: ["Coin", "Hero"] });
+    expect(pair.isError).toBe(true);
+    expect(textOf(pair)).toContain("Coin detects Hero: no: its mask scans 2 = 2, the other one is on 1 = 1 (fix: collision_mask = 3 on it");
+    expect(textOf(await call("godot_collisions", { layers: [2, 4] }))).toContain("layers 2, 4 = value 10");
+
+    const impact = await call("godot_impact", { files: ["res://coin.tscn"] });
+    expect(impact.isError).toBeFalsy();
+    expect(textOf(impact)).toContain("res://coin.tscn (main scene, changed itself)");
+    expect(textOf(await call("godot_impact"))).toMatch(/not in a git repository: pass files/);
+
+    const diff = await call("godot_diff", { files: ["res://coin.tscn"], against: "res://old.tscn" });
+    expect(diff.isError).toBeFalsy();
+    expect(textOf(diff)).toContain("  ~ node Coin (Area2D): + collision_mask = 2\n  + node Shape (CollisionShape2D)");
+    const noGit = await call("godot_diff");
+    expect(noGit.isError).toBe(true);
+    expect(textOf(noGit)).toMatch(/not in a git repository/);
     await Promise.all([local.close(), server.close()]);
   });
 

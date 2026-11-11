@@ -108,6 +108,9 @@ import { LanguageServerError } from "../lsp/server.js";
 import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
+import { diffProject, formatDiff } from "../diff/diff.js";
+import { formatImpact, impactOf } from "../impact/impact.js";
+import { collisionMap, formatBetween, formatBits, formatCollisions } from "../collisions/collisions.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import {
   ScenarioError,
@@ -1025,6 +1028,90 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (op === "why") return text(formatWhy(whyUsed(dir, file)));
         const d = depsOf(dir, file);
         return d.missing.length ? failure(formatDepsOf(d)) : text(formatDepsOf(d));
+      }),
+  );
+
+  tool(
+    "godot_diff",
+    {
+      title: "What changed, by meaning, and what it breaks",
+      description:
+        "A diff you can read, against git (default: the files on disk against HEAD), offline. A text diff of a .tscn is mostly noise (ids renumbered, sections moved); this compares what the files mean. Scenes and resources: nodes added, removed, moved or renamed, each changed property with resource ids resolved to paths and a changed sub-resource opened up (shape.radius 12 -> 16), groups, children reordered (the 2D draw order), connections, what the file loads; a file whose text changed but not its meaning is one line. Scripts: functions, signals, variables, constants and enums added, removed or changed, and the functions whose code changed. project.godot: settings, input actions and autoloads. Shaders: uniforms and functions. And for everything removed, what still uses it, marked `!`: a scene connection to a function that is gone (an error at load), an @export value still saved in a scene (dropped silently), a material that still sets a removed uniform, an input action or autoload code still asks for, callers of a function whose argument count changed, files that name a deleted file. Run it after a set of edits and before you call the work done, to check you changed only what you meant to; `ref` and `to` compare other commits (a review of a branch), `against` compares one file with another without git. It is an error when something is marked `!`. Read-only.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: everything that changed)"),
+        ref: z.string().optional().describe("the commit to compare with (default HEAD), e.g. HEAD~1 or main"),
+        to: z.string().optional().describe("a second commit: compare two commits instead of a commit with the files on disk"),
+        against: z.string().optional().describe("with exactly one file in files: the earlier version as another file, instead of git"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, files, ref, to, against, detail }) =>
+      guard(() => {
+        const report = diffProject(where(path), {
+          ...(files ? { files } : {}),
+          ...(ref ? { ref } : {}),
+          ...(to ? { to } : {}),
+          ...(against ? { against } : {}),
+          base: options.base,
+          baseFiles: options.baseFiles,
+        });
+        const body = formatDiff(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_impact",
+    {
+      title: "What a change reaches, and what to run",
+      description:
+        "The blast radius of a change, offline: from the changed files (default: everything that differs from git HEAD, new files included; or `files`) backwards through the project's file graph (ext_resource, preload, class_name, includes, and paths the code loads later) to every scene that loads them, nearest first with the chain in between and the main scene marked; whether the change is global (an autoload or something an autoload loads, project.godot, a class_name many scripts use); the test files and saved scenarios that cover it; deleted files something still names; then the numbered checks to run for exactly this change (godot_review with the files, godot_check, the scenarios, the tests, the scene to play). Call it when you finished a set of edits, before you say the work is done: checking only the file you edited misses the scenes that instance it. Read-only.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("the changed res:// files (default: what differs from ref in git)"),
+        ref: z.string().optional().describe("the commit to compare with when files is not given (default HEAD)"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, files, ref, detail }) =>
+      guard(() =>
+        text(
+          formatImpact(
+            impactOf(where(path), { ...(files ? { files } : {}), ...(ref ? { ref } : {}), base: options.base, baseFiles: options.baseFiles }),
+            (detail ?? profile.detail) === "full" ? 40 : 12,
+          ),
+        ),
+      ),
+  );
+
+  tool(
+    "godot_collisions",
+    {
+      title: "Physics layers and masks: who detects whom",
+      description:
+        "The physics layers of the project, read from its scenes, offline. Use it when something falls through the floor, a bullet or pickup is not detected, body_entered never fires, or before you set any collision_layer or collision_mask. Without arguments: per physics world (2D, 3D) every layer in use with its name and bit value, how many nodes are on it and how many scan it; every body, area, ray and TileSet physics layer with its layers and mask as numbers, names and value (instances and inherited scenes resolved); and what can never work: a mask that scans a layer nothing is on (also the classic collision_mask = 3 meant as layer 3, which is the value 4), an area or ray with mask 0, an Area with monitoring off whose body_entered is connected, a body or area without a collision shape, a CollisionShape without a shape; plus the lines of code that change layers. `between: [a, b]` (node names or paths, scenes, class_names or Godot classes): for each pair, whether a detects b and b detects a, why, and the exact mask value that fixes it. `value` says which layers a bit value means, `layers` the value of layer numbers. It is an error when there are problems. Read-only.",
+      inputSchema: {
+        path: pathParam,
+        between: z.array(z.string()).length(2).optional().describe('two names: who detects whom, e.g. ["Player", "Enemy"] or ["bullet.tscn", "Hurtbox"]'),
+        value: z.number().int().min(0).max(4294967295).optional().describe("a collision_layer or collision_mask value: which layers it means"),
+        layers: z.array(z.number().int().min(1).max(32)).optional().describe("layer numbers (1 to 32): the value to write"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, between, value, layers, detail }) =>
+      guard(() => {
+        const report = collisionMap(where(path), { base: options.base, baseFiles: options.baseFiles });
+        if (value !== undefined || layers?.length) return text(formatBits(report, value, layers));
+        if (between) {
+          const answer = formatBetween(report, between[0]!, between[1]!);
+          return answer.ok ? text(answer.text) : failure(answer.text);
+        }
+        const body = formatCollisions(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
       }),
   );
 
