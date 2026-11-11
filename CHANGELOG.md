@@ -4,6 +4,14 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Lean mode (`godotwright mcp --lean`, `GODOTWRIGHT_LEAN=1`): two tools instead of 43.** Every tool definition is
+  sent to the model on every turn; the full list is about 88,000 characters (about 22,000 tokens), and some clients
+  stop at 40 tools. With `--lean` the server offers `godot`, which runs any tool by name
+  (`{"tool": "review", "args": {...}}`) and carries a one-line catalogue of every enabled tool, and `godot_help`,
+  which gives a tool's parameters, finds a tool by words or lists them all. The tool list becomes about 3,500
+  characters (96% less). The tools, results, tool sets and read-only refusals are the same; a call with a wrong,
+  missing or unknown argument is answered with the tool's parameters. Dreaming counts calls through `godot` like
+  direct ones. Also a setting of the Claude Code plugin.
 - **`godot_diff` (and `godotwright diff`): a diff by meaning, and what it breaks.** A text diff of a `.tscn` is mostly
   noise (ids renumbered, sections moved). This compares what the files mean, against git (default `HEAD`; `--ref` and
   `--to` for other commits, `--against` for two files without git): scene nodes added, removed, moved or renamed, each

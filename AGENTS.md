@@ -92,6 +92,9 @@ node dist/cli.js --help
   `server.registerTool`: every tool must be in one set in `src/mcp/toolsets.ts` (`--tools`, `--read-only` and the
   read-only refusals), `src/mcp/instructions.ts` holds the server instructions (filtered by the enabled tools), and
   `src/mcp/structured.ts` the `outputSchema`s and `structuredContent` of review, check, doctor and test.
+- `src/mcp/lean.ts`: lean mode (`--lean`): the tools are kept out of the tool list and run through `godot`, with
+  `godot_help` for their parameters. A tool needs nothing extra for it; keep its `title` short, it is the tool's line
+  in the catalogue.
 - `src/check/progress.ts`: the run context of a tool call: progress messages from Godot's output and cancellation;
   `runGodot` uses it, so code that starts Godot needs nothing extra.
 - `src/project/protect.ts`: protected paths (godotwright.json `"protect"`, `$GODOTWRIGHT_PROTECT`). Every write

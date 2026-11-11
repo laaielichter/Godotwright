@@ -41,6 +41,13 @@
       "description": "Which Godotwright tools Claude sees, comma separated: core, edit, verify, run, game, export, model, or tool names. Empty means all.",
       "required": false
     },
+    "lean": {
+      "type": "boolean",
+      "title": "Lean tool list",
+      "description": "Show Claude two tools (godot runs any tool by name, godot_help gives its parameters) instead of all of them: about 95% less tool list in every turn.",
+      "required": false,
+      "default": false
+    },
     "read_only": {
       "type": "boolean",
       "title": "Read-only",

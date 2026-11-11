@@ -183,6 +183,14 @@ Godotwright gets better with every use, without collecting anything personal.
     *Done when:* a removed function that a scene connection still names, a scene three levels above an edited script,
     and a mask written as a layer number are each reported, with tests, without Godot.
 
+31. **A tool list that costs almost nothing.** The biggest cost of every Godot MCP server, this one included: the
+    tool list is paid on every turn (43 tools, about 22,000 tokens; editor servers have up to 170 tools), some clients
+    stop at 40 tools, and in the benchmark the strongest models never called a tool. Lean mode offers two tools, one
+    that runs any tool by name and one that gives its parameters.
+    *Done when:* the lean tool list is at least twenty times smaller, every tool still runs with its own result, and a
+    wrong call is answered with the parameters. Next: measure tool use and task results in the benchmark with and
+    without lean mode.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -223,6 +231,7 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 28: What competitors have, round two
 - [x] Step 29: Dreaming (`godotwright dream`, `godot_dream`, the `godot-dreamer` subagent)
 - [x] Step 30: The whole change (`godot_diff`, `godot_impact`, `godot_collisions`)
+- [x] Step 31: Lean mode (`godotwright mcp --lean`)
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

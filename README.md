@@ -108,7 +108,11 @@ models; `--tier cheap` (the default) gives short output and step-by-step instruc
   connection to a function that is gone or an `@export` value a scene still saves; `godot_impact` walks back to every
   scene, test and saved scenario the change reaches and lists the checks to run; `godot_collisions` maps physics
   layers and masks and says who detects whom, with the exact mask value to set.
-- **For agents and teams.** Tool sets (`--tools core` is about a third of the tool list), `--read-only`,
+- **A tool list that costs almost nothing.** Every MCP tool definition is sent to the model on every turn: 43 tools
+  are about 22,000 tokens before the agent has done anything, and some clients stop at 40 tools. `godotwright mcp --lean`
+  offers two tools instead (`godot` runs any tool by name, `godot_help` gives its parameters): about 900 tokens, 96%
+  less, with the same tools and results behind them.
+- **For agents and teams.** Tool sets (`--tools core` is about a third of the tool list), `--lean`, `--read-only`,
   structured results, progress and cancel for long Godot runs, and protected folders that no write may touch.
 
 0.5.0 brought `godot_code` (Godot's own GDScript language server: warnings at the project's levels, inferred types,
@@ -299,7 +303,7 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Shader review and compile | yes, headless, also in CI | compile through the editor (godot-ai) | no | renames only |
 | Export, read the `.pck` and run the build | yes, headless; patch packs | export or patch through the editor (Godot MCP Pro) | no | no |
 | Visual regression | screenshot baselines in scenarios and CI | screenshot diffs in one fork (grinry) | no | no |
-| Smaller tool list, read-only mode | tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
+| Smaller tool list, read-only mode | `--lean` (2 tools, ~900 tokens for all 43), tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
 | C# | no | some do | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 

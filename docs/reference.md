@@ -884,13 +884,14 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 39 cost about 80,000 characters (about
-20,000 tokens); the `core` set about 24,000. Load only what the work needs:
+Every tool definition goes into the agent's context on every turn. All 43 cost about 88,000 characters (about
+22,000 tokens); the `core` set about 24,000. Load only what the work needs, or run lean (below):
 
 ```sh
 godotwright mcp --tools core            # or GODOTWRIGHT_TOOLS=core
 godotwright mcp --tools core,run,godot_session,godot_game
 godotwright mcp --read-only             # or GODOTWRIGHT_READ_ONLY=1
+godotwright mcp --lean                  # two tools instead of all: see Lean mode
 ```
 
 | Set | Tools | Size of the tool list |
@@ -923,6 +924,38 @@ Read-only does not make an untrusted project safe: `godot_check`, `godot_test`, 
 scripts, and Godot rewrites its cache in `.godot/`. For a project you do not trust, also leave out the sets that run
 Godot (`--tools core` still has `godot_check` and `godot_doctor`; pass `godot: false` to the doctor) or do not install
 Godot where the agent runs.
+
+## Lean mode: two tools instead of 43
+
+```sh
+godotwright mcp --lean                  # or GODOTWRIGHT_LEAN=1
+godotwright mcp --lean --tools core,verify --read-only
+```
+
+A full tool list is paid on every turn, whether a tool is called or not, and some clients stop at 40 tools. With
+`--lean` the server offers two:
+
+- **`godot`** runs any tool by name: `{"tool": "review", "args": {"files": ["res://player.gd"]}}` (the name with or
+  without `godot_`). Its description holds the catalogue: every enabled tool with one line on what it is for.
+- **`godot_help`** gives a tool's description and parameters (`{"tool": "review"}`), finds a tool by words
+  (`{"query": "collision layers"}`), or lists them all.
+
+| | Tools in the list | Size of the tool list |
+| --- | ---: | --- |
+| full (default) | 43 | ~88,100 characters (~22,000 tokens) |
+| `--tools core` | 13 | ~23,900 |
+| `--lean` | 2 | ~3,500 (~900 tokens): 96% less |
+| `--lean --tools core` | 2 | ~2,100 |
+
+The tools, their checks, results (structured results included), tool sets and read-only refusals are the same. A call
+with a wrong, missing or unknown argument is answered with what is wrong and the tool's parameters, so one bad call
+corrects itself; unknown arguments are an error here (the full server drops them), because the model has not seen the
+parameters. The server instructions say how to call, and keep naming the tools as `godot_...`.
+
+What you give up: the model reads a tool's parameters with one extra call the first time it uses it, and a client
+that asks for permission per tool sees one tool, `godot`, for everything (use `--read-only` or `--tools` to limit
+what it can do). Use it with clients that have a tool limit, with small context windows, and next to other MCP
+servers. Clients that load tool definitions on demand by themselves gain less.
 
 ## Structured results
 
