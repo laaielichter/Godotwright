@@ -190,6 +190,21 @@ function godotTool(name: unknown): string | undefined {
   return m && ALL_TOOLS.includes(m[1]!) ? m[1] : undefined;
 }
 
+/** The Godotwright tool a call ran and its arguments, also through the lean server's `godot` tool. */
+function toolCall(name: unknown, raw: unknown): { tool: string | undefined; input: Record<string, unknown> } {
+  const input = parseArgs(raw);
+  const lean = leanCall(name, input);
+  return lean ? { tool: lean.tool, input: lean.args } : { tool: godotTool(name), input };
+}
+
+/** A call through the lean server's `godot` tool: the tool it ran and that tool's arguments. */
+function leanCall(name: unknown, args: Record<string, unknown>): { tool: string; args: Record<string, unknown> } | undefined {
+  if (typeof name !== "string" || !/(^|_)godotwright_+godot$|^godot$/.test(name) || typeof args["tool"] !== "string") return undefined;
+  const key = args["tool"].trim().toLowerCase();
+  const tool = ALL_TOOLS.includes(key) ? key : ALL_TOOLS.includes(`godot_${key}`) ? `godot_${key}` : undefined;
+  return tool ? { tool, args: parseArgs(args["args"]) } : undefined;
+}
+
 function parseArgs(raw: unknown): Record<string, unknown> {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
   if (typeof raw === "string") {
@@ -265,9 +280,9 @@ export function readTranscript(text: string, facts: TranscriptFacts, api: GodotA
       for (const block of message.content as Record<string, unknown>[]) {
         if (!block || typeof block !== "object") continue;
         if (block["type"] === "tool_use") {
-          const tool = godotTool(block["name"]);
+          const { tool, input } = toolCall(block["name"], block["input"]);
           if (tool) facts.toolCalls[tool] = (facts.toolCalls[tool] ?? 0) + 1;
-          if (typeof block["id"] === "string") calls.set(block["id"], { tool: tool ?? "", input: parseArgs(block["input"]) });
+          if (typeof block["id"] === "string") calls.set(block["id"], { tool: tool ?? "", input });
         } else if (block["type"] === "tool_result") {
           const call = typeof block["tool_use_id"] === "string" ? calls.get(block["tool_use_id"]) : undefined;
           result(call, textOf(block["content"]), block["is_error"] === true);
@@ -279,20 +294,20 @@ export function readTranscript(text: string, facts: TranscriptFacts, api: GodotA
     const payload = obj["payload"] as Record<string, unknown> | undefined;
     if (!payload || typeof payload !== "object") continue;
     if (payload["type"] === "function_call" || payload["type"] === "custom_tool_call") {
-      const tool = godotTool(payload["name"]);
+      const { tool, input } = toolCall(payload["name"], payload["arguments"] ?? payload["input"]);
       if (tool) facts.toolCalls[tool] = (facts.toolCalls[tool] ?? 0) + 1;
-      if (typeof payload["call_id"] === "string") calls.set(payload["call_id"], { tool: tool ?? "", input: parseArgs(payload["arguments"] ?? payload["input"]) });
+      if (typeof payload["call_id"] === "string") calls.set(payload["call_id"], { tool: tool ?? "", input });
     } else if (payload["type"] === "function_call_output" || payload["type"] === "custom_tool_call_output") {
       const call = typeof payload["call_id"] === "string" ? calls.get(payload["call_id"]) : undefined;
       result(call, textOf(payload["output"]), false);
     } else if (payload["type"] === "mcp_tool_call_end") {
       const invocation = payload["invocation"] as { tool?: unknown; arguments?: unknown } | undefined;
-      const tool = godotTool(invocation?.tool);
+      const { tool, input } = toolCall(invocation?.tool, invocation?.arguments);
       const id = typeof payload["call_id"] === "string" ? payload["call_id"] : undefined;
       // The same call may also have a function_call item; count it once.
       if (tool && !(id && calls.has(id))) facts.toolCalls[tool] = (facts.toolCalls[tool] ?? 0) + 1;
       const r = payload["result"] as Record<string, unknown> | undefined;
-      if (!(id && calls.has(id))) result(tool ? { tool, input: parseArgs(invocation?.arguments) } : undefined, textOf(r), Boolean(r && "Err" in r));
+      if (!(id && calls.has(id))) result(tool ? { tool, input } : undefined, textOf(r), Boolean(r && "Err" in r));
     } else if (payload["type"] === "exec_command_end") {
       result(undefined, textOf(payload), false);
     }

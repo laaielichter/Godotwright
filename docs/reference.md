@@ -47,6 +47,9 @@ godotwright export run --preset Linux # export headless, check the pack against 
 godotwright export patch --preset Linux --against base.pck   # a patch with only what changed, checked and run over the base
 godotwright export pck game.pck       # what a .pck (or a game .exe) holds, against the project; no Godot needed
 godotwright deps unused               # files nothing the game starts with reaches, biggest first; `deps why <file>` before deleting one
+godotwright diff                      # what changed by meaning against git HEAD, and what it breaks elsewhere (`--ref main`, `--against old.tscn`)
+godotwright impact                    # the scenes, tests and scenarios a change reaches, and the checks to run (or name the files)
+godotwright collisions                # physics layers and masks; `--between Player Enemy` says who detects whom and the mask to set
 godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, completion; --code for unsaved text)
 godotwright shaders                   # the GPU pass: draw every shader (Compatibility renderer) for driver errors; errors at the line in the .gdshader
 godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
@@ -212,6 +215,47 @@ concrete, asphalt, plaster, leaf, grass, stone, sand, water, ground, granite, an
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
+
+## The whole change: diff, impact, collisions
+
+Three checks without Godot, for the moment an agent thinks it is done.
+
+```sh
+godotwright diff                              # the files on disk against HEAD
+godotwright diff --ref main                   # against another commit; --to compares two commits
+godotwright diff res://player/ --json         # only a folder, as JSON
+godotwright diff res://b.tscn --against res://a.tscn   # two files, no git needed
+```
+
+`diff` compares what the files mean. In a scene or resource: nodes added, removed, moved or renamed, each changed
+property with resource ids resolved to paths (a changed sub-resource is opened up: `shape.radius: 12 -> 16`), groups,
+children reordered, connections and what the file loads. In a script: functions, signals, variables, constants and
+enums, and the functions whose code changed. Also `project.godot` (settings, input actions, autoloads), shader uniforms
+and `.import` options. A file that changed only in ids, order or formatting is one line. Lines marked `!` are what the
+change breaks elsewhere: a scene connection to a function that is gone, an `@export` value still saved in a scene, a
+material that sets a removed uniform, an input action or autoload code still asks for, callers of a function whose
+argument count changed, files that name a deleted file. The exit code is 1 when there is one.
+
+```sh
+godotwright impact                            # everything that differs from git HEAD
+godotwright impact res://player/gun.gd        # or the files you name
+```
+
+`impact` walks the project's file graph backwards from the changed files to every scene that loads them (nearest
+first, with the chain in between; a scene that only loads the file later with `load()` is marked), says when a change
+is global (an autoload, something an autoload loads, `project.godot`, a `class_name` many scripts use), names the
+test files and saved scenarios that cover it, and ends with the checks to run for this change.
+
+```sh
+godotwright collisions                        # every physics node, the layers in use, and what can never work
+godotwright collisions --between Player Enemy # who detects whom, why, and the mask value that fixes it
+godotwright collisions --layers 1 3           # = value 5;  --value 5 = layers 1, 3
+```
+
+`collisions` reads bodies, areas, rays and TileSet physics layers from the scenes, with layer names from
+`project.godot`. It reports a mask that scans a layer nothing is on, an area or ray with mask 0, an Area with
+monitoring off whose `body_entered` is connected, a body or area without a collision shape and a CollisionShape
+without a shape. Where code sets layers or makes shapes, it lists those lines and leaves the matching checks out.
 
 ## Find leaks
 
@@ -790,7 +834,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 40 tools
+### The 43 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -805,6 +849,9 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_lesson_add` | Keep a lesson learned here, scrubbed of names, paths and code; it comes back when the same error does |
 | `godot_dream` | Look back between sessions (learning file, journal, optionally session transcripts) and propose draft lessons, project hints, merges, retirements and fixes for contradictions, each with its evidence; nothing changes until `apply` |
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
+| `godot_diff` | A diff by meaning against git: scene nodes added, removed, moved or renamed, properties with resource ids resolved, connections, script functions, signals and exports, settings and shader uniforms; marks what the change breaks elsewhere (a connection to a removed function, a saved `@export` value, callers with the wrong argument count) |
+| `godot_impact` | What a change reaches: every scene that loads the changed files (default: what differs from git), whether it is global (autoload, `project.godot`), the tests and saved scenarios that cover it, and the checks to run |
+| `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
@@ -837,24 +884,26 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 39 cost about 80,000 characters (about
-20,000 tokens); the `core` set about 24,000. Load only what the work needs:
+Every tool definition goes into the agent's context on every turn. All 43 cost about 88,000 characters (about
+22,000 tokens); the `core` set about 24,000. Load only what the work needs, or run lean (below):
 
 ```sh
 godotwright mcp --tools core            # or GODOTWRIGHT_TOOLS=core
 godotwright mcp --tools core,run,godot_session,godot_game
 godotwright mcp --read-only             # or GODOTWRIGHT_READ_ONLY=1
+godotwright mcp --lean                  # two tools instead of all: see Lean mode
 ```
 
 | Set | Tools | Size of the tool list |
 | --- | --- | --- |
 | `core` | scan, api, api_search, review, check, code, doctor, fix, usages, lessons, feedback, undo, checklist | 13 tools, ~23,900 characters |
 | `edit` | rename, scene_edit, project_edit, resource_edit, migrate, shader, lesson_add, dream | 8 tools, ~18,600 |
+| `verify` | diff, impact, collisions | 3 tools, ~6,500 |
 | `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~16,500 |
 | `game` | session, game | 2 tools, ~5,400 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
 | `model` | model_brief, model_identify, model_spec, model_library, model_build, model_view, model_lint, model_inspect | 8 tools, ~11,800 |
-| `all` (default) | everything | 40 tools, ~81,700 |
+| `all` (default) | everything | 43 tools, ~88,100 |
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never
@@ -875,6 +924,38 @@ Read-only does not make an untrusted project safe: `godot_check`, `godot_test`, 
 scripts, and Godot rewrites its cache in `.godot/`. For a project you do not trust, also leave out the sets that run
 Godot (`--tools core` still has `godot_check` and `godot_doctor`; pass `godot: false` to the doctor) or do not install
 Godot where the agent runs.
+
+## Lean mode: two tools instead of 43
+
+```sh
+godotwright mcp --lean                  # or GODOTWRIGHT_LEAN=1
+godotwright mcp --lean --tools core,verify --read-only
+```
+
+A full tool list is paid on every turn, whether a tool is called or not, and some clients stop at 40 tools. With
+`--lean` the server offers two:
+
+- **`godot`** runs any tool by name: `{"tool": "review", "args": {"files": ["res://player.gd"]}}` (the name with or
+  without `godot_`). Its description holds the catalogue: every enabled tool with one line on what it is for.
+- **`godot_help`** gives a tool's description and parameters (`{"tool": "review"}`), finds a tool by words
+  (`{"query": "collision layers"}`), or lists them all.
+
+| | Tools in the list | Size of the tool list |
+| --- | ---: | --- |
+| full (default) | 43 | ~88,100 characters (~22,000 tokens) |
+| `--tools core` | 13 | ~23,900 |
+| `--lean` | 2 | ~3,500 (~900 tokens): 96% less |
+| `--lean --tools core` | 2 | ~2,100 |
+
+The tools, their checks, results (structured results included), tool sets and read-only refusals are the same. A call
+with a wrong, missing or unknown argument is answered with what is wrong and the tool's parameters, so one bad call
+corrects itself; unknown arguments are an error here (the full server drops them), because the model has not seen the
+parameters. The server instructions say how to call, and keep naming the tools as `godot_...`.
+
+What you give up: the model reads a tool's parameters with one extra call the first time it uses it, and a client
+that asks for permission per tool sees one tool, `godot`, for everything (use `--read-only` or `--tools` to limit
+what it can do). Use it with clients that have a tool limit, with small context windows, and next to other MCP
+servers. Clients that load tool definitions on demand by themselves gain less.
 
 ## Structured results
 

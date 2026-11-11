@@ -4,6 +4,37 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Lean mode (`godotwright mcp --lean`, `GODOTWRIGHT_LEAN=1`): two tools instead of 43.** Every tool definition is
+  sent to the model on every turn; the full list is about 88,000 characters (about 22,000 tokens), and some clients
+  stop at 40 tools. With `--lean` the server offers `godot`, which runs any tool by name
+  (`{"tool": "review", "args": {...}}`) and carries a one-line catalogue of every enabled tool, and `godot_help`,
+  which gives a tool's parameters, finds a tool by words or lists them all. The tool list becomes about 3,500
+  characters (96% less). The tools, results, tool sets and read-only refusals are the same; a call with a wrong,
+  missing or unknown argument is answered with the tool's parameters. Dreaming counts calls through `godot` like
+  direct ones. Also a setting of the Claude Code plugin.
+- **`godot_diff` (and `godotwright diff`): a diff by meaning, and what it breaks.** A text diff of a `.tscn` is mostly
+  noise (ids renumbered, sections moved). This compares what the files mean, against git (default `HEAD`; `--ref` and
+  `--to` for other commits, `--against` for two files without git): scene nodes added, removed, moved or renamed, each
+  changed property with resource ids resolved to paths and a changed sub-resource opened up (`shape.radius: 12 -> 16`),
+  groups, children reordered, connections and what the file loads; script functions, signals, variables, constants and
+  enums, and the functions whose code changed; settings, input actions and autoloads; shader uniforms. A file whose
+  text changed but not its meaning is one line. For everything removed it says what still uses it, marked `!`: a scene
+  connection to a function that is gone, an `@export` value still saved in a scene (Godot drops it without an error),
+  a material that sets a removed uniform, an input action or autoload code still asks for, callers of a function whose
+  argument count changed, files that name a deleted file. Exit code 1 when something is marked.
+- **`godot_impact` (and `godotwright impact`): what a change reaches, and what to run.** From the changed files
+  (default: what differs from git `HEAD`, new and deleted files included) backwards through the project's file graph
+  to every scene that loads them, nearest first with the chain in between; whether the change is global (an autoload
+  or what an autoload loads, `project.godot`, a `class_name` many scripts use); the test files and saved scenarios
+  that cover it; then the numbered checks for exactly this change.
+- **`godot_collisions` (and `godotwright collisions`): physics layers and masks.** Every body, area, ray and TileSet
+  physics layer of the project with its layers and mask as numbers, names and bit value (instances and inherited
+  scenes resolved), the layers in use per physics world with how many nodes are on them and scan them, and what can
+  never work: a mask that scans a layer nothing is on, an area or ray with mask 0, an Area with monitoring off whose
+  `body_entered` is connected, a body or area without a collision shape, a CollisionShape without a shape.
+  `--between Player Enemy` says for each pair who detects whom, why, and the exact mask value that fixes it (it knows
+  `collision_mask = 3` is layers 1 and 2, not layer 3); `--value` and `--layers` convert between bit values and layer
+  numbers. 43 MCP tools.
 - **Review: `api/connect-called-handler`** (error): catches a call to a local no-value handler passed to `Signal.connect()`; pass the function itself so the signal can call it later. Thanks to @dannyward630! (#192, #202)
 
 ## 0.7.0 (an asset library of a thousand models, dreaming, and seven specialist agents)

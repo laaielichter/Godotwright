@@ -9,6 +9,9 @@ import { codeCommand } from "./commands/code.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
 import { depsCommand } from "./commands/deps.js";
+import { diffCommand } from "./commands/diff.js";
+import { impactCommand } from "./commands/impact.js";
+import { collisionsCommand } from "./commands/collisions.js";
 import { leaksCommand } from "./commands/leaks.js";
 import { perfCommand } from "./commands/perf.js";
 import { gameCommand, sessionCommand } from "./commands/session.js";
@@ -67,6 +70,9 @@ export function createProgram(): Command {
     .addCommand(codeCommand())
     .addCommand(undoCommand())
     .addCommand(depsCommand())
+    .addCommand(diffCommand())
+    .addCommand(impactCommand())
+    .addCommand(collisionsCommand())
     .addCommand(usagesCommand())
     .addCommand(renameCommand())
     .addCommand(projectCommand())

@@ -36,10 +36,11 @@ export function mcpCommand(): Command {
       "--tools <sets>",
       `tool sets or tool names to offer, comma separated: ${TOOLSET_NAMES.join(", ")}, all (default: $GODOTWRIGHT_TOOLS, then all)`,
     )
+    .option("--lean", "offer two tools (godot runs any tool by name, godot_help gives its parameters) instead of all: about 95% less tool list on every turn, and under any client's tool limit (default: $GODOTWRIGHT_LEAN)")
     .option("--read-only", "leave out the tools that always write and refuse write options (default: $GODOTWRIGHT_READ_ONLY)")
     .option("--base <dir>", BASE_HELP, collect, [])
     .option("--base-files <file>", BASE_FILES_HELP, collect, [])
-    .action(async (options: { tier: Tier; project?: string; godot?: string; tools?: string; readOnly?: boolean; base: string[]; baseFiles: string[] }) => {
+    .action(async (options: { tier: Tier; project?: string; godot?: string; tools?: string; readOnly?: boolean; lean?: boolean; base: string[]; baseFiles: string[] }) => {
       const tools = options.tools ?? toolsFromEnv();
       enabledTools(tools); // an unknown name fails here, before the client connects
       const server = createServer({
@@ -48,6 +49,7 @@ export function mcpCommand(): Command {
         godot: options.godot,
         tools,
         readOnly: options.readOnly === true || envFlag(process.env["GODOTWRIGHT_READ_ONLY"]),
+        lean: options.lean === true || envFlag(process.env["GODOTWRIGHT_LEAN"]),
         base: options.base,
         baseFiles: options.baseFiles,
       });

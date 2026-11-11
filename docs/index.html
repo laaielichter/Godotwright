@@ -376,8 +376,8 @@ footer a { color: var(--muted); }
 
   <section id="tools">
     <div class="wrap">
-      <h2>40 MCP tools, one CLI</h2>
-      <p class="sub">Most of the 40 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
+      <h2>43 MCP tools, one CLI</h2>
+      <p class="sub">Most of the 43 tools are also CLI commands, so they work from any shell or agent. Output is compact and stable, so it is cheap for a model to read. Every write shows the change first, and <code>godot_undo</code> takes it back.</p>
       <details class="tool-inventory"><summary>Explore the complete tool inventory <span aria-hidden="true">+</span></summary>      <ul class="tree">
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scan</span><p>Map the project without starting Godot: scenes and node trees, scripts with signals and exports, autoloads, input map, broken references.</p><code>godotwright scan</code></li>
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>godot_api</span><p>Exact Godot 4.7 lookup from the bundled class reference (1078 classes): signatures, inheritance, Godot 3 names.</p><code>godotwright api Node2D.look_at</code></li>
@@ -385,6 +385,9 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_review</span><p>AAA review with a 0–100 score for api, performance, quality and structure. Also reviews unsaved code before the agent writes it.</p><code>godotwright review --min-score 90</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_check</span><p>Run Godot headless: import, load and instantiate every script and scene, optionally run the main scene. Errors come back as <code>file:line</code>.</p><code>godotwright check --run</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_usages</span><p>Every place a name or <code>res://</code> path is used: code, scenes, signal connections, groups and settings. Call it before renaming or deleting.</p><code>godotwright usages take_damage</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_diff</span><p>A diff by meaning against git: nodes, properties, connections, script functions and exports, and what the change breaks elsewhere, such as a scene connection to a function that is gone.</p><code>godotwright diff</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_impact</span><p>What a change reaches: the scenes that load the changed files, the tests and saved scenarios that cover them, and the checks to run.</p><code>godotwright impact</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_collisions</span><p>Physics layers and masks by name and bit value: who detects whom, the exact mask to set, and what can never work.</p><code>godotwright collisions --between Player Enemy</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_rename</span><p>Rename a function, signal, node, action or file everywhere at once, keeping connections, node paths and <code>.uid</code> files right.</p><code>godotwright rename hp health --write</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_project_edit</span><p>Change settings, input actions and autoloads in <code>project.godot</code>, checked against Godot 4.7, touching only that entry.</p><code>godotwright project input add jump --key Space</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_scene_edit</span><p>Add or remove nodes, set properties, connect signals and attach scripts in a <code>.tscn</code>, without the editor.</p><code>godotwright scene add main.tscn . Music AudioStreamPlayer</code></li>

@@ -14,7 +14,8 @@
         "GODOT": "${user_config.godot}",
         "GODOTWRIGHT_PROTECT": "${user_config.protect}",
         "GODOTWRIGHT_TOOLS": "${user_config.tools}",
-        "GODOTWRIGHT_READ_ONLY": "${user_config.read_only}"
+        "GODOTWRIGHT_READ_ONLY": "${user_config.read_only}",
+        "GODOTWRIGHT_LEAN": "${user_config.lean}"
       }
     }
   }
