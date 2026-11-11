@@ -155,12 +155,17 @@ function connectCalledHandlers(pm: ProjectModel, path: string, lines: LogicalLin
           const open = match.index + match[0].lastIndexOf("(");
           const argument = firstCallArgument(ll.code, open);
           const called = argument === undefined ? undefined : exactHandlerCall(argument);
-          if (!called || !handlers.has(called.name)) continue;
+          // `code` keeps quote positions but blanks their contents. Match the call
+          // there, then inspect the original text to tell whether it had explicit
+          // arguments without ever copying masked spaces into a recommendation.
+          const sourceArgument = firstCallArgument(ll.text, open);
+          const sourceCall = sourceArgument === undefined ? undefined : exactHandlerCall(sourceArgument);
+          if (!called || !sourceCall || !handlers.has(called.name)) continue;
           const handler = `${called.onSelf ? "self." : ""}${called.name}`;
           const recommendation =
-            called.args === undefined
+            sourceCall.args === undefined
               ? `Pass the function itself: connect(${handler}).`
-              : `Preserve the arguments in a Callable binding: connect(${handler}.bind(${called.args})).`;
+              : "Pass a Callable, not the function result. Match its parameters to the signal's emitted arguments; bind only fixed values the signal does not provide.";
           out.push(
             finding(
               "api/connect-called-handler",

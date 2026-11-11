@@ -862,22 +862,30 @@ describe("api/connect-called-handler", () => {
     expect(run(code)).toEqual([]);
   });
 
-  it("preserves explicitly passed handler arguments in the Callable recommendation", () => {
+  it("uses signal-aware guidance for calls with explicit handler arguments", () => {
     const code = [
       "extends Control",
       "",
       "func _ready() -> void:",
-      "\t$Button.pressed.connect(_on_pressed(1, Vector2(2, 3)))",
+      "\t$CheckBox.toggled.connect(_on_toggled(true))",
+      "\t$Button.pressed.connect(_on_text(\"confirm\"))",
       "",
-      "func _on_pressed(id: int, position: Vector2) -> void:",
-      "\tprint(id, position)",
+      "func _on_toggled(enabled: bool) -> void:",
+      "\tprint(enabled)",
+      "",
+      "func _on_text(message: String) -> void:",
+      "\tprint(message)",
     ].join("\n");
 
     const findings = run(code);
-    expect(findings).toHaveLength(1);
-    expect(findings[0]?.message).toContain(
-      "Preserve the arguments in a Callable binding: connect(_on_pressed.bind(1, Vector2(2, 3))).",
-    );
+    expect(findings.map((finding) => finding.line)).toEqual([4, 5]);
+    for (const finding of findings) {
+      expect(finding.message).toContain("Pass a Callable, not the function result.");
+      expect(finding.message).toContain("signal's emitted arguments");
+      expect(finding.message).not.toContain(".bind(");
+    }
+    // The diagnostic never builds a binding from the blanked code representation.
+    expect(findings[1]?.message).not.toContain("confirm");
   });
 
   it("stays quiet for Callables, values, foreign methods, bindings, lambdas, strings, and comments", () => {
