@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+## 0.8.0 (lean mode, and three checks for the whole change)
+
 - **Lean mode (`godotwright mcp --lean`, `GODOTWRIGHT_LEAN=1`): two tools instead of 43.** Every tool definition is
   sent to the model on every turn; the full list is about 88,000 characters (about 22,000 tokens), and some clients
   stop at 40 tools. With `--lean` the server offers `godot`, which runs any tool by name
