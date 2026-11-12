@@ -529,6 +529,8 @@ function isDirectCall(value: string): boolean {
   const readPrimary = (): boolean => {
     skipWhitespace();
     if (expression[index] === "(") return readBalanced("(", ")");
+    if (expression[index] === "[") return readBalanced("[", "]");
+    if (expression[index] === "{") return readBalanced("{", "}");
     if (expression[index] === "\"" || expression[index] === "'") return readQuotedString();
     if (expression[index] === "$" || expression[index] === "%") {
       index++;

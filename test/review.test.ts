@@ -393,6 +393,22 @@ describe("api/void-return-value edge cases", () => {
     expect(lines(code)).toEqual([10]);
   });
 
+  it("accepts array and dictionary literals as direct-call receivers", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func calls() -> void:",
+      "\treturn [].clear()",
+      "\treturn {}.clear()",
+      "",
+      "func values() -> void:",
+      "\treturn []",
+      "\treturn {}",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([8, 9]);
+  });
+
   it("preserves enclosing calls around inline lambdas and checks following branch returns", () => {
     const code = [
       "extends Node",
