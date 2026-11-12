@@ -499,7 +499,9 @@ function parseMember(text: string, ll: LogicalLine, annotations: string[]): Memb
     const open = match[0].length - 1;
     const close = matchingParen(text, open);
     const after = text.slice(close + 1);
-    const ret = /^\s*->\s*([^:]+?)\s*:/.exec(after);
+    const ret =
+      /^\s*->\s*([^:]+?)\s*:/.exec(after) ??
+      (annotations.includes("@abstract") ? /^\s*->\s*(.+?)\s*$/.exec(after) : undefined);
     return {
       kind: "func",
       info: {

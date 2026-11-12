@@ -29,6 +29,8 @@ export const TOOLSETS = {
     "godot_lesson_add",
     "godot_dream",
   ],
+  // The whole change, read from the files: what changed by meaning, what it reaches, and the physics layers.
+  verify: ["godot_diff", "godot_impact", "godot_collisions"],
   run: ["godot_test", "godot_play", "godot_scenario", "godot_perf", "godot_leaks", "godot_screenshot"],
   game: ["godot_session", "godot_game"],
   export: ["godot_export", "godot_export_run", "godot_deps"],
@@ -56,7 +58,7 @@ export class ToolsetError extends Error {
 }
 
 /**
- * The tools a `--tools` list enables: set names (core, edit, run, game, export, model, all) and single tool names
+ * The tools a `--tools` list enables: set names (core, edit, verify, run, game, export, model, all) and single tool names
  * (`godot_play`), separated by commas or spaces. Empty or unset means all. Unknown names throw, naming the valid ones.
  */
 export function enabledTools(list?: string | readonly string[]): Set<string> {

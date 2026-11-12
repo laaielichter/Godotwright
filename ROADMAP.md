@@ -175,6 +175,22 @@ Godotwright gets better with every use, without collecting anything personal.
     *Done when:* tests cover every proposal kind, no transcript text reaches any output, the due logic, and that an
     apply is undone in full.
 
+30. **The whole change, not the one file.** From watching agents work: they check the file they edited and stop, they
+    cannot read a `.tscn` diff, and they get collision layers wrong more than anything else. `godot_diff` compares what
+    changed by meaning against git and marks what it breaks elsewhere, `godot_impact` walks the file graph back to
+    every scene, test and saved scenario a change reaches and lists the checks to run, and `godot_collisions` maps
+    physics layers and masks and says who detects whom.
+    *Done when:* a removed function that a scene connection still names, a scene three levels above an edited script,
+    and a mask written as a layer number are each reported, with tests, without Godot.
+
+31. **A tool list that costs almost nothing.** The biggest cost of every Godot MCP server, this one included: the
+    tool list is paid on every turn (43 tools, about 22,000 tokens; editor servers have up to 170 tools), some clients
+    stop at 40 tools, and in the benchmark the strongest models never called a tool. Lean mode offers two tools, one
+    that runs any tool by name and one that gives its parameters.
+    *Done when:* the lean tool list is at least twenty times smaller, every tool still runs with its own result, and a
+    wrong call is answered with the parameters. Next: measure tool use and task results in the benchmark with and
+    without lean mode.
+
 ## After layer 1
 
 - Release on npm and the MCP Registry.
@@ -214,6 +230,8 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 27: A game session that stays up across calls
 - [x] Step 28: What competitors have, round two
 - [x] Step 29: Dreaming (`godotwright dream`, `godot_dream`, the `godot-dreamer` subagent)
+- [x] Step 30: The whole change (`godot_diff`, `godot_impact`, `godot_collisions`)
+- [x] Step 31: Lean mode (`godotwright mcp --lean`)
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

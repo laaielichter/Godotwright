@@ -21,6 +21,8 @@ step below answers from the project or from Godot.
 3. **Read the code that runs.** `godot_scan` for the scene tree, autoloads and input map; `godot_usages` for everything
    that touches the name in the message. Check every engine call on the path with `godot_api`: Godot 3 names, wrong
    argument counts and properties that moved are the usual cause.
+   When something falls through, is not hit or a `body_entered` never fires: `godot_collisions` with
+   `between: [a, b]` says who detects whom and the mask value that fixes it.
 4. **Name the cause in one sentence** before you change anything, in Godot terms (which node, which property, which
    frame or physics tick). If two causes fit, design a check that tells them apart (`godot_play` with `watch`).
 5. **Fix the cause, not the symptom.** No `if x == null: return` around a null that should never be null, no lowered
