@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Review value returns from `-> void` functions** (`api/void-return-value`, error): Godot cannot load a script that returns a value from a void function.
+
 ## 0.8.0 (lean mode, and three checks for the whole change)
 
 - **Lean mode (`godotwright mcp --lean`, `GODOTWRIGHT_LEAN=1`): two tools instead of 43.** Every tool definition is

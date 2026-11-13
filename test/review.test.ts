@@ -179,6 +179,297 @@ describe("godotwright review", () => {
   });
 });
 
+describe("api/void-return-value", () => {
+  const rule = "api/void-return-value";
+
+  it("reports each value return on its own line in a void function", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func heal() -> void:",
+      "\treturn 5",
+      "",
+      "func log_hit() -> void:",
+      "\treturn true",
+      "",
+      "func score() -> void:",
+      "\treturn health + 1",
+      "",
+      "func parenthesized_score() -> void:",
+      "\treturn (health + 1)",
+      "",
+      "func score_call() -> void:",
+      "\treturn some_call() + 1",
+    ].join("\n");
+    const actual = findings({ "main.gd": code }).filter((line) => line.includes(`[${rule}]`));
+    expect(actual).toEqual([
+      'res://main.gd:4: error [api/void-return-value] heal() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:7: error [api/void-return-value] log_hit() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:10: error [api/void-return-value] score() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:13: error [api/void-return-value] parenthesized_score() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+      'res://main.gd:16: error [api/void-return-value] score_call() is declared "-> void", so Godot cannot return a value from it. Remove the value, or give the function a return type.',
+    ]);
+  });
+
+  it("stays quiet for bare returns, comments, other return types, calls, and inline lambdas", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func bare() -> void:",
+      "\treturn",
+      "",
+      "func commented() -> void:",
+      "\treturn # no value",
+      "",
+      "func typed() -> int:",
+      "\treturn 5",
+      "",
+      "func untyped():",
+      "\treturn 5",
+      "",
+      "func calls() -> void:",
+      "\treturn some_call()",
+      "",
+      "func lambda() -> void:",
+      "\tvar callback = func(x): return x * 2",
+      "\tprint(\"return 5\")",
+    ].join("\n");
+    expect(findings({ "main.gd": code }).filter((line) => line.includes(`[${rule}]`))).toEqual([]);
+  });
+});
+
+describe("api/void-return-value edge cases", () => {
+  const lines = (code: string) =>
+    findings({ "main.gd": code })
+      .filter((finding) => finding.includes("[api/void-return-value]"))
+      .map((finding) => Number(/main\.gd:(\d+):/.exec(finding)?.[1]));
+
+  it("keeps bare and semicolon returns and chained calls quiet", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func bare() -> void:",
+      "\treturn",
+      "\treturn;",
+      "\treturn ;",
+      "",
+      "func calls() -> void:",
+      "\treturn some_call()",
+      "\treturn get_tree().quit()",
+      "\treturn a.b().c()",
+      "\treturn a().b()",
+      "\treturn print(\"x\")",
+      "\treturn queue_free()",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([]);
+  });
+
+  it("ignores typed and untyped multiline lambda bodies", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func typed() -> void:",
+      "\tvar callback: Callable = func(x: int) -> int:",
+      "\t\treturn x * 2",
+      "\tcallback.call(1)",
+      "\treturn 5",
+      "",
+      "func untyped() -> void:",
+      "\tvar callback = func(a, b):",
+      "\t\tif a:",
+      "\t\t\treturn a",
+      "\t\treturn b",
+      "\tcallback.call(1, 2)",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([7]);
+  });
+
+  it("keeps match-pattern commas inside multiline lambda bodies", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func consume(_callback: Callable) -> void:",
+      "\tpass",
+      "",
+      "func match_argument() -> void:",
+      "\tconsume(func(x: int) -> bool:",
+      "\t\tmatch x:",
+      "\t\t\t1, 2:",
+      "\t\t\t\treturn true",
+      "\t\t\t_:",
+      "\t\t\t\treturn false",
+      "\t)",
+      "\treturn 5",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([14]);
+  });
+
+  it("ignores named lambda returns and keeps following enclosing returns", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func inline_named() -> void:",
+      "\tvar callback = func double(x): return x * 2",
+      "",
+      "func multiline_named() -> void:",
+      "\tvar callback = func double(x):",
+      "\t\treturn x * 2",
+      "\treturn 5",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([9]);
+  });
+
+  it("ends return expressions at semicolon statement boundaries", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func bare_return(done: bool) -> void:",
+      "\tif done: return; print(\"continuing\")",
+      "",
+      "func void_call_return() -> void:",
+      "\treturn queue_free(); print(\"done\")",
+      "",
+      "func value_return() -> void:",
+      "\treturn 5; print(\"unreachable\")",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([10]);
+  });
+
+  it("reports return(5) and awaited values", () => {
+    // Godot 4.7.2 accepts print(), queue_free(), and chained quit calls; it rejects
+    // `return await get_tree().process_frame` and `return(5)`.
+    const code = [
+      "extends Node",
+      "",
+      "func invalid() -> void:",
+      "\treturn(5)",
+      "\treturn await get_tree().process_frame",
+      "",
+      "func calls() -> void:",
+      "\treturn print(\"x\")",
+      "\treturn queue_free()",
+      "\treturn get_tree().quit()",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([4, 5]);
+  });
+
+  it("keeps awaited void helpers quiet but reports awaited signal values", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func helper() -> void:",
+      "\tawait get_tree().process_frame",
+      "",
+      "func valid() -> void:",
+      "\treturn await helper()",
+      "",
+      "func invalid() -> void:",
+      "\treturn await get_tree().process_frame",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([10]);
+  });
+
+  it("accepts node-path and indexed calls without exempting combined values", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func node_path_call() -> void:",
+      "\treturn $Child.queue_free()",
+      "",
+      "func indexed_call(children: Array[Node]) -> void:",
+      "\treturn children[0].queue_free()",
+      "",
+      "func combined_value(children: Array[Node]) -> void:",
+      "\treturn $Child.get_instance_id() + children[0].get_instance_id()",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([10]);
+  });
+
+  it("accepts array and dictionary literals as direct-call receivers", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func calls() -> void:",
+      "\treturn [].clear()",
+      "\treturn {}.clear()",
+      "",
+      "func values() -> void:",
+      "\treturn []",
+      "\treturn {}",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([8, 9]);
+  });
+
+  it("preserves enclosing calls around inline lambdas and checks following branch returns", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func consume(_callback: Callable) -> void:",
+      "\tpass",
+      "",
+      "func lambda_argument() -> void:",
+      "\treturn consume(func(x): return x * 2)",
+      "",
+      "func lambda_assignment() -> void:",
+      "\tvar callback = func(x): return x * 2",
+      "",
+      "func branch_return(items: Array[int]) -> void:",
+      "\tif items.any(func(x): return x > 0):",
+      "\t\treturn 5",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([14]);
+  });
+
+  it("checks an enclosing return after a same-line inline lambda", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func invalid(items: Array[int]) -> void:",
+      "\tif items.any(func(x): return x > 0): return 5",
+      "",
+      "func valid(items: Array[int]) -> void:",
+      "\tif items.any(func(x): return x > 0): print(\"matched\")",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([4]);
+  });
+
+  it("keeps semicolon-separated inline lambda statements inside the lambda", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func callback() -> void:",
+      "\tvar cb = func(x): print(x); return x * 2",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([]);
+  });
+
+  it("does not treat Unicode identifiers containing return as return statements", () => {
+    const code = [
+      "extends Node",
+      "",
+      "func names() -> void:",
+      "\tvar return値: int = 1",
+      "\tprint(return値)",
+      "\tvar 値return: int = 2",
+      "\tprint(値return)",
+    ].join("\n");
+
+    expect(lines(code)).toEqual([]);
+  });
+});
+
 
 describe("moved Godot 3 window properties", () => {
   const cases = [
