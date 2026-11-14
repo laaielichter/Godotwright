@@ -5,7 +5,7 @@ Godotwright **0.8.0**. El README en inglés sigue siendo la fuente de verdad.
 
 Los agentes de código aprendieron Godot con años de tutoriales de Godot 3. Escriben `yield`, `export var` y
 `KinematicBody2D`, inventan métodos y conectan señales a nodos que no están en la escena. Godotwright es el control entre
-el agente y tu proyecto: la API real de Godot 4.7 sin conexión, una reseña con puntuación de cada script, ejecuciones de
+el agente y tu proyecto: la API real de Godot 4.7 sin conexión, una revisión con puntuación de cada script, ejecuciones de
 Godot sin interfaz y ediciones seguras. Funciona desde archivos, así que no necesita un editor abierto, y funciona bien
 junto a un servidor MCP que maneja el editor.
 
@@ -13,7 +13,7 @@ junto a un servidor MCP que maneja el editor.
 
 | Tu agente... | Por su cuenta | Con Godotwright |
 | --- | --- | --- |
-| escribe GDScript | `yield`, `export var`, `KinematicBody2D`: hábitos de Godot 3 | cada línea marcada con el arreglo de Godot 4; `migrate` reescribe la parte mecánica |
+| escribe GDScript | `yield`, `export var`, `KinematicBody2D`: hábitos de Godot 3 | cada línea marcada con la corrección de Godot 4; `migrate` reescribe la parte mecánica |
 | llama a un método del motor | adivina un nombre de memoria | lo busca en la referencia de clases de Godot 4.7 incluida |
 | renombra una señal o mueve un archivo | rompe las conexiones de la escena y los archivos `.uid` | `rename` cambia código, escenas, conexiones y archivos `.uid` juntos, primero sin aplicar los cambios |
 | dice "funciona" | sin ejecutar nada | `check`, `test` y `play` lo ejecutan sin interfaz e informan `file:line` |
@@ -33,7 +33,7 @@ npx -y godotwright review ~/games/my-game
 ```
 
 Recibes una puntuación de 0 a 100 para api, performance, quality y structure, y cada hallazgo como
-`res://player.gd:12: error [rule] message` con el arreglo de Godot 4. No hace falta instalar Godot.
+`res://player.gd:12: error [rule] message` con la corrección de Godot 4. No hace falta instalar Godot.
 
 **2. Entrégalo a tu agente.** En Claude Code:
 
