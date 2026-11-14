@@ -1,3 +1,4 @@
+import { nearest } from "../../api/api.js";
 import type { BuildScene } from "../glb.js";
 import { BuildError, resolveParams, type ParamDef, type Params } from "../params.js";
 import { buildSpec } from "../spec.js";
@@ -30,7 +31,13 @@ const isBuiltin = (kind: string): boolean => Object.hasOwn(GENERATORS, kind);
 
 export function generatorFor(kind: string): Generator {
   const g = isBuiltin(kind) ? GENERATORS[kind] : undefined;
-  if (!g) throw new BuildError(`unknown model kind "${kind}" (known: ${allKinds().map((k) => k.kind).join(", ")}; or a library asset such as furniture/dining-chair-oak-ladder, see \`model library\`)`);
+  if (!g) {
+    const known = allKinds().map((k) => k.kind);
+    const near = nearest(kind, known);
+    throw new BuildError(
+      `unknown model kind "${kind}"${near.length ? `; did you mean ${near.join(", ")}? (all kinds: godotwright model kinds)` : ` (known: ${known.join(", ")}; or a library asset such as furniture/dining-chair-oak-ladder, see \`model library\`)`}`,
+    );
+  }
   return g;
 }
 

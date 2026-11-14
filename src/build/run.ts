@@ -1,4 +1,5 @@
 import { closeSync, constants, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
+import { nearest } from "../api/api.js";
 import { dirname, relative, sep } from "node:path";
 import { loadLibrary } from "../archetype/library.js";
 import { contractFromModel } from "../model/contract.js";
@@ -142,7 +143,10 @@ export function buildModel(request: BuildRequest): BuildOutcome {
   }
   const info = inspectModel(request.out);
   const library = loadLibrary();
-  if (scene.archetype && !library.get(scene.archetype)) throw new BuildError(`unknown archetype "${scene.archetype}" (see \`model archetypes\`)`);
+  if (scene.archetype && !library.get(scene.archetype)) {
+    const near = nearest(scene.archetype, library.archetypes.map((a) => a.id));
+    throw new BuildError(`unknown archetype "${scene.archetype}"${near.length ? `; did you mean ${near.join(", ")}?` : ""} (see \`model archetypes\`)`);
+  }
   const report = lintModelFile(request.out, scene.archetype ? { archetype: library.resolve(scene.archetype) } : {});
   const size = info.bounds?.size.map((v) => v.toFixed(2)).join(" x ") ?? "?";
   const hint =

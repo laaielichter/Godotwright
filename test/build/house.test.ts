@@ -83,6 +83,11 @@ describe("parameters", () => {
     expect(() => buildKind("starfighter")).toThrow(/unknown model kind "starfighter"/);
   });
 
+  it("names the nearest kind on a typo, and the whole list when nothing is close", () => {
+    expect(() => buildKind("chiar")).toThrow('unknown model kind "chiar"; did you mean chair? (all kinds: godotwright model kinds)');
+    expect(() => buildKind("xyzzy")).toThrow(/^unknown model kind "xyzzy" \(known: house, terrain, sea, /);
+  });
+
   it("does not take the names of Object.prototype for kinds", () => {
     for (const kind of ["constructor", "toString", "__proto__"]) {
       expect(() => buildKind(kind), kind).toThrow(/unknown model kind/);

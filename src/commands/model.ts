@@ -1,3 +1,4 @@
+import { nearest } from "../api/api.js";
 import { readFileSync } from "node:fs";
 import { Command, Option } from "commander";
 import { briefFor } from "../archetype/brief.js";
@@ -119,7 +120,11 @@ export function modelCommand(): Command {
         const all = loadRecipes();
         if (kind !== undefined) {
           const recipe = all.get(kind);
-          if (!recipe) throw new BuildError(`no recipe "${kind}" (known: ${[...all.keys()].join(", ")}; house, terrain and sea are generators without a spec)`);
+          if (!recipe) {
+            const known = [...all.keys()];
+            const near = nearest(kind, known);
+            throw new BuildError(`no recipe "${kind}"${near.length ? `; did you mean ${near.join(", ")}? (all recipes: godotwright model recipes)` : ` (known: ${known.join(", ")}; house, terrain and sea are generators without a spec)`}`);
+          }
           return writeOut(command, `${JSON.stringify(recipe.spec, null, 2)}\n`);
         }
         const recipes = [...all.values()];
@@ -211,7 +216,10 @@ export function modelCommand(): Command {
       guard(() => {
         const library = loadLibrary();
         if (!id) return writeOut(command, options.json ? `${JSON.stringify(library.archetypes.map((a) => a.id), null, 2)}\n` : formatTree(library));
-        if (!library.get(id)) throw new ArchetypeError(`unknown archetype "${id}" (see \`model archetypes\`)`);
+        if (!library.get(id)) {
+          const near = nearest(id, library.archetypes.map((a) => a.id));
+          throw new ArchetypeError(`unknown archetype "${id}"${near.length ? `; did you mean ${near.join(", ")}?` : ""} (see \`model archetypes\`)`);
+        }
         const resolved = library.resolve(id);
         writeOut(command, options.json ? `${JSON.stringify(resolved, null, 2)}\n` : formatArchetype(resolved));
       });

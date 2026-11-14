@@ -4,6 +4,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **A mistyped model kind, recipe or archetype, and a mistyped lesson topic, name the nearest match**: `model build chiar` answers `unknown model kind "chiar"; did you mean chair?` and points at the full list (`model kinds`), the same way `godotwright api` already does. A name with nothing close keeps the whole list, and the exit code stays 1. (#217)
 - **Review value returns from `-> void` functions** (`api/void-return-value`, error): Godot cannot load a script that returns a value from a void function. Thanks to @dannyward630! (#188, #201)
 
 ## 0.8.0 (lean mode, and three checks for the whole change)
