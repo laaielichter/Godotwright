@@ -20,6 +20,7 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <a href="bench/RESULTS.md">Benchmark</a> ·
   <a href="CHANGELOG.md">Changelog</a>
 </p>
+<p align="center">Translations: <a href="docs/translations/README.es.md">Español</a></p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/"><img src="docs/assets/social.jpg" alt="Godotwright: big worlds, better code, keep creating" width="1000"></a><br>
   <sub>Concept artwork. Explore the toolkit, real demo and model gallery on the <a href="https://laaielichter.github.io/Godotwright/">website</a>.</sub>
