@@ -59,6 +59,7 @@ administrators make links otherwise); CI runs them on Linux. Files are stored wi
 3. Add tests. New review rules need a test in `test/review.test.ts` and must stay
    quiet on the official demo projects.
 4. Follow the conventions in [AGENTS.md](AGENTS.md).
+5. Do not edit `CHANGELOG.md` in your pull request; the maintainer adds the entry, with credit to you, when it is merged. This keeps pull requests from conflicting with each other.
 
 ## Be kind
 
