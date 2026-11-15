@@ -5,6 +5,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 ## Unreleased
 
 - **Review value returns from `-> void` functions** (`api/void-return-value`, error): Godot cannot load a script that returns a value from a void function. Thanks to @dannyward630! (#188, #201)
+- **Example to try `migrate` on:** `examples/godot3-platformer/` is a tiny Godot 3 project (five scripts, no scenes, no assets) with a README that walks through `review` -> `migrate` -> `review` with real output and the lines left for a hand fix; `test/examples.test.ts` migrates every example script and checks it against the expected Godot 4 text, so the README stays true. (#199)
 
 ## 0.8.0 (lean mode, and three checks for the whole change)
 
