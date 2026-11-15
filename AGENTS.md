@@ -171,6 +171,8 @@ node dist/cli.js --help
 - Small commits with a short imperative subject (`Add project scan`).
 - No trailers, chat or session links, or personal information in commits or files.
 - Update the status list in `ROADMAP.md` when a step is done.
+- Pull requests do not edit `CHANGELOG.md`; the maintainer adds the entry, with credit to the contributor, when it is
+  merged. This keeps pull requests from conflicting with each other.
 - Releases: add the version's section to `CHANGELOG.md`, run `npm version X.Y.Z` (it also writes the
   version into `server.json`, the Claude Code plugin and the Gemini CLI extension), then push the commit
   and the tag `vX.Y.Z`. The Publish workflow publishes to npm and the MCP Registry; the Release workflow
