@@ -6574,6 +6574,696 @@
                         "archetypes":  [
                                            "world"
                                        ]
+                    },
+                    {
+                        "id":  "world/sample-road-edges-not-centre-line",
+                        "topic":  "world",
+                        "title":  "A height check that samples only a road\u0027s centre line misses floating and buried edges",
+                        "symptom":  "After a road was raised and the ground left alone, a checker reported that nothing floated. On a cross slope one edge hung almost a metre above the ground while the other edge sat under it, and paths beside the road were buried by several centimetres.",
+                        "cause":  "The check sampled the centre line only. On sloping ground the centre can sit right on the terrain while both edges, and the foot of any embankment, are off by much more.",
+                        "fix":  "Sample at least the left edge, the centre, the right edge and the foot of any embankment for every road, path and ribbon mesh, and report the worst value. Treat a result such as \u0027nothing floats\u0027 as true only for the points that were sampled.",
+                        "test":  "Run the check on one road section across a slope with centre-only sampling and with edge sampling. The edge version must report the floating and buried sides that the centre-only version passed.",
+                        "tags":  [
+                                     "road",
+                                     "ribbon",
+                                     "terrain",
+                                     "height check",
+                                     "cross slope",
+                                     "floating",
+                                     "buried",
+                                     "embankment",
+                                     "validation"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/dependents-follow-a-raised-parent",
+                        "topic":  "world",
+                        "title":  "When a road is raised, crossings, islands and markings that keep their old height end up buried",
+                        "symptom":  "A patch raised a road by more than a metre but kept its pedestrian crossings, road markings and traffic islands at their old heights, guarded by an assert that they had not changed. Afterwards they sat one to two and a half metres below the new surface, and a sign post stuck out of the asphalt.",
+                        "cause":  "The dependent objects stored absolute heights instead of an offset from the road they belong to, and the patch treated \u0027unchanged\u0027 as \u0027correct\u0027.",
+                        "fix":  "Store dependents as an offset from their parent surface, or move every dependent by the same height change in the same patch. After the patch, check that each crossing, island and marking lies within a few centimetres of its road, and fail the patch when one does not.",
+                        "test":  "Raise one road section in a test and check that every object attached to it moved by the same amount, while objects on untouched roads stayed where they were.",
+                        "tags":  [
+                                     "road",
+                                     "regrade",
+                                     "crossing",
+                                     "traffic island",
+                                     "road marking",
+                                     "dependent",
+                                     "offset",
+                                     "height",
+                                     "patch"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/junction-parts-share-one-height",
+                        "topic":  "world",
+                        "title":  "Derive a roundabout\u0027s ring, arm ends and central island from one height, not separately",
+                        "symptom":  "At roundabouts, the arriving roads ended in short stubs that finished half a metre to almost two metres above or below the ring, giving grades of about 35 percent. Central islands sat up to two and a half metres off the road surface, and one ring on flat ground was tilted enough to give a 19 percent grade by itself.",
+                        "cause":  "The ring, the arm ends and the island were each given their own height. Nothing tied them together, and the arms were too short to take up the difference at a sane grade.",
+                        "fix":  "Use the ring height as the single source: keep the ring close to flat, derive the island and the arm end heights from it, and taper each arm over a distance long enough to stay under the grade limit. Measure ring tilt as the highest minus the lowest point of the ring, not only as slope per segment.",
+                        "test":  "For every junction, assert that each arm end and the island are within a few centimetres of the ring, that the ring tilt is below a limit, and that the last ten metres of every arm stay under the grade limit.",
+                        "tags":  [
+                                     "roundabout",
+                                     "junction",
+                                     "road",
+                                     "height",
+                                     "grade",
+                                     "slope",
+                                     "island",
+                                     "ring",
+                                     "single source"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/measure-grade-over-a-distance-window",
+                        "topic":  "world",
+                        "title":  "Per-segment grade hides ramps on closely spaced points; measure grade over a distance window",
+                        "symptom":  "A grade audit that only looked at segments longer than two metres reported a clean network, while a tilted roundabout ring and short steps near joins were steep enough to notice in play. A later audit still found almost two hundred steep segments outside bridges.",
+                        "cause":  "Rings, curves and joins are built from points less than two metres apart, so every one of their segments was skipped. A step spread over several short segments never shows up in one of them.",
+                        "fix":  "Compute grade as the height change over a fixed horizontal distance along the path, for example 3, 6 and 10 metres, run it on every road and path class, and report the steepest window in the last few metres before each join. Keep bridges, decks and stairs in a separate class so they do not hide the real findings.",
+                        "test":  "Feed the audit a short ring of points one metre apart with a known tilt. The window metric must report the grade that the per-segment metric skips.",
+                        "tags":  [
+                                     "grade",
+                                     "slope",
+                                     "road",
+                                     "audit",
+                                     "window",
+                                     "segment",
+                                     "ramp",
+                                     "path",
+                                     "validation"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/classify-steep-spots-by-cause",
+                        "topic":  "world",
+                        "title":  "Most steep spots in generated road data are profile faults, not hills; classify them before fixing",
+                        "symptom":  "A list of almost two hundred road segments steeper than 12 percent looked like a terrain problem. Some of the worst were pits and zigzags of two metres or more in the centre line, and in one place the navigation line dipped almost seven metres while the visible road was fine.",
+                        "cause":  "The steep segments had different causes: ground slope under the road, kinks in a height profile on flat ground, segments near decks that had come loose from the ground, junction joins, and one newly generated feature that produced most of them. Terrain edits can never fix a kink in the data.",
+                        "fix":  "Tag every flagged segment with a cause (terrain, profile kink, deck approach, junction, generated feature) before choosing a repair. Flatten profile kinks by equalising the first few points, give real hillsides a longer height profile at a moderate grade, and re-route what cannot be fixed by shaping the ground.",
+                        "test":  "After the fix, run the same audit and check that the count per cause went down, not only the total.",
+                        "tags":  [
+                                     "grade",
+                                     "slope",
+                                     "road",
+                                     "profile",
+                                     "kink",
+                                     "triage",
+                                     "classification",
+                                     "audit",
+                                     "navigation"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/path-beside-raised-road-uses-road-height",
+                        "topic":  "world",
+                        "title":  "A path generated at ground height ends up under the raised road next to it",
+                        "symptom":  "A generated cycle path beside a road on a small embankment ended two metres below the road surface at a junction, so the road seemed to lie on top of it. Elsewhere the path climbed at 40 to 58 percent to reach a crossing fixed to the road.",
+                        "cause":  "The path took its height from the terrain, while the road next to it and the crossing it had to meet were above the terrain.",
+                        "fix":  "When a path runs within a road\u0027s width, give it the road\u0027s height plus an offset. Let the path ends blend into the height they join with a grade cone: clamp the ground height to within s times d of the join height, where s is about 0.06 and d is the distance to the join. Drop segments that cannot satisfy the cone instead of building a cliff, and measure the result with a tool that is independent of the generator.",
+                        "test":  "Measure the steepest 3 metre window at every path end. After the fix it stayed below about 6 percent, where it had exceeded 25 percent in dozens of places.",
+                        "tags":  [
+                                     "path",
+                                     "cycle path",
+                                     "road",
+                                     "embankment",
+                                     "height",
+                                     "clamp",
+                                     "grade",
+                                     "procedural",
+                                     "junction"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/slope-check-every-graph-edge",
+                        "topic":  "world",
+                        "title":  "A slope check that skips short or graph-only links lets ramps and cliffs through",
+                        "symptom":  "A road graph patch claimed that no link was steeper than 12 percent, but vehicles climbed 16 and 31 percent ramps into the side of a raised road. After a road was raised, a few navigation points kept the old height and cars sank into or floated above the surface.",
+                        "cause":  "The slope test skipped short links and only checked links that had a visible road piece. It took the grade from the visible surface, while the graph edge used its own node heights, so the checked number was not the one vehicles followed.",
+                        "fix":  "Run the same slope assertion on every edge the final graph contains, using the heights vehicles actually follow. Either reject the edge or set its node heights from the visible surface. After any height change, snap navigation points back to the surface they belong to and compare the two.",
+                        "test":  "Count the graph edges the slope check visited and assert that it equals the number of edges in the graph.",
+                        "tags":  [
+                                     "navigation",
+                                     "road graph",
+                                     "slope",
+                                     "grade",
+                                     "edge",
+                                     "validation",
+                                     "vehicle",
+                                     "height"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "infrastructure.road"
+                                       ]
+                    },
+                    {
+                        "id":  "world/place-on-the-height-the-terrain-shader-shows",
+                        "topic":  "world",
+                        "title":  "Place generated paths and plates on the height the terrain shader actually draws",
+                        "symptom":  "One edge of a generated gravel plate hung two metres in the air and a path floated one and a half metres above the ground on steep terrain, while placed objects nearby looked fine.",
+                        "cause":  "The generator took the maximum of bilinear interpolation and two triangle-split interpolations of the heightmap. The terrain mesh is displaced from a heightmap texture, so the visible surface follows the bilinear value, and on steep cells the maximum overshoots by metres. Objects were checked on slopes, but ribbons and plates were not.",
+                        "fix":  "Sample the same interpolation the terrain shader uses (bilinear, plus any offset the shader adds), subdivide more finely on slopes, refuse paths where the ground changes by more than about 0.3 metres across their width, and add a check that compares generated heights with the terrain height function.",
+                        "test":  "Compare generated vertex heights with the terrain height at the same points on a set of steep cells; the difference must stay within a few centimetres.",
+                        "tags":  [
+                                     "heightmap",
+                                     "terrain",
+                                     "bilinear",
+                                     "interpolation",
+                                     "shader",
+                                     "path",
+                                     "plate",
+                                     "floating",
+                                     "procedural"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/test-the-whole-footprint-on-a-heightfield",
+                        "topic":  "world",
+                        "title":  "Test objects on a heightfield over their whole footprint, not at corners or one point",
+                        "symptom":  "Stacks of containers placed at a fixed height were half buried with the ground more than two metres above their base. A ship hull with a curved bottom floated half a metre to a metre above flat sand, and a bench and shelf floated because they used the highest ground value of a larger area.",
+                        "cause":  "Placement was checked at the corners only, at one sampled point plus an offset, or against one shared maximum. The ground between the sample points and the shape of a curved bottom were never compared.",
+                        "fix":  "Sample the ground on a fine grid over the whole footprint (about one metre, or several points per terrain triangle) with the interpolation the renderer uses. For flat objects accept ground at most a few centimetres above the base and a bounded gap below, and move or skip the object when it fails. For curved bottoms, find the lowest clearance and sink the object until that point touches. Use each object\u0027s own local ground, not a shared maximum.",
+                        "test":  "After the fix, compute the clearance of every placed object again; then render a close, low view with shadows to confirm the contact.",
+                        "tags":  [
+                                     "heightfield",
+                                     "terrain",
+                                     "footprint",
+                                     "placement",
+                                     "floating",
+                                     "buried",
+                                     "clearance",
+                                     "prop",
+                                     "procedural"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/re-measure-after-terrain-edits",
+                        "topic":  "world",
+                        "title":  "Editing a coarse height grid also moves the ground under everything nearby",
+                        "symptom":  "Lowering a few nodes of a coarse height grid to carve a trough also lowered the ground under the next road by half a metre. A ramp that had hung slightly above the ground now floated one and a half metres up with its embankment in the air, and no bridge explained it.",
+                        "cause":  "One coarse grid node affects every point within a cell around it. The checker only tested that the ground did not rise under a deck, and only at the road centre.",
+                        "fix":  "After any terrain edit, re-measure every road, embankment, object and navigation point near the edited nodes against the new heights, not only the object that triggered the edit. Check clearance in both directions: the ground must not rise into a road, and lowered ground must not leave a road hanging without a structure.",
+                        "test":  "List all measurements within one cell of each edited node before and after the edit and assert that none outside the intended area changed by more than a few centimetres.",
+                        "tags":  [
+                                     "terrain",
+                                     "heightmap",
+                                     "grid",
+                                     "edit",
+                                     "road",
+                                     "clearance",
+                                     "floating",
+                                     "regression"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/one-lookup-for-layered-height-grids",
+                        "topic":  "world",
+                        "title":  "Heights from several grids of different resolution need one lookup helper used everywhere",
+                        "symptom":  "A world with a coarse grid and several finer local grids got different ground heights from different tools, so audits disagreed with what the game drew and \u0027clean\u0027 meant something different in each script.",
+                        "cause":  "Each tool sampled the grids in its own order, with its own interpolation and edge clamp.",
+                        "fix":  "Write one lookup helper (the finest grid that covers the point first, then coarser fallbacks, bilinear interpolation, the same clamp at the edges) and reuse it in generators, checks and audits. Store a hash of each grid file and confirm the terrain is unchanged before comparing before and after measurements.",
+                        "test":  "Compare the helper with the height the running game reports at a set of points, including points on grid borders. They must match exactly.",
+                        "tags":  [
+                                     "terrain",
+                                     "heightmap",
+                                     "grid",
+                                     "lookup",
+                                     "interpolation",
+                                     "resolution",
+                                     "audit",
+                                     "hash"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/inventory-every-absolute-height",
+                        "topic":  "world",
+                        "title":  "Every data file that stores an absolute height must be updated or checked after a terrain change",
+                        "symptom":  "After a terrain edit, hundreds of thousands of trees and lamps stayed on the ground because they were regenerated, but eight trees from a separate file with fixed heights floated a few centimetres, a building hung above its base and a vehicle path stayed at the old height.",
+                        "cause":  "Those files held absolute heights and were not part of the update. They were assumed to be covered because similar files were.",
+                        "fix":  "Before changing terrain or road heights, list every data source that holds an absolute height (placed trees, lamps, buildings, paths, navigation graphs) and either regenerate each one from the new ground or add a check that compares it with the new heights.",
+                        "test":  "After the change, run the height comparison over every source on the list and fail when any object is more than a few centimetres off the ground.",
+                        "tags":  [
+                                     "terrain",
+                                     "height",
+                                     "data",
+                                     "inventory",
+                                     "regenerate",
+                                     "floating",
+                                     "placement",
+                                     "regression"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/keep-out-covers-every-layer",
+                        "topic":  "world",
+                        "title":  "Overlap and keep-out tests must include every road class and every placed zone",
+                        "symptom":  "A new wide street piece ended abruptly against a narrow road, leaving loose asphalt on each side, and covered the end of a cycle path. Generated paths ran straight through storage yards, and some path points lay under water.",
+                        "cause":  "The overlap check only knew about car roads, placed zones were not in the keep-out set, and the water test read a land-use flag although the sea surface also covers land that lies below sea level.",
+                        "fix":  "Build one keep-out set from all road and path classes and every placed zone. Decide \u0027under water\u0027 from the ground being below the water level plus a small margin, with the right level for each water body. Where roads of different width meet, taper the wider one, and run the same check on old and new output so regressions show.",
+                        "test":  "Run the stricter check on the previous output as well. It found faults the old check had passed, and after the fix thousands of path points inside yards and water were gone.",
+                        "tags":  [
+                                     "keep-out",
+                                     "overlap",
+                                     "road",
+                                     "path",
+                                     "water",
+                                     "procedural",
+                                     "placement",
+                                     "validation"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "world/path-search-needs-slope-cost",
+                        "topic":  "world",
+                        "title":  "A path search without a slope cost builds paths straight up embankments",
+                        "symptom":  "A generator that laid footpaths with A* produced over two hundred pieces steeper than 25 percent, the worst over 150 percent, and many entrances where the path surfaced from an embankment beside the road.",
+                        "cause":  "The search cost ignored slope, and nothing checked the ground at the point where a path left the road.",
+                        "fix":  "Add slope to the cost and reject cells above a grade limit (around 12 percent) or on a sharp kink. At each entrance require the ground at the path start to be at most about 0.1 metres above it and the drop over the first couple of metres to be small, otherwise drop that entrance. Report what was rejected.",
+                        "test":  "After the change, assert that no generated path piece exceeds 25 percent and that no entrance has ground above the path start.",
+                        "tags":  [
+                                     "A*",
+                                     "AStar",
+                                     "path",
+                                     "slope",
+                                     "cost",
+                                     "procedural",
+                                     "grade",
+                                     "entrance"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/crawling-creatures-sample-ground-every-step",
+                        "topic":  "world",
+                        "title":  "A creature that crawls over slopes must sample the ground height every step",
+                        "symptom":  "On a steep rocky bank, crabs sank more than 15 centimetres into the ground on the way down and hovered above it on the way back, for the length of a step.",
+                        "cause":  "Each animal cached the ground height and only sampled it again after moving some distance, which is far too coarse on a steep slope.",
+                        "fix":  "Sample the ground every step, or after a very small move (a few centimetres) and interpolate along the slope of the last two samples in between. Keep the cost in check by sampling only for animals that move.",
+                        "test":  "Each frame, for every moving animal, compare its height with the ground and fail above 0.1 metres. Run the old code as a counter-test that must fail; the new code passed tens of thousands of samples at about 10 percent more tick cost.",
+                        "tags":  [
+                                     "animal",
+                                     "creature",
+                                     "ground",
+                                     "terrain",
+                                     "slope",
+                                     "height",
+                                     "sampling",
+                                     "wildlife"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "world.terrain"
+                                       ]
+                    },
+                    {
+                        "id":  "world/build-what-the-camera-distance-can-see",
+                        "topic":  "world",
+                        "title":  "Choose vegetation layers by the camera distances that really occur",
+                        "symptom":  "A ground-cover layer of flowers and hedges cost instances and draw calls but contributed nothing, because the camera usually flew hundreds of metres up and the layer was only built within about a hundred metres. Low-poly shrub spheres also looked cheap next to the real trees.",
+                        "cause":  "The layer was planned from a walking point of view instead of the camera heights the game actually uses.",
+                        "fix":  "Spend instances on what is visible from the usual camera height: trees, impostors and ground colour (a tint in the terrain shader costs no instances). Build the middle layer from smaller copies of the same tree models so it uses the existing LOD and impostor pipeline, and give every layer its own off switch.",
+                        "test":  "Compare each layer\u0027s build radius with the camera heights recorded in play; a layer whose radius is below the usual camera distance should not exist in that mode.",
+                        "tags":  [
+                                     "vegetation",
+                                     "foliage",
+                                     "camera",
+                                     "distance",
+                                     "LOD",
+                                     "impostor",
+                                     "instances",
+                                     "budget",
+                                     "trees"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "plant.tree"
+                                       ]
+                    },
+                    {
+                        "id":  "rendering/underwater-scatter-integrate-the-ray",
+                        "topic":  "rendering",
+                        "title":  "Underwater in-scatter must integrate along the whole ray, not sample light at its midpoint",
+                        "symptom":  "A full-screen underwater fog pass drew a hard dark streak along the horizon, with a visible step between the rows above and below it.",
+                        "cause":  "In-scatter used the light level at the depth halfway along the ray. Where the depth buffer held the sky, the ray end was kilometres deep, the midpoint light was close to zero and the pixel went black, while neighbouring rows that hit the seabed or the reflected surface got other values.",
+                        "fix":  "Replace the midpoint sample with the closed-form integral of light along the ray. With extinction sigma, light falloff k with depth, ray direction y component dy and ray length d: scatter = sigma / (sigma - k * dy) * (1 - exp(-(sigma - k * dy) * d)) * exp(-k * c), where c is the depth of the camera below the surface. Guard the divisor near zero. Long rays then reach the same colour just above and just below the horizon. Make sure every scene that reused the old pass gets the new one.",
+                        "test":  "Measure each image row of the horizon view: the step between rows fell from 32 to 100 levels to below one, in every test view.",
+                        "tags":  [
+                                     "underwater",
+                                     "fog",
+                                     "scattering",
+                                     "shader",
+                                     "post-process",
+                                     "horizon",
+                                     "depth buffer",
+                                     "banding",
+                                     "integral"
+                                 ],
+                        "archetypes":  [
+                                           "world.water.sea"
+                                       ]
+                    },
+                    {
+                        "id":  "rendering/multimesh-interpolation-outside-physics",
+                        "topic":  "rendering",
+                        "title":  "Updating an interpolated MultiMesh outside the physics step triggers a warning each time",
+                        "symptom":  "With physics interpolation on, a smoke test printed the warning that MultiMesh interpolation was triggered from outside the physics process a dozen times, without saying which layer caused it.",
+                        "cause":  "A layer wrote MultiMesh instance transforms from _process or a build step while the node used physics interpolation.",
+                        "fix":  "Write interpolated instance transforms in _physics_process, or set physics_interpolation_mode to off on MultiMesh nodes whose data is not driven by physics. Count the warning in smoke tests and find the culprit by turning layers on one at a time.",
+                        "test":  "Run the smoke test with all layers and assert that the warning count is zero.",
+                        "tags":  [
+                                     "MultiMesh",
+                                     "physics interpolation",
+                                     "physics_interpolation_mode",
+                                     "_physics_process",
+                                     "warning",
+                                     "smoke test"
+                                 ]
+                    },
+                    {
+                        "id":  "tooling/measure-banding-per-row",
+                        "topic":  "tooling",
+                        "title":  "To prove a horizontal streak is gone, measure dips and steps per image row",
+                        "symptom":  "Horizon streaks and bands are easy to call fixed by eye and easy to miss on a scaled-down preview. A scene with no post-process pass at all can already contain a step that then gets blamed on the pass.",
+                        "cause":  "Visual review gives no number, and without a bare scene to compare with there is no way to tell which part of the step comes from the change.",
+                        "fix":  "Render the suspect view with the game\u0027s own renderer over several camera depths and pitches, include the worst case where the depth buffer shows sky, and compute per image row a dip (a row darker than both neighbours) and a step (the jump between neighbouring rows). Compare the old pass, the new pass and the bare scene, and keep the numbers next to a before and after image sheet.",
+                        "test":  "The metric must show a clear dip on the old pass and none on the bare scene before it is trusted to judge a fix.",
+                        "tags":  [
+                                     "banding",
+                                     "streak",
+                                     "screenshot",
+                                     "image",
+                                     "metric",
+                                     "row",
+                                     "post-process",
+                                     "visual test"
+                                 ]
+                    },
+                    {
+                        "id":  "tooling/headless-multimesh-not-readable",
+                        "topic":  "tooling",
+                        "title":  "Headless runs cannot read MultiMesh instance transforms back; test the data you feed it",
+                        "symptom":  "A headless test that read MultiMesh instance transforms back from the node to check placement could neither pass nor fail meaningfully.",
+                        "cause":  "In a headless run the rendering server is a dummy, so the instance buffer that holds the transforms is not available to read back.",
+                        "fix":  "Check placement on the source arrays before they go into the MultiMesh (positions, overlaps with roads or buildings), assert instance counts, and use a windowed run with a screenshot for the final visual check.",
+                        "test":  "Make the placement test fail on purpose by moving one source position onto a road; the headless test must catch it.",
+                        "tags":  [
+                                     "MultiMesh",
+                                     "headless",
+                                     "test",
+                                     "instance transform",
+                                     "placement",
+                                     "RenderingServer"
+                                 ]
+                    },
+                    {
+                        "id":  "tooling/headless-no-frame-post-draw",
+                        "topic":  "tooling",
+                        "title":  "Do not await frame_post_draw in a headless run; it never fires",
+                        "symptom":  "A QA script that awaited RenderingServer.frame_post_draw before capturing hung forever when run with the headless display driver.",
+                        "cause":  "Without a window nothing is drawn, so the signal is never emitted.",
+                        "fix":  "Detect headless mode (DisplayServer.get_name() == \"headless\") and skip render-dependent waits and captures there, using process frames or timers instead. Use headless runs for logic, compile and result checks, and a window for anything visual.",
+                        "test":  "Run the same QA script headless and windowed; both must finish.",
+                        "tags":  [
+                                     "headless",
+                                     "frame_post_draw",
+                                     "RenderingServer",
+                                     "DisplayServer",
+                                     "hang",
+                                     "await",
+                                     "screenshot",
+                                     "QA"
+                                 ]
+                    },
+                    {
+                        "id":  "tooling/wait-for-streaming-to-settle",
+                        "topic":  "tooling",
+                        "title":  "Wait until streaming has gone quiet before taking screenshots and measurements",
+                        "symptom":  "A fixed wait after moving the camera gave half-streamed terrain, missing vegetation and misleading draw call counts, or wasted time when loading had already finished.",
+                        "cause":  "The time streaming needs depends on the place and the machine, and a fixed sleep knows nothing about it.",
+                        "fix":  "After each camera move, wait a minimum time, then poll every streaming system that exposes state (job queues, pending cells, builder states) until all have been idle for a stable window, with a hard maximum. When the maximum is hit, mark the shot as not settled in the log and on the image sheet instead of trusting it.",
+                        "test":  "Log for every shot whether it settled and how long it took; a shot taken right after a teleport must report not settled.",
+                        "tags":  [
+                                     "streaming",
+                                     "screenshot",
+                                     "QA",
+                                     "wait",
+                                     "idle",
+                                     "measurement",
+                                     "loading",
+                                     "camera"
+                                 ]
+                    },
+                    {
+                        "id":  "gdscript/remove-old-node-before-adding-same-name",
+                        "topic":  "gdscript",
+                        "title":  "A node added under the name of a node still waiting for queue_free() gets a new name",
+                        "symptom":  "In a loop that rebuilt a helper node for each test point, the second point lost its night lighting because code that looked the helper up by name no longer found it.",
+                        "cause":  "queue_free() only frees the old node at the end of the frame. Adding a replacement with the same name in the same frame makes Godot give the new node an automatic unique name.",
+                        "fix":  "Call remove_child() on the old node (then queue_free() it) before adding the replacement, or keep a reference instead of looking the node up by name. In tests, check the node\u0027s name after add_child() when other systems find it by name.",
+                        "test":  "Replace the node twice in the same frame and assert that get_node() with the original name returns the newest instance.",
+                        "tags":  [
+                                     "queue_free",
+                                     "remove_child",
+                                     "add_child",
+                                     "node name",
+                                     "rename",
+                                     "get_node",
+                                     "replace"
+                                 ]
+                    },
+                    {
+                        "id":  "performance/budget-layers-in-draw-calls",
+                        "topic":  "performance",
+                        "title":  "In a CPU-bound scene, budget each new layer in draw calls, not triangles",
+                        "symptom":  "A large world looked fine on triangle counts but ran at about 19 fps. Layers that each looked cheap added up to a large frame-time hit in dense areas.",
+                        "cause":  "Frame time was split roughly equally between scripts, CPU draw submission and GPU. Each extra object layer mostly cost draw submission, while extra triangles weighed little.",
+                        "fix":  "Once, calibrate from a frame report by dividing CPU draw time by the number of draw calls (one measurement gave about 2.4 microseconds per draw call, so 1000 extra draw calls cost about 2.4 ms a frame). Give every layer a ceiling for draw calls, shadow draw calls and triangles, add up the ceilings per location, and make each layer report its instances, multimeshes, triangles and build time.",
+                        "test":  "Sum the measured draw calls of all layers at the densest test points and compare the total with the frame budget before adding another layer.",
+                        "tags":  [
+                                     "draw calls",
+                                     "budget",
+                                     "CPU",
+                                     "triangles",
+                                     "layers",
+                                     "frame time",
+                                     "calibration",
+                                     "profiling"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/loaded-versus-drawn-triangles",
+                        "topic":  "performance",
+                        "title":  "Count the triangles that are drawn near the camera, not only the triangles loaded",
+                        "symptom":  "A ring of distant terrain pieces kept about 16 million triangles and a thousand mesh instances loaded everywhere, yet drew only a few hundred triangles within 400 metres. At the same time one dense scatter layer put more than 3 million triangles inside that radius from a close camera.",
+                        "cause":  "Total loaded triangles measure memory and cull work, not draw cost. Which layer is expensive depends on what falls inside each instance\u0027s visibility range.",
+                        "fix":  "Measure both numbers per layer: loaded triangles, and triangles within a radius that respects each instance\u0027s visibility range (visibility_range_end). Build far pieces only within a few kilometres or merge them into larger blocks, and give dense scatter its own shorter visibility_range_end or sow it thinner.",
+                        "test":  "Run the meter at a few test points and list layers by drawn triangles; the top layer is the one to fix first.",
+                        "tags":  [
+                                     "triangles",
+                                     "visibility_range_end",
+                                     "LOD",
+                                     "memory",
+                                     "culling",
+                                     "scatter",
+                                     "metering",
+                                     "terrain"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/no-shadows-on-small-props",
+                        "topic":  "performance",
+                        "title":  "Shadows on small props and far instances waste a large share of draw calls",
+                        "symptom":  "In a profiled frame about 2200 of roughly 7400 draw calls belonged to the shadow pass, much of it for posts, benches, signs and boxes no taller than a person\u0027s chest, and for instances far from the camera.",
+                        "cause":  "Every mesh casts shadows by default, and each shadow cascade draws the casters again.",
+                        "fix":  "Turn cast_shadow off for objects smaller than about 1.5 metres. Where far shadows are wanted, keep a separate shadow-only copy (for example a second MultiMesh with shadows-only casting) with a visibility_range_end of 150 to 300 metres, so the visible copy stays visible far away without its shadow draws.",
+                        "test":  "Compare shadow draw calls in a frame report before and after; the visible scene should look the same at normal camera distance.",
+                        "tags":  [
+                                     "shadows",
+                                     "cast_shadow",
+                                     "draw calls",
+                                     "props",
+                                     "visibility_range_end",
+                                     "MultiMesh",
+                                     "shadow pass"
+                                 ],
+                        "archetypes":  [
+                                           "world"
+                                       ]
+                    },
+                    {
+                        "id":  "performance/label3d-is-a-draw-call-each",
+                        "topic":  "performance",
+                        "title":  "Do not give every sign its own Label3D; draw the text from an atlas on a MultiMesh",
+                        "symptom":  "A layer of many road signs with tiny geometry blew through its draw call budget.",
+                        "cause":  "Each Label3D is its own draw call with its own material, so a label per sign costs one draw call per sign.",
+                        "fix":  "Bake the texts into an atlas texture and draw the signs as quads on a MultiMesh, choosing the atlas cell with per-instance custom data. When a Label3D cannot be avoided, give it a short visibility_range_end.",
+                        "test":  "Meter the layer\u0027s draw calls with and without labels; with the atlas the count should no longer grow with the number of signs.",
+                        "tags":  [
+                                     "Label3D",
+                                     "text",
+                                     "atlas",
+                                     "MultiMesh",
+                                     "custom data",
+                                     "draw calls",
+                                     "signs"
+                                 ]
+                    },
+                    {
+                        "id":  "performance/measure-layers-do-not-trust-the-model",
+                        "topic":  "performance",
+                        "title":  "A triangle model of a new layer can be far off; calibrate it with one real measurement",
+                        "symptom":  "An orchard layer of dense low trees built from the full-detail tree model more than doubled the triangles near the ground and dropped the frame rate from 28 to 16, far more than a per-tree model had predicted. The gap was never fully explained.",
+                        "cause":  "A static count of instances times triangles per LOD leaves out shadow cascades, impostor quads and the streaming state at the moment of the run.",
+                        "fix":  "Use models only to rank and to set ceilings, label unmeasured numbers as estimates, and measure every new layer before and after with the game\u0027s own renderer. For dense low vegetation, use the highest LOD only very close (about 30 metres), turn shadows off on the lowest LOD, and split each impostor MultiMesh into blocks of about 128 metres so frustum culling works.",
+                        "test":  "Record triangles and frame time at fixed camera points with the layer on and off, and retune the model whenever the two disagree.",
+                        "tags":  [
+                                     "LOD",
+                                     "trees",
+                                     "orchard",
+                                     "impostor",
+                                     "triangles",
+                                     "fps",
+                                     "estimate",
+                                     "measurement",
+                                     "shadows"
+                                 ],
+                        "archetypes":  [
+                                           "world",
+                                           "plant.tree"
+                                       ]
+                    },
+                    {
+                        "id":  "process/hook-insertions-instead-of-file-replacements",
+                        "topic":  "process",
+                        "title":  "Add a hook to a shared script with a small idempotent insertion, not a full copy of the file",
+                        "symptom":  "Several features each shipped a complete replacement of the same shared script. Whichever was installed second had to be rebuilt, and every change to the shared file forced a rebuild of every package based on it.",
+                        "cause":  "A full file copy carries the whole state of the file at build time, including other features\u0027 changes.",
+                        "fix":  "Instead, ship the hook as a tiny insertion: find a stable anchor line, insert one guarded call, do nothing when the line is already there, and apply it to the current file at install time. Keep a table of which feature hooks into which file, because hooks change the base that other packages are built on.",
+                        "test":  "Apply the insertion twice and in a different order with another hook; the file must end up the same and contain each call once.",
+                        "tags":  [
+                                     "patch",
+                                     "hook",
+                                     "idempotent",
+                                     "insertion",
+                                     "anchor",
+                                     "shared script",
+                                     "merge",
+                                     "install"
+                                 ]
+                    },
+                    {
+                        "id":  "process/serial-lane-for-heavy-test-runs",
+                        "topic":  "process",
+                        "title":  "Run heavy game test instances in one serial queue",
+                        "symptom":  "Test runs that each needed gigabytes of memory and minutes of loading corrupted each other\u0027s results and ran out of memory when several ran at the same time.",
+                        "cause":  "Parallel runs shared memory, the same executable and user data folder, and sometimes installed into the same pack at once.",
+                        "fix":  "Put heavy runs in one serial queue where each step waits for the previous step\u0027s result file, and run build-only and headless compile work in parallel beside it. Guard the shared pack with a lock file so a second install is refused. A second heavy lane needs its own copy of the executable and its own user data folder.",
+                        "test":  "Start two installs at once; the second must refuse because of the lock.",
+                        "tags":  [
+                                     "test",
+                                     "queue",
+                                     "serial",
+                                     "lock file",
+                                     "memory",
+                                     "parallel",
+                                     "user data",
+                                     "CI"
+                                 ]
+                    },
+                    {
+                        "id":  "process/batch-test-points-in-one-boot",
+                        "topic":  "process",
+                        "title":  "Check many test points in one long-running session when loading the world is expensive",
+                        "symptom":  "Every feature check needed the whole world loaded, which took minutes and gigabytes, so running one script per feature made testing very slow.",
+                        "cause":  "Each separate run paid the same load cost again.",
+                        "fix":  "Write one QA driver that reads a list of points (shared defaults plus per-point overrides), moves the camera to each, takes the standard shots and records frame time, draw calls, primitives and video memory, then writes one result file and image sheets. Let extra checks run in the same session after the last shot, and try two or three points before a large batch.",
+                        "test":  "Compare the total time of one batched run with separate runs for the same points; the batch should take roughly half.",
+                        "tags":  [
+                                     "QA",
+                                     "test",
+                                     "batch",
+                                     "loading",
+                                     "screenshot",
+                                     "metrics",
+                                     "harness",
+                                     "camera"
+                                 ]
+                    },
+                    {
+                        "id":  "process/prove-the-test-harness-on-a-mock-project",
+                        "topic":  "process",
+                        "title":  "Try a test harness in a small mock project before the expensive real run",
+                        "symptom":  "A harness that only ever ran in the real, slow project hid its own bugs behind long load times; a mock run found a hang and a lighting node reused in the same frame it was freed before the first real run.",
+                        "cause":  "When every run costs minutes, harness bugs look like game problems and are found late.",
+                        "fix":  "Build a tiny Godot project with mock nodes that expose the same properties as the real scene, include the real unmodified helper scripts the harness depends on, and run it headless and in a window. Report PASS or FAIL lines plus a count of script and parse errors, seed deliberate regressions (for example three times the objects) to prove the comparison catches them, and write down what the mock does not cover.",
+                        "test":  "A seeded tripling of objects must show up as a clear draw call increase in the before and after comparison.",
+                        "tags":  [
+                                     "test harness",
+                                     "mock",
+                                     "QA",
+                                     "headless",
+                                     "regression",
+                                     "smoke test",
+                                     "verification"
+                                 ]
                     }
                 ]
 }
