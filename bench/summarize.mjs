@@ -7,9 +7,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-/** "claude-haiku-5-5-with-r2" -> { model: "claude-haiku-5-5", mode: "with" } */
+/** "claude-haiku-5-5-with-r2" (or -lean-, -without-) -> { model: "claude-haiku-5-5", mode: "with" } */
 export function parseLabel(label) {
-  const m = /^(.*)-(with|without)(?:-r\d+)?$/.exec(label);
+  const m = /^(.*)-(with|without|lean)(?:-r\d+)?$/.exec(label);
   return m ? { model: m[1], mode: m[2] } : { model: label, mode: "?" };
 }
 
@@ -73,12 +73,12 @@ export function table(rows) {
   ];
   for (const r of rows) {
     lines.push(
-      `| ${r.model} | ${r.mode === "with" ? "yes" : "no"} | ${r.runs} | ${pct(r.passRate)} | ${pct(r.checkRate)} | ${pct(r.cleanRate)} | ${r.godotErrors.toFixed(2)} | ${r.reviewErrors.toFixed(2)} | ${r.godotwrightCalls.toFixed(1)} | ${Math.round(r.seconds)} s | $${r.costUsd.toFixed(3)} |`,
+      `| ${r.model} | ${r.mode === "with" ? "yes" : r.mode === "lean" ? "lean" : "no"} | ${r.runs} | ${pct(r.passRate)} | ${pct(r.checkRate)} | ${pct(r.cleanRate)} | ${r.godotErrors.toFixed(2)} | ${r.reviewErrors.toFixed(2)} | ${r.godotwrightCalls.toFixed(1)} | ${Math.round(r.seconds)} s | $${r.costUsd.toFixed(3)} |`,
     );
   }
   const tasks = [...new Set(rows.flatMap((r) => Object.keys(r.perTask)))].sort();
   lines.push("", `| Model | Godotwright | ${tasks.join(" | ")} |`, `| --- | --- |${tasks.map(() => " ---: |").join("")}`);
-  for (const r of rows) lines.push(`| ${r.model} | ${r.mode === "with" ? "yes" : "no"} | ${tasks.map((t) => r.perTask[t] ?? "-").join(" | ")} |`);
+  for (const r of rows) lines.push(`| ${r.model} | ${r.mode === "with" ? "yes" : r.mode === "lean" ? "lean" : "no"} | ${tasks.map((t) => r.perTask[t] ?? "-").join(" | ")} |`);
   return lines.join("\n");
 }
 

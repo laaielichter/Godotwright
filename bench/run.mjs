@@ -2,11 +2,11 @@
 /**
  * Runs Claude Code on every benchmark task, with and without Godotwright.
  *
- *   node bench/run.mjs --model claude-haiku-5-5 [--tier cheap] [--tasks a,b] [--modes without,with]
+ *   node bench/run.mjs --model claude-haiku-5-5 [--tier cheap] [--tasks a,b] [--modes without,with,lean]
  *                      [--reps 3] [--out bench/runs] [--jobs 4] [--max-turns 40]
  *
  * Both modes get the same prompt and the same file tools (Read, Write, Edit, Glob, Grep).
- * "with" adds the Godotwright MCP server; nothing else differs. Only files the agent
+ * "with" adds the Godotwright MCP server; "lean" adds it with --lean (two tools instead of all); nothing else differs. Only files the agent
  * changed are kept, in <out>/<model>-<mode>/<task>/files, plus run.json with metrics.
  * Grade the results with real Godot: node bench/grade.mjs --runs <out>
  */
@@ -87,9 +87,9 @@ function runAgent(task, mode, rep) {
   const work = makeProject(task, mkdtempSync(join(tmpdir(), `agent-${task}-`)));
 
   const mcpConfig = join(mkdtempSync(join(tmpdir(), "bench-mcp-")), "mcp.json");
-  const servers = mode === "with" ? { godotwright: { command: process.execPath, args: [CLI, "mcp", "--tier", tier] } } : {};
+  const servers = mode !== "without" ? { godotwright: { command: process.execPath, args: [CLI, "mcp", "--tier", tier, ...(mode === "lean" ? ["--lean"] : [])] } } : {};
   writeFileSync(mcpConfig, JSON.stringify({ mcpServers: servers }));
-  const allowed = [...FILE_TOOLS, ...(mode === "with" ? ["mcp__godotwright"] : [])];
+  const allowed = [...FILE_TOOLS, ...(mode !== "without" ? ["mcp__godotwright"] : [])];
 
   const cliArgs = [
     "-p",
@@ -148,7 +148,7 @@ function runAgent(task, mode, rep) {
         task,
         mode,
         model,
-        tier: mode === "with" ? tier : null,
+        tier: mode !== "without" ? tier : null,
         exitCode: code,
         seconds: Math.round((Date.now() - started) / 1000),
         turns: final.num_turns ?? null,

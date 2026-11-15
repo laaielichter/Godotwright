@@ -81,6 +81,8 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
     add("model/opaque-glass", `Material "${m.name}" looks like glass but ${why}: nothing behind it shows.`);
   }
 
+  checkAlbedo(info, add);
+
   const order: Record<ModelSeverity, number> = { error: 0, warning: 1, info: 2 };
   findings.sort((a, b) => order[a.severity] - order[b.severity] || a.rule.localeCompare(b.rule));
   const checked = options.archetype !== undefined && options.archetype.id !== "thing";
@@ -92,6 +94,29 @@ export function lintModel(info: ModelInfo, options: LintOptions = {}): ModelRepo
 }
 
 type Add = (rule: string, message: string, node?: string, severity?: ModelSeverity) => void;
+
+/** Linear 0..1 to sRGB 0..255, for messages people can compare with a colour picker. */
+const srgb = (v: number): number => Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(Math.min(1, v), 1 / 2.4) - 0.055));
+
+/**
+ * Base colours real surfaces do not have: a non-metal brighter than white paint (it glows under a sun and reads as a
+ * toy), darker than charcoal (it turns into a black hole), or a "metal" so dark that it can only be a painted finish.
+ * Glowing and see-through materials are left alone; a textured one is judged by the mean of its colour map.
+ */
+export function checkAlbedo(info: ModelInfo, add: Add): void {
+  for (const m of info.materials) {
+    if (!m.albedo || m.emissive || m.transmission || (m.alphaMode === "BLEND" && m.alpha < 0.95)) continue;
+    const [r, g, b] = m.albedo;
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const hex = `sRGB ${srgb(r)}, ${srgb(g)}, ${srgb(b)}`;
+    if (m.metallic >= 0.5) {
+      if (lum < 0.2) add("model/albedo", `Material "${m.name}" is metallic with a base colour of ${lum.toFixed(2)} (${hex}): metals reflect 50-100% of light, so it renders as a black mirror. Make dark metal a painted finish (metallic 0-0.3) or give it a brighter base colour.`);
+      continue;
+    }
+    if (Math.max(r, g, b) > 0.9) add("model/albedo", `Material "${m.name}" has a base colour of ${lum.toFixed(2)} (${hex}), brighter than fresh snow (real surfaces stay below about sRGB 240, 0.87 linear): it blows out under a sun. Darken it; white paint is about sRGB 220-235.`);
+    else if (lum < 0.01) add("model/albedo", `Material "${m.name}" has a base colour of ${lum.toFixed(3)} (${hex}), darker than charcoal (real surfaces stay above about sRGB 25-30): it reads as a hole. Black paint and rubber are about sRGB 30-50.`);
+  }
+}
 
 /** A part that hangs in the air (a warning) or stands apart on the ground (an info) is usually a part put in the wrong place. */
 function checkSeparateParts(info: ModelInfo, add: Add): void {

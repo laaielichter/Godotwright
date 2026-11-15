@@ -20,6 +20,7 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <a href="bench/RESULTS.md">Benchmark</a> ·
   <a href="CHANGELOG.md">Changelog</a>
 </p>
+<p align="center">Translations: <a href="docs/translations/README.es.md">Español</a></p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/"><img src="docs/assets/social.jpg" alt="Godotwright: big worlds, better code, keep creating" width="1000"></a><br>
   <sub>Concept artwork. Explore the toolkit, real demo and model gallery on the <a href="https://laaielichter.github.io/Godotwright/">website</a>.</sub>
@@ -77,7 +78,7 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 
 | Client | How |
 | --- | --- |
-| **Claude Code** | `/plugin install godotwright --marketplace laaielichter/Godotwright` (MCP server, hooks, ten skills, seven subagents) |
+| **Claude Code** | `/plugin install godotwright --marketplace laaielichter/Godotwright` (MCP server, hooks, eleven skills, eight subagents) |
 | **Claude Desktop** | Download [`godotwright.mcpb`](https://github.com/laaielichter/Godotwright/releases/latest/download/godotwright.mcpb) and open it |
 | **Cursor** | [Add to Cursor](https://laaielichter.github.io/Godotwright/install.html#cursor) (one click) |
 | **VS Code** (Copilot) | [Install in VS Code](https://laaielichter.github.io/Godotwright/install.html#vscode) (one click) |
@@ -103,7 +104,16 @@ models; `--tier cheap` (the default) gives short output and step-by-step instruc
 - **Upgrades.** Godot 4.6 and 4.7 changes as review rules and fixes, `target` for a project on an older 4.x, and
   `compare_godot` to see what a 4.8 beta breaks.
 - **Resources and imports.** `godot_resource_edit` edits `.tres` files and import settings and verifies the reimport.
-- **For agents and teams.** Tool sets (`--tools core` is about a third of the tool list), `--read-only`,
+- **The whole change, not the one file.** `godot_diff` reads a change by meaning (nodes, properties, connections,
+  script functions and exports instead of renumbered ids) and marks what it breaks elsewhere, such as a scene
+  connection to a function that is gone or an `@export` value a scene still saves; `godot_impact` walks back to every
+  scene, test and saved scenario the change reaches and lists the checks to run; `godot_collisions` maps physics
+  layers and masks and says who detects whom, with the exact mask value to set.
+- **A tool list that costs almost nothing.** Every MCP tool definition is sent to the model on every turn: 43 tools
+  are about 22,000 tokens before the agent has done anything, and some clients stop at 40 tools. `godotwright mcp --lean`
+  offers two tools instead (`godot` runs any tool by name, `godot_help` gives its parameters): about 900 tokens, 96%
+  less, with the same tools and results behind them.
+- **For agents and teams.** Tool sets (`--tools core` is about a third of the tool list), `--lean`, `--read-only`,
   structured results, progress and cancel for long Godot runs, and protected folders that no write may touch.
 
 0.5.0 brought `godot_code` (Godot's own GDScript language server: warnings at the project's levels, inferred types,
@@ -130,6 +140,7 @@ you give on the frames you give, and prints the values you watch; `screenshot` r
 **Build 3D models.** `model build` makes a clean `.glb` with no Blender: one of 59 ready-made kinds (vehicles, aircraft,
 ships, buildings, plants, terrain with lakes and rivers) or your own JSON spec. `model identify` says what a thing is
 (parts, sizes, pivots), `model view` draws it as text for agents that cannot see pictures, and `model lint` scores it.
+The [asset library](LIBRARY.md) adds over a thousand ready-made base recipes to build or start from.
 
 **Review every pull request.** Add this to your game's repository:
 
@@ -156,7 +167,68 @@ opt-in and off by default ([PRIVACY.md](PRIVACY.md)).
 
 Every command, option and rule: [docs/reference.md](docs/reference.md).
 
-## The 38 tools
+## Dreaming: learn from past sessions
+
+Between sessions, Godotwright can look back at what happened in a project and tidy up what it learned, like the
+"dreaming" of long-running agents, but local and Godot-specific. `godotwright dream` (or `godot_dream`) reads the local
+learning file, the project's write journal and, only with `--transcripts`, the project's Claude Code and Codex session
+transcripts, and proposes, each with its evidence and a reason:
+
+- a **draft lesson** for a Godot error that keeps coming back and that no rule predicts and no lesson explains;
+- a **project hint** for an API name the agent keeps guessing ("use `Node2D.look_at`, not `Node2D.look_att`");
+- to **retire, rewrite or merge** lessons that were shown often but marked wrong, or say the same thing twice;
+- a **lesson about writes that were undone** again and again by the same tool on the same kind of file;
+- that a **rule is noisy here**, when this project keeps marking it as a false alarm (a suggestion only);
+- to **resolve** verdicts that contradict each other (a finding marked wrong, then right or confirmed by Godot).
+
+```sh
+godotwright dream                    # numbered proposals with their evidence; nothing changes
+godotwright dream --transcripts      # also learn from this project's agent sessions (anonymous facts only)
+godotwright dream --apply 1,3        # or --apply all; godotwright undo takes it back
+```
+
+It is deterministic: no model, no network, nothing leaves the machine, and it never writes into a file of your
+repository. From transcripts (only when you ask, per run) it keeps only tool names, Godot message templates without
+names or paths, and Godot API names, never their text; nothing that still looks like code or a name is kept. An apply
+(only when you ask) keeps lessons through the same scrubber as `godot_lesson_add`, and keeps hints, a dated report and a
+short "Godotwright lessons for agents" note (top recurring mistakes and project hints) in `.godot/godotwright/dreams/`,
+which Godot's `.gitignore` leaves out (when git tracks `.godot/`, they go to Godotwright's state folder instead). The
+session-start hook shows the note to the agent. All of it goes through the journal, so `godotwright undo` takes it
+back. Draft lessons hold the symptom and the message; the plugin's `godot-dreamer` subagent (or `/godotwright:dream`)
+works out the cause and fix with `godot_api`, `godot_lessons` and, when Godot is installed, `godot_check`, and applies
+only what you approve.
+
+The session-start hook counts sessions and, once a dream is due (24 hours and 5 sessions since the last one), says
+"Godotwright has N dream proposals: run godot_dream". Set it in `godotwright.json`:
+`"dream": {"auto": "suggest" | "apply" | "off", "minHours": 24, "minSessions": 5}` (default `"suggest"`). `"apply"`
+applies lesson and hint changes by itself, never a removal, and only after you allowed it once on this machine with
+`godotwright dream --auto-apply yes`. Nothing from dreaming goes into the opt-in anonymous report.
+
+## Asset library: a thousand base recipes
+
+![One asset of every family in the library, rendered in Godot 4.7](docs/library.png)
+
+*One asset of every family, rendered in Godot 4.7 (Compatibility renderer, AgX).*
+
+`godotwright model library` (MCP `godot_model_library`) holds over a thousand ready-made base recipes in seven
+categories: furniture, street furniture, storage and industrial props, nature, buildings, vehicles and props. Each one
+is a model spec with parameters, made by a family of variants (styles, part layouts and finishes), and each one builds a
+clean `.glb` that passes the model lint and the check against its archetype, at its defaults and at the ends of its
+parameter ranges, and every one imports, loads and instantiates in Godot 4.7 (tested). An agent searches it in English or Dutch, builds an asset as it is, or copies its spec as the start of
+its own model instead of starting from nothing.
+
+```sh
+godotwright model library                                       # the overview per category and family
+godotwright model library "rode houten bank"                    # search, English or Dutch
+godotwright model library furniture/dining-chair-oak-ladder     # what it is, its parameters and parts
+godotwright model build furniture/dining-chair-oak-ladder --set seatHeight=0.5 -o chair.glb --collision convex
+godotwright model library furniture/dining-chair-oak-ladder --spec > my-chair.json   # change it, build with --spec
+```
+
+`godotwright model brief <thing>` names the library assets of that thing too. Browse all of them with their Godot
+renders on the [asset library page](https://laaielichter.github.io/Godotwright/library.html); the full list is also in [LIBRARY.md](LIBRARY.md).
+
+## The 43 tools
 
 <details>
 <summary>All MCP tools (most are also CLI commands; <code>--tools core</code> loads 13)</summary>
@@ -172,7 +244,11 @@ Every command, option and rule: [docs/reference.md](docs/reference.md).
 | `godot_feedback` | Mark a review finding as wrong or right, or say whether a lesson helped, so Godotwright learns from it |
 | `godot_lessons` | Lessons from real Godot projects (symptom, cause, fix, test) by words, Godot error, rule or topic; `gaps` lists what it cannot predict yet |
 | `godot_lesson_add` | Keep a lesson learned here, scrubbed of names, paths and code; it comes back when the same error does |
+| `godot_dream` | Look back between sessions (learning file, journal, optionally session transcripts) and propose draft lessons, project hints, merges, retirements and fixes for contradictions, each with its evidence; nothing changes until `apply` |
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
+| `godot_diff` | A diff by meaning against git: scene nodes added, removed, moved or renamed, properties with resource ids resolved, connections, script functions, signals and exports, settings and shader uniforms; marks what the change breaks elsewhere (a connection to a removed function, a saved `@export` value, callers with the wrong argument count) |
+| `godot_impact` | What a change reaches: every scene that loads the changed files (default: what differs from git), whether it is global (autoload, `project.godot`), the tests and saved scenarios that cover it, and the checks to run |
+| `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
@@ -197,6 +273,7 @@ Every command, option and rule: [docs/reference.md](docs/reference.md).
 | `godot_model_brief` | One page before you build, for small models: the kind to start from, parts, size, rules and the order of tools |
 | `godot_model_identify` | What a thing is: parts, pivots, typical size with its source, variants (English or Dutch) |
 | `godot_model_spec` | The model spec format, an example and the ready-made kinds |
+| `godot_model_library` | Search over a thousand ready-made base recipes (furniture, street, storage, nature, buildings, vehicles, props) in English or Dutch; build one by id or take its spec as the start of your own |
 | `godot_model_build` | Build a clean `.glb` from a kind or a spec (inside the project), and lint it |
 | `godot_model_lint` | Score a `.glb`; with `archetype` also check it is what it should be |
 | `godot_model_view` | See a `.glb` as text: front, side and top views, parts with sizes, parts that do not touch |
@@ -227,7 +304,7 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Shader review and compile | yes, headless, also in CI | compile through the editor (godot-ai) | no | renames only |
 | Export, read the `.pck` and run the build | yes, headless; patch packs | export or patch through the editor (Godot MCP Pro) | no | no |
 | Visual regression | screenshot baselines in scenarios and CI | screenshot diffs in one fork (grinry) | no | no |
-| Smaller tool list, read-only mode | tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
+| Smaller tool list, read-only mode | `--lean` (2 tools, ~900 tokens for all 43), tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
 | C# | no | some do | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 

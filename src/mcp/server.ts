@@ -60,6 +60,7 @@ import {
   recordShown,
 } from "../lessons/local.js";
 import { projectNames } from "../lessons/names.js";
+import { applyDream, DreamError, dream, formatApply, formatDream, markDreamed, parseSince } from "../dream/dream.js";
 import {
   findLesson,
   lessonsForError,
@@ -69,6 +70,8 @@ import {
 } from "../lessons/search.js";
 import { LESSON_TOPICS } from "../lessons/types.js";
 import { allKinds } from "../build/generators/index.js";
+import { formatAsset, formatAssetList, formatOverview } from "../library/format.js";
+import { getAsset, libraryOverview, loadAssetLibrary, searchAssets } from "../library/library.js";
 import { buildModel } from "../build/run.js";
 import { EXAMPLE_SPEC, SPEC_HELP } from "../build/spec-help.js";
 import { loadContract } from "../model/contract.js";
@@ -105,6 +108,10 @@ import { LanguageServerError } from "../lsp/server.js";
 import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
+import { diffProject, formatDiff } from "../diff/diff.js";
+import { formatImpact, impactOf } from "../impact/impact.js";
+import { collisionMap, formatBetween, formatBits, formatCollisions } from "../collisions/collisions.js";
+import { LEAN_NOTE, catalogue, checkArgs, findTool, help, unknownTool, type LeanTool } from "./lean.js";
 import { gameRequest, newDiagnostics, readSession, reloadScripts, startSession, stepPayload, stopSession } from "../session/session.js";
 import {
   ScenarioError,
@@ -167,6 +174,11 @@ export interface ServerOptions {
   tools?: string | readonly string[];
   /** Leave out the tools that always write, and refuse the write options of the others. */
   readOnly?: boolean;
+  /**
+   * Offer two tools instead of all of them: `godot` runs any tool by name and `godot_help` gives a tool's
+   * parameters. The tool list the model pays for on every turn shrinks by about 95%.
+   */
+  lean?: boolean;
 }
 
 interface Profile {
@@ -237,12 +249,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
   if (options.readOnly) for (const name of WRITE_ONLY_TOOLS) enabled.delete(name);
   const server = new McpServer(
     { name: "godotwright", title: "Godotwright", version: VERSION },
-    { instructions: renderInstructions(tier, enabled, options.readOnly === true) },
+    { instructions: `${options.lean ? `${LEAN_NOTE}\n` : ""}${renderInstructions(tier, enabled, options.readOnly === true)}` },
   );
   // Registers a tool only when its set is enabled; a read-only server refuses the options that write. Every call
   // runs in a run context: Godot runs it starts report progress (when the client sent a progressToken) and are
   // stopped, with what they started, when the client cancels the call.
   const registerTool = server.registerTool.bind(server);
+  // Lean mode keeps the tools here instead of in the tool list; `godot` runs them.
+  const leanTools = new Map<string, LeanTool>();
   const tool = ((name: string, config: never, cb: (args: Record<string, unknown>, extra: Extra) => unknown) => {
     if (!ALL_TOOLS.includes(name)) throw new Error(`${name} is in no tool set (src/mcp/toolsets.ts)`);
     if (!enabled.has(name)) return undefined;
@@ -251,6 +265,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
       if (why) return failure(why);
       return withRun(runContext(extra), async () => cb(args, extra));
     };
+    if (options.lean) {
+      const c = config as { title?: string; description?: string; inputSchema?: Record<string, z.ZodType> };
+      leanTools.set(name, { name, title: c.title ?? name, description: c.description ?? "", shape: c.inputSchema ?? {}, run: run as never });
+      return undefined;
+    }
     return registerTool(name, config, run as never);
   }) as typeof server.registerTool;
 
@@ -1022,6 +1041,90 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (op === "why") return text(formatWhy(whyUsed(dir, file)));
         const d = depsOf(dir, file);
         return d.missing.length ? failure(formatDepsOf(d)) : text(formatDepsOf(d));
+      }),
+  );
+
+  tool(
+    "godot_diff",
+    {
+      title: "What changed, by meaning, and what it breaks",
+      description:
+        "A diff you can read, against git (default: the files on disk against HEAD), offline. A text diff of a .tscn is mostly noise (ids renumbered, sections moved); this compares what the files mean. Scenes and resources: nodes added, removed, moved or renamed, each changed property with resource ids resolved to paths and a changed sub-resource opened up (shape.radius 12 -> 16), groups, children reordered (the 2D draw order), connections, what the file loads; a file whose text changed but not its meaning is one line. Scripts: functions, signals, variables, constants and enums added, removed or changed, and the functions whose code changed. project.godot: settings, input actions and autoloads. Shaders: uniforms and functions. And for everything removed, what still uses it, marked `!`: a scene connection to a function that is gone (an error at load), an @export value still saved in a scene (dropped silently), a material that still sets a removed uniform, an input action or autoload code still asks for, callers of a function whose argument count changed, files that name a deleted file. Run it after a set of edits and before you call the work done, to check you changed only what you meant to; `ref` and `to` compare other commits (a review of a branch), `against` compares one file with another without git. It is an error when something is marked `!`. Read-only.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: everything that changed)"),
+        ref: z.string().optional().describe("the commit to compare with (default HEAD), e.g. HEAD~1 or main"),
+        to: z.string().optional().describe("a second commit: compare two commits instead of a commit with the files on disk"),
+        against: z.string().optional().describe("with exactly one file in files: the earlier version as another file, instead of git"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, files, ref, to, against, detail }) =>
+      guard(() => {
+        const report = diffProject(where(path), {
+          ...(files ? { files } : {}),
+          ...(ref ? { ref } : {}),
+          ...(to ? { to } : {}),
+          ...(against ? { against } : {}),
+          base: options.base,
+          baseFiles: options.baseFiles,
+        });
+        const body = formatDiff(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_impact",
+    {
+      title: "What a change reaches, and what to run",
+      description:
+        "The blast radius of a change, offline: from the changed files (default: everything that differs from git HEAD, new files included; or `files`) backwards through the project's file graph (ext_resource, preload, class_name, includes, and paths the code loads later) to every scene that loads them, nearest first with the chain in between and the main scene marked; whether the change is global (an autoload or something an autoload loads, project.godot, a class_name many scripts use); the test files and saved scenarios that cover it; deleted files something still names; then the numbered checks to run for exactly this change (godot_review with the files, godot_check, the scenarios, the tests, the scene to play). Call it when you finished a set of edits, before you say the work is done: checking only the file you edited misses the scenes that instance it. Read-only.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("the changed res:// files (default: what differs from ref in git)"),
+        ref: z.string().optional().describe("the commit to compare with when files is not given (default HEAD)"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, files, ref, detail }) =>
+      guard(() =>
+        text(
+          formatImpact(
+            impactOf(where(path), { ...(files ? { files } : {}), ...(ref ? { ref } : {}), base: options.base, baseFiles: options.baseFiles }),
+            (detail ?? profile.detail) === "full" ? 40 : 12,
+          ),
+        ),
+      ),
+  );
+
+  tool(
+    "godot_collisions",
+    {
+      title: "Physics layers and masks: who detects whom",
+      description:
+        "The physics layers of the project, read from its scenes, offline. Use it when something falls through the floor, a bullet or pickup is not detected, body_entered never fires, or before you set any collision_layer or collision_mask. Without arguments: per physics world (2D, 3D) every layer in use with its name and bit value, how many nodes are on it and how many scan it; every body, area, ray and TileSet physics layer with its layers and mask as numbers, names and value (instances and inherited scenes resolved); and what can never work: a mask that scans a layer nothing is on (also the classic collision_mask = 3 meant as layer 3, which is the value 4), an area or ray with mask 0, an Area with monitoring off whose body_entered is connected, a body or area without a collision shape, a CollisionShape without a shape; plus the lines of code that change layers. `between: [a, b]` (node names or paths, scenes, class_names or Godot classes): for each pair, whether a detects b and b detects a, why, and the exact mask value that fixes it. `value` says which layers a bit value means, `layers` the value of layer numbers. It is an error when there are problems. Read-only.",
+      inputSchema: {
+        path: pathParam,
+        between: z.array(z.string()).length(2).optional().describe('two names: who detects whom, e.g. ["Player", "Enemy"] or ["bullet.tscn", "Hurtbox"]'),
+        value: z.number().int().min(0).max(4294967295).optional().describe("a collision_layer or collision_mask value: which layers it means"),
+        layers: z.array(z.number().int().min(1).max(32)).optional().describe("layer numbers (1 to 32): the value to write"),
+        detail: detailParam,
+      },
+      annotations: readOnly,
+    },
+    async ({ path, between, value, layers, detail }) =>
+      guard(() => {
+        const report = collisionMap(where(path), { base: options.base, baseFiles: options.baseFiles });
+        if (value !== undefined || layers?.length) return text(formatBits(report, value, layers));
+        if (between) {
+          const answer = formatBetween(report, between[0]!, between[1]!);
+          return answer.ok ? text(answer.text) : failure(answer.text);
+        }
+        const body = formatCollisions(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
       }),
   );
 
@@ -1921,7 +2024,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     async (input) => {
       try {
-        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base) });
+        const { lesson, replaced, updated } = addLocalLesson(input, { projectNames: projectNames(base), project: base });
         const removed = Object.entries(replaced).map(([k, n]) => `${n} ${k}`).join(", ");
         return text(
           `${updated ? "Updated" : "Kept"} ${lesson.id} on this machine${removed ? ` (replaced: ${removed})` : ""}.\n` +
@@ -1929,6 +2032,39 @@ export function createServer(options: ServerOptions = {}): McpServer {
         );
       } catch (error) {
         return failure(error instanceof LessonError || error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  tool(
+    "godot_dream",
+    {
+      title: "Dream: learn from past sessions",
+      description:
+        "Look back at what Godotwright learned and did in this project, between sessions, and propose what to keep: draft lessons for Godot errors that keep coming back with no rule or lesson, project hints for API names the agent keeps guessing (use X, not Y), lessons to merge, retire or rewrite (shown often but marked wrong, or duplicates), lessons about writes that were undone again and again, rules this project marks as false alarms again and again (a suggestion only), and verdicts that contradict each other. It reads the local learning file and the project's journal, and with `transcripts: true` also this project's Claude Code and Codex session transcripts (only anonymous facts are kept: tool names, Godot message templates, Godot API names; no text, names, paths or code). Deterministic: no model, no network. Each proposal has a number, an id, its evidence and a reason. Nothing changes until `apply` (numbers or ids, or \"all\"): lessons go through the same scrubbing as godot_lesson_add, hints, a dated report and a short \"Godotwright lessons for agents\" note are kept only on this machine (the project's untracked .godot/godotwright/dreams/, or Godotwright's state folder when git tracks .godot), never in a file of the repository; the session start shows the note to the agent. godot_undo takes an apply back, lessons included. Draft lessons hold the symptom and message only: look up the cause and fix (godot_lessons, godot_api, godot_check) and rewrite them with godot_lesson_add, same title. Show the person the proposals with their evidence and apply only what they approve.",
+      inputSchema: {
+        path: pathParam,
+        apply: z.string().optional().describe('proposals to apply: numbers or ids from the list, comma separated, or "all"; leave out to only list them'),
+        transcripts: z.boolean().optional().describe("also read this project's Claude Code and Codex session transcripts (default false)"),
+        since: z.string().optional().describe("only journal events and transcripts this recent: 7d, 12h, 2w or a date (default 30d)"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, apply, transcripts, since, detail }) => {
+      try {
+        const common = { ...(since ? { since: parseSince(since) } : {}), ...(transcripts ? { transcripts: true } : {}) };
+        if (apply !== undefined) {
+          const r = applyDream(where(path), apply, common);
+          markDreamed(r.root);
+          return text(formatApply(r));
+        }
+        const r = dream(where(path), common);
+        markDreamed(r.root);
+        return text(formatDream(r, detail ?? profile.detail));
+      } catch (error) {
+        if (error instanceof DreamError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );
@@ -2039,6 +2175,37 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   tool(
+    "godot_model_library",
+    {
+      title: "Asset library: ready-made base recipes",
+      description:
+        "Search the asset library: over a thousand ready-made base recipes (furniture, street furniture, storage and industrial props, nature, buildings, vehicles, props), each a model spec with parameters that builds a clean, lint-checked .glb. With nothing: an overview per category and family. With `query` (English or Dutch words, e.g. 'oak chair', 'rode bank', 'pine tree') and/or filters: matching assets, one line each. With `id` (e.g. furniture/dining-chair-oak-ladder): what it is, its parameters, materials and parts; with `spec: true` the full spec JSON to copy, change and pass to godot_model_build as `spec`. Build one as is with godot_model_build `kind: <id>` and `params`. Start here before writing a spec from scratch. Read-only.",
+      inputSchema: {
+        query: z.string().optional().describe("words to search for, English or Dutch"),
+        id: z.string().optional().describe("an asset id to show, e.g. furniture/dining-chair-oak-ladder"),
+        category: z.string().optional().describe("only this category: furniture, street, storage, nature, buildings, vehicles or props"),
+        family: z.string().optional().describe("only this family, e.g. dining-chair"),
+        archetype: z.string().optional().describe("only assets of this archetype or below it, e.g. prop.chair"),
+        limit: z.number().int().min(1).max(200).optional().describe("at most this many results (default 30)"),
+        spec: z.boolean().optional().describe("with `id`: return the full spec JSON"),
+      },
+      annotations: readOnly,
+    },
+    async ({ query, id, category, family, archetype, limit, spec }) =>
+      guard(() => {
+        if (id !== undefined) {
+          const asset = getAsset(id);
+          if (!asset) return failure(`no library asset "${id}"; search with \`query\` (ids look like furniture/dining-chair-oak-ladder)`);
+          return text(spec ? `${JSON.stringify(asset.spec, null, 2)}\n` : formatAsset(asset));
+        }
+        if (spec) return failure("`spec: true` needs an `id`");
+        if (!query && !category && !family && !archetype) return text(formatOverview(libraryOverview(), loadAssetLibrary().size));
+        const all = searchAssets({ ...(query ? { text: query } : {}), ...(category ? { category } : {}), ...(family ? { family } : {}), ...(archetype ? { archetype } : {}) });
+        return text(formatAssetList(all.slice(0, limit ?? 30), all.length));
+      }),
+  );
+
+  tool(
     "godot_model_build",
     {
       title: "Build a 3D model from code",
@@ -2056,7 +2223,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe(
             `a ready-made kind: ${allKinds()
               .map((k) => k.kind)
-              .join(", ")}`,
+              .join(", ")}; or a library asset id from godot_model_library, e.g. furniture/dining-chair-oak-ladder`,
           ),
         spec: z
           .record(z.string(), z.unknown())
@@ -2236,6 +2403,44 @@ export function createServer(options: ServerOptions = {}): McpServer {
       ),
   );
 
+  if (options.lean) {
+    registerTool(
+      "godot",
+      {
+        title: "Run a Godotwright tool",
+        description: `Run one of Godotwright's Godot 4.7 tools by name: {"tool": "review", "args": {"files": ["res://player.gd"]}}. The tools, by set, as name (what it is for):\n${catalogue(leanTools)}\nRead a tool's parameters first with godot_help {"tool": name}; a call with a wrong or missing argument answers with the parameters. Results are the tool's own.`,
+        inputSchema: {
+          tool: z.string().describe("the tool to run, e.g. review, check, api, scan, diff (with or without godot_)"),
+          args: z.record(z.string(), z.unknown()).optional().describe("the tool's arguments, as godot_help lists them"),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: options.readOnly !== true, idempotentHint: false, openWorldHint: false },
+      },
+      (async ({ tool: name, args }: { tool: string; args?: Record<string, unknown> }, extra: Extra) => {
+        const found = findTool(leanTools, name);
+        if (!found) return failure(unknownTool(leanTools, name));
+        const checked = checkArgs(found, args);
+        if (!checked.ok) return failure(checked.message);
+        return found.run(checked.args, extra as never);
+      }) as never,
+    );
+    registerTool(
+      "godot_help",
+      {
+        title: "Godotwright tools and their parameters",
+        description:
+          'What a Godotwright tool does and takes. {"tool": "review"}: its description and parameters, to read before the first call. {"query": "collision layers"}: the tools that match the words, the best one in full. No arguments: every tool, by set. Read-only.',
+        inputSchema: {
+          tool: z.string().optional().describe("a tool name, e.g. review or godot_review"),
+          query: z.string().optional().describe("words for what you want to do"),
+        },
+        annotations: readOnly,
+      },
+      (async (input: { tool?: string; query?: string }) => {
+        const answer = help(leanTools, input);
+        return answer.ok ? text(answer.text) : failure(answer.text);
+      }) as never,
+    );
+  }
   return server;
 }
 

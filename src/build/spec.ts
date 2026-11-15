@@ -4,7 +4,7 @@ import { MATERIALS, type Material } from "./materials.js";
 import { PATTERN_NAMES } from "./textures.js";
 import type { MeshBuilder, V3 } from "./mesh.js";
 import { BuildError, resolveParams, type ParamDef } from "./params.js";
-import { box, cylinder, ellipsoid, extrude, lathe, lumpyEllipsoid, ringSurface, roof, roundedBox, roundedCylinder, tube } from "./shapes.js";
+import { box, cylinder, ellipsoid, extrude, fracturedEllipsoid, lathe, lumpyEllipsoid, ringSurface, roof, roundedBox, roundedCylinder, tube } from "./shapes.js";
 
 /** Limits that keep a spec from running away (a mistake or a hostile file). */
 export const LIMITS = { nodes: 5000, depth: 100, repeat: 500, triangles: 3_000_000, points: 256, sections: 200, segments: 128 };
@@ -15,7 +15,7 @@ const COMMON_KEYS = ["name", "shape", "material", "at", "offset", "rotate", "mir
 const SHAPE_KEYS: Record<string, string[]> = {
   box: ["size", "anchor", "bevel"],
   cylinder: ["radius", "height", "axis", "segments", "anchor", "bevel"],
-  ellipsoid: ["radii", "segments", "lumps", "seed"],
+  ellipsoid: ["radii", "segments", "lumps", "seed", "cuts"],
   tube: ["path", "radius", "radii", "segments", "caps"],
   lathe: ["profile", "segments", "caps"],
   loft: ["sections", "caps"],
@@ -147,8 +147,11 @@ function makeShape(node: Obj, ctx: Ctx, path: string): MeshBuilder {
       const segments = node["segments"] === undefined ? 24 : integer(node["segments"], s, `${path}.segments`, 6, LIMITS.segments);
       const lumps = get("lumps", 0);
       if (lumps < 0 || lumps > 0.6) throw new BuildError(`${path}.lumps: must be from 0 (smooth) to 0.6`);
+      const seed = node["seed"] === undefined ? 1 : integer(node["seed"], s, `${path}.seed`, 0, 1_000_000);
+      const cuts = node["cuts"] === undefined ? 0 : integer(node["cuts"], s, `${path}.cuts`, 0, 24);
+      if (cuts > 0) return fracturedEllipsoid(rx, ry, rz, segments, lumps, seed, cuts, m);
       if (lumps === 0) return ellipsoid(rx, ry, rz, segments, m);
-      return lumpyEllipsoid(rx, ry, rz, segments, lumps, node["seed"] === undefined ? 1 : integer(node["seed"], s, `${path}.seed`, 0, 1_000_000), m);
+      return lumpyEllipsoid(rx, ry, rz, segments, lumps, seed, m);
     }
     case "tube": {
       const points = list(node["path"], `${path}.path`, LIMITS.points, 2).map((q, i) => vec(q, 3, s, `${path}.path[${i}]`) as V3);

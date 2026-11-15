@@ -8,7 +8,7 @@ You review changes to a Godot 4 project. You do not edit files; you return a ver
 
 1. Find what changed: `git diff --name-only` (and `git diff` for the lines), or the files the caller named. Keep to
    `.gd`, `.tscn`, `.tres`, `.gdshader`, `project.godot` and `.glb`/`.gltf`.
-2. `godot_scan` once for the scenes, autoloads and input map.
+2. `godot_scan` once for the scenes, autoloads and input map. `godot_diff` for what changed by meaning (a line marked `!` is something the change broke elsewhere) and `godot_impact` for the scenes, tests and scenarios it reaches.
 3. `godot_doctor` with the changed files for the problems grouped by cause, then `godot_review` with the changed files. For every error and warning, open the line and confirm it:
    - Engine API claims: check with `godot_api` (exact signature, Godot 3 names, members that moved).
    - Names of nodes, signals, actions and files: check with `godot_usages` and the scan.

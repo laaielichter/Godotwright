@@ -87,7 +87,7 @@ export function lessonsCommand(): Command {
       ) => {
         const { lesson, replaced, updated } = addLocalLesson(
           { title: options.title, fix: options.fix, symptom: options.symptom, cause: options.cause, topic: options.topic, tags: options.tag, error: options.error, rules: options.rule, test: options.test },
-          { projectNames: projectNames(options.project) },
+          { projectNames: projectNames(options.project), project: options.project },
         );
         const removed = Object.entries(replaced).map(([k, n]) => `${n} ${k}`).join(", ");
         writeOut(

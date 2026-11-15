@@ -48,6 +48,9 @@ solution must pass it with zero Godot errors.
   Bash, skills, subagents and web access are off, and user settings are not loaded.
 - "with" adds the Godotwright MCP server (`godotwright mcp --tier cheap|premium`).
   The agent decides itself whether and how to use it.
+- "lean" adds the same server with `--lean` (two tools, `godot` and `godot_help`, instead of all of them), to
+  measure whether a short tool list changes how often agents call a tool and what they finish
+  (`node bench/run.mjs --modes without,with,lean`).
 - Godot is not installed where the agent runs, in either mode.
 - Each configuration runs several times, because agents are not deterministic.
 

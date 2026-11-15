@@ -8,6 +8,8 @@ import { inspectModel } from "../src/model/inspect.js";
 import { ModelError, loadGltf } from "../src/model/gltf.js";
 import { lintModelFile } from "../src/model/lint.js";
 import { box, writeGlb, type TestMesh } from "./model-helpers.js";
+import { buildGlb } from "../src/build/glb.js";
+import { buildSpec } from "../src/build/spec.js";
 import { CAN_SYMLINK, makeProject, runCli } from "./helpers.js";
 
 const ids = (path: string, options = {}) => lintModelFile(path, options).findings.map((f) => f.rule);
@@ -153,6 +155,28 @@ describe("model lint", () => {
     }
     const report = lintModelFile(writeGlb({ meshes: [{ ...mesh, material: 0 }], materials: [{ doubleSided: true }] }));
     expect(report.findings.map((f) => f.rule)).toContain("model/asymmetry");
+  });
+
+  it("flags base colours real surfaces do not have, judging a textured one by its colour map", () => {
+    const albedo = (materials: Record<string, object>) => {
+      const nodes = Object.keys(materials).map((m, i) => ({ name: `Part${i}`, shape: "box", material: m, size: [1, 1, 1], at: [i * 1.2, 0.5, 0] }));
+      const dir = makeProject({});
+      const path = join(dir, "m.glb");
+      writeFileSync(path, buildGlb(buildSpec({ version: 1, materials, nodes })));
+      return lintModelFile(path).findings.filter((f) => f.rule === "model/albedo").map((f) => f.message.split('"')[1]);
+    };
+    expect(albedo({
+      snow_white: { color: [0.97, 0.97, 0.97], metallic: 0, roughness: 0.9 },
+      black_hole: { color: [0.002, 0.002, 0.002], metallic: 0, roughness: 0.9 },
+      black_mirror: { color: [0.04, 0.04, 0.045], metallic: 1, roughness: 0.4 },
+      white_paint: { color: [0.7, 0.7, 0.68], metallic: 0, roughness: 0.4 },
+      rubber: { color: [0.022, 0.022, 0.024], metallic: 0, roughness: 0.9 },
+      steel: { color: [0.55, 0.56, 0.58], metallic: 1, roughness: 0.4 },
+      powder_coat: { color: [0.03, 0.03, 0.033], metallic: 0.25, roughness: 0.5 },
+      lamp: { color: [1, 1, 1], metallic: 0, roughness: 0.2, emissive: [1, 0.9, 0.7] },
+    }).sort()).toEqual(["black_hole", "black_mirror", "snow_white"]);
+    // A textured material keeps a base colour factor of 1: the mean of its colour map is what counts.
+    expect(albedo({ dark_brick: { color: [0.25, 0.08, 0.05], metallic: 0, roughness: 0.9, texture: "brick" }, pale: { color: [0.98, 0.98, 0.98], metallic: 0, roughness: 0.9, texture: "plaster" } })).toEqual(["pale"]);
   });
 
   it("formats a brief report", () => {

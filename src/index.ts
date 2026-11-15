@@ -3,6 +3,7 @@ export { formatLookup, formatSearch } from "./api/format.js";
 export type * from "./api/types.js";
 export { checkProject, type CheckOptions, type CheckResult } from "./check/check.js";
 export { findGodot } from "./check/godot.js";
+export { applyDream, dream, formatApply, formatDream, type ApplyResult, type DreamResult, type Proposal } from "./dream/dream.js";
 export { formatDiagnostic, parseGodotLog, type Diagnostic } from "./check/log.js";
 export { compileShaders, type ShaderCompileResult, type ShaderToCompile } from "./check/shader-compile.js";
 export { createServer, type ServerOptions, type Tier } from "./mcp/server.js";

@@ -12,7 +12,9 @@ Godot conventions: a model faces +Z, +Y is up, units are metres, the origin sits
    nearest ready-made kind, the parts that must exist and how they move, a typical size with its source, and the
    mistakes real builds made (`godot_lessons` with topic `models` has more). Find real dimensions before modelling;
    a published overall size can be for another version.
-2. **Start from a kind or a spec.** `godot_model_spec` shows the spec (named parts: box, cylinder, ellipsoid, lathe,
+2. **Start from the library, a kind or a spec.** `godot_model_library` searches over a thousand ready-made base
+   recipes (English or Dutch words: "oak chair", "rode bank"); build one with `godot_model_build` `kind: <id>`, or take
+   its spec (`spec: true`) and change it instead of starting from nothing. `godot_model_spec` shows the spec (named parts: box, cylinder, ellipsoid, lathe,
    loft, extrude, roof, tube; mirror, repeat, bevels, textured materials). Put every moving part's pivot at its hub or
    hinge. Keep one source of truth for the layout: parts read positions from it, they do not copy numbers.
 3. **Build:** `godot_model_build` with the kind or the spec and the `archetype`.

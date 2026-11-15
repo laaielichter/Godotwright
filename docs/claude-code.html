@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Godot 4 plugin for Claude Code: hooks, skills and subagents | Godotwright</title>
-<meta name="description" content="The Godotwright plugin puts Godot 4.7 checks in Claude Code's loop: every Godot file Claude edits is reviewed right after the edit, Godot errors come with the lessons that explain them, plus ten skills and seven subagents. One command, MIT.">
+<meta name="description" content="The Godotwright plugin puts Godot 4.7 checks in Claude Code's loop: every Godot file Claude edits is reviewed right after the edit, Godot errors come with the lessons that explain them, plus eleven skills and eight subagents. One command, MIT.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/claude-code.html">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#080f17">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
 <meta property="og:title" content="Godotwright for Claude Code: Godot 4 checks in Claude's loop">
-<meta property="og:description" content="Every Godot file Claude edits is reviewed right after the edit. Hooks, ten skills, seven subagents and 272 lessons from real projects. One command, MIT.">
+<meta property="og:description" content="Every Godot file Claude edits is reviewed right after the edit. Hooks, eleven skills, eight subagents and 272 lessons from real projects. One command, MIT.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/claude-code.html">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/assets/social.jpg">
 <meta property="og:image:width" content="1280">
@@ -244,7 +244,7 @@ footer a { color: var(--muted); }
   <div class="wrap hero">
     <p class="eyebrow">Claude Code plugin · Godot 4.7</p>
     <h1>Claude Code, <em>checked in Godot&nbsp;4</em> after every edit.</h1>
-    <p class="lede">One command puts Godotwright in Claude’s loop. Every Godot file Claude edits is reviewed right after the edit, Godot errors come back with the lessons that explain them, and Claude does not stop with review errors left open. With the MCP tools, ten skills and seven subagents.</p>
+    <p class="lede">One command puts Godotwright in Claude’s loop. Every Godot file Claude edits is reviewed right after the edit, Godot errors come back with the lessons that explain them, and Claude does not stop with review errors left open. With the MCP tools, eleven skills and eight subagents.</p>
     <div class="cmd"><pre><code>/plugin install godotwright --marketplace laaielichter/Godotwright</code></pre><button class="copy" type="button">Copy</button></div>
     <p class="sub">Start Claude Code in your Godot project folder. Needs Node.js 22.12 or newer. On Claude Code older than 2.1.275: <code>/plugin marketplace add laaielichter/Godotwright</code>, then <code>/plugin install godotwright@godotwright</code>.</p>
   </div>
@@ -291,13 +291,14 @@ footer a { color: var(--muted); }
         <li><span class="when">You start it</span><h3>/godotwright:review</h3><p>Review the project and fix what it finds, errors first, re-reviewing after each fix.</p></li>
         <li><span class="when">You start it</span><h3>/godotwright:port</h3><p>Port Godot 3 GDScript to Godot 4.7, then check it with a review and with Godot.</p></li>
         <li><span class="when">You start it</span><h3>/godotwright:learn</h3><p>Teach Godotwright what this session learned, anonymously, so the next session starts smarter. Nothing is sent.</p></li>
+        <li><span class="when">You start it</span><h3>/godotwright:dream</h3><p>Look back at past sessions: draft lessons for errors that keep coming back, hints for guessed API names, lessons to merge or retire, each with its evidence. Apply only what you approve; undo takes it back.</p></li>
       </ul>
     </div>
   </section>
 
   <section id="subagents">
     <div class="wrap">
-      <h2>Seven subagents for work that would flood the conversation</h2>
+      <h2>Eight subagents for work that would flood the conversation</h2>
       <ul class="cards four">
         <li><h3>godot-reviewer</h3><p>Reviews a change (GDScript, scenes, shaders, settings, models) with Godotwright and, when installed, with Godot itself. It checks every finding against the code and the 4.7 API and returns only confirmed problems with their fixes.</p></li>
         <li><h3>godot-debugger</h3><p>Finds the root cause of an error, a crash or wrong behaviour with the lessons, the project map, the 4.7 API and headless Godot runs, and proves it.</p></li>
@@ -306,6 +307,7 @@ footer a { color: var(--muted); }
         <li><h3>godot-shader-specialist</h3><p>Checks shaders and materials with static review, compilation and available renderer evidence.</p></li>
         <li><h3>godot-model-builder</h3><p>Builds or inspects 3D assets, checks dimensions, named parts, pivots, collision and geometry budgets.</p></li>
         <li><h3>godot-test-engineer</h3><p>Verifies behavior with unit tests, deterministic input scenarios and visual regressions; reports unavailable checks.</p></li>
+        <li><h3>godot-dreamer</h3><p>Runs the dream, turns draft lessons into full ones (cause, fix, test) with the 4.7 API, the lessons and Godot when installed, and applies only the proposals you approve.</p></li>
       </ul>
     </div>
   </section>

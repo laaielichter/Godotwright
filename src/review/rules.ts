@@ -27,6 +27,7 @@ const list: Rule[] = [
   { id: "api/unknown-function", category: "api", severity: "error", title: "Unknown function", fix: "Call a function that exists on this class, its parents or the global scope." },
   { id: "api/unknown-member", category: "api", severity: "error", title: "Unknown member", fix: "Use a member that exists on this type in Godot 4.7 (check with godotwright api)." },
   { id: "api/wrong-arguments", category: "api", severity: "error", title: "Wrong number of arguments", fix: "Pass the arguments the Godot 4.7 signature expects (check with godotwright api)." },
+  { id: "api/connect-called-handler", category: "api", severity: "error", title: "Signal connects a handler call result", fix: "Pass the handler itself to connect(), e.g. `connect(_on_pressed)`, instead of calling it." },
   { id: "api/impossible-type-test", category: "api", severity: "error", title: "Type test that can never be true", fix: "Test or cast against a type the value can be: a parent or child class of its static type." },
   { id: "api/infer-variant", category: "api", severity: "error", title: "Type inferred from a Variant", fix: "Give the variable a type (`var x: float = abs(v)`), or use the typed function (`absf`, `maxi`, `clampf`, ...)." },
   { id: "api/unsafe-member", category: "api", severity: "warning", title: "Member not on the static type", fix: "Give the variable the right type (or cast with `as`) so the member can be checked." },
@@ -38,6 +39,7 @@ const list: Rule[] = [
   { id: "api/redefines-native-member", category: "api", severity: "error", title: "Member already defined in native class", fix: "Remove the declaration to use the inherited member, or rename it." },
   // Runtime pitfalls from real projects (see data/lessons.json and `godotwright lessons`).
   { id: "api/override-signature", category: "api", severity: "error", title: "Override does not match its parent", fix: "Give the override the parent's parameters; parameters it adds need a default value." },
+  { id: "api/void-return-value", category: "api", severity: "error", title: "Value returned from a void function", fix: "Remove the returned value, or give the function a return type." },
   { id: "api/freed-check-order", category: "api", severity: "warning", title: "Type test before the freed check", fix: "Check is_instance_valid(x) first and test `x is T` after it: a type test on a freed object is itself an error." },
   { id: "api/get-meta-null-default", category: "api", severity: "warning", title: "get_meta() with a null default", fix: "Check has_meta() first, or pass a default that is not null: with null, Godot prints an error when the entry is missing." },
   { id: "api/parse-into-typed", category: "api", severity: "warning", title: "Parsed data put straight into a typed variable", fix: "Parse into a Variant, check it with `is Dictionary` or `is Array`, then use it: a missing or broken input gives null and stops the function." },

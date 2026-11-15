@@ -2173,5 +2173,277 @@
   "pitfalls": [
    "Leave the boarding side open; the shelter is roadside infrastructure and must not be classified as a bus vehicle."
   ]
+ },
+ {
+  "id": "infrastructure.bollard",
+  "name": "bollard",
+  "description": "A short post that keeps vehicles off a path or square.",
+  "aliases": [
+   "bollard",
+   "bollards",
+   "paaltje",
+   "paaltjes",
+   "afzetpaal",
+   "anti-parkeerpaal",
+   "amsterdammertje",
+   "parking post",
+   "pilon"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Post",
+    "role": "post",
+    "required": true,
+    "aliases": [
+     "post",
+     "body",
+     "paal",
+     "shaft"
+    ]
+   },
+   {
+    "name": "Cap",
+    "role": "cap",
+    "required": false,
+    "aliases": [
+     "cap",
+     "top",
+     "kop",
+     "dop",
+     "head"
+    ]
+   },
+   {
+    "name": "Band",
+    "role": "band",
+    "required": false,
+    "aliases": [
+     "band",
+     "ring",
+     "reflector",
+     "stripe"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.08,
+    0.6
+   ],
+   "width": [
+    0.08,
+    0.6
+   ],
+   "height": [
+    0.4,
+    1.3
+   ],
+   "source": "general knowledge of street furniture: most bollards are 0.8-1.0 m high and 0.1-0.3 m across",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "infrastructure.bike-rack",
+  "name": "bike rack",
+  "description": "A stand for parking bicycles.",
+  "aliases": [
+   "bike rack",
+   "bicycle rack",
+   "fietsenrek",
+   "fietsrek",
+   "fietsenstalling",
+   "nietje",
+   "bike stand",
+   "cycle stand",
+   "fietsbeugel"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Frame",
+    "role": "frame",
+    "required": true,
+    "aliases": [
+     "frame",
+     "rack",
+     "hoop",
+     "loop",
+     "beugel",
+     "stand",
+     "rail"
+    ]
+   },
+   {
+    "name": "Foot",
+    "role": "foot",
+    "required": false,
+    "aliases": [
+     "foot",
+     "feet",
+     "base",
+     "voet",
+     "anchor"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    2.0
+   ],
+   "width": [
+    0.6,
+    8.0
+   ],
+   "height": [
+    0.3,
+    1.2
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "infrastructure.road-barrier",
+  "name": "road barrier",
+  "description": "A temporary or fixed barrier: a jersey barrier, crowd fence or works barrier.",
+  "aliases": [
+   "road barrier",
+   "jersey barrier",
+   "new jersey",
+   "barrier block",
+   "wegafzetting",
+   "afzethek",
+   "dranghek",
+   "crowd barrier",
+   "works barrier",
+   "betonblok",
+   "barricade"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Body",
+    "role": "body",
+    "required": true,
+    "aliases": [
+     "body",
+     "block",
+     "panel",
+     "frame",
+     "hek",
+     "blok"
+    ]
+   },
+   {
+    "name": "Foot",
+    "role": "foot",
+    "required": false,
+    "aliases": [
+     "foot",
+     "feet",
+     "base",
+     "voet"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    0.2,
+    1.2
+   ],
+   "width": [
+    1.0,
+    4.0
+   ],
+   "height": [
+    0.6,
+    1.5
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
+ },
+ {
+  "id": "infrastructure.storage-tank",
+  "name": "storage tank",
+  "description": "A large fixed tank or silo for liquids, gas or grain.",
+  "aliases": [
+   "storage tank",
+   "opslagtank",
+   "grain silo",
+   "graansilo",
+   "fuel depot tank",
+   "oil tank",
+   "olietank",
+   "water tower tank",
+   "vloeistoftank"
+  ],
+  "extends": "infrastructure",
+  "parts": [
+   {
+    "name": "Shell",
+    "role": "shell",
+    "required": true,
+    "aliases": [
+     "shell",
+     "body",
+     "wall",
+     "mantel",
+     "romp",
+     "vessel"
+    ]
+   },
+   {
+    "name": "Roof",
+    "role": "roof",
+    "required": false,
+    "aliases": [
+     "roof",
+     "dome",
+     "dak",
+     "cap"
+    ]
+   },
+   {
+    "name": "Ladder",
+    "role": "ladder",
+    "required": false,
+    "aliases": [
+     "ladder",
+     "stair",
+     "stairs",
+     "trap"
+    ]
+   },
+   {
+    "name": "Leg",
+    "role": "leg",
+    "required": false,
+    "aliases": [
+     "leg",
+     "legs",
+     "support",
+     "poot"
+    ]
+   }
+  ],
+  "scale": {
+   "length": [
+    1.5,
+    40
+   ],
+   "width": [
+    1.5,
+    40
+   ],
+   "height": [
+    2,
+    40
+   ],
+   "source": "general knowledge: typical production range, not a standard",
+   "confidence": "C"
+  }
  }
 ]

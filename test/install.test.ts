@@ -6,10 +6,10 @@ import { HOOK_EVENTS } from "../src/hooks/agent-hooks.js";
 
 const AGENTS = [
   "godot-reviewer", "godot-debugger", "godot-migrator", "godot-performance",
-  "godot-shader-specialist", "godot-model-builder", "godot-test-engineer",
+  "godot-shader-specialist", "godot-model-builder", "godot-test-engineer", "godot-dreamer",
 ];
 
-const SKILLS = ["godot", "review", "port", "learn", "debug", "perf", "patch", "model", "vehicles", "world"];
+const SKILLS = ["godot", "review", "port", "learn", "dream", "debug", "perf", "patch", "model", "vehicles", "world"];
 
 // The ways people install Godotwright: the Claude Code plugin and marketplace, the Gemini CLI extension,
 // the Claude Desktop bundle and the one-click links on the install page. They name the package and its
@@ -76,7 +76,7 @@ describe("Claude Code plugin and marketplace", () => {
     }
   });
 
-  it("ships exactly seven discoverable subagents with a name, description and inherited model", () => {
+  it("ships exactly eight discoverable subagents with a name, description and inherited model", () => {
     expect(readdirSync(path("plugins/godotwright/agents")).sort()).toEqual(AGENTS.map((agent) => `${agent}.md`).sort());
     for (const agent of AGENTS) {
       const text = readFileSync(path(`plugins/godotwright/agents/${agent}.md`), "utf8");
