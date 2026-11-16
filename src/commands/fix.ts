@@ -1,6 +1,7 @@
 import { Command, Option } from "commander";
 import { FIXABLE_RULES, fixProject, formatFix } from "../fix/fix.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { OptionError } from "../project/options.js";
 import { collect, writeOut } from "./output.js";
 
 export function fixCommand(): Command {
@@ -30,7 +31,7 @@ export function fixCommand(): Command {
         writeOut(command, options.json ? `${JSON.stringify(result, null, 2)}\n` : formatFix(result, options.detail));
         if (result.remaining?.some((f) => f.severity === "error")) process.exitCode = 1;
       } catch (error) {
-        if (!(error instanceof ProjectNotFoundError)) throw error;
+        if (!(error instanceof ProjectNotFoundError) && !(error instanceof OptionError)) throw error;
         process.stderr.write(`${error.message}\n`);
         process.exitCode = 1;
       }

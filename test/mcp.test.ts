@@ -412,6 +412,19 @@ describe("MCP server (premium profile)", () => {
     expect(fix).toMatch(/after the fixes: 1 error and 0 warnings left/);
   });
 
+  it("names a mistyped rule or file for godot_fix instead of reporting nothing to fix", async () => {
+    const root = makeProject({
+      "project.godot": '[application]\nconfig/name="T"\nconfig/features=PackedStringArray("4.7")\n',
+      "a.gd": "extends Node\n",
+    });
+    const bad = await client.callTool({ name: "godot_fix", arguments: { path: root, rules: ["api/infer-varaint"] } });
+    expect((bad as Result).isError).toBe(true);
+    expect(textOf(bad)).toContain('unknown rule "api/infer-varaint"; did you mean api/infer-variant?');
+    const missing = await client.callTool({ name: "godot_fix", arguments: { path: root, files: ["res://mian.gd"] } });
+    expect((missing as Result).isError).toBe(true);
+    expect(textOf(missing)).toContain("res://mian.gd does not exist in the project");
+  });
+
   it("describes all tools in its instructions", () => {
     expect(client.getInstructions()).toContain(
       "godot_checklist lists every AAA rule",

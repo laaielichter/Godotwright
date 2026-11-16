@@ -325,6 +325,15 @@ describe("migrate a project", () => {
     expect(migrateProject(root, { includeAddons: true }).files.map((f) => f.file)).toEqual(["res://addons/x/plugin.gd"]);
   });
 
+  it("refuses a --file that is not in the project, and still migrates the one that is", async () => {
+    const root = makeProject({ "project.godot": PROJECT, "player.gd": "export var a = 1\n" });
+    expect(() => migrateProject(root, { files: ["res://mian.gd"] })).toThrow("res://mian.gd does not exist in the project");
+    expect(migrateProject(root, { files: ["res://player.gd"] }).files.map((f) => f.file)).toEqual(["res://player.gd"]);
+    const cli = await runCli(["migrate", root, "--file", "res://mian.gd"]);
+    expect(cli.exitCode).toBe(1);
+    expect(readFileSync(`${root}/player.gd`, "utf8")).toBe("export var a = 1\n");
+  });
+
   it("migrates one file and runs from the CLI with --json", async () => {
     const root = makeProject({ "project.godot": PROJECT, "a.gd": "onready var x = 1\n" });
     const one = migrateProject(`${root}/a.gd`);
