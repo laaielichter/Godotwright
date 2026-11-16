@@ -313,6 +313,11 @@ describe("the lessons command", () => {
     resetLearning();
   });
 
+  it("names the nearest topic on a typo, and lists the topics when nothing is close", async () => {
+    await expect(runCli(["lessons", "--topic", "physic"])).rejects.toThrow('unknown topic "physic"; did you mean physics? (topics: gdscript, physics,');
+    await expect(runCli(["lessons", "--topic", "zzzz"])).rejects.toThrow(/^unknown topic "zzzz" \(topics: gdscript, physics,/);
+  });
+
   it("learn gaps and learn status show what to teach next", async () => {
     resetLearning();
     saveLearning((d) => (d.missedByReview['Identifier "<s>" not declared in the current scope.'] = 2));

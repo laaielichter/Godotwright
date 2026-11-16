@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closest, distance, formatMethodSignature, GodotApi } from "../src/api/api.js";
+import { closest, distance, formatMethodSignature, GodotApi, nearest } from "../src/api/api.js";
 import { formatLookup } from "../src/api/format.js";
 import type { ApiMethod, ApiSignal } from "../src/api/types.js";
 import { runCli } from "./helpers.js";
@@ -142,6 +142,21 @@ describe("closest", () => {
     expect(closest("Color.bright", ["r", "g", "b", "a"])).toEqual([]);
     expect(closest("", ["r", "g", "b", "a"])).toEqual([]);
     expect(api.lookup("Color.bright").suggestions.filter((s) => s.length < 3)).toEqual([]);
+  });
+});
+
+describe("nearest", () => {
+  it("counts a swap of two letters as one edit, so the intended name comes first alone", () => {
+    expect(nearest("chiar", ["car", "chair", "table"])).toEqual(["chair"]);
+  });
+
+  it("does not offer a name that only contains the query", () => {
+    expect(nearest("prop.chiar", ["prop", "prop.chair"])).toEqual(["prop.chair"]);
+  });
+
+  it("offers nothing when nothing is close, and nothing for an empty query", () => {
+    expect(nearest("xyzzy", ["car", "chair"])).toEqual([]);
+    expect(nearest("", ["car"])).toEqual([]);
   });
 });
 

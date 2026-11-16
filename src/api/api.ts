@@ -460,6 +460,30 @@ export function closest(name: string, candidates: string[], max = 5): string[] {
     .map((x) => x.c);
 }
 
+/**
+ * Up to `max` names nearest to `name` by edit distance (case-insensitive), nearest first: the ones
+ * at the smallest distance, so `chiar` offers `chair` and not also `car`.
+ * A swap of two adjacent letters costs one edit, since `chiar` for `chair` is ordinary typing, and
+ * unlike `closest` a name that merely contains the query is not one edit away: `prop` is not a typo
+ * of `prop.chiar`. `closest` stays the one for lookups over Godot names, where `set_pos` should
+ * find `set_position`.
+ */
+export function nearest(name: string, candidates: readonly string[], max = 3): string[] {
+  const target = name.toLowerCase();
+  if (!target) return [];
+  const limit = Math.max(2, Math.floor(target.length / 3));
+  const scored = candidates
+    .map((c) => ({ c, d: typoDistance(target, c.toLowerCase(), limit) }))
+    .filter((x) => x.d <= limit);
+  if (!scored.length) return [];
+  const best = Math.min(...scored.map((x) => x.d));
+  return scored
+    .filter((x) => x.d === best)
+    .sort((a, b) => Math.abs(a.c.length - target.length) - Math.abs(b.c.length - target.length) || a.c.length - b.c.length || a.c.localeCompare(b.c))
+    .slice(0, max)
+    .map((x) => x.c);
+}
+
 /** Levenshtein distance, stopping early once it exceeds `limit`. */
 export function distance(a: string, b: string, limit = Number.POSITIVE_INFINITY): number {
   if (Math.abs(a.length - b.length) > limit) return limit + 1;
@@ -478,3 +502,23 @@ export function distance(a: string, b: string, limit = Number.POSITIVE_INFINITY)
   return prev[b.length]!;
 }
 
+/** Levenshtein distance where a swap of two adjacent letters costs one, stopping early past `limit`. */
+function typoDistance(a: string, b: string, limit: number): number {
+  if (Math.abs(a.length - b.length) > limit) return limit + 1;
+  let before: number[] = [];
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(prev[j]! + 1, cur[j - 1]! + 1, prev[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, (before[j - 2] ?? 0) + 1);
+      cur.push(v);
+      rowMin = Math.min(rowMin, v);
+    }
+    if (rowMin > limit) return limit + 1;
+    before = prev;
+    prev = cur;
+  }
+  return prev[b.length]!;
+}

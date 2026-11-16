@@ -1,4 +1,5 @@
 import { Command, InvalidArgumentError } from "commander";
+import { nearest } from "../api/api.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
 import { readLearning } from "../learn/store.js";
@@ -31,7 +32,10 @@ export function findLessons(query: string, options: Omit<SearchOptions, "json" |
   const learning = currentLearning();
   const shared = bundledLearning();
   const common = { learning, shared, limit: options.limit };
-  if (options.topic !== undefined && !isTopic(options.topic)) throw new Error(`unknown topic "${options.topic}" (topics: ${LESSON_TOPICS.join(", ")})`);
+  if (options.topic !== undefined && !isTopic(options.topic)) {
+    const near = nearest(options.topic, LESSON_TOPICS);
+    throw new Error(`unknown topic "${options.topic}"${near.length ? `; did you mean ${near.join(", ")}?` : ""} (topics: ${LESSON_TOPICS.join(", ")})`);
+  }
   const topic = isTopic(options.topic) ? options.topic : undefined;
   let hits: LessonHit[];
   const byId = query && findLesson(query.trim(), learning);

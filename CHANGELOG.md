@@ -4,6 +4,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **A mistyped model kind, recipe or archetype, and a mistyped lesson topic, name the nearest match**: `model build chiar` answers `unknown model kind "chiar"; did you mean chair?` and points at the full list (`model kinds`), the same way `godotwright api` already does. A name with nothing close keeps the whole list, and the exit code stays 1. (#217)
 - **Review value returns from `-> void` functions** (`api/void-return-value`, error): Godot cannot load a script that returns a value from a void function. Thanks to @dannyward630! (#188, #201)
 - Docs: Spanish translation of the README quick start (`docs/translations/README.es.md`). Thanks to @mafujahmedridoy22-commits! (#200, #207)
 - `migrate` rewrites `call_func()` and `call_funcv()` to `call()` and `callv()`, and `sort_custom(object, "name")` to the Godot 4 `sort_custom(object.name)`, so a script that calls them no longer keeps Godot 3 code next to the rewritten `funcref()`. A dynamic method name is reported as a TO DO. Thanks to @bfs2021! (#194, #228)

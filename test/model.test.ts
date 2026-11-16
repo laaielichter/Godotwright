@@ -9,6 +9,8 @@ import { ModelError, loadGltf } from "../src/model/gltf.js";
 import { lintModelFile } from "../src/model/lint.js";
 import { box, writeGlb, type TestMesh } from "./model-helpers.js";
 import { buildGlb } from "../src/build/glb.js";
+import { loadRecipes } from "../src/build/recipes.js";
+import { buildModel } from "../src/build/run.js";
 import { buildSpec } from "../src/build/spec.js";
 import { CAN_SYMLINK, makeProject, runCli } from "./helpers.js";
 
@@ -380,6 +382,50 @@ describe("model recipes", () => {
     const json = JSON.parse((await runCli(["model", "recipes", "--json"])).output) as { kind: string; archetype: string | null; params: { name: string }[] }[];
     expect(json.map((r) => r.kind)).toEqual(recipes.map((r) => r.kind));
     expect(json.every((r) => r.archetype && r.params.length > 0)).toBe(true);
+  });
+});
+
+describe("mistyped model names", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.exitCode = undefined;
+  });
+
+  /** Runs the CLI and also returns what it wrote to stderr (problems and notes). */
+  const withErrors = async (args: string[]) => {
+    let errors = "";
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => ((errors += String(chunk)), true));
+    const run = await runCli(args);
+    return { ...run, errors };
+  };
+
+  it("names the nearest recipe, and lists every recipe when nothing is close", async () => {
+    const near = await withErrors(["model", "recipes", "chiar"]);
+    expect(near.exitCode).toBe(1);
+    expect(near.errors).toContain('no recipe "chiar"; did you mean chair? (all recipes: godotwright model recipes)');
+    process.exitCode = undefined;
+    const far = await withErrors(["model", "recipes", "xyzzy"]);
+    expect(far.exitCode).toBe(1);
+    expect(far.errors).toMatch(/^no recipe "xyzzy" \(known: /);
+    expect(far.errors).not.toContain("did you mean");
+    process.exitCode = undefined;
+  });
+
+  it("names the nearest archetype, and points at the list when nothing is close", async () => {
+    const near = await withErrors(["model", "archetypes", "prop.chiar"]);
+    expect(near.exitCode).toBe(1);
+    expect(near.errors).toContain('unknown archetype "prop.chiar"; did you mean prop.chair? (see `model archetypes`)');
+    process.exitCode = undefined;
+    const far = await withErrors(["model", "archetypes", "qqqq.zzzz"]);
+    expect(far.exitCode).toBe(1);
+    expect(far.errors).toContain('unknown archetype "qqqq.zzzz" (see `model archetypes`)');
+    expect(far.errors).not.toContain("did you mean");
+    process.exitCode = undefined;
+  });
+
+  it("names the nearest archetype inside a model spec too", () => {
+    const spec = { ...loadRecipes().get("chair")!.spec, archetype: "prop.chiar" };
+    expect(() => buildModel({ spec, out: join(makeProject({}), "typo.glb") })).toThrow('unknown archetype "prop.chiar"; did you mean prop.chair? (see `model archetypes`)');
   });
 });
 
