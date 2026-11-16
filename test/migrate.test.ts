@@ -97,6 +97,42 @@ describe("migrate a script", () => {
     expect(dynamic.left[0]?.message).toContain("dynamic");
   });
 
+  it("rewrites call_func(), call_funcv() and sort_custom() with the method they name", () => {
+    expect(code("handler.call_func(1, 2)")).toBe("handler.call(1, 2)");
+    expect(code("values.call_funcv([1, 2])")).toBe("values.callv([1, 2])");
+    expect(code('scores.sort_custom(self, "_by_value")')).toBe("scores.sort_custom(self._by_value)");
+    expect(code('scores.sort_custom(helper, "compare")')).toBe("scores.sort_custom(helper.compare)");
+    expect(code("scores.sort_custom(self._by_value)")).toBe("scores.sort_custom(self._by_value)");
+    // A function the script defines itself and a comment stay.
+    expect(code("func call_func():\n\tpass\n\nfunc go():\n\tcall_func()")).toContain("\tcall_func()");
+    expect(code('# sort_custom(self, "x")')).toBe('# sort_custom(self, "x")');
+    // A dynamic method name cannot be rewritten: the report names the Godot 4 form.
+    const dynamic = migrateScript("scores.sort_custom(self, method_name)", api);
+    expect(dynamic.code).toBe("scores.sort_custom(self, method_name)");
+    expect(dynamic.left.map((l) => l.message).join(" ")).toContain("sort_custom() takes a Callable");
+
+    // The issue's reproduction: migrate --write leaves no wrong-arguments or unknown-member finding behind.
+    const source = [
+      "extends Node",
+      "",
+      "var scores := [3, 1, 2]",
+      "",
+      "func _ready():",
+      '	scores.sort_custom(self, "_by_value")',
+      '	var handler = funcref(self, "_by_value")',
+      "	print(handler.call_func(1, 2))",
+      "",
+      "func _by_value(a, b):",
+      "	return a < b",
+      "",
+    ].join("\n");
+    const migrated = migrateScript(source, api);
+    const root = makeProject({ "project.godot": PROJECT, "sorter.gd": migrated.code });
+    const findings = reviewProject(root).findings.filter((f) => f.rule === "api/wrong-arguments" || f.rule === "api/unknown-member");
+    expect(findings).toEqual([]);
+    expect(migrateScript(migrated.code, api).changes).toEqual([]);
+  });
+
   it("rewrites to_json, parse_json, ColorN and polar2cartesian (#144)", () => {
     expect(code("var text = to_json(data)")).toBe('var text = JSON.stringify(data, "", false)');
     expect(code("var val = parse_json(text)")).toBe("var val = JSON.parse_string(text)");

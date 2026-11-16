@@ -46,6 +46,8 @@ export interface ProjectMigration {
 
 /** Godot 3 method names that the bundled rename table does not carry, with the Godot 4 name. */
 const EXTRA_FUNCTIONS: Record<string, string> = {
+  call_func: "call",
+  call_funcv: "callv",
   empty: "is_empty",
   invert: "reverse",
   is_valid_integer: "is_valid_int",
@@ -430,7 +432,7 @@ class Migrator {
 
   /** yield(), connect(), disconnect(), is_connected(), emit_signal(), funcref(), JSON, ColorN, polar2cartesian, update and print calls. */
   private calls(line: string): string {
-    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|to_json|parse_json|ColorN|polar2cartesian|update|print)\s*\(/g;
+    const re = /\b(yield|connect|disconnect|is_connected|emit_signal|funcref|sort_custom|to_json|parse_json|ColorN|polar2cartesian|update|print)\s*\(/g;
     let from = 0;
     for (;;) {
       const mask = codeMask(line, {});
@@ -454,7 +456,7 @@ class Migrator {
         from = open + 1;
         continue;
       }
-      const rule = name === "yield" ? "await" : (name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian" || name === "update" || name === "print") ? "rename" : "signal";
+      const rule = name === "yield" ? "await" : (name === "sort_custom" || name === "to_json" || name === "parse_json" || name === "ColorN" || name === "polar2cartesian" || name === "update" || name === "print") ? "rename" : "signal";
       this.note(rule, whole, to);
       line = line.slice(0, receiverStart) + to + line.slice(close + 1);
       from = receiverStart + to.length;
@@ -512,6 +514,12 @@ class Migrator {
       const method = args.length === 2 ? quoted(args[1] as string) : undefined;
       if (method) return `${on}${args[0]}.${method}`;
       this.todo(`${whole}: funcref() is a Callable in Godot 4 (object.method)`);
+      return undefined;
+    }
+    if (name === "sort_custom") {
+      const method = args.length === 2 ? quoted(args[1] as string) : undefined;
+      if (method) return `${on}sort_custom(${args[0]}.${method})`;
+      if (args.length > 1) this.todo(`${whole}: sort_custom() takes a Callable in Godot 4 (array.sort_custom(object.method)); this form needs a hand rewrite`);
       return undefined;
     }
     if (name === "emit_signal") {
