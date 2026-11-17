@@ -11,6 +11,7 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <a href="https://glama.ai/mcp/servers/laaielichter/Godotwright"><img src="https://glama.ai/mcp/servers/laaielichter/Godotwright/badges/score.svg" alt="Godotwright MCP server – quality and maintenance score on Glama"></a>
   <a href="https://mcpservers.org/servers/laaielichter/godotwright"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org" height="20"></a>
+  <a href="https://github.com/laaielichter/Godotwright/stargazers"><img src="https://img.shields.io/github/stars/laaielichter/Godotwright?style=social" alt="GitHub stars"></a>
 </p>
 <p align="center">
   <a href="https://laaielichter.github.io/Godotwright/">Website</a> ·
@@ -345,7 +346,11 @@ Wrong review findings and ideas for new rules are the most useful reports. Start
 [CONTRIBUTING.md](CONTRIBUTING.md). Working on the code: `npm ci && npm run check`, and [AGENTS.md](AGENTS.md) for the
 conventions.
 
-## Support
+## Support the project
+
+If Godotwright is useful to you, a ⭐ on [GitHub](https://github.com/laaielichter/Godotwright) helps other people find it.
+
+Thanks to everyone who has contributed: [@ANO3457](https://github.com/ANO3457), [@tnalbant](https://github.com/tnalbant), [@dannyward630](https://github.com/dannyward630), [@mafujahmedridoy22-commits](https://github.com/mafujahmedridoy22-commits), [@Vamsi-2581](https://github.com/Vamsi-2581) and [@Aaqibhafeezkhan](https://github.com/Aaqibhafeezkhan).
 
 Godotwright is free and open source. If it saves you or your agent time, a gift is welcome but never expected. SOL and
 any token on Solana (such as USDC) can be sent to:
