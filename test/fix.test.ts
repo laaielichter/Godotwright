@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FIXABLE_RULES, fixProject, formatFix } from "../src/fix/fix.js";
 import { RULES } from "../src/review/rules.js";
 import { undoJournal } from "../src/journal/journal.js";
@@ -85,7 +85,41 @@ describe("godotwright fix", () => {
     const only = await runCli(["fix", root, "--rule", "quality/mojibake", "--json"]);
     expect(JSON.parse(only.output).changes.map((c: { rule: string }) => c.rule)).toEqual(["quality/mojibake"]);
     const none = await runCli(["fix", root, "--file", "res://missing.gd"]);
-    expect(none.output).toMatch(/Nothing to fix/);
+    expect(none.exitCode).toBe(1);
+  });
+
+  it("names the nearest rule for a typo, and writes nothing", () => {
+    const code = "extends Node\n\n\nfunc f(x: Node) -> void:\n\tif x is Node3D and is_instance_valid(x):\n\t\tprint(x)\n";
+    const { root, read } = project(code);
+    expect(() => fixProject(root, { rules: ["api/infer-varaint"], write: true })).toThrow('unknown rule "api/infer-varaint"; did you mean api/infer-variant?');
+    expect(read()).toBe(code);
+  });
+
+  it("says a real rule has no mechanical fix, and keeps today's message for a name with nothing close", () => {
+    const { root } = project("extends Node\n");
+    expect(() => fixProject(root, { rules: ["api/unknown-member"] })).toThrow(/^api\/unknown-member has no mechanical fix \(fixable rules: /);
+    expect(() => fixProject(root, { rules: ["qqqq"] })).toThrow(/^unknown rule "qqqq" \(fixable rules: /);
+  });
+
+  it("exits 1 for a wrong rule or file, and 0 for a project with nothing to fix", async () => {
+    const root = makeProject({ "project.godot": PROJECT, "a.gd": "extends Node\n" });
+    const clean = await runCli(["fix", root]);
+    expect(clean.exitCode).toBe(0);
+    expect(clean.output).toMatch(/Nothing to fix mechanically/);
+    const printed: string[] = [];
+    const written = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      printed.push(String(chunk));
+      return true;
+    });
+    try {
+      expect((await runCli(["fix", root, "--rule", "api/infer-varaint"])).exitCode).toBe(1);
+      expect((await runCli(["fix", root, "--file", "res://mian.gd", "--write"])).exitCode).toBe(1);
+    } finally {
+      written.mockRestore();
+    }
+    expect(printed.join("")).toContain('unknown rule "api/infer-varaint"; did you mean api/infer-variant?');
+    expect(printed.join("")).toContain("res://mian.gd does not exist in the project");
+    expect(readFileSync(join(root, "a.gd"), "utf8")).toBe("extends Node\n");
   });
 });
 

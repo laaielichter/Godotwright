@@ -3,6 +3,7 @@ import { JournalWriter } from "../journal/journal.js";
 import { GodotApi } from "../api/api.js";
 import type { ApiMethod } from "../api/types.js";
 import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
+import { checkFiles } from "../project/options.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
 import { assertWritable } from "../project/protect.js";
@@ -602,11 +603,12 @@ export function migrateProject(path: string, options: MigrateOptions = {}): Proj
   const single = path.endsWith(".gd") || SHADER_FILE.test(path);
   const root = single ? undefined : findProjectRoot(path);
   if (!single && !root) throw new ProjectNotFoundError(path);
+  const named = options.files && root ? checkFiles(root, options.files) : options.files;
   const targets = single
     ? [{ res: path, full: path }]
     : listProjectFiles(root as string)
         .filter((f) => (f.endsWith(".gd") || SHADER_FILE.test(f)) && (options.includeAddons || !f.startsWith("res://addons/")))
-        .filter((f) => !options.files || options.files.includes(f))
+        .filter((f) => !named || named.includes(f))
         .map((res) => ({ res, full: fromResPath(root as string, res) }));
   const files: FileMigration[] = [];
   // One .gd file outside a project is written as it is; inside one, the write goes in the journal.

@@ -1,6 +1,7 @@
 import { Command, Option } from "commander";
 import { formatMigration, migrateProject } from "../migrate/migrate.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
+import { OptionError } from "../project/options.js";
 import { collect, writeOut } from "./output.js";
 
 export function migrateCommand(): Command {
@@ -17,7 +18,7 @@ export function migrateCommand(): Command {
         const result = migrateProject(path, { write: options.write, includeAddons: options.includeAddons, ...(options.file.length ? { files: options.file } : {}) });
         writeOut(command, options.json ? `${JSON.stringify(result, null, 2)}\n` : formatMigration(result, options.detail));
       } catch (error) {
-        if (!(error instanceof ProjectNotFoundError)) throw error;
+        if (!(error instanceof ProjectNotFoundError) && !(error instanceof OptionError)) throw error;
         process.stderr.write(`${error.message}\n`);
         process.exitCode = 1;
       }
