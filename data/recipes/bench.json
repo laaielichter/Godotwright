@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "name": "bench",
+  "archetype": "prop.bench",
+  "description": "A sturdy outdoor park bench with one continuous shared timber seat, two spaced supports and a full-width upright backrest. The seat is 0.45 m above the ground; the overall length is adjustable.",
+  "params": [
+    {
+      "name": "width",
+      "type": "number",
+      "default": 1.8,
+      "min": 1.2,
+      "max": 2.4,
+      "description": "Overall length of the shared bench seat along the x axis in metres."
+    }
+  ],
+  "materials": {
+    "bench_wood": {
+      "color": [0.34, 0.19, 0.09, 1],
+      "metallic": 0,
+      "roughness": 0.62,
+      "texture": "wood"
+    },
+    "bench_support": {
+      "color": [0.12, 0.13, 0.14, 1],
+      "metallic": 0.72,
+      "roughness": 0.48
+    }
+  },
+  "nodes": [
+    {
+      "name": "Bench",
+      "children": [
+        {
+          "name": "Seat",
+          "shape": "box",
+          "material": "bench_wood",
+          "size": ["$width", 0.08, 0.52],
+          "at": [0, 0.45, 0]
+        },
+        {
+          "name": "Support",
+          "shape": "box",
+          "material": "bench_support",
+          "size": [0.08, 0.41, 0.46],
+          "at": ["-($width - 0.24) / 2", 0.205, 0],
+          "repeat": {
+            "count": 2,
+            "step": ["$width - 0.24", 0, 0]
+          }
+        },
+        {
+          "name": "Back",
+          "shape": "box",
+          "material": "bench_wood",
+          "size": ["$width", 0.55, 0.06],
+          "at": [0, 0.77, -0.23]
+        }
+      ]
+    }
+  ]
+}
