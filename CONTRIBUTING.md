@@ -1,6 +1,6 @@
 # Contributing to Godotwright
 
-Thanks for helping. Small fixes and big ideas are both welcome.
+Thanks for helping. Small fixes and big ideas are both welcome. Starring the repo is a simple way to keep it in your list and helps others find it, but it is never needed to get an issue, help or a review.
 
 ## Ways to help
 
