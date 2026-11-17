@@ -81,7 +81,7 @@ describe("ring and offset in the spec language", () => {
 describe("the recipes", () => {
   it("are listed with the built-in kinds, with parameters and an archetype", () => {
     const kinds = allKinds();
-    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower", "crate", "barrel", "chair", "table", "campfire", "rowing-boat", "rocket", "satellite", "castle", "humanoid", "horse", "dragon", "spaceship"]));
+    expect(kinds.map((k) => k.kind)).toEqual(expect.arrayContaining(["house", "car", "tractor", "helicopter", "airliner", "ship", "tree", "conifer", "wind-turbine", "shipping-container", "truck", "bus", "motorcycle", "bicycle", "train", "tank", "light-aircraft", "fighter", "drone", "boat", "sailboat", "piston-engine", "jet-engine", "barn", "tower", "church", "windmill", "apartment", "bridge", "road", "railway-track", "street-lamp", "fence", "power-pylon", "palm", "bush", "grass", "flower", "crate", "barrel", "bench", "chair", "table", "campfire", "rowing-boat", "rocket", "satellite", "castle", "humanoid", "horse", "dragon", "spaceship"]));
     for (const r of recipes) {
       expect(r.archetype, r.kind).toBeDefined();
       expect(library.get(r.archetype!), r.kind).toBeDefined();
@@ -150,6 +150,22 @@ describe("the recipes", () => {
 });
 
 describe("recipe geometry", () => {
+  it("bench: the shared seat stays 0.45 m high at every width and has two supports", () => {
+    for (const width of [1.2, 1.8, 2.4]) {
+      const boxes = nodeBoxes("bench", { width });
+      const seat = boxes.get("Bench/Seat");
+      expect(seat, `width ${width}: missing shared seat`).toBeDefined();
+      expect(seat!.min[1], `width ${width}: seat bottom`).toBeCloseTo(0.37, 3);
+      expect(seat!.max[1], `width ${width}: seat top`).toBeCloseTo(0.45, 3);
+      const supports = [...boxes.keys()].filter((path) => path.startsWith("Bench/Support_"));
+      expect(supports, `width ${width}: support count`).toHaveLength(2);
+      for (const path of supports) {
+        expect(boxes.get(path)!.min[1], `${path} at width ${width}`).toBeCloseTo(0, 3);
+      }
+    }
+  });
+
+
   it("church: the roof reaches the belfry's back face at every nave width", () => {
     for (const naveWidth of [8, 10, 25]) {
       const boxes = nodeBoxes("church", { naveWidth });
