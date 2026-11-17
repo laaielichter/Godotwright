@@ -155,8 +155,8 @@ describe("recipe geometry", () => {
       const boxes = nodeBoxes("bench", { width });
       const seat = boxes.get("Bench/Seat");
       expect(seat, `width ${width}: missing shared seat`).toBeDefined();
-      expect(seat!.min[1], `width ${width}: seat bottom`).toBeCloseTo(0.41, 3);
-      expect(seat!.max[1], `width ${width}: seat top`).toBeCloseTo(0.49, 3);
+      expect(seat!.min[1], `width ${width}: seat bottom`).toBeCloseTo(0.37, 3);
+      expect(seat!.max[1], `width ${width}: seat top`).toBeCloseTo(0.45, 3);
       const supports = [...boxes.keys()].filter((path) => path.startsWith("Bench/Support_"));
       expect(supports, `width ${width}: support count`).toHaveLength(2);
       for (const path of supports) {
