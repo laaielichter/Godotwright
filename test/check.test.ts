@@ -317,7 +317,7 @@ describe("godotwright check", () => {
     const previous = process.exitCode;
     const { output } = await runCli(["check", root, "--godot", godot]);
     expect(output).toContain('res://scripts/broken.gd:5: error: Parse Error: Unexpected "Indent".');
-    expect(output).toContain("1 error, 1 warning (Godot 4.7.2.stable.official.fake, 3 scripts, 1 scenes)");
+    expect(output).toContain("1 error, 1 warning (Godot 4.7.2.stable.official.fake, 3 scripts, 1 scene)");
     expect(process.exitCode).toBe(1);
     process.exitCode = previous;
   });

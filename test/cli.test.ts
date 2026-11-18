@@ -96,6 +96,21 @@ describe("godotwright CLI", () => {
   });
 });
 
+describe("godotwright doctor", () => {
+  it("uses singular script and scene counts in the text summary", async () => {
+    const root = mkdtempSync(join(tmpdir(), "godotwright-doctor-counts-"));
+    writeFileSync(join(root, "project.godot"), 'config_version=5\n\n[application]\nconfig/name="Doctor counts"\nrun/main_scene="res://Main.tscn"\n');
+    writeFileSync(join(root, "Main.gd"), "extends Node\n");
+    writeFileSync(join(root, "Main.tscn"), '[gd_scene format=3]\n\n[node name="Main" type="Node"]\n');
+
+    const { output } = await run(["doctor", root, "--no-godot"]);
+    expect(output).toContain("1 script, 1 scene; Godot skipped");
+
+    const { output: json } = await run(["doctor", root, "--no-godot", "--json"]);
+    expect(JSON.parse(json)).toMatchObject({ scripts: 1, scenes: 1 });
+  });
+});
+
 describe("number options", () => {
   it("review --min-score fails the gate only below the score", async () => {
     expect((await run(["review", DEMO, "--min-score", "0"])).exitCode).toBe(0);

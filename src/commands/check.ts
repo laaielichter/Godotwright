@@ -5,6 +5,7 @@ import { GodotNotFoundError } from "../check/godot.js";
 import { formatDiagnostic } from "../check/log.js";
 import { shaderSummary } from "../shaders/shaders.js";
 import { lessonHintsForMessages } from "../lessons/hints.js";
+import { plural } from "../scan/format.js";
 import { collect, parseNumber, writeOut } from "./output.js";
 
 interface Options {
@@ -102,8 +103,8 @@ export function checkCommand(): Command {
           }
           lines.push(...result.diagnostics.map(formatDiagnostic));
           lines.push(
-            `${result.errors} error${result.errors === 1 ? "" : "s"}, ${result.warnings} warning${result.warnings === 1 ? "" : "s"}` +
-              ` (Godot ${result.godotVersion}, ${result.scripts} scripts, ${result.scenes} scenes${result.shaderFiles ? `, ${result.shaderFiles} shaders` : ""})`,
+            `${plural(result.errors, "error")}, ${plural(result.warnings, "warning")}` +
+              ` (Godot ${result.godotVersion}, ${plural(result.scripts, "script")}, ${plural(result.scenes, "scene")}${result.shaderFiles ? `, ${plural(result.shaderFiles, "shader")}` : ""})`,
           );
           if (result.shaders) lines.push(shaderSummary(result.shaders));
           lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));

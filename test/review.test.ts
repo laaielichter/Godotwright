@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 import { GodotApi } from "../src/api/api.js";
-import { formatFinding, formatReview } from "../src/review/format.js";
+import { formatFinding, formatReview, formatReviewSummary } from "../src/review/format.js";
 import { reviewProject } from "../src/review/review.js";
 import { FIXTURES, DEMO, makeProject, runCli } from "./helpers.js";
 
@@ -19,6 +19,21 @@ describe("review of the demo fixture", () => {
     expect(report.overall).toBe(100);
     expect(report.categories.map((c) => c.score)).toEqual([100, 100, 100, 100]);
     expect(report.typing.percent).toBe(100);
+  });
+});
+
+describe("review summary counts", () => {
+  it.each([0, 1, 2])("formats counts of %i in human-readable output", (count) => {
+    const report = reviewProject(DEMO);
+    const text = formatReviewSummary({
+      ...report,
+      scripts: count,
+      scenes: count,
+      categories: report.categories.map((category) => ({ ...category, errors: count, warnings: count, infos: count })),
+    });
+    const suffix = count === 1 ? "" : "s";
+    expect(text).toContain(`${count} script${suffix}, ${count} scene${suffix})`);
+    expect(text).toContain(count === 0 ? "no findings" : `${count} error${suffix}, ${count} warning${suffix}, ${count} info${suffix}\n`);
   });
 });
 

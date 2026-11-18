@@ -5,6 +5,7 @@ import { findProjectRoot } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
 import { ciAnnotations } from "../review/annotations.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
+import { plural } from "../scan/format.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { DIFF_DIR, formatBaseline, loadBaselines, type BaselineResult } from "../screenshot/baseline.js";
 import { ScreenshotError, takeScreenshot } from "../screenshot/screenshot.js";
@@ -13,11 +14,14 @@ import { behaviourOk, formatScenario, formatShot, loadScenarios, runScenario, ty
 
 export type StepStatus = "pass" | "fail" | "skip";
 
+const displaySummary = Symbol("displaySummary");
+
 export interface CiStep {
   name: "review" | "check" | "test" | "scenarios" | "export" | "visual";
   status: StepStatus;
   /** One line: what ran and what came out. */
   summary: string;
+  [displaySummary]?: string;
   /** The lines that explain a failure, each with file:line where there is one. */
   details: string[];
 }
@@ -67,12 +71,21 @@ function clip(lines: string[], max: number): string[] {
   return lines.length > max ? [...lines.slice(0, max), `+${lines.length - max} more`] : lines;
 }
 
+/** Keep the serialized JSON and JUnit summaries stable while formatting the Markdown receipt. */
+function countedSummary(format: (count: typeof plural) => string) {
+  return {
+    summary: format((n, word) => `${n} ${word}s`),
+    [displaySummary]: format(plural),
+  };
+}
+
 function reviewStep(report: ReviewReport, max: number): CiStep {
   const errors = report.findings.filter((f) => f.severity === "error");
+  const warnings = report.findings.filter((f) => f.severity === "warning").length;
   return {
     name: "review",
     status: errors.length ? "fail" : "pass",
-    summary: `score ${report.overall}/100, ${errors.length} errors, ${report.findings.filter((f) => f.severity === "warning").length} warnings`,
+    ...countedSummary((count) => `score ${report.overall}/100, ${count(errors.length, "error")}, ${count(warnings, "warning")}`),
     details: clip(errors.map(formatFinding), max),
   };
 }
@@ -82,7 +95,7 @@ function checkStep(result: CheckResult, max: number): CiStep {
   return {
     name: "check",
     status: errors.length ? "fail" : "pass",
-    summary: `Godot ${result.godotVersion}: ${result.scripts} scripts and ${result.scenes} scenes loaded, ${result.errors} errors, ${result.warnings} warnings`,
+    ...countedSummary((count) => `Godot ${result.godotVersion}: ${count(result.scripts, "script")} and ${count(result.scenes, "scene")} loaded, ${count(result.errors, "error")}, ${count(result.warnings, "warning")}`),
     details: clip(errors.map((d) => `${d.file ?? ""}${d.line ? `:${d.line}` : ""} ${d.message}`.trim()), max),
   };
 }
@@ -94,7 +107,7 @@ function testStep(report: TestReport, max: number): CiStep {
   return {
     name: "test",
     status: ok ? "pass" : "fail",
-    summary: `${report.framework}: ${report.passed} passed, ${report.failed} failed, ${report.errors} errors of ${report.tests}`,
+    ...countedSummary((count) => `${report.framework}: ${report.passed} passed, ${report.failed} failed, ${count(report.errors, "error")} of ${report.tests}`),
     details: clip(lines, max),
   };
 }
@@ -129,15 +142,17 @@ function visualStep(visuals: Visual[], max: number): CiStep {
 
 function exportStep(r: ExportRun, max: number): CiStep {
   const errors = r.diagnostics.filter((d) => d.severity === "error");
-  const parts = [
-    r.pack ? `${r.pack.files} files, ${kb(r.pack.bytes)}` : "no pack",
-    r.contents?.needed ? `${r.contents.needed - r.contents.missing} of ${r.contents.needed} loaded files in it` : "",
-    r.smoke ? `ran ${r.smoke.frames} frames: ${r.smoke.errors} errors` : "",
-  ].filter(Boolean);
   return {
     name: "export",
     status: errors.length ? "fail" : "pass",
-    summary: `pack of ${r.preset?.name ?? "?"}: ${parts.join(", ")}`,
+    ...countedSummary((count) => {
+      const parts = [
+        r.pack ? `${r.pack.files} files, ${kb(r.pack.bytes)}` : "no pack",
+        r.contents?.needed ? `${r.contents.needed - r.contents.missing} of ${r.contents.needed} loaded files in it` : "",
+        r.smoke ? `ran ${r.smoke.frames} frames: ${count(r.smoke.errors, "error")}` : "",
+      ].filter(Boolean);
+      return `pack of ${r.preset?.name ?? "?"}: ${parts.join(", ")}`;
+    }),
     details: clip(errors.map((d) => `${d.file ?? ""}${d.line ? `:${d.line}` : ""} ${d.message}`.trim()), max),
   };
 }
@@ -205,7 +220,7 @@ const MARK: Record<StepStatus, string> = { pass: "✅", fail: "❌", skip: "➖"
 /** The receipt: a markdown table a pull request comment or a job summary can show as it is. */
 export function formatCi(r: CiReport): string {
   const out = [`## Godotwright: ${r.ok ? "all checks passed" : "checks failed"}`, "", "| Step | Result |", "|---|---|"];
-  for (const s of r.steps) out.push(`| ${s.name} | ${MARK[s.status]} ${s.summary} |`);
+  for (const s of r.steps) out.push(`| ${s.name} | ${MARK[s.status]} ${s[displaySummary] ?? s.summary} |`);
   for (const s of r.steps.filter((x) => x.details.length)) out.push("", `**${s.name}**`, "", "```", ...s.details, "```");
   return `${out.join("\n")}\n`;
 }
