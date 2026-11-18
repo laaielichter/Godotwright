@@ -9,6 +9,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - Docs: Spanish translation of the README quick start (`docs/translations/README.es.md`). Thanks to @mafujahmedridoy22-commits! (#200, #207)
 - `migrate` rewrites `call_func()` and `call_funcv()` to `call()` and `callv()`, and `sort_custom(object, "name")` to the Godot 4 `sort_custom(object.name)`, so a script that calls them no longer keeps Godot 3 code next to the rewritten `funcref()`. A dynamic method name is reported as a TO DO. Thanks to @bfs2021! (#194, #228)
 - **A mistyped `--rule` or `--file` is named instead of "Nothing to fix"**: `fix --rule api/infer-varaint` answers `unknown rule "api/infer-varaint"; did you mean api/infer-variant?`, a rule without a mechanical fix says so, and `fix --file` / `migrate --file` with a file that is not in the project answer `res://mian.gd does not exist in the project`. All exit with code 1 and write nothing, also with `--write`, and the MCP tools `godot_fix` and `godot_migrate` give the same errors. Thanks to @tnalbant! (#214, #231)
+- **Human-readable CLI output uses the singular for one item**: it says "1 script", "1 scene" and "1 error" instead of "1 scripts", including in the doctor output; JSON, SARIF and JUnit output are unchanged. Thanks to @Golden007-prog! (#215, #235)
 
 ## 0.8.0 (lean mode, and three checks for the whole change)
 
