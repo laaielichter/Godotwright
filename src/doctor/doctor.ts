@@ -9,6 +9,7 @@ import { lessonsForError, lessonsForRule, searchLessons, type LessonHit } from "
 import { findProjectRoot, toResPath } from "../project/files.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import { RULES, type Finding } from "../review/rules.js";
+import { plural } from "../scan/format.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 
 /**
@@ -184,7 +185,7 @@ export function formatDoctor(d: DoctorReport, detail: "brief" | "full" = "brief"
   const errors = d.problems.filter((p) => p.severity === "error").length + d.more.errors;
   const warnings = d.problems.filter((p) => p.severity === "warning").length + d.more.warnings;
   out.push(
-    `doctor: ${d.project}: ${errors} problem${errors === 1 ? "" : "s"} to fix, ${warnings} to look at (review ${d.overall}/100, ${d.scripts} scripts, ${d.scenes} scenes; ` +
+    `doctor: ${d.project}: ${errors} problem${errors === 1 ? "" : "s"} to fix, ${warnings} to look at (review ${d.overall}/100, ${plural(d.scripts, "script")}, ${plural(d.scenes, "scene")}; ` +
       (d.godot === "ran" ? `Godot ${d.godotVersion ?? ""} loaded everything` : d.godot === "not installed" ? "Godot not installed: review only" : d.godot === "skipped" ? "Godot skipped" : "Godot could not run") +
       ")",
   );
