@@ -5,6 +5,7 @@ import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { runOutput } from "../check/check.js";
 import { findProjectRoot } from "../project/files.js";
+import { plural } from "../scan/format.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 
 export class TestRunError extends Error {}
@@ -227,7 +228,7 @@ export function formatTests(r: TestReport): string {
     out.push(`${name}: no test report came out of the run${r.timedOut ? " (timed out)" : ` (exit code ${r.exitCode})`}; last output:`, r.output);
   } else {
     out.push(
-      `${name}: ${r.passed} passed, ${r.failed} failed${r.errors ? `, ${r.errors} errors` : ""}${r.skipped ? `, ${r.skipped} skipped` : ""} of ${r.tests} (${r.seconds}s)${r.tests === 0 ? ": no tests found" : ""}`,
+      `${name}: ${r.passed} passed, ${r.failed} failed${r.errors ? `, ${plural(r.errors, "error")}` : ""}${r.skipped ? `, ${r.skipped} skipped` : ""} of ${r.tests} (${r.seconds}s)${r.tests === 0 ? ": no tests found" : ""}`,
     );
     for (const f of r.failures) out.push(`  ${f.file ?? f.suite}${f.line ? `:${f.line}` : ""}  ${f.test}  ${f.kind === "error" ? "ERROR " : ""}${f.message}`);
   }

@@ -1,4 +1,4 @@
-import type { Detail } from "../scan/format.js";
+import { plural, type Detail } from "../scan/format.js";
 import type { ModelInfo } from "./inspect.js";
 import type { ModelReport } from "./lint.js";
 import { MODEL_RULES, type ModelFinding } from "./rules.js";
@@ -46,7 +46,7 @@ export function formatModelReport(report: ModelReport, detail: Detail = "brief")
   out.push(`Model lint: ${report.file} (${report.triangles.toLocaleString("en-US")} triangles, ${report.nodes} nodes)`);
   out.push(`overall: ${report.overall}/100`);
   for (const c of report.categories) {
-    const counts = [c.errors && `${c.errors} errors`, c.warnings && `${c.warnings} warnings`, c.infos && `${c.infos} infos`].filter(Boolean).join(", ");
+    const counts = [c.errors && plural(c.errors, "error"), c.warnings && plural(c.warnings, "warning"), c.infos && plural(c.infos, "info")].filter(Boolean).join(", ");
     out.push(`  ${c.category.padEnd(12)} ${String(c.score).padStart(3)}  ${counts || "no findings"}`);
   }
   const shown = detail === "full" ? report.findings : report.findings.filter((f) => f.severity !== "info").slice(0, BRIEF_FINDINGS);

@@ -70,7 +70,7 @@ describe("compareGodot", () => {
     expect(readdirSync(tmpdir()).some((d) => d.startsWith("godotwright-compare-") && existsSync(join(tmpdir(), d, root.split(/[\\/]/).pop()!)))).toBe(false);
 
     const text = formatCompare(result);
-    expect(text).toContain("Godot 4.7.2.stable vs 4.8.beta2: 1 new in 4.8.beta2 (1 errors), 1 gone, 1 in both (2 scripts, 1 scenes)");
+    expect(text).toContain("Godot 4.7.2.stable vs 4.8.beta2: 1 new in 4.8.beta2 (1 error), 1 gone, 1 in both (2 scripts, 1 scene)");
     expect(text).toContain("new in 4.8.beta2:\nres://b.gd:4: error: Parse Error: Not all code paths return a value.");
     expect(text).toContain("gone in 4.8.beta2:\nres://a.gd:7: warning:");
   });
@@ -104,7 +104,7 @@ describe("compareGodot", () => {
     const base = fakeGodot("cli-base", "4.7.2.stable.official.abcdef123", both);
     const next = fakeGodot("cli-next", "4.8.beta2.official.0123456789", both + fresh);
     const { output, exitCode } = await runCli(["check", root, "--godot", base.bin, "--compare-godot", next.bin]);
-    expect(output).toContain("1 new in 4.8.beta2 (1 errors)");
+    expect(output).toContain("1 new in 4.8.beta2 (1 error)");
     expect(exitCode).toBe(1);
     const same = await runCli(["check", root, "--godot", base.bin, "--compare-godot", base.bin, "--json"]);
     expect(same.exitCode).toBe(0);

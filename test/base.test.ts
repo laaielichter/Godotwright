@@ -97,7 +97,7 @@ describe("projects laid over a base game", () => {
     const { game, mod } = gameAndMod();
     const { output, exitCode } = await runCli(["review", mod, "--base", game]);
     expect(exitCode).toBe(0);
-    expect(output).toContain("1 scripts");
+    expect(output).toContain("1 script,");
     expect((await runCli(["scan", mod, "--base", game])).output).toContain("base: 4 files");
   });
 });

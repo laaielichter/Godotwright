@@ -2,6 +2,7 @@ import { cpSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, sep } from "node:path";
 import { findProjectRoot } from "../project/files.js";
+import { plural } from "../scan/format.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { checkProject, type CheckOptions, type CheckResult } from "./check.js";
 import { formatDiagnostic, type Diagnostic } from "./log.js";
@@ -107,8 +108,8 @@ export function formatCompare(result: CompareResult, cap = 50): string {
   const b = shortVersion(result.other.godotVersion);
   const newErrors = result.onlyOther.filter((d) => d.severity === "error").length;
   const out = [
-    `Godot ${a} vs ${b}: ${result.onlyOther.length} new in ${b} (${newErrors} errors), ${result.onlyBase.length} gone, ${result.same} in both` +
-      ` (${result.base.scripts} scripts, ${result.base.scenes} scenes)`,
+    `Godot ${a} vs ${b}: ${result.onlyOther.length} new in ${b} (${plural(newErrors, "error")}), ${result.onlyBase.length} gone, ${result.same} in both` +
+      ` (${plural(result.base.scripts, "script")}, ${plural(result.base.scenes, "scene")})`,
   ];
   const list = (title: string, items: Diagnostic[]) => {
     if (!items.length) return;

@@ -98,6 +98,7 @@ describe("godotwright ci", () => {
     expect(ci.ok).toBe(true);
     const text = formatCi(ci);
     expect(text).toContain("## Godotwright: all checks passed");
+    expect(text).toContain("Godot 4.7.2: 1 script and 0 scenes loaded");
     expect(text).toContain("| test | ➖ no GUT or GdUnit4 in res://addons |");
 
     const failing = await runCi(root, {
@@ -107,6 +108,8 @@ describe("godotwright ci", () => {
     expect(failing.ok).toBe(false);
     expect(failing.steps.map((s) => s.status)).toEqual(["fail", "skip", "skip", "skip", "skip"]);
     expect(formatCi(failing)).toContain("res://main.gd:4");
+    expect(formatCi(failing)).toContain("score 70/100, 1 error, 0 warnings");
+    expect(JSON.parse(JSON.stringify(failing)).steps[0].summary).toBe("score 70/100, 1 errors, 0 warnings");
   });
 
   it("runs scenarios through the injected runner and fails when one fails", async () => {

@@ -218,7 +218,7 @@ describe("MCP server (cheap profile)", () => {
       }),
     );
     expect(out).toContain(
-      "findings in res://scripts/new_player.gd: 1 (1 errors)",
+      "findings in res://scripts/new_player.gd: 1 (1 error)",
     );
     expect(out).toContain(
       "res://scripts/new_player.gd:5: error [api/wrong-arguments] move_and_slide() takes 0 arguments, but 2 are given.",

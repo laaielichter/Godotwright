@@ -87,7 +87,7 @@ import { findProjectRoot, listProjectFiles } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
 import type { ReviewReport } from "../review/review.js";
 import { CATEGORIES, RULES } from "../review/rules.js";
-import { formatProjectMap, type Detail } from "../scan/format.js";
+import { formatProjectMap, plural, type Detail } from "../scan/format.js";
 import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
 import {
   ScreenshotError,
@@ -1490,7 +1490,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
         const lines = checked.diagnostics.map(formatDiagnostic);
         lines.push(
-          `${checked.errors} errors, ${checked.warnings} warnings (Godot ${checked.godotVersion}, ${checked.scripts} scripts, ${checked.scenes} scenes${checked.shaderFiles ? `, ${checked.shaderFiles} shaders` : ""})`,
+          `${plural(checked.errors, "error")}, ${plural(checked.warnings, "warning")} (Godot ${checked.godotVersion}, ${plural(checked.scripts, "script")}, ${plural(checked.scenes, "scene")}${checked.shaderFiles ? `, ${plural(checked.shaderFiles, "shader")}` : ""})`,
         );
         if (checked.shaders) lines.push(shaderSummary(checked.shaders));
         lines.push(...lessonHintsForMessages(checked.diagnostics.map((d) => d.message)));
@@ -2536,7 +2536,7 @@ function formatReviewFor(
   const shown = list.slice(0, profile.findings);
   const errors = list.filter((f) => f.severity === "error").length;
   out.push(
-    `${focus.length ? `findings in ${focus.join(", ")}` : "findings"}: ${list.length} (${errors} errors)`,
+    `${focus.length ? `findings in ${focus.join(", ")}` : "findings"}: ${list.length} (${plural(errors, "error")})`,
   );
   for (const f of shown) {
     out.push(formatFinding(f));

@@ -1,4 +1,4 @@
-import type { Detail } from "../scan/format.js";
+import { plural, type Detail } from "../scan/format.js";
 import type { ReviewReport } from "./review.js";
 import { RULES, type Finding } from "./rules.js";
 
@@ -12,11 +12,11 @@ export function formatFinding(f: Finding): string {
 /** The project, the scores and the typing line: everything above the findings. */
 export function formatReviewSummary(report: ReviewReport): string {
   const out: string[] = [];
-  out.push(`AAA review: ${report.project} (Godot ${report.godot}, ${report.scripts} scripts, ${report.scenes} scenes)`);
+  out.push(`AAA review: ${report.project} (Godot ${report.godot}, ${plural(report.scripts, "script")}, ${plural(report.scenes, "scene")})`);
   if (report.upgrade?.from) out.push(`upgrade: Godot ${report.upgrade.from} -> ${report.upgrade.target} (changes in between are reported)`);
   out.push(`overall: ${report.overall}/100`);
   for (const c of report.categories) {
-    const counts = [c.errors && `${c.errors} errors`, c.warnings && `${c.warnings} warnings`, c.infos && `${c.infos} infos`].filter(Boolean).join(", ");
+    const counts = [c.errors && plural(c.errors, "error"), c.warnings && plural(c.warnings, "warning"), c.infos && plural(c.infos, "info")].filter(Boolean).join(", ");
     out.push(`  ${c.category.padEnd(12)} ${String(c.score).padStart(3)}  ${counts || "no findings"}`);
   }
   out.push(`  static typing: ${report.typing.percent}% (${report.typing.typed}/${report.typing.total} declarations)`);

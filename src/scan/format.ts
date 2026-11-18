@@ -10,7 +10,7 @@ function limit<T>(items: T[], max: number): { shown: T[]; hidden: number } {
   return items.length > max ? { shown: items.slice(0, max), hidden: items.length - max } : { shown: items, hidden: 0 };
 }
 
-function plural(count: number, word: string): string {
+export function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
