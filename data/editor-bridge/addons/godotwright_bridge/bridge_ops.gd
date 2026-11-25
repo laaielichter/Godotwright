@@ -1,9 +1,10 @@
 @tool
 extends RefCounted
 ## The ops of the Godotwright bridge. Each one takes the `args` of a request and returns {"result": ...} or
-## {"error": "..."}. They only read the editor or ask it to do what its menus do (open, save, reload, run, stop,
-## select, scan). Nothing here edits a scene or runs code: scene edits are file edits made by Godotwright
-## (godot_scene_edit), and `reload_scene` makes the editor show them.
+## {"error": "..."}. They read the editor, ask it to do what its menus do (open, save, reload, run, stop, select,
+## scan), or edit the open scene the way the editor's own docks do: every edit (set_property, add_node, remove_node,
+## rename_node) is one action in the editor's undo history, so Ctrl+Z in the editor takes it back, and it leaves the
+## scene unsaved until save_scene. Nothing here runs code.
 
 const SHOT_DIR := "res://.godot/godotwright"
 const MAX_TREE_NODES := 2000
@@ -14,6 +15,8 @@ const MAX_ERRORS := 500
 const GAME_ERRORS_NOTE := "Errors of a game started from the editor happen in the game's process and are not captured here (the debugger does not hand its \"error\" messages to plugins). Use godot_session, godot_play or godot_check for those."
 const NO_LOGGER_REASON := "This Godot has no Logger class (it is new in Godot 4.5), so the bridge cannot collect the editor's errors. Run godot_check for the project's errors."
 
+## The editor's undo history (EditorPlugin.get_undo_redo()); the edit ops need it.
+var undo_redo: EditorUndoRedoManager
 ## The name of the main screen (2D, 3D, Script, ...); known once the user or an op has switched it.
 var main_screen := ""
 ## The Logger that keeps the errors (error_log.gd), or null on Godot versions without Logger.
@@ -59,6 +62,14 @@ func run(op: String, args: Dictionary) -> Dictionary:
 			return _done(_scan_state())
 		"errors":
 			return _errors(args)
+		"set_property":
+			return _set_property(args)
+		"add_node":
+			return _add_node(args)
+		"remove_node":
+			return _remove_node(args)
+		"rename_node":
+			return _rename_node(args)
 	return _failed("unknown op \"%s\"" % op)
 
 
@@ -455,4 +466,202 @@ func _errors(args: Dictionary) -> Dictionary:
 	var result: Dictionary = found
 	result["supported"] = true
 	result["game_errors"] = GAME_ERRORS_NOTE
+	return _done(result)
+
+
+## A value from a request: a JSON number, bool or null as it is, and a string as Godot's Variant text (the form of
+## .tscn files: 3, 1.5, true, "text", Vector2(1, 2), Color(1, 0, 0, 1), &"name", NodePath("A/B")). Text that is not
+## a Variant is refused rather than stored as a string by accident; a plain string is written with its quotes.
+func _value_arg(raw: Variant) -> Dictionary:
+	if typeof(raw) == TYPE_STRING:
+		var text: String = raw
+		var parsed: Variant = str_to_var(text)
+		if parsed == null and text.strip_edges() != "null":
+			return {"error": "%s is not a Godot value; write it as in a .tscn file, e.g. 3, true, \"text\" or Vector2(1, 2)" % text}
+		return {"value": parsed}
+	return {"value": raw}
+
+
+## The action now on top of the scene's undo history: what Ctrl+Z in the editor takes back next. Read only.
+func _undo_step(root: Node) -> String:
+	var history := undo_redo.get_history_undo_redo(undo_redo.get_object_history_id(root))
+	return history.get_current_action_name() if history != null else ""
+
+
+## The value converted to the property's type where Godot converts it too (an int for a float); an error when the
+## types do not fit.
+func _fit(node: Node, property: String, value: Variant) -> Dictionary:
+	for entry: Dictionary in node.get_property_list():
+		if str(entry.get("name", "")) != property:
+			continue
+		var wanted: int = entry.get("type", TYPE_NIL)
+		if wanted == TYPE_NIL or typeof(value) == wanted or value == null:
+			return {"value": value}
+		if wanted == TYPE_FLOAT and typeof(value) == TYPE_INT:
+			return {"value": float(value)}
+		if wanted == TYPE_INT and typeof(value) == TYPE_FLOAT and float(value) == floorf(float(value)):
+			return {"value": int(value)}
+		if wanted == TYPE_STRING_NAME and typeof(value) == TYPE_STRING:
+			return {"value": StringName(str(value))}
+		if wanted == TYPE_STRING and typeof(value) == TYPE_STRING_NAME:
+			return {"value": str(value)}
+		if wanted == TYPE_NODE_PATH and typeof(value) == TYPE_STRING:
+			return {"value": NodePath(str(value))}
+		return {"error": "%s is a %s, not a %s" % [property, type_string(wanted), type_string(typeof(value))]}
+	return {"error": "%s has no property %s" % [node.get_class(), property]}
+
+
+func _set_property(args: Dictionary) -> Dictionary:
+	var path := _text_arg(args, "path", ".")
+	var node := _node_at(path)
+	if node == null:
+		return _no_node(path)
+	var property := _text_arg(args, "property")
+	if property == "":
+		return _failed("give property: the name of the property, as in the inspector's tooltip (position, text, modulate)")
+	if property == "script" or property == "owner" or property == "name":
+		return _failed("%s is not set here: use rename_node for the name, and godot_scene_edit for a script" % property)
+	if not args.has("value"):
+		return _failed("give value, as in a .tscn file: 3, true, \"text\", Vector2(1, 2)")
+	var given := _value_arg(args.get("value"))
+	if given.has("error"):
+		return given
+	var fitted := _fit(node, property, given.get("value"))
+	if fitted.has("error"):
+		return _failed(str(fitted.get("error")))
+	var root := EditorInterface.get_edited_scene_root()
+	var before: Variant = node.get(property)
+	var after: Variant = fitted.get("value")
+	undo_redo.create_action("Godotwright: set %s" % property, UndoRedo.MERGE_DISABLE, root)
+	undo_redo.add_do_property(node, property, after)
+	undo_redo.add_undo_property(node, property, before)
+	undo_redo.commit_action()
+	var result := _node_info(root, node)
+	result["property"] = property
+	result["before"] = _value_text(before)
+	result["after"] = _value_text(node.get(property))
+	result["undo"] = _undo_step(root)
+	return _done(result)
+
+
+func _name_problem(text: String) -> String:
+	if text.strip_edges() == "":
+		return "give a name"
+	for bad: String in [".", ":", "@", "/", "\"", "%"]:
+		if text.contains(bad):
+			return "a node name cannot hold %s" % bad
+	return ""
+
+
+func _add_node(args: Dictionary) -> Dictionary:
+	var root := EditorInterface.get_edited_scene_root()
+	if root == null:
+		return _failed("no scene is open in the editor")
+	var parent_path := _text_arg(args, "parent", ".")
+	var parent := _node_at(parent_path)
+	if parent == null:
+		return _no_node(parent_path)
+	var type := _text_arg(args, "type")
+	var scene := _text_arg(args, "scene")
+	var node: Node = null
+	if scene != "":
+		if not scene.begins_with("res://") or not ResourceLoader.exists(scene, "PackedScene"):
+			return _failed("%s is not a scene in the project" % scene)
+		if scene == root.scene_file_path:
+			return _failed("a scene cannot contain itself")
+		var packed := ResourceLoader.load(scene) as PackedScene
+		if packed == null:
+			return _failed("%s could not be loaded" % scene)
+		node = packed.instantiate(PackedScene.GEN_EDIT_STATE_INSTANCE)
+	elif type != "":
+		if not ClassDB.class_exists(type) or not ClassDB.is_parent_class(type, "Node") or not ClassDB.can_instantiate(type):
+			return _failed("%s is not a node class Godot can make (see godot_api)" % type)
+		node = ClassDB.instantiate(type) as Node
+	else:
+		return _failed("give type (a node class such as Sprite2D) or scene (a res:// .tscn to instance)")
+	if node == null:
+		return _failed("the node could not be made")
+	var wanted := _text_arg(args, "name")
+	if wanted != "":
+		var problem := _name_problem(wanted)
+		if problem != "":
+			node.free()
+			return _failed(problem)
+		node.name = wanted
+	var properties: Variant = args.get("properties", {})
+	if typeof(properties) != TYPE_DICTIONARY:
+		node.free()
+		return _failed("properties must be an object of property: value")
+	var settings: Dictionary = properties
+	for key: Variant in settings.keys():
+		var given := _value_arg(settings.get(key))
+		var fitted: Dictionary = given if given.has("error") else _fit(node, str(key), given.get("value"))
+		if fitted.has("error"):
+			node.free()
+			return _failed(str(fitted.get("error")))
+		node.set(str(key), fitted.get("value"))
+	undo_redo.create_action("Godotwright: add %s" % node.name, UndoRedo.MERGE_DISABLE, root)
+	undo_redo.add_do_method(parent, &"add_child", node, true)
+	undo_redo.add_do_method(node, &"set_owner", root)
+	undo_redo.add_do_reference(node)
+	undo_redo.add_undo_method(parent, &"remove_child", node)
+	undo_redo.commit_action()
+	var added := _node_info(root, node)
+	added["undo"] = _undo_step(root)
+	return _done(added)
+
+
+func _remove_node(args: Dictionary) -> Dictionary:
+	var path := _text_arg(args, "path")
+	var node := _node_at(path)
+	if node == null:
+		return _no_node(path)
+	var root := EditorInterface.get_edited_scene_root()
+	if node == root:
+		return _failed("the scene root cannot be removed")
+	var parent := node.get_parent()
+	var info := _node_info(root, node)
+	undo_redo.create_action("Godotwright: remove %s" % node.name, UndoRedo.MERGE_DISABLE, root)
+	undo_redo.add_do_method(parent, &"remove_child", node)
+	undo_redo.add_undo_method(parent, &"add_child", node, true)
+	undo_redo.add_undo_method(parent, &"move_child", node, node.get_index())
+	# Removing a node takes it out of the scene: its owner and that of its children must come back with it.
+	for owned: Node in _owned(node, root):
+		undo_redo.add_undo_method(owned, &"set_owner", root)
+	undo_redo.add_undo_reference(node)
+	undo_redo.commit_action()
+	return _done({"removed": info, "undo": _undo_step(root)})
+
+
+## The node and its descendants that the scene root owns (what is saved in the scene).
+func _owned(node: Node, root: Node) -> Array[Node]:
+	var out: Array[Node] = []
+	if node.owner == root:
+		out.append(node)
+	for child: Node in node.get_children():
+		out.append_array(_owned(child, root))
+	return out
+
+
+func _rename_node(args: Dictionary) -> Dictionary:
+	var path := _text_arg(args, "path")
+	var node := _node_at(path)
+	if node == null:
+		return _no_node(path)
+	var wanted := _text_arg(args, "name")
+	var problem := _name_problem(wanted)
+	if problem != "":
+		return _failed(problem)
+	var root := EditorInterface.get_edited_scene_root()
+	var parent := node.get_parent()
+	if parent != null and parent.has_node(NodePath(wanted)) and parent.get_node(NodePath(wanted)) != node:
+		return _failed("%s already has a child called %s" % [str(root.get_path_to(parent)), wanted])
+	var before := str(node.name)
+	undo_redo.create_action("Godotwright: rename %s" % before, UndoRedo.MERGE_DISABLE, root)
+	undo_redo.add_do_property(node, &"name", wanted)
+	undo_redo.add_undo_property(node, &"name", before)
+	undo_redo.commit_action()
+	var result := _node_info(root, node)
+	result["before"] = before
+	result["undo"] = _undo_step(root)
 	return _done(result)

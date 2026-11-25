@@ -39,6 +39,7 @@ var _error_log: RefCounted
 func _enter_tree() -> void:
 	_token = _crypto.generate_random_bytes(16).hex_encode()
 	_ops = BridgeOps.new()
+	_ops.undo_redo = get_undo_redo()
 	_start_error_log()
 	_ops.error_log = _error_log
 	main_screen_changed.connect(_on_main_screen_changed)
