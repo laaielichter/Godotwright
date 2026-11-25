@@ -8,7 +8,7 @@ installs, the [install page](https://laaielichter.github.io/Godotwright/install.
 - [Merge scenes by meaning](#merge-scenes-by-meaning)
 - [Which commit broke it: bisect](#which-commit-broke-it-bisect)
 - [Scene structure](#scene-structure)
-- [Format GDScript](#format-gdscript)
+- [Format GDScript and C#](#format-gdscript-and-c)
 - [Metrics: complexity, signal flow, statistics](#metrics-complexity-signal-flow-statistics)
 - [TileMap cells](#tilemap-cells)
 - [Animations](#animations)
@@ -74,7 +74,7 @@ godotwright new project my-game --kind 3d    # a new Godot 4.7 project; `new scr
 godotwright preset add linux --export-path build/game.x86_64 --write   # export presets without the editor: list, add, set, remove
 godotwright translations check res://text.csv   # a CSV against the tr() keys the code uses; list, add, remove
 godotwright editor install            # optional: the addon for the open editor; then `editor status`, `editor play`, `editor errors`
-godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, completion; --code for unsaved text)
+godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, references, symbols, completion; --code for unsaved text; .cs files go to csharp-ls)
 godotwright shaders                   # the GPU pass: draw every shader (Compatibility renderer) for driver errors; errors at the line in the .gdshader
 godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
@@ -109,7 +109,7 @@ godotwright resource set beep.wav edit/loop_mode Forward --write   # enum option
 godotwright resource set car.glb settings/loop_mode Linear --sub animations/drive --write   # per-animation loop
 godotwright resource set car.glb generate/shadow_meshes Disable --sub meshes/car_body --write   # per-mesh (named <scene>_<mesh>)
 godotwright resource importer anims.glb animation_library --write   # import a .glb as an AnimationLibrary, uid kept
-godotwright migrate --write         # port Godot 3 scripts and shaders to Godot 4 where that is mechanical; lists what is left
+godotwright migrate --write         # port Godot 3 scripts, shaders and C# to Godot 4 where that is mechanical; lists what is left
 godotwright shader                  # review every shader against Godot 4.7's shader tables and compile it headless; file:line
 godotwright api shader:spatial.fragment   # the built-ins of a shader type and function; `api ALBEDO` says where one exists
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
@@ -434,7 +434,7 @@ warning: no script names "SpawnTimer" in a way Godotwright can see; paths built 
 Run on 433 real scenes: 3,956 steps, 0 failures (each result parses and its references resolve). The results have not
 been loaded in Godot yet.
 
-## Format GDScript
+## Format GDScript and C#
 
 `godotwright format` (MCP: `godot_format`) formats GDScript the way the official style guide writes it: tabs, spaces
 around operators and after commas, two blank lines around functions. It changes whitespace only. Lines are never
@@ -450,7 +450,7 @@ godotwright format --check            # for CI: write nothing, exit 1 when a fil
 
 | Option | What it does |
 | --- | --- |
-| `[files...]` | scripts or folders to format (default: every `.gd` file of the project) |
+| `[files...]` | scripts or folders to format (default: every `.gd` and `.cs` file of the project) |
 | `--path <dir>` | project directory, or any path inside it |
 | `--check` | write nothing; list the files that would change and exit with 1 when there are any |
 | `--diff` | print a unified diff of every change |
@@ -613,7 +613,8 @@ extends CharacterBody2D
 ...
 ```
 
-The new project has not been opened in Godot yet, and the C# templates were not compiled.
+A new C# project with every C# template is built with `dotnet build` and run in the .NET build of Godot 4.7.2 by an
+integration test (0 errors, 0 warnings, no script errors).
 
 ## Export presets and translations
 
@@ -675,11 +676,56 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
 - **`check`** (`godot_check`): when the project has a `.csproj` and `dotnet` is on PATH, it runs `dotnet build` and
   reports the compiler's errors and warnings by file and line. Without `dotnet` it says the C# code was not built
   (install the .NET SDK 8 or later); the review still checks the C# files.
-- **`new`** (`godot_new`): C# script templates, and `new project --dotnet`.
+- **`new`** (`godot_new`): C# script templates, and `new project --dotnet`. The `.csproj` is what Godot 4.7.2's own
+  generator writes (`Godot.NET.Sdk/4.7.2`, `net8.0`, `net9.0` for Android, a `RootNamespace` only when the name is not
+  one, by Godot's rules); the templates indent with 4 spaces like Godot's and build with 0 errors and 0 warnings.
+- **`code`** (`godot_code`): a `.cs` file goes to the C# language server csharp-ls: `diagnostics`, `hover`,
+  `definition`, `references` and `symbols` (not `completion`). It is yours to install
+  (`dotnet tool install --global csharp-ls`), or name another server that speaks LSP over stdio in
+  `$GODOTWRIGHT_CSHARP_LS` (a path, or a JSON array of command and arguments). One warm server per project, stopped
+  after 10 minutes unused, started again when a `.csproj`, `.sln`, `.props`, `.targets` or `project.godot` changes or
+  a `.cs` file is added or removed; an edited `.cs` file is sent to it without a restart. Without it:
 
-Not there: a C# language server, a C# formatter, rename inside C# code, and migration of C# code. The rules are quiet
-on the official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
-built, and the C# templates were not compiled.
+  ```text
+  $ godotwright code hover res://scripts/Player.cs --line 12 --column 10
+  hover res://scripts/Player.cs:12:10: no C# language server: csharp-ls is not on PATH or in ~/.dotnet/tools, and $GODOTWRIGHT_CSHARP_LS is not set
+  install it with: dotnet tool install --global csharp-ls (Godotwright does not install it; set $GODOTWRIGHT_CSHARP_LS to use another server that speaks LSP over stdio)
+  Next: everything else works without it: godot_check builds the C# with dotnet build, godot_review and godot_usages read the .cs files.
+  ```
+
+- **`rename`** (`godot_rename`): a name declared in C# (a class, method, `[Signal]`, `[Export]` or other member) is
+  renamed in the C# code by the language server, then by Godotwright where the server does not look: scene
+  connections to the method, signal names in scenes (`Fired`, without `EventHandler`), exported values in `.tscn` and
+  `.tres` on nodes whose script is the class or a subclass, GDScript that names it (Godot uses the C# name as it is),
+  and for a class its file and `.uid` (Godot needs the file to be named after the class) with every scene that loads
+  it. Godot's generated `SignalName.X`, `MethodName.X`, `PropertyName.X`, `EmitSignalX` and the signal's event are
+  renamed only where the server, asked for their references, names them; strings in C# that hold the name are listed
+  to check by hand. A shown plan first, `--write` to apply, all or nothing, through the journal (`undo`). Without a
+  language server it is refused. `--file res://x.cs` picks the declaration when the name is declared in more than
+  one place.
+- **`format`** (`godot_format`): `.cs` files are formatted with `dotnet format whitespace` (see
+  [Format GDScript and C#](#format-gdscript-and-c)).
+- **`migrate`** (`godot_migrate`): Godot 3 C# is ported too (see [Port Godot 3 C#](#port-godot-3-c)).
+
+The rules are quiet on the official `mono/` demos and two public C# projects (about 650 files). The build, the
+templates, the formatter and the migration were run with the .NET build of Godot 4.7.2 and the .NET SDK 8.0.134. The
+C# language server and C# rename are tested against a fake server; they have not run against a real csharp-ls yet.
+
+C# files (`.cs`) go to `dotnet format whitespace`, the formatter of the .NET SDK, run on a copy of only the files
+asked for (`--folder`: no restore, no build). It follows the project's `.editorconfig`; without one it writes the .NET
+defaults, which are Godot's C# style guide (4 spaces, braces on their own line). The same promise as for GDScript: a
+file is kept only when its code without whitespace, every string and the number of symbols in its outline are the
+same before and after, and when writing, the project is built before and after: a file that makes the build worse is
+put back and listed as skipped. GDScript and C# are written in one journal entry. Without `dotnet` the C# files are
+listed as skipped with the reason.
+
+```text
+$ godotwright format res://scripts/Messy.cs --write --diff
+format: formatted 1 of 1 script
+  res://scripts/Messy.cs (4 lines)
+...
+C#: dotnet build 0 errors before formatting, 0 after
+```
 
 ## The open editor (optional addon)
 
@@ -700,11 +746,13 @@ godotwright editor uninstall
 | --- | --- |
 | look | `status`, `selection`, `tree` (the edited scene as the editor has it, unsaved changes included), `inspect`, `errors`, `is_scanning` |
 | act | `open_scene`, `select`, `edit_node`, `save_scene`, `save_all`, `reload_scene`, `close_scene`, `filesystem_scan`, `reimport`, `play`, `stop`, `screenshot` |
+| edit the open scene | `set_property` (`{path, property, value}`; value as Variant text: `"Vector2(1, 2)"`), `add_node` (`{parent?, type? or scene?, name?, properties?}`), `remove_node` (`{path}`), `rename_node` (`{path, name}`): each one undo step in the editor, named in the answer; the scene stays unsaved until `save_scene` |
 
 `editor install` takes `--no-enable` (only copy the files; enable the plugin yourself in Project Settings > Plugins)
 and `--json`. Every op takes `--args <json>` (its arguments, for example `editor open_scene --args '{"path": "res://main.tscn"}'`),
-`--json` and `--timeout <seconds>`. There is no scene editing and no code execution through the bridge: scenes are edited in the files, and
-`reload_scene` shows the result. A read-only server allows only the looking ops. Without the addon:
+`--json` and `--timeout <seconds>`. There is no code execution through the bridge. Scenes that are not open are edited
+in the files (`godot_scene_edit`), and `reload_scene` shows the result. A read-only server allows only the looking
+ops. Without the addon:
 
 ```text
 $ godotwright editor status
@@ -712,9 +760,10 @@ addon: not installed (godotwright editor install)
 editor: the editor is not running or the addon is not enabled: install it with `godotwright editor install` and enable it in Project Settings > Plugins
 ```
 
-The addon has not run in Godot yet: it is checked statically (every engine method it calls is looked up in the
-bundled class reference) and the client is tested against a fake editor. How it talks, every op and the manual test:
-[editor-bridge.md](editor-bridge.md).
+The addon runs in a headless Godot 4.7.2 editor in an integration test (the looking ops, open, close, reload,
+reimport, the edit ops and save_scene). Not proven yet: `screenshot` and `play` (a headless editor draws nothing and
+kept no game running), and the editor with a window. Every engine method it calls is also looked up in the bundled
+class reference by a test. How it talks, every op and the manual test: [editor-bridge.md](editor-bridge.md).
 
 ## Find leaks
 
@@ -816,6 +865,55 @@ Commit first; a second run makes no further changes.
 (`uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;`). It lists `CLEARCOAT_GLOSS` (now
 `CLEARCOAT_ROUGHNESS`, which is 1.0 - gloss), a particle shader's `vertex()` (now `start()` and `process()`) and `COLOR`
 written in a spatial `fragment()` as work by hand. Shaders stored inside scenes are not rewritten.
+
+### Port Godot 3 C#
+
+`migrate` ports `.cs` files, the root `.csproj` and the `.sln` too, where the rewrite is mechanical and sure:
+
+| Godot 3 | Godot 4 |
+| --- | --- |
+| `public class Hud : CanvasLayer` | `public partial class Hud : CanvasLayer` (every class that derives from a Godot class, also through a class of the project) |
+| `[Signal] public delegate void Hit();` and `nameof(Hit)` | `HitEventHandler`, and `SignalName.Hit` (`Hud.SignalName.Hit` for another class's signal) |
+| `Connect("s", this, nameof(M))`, `Disconnect`, `IsConnected` | `Connect("s", new Callable(this, nameof(M)))`; with binds: a TO DO |
+| `GetTree().Connect("network_peer_connected", ...)`, `GetTree().NetworkPeer`, `IsNetworkServer()` | `Multiplayer.Connect("peer_connected", ...)`, `Multiplayer.MultiplayerPeer`, `Multiplayer.IsServer()` |
+| `[Remote]`, `[RemoteSync]`/`[Sync]`, `[Puppet]`, `[PuppetSync]` | `[Rpc(MultiplayerApi.RpcMode.AnyPeer)]`, `[Rpc(..., CallLocal = true)]`, `[Rpc]`, `[Rpc(CallLocal = true)]`; `[Master]`: a TO DO |
+| `Spatial`, `KinematicBody2D`, `Position2D`, `Godot.Object`, `Transform` (as a type), `Texture` (as a type) | `Node3D`, `CharacterBody2D`, `Marker2D`, `GodotObject`, `Transform3D`, `Texture2D` |
+| `IsNetworkMaster()`, `Instance()`, `path.Offset`, `animatedSprite.Frames`, `sprite.Playing = true;` | `IsMultiplayerAuthority()`, `Instantiate()`, `path.Progress` (on a PathFollow2D), `SpriteFrames`, `sprite.Play();` |
+| `v.x`, `t.origin`, `c.r` | `v.X`, `t.Origin`, `c.R` |
+| `Engine.EditorHint`, `OS.GetTicksMsec()` | `Engine.IsEditorHint()`, `Time.GetTicksMsec()` |
+| `public override void _Process(float delta) {` | `_Process(double deltaDouble) { float delta = (float)deltaDouble;` |
+| `MoveAndCollide(m, true, true, false)` | `MoveAndCollide(m)` (the two removed flags dropped, test-only kept) |
+| `Name.ToLower()` on a node | `Name.ToString().ToLower()` (Name is a StringName) |
+| `Sdk="Godot.NET.Sdk/3.3.0"`, `net472`; `Tools\|Any CPU` in the `.sln` | `Godot.NET.Sdk/4.7.2`, `net8.0`; Godot's own configuration renames |
+
+Renames come from Godot's official table (editor/project_upgrade/renames_map_3_to_4.cpp, the same source as the
+GDScript migration: its class, type and C# tables, and the pairs it keeps in comments because they only hold on some
+classes). A member is renamed only where the evidence says it is Godot 3's: the type of the value it is used on (from
+a declaration, `GetNode<T>`, a cast, `new`, a property of the class, a setter's `value`), or a name Godot 4 does not
+have anywhere. `GetNode<T>` stays as it is; `GD` and `Mathf` keep their own C# API. Strings and comments are left alone.
+
+Then the migrated C# is built (`dotnet build` on a temp copy of the project's C#, so the project gets no `obj/`) and
+every compiler error left is a TO DO on its line:
+
+```text
+res://logic/Lobby.cs (22 changes)
+    28: "network_peer_connected", this, nameof(PlayerConnected)  ->  "network_peer_connected", new Callable(this, nameof(PlayerConnected))
+   113: TO DO: ENet compression is set on the host in Godot 4, after it is created: peer.Host.Compress(ENetConnection.CompressionMode...)
+   113: TO DO: does not build in Godot 4 yet: CS1061: 'ENetMultiplayerPeer' does not contain a definition for 'CompressionMode' ...
+C#: trial build of the migrated code: 6 compiler errors left (TO DOs above)
+```
+
+On the five C# demos of the 3.x branch of godot-demo-projects (`mono/`), migrated and built with Godot.NET.Sdk 4.7.2:
+
+| Demo | Builds | TO DOs | Compiler errors left |
+| --- | --- | --- | --- |
+| dodge_the_creeps | yes | 0 | 0 |
+| pong | yes (also in Godot's own editor build) | 0 | 0 |
+| 2.5d | no | 3 | 2: `GetPositionInParent` (not in Godot's table), `MoveAndSlide(velocity)` |
+| multiplayer_pong | no | 10 | 6: ENet compression (4), `Connect` with binds, `RpcUnreliable` |
+| android_iap | no | 32 | 32: casts from `Variant` (`(bool?)dict["x"]`, enum constants) |
+
+Scenes and project settings are not migrated; Godot's own `--convert-3to4` does those.
 
 ### Cheaper fix loops: only what changed
 
@@ -1312,22 +1410,22 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_impact` | What a change reaches: every scene that loads the changed files (default: what differs from git), whether it is global (autoload, `project.godot`), the tests and saved scenarios that cover it, and the checks to run |
 | `godot_merge` | A three-way merge of `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids of both sides renumbered so they fit, `load_steps` recounted; only a property both sides changed differently is a conflict. Finishes a merge git stopped on, or previews merging a branch; `godotwright merge --install` makes git use it by itself |
 | `godot_bisect` | Which commit broke it: reviews the project as it was at each commit (copies from git, the working tree is not touched) and halves the range to the first commit with the problem, with the findings and the files that commit changed |
-| `godot_format` | Formats GDScript to the official style guide without changing what it means: a guard compares the tokens before and after, and a file that is not valid GDScript is skipped with the reason |
+| `godot_format` | Formats GDScript to the official style guide without changing what it means: a guard compares the tokens before and after, and a file that is not valid GDScript is skipped with the reason. C# with `dotnet format`, guarded by the code, the strings, the outline and a build |
 | `godot_metrics` | Cyclomatic complexity per function with a grade; the signal flow (who emits, who connects, signals never emitted or never connected, connections to a missing method; also as mermaid); project statistics and the heaviest scenes |
 | `godot_tilemap` | The cells of a TileMapLayer, read from and written to the scene file: a map with a legend, set, fill, erase, clear, checked against the TileSet |
 | `godot_animation` | The animations of an AnimationPlayer in the scene file: read tracks and keyframes, create an animation, add value and method tracks, set keys, length and loop mode |
 | `godot_new` | A new project (2D, 3D or UI), a typed script from a template that passes the review, or a shader |
 | `godot_preset` | Export presets without the editor: list, add, change, remove (renumbered as Godot needs) |
 | `godot_translations` | Register translation files, and check a CSV against the `tr()` keys the code uses |
-| `godot_editor` | Optional: see and drive the open editor through a small addon (localhost, token): open scenes and unsaved state, selection, the edited tree, logged errors, save, reload, play, stop, screenshot. See [editor-bridge.md](editor-bridge.md) |
+| `godot_editor` | Optional: see and drive the open editor through a small addon (localhost, token): open scenes and unsaved state, selection, the edited tree, logged errors, save, reload, play, stop, screenshot, and undoable edits of the open scene. See [editor-bridge.md](editor-bridge.md) |
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
-| `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
+| `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right; a C# symbol through the C# language server |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Make a scene, add (one or many), remove, rename, move and duplicate nodes, set properties and groups, connect signals, attach scripts and make instances editable in a `.tscn`; paths follow a rename or move; refuses a change Godot would drop on the next editor save |
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
-| `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
+| `godot_migrate` | Rewrite Godot 3 GDScript, shaders and C# to Godot 4 where that is mechanical, and list what is left (for C#, after a trial build) |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
-| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code |
+| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition, references, symbols and completion, also for unsaved code; a `.cs` file goes to the C# language server csharp-ls |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`, uid repairs across files included; shows them first, then reviews the changed files again |

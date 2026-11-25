@@ -4,6 +4,44 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **C# support finished: a real build, a language server, rename, a formatter and the Godot 3 migration.** Checked
+  with the .NET build of Godot 4.7.2 and the .NET SDK 8.0.134.
+  - A new C# project's `.csproj` is now byte for byte what Godot 4.7.2's own project generator writes
+    (`Godot.NET.Sdk/4.7.2`, `net8.0` with `net9.0` for Android, Godot's `RootNamespace` rules: "Space Game" is
+    `SpaceGame`), and the C# script templates indent with 4 spaces like Godot's own. Every C# template builds with
+    0 errors and 0 warnings and runs in Godot without errors. The MSBuild reader is checked against real `dotnet build`
+    output (compiler errors and warnings, Godot's GD0001, an MSB error without a file, a missing Godot.NET.Sdk with the
+    resolver's reasons), kept verbatim in `test/fixtures/msbuild/`; it now also reads lines without a code.
+  - `godot_code` sends a `.cs` file to the C# language server csharp-ls (`dotnet tool install --global csharp-ls`;
+    Godotwright never installs it): diagnostics, hover, definition, references and symbols, one warm server per project
+    with the same idle stop and restart rules as the GDScript one. Without it the answer gives the install command and
+    every other tool works. New ops for GDScript too: `references` and `symbols` (checked against Godot 4.7.2's
+    language server). Not tested against a real csharp-ls: it could not be downloaded where this was built; the client
+    is tested against a fake stdio server.
+  - `godot_rename` renames a name declared in C# (class, method, `[Signal]`, `[Export]`, other members): the C# code
+    through the language server, then the scene connections, signal names in scenes, exported values in `.tscn` and
+    `.tres`, GDScript that names it, and a class's file and `.uid`. Godot's generated `SignalName.X`, `MethodName.X`,
+    `PropertyName.X` and `EmitSignalX` uses are renamed only where the server resolves them; strings in C# are listed.
+    Without a language server it is refused, never done by replacing text. Tested against a fake server only.
+  - `godot_format` and `godotwright format` format `.cs` files with `dotnet format whitespace` (from the .NET SDK, the
+    project's `.editorconfig`, else Godot's C# style), only the files asked for, `--check` for CI. A file is kept only
+    when its code without whitespace, its strings and its outline's symbol count are unchanged; when writing, the
+    project is built before and after, and a file that makes the build worse is put back and reported.
+  - `godot_migrate` ports Godot 3 C#: `partial`, `[Signal]` delegates to the `EventHandler` form with `nameof(X)` to
+    `SignalName.X`, `Connect(signal, target, method)` to a Callable, `[Remote]`/`[Sync]`/`[Puppet]` to `[Rpc(...)]`,
+    renamed classes, types and members from Godot's official rename table (its C# tables and its class-bound pairs,
+    now in the bundled API data) where the receiver's type confirms them, `v.x` to `v.X`, `Godot.Object` to
+    `GodotObject`, moved `OS.`/`Engine.` members, `_Process(float)` to `double`, the SceneTree's multiplayer API to
+    `Multiplayer`, and the `.csproj` and `.sln` as Godot's editor upgrades them. The migrated C# is then built on a
+    temp copy and every compiler error left is a TO DO. On the five C# demos of the 3.x branch of
+    godot-demo-projects: dodge_the_creeps and pong build (pong also in Godot's own editor build); 2.5d has 2 compiler
+    errors left, multiplayer_pong 6 and android_iap 32, each one listed as a TO DO.
+- **`godot_editor` edits the open scene, and has run in a real editor.** New ops `set_property`, `add_node` (a class
+  or a scene instance), `remove_node` and `rename_node`, each one undoable step in the editor's history (Ctrl+Z takes
+  it back; the answer names the step), leaving the scene unsaved until `save_scene`. An integration test runs the
+  addon in a headless Godot 4.7.2 editor: the read ops, the edit ops and `save_scene`. Not proven: `screenshot` and
+  `play` (a headless editor draws nothing and kept no game running), and the editor with a window.
+
 - **Seven tools and six scene operations other Godot servers have, without an editor plugin.** All work on the files,
   so they run in CI and without Godot. Checked on a real project of 12,000 scripts and 433 scenes
   (`GODOTWRIGHT_CORPUS=<folder>` runs those checks; they never write there).
@@ -32,13 +70,12 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   `api/csharp-not-partial`, `api/csharp-class-name`, `api/csharp-signal-name` (errors) and `api/csharp-callback`
   (warning). `godot_check` runs `dotnet build` when the project has a `.csproj` and `dotnet` is installed, and reports
   the compiler's errors by file and line. `godot_new` has C# templates and `--dotnet` for a new project. Quiet on the
-  official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
-  built, and the templates were not compiled.
+  official `mono/` demos and two public C# projects (about 650 files).
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload
-  a scene it edited, scan, reimport, play, stop and take a screenshot. No scene editing and no code execution through
-  the bridge. The addon has not run in Godot where this was built; see `docs/editor-bridge.md` for the manual test.
+  a scene it edited, scan, reimport, play, stop and take a screenshot. No code execution through the bridge; see
+  `docs/editor-bridge.md`.
 - `godot_merge` is checked on 494 real scenes, resources and project files: two different changes merge into a file
   that parses, with every reference resolving.
 - **`godot_merge` (and `godotwright merge`): scenes, resources and `project.godot` merged by meaning.** Git merges these

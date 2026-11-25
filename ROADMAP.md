@@ -235,6 +235,7 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 32: Work with git (`godot_merge` with a git merge driver, `godot_bisect`)
 - [x] Step 34: C# projects (outline, project map, review rules, dotnet build in check, templates) and the optional editor bridge (`godot_editor`)
 - [x] Step 33: What competitors have, from the files (scene structure, tilemap cells, animations, formatter, metrics, new projects and scripts, export presets, translations), checked on a real project
+- [x] Step 35: C# finished (a real build, Godot's own csproj, the C# language server in `godot_code`, C# rename, `dotnet format`, Godot 3 C# migration) and scene edits through the editor bridge, run in a headless editor
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

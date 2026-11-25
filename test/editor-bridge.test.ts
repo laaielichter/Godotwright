@@ -393,7 +393,7 @@ describe("the addon's GDScript", () => {
     expect(readdirSync(dir).sort()).toEqual(["README.md", "bridge_ops.gd", "error_log.gd", "plugin.cfg", "plugin.gd"]);
     expect(source("plugin.gd")).toContain(`const BRIDGE_VERSION := "${bundledAddonVersion()}"`);
     expect(readFileSync(join(dir, "plugin.cfg"), "utf8")).toContain(`version="${bundledAddonVersion()}"`);
-    expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("Not yet run in Godot");
+    expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("Run in a headless Godot 4.7.2 editor");
   });
 
   it("passes the project review without errors", () => {
