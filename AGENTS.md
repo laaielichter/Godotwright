@@ -96,7 +96,9 @@ node dist/cli.js --help
 - `src/scene/structure.ts`: the structure operations of `godot_scene_edit` (create_scene, rename_node, move_node,
   duplicate_node, set_groups, add_nodes); `test/integration/scene-structure-corpus.test.ts` runs them on real scenes.
 - `src/format/`: `godot_format`. `tokenizer.ts` is a full GDScript tokenizer, `format.ts` the formatter with its guard
-  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project.
+  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project. `csharp.ts` is the C# side:
+  `dotnet format` restricted to the files, then the outline compared before and after and a build; `formatProjectAll`
+  runs both languages into one report and one journal entry.
 - `src/rename/`: `godot_rename`. `rename.ts` plans and applies a rename by name (GDScript, scenes, settings) or of a
   file; `csharp.ts` (`renameAnywhere`, what the CLI and the MCP tool call) renames a symbol declared in C# through the
   language server and then updates scenes, resources and GDScript. C# code is never renamed as text.

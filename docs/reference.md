@@ -66,7 +66,7 @@ godotwright collisions                # physics layers and masks; `--between Pla
 godotwright merge --install           # git merges *.tscn, *.tres and project.godot by meaning from now on, in this clone
 godotwright merge --theirs feature    # preview what merging a branch does to the Godot files; `merge --write` finishes a merge git stopped on
 godotwright bisect                    # which commit broke it: the first commit where the review reports a new error (--rule, --file, --text, --good)
-godotwright format --check            # GDScript formatting for CI: lists the files that would change, exit 1 when there are any (--diff, --write)
+godotwright format --check            # GDScript and C# formatting for CI: lists the files that would change, exit 1 when there are any (--diff, --write)
 godotwright metrics complexity        # cyclomatic complexity per function with a grade; `metrics signals` (--mermaid), `metrics stats`
 godotwright tilemap read level.tscn Ground   # the cells of a TileMapLayer as a text map; set, fill, erase, clear with --write
 godotwright animation read hero.tscn  # the animations of an AnimationPlayer; create, add-track, set-key, set with --write
@@ -718,7 +718,21 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
   project, `dotnet build` clean after each, the scene still running in the .NET build of Godot 4.7.2, and undo
   bringing everything back. Not tested: nested classes, generic classes, and a project with several `.csproj` files.
 
-Not there: a C# formatter and migration of C# code. The rules are quiet
+- **`format`** (`godot_format`): `.cs` files are formatted by `dotnet format` on the project's `.sln` or `.csproj`,
+  restricted to the requested files (`--include`), with the project's own `.editorconfig`. Without one, `dotnet
+  format` indents with four spaces where Godot's templates use tabs; `new project --dotnet` writes an `.editorconfig`
+  with `indent_style = tab` for `*.cs`, so the templates are clean as they are. Without `--write` (and with `--check`)
+  it runs `dotnet format --verify-no-changes` and lists the files and how many lines would change. With `--write` the
+  promise of the GDScript formatter holds, that the meaning cannot change: the outline of every changed file (classes,
+  members, signals, methods, the calls that name nodes, files, signals and actions, and every string literal) must be
+  the same as before, and when the project has a `.csproj` it is built; a file whose outline differs, or that the
+  build reports an error in, is put back and reported as skipped with the reason. When the project does not build
+  anyway, nothing is kept, because the build could not check it. Writes go through the journal. Without `dotnet` the
+  C# files are skipped with that reason and GDScript is formatted as before; without a project file only whitespace
+  is formatted (`dotnet format whitespace --folder`). One run takes about 8 s on a small project. Ran with dotnet
+  8.0.134 on a generated project; not run on a large project, or with an `.editorconfig` that turns on style rules.
+
+Not there: migration of C# code. The rules are quiet
 on the official `mono/` demos and two public C# projects (about 650 files). The build ran for real: a generated
 project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.0, and a scene with a C# script
 ran in the .NET build of Godot 4.7.2. The check builds with `--no-incremental` (an up-to-date build would report no
@@ -1355,7 +1369,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_impact` | What a change reaches: every scene that loads the changed files (default: what differs from git), whether it is global (autoload, `project.godot`), the tests and saved scenarios that cover it, and the checks to run |
 | `godot_merge` | A three-way merge of `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids of both sides renumbered so they fit, `load_steps` recounted; only a property both sides changed differently is a conflict. Finishes a merge git stopped on, or previews merging a branch; `godotwright merge --install` makes git use it by itself |
 | `godot_bisect` | Which commit broke it: reviews the project as it was at each commit (copies from git, the working tree is not touched) and halves the range to the first commit with the problem, with the findings and the files that commit changed |
-| `godot_format` | Formats GDScript to the official style guide without changing what it means: a guard compares the tokens before and after, and a file that is not valid GDScript is skipped with the reason |
+| `godot_format` | Formats GDScript to the official style guide without changing what it means: a guard compares the tokens before and after, and a file that is not valid GDScript is skipped with the reason. C# files go through `dotnet format` and are kept only when their outline is the same and the project still builds |
 | `godot_metrics` | Cyclomatic complexity per function with a grade; the signal flow (who emits, who connects, signals never emitted or never connected, connections to a missing method; also as mermaid); project statistics and the heaviest scenes |
 | `godot_tilemap` | The cells of a TileMapLayer, read from and written to the scene file: a map with a legend, set, fill, erase, clear, checked against the TileSet |
 | `godot_animation` | The animations of an AnimationPlayer in the scene file: read tracks and keyframes, create an animation, add value and method tracks, set keys, length and loop mode |

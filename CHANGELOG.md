@@ -63,6 +63,12 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
     is then refused. Same contract as before: shown first, written with `write`, all or nothing, undone with
     `godot_undo`. Before this, `godot_rename` of a name declared in C# replaced text in the `.cs` files; it no longer
     touches C# code that way. Tested with csharp-ls 0.16.0 and a real `dotnet build` after each rename.
+  - **`godot_format` for C#.** `.cs` files are formatted by `dotnet format` on the project, restricted to the
+    requested files, with the project's `.editorconfig`; `--check` uses `--verify-no-changes`. After formatting, the
+    outline of each file must be the same as before and the project must still build; a file that fails either is
+    put back and reported as skipped. Writes go through the journal. `new project --dotnet` now writes an
+    `.editorconfig` with tabs for `*.cs`, because `dotnet format` otherwise turns the tabs of Godot's templates into
+    spaces. Tested with the real `dotnet format` of dotnet 8.0.134 on a generated project.
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload

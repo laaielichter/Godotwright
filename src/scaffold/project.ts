@@ -240,6 +240,8 @@ export function newProject(dir: string, options: NewProjectOptions = {}): NewPro
     // The assembly has the project's name, and the two files are named after it (Godot does the same).
     if (/[<>:"/\\|?*\x00-\x1f]/.test(name)) throw new ScaffoldError(`a C# project names its .csproj and .sln after the project, and "${name}" has characters a file name cannot hold; give a name without < > : " / \\ | ? *`);
     files.push([`${name}.csproj`, csprojText(name)], [`${name}.sln`, slnText(name, `${name}.csproj`, randomUUID().toUpperCase())]);
+    // Godot's C# templates indent with tabs; without this, `dotnet format` (and godot_format) turns them into spaces.
+    files.push([".editorconfig", "root = true\n\n[*]\ncharset = utf-8\n\n[*.cs]\nindent_style = tab\n"]);
   }
 
   for (const [rel] of files) assertWritable(join(root, rel));

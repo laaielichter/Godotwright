@@ -111,7 +111,7 @@ import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycle
 import { bisectProject, formatBisect } from "../bisect/bisect.js";
 import { diffProject, formatDiff } from "../diff/diff.js";
 import { formatMergeReport, mergeProject } from "../merge/project.js";
-import { formatFormatReport, formatProject } from "../format/project.js";
+import { formatFormatReport, formatProjectAll } from "../format/project.js";
 import { addonState, editorCall, EditorBridgeError, EditorInstallError, EDITOR_OP_NAMES, formatAddonState, formatEditorOps, formatEditorResult, formatInstall, formatUninstall, installAddon, uninstallAddon } from "../editor/index.js";
 import { AnimationError, editAnimation, formatAnimationPlan, formatAnimationReport, readAnimations, type AnimationEditArgs } from "../animation/animation.js";
 import { complexityReport, formatComplexity } from "../metrics/complexity.js";
@@ -925,12 +925,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_format",
     {
-      title: "Format GDScript, safely",
+      title: "Format GDScript and C#, safely",
       description:
-        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes.",
+        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes. C# files (.cs) are formatted by `dotnet format` with the project's .editorconfig, restricted to the requested files; it needs the .NET SDK (without it the C# files are skipped with that reason). The same promise holds: after formatting, the outline of each C# file (classes, members, signals, methods, calls, every string literal) must be the same as before and, when the project has a .csproj, it must still build; a file that fails either is put back and reported as skipped. A dry run of C# lists the files and how many lines would change (dotnet format --verify-no-changes); the checks and the diff come with write: true.",
       inputSchema: {
         path: pathParam,
-        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: every script, without addons)"),
+        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: every .gd and .cs script, without addons)"),
         write: z.boolean().optional().describe("write the formatted files (default false: list what would change)"),
         diff: z.boolean().optional().describe("show the changes as a unified diff"),
         include_addons: z.boolean().optional().describe("also format res://addons/"),
@@ -938,7 +938,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ path, files, write, diff, include_addons }) =>
-      guard(() => text(formatFormatReport(formatProject(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20))),
+      guardAsync(async () => text(formatFormatReport(await formatProjectAll(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20))),
   );
 
   tool(
@@ -2861,6 +2861,14 @@ function isSymlink(path: string): boolean {
 function guard<T>(fn: () => T): T | ReturnType<typeof failure> {
   try {
     return fn();
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function guardAsync<T>(fn: () => Promise<T>): Promise<T | ReturnType<typeof failure>> {
+  try {
+    return await fn();
   } catch (error) {
     return failure(error instanceof Error ? error.message : String(error));
   }

@@ -69,10 +69,10 @@ describe("godot_code picks the server by the file's extension", () => {
     expect(diag.diagnostics).toEqual([{ file: "res://Player.cs", line: 9, column: 11, severity: "error", code: "CS0103", message: "The name 'nope' does not exist in the current context" }]);
     expect(formatCode(diag)).toContain("res://Player.cs:9:11: error [CS0103] The name 'nope' does not exist in the current context");
     expect(formatCode(diag)).toContain("started the C# language server (csharp-ls)");
-    // The saved text goes back to the server after unsaved code.
-    expect(calls()).toContain("textDocument/didChange");
+    // The saved text goes back to the server after unsaved code: the next call sees the file as it is on disk.
     const clean = await codeIntel(root, { op: "diagnostics", file: "res://Player.cs", ...opts });
     expect(clean).toMatchObject({ diagnostics: [], server: { fresh: false } });
+    expect(calls()).toContain("textDocument/didChange");
 
     const hover = await codeIntel(root, { op: "hover", file: "Player.cs", line: 10, column: 5, ...opts });
     expect(hover.hover).toEqual({ signature: "Timer Node.GetNode<Timer>(NodePath path)", doc: "Fetches a node.", definedIn: "assembly GodotSharp" });

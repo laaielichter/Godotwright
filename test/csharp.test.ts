@@ -770,7 +770,9 @@ describe("C# scaffolding", () => {
   it("makes a C# project with the .csproj and .sln Godot generates", () => {
     const dir = join(tempFolder("godotwright-new-cs-"), "game");
     const r = newProject(dir, { name: "Space Game", dotnet: true });
-    expect(r.created).toEqual(["project.godot", "main.tscn", "main.gd", "main.gd.uid", "icon.svg", ".gitignore", ".gitattributes", "Space Game.csproj", "Space Game.sln"]);
+    expect(r.created).toEqual(["project.godot", "main.tscn", "main.gd", "main.gd.uid", "icon.svg", ".gitignore", ".gitattributes", "Space Game.csproj", "Space Game.sln", ".editorconfig"]);
+    // Godot's C# templates use tabs: dotnet format must keep them.
+    expect(readFileSync(join(dir, ".editorconfig"), "utf8")).toBe("root = true\n\n[*]\ncharset = utf-8\n\n[*.cs]\nindent_style = tab\n");
     const project = readFileSync(join(dir, "project.godot"), "utf8");
     expect(project).toContain('config/features=PackedStringArray("4.7", "C#", "Forward Plus")');
     expect(project).toContain('[dotnet]\n\nproject/assembly_name="Space Game"\n');
