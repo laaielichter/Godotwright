@@ -4,6 +4,13 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **`godot_editor` edits the open scene, and has run in a real editor.** New ops `set_property`, `add_node` (a class
+  or a scene instance), `remove_node` and `rename_node`, each one undoable step in the editor's history (Ctrl+Z takes
+  it back; the answer names the step), leaving the scene unsaved until `save_scene`. The addon is version 2. An
+  integration test runs it in a headless Godot 4.7.2 editor: the read ops, open, close, reload, reimport, the edit
+  ops and `save_scene`. Not proven: `screenshot` and `play` (a headless editor draws nothing and kept no game
+  running), and the editor with a window.
+
 - **Seven tools and six scene operations other Godot servers have, without an editor plugin.** All work on the files,
   so they run in CI and without Godot. Checked on a real project of 12,000 scripts and 433 scenes
   (`GODOTWRIGHT_CORPUS=<folder>` runs those checks; they never write there).
@@ -81,8 +88,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload
-  a scene it edited, scan, reimport, play, stop and take a screenshot. No scene editing and no code execution through
-  the bridge. The addon has not run in Godot where this was built; see `docs/editor-bridge.md` for the manual test.
+  a scene it edited, scan, reimport, play, stop and take a screenshot. No code execution through the bridge; see
+  `docs/editor-bridge.md`.
 - `godot_merge` is checked on 494 real scenes, resources and project files: two different changes merge into a file
   that parses, with every reference resolving.
 - **`godot_merge` (and `godotwright merge`): scenes, resources and `project.godot` merged by meaning.** Git merges these

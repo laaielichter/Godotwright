@@ -226,7 +226,7 @@ export function formatInstall(r: InstallResult): string {
   if (r.written.length) lines.push(`${r.previous ? `updated the editor bridge from version ${r.previous} to ${r.version}` : `installed the editor bridge (version ${r.version})`}: ${r.written.length} file${r.written.length === 1 ? "" : "s"} in res://${ADDON_DIR}/`);
   else lines.push(`the editor bridge (version ${r.version}) is already installed`);
   lines.push(r.settingChanged ? `enabled it in project.godot ([editor_plugins] enabled)` : "project.godot was not changed");
-  if (r.written.length || r.settingChanged) lines.push(EDITOR_OPEN_NOTE, "Then: `godotwright editor status`. Not yet run in Godot by its author: see docs/editor-bridge.md for what to check.");
+  if (r.written.length || r.settingChanged) lines.push(EDITOR_OPEN_NOTE, "Then: `godotwright editor status`. Tested in a headless Godot 4.7.2 editor; docs/editor-bridge.md says what is not proven yet.");
   if (r.journal.length) lines.push(`undo: godotwright undo --steps ${r.journal.length}, or godotwright editor uninstall`);
   return `${lines.join("\n")}\n`;
 }

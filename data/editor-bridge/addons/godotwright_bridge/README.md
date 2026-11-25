@@ -2,11 +2,13 @@
 
 Lets [Godotwright](https://github.com/laaielichter/godotwright) see and drive the **open** Godot editor: which scenes
 are open and unsaved, the selection, the edited scene tree, the editor's errors, save, reload, run, stop, an editor
-screenshot, a filesystem scan. It is optional: every other Godotwright tool works without it.
+screenshot, a filesystem scan, and edits of the open scene (set a property, add, remove or rename a node), each one
+undo step in the editor. It is optional: every other Godotwright tool works without it.
 
-> Not yet run in Godot. This addon was written and checked against the Godot 4.7.2 class reference (every engine
-> method it calls is looked up in a test), reviewed and formatted with Godotwright, but the machine it was written on
-> had no Godot. The manual test steps are in `docs/editor-bridge.md` of the Godotwright repository.
+> Run in a headless Godot 4.7.2 editor by Godotwright's tests (the read ops, the edit ops, save, reload, reimport).
+> Not proven yet: the editor with a window, `screenshot` and `play`. Every engine method it calls is also checked
+> against the Godot 4.7.2 class reference. What is left to check by hand is in `docs/editor-bridge.md` of the
+> Godotwright repository.
 
 ## Install
 

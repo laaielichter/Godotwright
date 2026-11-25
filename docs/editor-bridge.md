@@ -4,10 +4,14 @@ Godotwright works on files and on headless Godot runs. The editor bridge is the 
 editor: which scenes are open and unsaved, the selection, the edited scene tree, the editor's errors, save, reload, run,
 stop, a screenshot, a filesystem scan. Without the addon every other tool works as before.
 
-> **Not yet run in Godot.** The addon was written on a machine without Godot. It is checked statically: every engine
-> method, property and constant it uses is looked up in the bundled Godot 4.7.2 class reference by a test, the project
-> review finds no errors in it, and it is formatted. The Node client is tested against a fake editor. The steps under
-> [Manual test](#manual-test-godot-472) are what still has to be done in a real editor.
+> **Run in a real Godot 4.7.2 editor, headless.** `test/integration/editor-bridge-godot.test.ts` starts
+> `godot --editor --headless` with the addon on a copy of `test/fixtures/demo` and checks status, tree, inspect, select,
+> selection, is_scanning, open_scene, close_scene, reload_scene, reimport, errors, the four edit ops (each one an undo
+> step named in its answer) and save_scene (the saved .tscn holds the edits). save_all, filesystem_scan and edit_node
+> were also run by hand there. Not proven: `screenshot` (a headless editor draws nothing), `play`/`stop` (the headless
+> editor accepted play, but no game stayed running), the editor with a window, and Ctrl+Z pressed by a person (the
+> answers show the step is in the scene's undo history). Every engine method the addon uses is also checked against
+> the bundled class reference by a test, and the Node client is tested against a fake editor.
 
 ## Parts
 
@@ -58,6 +62,10 @@ editor changes; `run` starts or stops the game. A read-only server should allow 
 | `filesystem_scan` | `{}` | write | `{started, scanning, importing, progress}` |
 | `reimport` | `{paths: [...]}` | write | `{reimported: [...]}` |
 | `is_scanning` | `{}` | read | `{scanning, importing, progress}` |
+| `set_property` | `{path, property, value}` (value: a JSON number or bool, or Variant text such as `"Vector2(1, 2)"`) | write | node info, `property`, `before`, `after`, `undo` (the undo step) |
+| `add_node` | `{parent?, type? \| scene?, name?, properties?}` | write | node info, `undo` |
+| `remove_node` | `{path}` | write | `{removed, undo}`; refuses the scene root |
+| `rename_node` | `{path, name}` | write | node info, `before`, `undo`; refuses a name a sibling has |
 | `errors` | `{since?, limit?}` | read | `{supported, errors: [{seq, type, file, line, function, message, code?, engine_source?, msec}], next, more, dropped, total, restarted, game_errors}` |
 
 Node paths start at the root of the edited scene (`.` is the root), as `tree` prints them.
@@ -65,7 +73,10 @@ Node paths start at the root of the edited scene (`.` is the root), as `tree` pr
 Left out on purpose:
 
 - **No op runs code** (no `eval`, no script execution).
-- **No op edits a scene.** Scene edits are file edits (`godot_scene_edit`); `reload_scene` makes the editor show them.
+- **Scene edits only as editor actions.** `set_property`, `add_node`, `remove_node` and `rename_node` edit the open
+  scene through `EditorUndoRedoManager` (`create_action` ... `commit_action`), the way the editor's own docks do: each
+  is one step in the scene's undo history, so Ctrl+Z in the editor takes it back, and the scene is unsaved until
+  `save_scene`. Edits to scenes that are not open stay file edits (`godot_scene_edit`; `reload_scene` shows them).
 - **No `undo_redo`.** `EditorUndoRedoManager` has no public `undo` or `redo` in the 4.7 class reference. It can hand
   out the scene's `UndoRedo` (`get_history_undo_redo`), but the reference itself warns that using it directly can
   make the editor unstable, so the bridge does not.
@@ -108,19 +119,19 @@ Use a project with a main scene, a second scene, and at least one script. `P` be
 ### 1. Install and start
 
 1. Close the editor. Run `godotwright editor install P`.
-   Expect: `installed the editor bridge (version 1): 5 files in res://addons/godotwright_bridge/` and
+   Expect: `installed the editor bridge (version 2): 5 files in res://addons/godotwright_bridge/` and
    `enabled it in project.godot`. `P/project.godot` has
    `enabled=PackedStringArray("res://addons/godotwright_bridge/plugin.cfg")` under `[editor_plugins]`.
 2. Open `P` in Godot 4.7.2. Expect: **no errors in the Output panel**, and Project Settings > Plugins shows
    "Godotwright Bridge" enabled. If the Output shows a parse error in `plugin.gd`, `bridge_ops.gd` or `error_log.gd`,
    that is the first thing to report (file and line).
 3. Expect a file `P/.godot/godotwright_bridge.json` such as
-   `{"bridge_version":"1","godot_version":"4.7.2-stable (official)","pid":12345,"port":6510,"project":"...","token":"<32 hex>"}`.
+   `{"bridge_version":"2","godot_version":"4.7.2-stable (official)","pid":12345,"port":6510,"project":"...","token":"<32 hex>"}`.
    On Linux and macOS: `ls -l` shows `-rw-------`.
 4. `godotwright editor status P`. Expect:
 
    ```
-   addon: installed, version 1; enabled in project.godot
+   addon: installed, version 2; enabled in project.godot
    editor: Godot 4.7.2-stable (official), project "<name>"
    open scenes (1):
      * res://main.tscn

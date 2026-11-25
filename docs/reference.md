@@ -787,11 +787,13 @@ godotwright editor uninstall
 | --- | --- |
 | look | `status`, `selection`, `tree` (the edited scene as the editor has it, unsaved changes included), `inspect`, `errors`, `is_scanning` |
 | act | `open_scene`, `select`, `edit_node`, `save_scene`, `save_all`, `reload_scene`, `close_scene`, `filesystem_scan`, `reimport`, `play`, `stop`, `screenshot` |
+| edit the open scene | `set_property` (`{path, property, value}`; value as Variant text: `"Vector2(1, 2)"`), `add_node` (`{parent?, type? or scene?, name?, properties?}`), `remove_node` (`{path}`), `rename_node` (`{path, name}`): each one undo step in the editor, named in the answer; the scene stays unsaved until `save_scene` |
 
 `editor install` takes `--no-enable` (only copy the files; enable the plugin yourself in Project Settings > Plugins)
 and `--json`. Every op takes `--args <json>` (its arguments, for example `editor open_scene --args '{"path": "res://main.tscn"}'`),
-`--json` and `--timeout <seconds>`. There is no scene editing and no code execution through the bridge: scenes are edited in the files, and
-`reload_scene` shows the result. A read-only server allows only the looking ops. Without the addon:
+`--json` and `--timeout <seconds>`. There is no code execution through the bridge. Scenes that are not open are edited
+in the files (`godot_scene_edit`), and `reload_scene` shows the result. A read-only server allows only the looking
+ops. Without the addon:
 
 ```text
 $ godotwright editor status
@@ -799,9 +801,10 @@ addon: not installed (godotwright editor install)
 editor: the editor is not running or the addon is not enabled: install it with `godotwright editor install` and enable it in Project Settings > Plugins
 ```
 
-The addon has not run in Godot yet: it is checked statically (every engine method it calls is looked up in the
-bundled class reference) and the client is tested against a fake editor. How it talks, every op and the manual test:
-[editor-bridge.md](editor-bridge.md).
+The addon runs in a headless Godot 4.7.2 editor in an integration test (the looking ops, open, close, reload,
+reimport, the edit ops and save_scene). Not proven yet: `screenshot` and `play` (a headless editor draws nothing and
+kept no game running), and the editor with a window. Every engine method it calls is also looked up in the bundled
+class reference by a test. How it talks, every op and the manual test: [editor-bridge.md](editor-bridge.md).
 
 ## Find leaks
 

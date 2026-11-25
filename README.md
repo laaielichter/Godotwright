@@ -135,8 +135,9 @@ Not released yet (on `main`, after 0.8.0):
   five official Godot 3 C# demos, two build against Godot 4 right after it, and the errors left in the other three
   each have a TO DO in their file.
 - **The open editor, when you want it.** `godot_editor` talks to the editor through an optional addon: what is open
-  and unsaved, the selection, the errors the editor logged, save, reload, play, stop and a screenshot. Without the
-  addon everything else works as before. See [docs/editor-bridge.md](docs/editor-bridge.md).
+  and unsaved, the selection, the errors the editor logged, save, reload, play, stop and a screenshot, and edits of the
+  open scene (set a property, add, remove and rename nodes) as undoable editor actions. Without the addon everything
+  else works as before. See [docs/editor-bridge.md](docs/editor-bridge.md).
 
 Measured on a real project, from its files:
 
@@ -147,8 +148,8 @@ Measured on a real project, from its files:
 | Merge | 494 scenes, resources and project files | 0 problems: each result parses and every reference resolves |
 
 The limits: none of this has been run in Godot yet. The results above were read back by Godotwright, not loaded by the
-engine. The editor addon has not run in an editor, and `godot_tilemap` and `godot_animation` are tested on
-fixtures.
+engine. The editor addon has run in a headless Godot 4.7.2 editor, not yet in one with a window, and
+`godot_tilemap` and `godot_animation` are tested on fixtures.
 
 In 0.8.0:
 
@@ -212,7 +213,8 @@ dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and csharp-ls 0.16.0; see [C# projects](docs
 was and was not tested.
 
 **The open editor, optionally.** `editor install` puts a small addon in the project (localhost, a new token every
-start). With it an agent sees what is open and unsaved and can save, reload, play, stop and take a screenshot.
+start). With it an agent sees what is open and unsaved and can save, reload, play, stop and take a screenshot, and
+edit the open scene (set a property, add, remove or rename a node), each edit one undo step in the editor.
 
 **Run and see.** `test` runs GUT or GdUnit4 tests and prints only what failed; `play` runs a scene, presses the keys
 you give on the frames you give, and prints the values you watch; `screenshot` renders a scene or a model to a PNG.
@@ -392,7 +394,7 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Finds the commit that broke it | yes (`godot_bisect`) | no | no | no |
 | Scored review (api, performance, quality, structure) | yes | no | style, naming, complexity | no |
 | Godot 3 code | flagged with the Godot 4 fix; `migrate` rewrites scripts | no | no | rewrites scripts, scenes and settings |
-| Live control of the open editor | optional addon (`godot_editor`): open scenes, unsaved state, selection, errors, save, reload, play, stop, screenshot. No scene editing through it; it has not run in an editor yet | yes, with scene editing | no | no |
+| Live control of the open editor | optional addon (`godot_editor`): open scenes, unsaved state, selection, errors, save, reload, play, stop, screenshot, and scene editing (set a property, add, remove, rename nodes) as undoable editor actions. Run in a headless Godot 4.7.2 editor; not yet in one with a window (screenshot and play untested) | yes, with scene editing | no | no |
 | Scene editing (nodes, properties, connections) | yes, in the files, with a dry run and undo | yes, through the editor | no | no |
 | TileMap cells and animations | yes, in the scene file (tested on fixtures) | some do, through the editor | no | no |
 | GDScript formatter | yes, whitespace only, with a token guard; `format --check` for CI | some do | yes (`gdformat`) | no |
@@ -415,7 +417,8 @@ drive the editor, Godotwright to check the code.
 edits. `check`, `test`, `play` and `screenshot` run Godot 4.7 headless.
 
 **Does it need an editor plugin?** No. Everything works from the files. `godotwright editor install` adds an optional
-addon for the open editor: what is open and unsaved, save, reload, play, stop, screenshot.
+addon for the open editor: what is open and unsaved, save, reload, play, stop, screenshot, and undoable edits of the
+open scene.
 
 **C#?** Yes. From the files: project map, usages, scene checks and four review rules. With the .NET SDK: `dotnet build`
 errors in `check`, `format` and `migrate`. With the C# language server `csharp-ls`, which you install yourself:
