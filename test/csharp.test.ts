@@ -703,9 +703,11 @@ describe("C# scaffolding", () => {
       const outline = outlineCSharp(text);
       const cls = scriptClass(outline, r.file)!;
       expect(cls, template).toMatchObject({ name, partial: true, base: r.extends });
-      // Balanced, tab-indented, and nothing left for the outline to trip on.
+      // Balanced, and nothing left for the outline to trip on.
       expect(text.split("{").length, template).toBe(text.split("}").length);
-      expect(text).not.toMatch(/^ +\S/m);
+      // Godot's own C# templates and its C# style guide indent with 4 spaces: no tabs.
+      expect(text).not.toMatch(/^\t/m);
+      expect(text).not.toMatch(/^( {4})* {1,3}\S/m);
       expect(readFileSync(join(root, "scripts", `${name}.cs.uid`), "utf8")).toBe(`${r.uid}\n`);
     }
     const map = scanProject(root);
@@ -726,7 +728,7 @@ describe("C# scaffolding", () => {
     const shown = formatNewScript(r);
     expect(shown).toContain("new script res://Hero.cs (character_3d) (dry run: nothing written): partial class Hero : CharacterBody3D");
     expect(shown).toContain("public override void _PhysicsProcess(double delta)");
-    expect(csharpTemplateText("node", "Spawner", { base: "Marker2D" })).toBe("using Godot;\n\npublic partial class Spawner : Marker2D\n{\n\tpublic override void _Ready()\n\t{\n\t}\n}\n");
+    expect(csharpTemplateText("node", "Spawner", { base: "Marker2D" })).toBe("using Godot;\n\npublic partial class Spawner : Marker2D\n{\n    public override void _Ready()\n    {\n    }\n}\n");
     expect(csharpTemplateText("area_trigger", "Zone", { dimension: "3d" })).toContain("public partial class Zone : Area3D");
     expect(csharpTemplateText("area_trigger", "Zone", { dimension: "3d" })).toContain("private void OnBodyEntered(Node3D body)");
   });

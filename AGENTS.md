@@ -98,7 +98,15 @@ node dist/cli.js --help
 - `src/scene/structure.ts`: the structure operations of `godot_scene_edit` (create_scene, rename_node, move_node,
   duplicate_node, set_groups, add_nodes); `test/integration/scene-structure-corpus.test.ts` runs them on real scenes.
 - `src/format/`: `godot_format`. `tokenizer.ts` is a full GDScript tokenizer, `format.ts` the formatter with its guard
-  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project.
+  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project
+  (`formatAll`: GDScript and C# in one journal entry). `csharp.ts` formats .cs files with `dotnet format whitespace`
+  on a copy of the asked files (`--folder`: no restore, no build, nothing else touched), keeps a file only when its
+  code without whitespace, its strings and its outline's symbol count are unchanged, and when writing builds before
+  and after and puts back a file that makes the build worse. Why dotnet format and not CSharpier: it ships with the
+  .NET SDK that builds the project (nothing more to install), it follows the project's .editorconfig, its whitespace
+  mode changes nothing but whitespace, and without an .editorconfig its defaults are Godot's C# style guide (4 spaces,
+  braces on their own line, the same as Godot's own C# templates, which the C# script templates here follow).
+  CSharpier is a separate tool with its own fixed style that ignores most of .editorconfig.
 - `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
   classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
   `dotnet build` and reads MSBuild's diagnostics.

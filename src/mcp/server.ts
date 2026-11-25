@@ -108,7 +108,7 @@ import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycle
 import { bisectProject, formatBisect } from "../bisect/bisect.js";
 import { diffProject, formatDiff } from "../diff/diff.js";
 import { formatMergeReport, mergeProject } from "../merge/project.js";
-import { formatFormatReport, formatProject } from "../format/project.js";
+import { formatAll, formatFormatReport } from "../format/project.js";
 import { addonState, editorCall, EditorBridgeError, EditorInstallError, EDITOR_OP_NAMES, formatAddonState, formatEditorOps, formatEditorResult, formatInstall, formatUninstall, installAddon, uninstallAddon } from "../editor/index.js";
 import { AnimationError, editAnimation, formatAnimationPlan, formatAnimationReport, readAnimations, type AnimationEditArgs } from "../animation/animation.js";
 import { complexityReport, formatComplexity } from "../metrics/complexity.js";
@@ -922,12 +922,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_format",
     {
-      title: "Format GDScript, safely",
+      title: "Format GDScript and C#, safely",
       description:
-        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes.",
+        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. C# (.cs) files are formatted with `dotnet format whitespace` from the .NET SDK, only the files asked for, following the project's .editorconfig (else the .NET defaults, which are Godot's C# style: 4 spaces, braces on their own line); each is kept only when the code without whitespace, every string and the number of outline symbols are unchanged, and when writing the project is built before and after: a file that makes the build worse is put back and listed as skipped. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes.",
       inputSchema: {
         path: pathParam,
-        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: every script, without addons)"),
+        files: z.array(z.string()).optional().describe("only these res:// .gd or .cs files or folders (default: every script, without addons)"),
         write: z.boolean().optional().describe("write the formatted files (default false: list what would change)"),
         diff: z.boolean().optional().describe("show the changes as a unified diff"),
         include_addons: z.boolean().optional().describe("also format res://addons/"),
@@ -935,7 +935,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ path, files, write, diff, include_addons }) =>
-      guard(() => text(formatFormatReport(formatProject(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20))),
+      (async () => {
+        try {
+          return text(formatFormatReport(await formatAll(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20));
+        } catch (error) {
+          return failure(error instanceof Error ? error.message : String(error));
+        }
+      })(),
   );
 
   tool(

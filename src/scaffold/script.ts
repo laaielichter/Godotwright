@@ -509,7 +509,9 @@ export function csharpTemplateText(template: CSharpTemplate, className: string, 
   const out = ["using Godot;", ...(built.usings ?? []).map((u) => `using ${u};`), ""];
   if (built.doc) out.push("/// <summary>", `/// ${built.doc}`, "/// </summary>");
   out.push(...(built.attributes ?? []), `public partial class ${className} : ${built.extends}`, "{", ...built.body.map((l) => (l ? `\t${l}` : "")), "}");
-  return `${out.join("\n")}\n`;
+  // Indented with 4 spaces, as Godot's own C# templates (modules/mono/editor/script_templates) and its C# style guide
+  // do, so a new script is already what dotnet format writes.
+  return `${out.map((l) => l.replace(/^\t+/, (tabs) => "    ".repeat(tabs.length))).join("\n")}\n`;
 }
 
 /** The text of a script template, without touching a project. */

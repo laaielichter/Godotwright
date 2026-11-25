@@ -1,9 +1,10 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildCSharp, findDotnet } from "../../src/check/csharp-build.js";
+import { formatAll } from "../../src/format/project.js";
 import { newProject } from "../../src/scaffold/project.js";
 import { newScript } from "../../src/scaffold/script.js";
 import { editProjectSettings } from "../../src/settings/edit.js";
@@ -66,5 +67,21 @@ describe.skipIf(!enabled)("C# with dotnet and the .NET build of Godot", () => {
     const out = `${run.stdout}\n${run.stderr}`;
     expect(out).toContain("Godot Engine v4.7");
     expect(out.split("\n").filter((l) => /ERROR|SCRIPT ERROR|Exception/.test(l))).toEqual([]);
+  });
+
+  it("dotnet format leaves every template as it is, formats a messy file, and the build stays clean", { timeout: 600_000 }, async () => {
+    const root = join(mkdtempSync(join(tmpdir(), "godotwright-cs-format-")), "cs");
+    newProject(root, { dotnet: true });
+    for (const [file, options] of CS_TEMPLATES) newScript(root, file, options);
+    const clean = await formatAll(root, { files: ["res://scripts"] });
+    expect(clean.changed).toEqual([]);
+    expect(clean.skipped).toEqual([]);
+    expect(clean.unchanged).toBe(CS_TEMPLATES.length);
+    const messy = 'using Godot;\npublic partial class Messy:Node{\n  [Export]   public int Speed{get;set;}=3;\n    public override void _Ready( ){GD.Print("a  b" ,Speed);   }\n}\n';
+    writeFileSync(join(root, "scripts", "Messy.cs"), messy);
+    const r = await formatAll(root, { files: ["res://scripts/Messy.cs"], write: true });
+    expect(r.changed.map((c) => c.file)).toEqual(["res://scripts/Messy.cs"]);
+    expect(r.build).toEqual({ before: 0, after: 0 });
+    expect(readFileSync(join(root, "scripts", "Messy.cs"), "utf8")).toBe('using Godot;\npublic partial class Messy : Node\n{\n    [Export] public int Speed { get; set; } = 3;\n    public override void _Ready() { GD.Print("a  b", Speed); }\n}\n');
   });
 });

@@ -6,10 +6,11 @@ import { OptionError } from "../project/options.js";
 import { ProtectedPathError } from "../project/protect.js";
 import { projectRootOf } from "../scan/scan.js";
 import { changedLineCount, unifiedDiff } from "./diff.js";
+import { formatCSharp } from "./csharp.js";
 import { formatScript } from "./format.js";
 
 export interface FormatProjectOptions {
-  /** Only these scripts or folders: `res://` paths, or paths on disk. Default: every .gd file of the project. */
+  /** Only these scripts or folders: `res://` paths, or paths on disk. Default: every .gd (and, in formatAll, .cs) file. */
   files?: string[];
   /** Write the formatted scripts (default false: only report what would change). */
   write?: boolean;
@@ -17,6 +18,10 @@ export interface FormatProjectOptions {
   includeAddons?: boolean;
   /** Add a unified diff to every changed file. */
   diff?: boolean;
+  /** Write into this journal entry and leave committing it to the caller (formatAll). */
+  journal?: JournalWriter;
+  /** The dotnet executable for C# files (default: found on PATH). */
+  dotnet?: string;
 }
 
 export interface FormatChange {
@@ -45,11 +50,16 @@ export interface FormatReport {
   skipped: FormatSkip[];
   /** The journal entry of the write, for `godotwright undo`. */
   journal?: number;
+  /** C# files among `files` (formatted with dotnet format). */
+  csharp?: number;
+  /** Errors of `dotnet build` before and after writing C# files, when it ran. */
+  build?: { before: number; after: number };
 }
 
-/** The scripts to format, as `res://` paths. */
-function scriptsOf(root: string, options: FormatProjectOptions): string[] {
-  const all = () => listProjectFiles(root).filter((f) => f.endsWith(".gd"));
+/** The scripts to format, as `res://` paths: .gd files, and .cs files too with `csharp`. */
+function scriptsOf(root: string, options: FormatProjectOptions, csharp = false): string[] {
+  const isScript = (f: string) => f.endsWith(".gd") || (csharp && f.endsWith(".cs"));
+  const all = () => listProjectFiles(root).filter(isScript);
   if (!options.files?.length) return all().filter((f) => options.includeAddons || !f.startsWith("res://addons/"));
   const out = new Set<string>();
   let listed: string[] | undefined;
@@ -63,8 +73,8 @@ function scriptsOf(root: string, options: FormatProjectOptions): string[] {
       for (const f of listed) {
         if ((res === "res://" || f.startsWith(prefix)) && (options.includeAddons || !f.startsWith("res://addons/") || prefix.startsWith("res://addons/"))) out.add(f);
       }
-    } else if (res.endsWith(".gd")) out.add(res);
-    else throw new OptionError(`${res} is not a GDScript file`);
+    } else if (isScript(res)) out.add(res);
+    else throw new OptionError(`${res} is not a GDScript${csharp ? " or C#" : ""} file`);
   }
   return [...out].sort();
 }
@@ -78,7 +88,7 @@ export function formatProject(path: string, options: FormatProjectOptions = {}):
   const root = projectRootOf(path);
   const scripts = scriptsOf(root, options);
   const report: FormatReport = { root, written: false, files: scripts.length, changed: [], unchanged: 0, skipped: [] };
-  const journal = options.write ? new JournalWriter(root, "format", "format scripts") : undefined;
+  const journal = options.write ? (options.journal ?? new JournalWriter(root, "format", "format scripts")) : undefined;
   for (const file of scripts) {
     const full = fromResPath(root, file);
     const bytes = readFileSync(full);
@@ -109,9 +119,42 @@ export function formatProject(path: string, options: FormatProjectOptions = {}):
   }
   if (journal) {
     report.written = true;
+    if (!options.journal) {
+      const id = journal.commit();
+      if (id !== undefined) report.journal = id;
+    }
+  }
+  return report;
+}
+
+/**
+ * `godotwright format` and godot_format: GDScript with the GDScript formatter and C# with dotnet format
+ * (src/format/csharp.ts), in one journal entry, so one `godotwright undo` puts both back.
+ */
+export async function formatAll(path: string, options: FormatProjectOptions = {}): Promise<FormatReport> {
+  const root = projectRootOf(path);
+  const scripts = scriptsOf(root, options, true);
+  const gd = scripts.filter((f) => f.endsWith(".gd"));
+  const cs = scripts.filter((f) => f.endsWith(".cs"));
+  const journal = options.write ? new JournalWriter(root, "format", "format scripts") : undefined;
+  const report: FormatReport = gd.length
+    ? formatProject(root, { ...options, files: gd, ...(journal ? { journal } : {}) })
+    : { root, written: false, files: 0, changed: [], unchanged: 0, skipped: [] };
+  if (cs.length) {
+    const r = await formatCSharp(root, cs, { ...(options.write ? { write: true } : {}), ...(options.diff ? { diff: true } : {}), ...(journal ? { journal } : {}), ...(options.dotnet ? { dotnet: options.dotnet } : {}) });
+    report.files += cs.length;
+    report.csharp = cs.length;
+    report.changed.push(...r.changed);
+    report.unchanged += r.unchanged;
+    report.skipped.push(...r.skipped);
+    if (r.build) report.build = r.build;
+  }
+  if (journal) {
+    report.written = true;
     const id = journal.commit();
     if (id !== undefined) report.journal = id;
   }
+  report.changed.sort((a, b) => a.file.localeCompare(b.file));
   return report;
 }
 
@@ -121,7 +164,7 @@ const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" 
 export function formatFormatReport(report: FormatReport, limit = 30): string {
   const out: string[] = [];
   const skipped = report.skipped.length ? `, ${report.skipped.length} skipped` : "";
-  if (!report.files) return "format: no GDScript files to format\n";
+  if (!report.files) return "format: no GDScript or C# files to format\n";
   if (!report.changed.length) out.push(`format: ${plural(report.files, "script")} checked, all formatted already${skipped}`);
   else out.push(`format: ${report.written ? "formatted" : "would format"} ${report.changed.length} of ${plural(report.files, "script")}${skipped}`);
   for (const c of report.changed.slice(0, limit)) out.push(`  ${c.file} (${plural(c.lines, "line")})`);
@@ -132,6 +175,7 @@ export function formatFormatReport(report: FormatReport, limit = 30): string {
     if (report.skipped.length > limit) out.push(`  ... ${report.skipped.length - limit} more`);
   }
   for (const c of report.changed.slice(0, limit)) if (c.diff) out.push("", c.diff.trimEnd());
+  if (report.build) out.push(`C#: dotnet build ${report.build.before} error${report.build.before === 1 ? "" : "s"} before formatting, ${report.build.after} after`);
   if (report.changed.length) {
     out.push(
       report.written
