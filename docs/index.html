@@ -260,7 +260,7 @@ footer a { color: var(--muted); }
   <section class="launch" aria-labelledby="hero-title">
     <div class="wrap launch-inner">
       <div class="launch-copy">
-        <a class="release" href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md"><span></span> v0.8.0 · Built for Godot 4.7 <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
+        <a class="release" href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md"><span></span> v0.9.0 · Built for Godot 4.7 <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
         <p class="eyebrow">Your agent. Your game. Real checks.</p>
         <h1 id="hero-title">Big worlds.<br>Better code.<br><em>Keep creating.</em></h1>
         <p class="launch-lede">Give your coding agent the Godot knowledge it needs. Catch invented APIs, check what actually runs, merge scenes without conflicts, and build 3D models from code.</p>
@@ -310,14 +310,14 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>Formatter</span><p>GDScript in the official style, whitespace only. A guard compares the tokens before and after, so the code cannot change meaning; a file that is not valid GDScript is skipped with the reason.</p><code>godotwright format --check</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>C# projects</span><p>C# scripts in the project map, usages and scene checks; four review rules for what Godot only reports at build time; <code>dotnet build</code> errors by file and line in <code>check</code>; <code>dotnet format</code> behind an outline and build guard; Godot 3 C# ported to Godot 4. With the language server csharp-ls (you install it): code intelligence and rename for C#.</p><code>godotwright review</code></li>
         <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>Scenes, tiles, animations</span><p>Create a scene, rename, move and duplicate nodes with every path following; set TileMapLayer cells; add animation tracks and keys. All in the scene file, with a dry run and undo.</p><code>godotwright scene</code></li>
-        <li><span class="node"><span class="dot" style="background:var(--nres)"></span>Editor bridge (optional)</span><p>A small addon on localhost with a token: what is open and unsaved, the selection, logged errors, save, reload, play, stop, screenshot. No scene editing through it. Everything else works without it.</p><code>godotwright editor install</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nres)"></span>Editor bridge (optional)</span><p>A small addon on localhost with a token: what is open and unsaved, the selection, logged errors, save, reload, play, stop, screenshot, and edits of the open scene as undoable editor steps. Everything else works without it.</p><code>godotwright editor install</code></li>
       </ul>
       <div class="stats" style="margin-top:1.5rem">
         <div class="stat good"><span class="n">0</span><span class="l">guard refusals when formatting 12,472 real scripts</span></div>
         <div class="stat good"><span class="n">0</span><span class="l">failures in 3,956 scene operation steps on 433 real scenes</span></div>
         <div class="stat good"><span class="n">0</span><span class="l">problems merging 494 real scenes, resources and project files</span></div>
       </div>
-      <p class="caption">Measured on one real project, from its files. The limits: none of this has been run in Godot yet, the editor addon has run in a headless Godot 4.7.2 editor but not yet in one with a window, and the TileMap and animation edits are tested on fixtures. On <code>main</code>, after 0.8.0. <a href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md">Changelog</a></p>
+      <p class="caption">Measured on one real project, from its files, then run in Godot 4.7.2 on a copy of a large game: formatting changed none of Godot's own errors, scene edits survive the editor's save, TileMap and animation edits load and play, and the editor addon ran in an editor with a window. Not run yet: Windows and macOS editors. In 0.9.0. <a href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md">Changelog</a></p>
     </div>
   </section>
 
