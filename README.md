@@ -439,6 +439,7 @@ see [what we measured](docs/cheap-models-code.md).
 - [Reference](docs/reference.md): every command, option, rule and tool
 - [Install page](https://laaielichter.github.io/Godotwright/install.html): every client, with one-click links
 - [Port Godot 3 to Godot 4](https://laaielichter.github.io/Godotwright/godot-3-to-4.html)
+- [Godot 3 platformer example](examples/godot3-platformer/README.md): a tiny Godot 3 project to run `migrate` and `review` on, with the real before/after output and the lines left for you
 - [3D model gallery](https://laaielichter.github.io/Godotwright/models.html)
 - [Lessons](LESSONS.md) and [road network lessons](LESSONS-ROADS.md): the stories behind the rules
 - [Small models and 3D](docs/cheap-models.md), [small models and everyday tasks](docs/cheap-models-code.md)
