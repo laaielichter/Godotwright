@@ -5,7 +5,7 @@ import { contentEnd, propSpan, type Block } from "../godot/blocks.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { isCall, type Variant } from "../godot/variant.js";
-import { fromResPath } from "../project/files.js";
+import { fromResPath, readResourceAt } from "../project/files.js";
 import { scriptInfo } from "../scene/edit.js";
 import { TextEditError, blockAt, extFor, finishPlan, formatTextPlan, openDoc, rawProp, removeProp, setProp, type Doc, type OpenOptions, type TextEditPlan } from "../tilemap/plan.js";
 import { arrayItems, dictEntries, formatDict, keyName, oneLine } from "./raw.js";
@@ -441,7 +441,7 @@ function checkPath(at: Located, type: "value" | "method", path: string, warnings
   let cls = node.type;
   let scriptPath = extPath(doc, node.scriptRef);
   for (let file = extPath(doc, node.instanceRef), depth = 0; !cls && file && depth < 8 && existsSync(fromResPath(doc.root, file)); depth++) {
-    const sub = parseResourceText(readFileSync(fromResPath(doc.root, file), "utf8"));
+    const sub = readResourceAt(doc.root, file);
     const top = sub.nodes[0];
     cls = top?.type;
     scriptPath ??= sub.extResources.find((e) => e.id === top?.scriptRef)?.path;

@@ -4,7 +4,10 @@ import { asString, asStringList, isCall, type Variant } from "./variant.js";
 export interface ExtResource {
   id: string;
   type: string;
+  /** As Godot loads it: res://, uid://, or (from `withLoadPaths`) a relative path made absolute. */
   path?: string;
+  /** The relative path as the file writes it, when `withLoadPaths` changed `path`. */
+  pathAsWritten?: string;
   uid?: string;
   line: number;
 }

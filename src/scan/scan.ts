@@ -6,7 +6,7 @@ import { KEY_SETTINGS, parseProjectSettings, type ProjectSettings } from "../god
 import { parseResourceFile } from "../godot/resource-file.js";
 import { parseResourceText, type ResourceFile } from "../godot/scene.js";
 import { asString, VariantParseError } from "../godot/variant.js";
-import { ASSET_KINDS, extension, findProjectRoot, fromResPath, listProjectFiles, realResPath, resolveResPath, withoutSubResource } from "../project/files.js";
+import { ASSET_KINDS, extension, findProjectRoot, fromResPath, listProjectFiles, realResPath, resolveResPath, withLoadPaths, withoutSubResource } from "../project/files.js";
 import type { CSharpScriptInfo, ProjectMap, ResourceInfo, SceneInfo, ScriptInfo, ShaderInfo, Warning } from "./types.js";
 
 export class ProjectNotFoundError extends Error {
@@ -293,7 +293,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
           if (fileSet.has(file.slice(0, -".import".length))) uidClaims.push({ uid, file: file.slice(0, -".import".length), from: "import" });
         }
       } else if (ext === "tscn" || ext === "tres") {
-        const resource = parsed(file, "resource", parseResourceText);
+        const resource = withLoadPaths(parsed(file, "resource", parseResourceText), file);
         resources.set(file, resource);
         if (resource.uid) {
           uids.set(resource.uid, file);

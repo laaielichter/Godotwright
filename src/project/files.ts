@@ -1,5 +1,6 @@
-import { type Dirent, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { parseResourceText, type ResourceFile } from "../godot/scene.js";
 
 /** Folders Godot never treats as project content: hidden ones (.godot, .git, a Python venv) and node_modules. */
 function isSkippedDir(name: string): boolean {
@@ -119,6 +120,36 @@ export function resolveResPath(from: string, path: string): string {
     else if (part !== "." && part !== "") parts.push(part);
   }
   return `res://${parts.join("/")}`;
+}
+
+/**
+ * A parsed scene or resource as Godot loads it from `resPath`: an ext_resource path without a scheme
+ * ("f35b_flight.gd", "../shared/x.tres") is relative to the file's folder (resource_format_text.cpp joins it to
+ * `local_path.get_base_dir()`). Returns a copy with those paths made res://, `pathAsWritten` keeping the text; the
+ * parse cache keeps the file as written.
+ */
+export function withLoadPaths(file: ResourceFile, resPath: string): ResourceFile {
+  const relative = (p: string | undefined): p is string => !!p && !p.includes("://") && !isAbsolute(p);
+  if (!file.extResources.some((e) => relative(e.path))) return file;
+  // A path that climbs out of the project with ../ is not a res:// path; Godot fails to load it, so it stays as written.
+  const escapes = (rel: string): boolean => {
+    let depth = resPath.replace(/^res:\/\//, "").split("/").length - 1;
+    for (const part of rel.split("/")) {
+      if (part === "..") depth--;
+      else if (part !== "." && part !== "") depth++;
+      if (depth < 0) return true;
+    }
+    return false;
+  };
+  return {
+    ...file,
+    extResources: file.extResources.map((e) => (relative(e.path) && !escapes(e.path) ? { ...e, path: resolveResPath(resPath, e.path), pathAsWritten: e.path } : e)),
+  };
+}
+
+/** A project's .tscn or .tres read and parsed as Godot loads it (relative ext_resource paths made res://). */
+export function readResourceAt(root: string, resPath: string): ResourceFile {
+  return withLoadPaths(parseResourceText(readFileSync(fromResPath(root, resPath), "utf8")), resPath);
 }
 
 export function extension(path: string): string {

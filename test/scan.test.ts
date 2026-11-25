@@ -221,6 +221,36 @@ describe("unreadable files and folders", () => {
   });
 });
 
+describe("relative ext_resource paths", () => {
+  const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://ships/a/main.tscn"\n';
+  const sceneWith = (path: string) => `[gd_scene format=3]\n[ext_resource type="Script" path="${path}" id="1"]\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n`;
+
+  it("are read from the scene's folder, as Godot loads them (no false 'missing')", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "ships/a/main.tscn": sceneWith("flight.gd"),
+      "ships/a/flight.gd": "extends Node\n",
+      "ships/a/other.tscn": sceneWith("../shared/fx.gd"),
+      "ships/shared/fx.gd": "extends Node\n",
+      "ships/a/dot.tscn": sceneWith("./flight.gd"),
+    });
+    const map = scanProject(root);
+    expect(map.warnings).toEqual([]);
+    expect(map.scenes.find((s) => s.path === "res://ships/a/main.tscn")?.nodes[0]?.script).toBe("res://ships/a/flight.gd");
+    expect(map.scenes.find((s) => s.path === "res://ships/a/other.tscn")?.nodes[0]?.script).toBe("res://ships/shared/fx.gd");
+  });
+
+  it("still report a relative path that does not exist, under its full res:// path", () => {
+    const root = makeProject({ "project.godot": PROJECT, "ships/a/main.tscn": sceneWith("gone.gd") });
+    expect(scanProject(root).warnings).toEqual([{ file: "res://ships/a/main.tscn", line: 2, message: "missing Script: res://ships/a/gone.gd" }]);
+  });
+
+  it("do not climb out of the project with ../", () => {
+    const root = makeProject({ "project.godot": PROJECT, "ships/a/main.tscn": sceneWith("../../../x.gd"), "x.gd": "extends Node\n" });
+    expect(scanProject(root).warnings).toEqual([{ file: "res://ships/a/main.tscn", line: 2, message: "missing Script: ../../../x.gd" }]);
+  });
+});
+
 describe("references that leave the project", () => {
   const PROJECT = '[application]\nconfig/name="T"\nrun/main_scene="res://main.tscn"\n';
   const sceneWith = (path: string) => `[gd_scene format=3]\n[ext_resource type="Script" path="${path}" id="1"]\n[node name="Main" type="Node"]\nscript = ExtResource("1")\n`;

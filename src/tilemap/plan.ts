@@ -3,7 +3,7 @@ import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { blocksOf, contentEnd, propSpan, type Block, type Splice } from "../godot/blocks.js";
 import { parseResourceText, type ResourceFile } from "../godot/scene.js";
 import { JournalWriter } from "../journal/journal.js";
-import { fromResPath, toResPath } from "../project/files.js";
+import { fromResPath, toResPath, withLoadPaths } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { projectRootOf } from "../scan/scan.js";
 import { resourceType, spliceOrder } from "../scene/edit.js";
@@ -62,7 +62,7 @@ export function openDoc(path: string, options: OpenOptions, extensions: string[]
   const lines = original.split(eol);
   let file: ResourceFile;
   try {
-    file = parseResourceText(original);
+    file = withLoadPaths(parseResourceText(original), toResPath(root, full));
   } catch (error) {
     throw fail(`${path} cannot be read (${(error as Error).message})`);
   }
