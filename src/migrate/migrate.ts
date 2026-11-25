@@ -7,6 +7,8 @@ import { checkFiles } from "../project/options.js";
 import { assertPathExists, ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
 import { assertWritable } from "../project/protect.js";
+import { DOTNET_TARGET_FRAMEWORK, GODOT_NET_SDK } from "../scaffold/project.js";
+import { csharpMigrationContext, migrateCSharp, migrateCsproj, type CSharpMigrationContext } from "./csharp.js";
 import { migrateShader } from "./shader.js";
 
 /** One mechanical rewrite in a script. */
@@ -662,32 +664,59 @@ export interface MigrateOptions {
   write?: boolean;
   /** Also migrate scripts in res://addons/ (default false). */
   includeAddons?: boolean;
-  /** Only these res:// files (default: every .gd, .gdshader and .gdshaderinc in the project). */
+  /** Only these res:// files (default: every .gd, .cs, .csproj, .gdshader and .gdshaderinc in the project). */
   files?: string[];
 }
 
 const SHADER_FILE = /\.gdshader(inc)?$/;
+const CSHARP_FILE = /\.(cs|csproj)$/i;
 
-/** Migrates every GDScript and shader file of a project (or one .gd or .gdshader file), and writes the result when asked. */
+/**
+ * Migrates every GDScript, C# and shader file of a project and its .csproj (or one .gd, .cs, .csproj or .gdshader
+ * file), and writes the result when asked.
+ */
 export function migrateProject(path: string, options: MigrateOptions = {}): ProjectMigration {
   const api = GodotApi.load();
   assertPathExists(path);
-  const single = path.endsWith(".gd") || SHADER_FILE.test(path);
+  const single = path.endsWith(".gd") || SHADER_FILE.test(path) || CSHARP_FILE.test(path);
   const root = single ? undefined : findProjectRoot(path);
   if (!single && !root) throw new ProjectNotFoundError(path);
   const named = options.files && root ? checkFiles(root, options.files) : options.files;
   const targets = single
     ? [{ res: path, full: path }]
     : listProjectFiles(root as string)
-        .filter((f) => (f.endsWith(".gd") || SHADER_FILE.test(f)) && (options.includeAddons || !f.startsWith("res://addons/")))
+        .filter((f) => (f.endsWith(".gd") || SHADER_FILE.test(f) || CSHARP_FILE.test(f)) && (options.includeAddons || !f.startsWith("res://addons/")))
         .filter((f) => !named || named.includes(f))
         .map((res) => ({ res, full: fromResPath(root as string, res) }));
   const files: FileMigration[] = [];
   // One .gd file outside a project is written as it is; inside one, the write goes in the journal.
   const journal = root ? new JournalWriter(root, "migrate", "Godot 3 code rewritten for Godot 4") : undefined;
+  // C# needs to know what the whole project declares (its classes and signals), also when only some files are migrated.
+  let csharp: CSharpMigrationContext | undefined;
+  const csharpContext = (own: string): CSharpMigrationContext => {
+    if (!root) return csharpMigrationContext([own]);
+    csharp ??= csharpMigrationContext(
+      listProjectFiles(root)
+        .filter((f) => /\.cs$/i.test(f))
+        .flatMap((f) => {
+          try {
+            return [readFileSync(fromResPath(root, f), "utf8")];
+          } catch {
+            return [];
+          }
+        }),
+    );
+    return csharp;
+  };
   for (const t of targets) {
     const source = readFileSync(t.full, "utf8");
-    const result = SHADER_FILE.test(t.res) ? migrateShader(source, api) : migrateScript(source, api);
+    const result = SHADER_FILE.test(t.res)
+      ? migrateShader(source, api)
+      : /\.csproj$/i.test(t.res)
+        ? migrateCsproj(source, GODOT_NET_SDK, DOTNET_TARGET_FRAMEWORK)
+        : /\.cs$/i.test(t.res)
+          ? migrateCSharp(source, api, csharpContext(source))
+          : migrateScript(source, api);
     if (result.changes.length === 0 && result.left.length === 0) continue;
     const written = options.write === true && result.changes.length > 0;
     if (written) {

@@ -110,7 +110,7 @@ godotwright resource set beep.wav edit/loop_mode Forward --write   # enum option
 godotwright resource set car.glb settings/loop_mode Linear --sub animations/drive --write   # per-animation loop
 godotwright resource set car.glb generate/shadow_meshes Disable --sub meshes/car_body --write   # per-mesh (named <scene>_<mesh>)
 godotwright resource importer anims.glb animation_library --write   # import a .glb as an AnimationLibrary, uid kept
-godotwright migrate --write         # port Godot 3 scripts and shaders to Godot 4 where that is mechanical; lists what is left
+godotwright migrate --write         # port Godot 3 scripts (GDScript and C#) and shaders to Godot 4 where that is mechanical; lists what is left
 godotwright shader                  # review every shader against Godot 4.7's shader tables and compile it headless; file:line
 godotwright api shader:spatial.fragment   # the built-ins of a shader type and function; `api ALBEDO` says where one exists
 godotwright review --sarif > review.sarif   # for GitHub code scanning: findings inline on pull requests
@@ -732,7 +732,37 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
   is formatted (`dotnet format whitespace --folder`). One run takes about 8 s on a small project. Ran with dotnet
   8.0.134 on a generated project; not run on a large project, or with an `.editorconfig` that turns on style rules.
 
-Not there: migration of C# code. The rules are quiet
+- **`migrate`** (`godot_migrate`): Godot 3 C# is rewritten for Godot 4 where the change is mechanical and certain,
+  and the rest is listed as a TO DO with its line, as for GDScript. It needs no compiler. What it rewrites:
+  script classes (and the classes around them) become `partial`; `[Signal] delegate void Hit()` becomes
+  `HitEventHandler`, and `nameof(Hit)` and `EmitSignal("Hit")` become `SignalName.Hit` where the signal is declared
+  in the class or a base class of the project; `Connect("s", target, nameof(M))` (also with `"M"`, `Disconnect` and
+  `IsConnected`) gets `new Callable(target, nameof(M))`; `Godot.Object` is `GodotObject`; classes, methods and
+  properties from Godot's own rename table, in their C# names of both versions (`Spatial` to `Node3D`, `Instance()`
+  to `Instantiate()`, `Mathf.Deg2Rad` to `DegToRad`, `HTTPRequest` to `HttpRequest`); `_Process(float delta)` takes
+  a `double` and the body keeps computing with `(float)delta`; `velocity.x` is `velocity.X`; `OS.GetTicksMsec()`,
+  `Engine.EditorHint`, `JSON.Print` and the like move where the move is one to one; `PropertyHint.ExpRange`,
+  `[Remote]`, `[Puppet]`, `GetTree().IsNetworkServer()` and the `network_peer_connected` signals get their Godot 4
+  form; `follow.Offset` is `Progress` where `follow` is declared as a `PathFollow2D` in the file. The `.csproj` gets
+  `Godot.NET.Sdk/4.7.0`, `net8.0` and `EnableDynamicLoading`. A name the project declares itself is left alone. TO DOs
+  cover what cannot be decided from the text: `MoveAndSlide` with arguments, `[Master]`, `RpcUnreliable` and `Rset`,
+  `OS.WindowSize` and its relatives, `new File()`, a `.x` whose type is not declared in the file while the project has
+  an `x` of its own, and the `Variant` that Godot's untyped `Dictionary` and `Array` now hold.
+
+  Tested on the five official Godot 3 C# demos (`mono/` on the 3.x branch of godot-demo-projects, 29 files), migrated
+  with `--include-addons` and built with dotnet 8.0.134 against Godot.NET.Sdk 4.7.0:
+
+  | Demo | After `migrate --write` | TO DOs |
+  | --- | --- | --- |
+  | `dodge_the_creeps` | builds | 0 |
+  | `pong` | builds | 0 |
+  | `multiplayer_pong` | 5 errors, each on a line with a TO DO (`CompressionMode`, `RpcUnreliable`) | 3 |
+  | `2.5d` | 17 errors, all in files with TO DOs (14 on the line: `.x` of an undeclared type, `MoveAndSlide`, `MoveAndCollide`; 3 are `Texture` used where a `Texture2D` is needed) | 48 |
+  | `android_iap` | 31 errors, all in files with TO DOs (the `Variant` in Godot's collections: 27 are the cases of `switch` statements that have the TO DO) | 9 |
+
+  "Builds" means the C# compiles against Godot 4's API; the scenes and `project.godot` of these demos are still Godot
+  3 files (Godot's `--convert-3to4` does those), so none of them was run. `test/integration/migrate-csharp.test.ts`
+  builds a migrated sample, and the demos when `GODOT3_MONO_DEMOS` points at that folder. The rules are quiet
 on the official `mono/` demos and two public C# projects (about 650 files). The build ran for real: a generated
 project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.0, and a scene with a C# script
 ran in the .NET build of Godot 4.7.2. The check builds with `--no-incremental` (an up-to-date build would report no
@@ -1382,7 +1412,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Make a scene, add (one or many), remove, rename, move and duplicate nodes, set properties and groups, connect signals, attach scripts and make instances editable in a `.tscn`; paths follow a rename or move; refuses a change Godot would drop on the next editor save |
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
-| `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
+| `godot_migrate` | Rewrite Godot 3 GDScript, C# and shaders to Godot 4 where that is mechanical, and list what is left |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
 | `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition, references, symbols and completion, also for unsaved code. A `.cs` file is answered by the C# language server `csharp-ls` (you install it) with the same ops |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |

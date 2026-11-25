@@ -102,9 +102,16 @@ node dist/cli.js --help
 - `src/rename/`: `godot_rename`. `rename.ts` plans and applies a rename by name (GDScript, scenes, settings) or of a
   file; `csharp.ts` (`renameAnywhere`, what the CLI and the MCP tool call) renames a symbol declared in C# through the
   language server and then updates scenes, resources and GDScript. C# code is never renamed as text.
+- `src/migrate/`: `godot_migrate`. `migrate.ts` is the GDScript migration and the project runner, `shader.ts` the
+  shaders, `csharp.ts` Godot 3 C# and the `.csproj` (the same rename table, with the names in C# form;
+  `csharp-names.ts` holds the Godot 4 classes whose C# name is not the engine's). A C# rule must be certain from the
+  text alone; what is not becomes a TO DO. `GODOT3_MONO_DEMOS=<folder>` runs the official Godot 3 C# demos through
+  `test/integration/migrate-csharp.test.ts`.
 - `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
   classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
-  `dotnet build` and reads MSBuild's diagnostics.
+  `dotnet build` and reads MSBuild's diagnostics. The C# tools were run with dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and
+  csharp-ls 0.16.0; the integration tests that need `dotnet` or `csharp-ls` (`test/integration/*csharp*.test.ts`) are
+  skipped without them. Godotwright never installs either.
 - `src/editor/`: `godot_editor`: `bridge.ts` is the client of the editor addon in `data/editor-bridge/` (localhost,
   token from `.godot/godotwright_bridge.json`), `install.ts` copies and enables the addon. The addon cannot be run in
   CI: a test checks every engine method it calls against the bundled API data; `docs/editor-bridge.md` has the manual
@@ -183,7 +190,8 @@ node dist/cli.js --help
   `test/fixtures/messy` has one example of most review findings.
 - `test/integration/`: tests that need a real Godot binary in `$GODOT`
   (and `$GODOT_DEMOS` for the official demo projects), or the Claude Code and
-  Codex CLIs (`AGENT_CLIS=1`). CI runs them.
+  Codex CLIs (`AGENT_CLIS=1`). CI runs them. The `*csharp*` ones need `dotnet` on PATH (and NuGet for the first
+  restore), some also `csharp-ls`; they are skipped where those are missing.
 - Never write to stdout in code the MCP server runs: stdout is the protocol channel.
 
 ## Conventions

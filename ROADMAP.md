@@ -234,6 +234,7 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 31: Lean mode (`godotwright mcp --lean`)
 - [x] Step 32: Work with git (`godot_merge` with a git merge driver, `godot_bisect`)
 - [x] Step 34: C# projects (outline, project map, review rules, dotnet build in check, templates) and the optional editor bridge (`godot_editor`)
+- [x] Step 35: C# finished: a real `dotnet build` behind the check and the templates, the C# language server (csharp-ls) in `godot_code`, rename of C# symbols, `dotnet format` with a guard, and migration of Godot 3 C#
 - [x] Step 33: What competitors have, from the files (scene structure, tilemap cells, animations, formatter, metrics, new projects and scripts, export presets, translations), checked on a real project
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render

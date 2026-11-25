@@ -69,6 +69,15 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
     put back and reported as skipped. Writes go through the journal. `new project --dotnet` now writes an
     `.editorconfig` with tabs for `*.cs`, because `dotnet format` otherwise turns the tabs of Godot's templates into
     spaces. Tested with the real `dotnet format` of dotnet 8.0.134 on a generated project.
+  - **`godot_migrate` for C#.** Godot 3 C# is ported where that is mechanical: script classes become `partial`,
+    `[Signal]` delegates get `EventHandler` (and `nameof(Hit)` becomes `SignalName.Hit`), `Connect` gets a
+    `Callable`, `Godot.Object` becomes `GodotObject`, classes, methods and properties are renamed from Godot's own
+    3-to-4 table in their C# names, `_Process(float)` takes a `double`, struct fields get PascalCase, one-to-one
+    moves of `OS` and `Engine` members are made, and the `.csproj` gets `Godot.NET.Sdk/4.7.0` and `net8.0`. What
+    cannot be decided from the text is a TO DO with its line. On the five official Godot 3 C# demos, built with a
+    real `dotnet build` after the migration: `dodge_the_creeps` and `pong` build; `multiplayer_pong` (5 errors),
+    `2.5d` (17) and `android_iap` (31) do not, and every one of those errors is in a file with TO DOs. The scenes of
+    those demos were not converted, so none was run.
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload

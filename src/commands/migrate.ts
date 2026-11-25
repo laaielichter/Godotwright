@@ -6,8 +6,8 @@ import { collect, writeOut } from "./output.js";
 
 export function migrateCommand(): Command {
   return new Command("migrate")
-    .description("rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical (annotations, renames, yield, connect, moved members, shader renames and SCREEN_TEXTURE), and list what is left to do by hand")
-    .argument("[path]", "project directory, or one .gd or .gdshader file", ".")
+    .description("rewrite Godot 3 GDScript, C# and shaders to Godot 4 where that is mechanical (annotations, renames, yield, connect, moved members, shader renames and SCREEN_TEXTURE; for C#: partial classes, signal delegates, Connect, renamed classes and members, and the .csproj), and list what is left to do by hand")
+    .argument("[path]", "project directory, or one .gd, .cs, .csproj or .gdshader file", ".")
     .option("--write", "write the migrated scripts (default: only show what would change)")
     .option("--file <res-path>", "only this res:// script or shader (repeatable)", collect, [])
     .option("--include-addons", "also migrate scripts in res://addons/")
