@@ -59,6 +59,33 @@ export interface DoctorReport {
   next: string[];
 }
 
+/**
+ * Of the lessons of one rule, the one that fits the finding's message best: most of the message's words in its title,
+ * fix or Godot messages (weakref() is the weakref lesson, not the loop one, though both explain api/infer-variant).
+ * Ties keep the rule's own order.
+ */
+export function closestLesson(hits: LessonHit[], message: string): LessonHit | undefined {
+  if (hits.length < 2) return hits[0];
+  // Plain English in Godot's messages says little; a function the message names (weakref()) says the most.
+  const plain = new Set(["cannot", "give", "with", "from", "this", "that", "have", "does", "must", "should", "returns", "value", "type"]);
+  const lower = message.toLowerCase();
+  const words = new Set((lower.match(/[a-z_][a-z0-9_]{3,}/g) ?? []).filter((w) => !plain.has(w)));
+  const called = new Set([...lower.matchAll(/([a-z_][a-z0-9_]*)\s*\(/g)].map((m) => m[1]!));
+  const texts = hits.map((hit) => `${hit.lesson.title} ${hit.lesson.fix} ${(hit.lesson.errors ?? []).join(" ")}`.toLowerCase());
+  // Only words that tell the lessons apart count: one that every candidate has (infer, type, variant) says nothing.
+  const telling = [...words].filter((w) => texts.some((t) => t.includes(w)) && !texts.every((t) => t.includes(w)));
+  let best = hits[0];
+  let bestScore = 0;
+  texts.forEach((text, i) => {
+    const score = telling.reduce((n, w) => n + (text.includes(w) ? (called.has(w) ? 3 : 1) : 0), 0);
+    if (score > bestScore) {
+      best = hits[i];
+      bestScore = score;
+    }
+  });
+  return best;
+}
+
 const lessonOf = (hit: LessonHit | undefined) => (hit ? { id: hit.lesson.id, title: hit.lesson.title, fix: hit.lesson.fix } : undefined);
 
 /** A finding's message with the varying parts (names, numbers, paths) taken out, for grouping. */
@@ -127,7 +154,7 @@ export async function doctorProject(path: string, options: DoctorOptions = {}): 
     const f = list[0]!;
     const rule = RULES[f.rule];
     // A rule's own lesson; for the broad API rules a lesson only when it matches the message itself.
-    const lesson = lessonOf(lessonsForRule(f.rule, { learning, shared, limit: 1 })[0] ?? (f.severity === "error" ? lessonsForError(f.message, { learning, shared, limit: 1 })[0] : undefined));
+    const lesson = lessonOf(closestLesson(lessonsForRule(f.rule, { learning, shared, limit: 10 }), f.message) ?? (f.severity === "error" ? lessonsForError(f.message, { learning, shared, limit: 1 })[0] : undefined));
     problems.push({
       severity: f.severity === "error" ? "error" : "warning",
       source: "review",

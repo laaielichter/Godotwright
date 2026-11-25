@@ -1866,6 +1866,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         lines.push(
           `${plural(checked.errors, "error")}, ${plural(checked.warnings, "warning")} (Godot ${checked.godotVersion}, ${plural(checked.scripts, "script")}, ${plural(checked.scenes, "scene")}${checked.shaderFiles ? `, ${plural(checked.shaderFiles, "shader")}` : ""})`,
         );
+        if (checked.overlay) lines.push(`overlay: ${checked.overlay.note}`);
         if (checked.csharp) lines.push(`C#: ${checked.csharp.note}`);
         if (checked.shaders) lines.push(shaderSummary(checked.shaders));
         lines.push(...lessonHintsForMessages(checked.diagnostics.map((d) => d.message)));
