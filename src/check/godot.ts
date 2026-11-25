@@ -234,6 +234,8 @@ export interface RunOptions {
   signal?: AbortSignal;
   /** Called with every complete line Godot prints. */
   onLine?: (line: string, stream: "stdout" | "stderr") => void;
+  /** Extra environment variables for the process, on top of this process's own. */
+  env?: Record<string, string>;
 }
 
 /**
@@ -290,7 +292,7 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
     // With a signal, Godot gets its own process group so a cancel stops what it started too. Without one (the CLI),
     // it stays in ours, so Ctrl+C in a terminal still reaches it.
     const group = signal !== undefined && process.platform !== "win32";
-    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group });
+    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group, ...(options.env ? { env: { ...process.env, ...options.env } } : {}) });
     if (group) trackGroup(child);
     let stdout = "";
     let stderr = "";

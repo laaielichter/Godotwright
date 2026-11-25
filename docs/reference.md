@@ -613,7 +613,7 @@ extends CharacterBody2D
 ...
 ```
 
-The new project has not been opened in Godot yet, and the C# templates were not compiled.
+The C# templates and the generated `.csproj` and `.sln` build with 0 errors and 0 warnings (dotnet 8.0.134, Godot.NET.Sdk 4.7.0).
 
 ## Export presets and translations
 
@@ -678,8 +678,10 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
 - **`new`** (`godot_new`): C# script templates, and `new project --dotnet`.
 
 Not there: a C# language server, a C# formatter, rename inside C# code, and migration of C# code. The rules are quiet
-on the official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
-built, and the C# templates were not compiled.
+on the official `mono/` demos and two public C# projects (about 650 files). The build ran for real: a generated
+project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.0, and a scene with a C# script
+ran in the .NET build of Godot 4.7.2. The check builds with `--no-incremental` (an up-to-date build would report no
+warnings) and in English, and restores NuGet packages only when the project was never restored.
 
 ## The open editor (optional addon)
 

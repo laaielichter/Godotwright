@@ -32,8 +32,17 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   `api/csharp-not-partial`, `api/csharp-class-name`, `api/csharp-signal-name` (errors) and `api/csharp-callback`
   (warning). `godot_check` runs `dotnet build` when the project has a `.csproj` and `dotnet` is installed, and reports
   the compiler's errors by file and line. `godot_new` has C# templates and `--dotnet` for a new project. Quiet on the
-  official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
-  built, and the templates were not compiled.
+  official `mono/` demos and two public C# projects (about 650 files).
+  - The build is proven on a real one: a project from `godotwright new project --dotnet` with every C# template builds
+    with 0 errors and 0 warnings (dotnet 8.0.134, Godot.NET.Sdk 4.7.0 from NuGet, no Godot needed), and
+    `godotwright check` on it passes with Godot 4.7.2 and with its .NET build. The tests now hold the lines a real
+    `dotnet build` printed (a compile error, a warning, a warning as error, a broken `.csproj`, a missing package, an
+    SDK error); the parser read them all as it was. Three things were wrong and are fixed: the check restored NuGet
+    packages on every run (the Godot.NET.Sdk keeps `obj/` under `.godot/mono/temp/`, not next to the `.csproj`); a
+    second check of unchanged code reported no warnings, because an up-to-date build skips the compiler (it now
+    builds with `--no-incremental`); and the compiler's messages came in the machine's language (builds now run with
+    `DOTNET_CLI_UI_LANGUAGE=en`). `test/integration/csharp-dotnet.test.ts` builds a generated project for real and
+    is skipped without `dotnet`.
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload

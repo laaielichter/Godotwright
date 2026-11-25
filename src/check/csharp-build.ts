@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { projectRootOf } from "../scan/scan.js";
@@ -28,7 +28,7 @@ export interface CSharpBuildResult {
   status: "ok" | "failed" | "no-project" | "no-dotnet" | "timed-out";
   /** The .sln or .csproj that was (or would be) built, relative to the project. */
   target?: string;
-  /** True when the build also restored NuGet packages (no obj/project.assets.json yet): that needs the network. */
+  /** True when the build also restored NuGet packages (no project.assets.json yet): that needs the network. */
   restored: boolean;
   diagnostics: Diagnostic[];
   errors: number;
@@ -98,6 +98,19 @@ const IN_PROJECT = /\s+\[([^\]]+?\.(?:cs|fs|vb)proj|[^\]]+?\.slnx?)(?:::[^\]]*)?
 const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 
 /**
+ * What every dotnet command Godotwright starts runs with: English messages whatever the machine's language (the
+ * compiler's texts are localised, e.g. German with DOTNET_CLI_UI_LANGUAGE=de), no first-run banner in the output and
+ * no telemetry sent on the user's behalf.
+ */
+export const DOTNET_ENV: Record<string, string> = { DOTNET_CLI_UI_LANGUAGE: "en", DOTNET_NOLOGO: "1", DOTNET_CLI_TELEMETRY_OPTOUT: "1" };
+
+/** True when NuGet restored the project before. The Godot.NET.Sdk keeps obj/ under .godot/mono/temp/; a plain .NET project next to the .csproj. */
+export function isRestored(root: string, csproj?: string): boolean {
+  const dirs = [join(root, ".godot", "mono", "temp", "obj"), join(root, "obj"), ...(csproj ? [join(root, dirname(csproj), "obj")] : [])];
+  return dirs.some((d) => existsSync(join(d, "project.assets.json")));
+}
+
+/**
  * MSBuild's console output as diagnostics. `root` is the Godot project: files inside it become res:// paths, a file
  * outside it (an SDK targets file) stays in the message. A relative path is relative to the project file MSBuild names
  * in the brackets at the end of the line. The same line printed twice (once per target framework, or again in the
@@ -106,11 +119,21 @@ const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 export function parseMsbuildOutput(output: string, root: string): Diagnostic[] {
   const out: Diagnostic[] = [];
   const seen = new Set<string>();
+  // MSBuild prints the real path: a project reached through a symlink (/tmp on macOS) is still the project.
+  let real = root;
+  try {
+    real = realpathSync(root);
+  } catch {
+    // Not on disk (a test, or a log from another machine).
+  }
   const toRes = (path: string, project: string | undefined): string | undefined => {
     const base = project ? dirname(isAbsolute(project) ? project : resolve(root, project)) : root;
     const full = isAbsolute(path) || /^[A-Za-z]:[\\/]/.test(path) ? path : resolve(base, path.replace(/\\/g, "/"));
-    const rel = relative(root, full).replace(/\\/g, "/");
-    return rel === "" || rel.startsWith("..") || isAbsolute(rel) || /^[A-Za-z]:/.test(rel) ? undefined : `res://${rel}`;
+    for (const from of real === root ? [root] : [root, real]) {
+      const rel = relative(from, full).replace(/\\/g, "/");
+      if (!(rel === "" || rel.startsWith("..") || isAbsolute(rel) || /^[A-Za-z]:/.test(rel))) return `res://${rel}`;
+    }
+    return undefined;
   };
   for (const raw of output.split(/\r?\n/)) {
     let line = raw.replace(ANSI, "").trimEnd();
@@ -142,7 +165,7 @@ export function parseMsbuildOutput(output: string, root: string): Diagnostic[] {
 
 /**
  * Builds the C# project of a Godot project with `dotnet build`. Packages are restored only when they were never
- * restored (no obj/project.assets.json): the result says so, since a restore needs the network.
+ * restored (no project.assets.json, see isRestored): the result says so, since a restore needs the network.
  */
 export async function buildCSharp(project: string, options: CSharpBuildOptions = {}): Promise<CSharpBuildResult> {
   const root = projectRootOf(project);
@@ -155,15 +178,16 @@ export async function buildCSharp(project: string, options: CSharpBuildOptions =
     return { ...empty, status: "no-dotnet", target, note: `dotnet is not on PATH, so ${target} was not built and C# compile errors are not checked (install the .NET SDK 8 or later; godot_review still checks the C# files)` };
   }
   // Restored before: build with what is there, so a check never waits on (or fails for) the network.
-  const assets = existsSync(join(root, "obj", "project.assets.json")) || (found.csproj !== undefined && existsSync(join(root, dirname(found.csproj), "obj", "project.assets.json")));
-  const args = ["build", target, "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", ...(options.configuration ? ["-c", options.configuration] : []), ...(assets ? ["--no-restore"] : [])];
+  const assets = isRestored(root, found.csproj);
+  // --no-incremental: a build that is up to date skips the compiler, and with it every warning it gave last time.
+  const args = ["build", target, "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "--no-incremental", ...(options.configuration ? ["-c", options.configuration] : []), ...(assets ? ["--no-restore"] : [])];
   const timeoutMs = options.timeoutMs ?? 5 * 60_000;
-  const run = await runGodot(dotnet, args, { cwd: root, timeoutMs });
+  const run = await runGodot(dotnet, args, { cwd: root, timeoutMs, env: DOTNET_ENV });
   const log = `${run.stdout}\n${run.stderr}`;
   const diagnostics = parseMsbuildOutput(log, root);
   const errors = diagnostics.filter((d) => d.severity === "error").length;
   const warnings = diagnostics.length - errors;
-  const how = assets ? "" : " (NuGet packages were restored first: obj/project.assets.json was missing)";
+  const how = assets ? "" : " (NuGet packages were restored first: there was no project.assets.json)";
   let status: CSharpBuildResult["status"] = run.timedOut ? "timed-out" : run.code === 0 && errors === 0 ? "ok" : "failed";
   if (run.timedOut) diagnostics.push({ severity: "error", message: `dotnet build timed out after ${Math.round(timeoutMs / 1000)}s${assets ? "" : " (it was restoring NuGet packages; run `dotnet restore` once with network access)"}`, source: "csharp" });
   else if (status === "failed" && errors === 0) {

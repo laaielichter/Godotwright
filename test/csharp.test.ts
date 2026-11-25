@@ -2,7 +2,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkProject } from "../src/check/check.js";
-import { buildCSharp, findCSharpProject, findDotnet, parseMsbuildOutput } from "../src/check/csharp-build.js";
+import { buildCSharp, findCSharpProject, findDotnet, isRestored, parseMsbuildOutput } from "../src/check/csharp-build.js";
 import { buildGraph } from "../src/deps/deps.js";
 import { allClasses, maskCSharp, outlineCSharp, pascalToSnake, sameGodotName, scriptClass, snakeToPascal } from "../src/godot/csharp.js";
 import { reviewProject } from "../src/review/review.js";
@@ -604,6 +604,55 @@ describe("C# build diagnostics", () => {
     ]);
   });
 
+  // Lines as dotnet 8.0.134 (MSBuild 17.8.64) printed them for a project made by `godotwright new project --dotnet`
+  // (Godot.NET.Sdk 4.7.0), with the project folder replaced by ROOT. Nothing else was changed.
+  const REAL = {
+    compileError: "ROOT/scripts/Bad.cs(7,15): error CS0103: The name 'missing' does not exist in the current context [ROOT/Cs.csproj]",
+    warning: "ROOT/scripts/Bad.cs(8,10): warning CS0219: The variable 'unused' is assigned but its value is never used [ROOT/Cs.csproj]",
+    // -warnaserror: the same diagnostic, worded as an error.
+    warningAsError: "ROOT/scripts/Bad.cs(7,10): error CS0219: The variable 'unused' is assigned but its value is never used [ROOT/Cs.csproj]",
+    // A .csproj that is not valid XML: a location in the project file, and no [project] at the end.
+    brokenProject: "ROOT/Cs.csproj(5,5): error MSB4025: The project file could not be loaded. The 'PropertyGroup' start tag on line 2 position 4 does not match the end tag of 'PropertyGrou'. Line 5, position 5.",
+    // No location at all, followed by a line that is not a diagnostic.
+    noProject: "MSBUILD : error MSB1009: Project file does not exist.\nSwitch: Nope.sln",
+    missingPackage: "ROOT/Cs.csproj : error NU1101: Unable to find package No.Such.Package.Gw. No packages exist with this id in source(s): nuget.org [ROOT/Cs.sln]",
+    sdkTargets:
+      "/usr/lib/dotnet/sdk/8.0.134/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets(166,5): error NETSDK1045: The current .NET SDK does not support targeting .NET 99.0.  Either target .NET 8.0 or lower, or use a version of the .NET SDK that supports .NET 99.0. Download the .NET SDK from https://aka.ms/dotnet/download [ROOT/Cs.csproj]",
+    // Default verbosity prints every diagnostic again in the summary.
+    summary: ["", "Build FAILED.", "", "ROOT/scripts/Bad.cs(8,10): warning CS0219: The variable 'unused' is assigned but its value is never used [ROOT/Cs.csproj]", "ROOT/scripts/Bad.cs(7,15): error CS0103: The name 'missing' does not exist in the current context [ROOT/Cs.csproj]", "    1 Warning(s)", "    1 Error(s)", "", "Time Elapsed 00:00:03.44"].join("\n"),
+    // DOTNET_CLI_UI_LANGUAGE=de: only the text is translated, so the line still parses; builds run in English.
+    german: 'ROOT/scripts/Bad.cs(7,10): warning CS0219: Die Variable "unused" ist zugewiesen, ihr Wert wird aber nie verwendet. [ROOT/Cs.csproj]',
+  };
+
+  it("reads what a real dotnet build printed", () => {
+    const root = "/home/me/game";
+    const parse = (...lines: string[]) => parseMsbuildOutput(lines.join("\n").replaceAll("ROOT", root), root);
+    expect(parse(REAL.compileError, REAL.warning, REAL.summary)).toEqual([
+      { severity: "error", file: "res://scripts/Bad.cs", line: 7, message: "CS0103: The name 'missing' does not exist in the current context", source: "csharp" },
+      { severity: "warning", file: "res://scripts/Bad.cs", line: 8, message: "CS0219: The variable 'unused' is assigned but its value is never used", source: "csharp" },
+    ]);
+    expect(parse(REAL.warningAsError)).toEqual([{ severity: "error", file: "res://scripts/Bad.cs", line: 7, message: "CS0219: The variable 'unused' is assigned but its value is never used", source: "csharp" }]);
+    expect(parse(REAL.brokenProject)).toEqual([
+      { severity: "error", file: "res://Cs.csproj", line: 5, message: "MSB4025: The project file could not be loaded. The 'PropertyGroup' start tag on line 2 position 4 does not match the end tag of 'PropertyGrou'. Line 5, position 5.", source: "csharp" },
+    ]);
+    expect(parse(REAL.noProject)).toEqual([{ severity: "error", message: "MSB1009: Project file does not exist.", source: "csharp" }]);
+    expect(parse(REAL.missingPackage)).toEqual([{ severity: "error", file: "res://Cs.csproj", message: "NU1101: Unable to find package No.Such.Package.Gw. No packages exist with this id in source(s): nuget.org", source: "csharp" }]);
+    const sdk = parse(REAL.sdkTargets);
+    expect(sdk).toHaveLength(1);
+    expect(sdk[0]).toMatchObject({ severity: "error", source: "csharp" });
+    expect(sdk[0]!.file).toBeUndefined();
+    expect(sdk[0]!.message).toMatch(/^NETSDK1045: The current \.NET SDK does not support targeting \.NET 99\.0\..*\(\/usr\/lib\/dotnet\/sdk\/8\.0\.134\/Sdks\/Microsoft\.NET\.Sdk\/targets\/Microsoft\.NET\.TargetFrameworkInference\.targets:166\)$/);
+    expect(parse(REAL.german)).toEqual([{ severity: "warning", file: "res://scripts/Bad.cs", line: 7, message: 'CS0219: Die Variable "unused" ist zugewiesen, ihr Wert wird aber nie verwendet.', source: "csharp" }]);
+  });
+
+  it("knows a restored project by where the Godot.NET.Sdk keeps obj/", () => {
+    const root = makeProject({ "project.godot": PROJECT, "CsDemo.csproj": "<Project />" });
+    expect(isRestored(root, "CsDemo.csproj")).toBe(false);
+    mkdirSync(join(root, ".godot", "mono", "temp", "obj"), { recursive: true });
+    writeFileSync(join(root, ".godot", "mono", "temp", "obj", "project.assets.json"), "{}");
+    expect(isRestored(root, "CsDemo.csproj")).toBe(true);
+  });
+
   it("finds the project file Godot builds", () => {
     const root = makeProject({ "project.godot": PROJECT, "Tools.csproj": "<Project />", "CsDemo.csproj": "<Project />", "CsDemo.sln": "" });
     expect(findCSharpProject(root)).toEqual({ csproj: "CsDemo.csproj", sln: "CsDemo.sln" });
@@ -632,8 +681,8 @@ describe("C# build diagnostics", () => {
     const failing = fakeDotnet(msbuildLines(root));
     const r = await buildCSharp(root, { dotnet: failing.bin, configuration: "ExportDebug" });
     expect(r).toMatchObject({ status: "failed", target: "CsDemo.sln", restored: true, errors: 5, warnings: 3, exitCode: 1 });
-    expect(r.note).toBe("dotnet build CsDemo.sln: 5 errors, 3 warnings (NuGet packages were restored first: obj/project.assets.json was missing)");
-    expect(JSON.parse(readFileSync(join(failing.dir, "calls.log"), "utf8").trim())).toEqual(["build", "CsDemo.sln", "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "-c", "ExportDebug"]);
+    expect(r.note).toBe("dotnet build CsDemo.sln: 5 errors, 3 warnings (NuGet packages were restored first: there was no project.assets.json)");
+    expect(JSON.parse(readFileSync(join(failing.dir, "calls.log"), "utf8").trim())).toEqual(["build", "CsDemo.sln", "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "--no-incremental", "-c", "ExportDebug"]);
     // Restored before: no restore, so no network.
     mkdirSync(join(root, "obj"));
     writeFileSync(join(root, "obj", "project.assets.json"), "{}");
