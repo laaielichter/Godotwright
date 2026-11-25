@@ -408,10 +408,10 @@ class Migrator {
         const close = closeParen(line, open, mask);
         if (close < 0) {
           // The call goes on over more lines: say what it becomes instead of guessing where it ends.
-          this.todo(`${from}() is gone in Godot 4: use ${to.replace("$", "...")}`);
+          this.todo(`${from}() is gone in Godot 4: use ${to.replaceAll("$", "...")}`);
           continue;
         }
-        const toText = to.replace("$", () => line.slice(open + 1, close));
+        const toText = to.replaceAll("$", () => line.slice(open + 1, close));
         this.note("moved", line.slice(m.index, close + 1), toText);
         line = line.slice(0, m.index) + toText + line.slice(close + 1);
         at = m.index + toText.length;

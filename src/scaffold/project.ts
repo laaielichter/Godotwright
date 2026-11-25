@@ -168,13 +168,14 @@ export function newProject(dir: string, options: NewProjectOptions = {}): NewPro
   const skipped: string[] = [];
   for (const [rel, text] of files) {
     const full = join(root, rel);
-    if (existsSync(full)) {
+    // "wx" fails on a file that is there, so nothing is ever overwritten, also not one that appeared just now.
+    try {
+      writeFileSync(full, text, { flag: "wx" });
+      created.push(rel);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       skipped.push(rel);
-      continue;
     }
-    // "wx": a file that appeared in the meantime is not overwritten either.
-    writeFileSync(full, text, { flag: "wx" });
-    created.push(rel);
   }
 
   const notes: string[] = [];

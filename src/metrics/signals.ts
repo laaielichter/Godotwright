@@ -82,6 +82,37 @@ function lastName(chain: string): { receiver: string; name: string } | undefined
   return m && !/^\d/.test(m[2]!) ? { receiver: (m[1] ?? "").trim(), name: m[2]! } : undefined;
 }
 
+/** `x.method.bind(a).unbind(1)` without its trailing bind calls: one pass over the text, brackets counted. */
+function withoutBinds(arg: string): string {
+  const BIND = /^\s*\.\s*(?:bind|bindv|unbind)\s*\(/u;
+  let depth = 0;
+  for (let i = 0; i < arg.length; i++) {
+    const ch = arg[i]!;
+    if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") depth--;
+    else if (depth === 0 && (ch === "." || /\s/u.test(ch)) && BIND.test(arg.slice(i)) && onlyBinds(arg.slice(i), BIND)) return arg.slice(0, i);
+  }
+  return arg;
+}
+
+/** Whether the text is bind calls and nothing else, to its end. */
+function onlyBinds(rest: string, bind: RegExp): boolean {
+  let text = rest;
+  while (text.trim() !== "") {
+    const m = bind.exec(text);
+    if (!m) return false;
+    let depth = 1;
+    let i = m[0].length;
+    for (; i < text.length && depth > 0; i++) {
+      if (text[i] === "(") depth++;
+      else if (text[i] === ")") depth--;
+    }
+    if (depth !== 0) return false;
+    text = text.slice(i);
+  }
+  return true;
+}
+
 export function signalFlow(path: string, options: MetricsOptions = {}): SignalReport {
   const data = loadProject(path, options);
   const api = GodotApi.load();
@@ -260,7 +291,7 @@ function connectTarget(ll: LogicalLine, args: string[], index: number, argText: 
     const name = /,\s*[&^]?["'](\w+)["']\s*\)/u.exec(argText(index))?.[1];
     return name ? { on: made[1]!, method: name, literal: true } : undefined;
   }
-  const plain = arg.replace(/(?:\s*\.\s*(?:bind|bindv|unbind)\s*\(.*\))+$/su, "");
+  const plain = withoutBinds(arg);
   const target = lastName(plain);
   if (!target || !/^[\w.$%/"' ()[\]]*$/u.test(plain)) return undefined;
   return { on: target.receiver === "" ? "self" : target.receiver, method: target.name };

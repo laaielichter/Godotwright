@@ -156,7 +156,12 @@ export function installMergeDriver(path: string, command = "npx -y godotwright")
   run(["config", "merge.godotwright.name", "Godotwright: merge Godot scenes and resources by meaning"]);
   run(["config", "merge.godotwright.driver", driver]);
   const attributes = join(root, ".gitattributes");
-  const current = existsSync(attributes) ? readFileSync(attributes, "utf8") : "";
+  let current = "";
+  try {
+    current = readFileSync(attributes, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const have = new Set(current.split(/\r?\n/).map((l) => l.trim()));
   const added = ATTRIBUTES.filter((l) => !have.has(l));
   if (added.length) writeFileSync(attributes, `${current}${current && !current.endsWith("\n") ? "\n" : ""}${added.join("\n")}\n`);
