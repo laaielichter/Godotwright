@@ -812,8 +812,8 @@ editor: the editor is not running or the addon is not enabled: install it with `
 ```
 
 The addon runs in a headless Godot 4.7.2 editor in an integration test (the looking ops, open, close, reload,
-reimport, the edit ops and save_scene). Not proven yet: `screenshot` and `play` (a headless editor draws nothing and
-kept no game running), and the editor with a window. Every engine method it calls is also looked up in the bundled
+reimport, the edit ops and save_scene); `play`, `stop` and `screenshot` ran in an editor with a window (Linux). Not
+proven yet: Windows and macOS. Every engine method it calls is also looked up in the bundled
 class reference by a test. How it talks, every op and the manual test: [editor-bridge.md](editor-bridge.md).
 
 ## Find leaks

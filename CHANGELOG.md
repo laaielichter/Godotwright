@@ -4,6 +4,19 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Fixes from a run of the new tools in Godot 4.7.2, on a copy of a large game.**
+  - A relative `ext_resource` path (`path="flight.gd"`, `"../shared/fx.tres"`) is read from the scene's folder, as
+    Godot loads it. Before, `godot_check` and the review called those files missing, and `godot_scene_edit`,
+    `godot_tilemap` and `godot_animation` did not find a script or scene named that way (and could add a second
+    `ext_resource` for the same file). A relative path that climbs out of the project is still reported.
+  - `godotwright new script` with `character_2d` or `character_3d` adds the input actions it reads to project.godot
+    when they are missing (A, D, W, S, Space), in the same undo entry, so the script is clean in the review as
+    promised; `--no-input-actions` (MCP: `input_actions: false`) leaves project.godot alone.
+  - `godotwright new shader` without `--kind` makes a `spatial` shader when the main scene is 3D.
+  - Every command with a `[path]` argument also takes `--path <dir>`, as `format` does.
+  - The editor bridge shows the playing scene and the main scene as res:// instead of the uid:// the main scene
+    setting holds. `play`, `stop` and `screenshot` ran in a Godot 4.7.2 editor with a window (Linux).
+
 - **C#: Godot's own `.csproj`, and a migration that leaves less and says all of it.**
   - A new C# project's `.csproj` is now byte for byte what Godot 4.7.2's own project generator writes (run from the
     4.7.2 .NET download to compare): `Godot.NET.Sdk/4.7.2` (it was 4.7.0), Godot's `net9.0` line for Android, and

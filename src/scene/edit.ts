@@ -7,7 +7,7 @@ import { outlineCSharp, sameGodotName, scriptClass } from "../godot/csharp.js";
 import { csharpClassIndex, godotTypeOf, resolveCSharpClass } from "../scan/csharp.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
-import { fromResPath, toResPath } from "../project/files.js";
+import { fromResPath, readResourceAt, toResPath, withLoadPaths } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { lockedInstances } from "../review/checks/integrity.js";
 import { loadProject, projectRootOf } from "../scan/scan.js";
@@ -229,7 +229,7 @@ function nodeClass(api: GodotApi, type: string): string {
 function rootClassOf(root: string, path: string | undefined): string | undefined {
   for (let depth = 0; path && depth < 8; depth++) {
     if (!existsSync(fromResPath(root, path))) return undefined;
-    const sub = parseResourceText(readFileSync(fromResPath(root, path), "utf8"));
+    const sub = readResourceAt(root, path);
     const top = sub.nodes[0];
     if (top?.type) return top.type;
     path = sub.extResources.find((e) => e.id === top?.instanceRef)?.path;
@@ -329,7 +329,7 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
   const eol = eolOf(original);
   const lines = original.split(eol);
   const blocks = blocksOf(lines);
-  const scene = parseResourceText(original);
+  const scene = withLoadPaths(parseResourceText(original), resPath);
   const api = GodotApi.load();
   const splices: Splice[] = [];
   const warnings: string[] = [];
@@ -362,7 +362,7 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
     if (!path && node.instanceRef) {
       const scenePathOf = extPath(node.instanceRef);
       if (scenePathOf && existsSync(fromResPath(root, scenePathOf))) {
-        const sub = parseResourceText(readFileSync(fromResPath(root, scenePathOf), "utf8"));
+        const sub = readResourceAt(root, scenePathOf);
         path = sub.extResources.find((e) => e.id === sub.nodes[0]?.scriptRef)?.path;
       }
     }
@@ -616,7 +616,7 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
         const names: string[] = [];
         let path = extPath(node.instanceRef);
         for (let depth = 0; path && depth < 8 && existsSync(fromResPath(root, path)); depth++) {
-          const sub = parseResourceText(readFileSync(fromResPath(root, path), "utf8"));
+          const sub = readResourceAt(root, path);
           for (const n of sub.nodes) if (n.path !== "." && !n.path.includes("/")) names.push(n.name);
           path = sub.extResources.find((e) => e.id === sub.nodes[0]?.instanceRef)?.path;
         }

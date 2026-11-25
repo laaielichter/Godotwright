@@ -1056,7 +1056,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "New project, script or shader from a template",
       description:
-        "Starts things the way Godot 4.7 expects them. op project: a new project in an empty folder (project.godot, a main scene with a typed root and its script, an icon, .gitignore and .gitattributes; kind 2d, 3d or ui; renderer forward_plus, mobile or gl_compatibility). `dotnet: true` makes it a C# project: it also writes <Name>.csproj (Godot.NET.Sdk, net8.0) and <Name>.sln as Godot generates them, and sets the assembly name. op script: a typed GDScript from a template that passes the review with no errors or warnings: node, character_2d, character_3d, area_trigger, state_machine, autoload, resource, ui_control, test_gut, test_gdunit4; the result names the input actions the script uses so you can add them with godot_project_edit. A file that ends in .cs gets the C# form instead (a partial class named after the file, with [Export] and [Signal] where they fit): node, character_2d, character_3d, area_trigger, autoload, resource, ui_control. op shader: canvas_item, spatial, particles, sky or fog. Nothing that exists is overwritten. Scripts and shaders are written unless write is false; godot_undo takes them back.",
+        "Starts things the way Godot 4.7 expects them. op project: a new project in an empty folder (project.godot, a main scene with a typed root and its script, an icon, .gitignore and .gitattributes; kind 2d, 3d or ui; renderer forward_plus, mobile or gl_compatibility). `dotnet: true` makes it a C# project: it also writes <Name>.csproj (Godot.NET.Sdk, net8.0) and <Name>.sln as Godot generates them, and sets the assembly name. op script: a typed GDScript from a template that passes the review with no errors or warnings: node, character_2d, character_3d, area_trigger, state_machine, autoload, resource, ui_control, test_gut, test_gdunit4; the input actions a template reads (move_left, jump, ...) are added to project.godot with a default key when it lacks them, in the same godot_undo entry (input_actions: false leaves project.godot alone and lists them instead). A file that ends in .cs gets the C# form instead (a partial class named after the file, with [Export] and [Signal] where they fit): node, character_2d, character_3d, area_trigger, autoload, resource, ui_control. op shader: canvas_item, spatial, particles, sky or fog (default: spatial when the main scene is 3D, else canvas_item). Nothing that exists is overwritten. Scripts and shaders are written unless write is false; godot_undo takes them back.",
       inputSchema: {
         path: pathParam,
         op: z.enum(["project", "script", "shader"]).describe("what to make"),
@@ -1071,7 +1071,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         template: z.enum(SCRIPT_TEMPLATES).optional().describe("script: the template (default node); for a .cs file: node, character_2d, character_3d, area_trigger, autoload, resource or ui_control"),
         class_name: z.string().optional().describe("script: a class_name for it (a C# class always has the name of its file)"),
         base: z.string().optional().describe("script: the class it extends, when the template allows another"),
-        shader: z.enum(SHADER_KINDS).optional().describe("shader: the shader type (default canvas_item)"),
+        shader: z.enum(SHADER_KINDS).optional().describe("shader: the shader type (default: spatial when the main scene is 3D, else canvas_item)"),
+        input_actions: z.boolean().optional().describe("script: add the input actions the template reads to project.godot when missing (default true)"),
         write: z.boolean().optional().describe("script or shader: false shows the file without writing it (default true)"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -1085,8 +1086,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (!args.file) return failure(`op ${args.op} needs file (the res:// path of the new file)`);
         const project = where(args.path);
         const write = args.write === false ? { write: false } : {};
-        if (args.op === "shader") return text(formatNewShader(newShader(project, args.file, args.shader ?? "canvas_item", write)));
-        return text(formatNewScript(newScript(project, args.file, { ...(args.template ? { template: args.template } : {}), ...(args.class_name ? { className: args.class_name } : {}), ...(args.base ? { base: args.base } : {}), ...write })));
+        if (args.op === "shader") return text(formatNewShader(newShader(project, args.file, args.shader, write)));
+        return text(formatNewScript(newScript(project, args.file, { ...(args.template ? { template: args.template } : {}), ...(args.class_name ? { className: args.class_name } : {}), ...(args.base ? { base: args.base } : {}), ...(args.input_actions === false ? { inputActions: false } : {}), ...write })));
       } catch (error) {
         if (error instanceof ScaffoldError || error instanceof ProjectNotFoundError) return failure(error.message);
         throw error;

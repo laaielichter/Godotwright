@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { closest } from "../api/api.js";
 import { parseResourceText, refId, type ResourceFile, type SceneNode } from "../godot/scene.js";
 import type { Variant } from "../godot/variant.js";
-import { fromResPath } from "../project/files.js";
+import { fromResPath, readResourceAt } from "../project/files.js";
 import { TILE_MAP_DATA_FORMAT, TileDataError, cellKey, decodeTileMapData, encodeTileMapData, formatTileMapDataValue, readTileMapDataValue, type TileCell, type TileDataEncoding } from "./codec.js";
 import { TextEditError, blockAt, finishPlan, formatTextPlan, openDoc, removeProp, setProp, type Doc, type OpenOptions, type TextEditPlan } from "./plan.js";
 
@@ -151,7 +151,7 @@ function tileSetOf(doc: Doc, node: SceneNode, warnings: string[]): TileSetInfo |
     return undefined;
   }
   try {
-    const file = parseResourceText(readFileSync(fromResPath(doc.root, path), "utf8"));
+    const file = readResourceAt(doc.root, path);
     return { path, sources: tileSetSources(file, file.resource?.props ?? {}) };
   } catch {
     warnings.push(`${path} could not be read, so sources and atlas coordinates are not checked`);

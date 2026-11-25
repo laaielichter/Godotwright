@@ -6,7 +6,7 @@ import { applySplices, blocksOf, contentEnd, propSpan, type Block, type Splice }
 import { parseResourceText } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { asString } from "../godot/variant.js";
-import { fromResPath, isInside } from "../project/files.js";
+import { fromResPath, isInside, withLoadPaths } from "../project/files.js";
 import { resourceType, scriptFacts } from "../scene/edit.js";
 import { uidOf } from "../scene/uid.js";
 import { ResourceEditError, type ResourceOp } from "./types.js";
@@ -51,7 +51,7 @@ export function planTres(root: string, resPath: string, original: string, ops: R
   for (const edit of ops) {
     const lines = text.split(eol);
     const blocks = blocksOf(lines);
-    const file = parseResourceText(text);
+    const file = withLoadPaths(parseResourceText(text), resPath);
     const splices: Splice[] = [];
     const head = blocks[0];
     const resourceBlock = blocks.find((b) => b.tag === "resource");

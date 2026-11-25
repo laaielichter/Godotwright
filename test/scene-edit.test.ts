@@ -223,3 +223,36 @@ describe("scene edits inside instanced scenes", () => {
     expect(off.warnings).toEqual(["1 edit inside it will be dropped on the next save from the editor"]);
   });
 });
+
+describe("scenes with relative ext_resource paths", () => {
+  const files = {
+    "project.godot": '[application]\nconfig/name="T"\n',
+    "ships/part.tscn": '[gd_scene format=3]\n\n[node name="Part" type="Sprite2D"]\n',
+    "ships/main.tscn": [
+      "[gd_scene format=3]",
+      "",
+      '[ext_resource type="PackedScene" path="part.tscn" id="1_part"]',
+      "",
+      '[node name="Main" type="Node2D"]',
+      "",
+      '[node name="Part" parent="." instance=ExtResource("1_part")]',
+      "",
+    ].join("\n"),
+  };
+
+  it("know the class of a node instanced through a relative path (as Godot loads it)", () => {
+    const root = makeProject(files);
+    const plan = editScene(join(root, "ships/main.tscn"), { op: "set", node: "Part", property: "flip_h", value: "true" }, { write: true });
+    expect(plan.summary).toMatch(/flip_h/);
+    expect(readFileSync(join(root, "ships/main.tscn"), "utf8")).toContain("flip_h = true");
+    expect(() => editScene(join(root, "ships/main.tscn"), { op: "set", node: "Part", property: "flip_hh", value: "true" })).toThrow(/did you mean flip_h/);
+  });
+
+  it("reuse the relative ext_resource instead of adding a second one for the same file", () => {
+    const root = makeProject(files);
+    editScene(join(root, "ships/main.tscn"), { op: "add_node", parent: ".", name: "Part2", instance: "res://ships/part.tscn" }, { write: true });
+    const text = readFileSync(join(root, "ships/main.tscn"), "utf8");
+    expect(text.match(/\[ext_resource/g)).toHaveLength(1);
+    expect(text).toContain('[node name="Part2" parent="." instance=ExtResource("1_part")]');
+  });
+});

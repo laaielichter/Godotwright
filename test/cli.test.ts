@@ -238,3 +238,21 @@ describe("godotwright check options", () => {
     expect(output).toContain("check timed out");
   }, 20_000);
 });
+
+describe("--path on every command with a [path] argument", () => {
+  it("means the same as the argument, and refuses two different paths", async () => {
+    const byArg = await run(["scan", DEMO, "--json"]);
+    const byOption = await run(["scan", "--path", DEMO, "--json"]);
+    expect(byOption.exitCode).toBe(0);
+    expect(byOption.output).toBe(byArg.output);
+    const both = await run(["scan", DEMO, "--path", "/elsewhere"]);
+    expect(both.exitCode).not.toBe(0);
+    expect(both.output).toMatch(/give the path once/);
+  });
+
+  it("is on check and scan, and not added twice where a command has --path already", () => {
+    const find = (names: string[]) => names.reduce<Command | undefined>((c, n) => c?.commands.find((x) => x.name() === n), createProgram());
+    for (const name of [["check"], ["scan"], ["perf"], ["metrics", "complexity"]]) expect(find(name)?.options.filter((o) => o.long === "--path"), name.join(" ")).toHaveLength(1);
+    expect(find(["format"])?.options.filter((o) => o.long === "--path")).toHaveLength(1);
+  });
+});

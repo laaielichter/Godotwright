@@ -5,8 +5,9 @@ are open and unsaved, the selection, the edited scene tree, the editor's errors,
 screenshot, a filesystem scan, and edits of the open scene (set a property, add, remove or rename a node), each one
 undo step in the editor. It is optional: every other Godotwright tool works without it.
 
-> Run in a headless Godot 4.7.2 editor by Godotwright's tests (the read ops, the edit ops, save, reload, reimport).
-> Not proven yet: the editor with a window, `screenshot` and `play`. Every engine method it calls is also checked
+> Run in a headless Godot 4.7.2 editor by Godotwright's tests (the read ops, the edit ops, save, reload, reimport),
+> and play, stop and screenshot in a Godot 4.7.2 editor with a window (Linux).
+> Not proven yet: Windows and macOS. Every engine method it calls is also checked
 > against the Godot 4.7.2 class reference. What is left to check by hand is in `docs/editor-bridge.md` of the
 > Godotwright repository.
 

@@ -46,7 +46,7 @@ import { maybeShare, takeShareNotice } from "./learn/share.js";
 import { GODOT_TARGET, VERSION } from "./version.js";
 
 export function createProgram(): Command {
-  return new Command()
+  return withPathOption(new Command()
     .name("godotwright")
     .description(
       `AAA coding toolkit for Godot ${GODOT_TARGET}. Makes any coding agent better at Godot.`,
@@ -109,5 +109,27 @@ export function createProgram(): Command {
       const notice = takeShareNotice();
       if (notice) process.stderr.write(`\n${notice}\n`);
       await maybeShare();
-    });
+    }));
+}
+
+/**
+ * Every command that takes the project as a `[path]` argument also takes `--path <dir>`, as `format` and the
+ * commands with file arguments do, so `check --path game` and `check game` mean the same.
+ */
+export function withPathOption(program: Command): Command {
+  const visit = (cmd: Command): void => {
+    const index = cmd.registeredArguments.findIndex((a) => a.name() === "path");
+    if (index >= 0 && !cmd.options.some((o) => o.long === "--path")) {
+      cmd.option("--path <dir>", "the same as the path argument");
+      cmd.hook("preAction", (self) => {
+        const value = self.getOptionValue("path") as string | undefined;
+        if (value === undefined) return;
+        if (self.args.length > index && self.args[index] !== value) self.error(`error: give the path once: as an argument (${self.args[index]}) or with --path (${value})`);
+        self.processedArgs[index] = value;
+      });
+    }
+    for (const sub of cmd.commands) visit(sub);
+  };
+  visit(program);
+  return program;
 }
