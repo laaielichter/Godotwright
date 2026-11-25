@@ -3,8 +3,8 @@
   "name": "godotwright",
   "display_name": "Godotwright",
   "version": "0.0.0",
-  "description": "Godot 4 tools for Claude: offline Godot 4.7 API, project map, headless checks, safe edits, tests, 3D models and an AAA GDScript review.",
-  "long_description": "Godotwright gives Claude checked Godot 4.7 knowledge for your project: the official class reference offline (with Godot 3 names translated), a map of your scenes, scripts, signals and input actions, a static AAA review with scores, headless checks with Godot, safe edits to scenes and project settings, unit tests, play-testing with input, screenshots, and 3D models built, viewed and checked from code. Choose your Godot project folder in the settings; tools also accept a path.",
+  "description": "Godot 4 tools for Claude: offline Godot 4.7 API, project map, headless checks, safe edits, scene merges, a GDScript formatter, C# checks, tests, 3D models and an AAA GDScript review.",
+  "long_description": "Godotwright gives Claude checked Godot 4.7 knowledge for your project: the official class reference offline (with Godot 3 names translated), a map of your scenes, scripts, signals and input actions, a static AAA review with scores, headless checks with Godot, safe edits to scenes, TileMaps, animations and project settings, a merge of scenes and resources by meaning, a GDScript formatter, checks for C# projects, unit tests, play-testing with input, screenshots, and 3D models built, viewed and checked from code. Choose your Godot project folder in the settings; tools also accept a path.",
   "author": {
     "name": "laaielichter",
     "url": "https://github.com/laaielichter"
@@ -30,7 +30,7 @@
     }
   },
   "tools_generated": true,
-  "keywords": ["godot", "godot4", "gdscript", "gamedev"],
+  "keywords": ["godot", "godot4", "gdscript", "gamedev", "formatter", "merge-driver", "csharp"],
   "license": "MIT",
   "privacy_policies": ["https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md"],
   "compatibility": {

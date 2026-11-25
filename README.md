@@ -3,7 +3,8 @@
 </p>
 <h1 align="center">Godotwright</h1>
 <p align="center"><b>Big worlds. Better code. Keep creating.</b><br>
-MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Codex, Cursor, VS Code, Gemini CLI and any MCP client. No editor needed.</p>
+MCP server, CLI and Claude Code plugin for Godot 4.7. Checks what your agent writes, merges scenes by meaning, and finds the commit that broke it.<br>
+Works with Claude Code, Codex, Cursor, VS Code, Gemini CLI and any MCP client. No editor plugin needed; there is an optional one.</p>
 <p align="center">
   <a href="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml"><img src="https://github.com/laaielichter/Godotwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://www.npmjs.com/package/godotwright"><img src="https://img.shields.io/npm/v/godotwright" alt="npm version"></a>
@@ -37,8 +38,19 @@ MCP server, CLI and Claude Code plugin for Godot 4.7. Works with Claude Code, Co
 
 Coding agents learned Godot from years of Godot 3 tutorials. They write `yield`, `export var` and `KinematicBody2D`,
 invent methods, and wire signals to nodes that are not in the scene. Godotwright is the check between the agent and your
-project: the real Godot 4.7 API offline, a scored review of every script, headless Godot runs, and safe edits. It works
-from files, so it needs no open editor, and it works fine next to an editor-driving MCP server.
+project: the real Godot 4.7 API offline, a scored review of every script, headless Godot runs, and safe edits.
+
+Two things no other Godot server has:
+
+- **Scenes that merge.** Two branches, or two agents in two worktrees, each add a node to the same scene. Git gives a
+  conflict, or a file Godot cannot load. `godotwright merge --install` sets up a git merge driver that merges `.tscn`,
+  `.tres` and `project.godot` by meaning, so `git merge` finishes by itself.
+- **The commit that broke it.** `godotwright bisect` reviews the project as it was at each commit and halves the range
+  to the first commit with the problem. The working tree is not touched.
+
+It works from files, so it needs no open editor and no editor plugin: scene and TileMap edits, animations, a GDScript
+formatter, C# checks and metrics all run in CI and on a machine without Godot. When you want the open editor too,
+there is an optional addon (`godot_editor`), and it works fine next to an editor-driving MCP server.
 
 ## Without and with
 
@@ -49,6 +61,11 @@ from files, so it needs no open editor, and it works fine next to an editor-driv
 | renames a signal or moves a file | breaks the scene connections and `.uid` files | `rename` changes code, scenes, connections and `.uid` files together, dry run first |
 | says "it works" | without running anything | `check`, `test` and `play` run it headless and report `file:line` |
 | writes a shader | `hint_albedo`, `SCREEN_TEXTURE`, `ALBEDO` in a 2D shader | reviewed against Godot 4.7's shader tables and compiled headless; `fix` renames the Godot 3 names |
+| merges two branches that changed one scene | a conflict, or a clean merge of a file Godot cannot load | a git merge driver merges nodes by path and properties one by one, with resource ids renumbered |
+| hears "it worked yesterday" | reads forty diffs | `bisect` names the first commit with the problem |
+| restructures a scene | hand-edits the `.tscn` and misses a path | `scene` renames, moves and duplicates nodes; children, connections and NodePaths follow |
+| formats a script | may change what the code does | `format` changes whitespace only; a guard compares the tokens before and after |
+| works on a C# project | finds a class that is not `partial` at build time | review rules for it, scene connections checked against C# methods, `dotnet build` errors by file and line |
 | copies a scene or writes a `.tscn` by hand | duplicate or invalid uids, edits Godot drops on the next save | caught from the files alone; `fix` repairs uids across files, with undo |
 | says the build works | never exports it | `export run` exports headless, reads the `.pck`, checks it against what the game loads and runs it; patch packs too |
 | changes the HUD | cannot see what changed | screenshot baselines with a pixel diff, in scenarios and in CI |
@@ -91,7 +108,58 @@ edits is now reviewed right after the edit, and its errors go straight back to C
 Run the agent from the Godot project folder, or pass `--project <path>`. `--tier premium` gives full detail for large
 models; `--tier cheap` (the default) gives short output and step-by-step instructions for small ones. Needs Node.js 22.12+.
 
-## New in 0.6.0
+## What is new
+
+Not released yet (on `main`, after 0.8.0):
+
+- **Scenes that merge.** Two branches, or two agents in two worktrees, that each add a node to the same scene give git
+  a conflict, or a clean merge of a file Godot cannot load (both sides numbered their new resource `3`). `godot_merge`
+  merges `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids
+  renumbered so both sides fit. `godotwright merge --install` sets it up as the git merge driver, so `git merge`
+  finishes by itself; only a property both sides really changed differently is left to decide.
+- **Which commit broke it.** `godot_bisect` reviews the project as it was at each commit and halves the range to the
+  first commit with the problem, without touching the working tree. An agent that made forty commits gets one commit
+  to read instead of forty diffs.
+- **What other Godot servers have, without an editor plugin.** Scene structure (`godot_scene_edit` creates scenes and
+  renames, moves and duplicates nodes with every path following), TileMapLayer cells (`godot_tilemap`), animations
+  (`godot_animation`), a formatter that cannot change what the code means (`godot_format`, `godotwright format --check`
+  for CI), complexity and signal flow (`godot_metrics`), new projects and scripts from templates (`godot_new`), export
+  presets (`godot_preset`) and translation checks (`godot_translations`). All of it works on the files, so it runs in
+  CI and on a machine without Godot.
+- **C# projects.** C# scripts are read like GDScript ones: classes, `[Export]`, `[Signal]`, methods and what they
+  load show up in the project map, usages and dependencies; a scene connection to a C# method is checked; the review
+  has four rules for the mistakes Godot only reports at build time (a script class that is not `partial`, a class name
+  that differs from the file, a signal delegate without `EventHandler`); `godot_check` runs `dotnet build` when it is
+  there and reports the compiler's errors by file and line.
+- **The open editor, when you want it.** `godot_editor` talks to the editor through an optional addon: what is open
+  and unsaved, the selection, the errors the editor logged, save, reload, play, stop and a screenshot. Without the
+  addon everything else works as before. See [docs/editor-bridge.md](docs/editor-bridge.md).
+
+Measured on a real project, from its files:
+
+| | Run on | Result |
+| --- | --- | --- |
+| Formatter | 12,472 scripts | 0 guard refusals, 0 not stable on a second run |
+| Scene operations | 433 scenes, 3,956 steps | 0 failures |
+| Merge | 494 scenes, resources and project files | 0 problems: each result parses and every reference resolves |
+
+The limits: none of this has been run in Godot yet. The results above were read back by Godotwright, not loaded by the
+engine. The editor addon has not run in an editor, no real `dotnet build` ran, and `godot_tilemap` and
+`godot_animation` are tested on fixtures.
+
+In 0.8.0:
+
+- **A tool list that costs almost nothing.** Every MCP tool definition is sent to the model on every turn: 53 tools
+  are about 28,700 tokens before the agent has done anything, and some clients stop at 40 tools. `godotwright mcp --lean`
+  offers two tools instead (`godot` runs any tool by name, `godot_help` gives its parameters): about 1,000 tokens, 96%
+  less, with the same tools and results behind them.
+- **The whole change, not the one file.** `godot_diff` reads a change by meaning (nodes, properties, connections,
+  script functions and exports instead of renumbered ids) and marks what it breaks elsewhere, such as a scene
+  connection to a function that is gone or an `@export` value a scene still saves; `godot_impact` walks back to every
+  scene, test and saved scenario the change reaches and lists the checks to run; `godot_collisions` maps physics
+  layers and masks and says who detects whom, with the exact mask value to set.
+
+Earlier:
 
 - **Shaders.** `godot_shader` reviews every shader against Godot 4.7's own shader tables (Godot 3 names, built-ins in
   the wrong place, read-only built-ins written, colours without `source_color`) and compiles it with Godot headless,
@@ -105,43 +173,11 @@ models; `--tier cheap` (the default) gives short output and step-by-step instruc
 - **Upgrades.** Godot 4.6 and 4.7 changes as review rules and fixes, `target` for a project on an older 4.x, and
   `compare_godot` to see what a 4.8 beta breaks.
 - **Resources and imports.** `godot_resource_edit` edits `.tres` files and import settings and verifies the reimport.
-- **The whole change, not the one file.** `godot_diff` reads a change by meaning (nodes, properties, connections,
-  script functions and exports instead of renumbered ids) and marks what it breaks elsewhere, such as a scene
-  connection to a function that is gone or an `@export` value a scene still saves; `godot_impact` walks back to every
-  scene, test and saved scenario the change reaches and lists the checks to run; `godot_collisions` maps physics
-  layers and masks and says who detects whom, with the exact mask value to set.
-- **Scenes that merge.** Two branches, or two agents in two worktrees, that each add a node to the same scene give git
-  a conflict, or a clean merge of a file Godot cannot load (both sides numbered their new resource `3`). `godot_merge`
-  merges `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids
-  renumbered so both sides fit. `godotwright merge --install` sets it up as the git merge driver, so `git merge`
-  finishes by itself; only a property both sides really changed differently is left to decide.
-- **What other Godot servers have, without an editor plugin.** Scene structure (`godot_scene_edit` creates scenes and
-  renames, moves and duplicates nodes with every path following), TileMapLayer cells (`godot_tilemap`), animations
-  (`godot_animation`), a formatter that cannot change what the code means (`godot_format`), complexity and signal flow
-  (`godot_metrics`), new projects and scripts from templates (`godot_new`), export presets (`godot_preset`) and
-  translation checks (`godot_translations`). All of it works on the files, so it runs in CI and on a machine without
-  Godot.
-- **C# projects.** C# scripts are read like GDScript ones: classes, `[Export]`, `[Signal]`, methods and what they
-  load show up in the project map, usages and dependencies; a scene connection to a C# method is checked; the review
-  has rules for the mistakes Godot only reports at build time (a script class that is not `partial`, a class name that
-  differs from the file, a signal delegate without `EventHandler`); `godot_check` runs `dotnet build` when it is
-  there and reports the compiler's errors by file and line.
-- **The open editor, when you want it.** `godot_editor` talks to the editor through an optional addon: what is open
-  and unsaved, the selection, the errors the editor logged, save, reload, play, stop and a screenshot. Without the
-  addon everything else works as before.
-- **Which commit broke it.** `godot_bisect` reviews the project as it was at each commit and halves the range to the
-  first commit with the problem, in a few seconds and without touching the working tree. An agent that made forty
-  commits gets one commit to read instead of forty diffs.
-- **A tool list that costs almost nothing.** Every MCP tool definition is sent to the model on every turn: 53 tools
-  are about 22,000 tokens before the agent has done anything, and some clients stop at 40 tools. `godotwright mcp --lean`
-  offers two tools instead (`godot` runs any tool by name, `godot_help` gives its parameters): about 900 tokens, 96%
-  less, with the same tools and results behind them.
-- **For agents and teams.** Tool sets (`--tools core` is about a third of the tool list), `--lean`, `--read-only`,
+- **For agents and teams.** Tool sets (`--tools core` is about a fifth of the tool list), `--lean`, `--read-only`,
   structured results, progress and cancel for long Godot runs, and protected folders that no write may touch.
-
-0.5.0 brought `godot_code` (Godot's own GDScript language server: warnings at the project's levels, inferred types,
-definitions and completion, also for unsaved code), shader compilation by drawing (`godotwright shaders`, `godot_check`
-`shaders: true`) and visual tests with screenshot baselines; see the [changelog](CHANGELOG.md).
+- **Godot's own language server.** `godot_code`: warnings at the project's levels, inferred types, definitions and
+  completion, also for unsaved code. Shader compilation by drawing (`godotwright shaders`) and visual tests with
+  screenshot baselines.
 
 All changes: [CHANGELOG.md](CHANGELOG.md).
 
@@ -153,9 +189,23 @@ missing `$Node` paths, scene connections to missing methods, unknown input actio
 reports each error once, as `file:line`.
 
 **Change.** `rename` a function, signal, node or file everywhere; `project` edits settings, input actions and
-autoloads; `scene` adds nodes, sets properties, connects signals and attaches scripts. Each one checks names and types
-against Godot 4.7, shows a dry run first and touches only its own lines. `migrate` ports Godot 3 scripts to Godot 4
-where that is mechanical ([more on porting](https://laaielichter.github.io/Godotwright/godot-3-to-4.html)).
+autoloads; `scene` makes scenes, adds, renames, moves and duplicates nodes, sets properties and groups, connects
+signals and attaches scripts; `tilemap` and `animation` edit TileMapLayer cells and AnimationPlayer tracks in the scene
+file. Each one checks names and types against Godot 4.7, shows a dry run first and touches only its own lines.
+`format` formats GDScript to the official style guide, whitespace only. `new` makes a project, a typed script from a
+template or a shader. `migrate` ports Godot 3 scripts to Godot 4 where that is mechanical
+([more on porting](https://laaielichter.github.io/Godotwright/godot-3-to-4.html)).
+
+**Work on one project together.** `merge --install` makes git merge scenes, resources and `project.godot` by meaning.
+`diff` shows what a change means and what it breaks elsewhere, `impact` what it reaches, and `bisect` which commit
+brought a problem in.
+
+**C#.** Godot 4 .NET projects are read from the files: the project map, usages, scene checks against C# methods, four
+review rules, and `dotnet build` errors in `check` when the .NET SDK is installed. There is no C# language server,
+formatter, rename inside C# or migration.
+
+**The open editor, optionally.** `editor install` puts a small addon in the project (localhost, a new token every
+start). With it an agent sees what is open and unsaved and can save, reload, play, stop and take a screenshot.
 
 **Run and see.** `test` runs GUT or GdUnit4 tests and prints only what failed; `play` runs a scene, presses the keys
 you give on the frames you give, and prints the values you watch; `screenshot` renders a scene or a model to a PNG.
@@ -284,7 +334,7 @@ renders on the [asset library page](https://laaielichter.github.io/Godotwright/l
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
-| `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
+| `godot_scene_edit` | Make a scene, add (one or many), remove, rename, move and duplicate nodes, set properties and groups, connect signals, attach scripts and make instances editable in a `.tscn`; paths follow a rename or move; refuses a change Godot would drop on the next editor save |
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
@@ -330,26 +380,38 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | | Godotwright | Editor-driving Godot MCP servers | GDScript linters (gdtoolkit) | Godot's `--convert-3to4` |
 | --- | --- | --- | --- | --- |
 | Needs the Godot editor open | no | yes | no | no |
+| Needs an editor plugin | no; an optional addon adds the open editor | yes | no | no |
+| Merges scenes by meaning (git merge driver) | yes: `.tscn`, `.tres`, `project.godot` | no | no | no |
+| Finds the commit that broke it | yes (`godot_bisect`) | no | no | no |
 | Scored review (api, performance, quality, structure) | yes | no | style, naming, complexity | no |
 | Godot 3 code | flagged with the Godot 4 fix; `migrate` rewrites scripts | no | no | rewrites scripts, scenes and settings |
-| Live control of the open editor | no | yes | no | no |
+| Live control of the open editor | optional addon (`godot_editor`): open scenes, unsaved state, selection, errors, save, reload, play, stop, screenshot. No scene editing through it; it has not run in an editor yet | yes, with scene editing | no | no |
+| Scene editing (nodes, properties, connections) | yes, in the files, with a dry run and undo | yes, through the editor | no | no |
+| TileMap cells and animations | yes, in the scene file (tested on fixtures) | some do, through the editor | no | no |
+| GDScript formatter | yes, whitespace only, with a token guard; `format --check` for CI | some do | yes (`gdformat`) | no |
 | A running game to inspect and drive | yes, headless (`godot_session`) | some do, through the editor | no | no |
 | Shader review and compile | yes, headless, also in CI | compile through the editor (godot-ai) | no | renames only |
 | Export, read the `.pck` and run the build | yes, headless; patch packs | export or patch through the editor (Godot MCP Pro) | no | no |
 | Visual regression | screenshot baselines in scenarios and CI | screenshot diffs in one fork (grinry) | no | no |
-| Smaller tool list, read-only mode | `--lean` (2 tools, ~900 tokens for all 53), tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
-| C# (Godot 4 .NET) | from the files: an outline of each script (class, base, `[Export]`, `[Signal]`, methods), usages, scene checks against C# methods, signals and exports, a few certain review rules, and `dotnet build` errors in `godot_check` when the .NET SDK is installed. No C# language server, formatter, rename inside C# or migration | some do (a real build, script templates) | no | not yet |
+| Smaller tool list, read-only mode | `--lean` (2 tools, ~1,000 tokens for all 53), tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
+| C# (Godot 4 .NET) | from the files: an outline of each script (class, base, `[Export]`, `[Signal]`, methods), usages, scene checks against C# methods, signals and exports, four review rules, C# script templates, and `dotnet build` errors in `godot_check` when the .NET SDK is installed (no real build has run yet). No C# language server, formatter, rename inside C# or migration | some do (a real build, script templates) | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 
 Editor servers such as [godot-ai](https://github.com/hi-godot/godot-ai) and [Godot MCP Pro](https://github.com/youichi-uda/godot-mcp-pro)
-control the open editor and have more tools; paid in-editor assistants such as [Ziva](https://ziva.sh) write inside the
+control the open editor and edit scenes through it; paid in-editor assistants such as [Ziva](https://ziva.sh) write inside the
 editor. Godotwright works from files and checks what the agent writes, so they work well together: an editor server to
 drive the editor, Godotwright to check the code.
 
 ## FAQ
 
-**Does it need Godot installed?** Not for `scan`, `api`, `review`, `migrate` or the edits. `check`, `test`, `play` and
-`screenshot` run Godot 4.7 headless.
+**Does it need Godot installed?** Not for `scan`, `api`, `review`, `migrate`, `format`, `merge`, `bisect` or the
+edits. `check`, `test`, `play` and `screenshot` run Godot 4.7 headless.
+
+**Does it need an editor plugin?** No. Everything works from the files. `godotwright editor install` adds an optional
+addon for the open editor: what is open and unsaved, save, reload, play, stop, screenshot.
+
+**C#?** Yes, from the files: project map, usages, scene checks, four review rules and `dotnet build` errors in `check`.
+GDScript has more: the formatter, `rename`, `migrate` and the language server are GDScript only.
 
 **Does it send my code anywhere?** No. Your code stays on your machine. Sharing anonymous counts is opt-in and off by
 default; see [PRIVACY.md](PRIVACY.md).

@@ -1,6 +1,6 @@
 # Godotwright
 
-> Godotwright is an MCP server, CLI and Claude Code plugin that makes coding agents (Claude Code, Codex, and any agent that speaks MCP or can run a shell command) better at Godot 4.7. It gives them the real Godot 4.7 API offline, a map of the project, headless Godot checks, an AAA review of GDScript, and tools to build, view and check 3D models (.glb) from code. MIT licensed, runs with `npx -y godotwright`.
+> Godotwright is an MCP server, CLI and Claude Code plugin that makes coding agents (Claude Code, Codex, and any agent that speaks MCP or can run a shell command) better at Godot 4.7. It gives them the real Godot 4.7 API offline, a map of the project, headless Godot checks, an AAA review of GDScript, a git merge driver that merges scenes and resources by meaning, a bisect that finds the commit that broke it, scene, TileMap and animation edits in the files, a GDScript formatter, C# checks, an optional editor addon, and tools to build, view and check 3D models (.glb) from code. 53 MCP tools; `--lean` offers two tools that run all of them. MIT licensed, runs with `npx -y godotwright`.
 
 Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict steps, for small models) or `--tier premium` (full detail). It is also listed in the official MCP Registry as io.github.laaielichter/godotwright. One-step installs: Claude Code plugin `/plugin install godotwright --marketplace laaielichter/Godotwright` (adds hooks that review every Godot file the agent edits, skills for the Godot workflow, debugging, performance, vehicles, large worlds, 3D models and patches to shipped games, /godotwright:review, /godotwright:port, /godotwright:learn and /godotwright:dream, and eight subagents: godot-reviewer, godot-debugger, godot-migrator, godot-performance, godot-shader-specialist, godot-model-builder, godot-test-engineer and godot-dreamer), Claude Desktop bundle `godotwright.mcpb` from the latest GitHub release, Gemini CLI `gemini extensions install https://github.com/laaielichter/Godotwright`, and one-click links for Cursor and VS Code on the [install page](https://laaielichter.github.io/Godotwright/install.html).
 
@@ -99,6 +99,39 @@ Install and connect: `npx -y godotwright mcp --tier cheap` (short output, strict
 ## Scene edits
 
 `godotwright scene add|remove|set|connect|disconnect|script <scene.tscn> ...` (godot_scene_edit with op add_node, remove_node, set, connect, disconnect, attach_script): changes a scene with checks against Godot 4.7 and the node's script, touching only those lines. Node paths are relative to the root ("."). Dry run first, `--write` (write: true) applies.
+
+## Merge scenes by meaning
+
+`godotwright merge` (godot_merge): a three-way merge of .tscn, .tres and project.godot that knows the format: nodes by path, ext_resources by uid or path, connections by signal, source, target and method, properties one by one; resource ids of both sides are renumbered into one numbering and load_steps is recounted. Only a property both sides set to different values is a conflict, reported with base, ours and theirs. Without arguments it shows the files a merge, rebase or cherry-pick left in conflict (`--write` writes them, `--prefer theirs` takes their side); `--theirs <branch>` previews a merge; `godotwright merge --install` sets it up as the git merge driver (.gitattributes plus this clone's git config; every clone runs it once). No Godot needed. Checked on 494 real scenes, resources and project files (0 problems); not yet loaded in Godot.
+
+## Which commit broke it
+
+`godotwright bisect [--good <commit>] [--bad <commit>] [--rule id] [--file res://x.gd] [--text words]` (godot_bisect): reviews the project as it was at each commit, on copies from git in a temp folder, and halves the range to the first commit with the problem (default: any new error the review reports). The working tree and the repository are not touched. Without `--good` it looks back 1, 2, 4, 8 ... commits. It finds what the review finds, not run-time problems.
+
+## Scene structure, TileMap cells, animations
+
+`godotwright scene create|rename|move|duplicate|groups|add-many` (godot_scene_edit ops create_scene, rename_node, move_node, duplicate_node, set_groups, add_nodes): a new scene with a fresh uid; a rename or move that children, connections, [editable] entries and NodePaths follow (scripts that name the old path are listed); a copy of a node with its children; groups; several nodes at once, all or nothing. Run on 433 real scenes: 3,956 steps, 0 failures.
+`godotwright tilemap read|set|fill|erase|clear <scene> <node>` (godot_tilemap): the cells of a TileMapLayer as a text map with a legend, and edits checked against the TileSet (cells as x,y=source:atlas_x,atlas_y).
+`godotwright animation read|create|add-track|set-key|remove-key|remove-track|remove|set <file>` (godot_animation): the animations of an AnimationPlayer in the scene file: value and method tracks, keys, length, loop mode; track paths checked against the scene.
+All are dry runs until `--write` (MCP `write: true`), and `godotwright undo` takes a write back. Tilemap and animation are tested on fixtures; none of these results has been loaded in Godot yet.
+
+## Format GDScript
+
+`godotwright format [files...] [--check] [--diff] [--write]` (godot_format): the official style guide (tabs, spaces around operators and after commas, two blank lines around functions), whitespace only; lines are never joined or wrapped. A guard compares the tokens before and after, so the code cannot change meaning; a file that is not valid GDScript is skipped with the reason. `--check` exits 1 when a file would change (for CI). On 12,472 real scripts: 0 guard refusals.
+
+## Metrics, new files, presets, translations
+
+`godotwright metrics complexity|signals|stats` (godot_metrics): cyclomatic complexity per function with a grade (A to F); the signal flow (who emits, who connects) with signals never emitted, never connected and connections to a missing method, `--mermaid` for a flowchart; project statistics and the heaviest scenes.
+`godotwright new project|script|shader` (godot_new): a new Godot 4.7 project (2d, 3d or ui; `--dotnet` for C#), a typed script from a template that passes the review (.gd or .cs), or a shader.
+`godotwright preset list|add|set|remove` (godot_preset): export presets in export_presets.cfg without the editor. `godotwright translations list|add|remove|check` (godot_translations): registered translation files, and a CSV checked against the tr() keys the code uses.
+
+## C# projects
+
+C# scripts are read from the files: classes, [Export], [Signal], methods and what they load are in the project map (godot_scan), usages and dependencies; a scene connection to a C# method is checked. Review rules: api/csharp-not-partial, api/csharp-class-name, api/csharp-signal-name (errors), api/csharp-callback (warning). godot_check runs `dotnet build` when the project has a .csproj and dotnet is installed, and reports the compiler's errors by file and line. No C# language server, formatter, rename inside C# or migration. No real dotnet build has run in the project's own tests yet.
+
+## The open editor (optional)
+
+`godotwright editor install` puts a small addon in the project (127.0.0.1, a new token every start). With it `godotwright editor status|selection|tree|inspect|errors|save_scene|save_all|reload_scene|open_scene|play|stop|screenshot|filesystem_scan|reimport` (godot_editor) sees what the editor has open and unsaved and can save, reload a scene edited on disk, play, stop and take a screenshot. No scene editing and no code execution through it. Everything else works without the addon. The addon has not run in a Godot editor yet; see https://github.com/laaielichter/Godotwright/blob/main/docs/editor-bridge.md
 
 ## Fix loop
 

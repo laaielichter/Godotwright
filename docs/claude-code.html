@@ -278,8 +278,8 @@ footer a { color: var(--muted); }
 
   <section id="skills">
     <div class="wrap">
-      <h2>Ten skills</h2>
-      <p class="sub">Seven Claude uses on its own when the work calls for them, and three you start yourself. Each one leans on the MCP tools and on 272 lessons from real Godot 4 projects.</p>
+      <h2>Eleven skills</h2>
+      <p class="sub">Seven Claude uses on its own when the work calls for them, and four you start yourself. Each one leans on the MCP tools and on 272 lessons from real Godot 4 projects.</p>
       <ul class="cards">
         <li><span class="when">Any Godot work</span><h3>godot</h3><p>The workflow: map the project, look up the exact Godot 4.7 API instead of guessing, review before and after each edit, check with Godot before finishing.</p></li>
         <li><span class="when">Errors and wrong behaviour</span><h3>debug</h3><p>From a Godot error, a crash or a body falling through a floor to the cause, the fix and the proof.</p></li>
@@ -332,7 +332,7 @@ footer a { color: var(--muted); }
         <details><summary>I only want the MCP server, without skills and hooks.</summary><p><code>claude mcp add godotwright -- npx -y godotwright mcp --tier premium</code></p></details>
         <details><summary>I use Codex, Cursor or another agent. Can I get the same?</summary><p>The MCP server works in any MCP client; see the <a href="install.html">install page</a>. The hooks are a CLI command, <code>godotwright hook &lt;event&gt;</code>, that reads Claude Code’s hook JSON on stdin, so any agent with a similar hook system can call it.</p></details>
         <details><summary>Does it need Godot installed?</summary><p>Not for the review, the API lookups, the project map, <code>migrate</code> or the edits. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> need Godot 4.7; set <code>GODOT</code> to its path if it is not found in the usual install folders.</p></details>
-        <details><summary>Does it work next to an editor-driving Godot MCP server?</summary><p>Yes. Those drive the open editor through an addon; Godotwright works from files and checks what Claude writes.</p></details>
+        <details><summary>Does it work next to an editor-driving Godot MCP server?</summary><p>Yes. Those drive the open editor through an addon; Godotwright works from files and checks what Claude writes. It also has an optional addon of its own (<code>godot_editor</code>) to see what the editor has open and to save, reload, play and stop.</p></details>
       </div>
       <div class="cta"><a class="btn primary" href="https://github.com/laaielichter/Godotwright">Godotwright on GitHub</a><a class="btn" href="./">Back to the overview</a></div>
     </div>

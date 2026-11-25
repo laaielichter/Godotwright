@@ -336,6 +336,18 @@ res://scripts/old_player.gd:11: <span class="e">error</span> [api/godot3-syntax]
     </div>
   </section>
 
+  <section id="format">
+    <div class="wrap">
+      <h2>Formatting and merges</h2>
+      <p class="sub">Both are on <code>main</code> and come with the release after 0.8.0.</p>
+      <p class="sub"><b>A format check.</b> <code>format --check</code> writes nothing, lists the GDScript files that are not in the official style and exits with 1 when there are any. The formatter changes whitespace only, and a guard compares the tokens before and after, so <code>format --write</code> cannot change what the code means.</p>
+      <div class="cmd"><pre><code>npx --yes godotwright format --check</code></pre><button class="copy" type="button">Copy</button></div>
+      <p class="sub"><b>Scenes that merge.</b> When two pull requests change one scene, git gives a conflict, or a clean merge of a file Godot cannot load. Run this once in each clone and commit the <code>.gitattributes</code> it writes: git then merges <code>*.tscn</code>, <code>*.tres</code> and <code>project.godot</code> by meaning. The merge button on GitHub does not run merge drivers, so merge or rebase locally when it reports a conflict in a scene.</p>
+      <div class="cmd"><pre><code>npx --yes godotwright merge --install</code></pre><button class="copy" type="button">Copy</button></div>
+      <p class="sub">To see before merging what a branch does to the Godot files: <code>godotwright merge --theirs &lt;branch&gt;</code> (exit code 1 when a conflict is left). To find the commit that brought a review error in: <code>godotwright bisect</code>.</p>
+    </div>
+  </section>
+
   <section id="faq">
     <div class="wrap">
       <h2>FAQ</h2>
@@ -344,7 +356,7 @@ res://scripts/old_player.gd:11: <span class="e">error</span> [api/godot3-syntax]
         <details><summary>Does it send my code anywhere?</summary><p>No. Everything runs on your own runner. The only thing it posts is the receipt, as a comment on your pull request, when <code>comment</code> is true.</p></details>
         <details><summary>My Godot project is in a subfolder.</summary><p>Set <code>path</code> to the folder that holds <code>project.godot</code>, or to any path inside it.</p></details>
         <details><summary>Will it fail on my existing code?</summary><p>It fails when a step has errors. Start with <code>review-only</code>, fix the errors (<code>godotwright fix</code> does the mechanical ones), then turn on the Godot steps. A finding you think is wrong is worth an issue.</p></details>
-        <details><summary>Does it work with C#?</summary><p>No. The review reads GDScript and scenes, and the action downloads the standard Godot build, without .NET.</p></details>
+        <details><summary>Does it work with C#?</summary><p>Partly. The review reads C# scripts too: four rules (a script class that is not <code>partial</code>, a class name that differs from the file, a <code>[Signal]</code> delegate without <code>EventHandler</code>, a callback Godot never calls) and scene connections to C# methods. The action downloads the standard Godot build, without .NET, so the Godot steps do not load C# scripts.</p></details>
       </div>
       <div class="cta"><a class="btn primary" href="https://github.com/marketplace/actions/godotwright-receipt">Godotwright receipt on the Marketplace</a><a class="btn" href="./">Back to the overview</a></div>
     </div>

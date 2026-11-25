@@ -4,6 +4,18 @@ Everything Godotwright does, in detail. For a quick start, see the [README](../R
 installs, the [install page](https://laaielichter.github.io/Godotwright/install.html).
 
 - [Commands](#commands)
+- [The whole change: diff, impact, collisions](#the-whole-change-diff-impact-collisions)
+- [Merge scenes by meaning](#merge-scenes-by-meaning)
+- [Which commit broke it: bisect](#which-commit-broke-it-bisect)
+- [Scene structure](#scene-structure)
+- [Format GDScript](#format-gdscript)
+- [Metrics: complexity, signal flow, statistics](#metrics-complexity-signal-flow-statistics)
+- [TileMap cells](#tilemap-cells)
+- [Animations](#animations)
+- [New projects, scripts and shaders](#new-projects-scripts-and-shaders)
+- [Export presets and translations](#export-presets-and-translations)
+- [C# projects](#c-projects)
+- [The open editor (optional addon)](#the-open-editor-optional-addon)
 - [Port Godot 3 scripts to Godot 4](#port-godot-3-scripts-to-godot-4)
 - [Shaders](#shaders)
 - [Review in GitHub Actions](#review-in-github-actions)
@@ -12,6 +24,7 @@ installs, the [install page](https://laaielichter.github.io/Godotwright/install.
 - [Mods and patches over a game](#mods-and-patches-over-a-game)
 - [Install in your coding agent (MCP)](#install-in-your-coding-agent-mcp)
 - [Tool sets and read-only mode](#tool-sets-and-read-only-mode)
+- [Lean mode](#lean-mode-two-tools-instead-of-53)
 - [Structured results](#structured-results)
 - [Progress and cancel](#progress-and-cancel)
 - [Protected paths](#protected-paths)
@@ -50,6 +63,17 @@ godotwright deps unused               # files nothing the game starts with reach
 godotwright diff                      # what changed by meaning against git HEAD, and what it breaks elsewhere (`--ref main`, `--against old.tscn`)
 godotwright impact                    # the scenes, tests and scenarios a change reaches, and the checks to run (or name the files)
 godotwright collisions                # physics layers and masks; `--between Player Enemy` says who detects whom and the mask to set
+godotwright merge --install           # git merges *.tscn, *.tres and project.godot by meaning from now on, in this clone
+godotwright merge --theirs feature    # preview what merging a branch does to the Godot files; `merge --write` finishes a merge git stopped on
+godotwright bisect                    # which commit broke it: the first commit where the review reports a new error (--rule, --file, --text, --good)
+godotwright format --check            # GDScript formatting for CI: lists the files that would change, exit 1 when there are any (--diff, --write)
+godotwright metrics complexity        # cyclomatic complexity per function with a grade; `metrics signals` (--mermaid), `metrics stats`
+godotwright tilemap read level.tscn Ground   # the cells of a TileMapLayer as a text map; set, fill, erase, clear with --write
+godotwright animation read hero.tscn  # the animations of an AnimationPlayer; create, add-track, set-key, set with --write
+godotwright new project my-game --kind 3d    # a new Godot 4.7 project; `new script res://player.gd --template character_2d`, `new shader`
+godotwright preset add linux --export-path build/game.x86_64 --write   # export presets without the editor: list, add, set, remove
+godotwright translations check res://text.csv   # a CSV against the tr() keys the code uses; list, add, remove
+godotwright editor install            # optional: the addon for the open editor; then `editor status`, `editor play`, `editor errors`
 godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, completion; --code for unsaved text)
 godotwright shaders                   # the GPU pass: draw every shader (Compatibility renderer) for driver errors; errors at the line in the .gdshader
 godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
@@ -70,6 +94,12 @@ godotwright scene add main.tscn . Music AudioStreamPlayer --write   # add a node
 godotwright scene set main.tscn Timer wait_time 0.5 --write   # property name and type checked; enums by name, resources as res:// files
 godotwright scene connect main.tscn Timer timeout . _on_timer_timeout   # warns when the method is missing or takes other arguments
 godotwright scene editable main.tscn Enemy --write   # [editable path="Enemy"]: this scene may change the instance's children (--off removes it)
+godotwright scene create levels/cave.tscn Node2D Cave --write   # a new scene with a fresh uid; never overwrites a file
+godotwright scene rename main.tscn Player Hero --write   # children, connections, [editable] entries and NodePaths follow
+godotwright scene move main.tscn Gun Player --index 0 --write   # another parent, or another place among its siblings (--after)
+godotwright scene duplicate main.tscn Floor Ceiling --write   # a copy with its children; shares the sub-resources, as the editor does
+godotwright scene groups main.tscn Enemy enemies targets --write   # the whole list, or --add and --remove
+godotwright scene add-many main.tscn nodes.json --write   # several nodes at once, all or nothing
 godotwright resource set mat.tres roughness 0.8 --write   # .tres: property name and type checked, uids kept, only that line changes
 godotwright resource set level.tres data "[0, 1, 255]"   # byte arrays as a plain list or base64:..., written as PackedByteArray
 godotwright resource add-sub theme.tres StyleBoxFlat --id hover   # then: resource set theme.tres bg_color "Color(0, 1, 0, 1)" --sub hover
@@ -256,6 +286,435 @@ godotwright collisions --layers 1 3           # = value 5;  --value 5 = layers 1
 `project.godot`. It reports a mask that scans a layer nothing is on, an area or ray with mask 0, an Area with
 monitoring off whose `body_entered` is connected, a body or area without a collision shape and a CollisionShape
 without a shape. Where code sets layers or makes shapes, it lists those lines and leaves the matching checks out.
+
+## Merge scenes by meaning
+
+Git merges `.tscn`, `.tres` and `project.godot` line by line. Two branches, or two agents in two worktrees, that each
+add a node to one scene get a conflict, or a clean merge of a file Godot cannot load: both sides gave their new
+resource the same id, `load_steps` is off, a node sits under a parent the other side removed. `godotwright merge`
+(MCP: `godot_merge`) is a three-way merge that knows the format. No Godot needed.
+
+```sh
+godotwright merge --install            # set it up as the git merge driver in this clone; commit .gitattributes
+godotwright merge --theirs feature     # preview a merge before you make it
+godotwright merge                      # the files a merge, rebase or cherry-pick left in conflict (dry run)
+godotwright merge --write              # write them; --prefer theirs makes conflicts take their side
+godotwright merge base.tscn ours.tscn theirs.tscn --out merged.tscn   # three files, no git needed
+```
+
+| Option | What it does |
+| --- | --- |
+| `[files...]` | three files (base ours theirs), or `res://` files to limit a merge in progress to |
+| `--path <dir>` | project directory (default: the current one) |
+| `--theirs <commit>` | preview what merging this branch or commit into HEAD does to the Godot files |
+| `--prefer <side>` | the side a conflict takes: `ours` (default) or `theirs` |
+| `--write` | write the merged files into the working tree (a merge in progress) |
+| `--out <file>` | with three files: write the result here instead of printing it |
+| `--driver`, `--name <path>` | with three files: act as a git merge driver (write into the second file, exit 1 on a conflict); `--name` is the real file name (git's `%P`) |
+| `--install` | set this up as the git merge driver for `*.tscn`, `*.tres` and `project.godot` |
+| `--command <cmd>` | with `--install`: how git starts Godotwright (default: `npx -y godotwright`) |
+| `--json` | print the result as JSON |
+
+What is merged: nodes by their path, ext_resources by uid or path (whatever id each side gave them), connections by
+signal, source, target and method, and properties one by one. The resource ids of both sides are brought into one
+numbering and every reference follows; a resource one side removed and the other still uses is kept; `load_steps` is
+recounted. Only a property both sides set to different values is a conflict, reported with base, ours and theirs:
+
+```text
+$ godotwright merge --theirs feature
+Merging feature into HEAD (common ancestor 4000410c1a): 1 Godot file changed on both sides.
+res://scenes/main.tscn: merged with 1 conflict (1 change from their side)
+  CONFLICT node SpawnTimer: wait_time (ours kept)
+    base:   2.0
+    ours:   3.0
+    theirs: 0.5
+  + node Music
+1 conflict to settle. Run git merge, then this again without theirs (and with write) to finish it.
+```
+
+The exit code is 1 while a conflict is left. After `--write`, review the files and mark them resolved with `git add`.
+
+`--install` writes three lines to `.gitattributes` (`*.tscn merge=godotwright`, `*.tres merge=godotwright`,
+`project.godot merge=godotwright`; commit that file) and the driver to this clone's git config:
+
+```text
+$ godotwright merge --install
+git now merges *.tscn, *.tres and project.godot with Godotwright in this clone.
+  driver: npx -y godotwright merge --driver %O %A %B --name %P
+Every other clone runs "godotwright merge --install" once.
+```
+
+Git config is not part of a clone, so every clone runs it once. A clone without the driver merges as git always did.
+The default driver command starts the published npm package: it needs a godotwright release that has `merge`. With a
+build from source, pass `--command "node /path/to/Godotwright/dist/cli.js"`.
+
+Checked on 494 real scenes, resources and project files: two different changes merge into a file that parses, with
+every reference resolving, 0 problems. The merged files were read back by Godotwright; they have not been loaded in
+Godot yet.
+
+## Which commit broke it: bisect
+
+`godotwright bisect` (MCP: `godot_bisect`) reviews the project as it was at each commit, on copies from git in a temp
+folder, and halves the range to the first commit with the problem. The working tree and the repository are not
+touched. No Godot needed.
+
+```sh
+godotwright bisect                               # the first commit with a new review error, looking back from HEAD
+godotwright bisect --good v1.2 --bad HEAD        # in a known range
+godotwright bisect --rule api/unknown-member     # a finding of one rule
+godotwright bisect --file res://player.gd --text "take_damage"   # in one file, with words in its message
+```
+
+| Option | What it does |
+| --- | --- |
+| `--path <dir>` | project directory (default: the current one) |
+| `--bad <commit>` | a commit that has the problem (default: `HEAD`) |
+| `--good <commit>` | a commit known to be without it (default: search backwards in growing steps: 1, 2, 4, 8 ... commits) |
+| `--rule <id>` | the problem is a finding of this review rule |
+| `--file <res-path>` | the problem is a finding in this file |
+| `--text <words>` | the problem is a finding whose message holds this text |
+| `--max <commits>` | how far back to look when no good commit is given (default: 200) |
+| `--include-addons` | also review `res://addons/` |
+| `--base <dir>`, `--base-files <file>` | as for `review`: a mod over a game |
+| `--json` | print the result as JSON |
+
+Without `--rule`, `--file` or `--text` the problem is "any error the review reports". Errors that were already there
+before the range are left out, so an old known error does not hide the new one. Uncommitted changes are not part of
+the search.
+
+```text
+$ godotwright bisect
+First commit with the problem (an error the review reports): 9dd6715 (2026-11-25, t) "add extra"
+Last commit without it: dd1cbb7 (2026-11-25, t) "merge"
+2 commits in the range, 3 reviewed.
+
+What is wrong at 9dd6715:
+  res://scripts/extra.gd:4 [api/unknown-member] Method "get_ticks_msec()" does not exist on OS in Godot 4.7. In Godot 4 use Time.get_ticks_msec().
+
+Files that commit changed (1):
+  A res://scripts/extra.gd   <- has the finding
+
+Next: godot_diff with ref dd1cbb7 and to 9dd6715 (CLI: godotwright diff --ref dd1cbb7 --to 9dd6715) shows what that commit changed by meaning.
+```
+
+It says so when the finding is in a file the commit did not touch. It finds what the review finds: a problem only
+Godot reports at run time is not something `bisect` can search for.
+
+## Scene structure
+
+`godotwright scene` (MCP: `godot_scene_edit`) also changes the structure of a `.tscn`. Like the other scene edits,
+each one is a dry run until `--write`, touches only the lines of that change and can be undone with `godotwright undo`.
+
+| Command | MCP `op` | What it does |
+| --- | --- | --- |
+| `scene create <scene> <type> [name]` | `create_scene` | a new scene with a root node and a fresh uid (`--script` attaches one); never overwrites a file |
+| `scene rename <scene> <node> <name>` | `rename_node` | renames a node; its children, connections, `[editable]` entries and NodePath values follow. Scripts that name the old path are listed, not changed |
+| `scene move <scene> <node> [parent]` | `move_node` | moves a node with its children under another parent, or to another place among its siblings (`--index`, `--after`) |
+| `scene duplicate <scene> <node> <name>` | `duplicate_node` | copies a node with its children; the copy shares the original's sub-resources, as Duplicate in the editor does |
+| `scene groups <scene> <node> [groups...]` | `set_groups` | sets the whole list (`--none` for no groups), or `--add` and `--remove` |
+| `scene add-many <scene> <nodes>` | `add_nodes` | several nodes at once, all or nothing: a JSON list (or a `.json` file) of `{"parent", "name", "type" or "instance", "props", "script"}`, in order, so a later node can be the child of an earlier one |
+
+```text
+$ godotwright scene move scenes/main.tscn SpawnTimer Floor
+scene move SpawnTimer under Floor (dry run: add --write to apply)
+res://scenes/main.tscn
+    17  - [node name="SpawnTimer" type="Timer" parent="."]
+        - wait_time = 0.5
+        - autostart = true
+        -
+    27  + [node name="SpawnTimer" type="Timer" parent="Floor"]
+        + wait_time = 0.5
+        + autostart = true
+        +
+    32  - [connection signal="timeout" from="SpawnTimer" to="." method="_on_spawn_timer_timeout"]
+        + [connection signal="timeout" from="Floor/SpawnTimer" to="." method="_on_spawn_timer_timeout"]
+warning: no script names "SpawnTimer" in a way Godotwright can see; paths built in code are not found, so check with godot_usages SpawnTimer when in doubt
+```
+
+Run on 433 real scenes: 3,956 steps, 0 failures (each result parses and its references resolve). The results have not
+been loaded in Godot yet.
+
+## Format GDScript
+
+`godotwright format` (MCP: `godot_format`) formats GDScript the way the official style guide writes it: tabs, spaces
+around operators and after commas, two blank lines around functions. It changes whitespace only. Lines are never
+joined or wrapped, and strings, comments and node paths stay byte for byte. A guard compares the tokens before and
+after: when they differ, the file is left alone. A file that is not valid GDScript is skipped with the reason.
+
+```sh
+godotwright format                    # what would change in every .gd file of the project; nothing is written
+godotwright format --diff scripts/    # a unified diff of every change
+godotwright format --write            # write the formatted files
+godotwright format --check            # for CI: write nothing, exit 1 when a file would change
+```
+
+| Option | What it does |
+| --- | --- |
+| `[files...]` | scripts or folders to format (default: every `.gd` file of the project) |
+| `--path <dir>` | project directory, or any path inside it |
+| `--check` | write nothing; list the files that would change and exit with 1 when there are any |
+| `--diff` | print a unified diff of every change |
+| `--write` | write the formatted files |
+| `--include-addons` | also format `res://addons/` |
+| `--json` | print the result as JSON |
+
+```text
+$ godotwright format --diff scripts/extra.gd
+format: would format 1 of 1 script
+  res://scripts/extra.gd (1 line)
+
+--- a/scripts/extra.gd
++++ b/scripts/extra.gd
+@@ -1,5 +1,6 @@
+ extends Node2D
+ 
++
+ func _ready() -> void:
+ 	var t = OS.get_ticks_msec()
+ 	print(t)
+Next: nothing was written; write: true (--write) formats them, diff: true (--diff) shows the changes first.
+```
+
+Run on 12,472 real scripts: 11,365 changed, 0 guard refusals, 0 not stable on a second run, 28 skipped (patch files
+and files with conflict markers or broken brackets). The formatted scripts have not been loaded in Godot yet; the
+token guard is what says the code is the same.
+
+## Metrics: complexity, signal flow, statistics
+
+`godotwright metrics` (MCP: `godot_metrics`, `op` `complexity`, `signals` or `stats`) gives numbers about the project
+from its files.
+
+```sh
+godotwright metrics complexity --threshold 10   # every function with a grade; the ones above the threshold first
+godotwright metrics signals --mermaid           # the signal flow as a mermaid flowchart
+godotwright metrics stats                       # scripts, scenes, lines, typed-ness, the heaviest scenes
+```
+
+All three take `[path]`, `--limit <n>` (how many entries each list shows), `--addons` (also count `res://addons/`),
+`--base`, `--base-files` and `--json`. `complexity` adds `--threshold <n>` (default 10), `signals` adds `--mermaid`.
+
+- **complexity**: cyclomatic complexity per GDScript function (1 + `if`, `elif`, `for`, `while`, `and`, `or`, ternary
+  `if`, `match` arms), a grade (A 1-5, B 6-10, C 11-20, D 21-30, E 31-40, F 41+), its lines and nesting depth.
+- **signals**: every signal, who emits it and who connects to it, and three lists of what is a bug: declared but
+  never emitted, emitted but never connected, connected to a method that does not exist.
+- **stats**: scripts, scenes, resources, shaders and assets by kind, lines of GDScript (code, comment, blank),
+  typed-ness, the biggest scripts and the heaviest scenes.
+
+```text
+$ godotwright metrics signals
+signals: 3 declared, 2 built-in in use, 3 emits, 4 connections; 0 never emitted, 1 never connected, 0 missing methods
+emitted but nobody listens (no connection, no await):
+  res://scripts/player.gd:6  health_changed
+signals (emit = who sends it, -> = who receives it):
+  score_changed(new_score: int)  res://autoload/game_state.gd:4
+    emit res://autoload/game_state.gd:9
+    -> hud.set_score()  [code res://scripts/main.gd:11, from GameState]
+  died  res://scripts/player.gd:5
+    emit res://scripts/player.gd:52
+    -> res://scripts/main.gd._on_player_died()  [scene res://scenes/main.tscn:27, from Player]
+```
+
+## TileMap cells
+
+`godotwright tilemap` (MCP: `godot_tilemap`) reads and changes the cells of a TileMapLayer in a `.tscn`, without
+Godot. Sources and atlas coordinates are checked against the TileSet, and nothing is written without `--write`.
+
+```sh
+godotwright tilemap read level.tscn Ground                    # used rect, tiles in use, a text map, the cells
+godotwright tilemap set level.tscn Ground 0,0=0:1,0 1,0=0:1,0 --write   # cells as x,y=source:atlas_x,atlas_y[:alternative]
+godotwright tilemap fill level.tscn Ground 0,0,10,2 0:1,0 --write       # a rect: x,y,width,height
+godotwright tilemap erase level.tscn Ground --rect 0,0,4,1 --write      # or cells: 2,0 3,0
+godotwright tilemap clear level.tscn Ground --write
+```
+
+Each subcommand takes `--write`, `--json` and `--project <path>` (for a `res://` scene path). Put `--` before
+positions that start with a minus.
+
+```text
+$ godotwright tilemap read level.tscn Ground
+tilemap res://level.tscn Ground: 8 cells, used rect (0, -1) 6x2, numbers, format 0
+tile_set res://tiles.tres: source 0 (atlas): 0,0 1,0
+tiles:
+  # source 0 atlas 0,0  x6
+  A source 0 atlas 1,0  x2
+map (top left is 0, -1; . is empty):
+  ..A..A
+  ######
+```
+
+A tile the TileSet does not have is refused: `source 0 of res://tiles.tres has no tile at atlas 7,7; nearest: 1,0 0,0`.
+Tested on fixtures; the written scenes have not been loaded in Godot yet.
+
+## Animations
+
+`godotwright animation` (MCP: `godot_animation`) reads and writes the animations of an AnimationPlayer in a `.tscn`
+(or an AnimationLibrary or Animation `.tres`), without Godot. Track paths and properties are checked against the
+scene and Godot 4.7, and nothing is written without `--write`.
+
+```sh
+godotwright animation read hero.tscn
+godotwright animation create hero.tscn run --length 0.5 --loop linear --write
+godotwright animation add-track hero.tscn run Sprite2D:position --keys '[{"time":0,"value":"Vector2(0, 0)"},{"time":0.5,"value":"Vector2(40, 0)"}]' --write
+godotwright animation set-key hero.tscn run 0 0.25 'Vector2(20, -8)' --write
+godotwright animation set hero.tscn run --length 1.0 --loop pingpong --write
+```
+
+| Subcommand | What it does |
+| --- | --- |
+| `read <file>` | the animations with their length, loop mode, tracks and keys |
+| `create <file> <name>` | a new animation in the player's library (made when the player has none): `--length`, `--loop none\|linear\|pingpong`, `--step` |
+| `add-track <file> <animation> <path>` | a value or method track: `--keys <json>`, `--type value\|method`, `--interp nearest\|linear\|cubic`, `--update continuous\|discrete\|capture` |
+| `set-key <file> <animation> <track> <time> <value>` | set the key at a time (a new key when there is none) |
+| `remove-key`, `remove-track`, `remove` | remove a key, a track (the tracks after it move up one number) or an animation |
+| `set <file> <animation>` | the length, loop mode or step |
+
+All take `--player <node>` (not needed when the scene has one AnimationPlayer), `--library <name>`, `--project <path>`,
+`--json` and `--write`.
+
+```text
+$ godotwright animation read hero.tscn
+animation res://hero.tscn AnimationPlayer (paths from .): 1 animation
+run  length 0.5  loop linear  1 track
+  0 value Sprite2D:position linear continuous  0: Vector2(0, 0)  0.25: Vector2(20, -8)  0.5: Vector2(40, 0)
+```
+
+A track to a node that is not there is refused with the nearest name. Tested on fixtures; the written animations
+have not been played in Godot yet.
+
+## New projects, scripts and shaders
+
+`godotwright new` (MCP: `godot_new`, `op` `project`, `script` or `shader`) makes new files without Godot.
+
+```sh
+godotwright new project my-game --kind 3d --merge-driver --mcp
+godotwright new script res://player/player.gd --template character_2d
+godotwright new script res://player/Player.cs --template character_3d    # a file that ends in .cs gets the C# form
+godotwright new shader res://fx/tint.gdshader --kind canvas_item --dry-run
+```
+
+| Command | Options |
+| --- | --- |
+| `new project <dir>` | `--name`, `--kind 2d\|3d\|ui` (the main scene's root; default `2d`), `--renderer forward_plus\|mobile\|gl_compatibility`, `--merge-driver` (the `merge=godotwright` lines in `.gitattributes`), `--mcp` (a `.mcp.json` that starts the MCP server), `--dotnet` (a C# project: also `<Name>.csproj` and `<Name>.sln`), `--force` (a folder that is not empty; files that are there are never overwritten), `--json` |
+| `new script <file> [path]` | `--template` (GDScript: `node`, `character_2d`, `character_3d`, `area_trigger`, `state_machine`, `autoload`, `resource`, `ui_control`, `test_gut`, `test_gdunit4`; C#: `node`, `character_2d`, `character_3d`, `area_trigger`, `autoload`, `resource`, `ui_control`), `--class-name`, `--base <class>` (node template), `--dimension 2d\|3d` (area_trigger), `--dry-run`, `--json` |
+| `new shader <file> [path]` | `--kind canvas_item\|spatial\|particles\|sky\|fog`, `--dry-run`, `--json` |
+
+A new project holds `project.godot`, `main.tscn` with `main.gd`, `icon.svg`, `.gitignore` and `.gitattributes`. The
+GDScript templates are typed and clean in `godotwright review`:
+
+```text
+$ godotwright new script res://enemy/enemy.gd --template character_2d --dry-run
+new script res://enemy/enemy.gd (character_2d) (dry run: nothing written): extends CharacterBody2D
+input actions it reads: move_left, move_right, jump
+
+extends CharacterBody2D
+
+@export var speed: float = 300.0
+@export var jump_velocity: float = -400.0
+...
+```
+
+The new project has not been opened in Godot yet, and the C# templates were not compiled.
+
+## Export presets and translations
+
+`godotwright preset` (MCP: `godot_preset`) edits `export_presets.cfg` without the editor; nothing is written without
+`--write`.
+
+```sh
+godotwright preset list
+godotwright preset add "Windows Desktop" --export-path build/game.exe --exclude "tests/*" --write
+godotwright preset set Linux --set export_path=build/game.x86_64 --option binary_format/embed_pck=true --write
+godotwright preset remove Linux --write      # the presets after it move down one number, as Godot needs them
+```
+
+`preset add <platform>` takes Windows Desktop, Linux, macOS, Web, Android or iOS, and `--name`, `--export-path`,
+`--runnable` / `--no-runnable`, `--export-filter all_resources|scenes|resources|exclude|customized`, `--include`,
+`--exclude` and `--option key=value` (repeatable). Only the keys given are written: Godot fills in the platform's
+other options with their defaults when it loads the file.
+
+```text
+$ godotwright preset list
+export presets: 1 in res://export_presets.cfg
+  0 "Linux" Linux runnable filter=all_resources path=build/game.x86_64 options=0
+```
+
+`godotwright translations` (MCP: `godot_translations`) registers translation files and checks a CSV against the
+project.
+
+```sh
+godotwright translations list                       # registered files, and CSV and PO files that are not
+godotwright translations add res://text.csv --write # a CSV adds one .translation per locale, a .po or .translation itself
+godotwright translations remove res://text.csv --write   # out of the setting; the file itself stays
+godotwright translations check res://text.csv       # keys tr() or scenes use that it lacks, keys nothing uses, empty cells
+```
+
+```text
+$ godotwright translations check res://text.csv
+translations check res://text.csv: 2 keys, locales en, nl: 0 missing, 2 unused, 1 empty cell
+  unused: HELLO, BYE
+  empty in nl: BYE
+note: unused means: no script string and no scene or resource text is exactly that key; keys kept in JSON or other data files are not seen
+```
+
+## C# projects
+
+A Godot 4 .NET project is read from its files, like a GDScript one.
+
+- **`scan`** (`godot_scan`): C# scripts are in the project map with their classes (partial classes and base classes
+  resolved), `[Export]` properties, `[Signal]` delegates, methods and what they load.
+- **`usages`, `deps` and the scene edits**: C# files count. A scene connection to a C# method is checked.
+- **`review`** (`godot_review`): four rules for what Godot only reports at build time or never.
+
+  | Rule | Severity | What it finds |
+  | --- | --- | --- |
+  | `api/csharp-not-partial` | error | a script class that is not `partial` (Godot 4's source generators add to every class that derives from a Godot class) |
+  | `api/csharp-class-name` | error | a class name that differs from the file name (`Player.cs` holds class `Player`) |
+  | `api/csharp-signal-name` | error | a `[Signal]` delegate whose name does not end with `EventHandler` |
+  | `api/csharp-callback` | warning | an engine callback Godot never calls, because it is not an override with its C# name and parameters (`public override void _Ready()`) |
+
+- **`check`** (`godot_check`): when the project has a `.csproj` and `dotnet` is on PATH, it runs `dotnet build` and
+  reports the compiler's errors and warnings by file and line. Without `dotnet` it says the C# code was not built
+  (install the .NET SDK 8 or later); the review still checks the C# files.
+- **`new`** (`godot_new`): C# script templates, and `new project --dotnet`.
+
+Not there: a C# language server, a C# formatter, rename inside C# code, and migration of C# code. The rules are quiet
+on the official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
+built, and the C# templates were not compiled.
+
+## The open editor (optional addon)
+
+Godotwright works on files and on headless Godot runs, with no editor plugin. `godotwright editor` (MCP:
+`godot_editor`) is the optional part that reaches the open editor, through a small addon that listens on 127.0.0.1
+with a new token every start.
+
+```sh
+godotwright editor install            # copy the addon to res://addons/godotwright_bridge/ and enable it (journaled)
+godotwright editor status             # is the addon running, and what the editor has open
+godotwright editor errors             # errors and warnings the editor logged (Godot 4.5+)
+godotwright editor reload_scene       # show a scene you edited on disk in the editor
+godotwright editor play               # run the game from the editor; `editor stop`
+godotwright editor uninstall
+```
+
+| Kind | Ops |
+| --- | --- |
+| look | `status`, `selection`, `tree` (the edited scene as the editor has it, unsaved changes included), `inspect`, `errors`, `is_scanning` |
+| act | `open_scene`, `select`, `edit_node`, `save_scene`, `save_all`, `reload_scene`, `close_scene`, `filesystem_scan`, `reimport`, `play`, `stop`, `screenshot` |
+
+`editor install` takes `--no-enable` (only copy the files; enable the plugin yourself in Project Settings > Plugins)
+and `--json`. Every op takes `--args <json>` (its arguments, for example `editor open_scene --args '{"path": "res://main.tscn"}'`),
+`--json` and `--timeout <seconds>`. There is no scene editing and no code execution through the bridge: scenes are edited in the files, and
+`reload_scene` shows the result. A read-only server allows only the looking ops. Without the addon:
+
+```text
+$ godotwright editor status
+addon: not installed (godotwright editor install)
+editor: the editor is not running or the addon is not enabled: install it with `godotwright editor install` and enable it in Project Settings > Plugins
+```
+
+The addon has not run in Godot yet: it is checked statically (every engine method it calls is looked up in the
+bundled class reference) and the client is tested against a fake editor. How it talks, every op and the manual test:
+[editor-bridge.md](editor-bridge.md).
 
 ## Find leaks
 
@@ -864,7 +1323,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
-| `godot_scene_edit` | Add or remove nodes, set properties, connect signals, attach scripts and make instances editable in a `.tscn`; refuses a change Godot would drop on the next editor save |
+| `godot_scene_edit` | Make a scene, add (one or many), remove, rename, move and duplicate nodes, set properties and groups, connect signals, attach scripts and make instances editable in a `.tscn`; paths follow a rename or move; refuses a change Godot would drop on the next editor save |
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
@@ -894,8 +1353,8 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 53 cost about 88,000 characters (about
-22,000 tokens); the `core` set about 24,000. Load only what the work needs, or run lean (below):
+Every tool definition goes into the agent's context on every turn. All 53 cost about 114,900 characters (about
+28,700 tokens); the `core` set about 23,900 (about 6,000 tokens). Load only what the work needs, or run lean (below):
 
 ```sh
 godotwright mcp --tools core            # or GODOTWRIGHT_TOOLS=core
@@ -907,13 +1366,16 @@ godotwright mcp --lean                  # two tools instead of all: see Lean mod
 | Set | Tools | Size of the tool list |
 | --- | --- | --- |
 | `core` | scan, api, api_search, review, check, code, doctor, fix, usages, lessons, feedback, undo, checklist | 13 tools, ~23,900 characters |
-| `edit` | rename, scene_edit, project_edit, resource_edit, migrate, shader, lesson_add, dream | 8 tools, ~18,600 |
-| `verify` | diff, impact, collisions | 3 tools, ~6,500 |
+| `edit` | rename, scene_edit, project_edit, resource_edit, migrate, shader, lesson_add, dream, format, tilemap, animation, new, preset, translations | 14 tools, ~36,900 |
+| `verify` | diff, impact, merge, bisect, collisions, metrics | 6 tools, ~12,400 |
 | `run` | test, play, scenario, perf, leaks, screenshot | 6 tools, ~16,500 |
-| `game` | session, game | 2 tools, ~5,400 |
+| `game` | session, game, editor | 3 tools, ~7,900 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
 | `model` | model_brief, model_identify, model_spec, model_library, model_build, model_view, model_lint, model_inspect | 8 tools, ~11,800 |
-| `all` (default) | everything | 53 tools, ~88,100 |
+| `all` (default) | everything | 53 tools, ~114,900 |
+
+Sizes are the length of the JSON of the tool list as the server sends it (`tools/list`), measured on this version;
+tokens are counted as characters divided by four.
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never
@@ -923,9 +1385,12 @@ told to call a tool that is not there. The default stays `all` on both tiers, so
 
 - left out: `godot_undo`, `godot_model_build` and `godot_export_run`, which always write;
 - kept, but `write: true` is refused, so they show their dry run: `godot_fix`, `godot_rename`, `godot_scene_edit`,
-  `godot_project_edit`, `godot_resource_edit`, `godot_migrate`;
-- refused: `godot_scenario` op `save`, `godot_game` ops `set`, `call` and `eval`, `godot_dream` with `apply`, and
-  `godot_screenshot` with `model` or `baseline` (they write the picture into the project);
+  `godot_project_edit`, `godot_resource_edit`, `godot_migrate`, `godot_merge`, `godot_format`, `godot_tilemap`,
+  `godot_animation`, `godot_preset`, `godot_translations`;
+- refused: `godot_scenario` op `save`, `godot_game` ops `set`, `call` and `eval`, `godot_dream` with `apply`,
+  `godot_screenshot` with `model` or `baseline` (they write the picture into the project), `godot_new` (a new project
+  always; a script or shader unless `write: false`), and every `godot_editor` op except `status`, `selection`,
+  `inspect`, `tree`, `is_scanning`, `errors` and `ops`;
 - kept as they are: the review, API and lessons tools (they write only counters to the local learning file in your
   home folder, which `GODOTWRIGHT_LEARN=0` turns off), and the tools that run Godot.
 
@@ -952,9 +1417,9 @@ A full tool list is paid on every turn, whether a tool is called or not, and som
 
 | | Tools in the list | Size of the tool list |
 | --- | ---: | --- |
-| full (default) | 53 | ~88,100 characters (~22,000 tokens) |
-| `--tools core` | 13 | ~23,900 |
-| `--lean` | 2 | ~3,500 (~900 tokens): 96% less |
+| full (default) | 53 | ~114,900 characters (~28,700 tokens) |
+| `--tools core` | 13 | ~23,900 (~6,000 tokens) |
+| `--lean` | 2 | ~4,000 (~1,000 tokens): 96% less |
 | `--lean --tools core` | 2 | ~2,100 |
 
 The tools, their checks, results (structured results included), tool sets and read-only refusals are the same. A call

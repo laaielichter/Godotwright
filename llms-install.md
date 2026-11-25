@@ -9,7 +9,9 @@ build, and it needs no API key.
 - A Godot 4 project (a folder with `project.godot`).
 - Optional: Godot 4.7, for the tools that run the game (`godot_check`, `godot_test`, `godot_play`, `godot_screenshot`,
   `godot_session`, `godot_perf`). Godotwright finds it on `PATH`, in the usual install folders, or through the `GODOT`
-  environment variable. Review, API lookup, the project map, migration and the edits work without it.
+  environment variable. Review, API lookup, the project map, migration, the formatter, the scene merge, bisect and the
+  edits work without it.
+- Optional: the .NET SDK, for C# projects: `godot_check` then also runs `dotnet build`.
 
 ## Add the server
 
@@ -33,6 +35,8 @@ Add this entry to the MCP settings (for Cline: `cline_mcp_settings.json`, under 
 - `--tier premium` gives full detail for large models; `--tier cheap` gives short output and step-by-step instructions
   for small models.
 - If Godot is not found, add `"env": { "GODOT": "/path/to/godot" }`.
+- The server has 53 tools. For a client with a tool limit or a small context window, add `"--lean"` (two tools that run
+  all of them) or `"--tools", "core"` (13 tools).
 - The first start downloads the package from npm, which can take up to 30 seconds.
 
 ## Check that it works
