@@ -191,6 +191,16 @@ function enumNames(api: GodotApi, enumName: string, prefix: string): string[] {
 }
 
 /** Turns `Key:Ctrl+S`, `Mouse:Left`, `JoyButton:A` or `JoyAxis:left_y-` into the Object(...) text the Godot 4 editor writes. */
+/** Settings the editor writes into project.godot that the ProjectSettings class reference does not list. */
+const EDITOR_WRITTEN = new Set([
+  "internationalization/locale/translations",
+  "internationalization/locale/translation_remaps",
+  "internationalization/locale/locale_filter_mode",
+  "internationalization/locale/translations_pot_files",
+  "editor_plugins/enabled",
+  "application/config/features",
+]);
+
 export function inputEventText(spec: string, api = GodotApi.load()): string {
   const match = /^\s*([A-Za-z_-]+)\s*:\s*(.+?)\s*$/.exec(spec);
   if (!match) throw new SettingsError(`"${spec}" is not an input event; write Key:Space, Key:Ctrl+S, Mouse:Left, JoyButton:0 or JoyAxis:1-`);
@@ -304,7 +314,7 @@ export function editProjectSettings(path: string, edit: SettingsEdit, options: {
       const members = api.getClass("ProjectSettings")?.members ?? [];
       // Feature overrides such as rendering/renderer/rendering_method.mobile take the type of the base setting.
       const member = members.find((m) => m.name === key) ?? members.find((m) => m.name === key.replace(/\.[\w]+$/, ""));
-      if (!member && key !== "config_version") {
+      if (!member && key !== "config_version" && !EDITOR_WRITTEN.has(key)) {
         const near = closest(key, members.map((m) => m.name), 3);
         warnings.push(`${key} is not a Godot ${api.version} project setting${near.length ? `; did you mean ${near.join(", ")}?` : ""} (a plugin or your own setting is fine)`);
       }

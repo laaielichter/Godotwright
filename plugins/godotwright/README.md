@@ -1,7 +1,7 @@
 # Godotwright for Claude Code
 
 Godotwright makes Claude Code better at Godot 4. It gives Claude the official Godot 4.7 class reference offline, a map
-of your project, an AAA review of GDScript with Godot 3 to 4 fixes, safe edits to scenes and project settings, headless
+of your project, an AAA review of GDScript with Godot 3 to 4 fixes, safe edits to scenes and project settings, a merge of scenes and resources by meaning, a GDScript formatter, checks for C# projects, headless
 checks, unit tests, play-testing with input, screenshots, and 3D models built and checked from code.
 
 ## Install
@@ -15,7 +15,7 @@ In Claude Code:
 ## What you get
 
 - **The MCP server** with all its tools (`godot_doctor`, `godot_scan`, `godot_api`, `godot_review`, `godot_fix`,
-  `godot_check`, `godot_play`, `godot_session`, `godot_game`, `godot_perf`, `godot_scene_edit`, `godot_model_build`, `godot_lessons` and more). See the [full list](https://github.com/laaielichter/Godotwright#the-33-tools).
+  `godot_check`, `godot_play`, `godot_session`, `godot_game`, `godot_perf`, `godot_scene_edit`, `godot_merge`, `godot_bisect`, `godot_format`, `godot_model_build`, `godot_lessons` and more: 53 in all). See the [full list](https://github.com/laaielichter/Godotwright#the-53-tools).
 - **Hooks that put Godotwright in Claude's loop,** so it does not have to remember a tool:
   - before Claude writes or edits a file (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) inside a path a
     `godotwright.json` `"protect"` list or the "Protected paths" setting keeps byte-identical, the edit is denied with
@@ -51,7 +51,7 @@ In Claude Code:
   renderer checks are reported explicitly.
 
 Settings (all optional): the Godot project, the Godot 4.7 program, protected paths (comma separated), tool sets
-(`core`, `edit`, `run`, `game`, `export`, `model`; empty means all, fewer tools cost less context) and read-only.
+(`core`, `edit`, `verify`, `run`, `game`, `export`, `model`; empty means all, fewer tools cost less context), the lean tool list and read-only.
 See the [reference](https://github.com/laaielichter/Godotwright/blob/main/docs/reference.md#tool-sets-and-read-only-mode).
 
 Start Claude Code in your Godot project folder. The tools that run Godot (`check`, `test`, `play`, `screenshot`) need
@@ -59,7 +59,7 @@ Godot 4.7; set `GODOT` to its path if it is not found in the usual install folde
 
 ## What it runs, writes and sends
 
-- **Runs:** `npx -y godotwright@0.5.0 mcp --tier premium`. The first start downloads that exact version of the
+- **Runs:** `npx -y godotwright@0.8.0 mcp --tier premium`. The first start downloads that exact version of the
   [godotwright npm package](https://www.npmjs.com/package/godotwright) (published from this repository by GitHub
   Actions, with provenance). It needs Node.js 22.12 or newer. The `check`, `test`, `play` and `screenshot` tools run
   your Godot binary headless on your project, which runs the project's own scripts.

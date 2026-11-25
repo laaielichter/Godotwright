@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Godotwright: Godot 4 MCP server and CLI for coding agents</title>
-<meta name="description" content="Godotwright checks the Godot code your coding agent writes. MCP server, CLI and Claude Code plugin for Godot 4.7: offline API, scored GDScript review, headless checks and tests, safe edits, Godot 3 to 4 migration and 3D models from code.">
+<meta name="description" content="Godotwright checks the Godot code your coding agent writes. MCP server, CLI and Claude Code plugin for Godot 4.7: offline API, scored GDScript review, headless checks and tests, safe edits, scenes that merge by meaning, a GDScript formatter, C# checks, Godot 3 to 4 migration and 3D models from code.">
 <link rel="canonical" href="https://laaielichter.github.io/Godotwright/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#080f17">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Godotwright">
 <meta property="og:title" content="Godotwright: make any coding agent better at Godot 4">
-<meta property="og:description" content="Checks the Godot code your coding agent writes: offline Godot 4.7 API, scored GDScript review, headless checks and tests, safe edits. MCP server, CLI and Claude Code plugin. MIT.">
+<meta property="og:description" content="Checks the Godot code your coding agent writes: offline Godot 4.7 API, scored GDScript review, headless checks and tests, safe edits, a git merge driver for scenes. MCP server, CLI and Claude Code plugin. MIT.">
 <meta property="og:url" content="https://laaielichter.github.io/Godotwright/">
 <meta property="og:image" content="https://laaielichter.github.io/Godotwright/assets/social.jpg">
 <meta property="og:image:width" content="1280">
@@ -31,8 +31,8 @@
   "name": "Godotwright",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "description": "MCP server, CLI and Claude Code plugin that checks the Godot code coding agents write: offline Godot 4.7 API lookup, project map, a scored review of GDScript, headless checks and tests, safe edits, Godot 3 to 4 migration, and 3D models built, viewed and checked from code.",
-  "featureList": ["Offline Godot 4.7 API lookup", "Project map without starting Godot", "AAA review of GDScript with scores", "Headless Godot checks", "GUT and GdUnit4 tests, play-testing with input, screenshots", "Safe renames and scene, settings and input map edits", "Godot 3 to 4 script migration", "Claude Code plugin with hooks, skills and subagents", "272 lessons from real Godot projects", "GitHub Action that posts a review receipt on pull requests", "59 ready-made parametric 3D models (.glb)", "3D model viewer as text and model lint"],
+  "description": "MCP server, CLI and Claude Code plugin that checks the Godot code coding agents write: offline Godot 4.7 API lookup, project map, a scored review of GDScript, headless checks and tests, safe edits, a git merge driver for scenes and resources, a GDScript formatter, C# checks, Godot 3 to 4 migration, and 3D models built, viewed and checked from code.",
+  "featureList": ["Offline Godot 4.7 API lookup", "Project map without starting Godot", "AAA review of GDScript with scores", "Headless Godot checks", "GUT and GdUnit4 tests, play-testing with input, screenshots", "Safe renames and scene, settings and input map edits", "Git merge driver that merges .tscn, .tres and project.godot by meaning", "Bisect: the first commit with a problem", "GDScript formatter with a token guard", "TileMap cell and animation edits in the scene file", "C# project map, review rules and dotnet build errors", "Optional editor addon", "Godot 3 to 4 script migration", "Claude Code plugin with hooks, skills and subagents", "272 lessons from real Godot projects", "GitHub Action that posts a review receipt on pull requests", "59 ready-made parametric 3D models (.glb)", "3D model viewer as text and model lint"],
   "url": "https://laaielichter.github.io/Godotwright/",
   "codeRepository": "https://github.com/laaielichter/Godotwright",
   "downloadUrl": "https://www.npmjs.com/package/godotwright",
@@ -55,7 +55,9 @@
     { "@type": "Question", "name": "Does it help with porting Godot 3 projects to Godot 4?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. The review flags Godot 3 syntax and names (export var, yield, KinematicBody2D, deg2rad, move_and_slide with arguments) and gives the Godot 4 replacement." } },
     { "@type": "Question", "name": "Does Godotwright work next to other Godot MCP servers?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most Godot MCP servers drive the open editor through an addon. Godotwright works from files, without the editor, and checks what the agent writes. Use both: an editor server to drive the editor, Godotwright to check the code." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most Godot MCP servers drive the open editor through an addon. Godotwright works from files, without the editor and without an editor plugin, and checks what the agent writes. It has an optional addon of its own for the open editor. Use both: an editor server to drive the editor, Godotwright to check the code." } },
+    { "@type": "Question", "name": "Does Godotwright work with C#?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, from the files: C# scripts are in the project map, usages and scene checks, the review has four C# rules, and godot_check reports dotnet build errors when the .NET SDK is installed. There is no C# language server, formatter, rename or migration." } }
   ]
 }
 </script>
@@ -258,10 +260,10 @@ footer a { color: var(--muted); }
   <section class="launch" aria-labelledby="hero-title">
     <div class="wrap launch-inner">
       <div class="launch-copy">
-        <a class="release" href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md"><span></span> v0.6.0 · Built for Godot 4.7 <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
+        <a class="release" href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md"><span></span> v0.8.0 · Built for Godot 4.7 <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
         <p class="eyebrow">Your agent. Your game. Real checks.</p>
         <h1 id="hero-title">Big worlds.<br>Better code.<br><em>Keep creating.</em></h1>
-        <p class="launch-lede">Give your coding agent the Godot knowledge it needs. Catch invented APIs, check what actually runs, and build 3D models from code.</p>
+        <p class="launch-lede">Give your coding agent the Godot knowledge it needs. Catch invented APIs, check what actually runs, merge scenes without conflicts, and build 3D models from code.</p>
         <div class="cta"><a class="btn primary" href="#install">Start building <svg class="ui-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a><a class="btn ghost" href="#demo">Watch it work <svg class="ui-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m6 3 11 7-11 7Z"/></svg></a></div>
         <p class="launch-note">Open source · MIT · CLI + MCP + Claude Code plugin</p>
       </div>
@@ -287,11 +289,34 @@ footer a { color: var(--muted); }
             <tr><td>calls an engine method</td><td class="no">Guesses a name from memory</td><td>Looks it up in the bundled Godot 4.7 class reference</td></tr>
             <tr><td>renames a signal or moves a file</td><td class="no">Breaks scene connections and <code>.uid</code> files</td><td><code>rename</code> changes code, scenes, connections and <code>.uid</code> files together, dry run first</td></tr>
             <tr><td>says “it works”</td><td class="no">Without running anything</td><td><code>check</code>, <code>test</code> and <code>play</code> run it headless and report <code>file:line</code></td></tr>
+            <tr><td>merges two branches that changed one scene</td><td class="no">A conflict, or a clean merge of a file Godot cannot load</td><td>A git merge driver merges nodes by path and properties one by one, with resource ids renumbered</td></tr>
+            <tr><td>hears “it worked yesterday”</td><td class="no">Reads forty diffs</td><td><code>bisect</code> names the first commit with the problem</td></tr>
+            <tr><td>formats a script</td><td class="no">May change what the code does</td><td><code>format</code> changes whitespace only; a guard compares the tokens before and after</td></tr>
             <tr><td>needs a 3D model</td><td class="no">Needs Blender</td><td><code>model build</code> makes a clean <code>.glb</code> from one of 59 kinds or 1000 library assets, then lints it</td></tr>
             <tr><td>opens a pull request</td><td class="no">Nobody checks the Godot side</td><td>A GitHub Action posts a receipt: review, check and tests (<a href="ci.html">set it up</a>)</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
+  </section>
+
+  <section id="new">
+    <div class="wrap">
+      <p class="eyebrow">Two things no other Godot server has</p><h2>Scenes that merge.<br>The commit that broke it.</h2>
+      <p class="sub">Both work on the files, with no editor and no editor plugin. So do scene and TileMap edits, animations, the formatter and the C# checks: they run in CI and on a machine without Godot. An optional addon adds the open editor.</p>
+      <ul class="tree">
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>Merge driver</span><p>Two branches, or two agents in two worktrees, each add a node to one scene. Git gives a conflict, or a file Godot cannot load. The merge driver merges <code>.tscn</code>, <code>.tres</code> and <code>project.godot</code> by meaning: nodes by path, properties one by one, resource ids renumbered. Only a property both sides changed differently is left to decide.</p><code>godotwright merge --install</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>Bisect</span><p>Reviews the project as it was at each commit, on copies from git, and halves the range to the first commit with the problem. The working tree is not touched. One commit to read instead of forty diffs.</p><code>godotwright bisect</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--accent-ink)"></span>Formatter</span><p>GDScript in the official style, whitespace only. A guard compares the tokens before and after, so the code cannot change meaning; a file that is not valid GDScript is skipped with the reason.</p><code>godotwright format --check</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>C# projects</span><p>C# scripts in the project map, usages and scene checks; four review rules for what Godot only reports at build time; <code>dotnet build</code> errors by file and line in <code>check</code>. No C# language server, formatter, rename or migration.</p><code>godotwright review</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nres)"></span>Editor bridge (optional)</span><p>A small addon on localhost with a token: what is open and unsaved, the selection, logged errors, save, reload, play, stop, screenshot. No scene editing through it. Everything else works without it.</p><code>godotwright editor install</code></li>
+      </ul>
+      <div class="stats" style="margin-top:1.5rem">
+        <div class="stat good"><span class="n">0</span><span class="l">guard refusals when formatting 12,472 real scripts</span></div>
+        <div class="stat good"><span class="n">0</span><span class="l">failures in 3,956 scene operation steps on 433 real scenes</span></div>
+        <div class="stat good"><span class="n">0</span><span class="l">problems merging 494 real scenes, resources and project files</span></div>
+      </div>
+      <p class="caption">Measured on one real project, from its files. The limits: none of this has been run in Godot yet, the editor addon has not run in an editor, no real <code>dotnet build</code> ran, and the TileMap and animation edits are tested on fixtures. On <code>main</code>, after 0.8.0. <a href="https://github.com/laaielichter/Godotwright/blob/main/CHANGELOG.md">Changelog</a></p>
     </div>
   </section>
 
@@ -366,8 +391,8 @@ footer a { color: var(--muted); }
       <p class="caption">Excerpt of real output of <code>godotwright hook post-edit</code> 0.3.0 after an edit of a Godot 3 script.</p>
       <div class="stats">
         <div class="stat"><span class="n">4</span><span class="l">hooks: after an edit, after a command, before stopping, at the start</span></div>
-        <div class="stat"><span class="n">10</span><span class="l">skills: debugging, performance, vehicles, large worlds, 3D models, patches and more</span></div>
-        <div class="stat"><span class="n">7</span><span class="l">subagents for review, debugging, migration, performance, shaders, models and tests</span></div>
+        <div class="stat"><span class="n">11</span><span class="l">skills: debugging, performance, vehicles, large worlds, 3D models, patches and more</span></div>
+        <div class="stat"><span class="n">8</span><span class="l">subagents for review, debugging, migration, performance, shaders, models, tests and dreaming</span></div>
         <div class="stat good"><span class="n">272</span><span class="l">lessons from real Godot projects: symptom, cause, fix and test</span></div>
       </div>
       <div class="cta"><a class="btn primary" href="claude-code.html">The Claude Code plugin</a><span class="sub">Other agents can call <code>godotwright hook &lt;event&gt;</code> the same way.</span></div>
@@ -388,10 +413,22 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_diff</span><p>A diff by meaning against git: nodes, properties, connections, script functions and exports, and what the change breaks elsewhere, such as a scene connection to a function that is gone.</p><code>godotwright diff</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_impact</span><p>What a change reaches: the scenes that load the changed files, the tests and saved scenarios that cover them, and the checks to run.</p><code>godotwright impact</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_collisions</span><p>Physics layers and masks by name and bit value: who detects whom, the exact mask to set, and what can never work.</p><code>godotwright collisions --between Player Enemy</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_merge</span><p>A three-way merge of <code>.tscn</code>, <code>.tres</code> and <code>project.godot</code> by meaning: nodes by path, properties one by one, resource ids of both sides renumbered. Finishes a merge git stopped on, previews a branch, or runs as the git merge driver.</p><code>godotwright merge --install</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_bisect</span><p>Which commit broke it: reviews the project as it was at each commit and halves the range to the first commit with the problem. The working tree is not touched.</p><code>godotwright bisect --rule api/unknown-member</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_metrics</span><p>Cyclomatic complexity per function with a grade; the signal flow with signals never emitted or never connected, also as mermaid; project statistics and the heaviest scenes.</p><code>godotwright metrics signals --mermaid</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_rename</span><p>Rename a function, signal, node, action or file everywhere at once, keeping connections, node paths and <code>.uid</code> files right.</p><code>godotwright rename hp health --write</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_project_edit</span><p>Change settings, input actions and autoloads in <code>project.godot</code>, checked against Godot 4.7, touching only that entry.</p><code>godotwright project input add jump --key Space</code></li>
-        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_scene_edit</span><p>Add or remove nodes, set properties, connect signals and attach scripts in a <code>.tscn</code>, without the editor.</p><code>godotwright scene add main.tscn . Music AudioStreamPlayer</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_scene_edit</span><p>Make a scene, add, remove, rename, move and duplicate nodes, set properties and groups, connect signals and attach scripts in a <code>.tscn</code>, without the editor. Paths follow a rename or move.</p><code>godotwright scene rename main.tscn Player Hero</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_resource_edit</span><p>Edit a <code>.tres</code> and import settings, checked against Godot 4.7 with uids kept; a written <code>.import</code> is reimported headless and checked.</p><code>godotwright resource set mat.tres roughness 0.8</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_format</span><p>Formats GDScript to the official style guide without changing what it means: a guard compares the tokens before and after.</p><code>godotwright format --check</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_tilemap</span><p>The cells of a TileMapLayer, read from and written to the scene file: a text map with a legend, set, fill, erase, clear, checked against the TileSet.</p><code>godotwright tilemap read level.tscn Ground</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_animation</span><p>The animations of an AnimationPlayer in the scene file: read tracks and keys, create an animation, add value and method tracks, set keys, length and loop mode.</p><code>godotwright animation read hero.tscn</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_new</span><p>A new project (2D, 3D or UI), a typed script from a template that passes the review (GDScript or C#), or a shader.</p><code>godotwright new script res://player.gd --template character_2d</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_preset</span><p>Export presets without the editor: list, add, change, remove.</p><code>godotwright preset add linux</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_translations</span><p>Register translation files, and check a CSV against the <code>tr()</code> keys the code uses.</p><code>godotwright translations check res://text.csv</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nres)"></span>godot_editor</span><p>Optional: see and drive the open editor through a small addon (localhost, token): open scenes and unsaved state, selection, logged errors, save, reload, play, stop, screenshot.</p><code>godotwright editor status</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_migrate</span><p>Rewrite Godot 3 GDScript to Godot 4 where that is mechanical, and list what is left to do by hand.</p><code>godotwright migrate --write</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_shader</span><p>Review every shader against Godot 4.7’s shader tables and compile it with Godot headless; errors as <code>file:line</code>.</p><code>godotwright shader</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_test</span><p>Run GUT or GdUnit4 tests headless and show only what failed, with <code>file:line</code>.</p><code>godotwright test</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_play</span><p>Run a scene with an input timeline and print the values you watch per frame: the agent sees the game do something.</p><code>godotwright play --input "10 tap jump" --watch Player.position</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_scenario</span><p>Keep a passing play run as a regression test in the project, and run them all with every failing claim, its value and frame.</p><code>godotwright scenario --save jump --input "10 tap jump" --expect "Player.velocity.y &lt; 0 @ 10"</code></li>
@@ -404,7 +441,9 @@ footer a { color: var(--muted); }
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_session</span><p>Load a scene once, headless and paused, and keep the game running between calls: a world that takes a minute to load loads once.</p><code>godotwright session start</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n2d)"></span>godot_game</span><p>Drive that running game: live tree, get and set values, step frames with input until a condition holds, 3D layout, rays, UI issues per window size, and hot reload of edited scripts with every node's values kept.</p><code>godotwright game step 120 --until "Hero.is_on_floor() == true"</code></li>
         <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_perf</span><p>Frame times as a player feels them: p50/p95/p99 against a budget, the slowest frames and what changed on them, and the change since the last run.</p><code>godotwright perf --scene res://level.tscn</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--n3d)"></span>godot_leaks</span><p>Load, run and free a scene in cycles and report what grows per cycle, by class, script and scene, and where it is made.</p><code>godotwright leaks --scene res://chunk.tscn</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_export</span><p>Before an export: files the presets leave out although the game loads them, and plain data files Godot only exports when <code>include_filter</code> names them.</p><code>godotwright export</code></li>
+        <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_export_run</span><p>Export headless, check the pack’s contents against what the game loads, then run the build for some frames. Patch packs too.</p><code>godotwright export run --preset Linux</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nui)"></span>godot_checklist</span><p>Every AAA rule with its fix, so the agent knows the bar before it starts. MCP only: there is no CLI command.</p></li>
         <li><span class="node"><span class="dot" style="background:var(--nres)"></span>godot_feedback</span><p>Mark a finding as wrong or right, or say whether a lesson helped. Later reviews on this machine learn from it.</p><code>godotwright learn feedback</code></li>
         <li><span class="node"><span class="dot" style="background:var(--nres)"></span>godot_lessons</span><p>Lessons from real Godot projects: symptom, cause, fix and test, by words, Godot error or rule. <code>gaps</code> lists what Godotwright cannot predict yet.</p><code>godotwright lessons moving ship deck</code></li>
@@ -454,16 +493,21 @@ footer a { color: var(--muted); }
           <thead><tr><th></th><th>Godotwright</th><th>Editor-driving Godot MCP servers</th><th>GDScript linters (gdtoolkit)</th><th>Godot’s <code>--convert-3to4</code></th></tr></thead>
           <tbody>
             <tr><td>Needs the Godot editor open</td><td class="yes">No</td><td class="no">Yes</td><td>No</td><td>No</td></tr>
+            <tr><td>Needs an editor plugin</td><td class="yes">No; an optional addon adds the open editor</td><td class="no">Yes</td><td>No</td><td>No</td></tr>
+            <tr><td>Merges scenes by meaning (git merge driver)</td><td class="yes">Yes: <code>.tscn</code>, <code>.tres</code>, <code>project.godot</code></td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Finds the commit that broke it</td><td class="yes">Yes (<code>godot_bisect</code>)</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
             <tr><td>Scored review: api, performance, quality, structure</td><td class="yes">Yes</td><td class="no">No</td><td class="no">Style, naming, complexity</td><td class="no">No</td></tr>
             <tr><td>Godot 3 code</td><td class="yes">Flagged with the Godot 4 fix; <code>migrate</code> rewrites scripts</td><td class="no">No</td><td class="no">No</td><td>Rewrites scripts, scenes and settings</td></tr>
-            <tr><td>Live control of the open editor</td><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Live control of the open editor</td><td>Optional addon: open scenes, errors, save, reload, play, stop, screenshot. No scene editing through it; not yet run in an editor</td><td class="yes">Yes, with scene editing</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Scene editing, TileMap cells, animations</td><td class="yes">Yes, in the files, with a dry run and undo</td><td>Yes, through the editor</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>GDScript formatter</td><td class="yes">Yes, whitespace only, with a token guard</td><td>Some do</td><td>Yes (<code>gdformat</code>)</td><td class="no">No</td></tr>
             <tr><td>A running game to inspect and drive</td><td class="yes">Yes, headless (<code>godot_session</code>)</td><td>Some do, through the editor</td><td class="no">No</td><td class="no">No</td></tr>
-            <tr><td>C#</td><td class="no">No</td><td>Some do</td><td class="no">No</td><td class="no">Not yet</td></tr>
+            <tr><td>C#</td><td>From the files: project map, usages, scene checks, four review rules, <code>dotnet build</code> errors in <code>check</code> (no real build has run yet). No language server, formatter, rename or migration</td><td>Some do</td><td class="no">No</td><td class="no">Not yet</td></tr>
             <tr><td>Best for</td><td>Checking and fixing what an agent writes, in the loop and in CI</td><td>Working in the open editor with an agent</td><td>Code style</td><td>A one-time port</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="sub">Editor servers such as <a href="https://github.com/hi-godot/godot-ai">godot-ai</a> and <a href="https://github.com/youichi-uda/godot-mcp-pro">Godot MCP Pro</a> control the open editor and have more tools; paid in-editor assistants such as <a href="https://ziva.sh">Ziva</a> write inside the editor. Godotwright works from files and checks what the agent writes, so they work well together: an editor server to drive the editor, Godotwright to check the code.</p>
+      <p class="sub">Editor servers such as <a href="https://github.com/hi-godot/godot-ai">godot-ai</a> and <a href="https://github.com/youichi-uda/godot-mcp-pro">Godot MCP Pro</a> control the open editor and edit scenes through it; paid in-editor assistants such as <a href="https://ziva.sh">Ziva</a> write inside the editor. Godotwright works from files and checks what the agent writes, so they work well together: an editor server to drive the editor, Godotwright to check the code.</p>
     </div>
   </section>
 
@@ -471,12 +515,13 @@ footer a { color: var(--muted); }
     <div class="wrap">
       <p class="eyebrow">Before you jump in</p><h2>A few good questions.</h2>
       <div class="faq">
-        <details><summary>Does it need Godot installed?</summary><p>No for <code>scan</code>, <code>api</code>, <code>review</code>, <code>migrate</code> and the edits: they read your project files and the bundled Godot 4.7 class reference. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> run Godot 4.7 headless (<code>--godot &lt;path&gt;</code>, <code>$GODOT</code>, <code>godot</code> on your PATH, or a Godot 4 download it finds in the usual folders, Steam or Downloads).</p></details>
+        <details><summary>Does it need Godot installed?</summary><p>No for <code>scan</code>, <code>api</code>, <code>review</code>, <code>migrate</code>, <code>format</code>, <code>merge</code>, <code>bisect</code> and the edits: they read your project files and the bundled Godot 4.7 class reference. <code>check</code>, <code>test</code>, <code>play</code> and <code>screenshot</code> run Godot 4.7 headless (<code>--godot &lt;path&gt;</code>, <code>$GODOT</code>, <code>godot</code> on your PATH, or a Godot 4 download it finds in the usual folders, Steam or Downloads).</p></details>
         <details><summary>Which agents does it work with?</summary><p>Any agent that speaks MCP over stdio. CI connects Claude Code and Codex to the server on every push. The CLI works from any shell, so agents without MCP can call it too.</p></details>
         <details><summary>Does it send my code anywhere?</summary><p>No. Learning stays on your machine and stores counters, rule names and API names, never code, names or paths. Sharing anonymous counters is opt-in, off by default, and respects <code>DO_NOT_TRACK</code>. See <a href="https://github.com/laaielichter/Godotwright/blob/main/PRIVACY.md">PRIVACY.md</a>.</p></details>
         <details><summary>Will it help me port a Godot 3 project?</summary><p>Yes. The review flags Godot 3 syntax and names such as <code>export var</code>, <code>yield</code>, <code>KinematicBody2D</code>, <code>deg2rad</code> and <code>move_and_slide()</code> with arguments, and gives the Godot 4 replacement for each.</p></details>
         <details><summary>Does it work with Godot 4.0–4.6?</summary><p>The target is Godot 4.7.x. Most findings apply to every Godot 4 version, but API lookups answer for 4.7, so a method added after your version may be reported as present.</p></details>
-        <details><summary>Does it work next to other Godot MCP servers?</summary><p>Yes. Most Godot MCP servers drive the open editor through an addon. Godotwright works from files, without the editor, and checks what the agent writes. Use both: an editor server to drive the editor, Godotwright to check the code.</p></details>
+        <details><summary>Does it work next to other Godot MCP servers?</summary><p>Yes. Most Godot MCP servers drive the open editor through an addon. Godotwright works from files, without the editor and without an editor plugin, and checks what the agent writes. It has an optional addon of its own for the open editor (<code>godotwright editor install</code>). Use both: an editor server to drive the editor, Godotwright to check the code.</p></details>
+        <details><summary>Does it work with C#?</summary><p>Yes, from the files: C# scripts are in the project map, usages and scene checks, the review has four C# rules, and <code>check</code> reports <code>dotnet build</code> errors when the .NET SDK is installed. There is no C# language server, formatter, rename or migration, and no real <code>dotnet build</code> has run in our tests yet.</p></details>
         <details><summary>Does it write my game?</summary><p>No. It checks, runs and fixes what you or your agent write, and builds clean base 3D models to refine. It does not replace playtesting or your own judgement.</p></details>
         <details><summary>Is it on npm?</summary><p>Yes: <a href="https://www.npmjs.com/package/godotwright">godotwright</a>. <code>npx -y godotwright</code> runs the latest version, or install it with <code>npm install -g godotwright</code>.</p></details>
       </div>

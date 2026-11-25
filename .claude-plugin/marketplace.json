@@ -9,7 +9,7 @@
     {
       "name": "godotwright",
       "source": "./plugins/godotwright",
-      "description": "Offline Godot 4.7 API, project map, headless checks, safe edits, tests, play-testing, 3D models and an AAA GDScript review."
+      "description": "Offline Godot 4.7 API, project map, headless checks, safe edits, scene merges, a GDScript formatter, C# checks, tests, play-testing, 3D models and an AAA GDScript review."
     }
   ]
 }

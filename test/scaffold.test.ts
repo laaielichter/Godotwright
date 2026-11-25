@@ -370,6 +370,8 @@ describe("translations", () => {
     expect(dry.plan.written).toBe(false);
     expect(read(root, "project.godot")).toBe(before);
     const done = translations(root, "add", { file: "res://i18n/text.csv" }, { write: true }) as TranslationEdit;
+    // The editor writes this setting itself: it is not called an unknown setting.
+    expect(JSON.stringify(done)).not.toMatch(/is not a Godot .* project setting/);
     expect(done.plan.written).toBe(true);
     expect(read(root, "project.godot")).toContain('locale/translations=PackedStringArray("res://i18n/text.en.translation", "res://gone.po", "res://i18n/text.nl.translation")\n');
     expect(formatTranslations(done)).toContain("translations add res://i18n/text.csv: res://i18n/text.nl.translation");
