@@ -1,5 +1,5 @@
 import { Command, Option } from "commander";
-import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { formatMigration, migrateProjectChecked } from "../migrate/migrate.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { OptionError } from "../project/options.js";
 import { collect, writeOut } from "./output.js";
@@ -13,9 +13,9 @@ export function migrateCommand(): Command {
     .option("--include-addons", "also migrate scripts in res://addons/")
     .addOption(new Option("-d, --detail <level>", "output detail").choices(["brief", "full"]).default("brief"))
     .option("--json", "print the result as JSON")
-    .action((path: string, options: { write?: boolean; file: string[]; includeAddons?: boolean; detail: "brief" | "full"; json?: boolean }, command: Command) => {
+    .action(async (path: string, options: { write?: boolean; file: string[]; includeAddons?: boolean; detail: "brief" | "full"; json?: boolean }, command: Command) => {
       try {
-        const result = migrateProject(path, { write: options.write, includeAddons: options.includeAddons, ...(options.file.length ? { files: options.file } : {}) });
+        const result = await migrateProjectChecked(path, { write: options.write, includeAddons: options.includeAddons, ...(options.file.length ? { files: options.file } : {}) });
         writeOut(command, options.json ? `${JSON.stringify(result, null, 2)}\n` : formatMigration(result, options.detail));
       } catch (error) {
         if (!(error instanceof ProjectNotFoundError) && !(error instanceof OptionError)) throw error;

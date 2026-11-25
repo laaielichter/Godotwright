@@ -2,7 +2,7 @@ import { cpSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildCSharp, findDotnet } from "../../src/check/csharp-build.js";
-import { migrateProject } from "../../src/migrate/migrate.js";
+import { migrateProject, migrateProjectChecked } from "../../src/migrate/migrate.js";
 import { makeProject, tempFolder } from "../helpers.js";
 
 /**
@@ -132,14 +132,20 @@ describe.skipIf(!DOTNET)("godot_migrate on Godot 3 C# with the real compiler", (
     const report: string[] = [];
     const errorsOf: Record<string, number> = {};
     for (const demo of readdirSync(copy).filter((d) => existsSync(join(copy, d, "project.godot"))).sort()) {
-      const migrated = migrateProject(join(copy, demo), { write: true, includeAddons: true });
+      const migrated = await migrateProjectChecked(join(copy, demo), { write: true, includeAddons: true });
       const built = await buildCSharp(join(copy, demo));
       const errors = built.diagnostics.filter((d) => d.severity === "error");
       errorsOf[demo] = errors.length;
+      // Nothing that does not build is left unreported: every compiler error is a TO DO on its line.
+      const todos = migrated.files.flatMap((f) => f.left.map((l) => `${f.file}:${l.line} ${l.message}`));
+      for (const e of errors) if (e.file) expect(todos.some((t) => t.startsWith(`${e.file}:${e.line} `) && t.includes(e.message)), `${demo}: ${e.file}:${e.line} ${e.message}`).toBe(true);
       report.push(`${demo}: ${built.status === "ok" ? "builds" : `${errors.length} errors`}, ${migrated.changes} changes, ${migrated.left} TO DOs${errors.length ? `; first: ${errors.slice(0, 5).map((e) => `${e.file}:${e.line} ${e.message.slice(0, 80)}`).join(" | ")}` : ""}`);
     }
     console.log(report.join("\n"));
     expect(errorsOf["dodge_the_creeps"]).toBe(0);
     expect(errorsOf["pong"]).toBe(0);
+    // Its .x fields on Godot math types are rewritten through the setter's value and member chains: only the
+    // MoveAndSlide(velocity) TO DO is left.
+    expect(errorsOf["2.5d"]).toBe(1);
   });
 });

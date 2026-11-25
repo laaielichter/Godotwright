@@ -107,10 +107,14 @@ node dist/cli.js --help
   `csharp-names.ts` holds the Godot 4 classes whose C# name is not the engine's). A C# rule must be certain from the
   text alone; what is not becomes a TO DO. `GODOT3_MONO_DEMOS=<folder>` runs the official Godot 3 C# demos through
   `test/integration/migrate-csharp.test.ts`.
+- `src/scaffold/project.ts` writes the `.csproj` byte for byte as Godot 4.7.2's ProjectGenerator does
+  (`sanitizeNamespace` is Godot's IdentifierUtils); keep `GODOT_ENGINE_VERSION` at the Godot version it was compared
+  with. `src/migrate/csharp.ts` is the Godot 3 C# migration; `migrateProjectChecked` (src/migrate/migrate.ts) builds
+  its result on a temp copy and turns every compiler error left into a TO DO.
 - `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
   classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
-  `dotnet build` and reads MSBuild's diagnostics. The C# tools were run with dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and
-  csharp-ls 0.16.0; the integration tests that need `dotnet` or `csharp-ls` (`test/integration/*csharp*.test.ts`) are
+  `dotnet build` and reads MSBuild's diagnostics. The C# tools were run with dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and 4.7.2,
+  and csharp-ls 0.16.0; the integration tests that need `dotnet` or `csharp-ls` (`test/integration/*csharp*.test.ts`) are
   skipped without them. Godotwright never installs either.
 - `src/editor/`: `godot_editor`: `bridge.ts` is the client of the editor addon in `data/editor-bridge/` (localhost,
   token from `.godot/godotwright_bridge.json`), `install.ts` copies and enables the addon. The addon cannot be run in

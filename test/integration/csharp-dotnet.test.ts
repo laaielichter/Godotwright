@@ -48,7 +48,8 @@ describe.skipIf(!DOTNET)("dotnet build on a generated C# project", () => {
     writeFileSync(csproj, readFileSync(csproj, "utf8").replace("</PropertyGroup>", "</PropertyGrou>"));
     const broken = await buildCSharp(root);
     expect(broken).toMatchObject({ status: "failed", errors: 1 });
-    expect(broken.diagnostics[0]).toMatchObject({ severity: "error", file: "res://CsGame.csproj", line: 5 });
+    // The closing tag of the PropertyGroup, under Godot 4.7.2's Android TargetFramework line.
+    expect(broken.diagnostics[0]).toMatchObject({ severity: "error", file: "res://CsGame.csproj", line: 6 });
     expect(broken.diagnostics[0]!.message).toMatch(/^MSB4025: The project file could not be loaded\./);
   }, 300_000);
 
