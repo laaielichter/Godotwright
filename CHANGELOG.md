@@ -4,6 +4,31 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Seven tools and six scene operations other Godot servers have, without an editor plugin.** All work on the files,
+  so they run in CI and without Godot. Checked on a real project of 12,000 scripts and 433 scenes
+  (`GODOTWRIGHT_CORPUS=<folder>` runs those checks; they never write there).
+  - `godot_scene_edit`: `create_scene`, `rename_node` (descendants, connections, editable paths and NodePaths follow;
+    scripts that name the old path are listed), `move_node` (another parent or another place among its siblings),
+    `duplicate_node`, `set_groups` and `add_nodes` (several nodes, all or nothing). On 433 real scenes: 3,956 steps,
+    0 failures. That run found a file with one stray CRLF being read as a Windows file, which the older operations had
+    too.
+  - `godot_format` (`godotwright format`, `--check` for CI): formats GDScript to the official style guide and cannot
+    change what the code means: the tokens before and after must be the same, strings, comments and node paths stay
+    byte for byte, and lines are not wrapped or joined. A file that is not valid GDScript is skipped with the reason.
+    On 12,472 real scripts: 11,365 changed, 0 guard refusals, 0 not stable on a second run, 28 skipped (patch files
+    and files with conflict markers or broken brackets).
+  - `godot_metrics`: cyclomatic complexity per function with a grade; the signal flow (who emits, who connects) with
+    signals never emitted, never connected, and connections to a missing method, also as mermaid; project statistics
+    and the heaviest scenes.
+  - `godot_tilemap`: the cells of a TileMapLayer read and edited in the scene file (a map with a legend; set, fill,
+    erase, clear), checked against the TileSet.
+  - `godot_animation`: the animations of an AnimationPlayer read and authored in the scene file (create, value and
+    method tracks, keys, length, loop mode), with the track path checked against the scene.
+  - `godot_new`: a new project (2D, 3D or UI), a typed script from a template that passes the review, or a shader.
+  - `godot_preset`: export presets listed, added, changed and removed. `godot_translations`: translation files
+    registered, and a CSV checked against the `tr()` keys the code uses.
+- `godot_merge` is checked on 494 real scenes, resources and project files: two different changes merge into a file
+  that parses, with every reference resolving.
 - **`godot_merge` (and `godotwright merge`): scenes, resources and `project.godot` merged by meaning.** Git merges these
   files line by line. Two branches, or two agents in two worktrees, that each add a node to one scene get a conflict, or
   a clean merge of a file Godot cannot load: both sides gave their new resource the same id, `load_steps` is off, a node

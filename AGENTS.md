@@ -81,6 +81,17 @@ node dist/cli.js --help
   merge driver (`merge --driver`) and installs it (`merge --install`: `.gitattributes` and the clone's git config).
 - `src/bisect/`: `godot_bisect`: the review run on copies of the project at earlier commits (`git archive` into a temp
   folder), halving the range to the first commit with the problem. Nothing in the working tree or the repository changes.
+- `src/scene/structure.ts`: the structure operations of `godot_scene_edit` (create_scene, rename_node, move_node,
+  duplicate_node, set_groups, add_nodes); `test/integration/scene-structure-corpus.test.ts` runs them on real scenes.
+- `src/format/`: `godot_format`. `tokenizer.ts` is a full GDScript tokenizer, `format.ts` the formatter with its guard
+  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project.
+- `src/metrics/`: `godot_metrics`: `complexity.ts`, `signals.ts` (signal flow and its three bug lists), `stats.ts`.
+- `src/tilemap/`: `godot_tilemap`: `codec.ts` reads and writes `tile_map_data`, `plan.ts` is the plan, journal and
+  `load_steps` code that `src/animation/` shares. `src/animation/`: `godot_animation`.
+- `src/scaffold/`: `godot_new` (`project.ts`, `script.ts` with the templates), `godot_preset` (`presets.ts`) and
+  `godot_translations` (`translations.ts`).
+- Corpus tests (`test/integration/*-corpus.test.ts`) run on real projects: set `GODOTWRIGHT_CORPUS=<folder>`. They
+  never write there.
 - `src/impact/`: `godot_impact`: the file graph of `src/deps/` walked backwards from the changed files to scenes,
   tests and saved scenarios, and the checks to run.
 - `src/collisions/`: `godot_collisions`: physics layers and masks read from the scenes, who detects whom, and what can

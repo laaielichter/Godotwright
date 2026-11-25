@@ -12,7 +12,12 @@ import { depsCommand } from "./commands/deps.js";
 import { bisectCommand } from "./commands/bisect.js";
 import { diffCommand } from "./commands/diff.js";
 import { impactCommand } from "./commands/impact.js";
+import { animationCommand } from "./commands/animation.js";
+import { formatCommand } from "./commands/format.js";
 import { mergeCommand } from "./commands/merge.js";
+import { metricsCommand } from "./commands/metrics.js";
+import { newCommand, presetCommand, translationsCommand } from "./commands/scaffold.js";
+import { tilemapCommand } from "./commands/tilemap.js";
 import { collisionsCommand } from "./commands/collisions.js";
 import { leaksCommand } from "./commands/leaks.js";
 import { perfCommand } from "./commands/perf.js";
@@ -76,6 +81,13 @@ export function createProgram(): Command {
     .addCommand(impactCommand())
     .addCommand(mergeCommand())
     .addCommand(bisectCommand())
+    .addCommand(formatCommand())
+    .addCommand(metricsCommand())
+    .addCommand(tilemapCommand())
+    .addCommand(animationCommand())
+    .addCommand(newCommand())
+    .addCommand(presetCommand())
+    .addCommand(translationsCommand())
     .addCommand(collisionsCommand())
     .addCommand(usagesCommand())
     .addCommand(renameCommand())
