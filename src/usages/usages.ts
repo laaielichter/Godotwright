@@ -1,9 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { allClasses, maskCSharp } from "../godot/csharp.js";
 import { logicalLines } from "../godot/gdscript.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { tokenize } from "../review/tokens.js";
-import { loadProject, ProjectNotFoundError, type LoadOptions } from "../scan/scan.js";
+import { loadProject, type LoadOptions } from "../scan/scan.js";
 import { withoutSubResource } from "../project/files.js";
 
 /** What kind of place a name turns up in. */
@@ -57,7 +58,6 @@ const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * A `res://` path or `uid://` finds every file that refers to that resource.
  */
 export function findUsages(path: string, name: string, options: UsageOptions = {}): UsageReport {
-  if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
   const data = loadProject(path, options);
   const wanted = name.trim();
   const inScope = (file: string): boolean => !data.external.has(withoutSubResource(file)) && (options.includeAddons || !file.startsWith("res://addons/"));
@@ -100,6 +100,42 @@ export function findUsages(path: string, name: string, options: UsageOptions = {
       // Names Godot looks up at run time: connect("sig"), emit_signal("sig"), is_action_pressed("jump"), add_to_group("enemies"), get_node("Player").
       const lit = new RegExp(`&?["']${escape(wanted)}["']|["'][^"']*/${escape(wanted)}["']|["']${escape(wanted)}/[^"']*["']`);
       if (lit.test(ll.text)) add({ file, line: ll.line, kind: "string", text: clip(ll.text) });
+    }
+  }
+
+  // C#: the same kinds, read from the outline (strings and comments are told apart there).
+  for (const [file, { source, outline }] of data.csharp) {
+    if (!inScope(file)) continue;
+    const lines = source.split("\n");
+    const lineText = (line: number) => clip(lines[line - 1] ?? "");
+    if (isResource) {
+      for (const l of outline.literals) if (resNames.has(l.value)) add({ file, line: l.line, kind: "resource", text: lineText(l.line) });
+      continue;
+    }
+    // One usage per line, the most telling kind first: a definition, a node path, a reference, a string.
+    const taken = new Set<number>();
+    const once = (line: number, kind: UsageKind) => {
+      if (taken.has(line)) return;
+      taken.add(line);
+      add({ file, line, kind, text: lineText(line) });
+    };
+    for (const c of allClasses(outline)) {
+      if (c.name === wanted) once(c.line, "definition");
+      for (const m of [...c.methods, ...c.members]) if (m.name === wanted) once(m.line, "definition");
+      // A signal is found by its name and by its delegate: HealthChanged and HealthChangedEventHandler.
+      for (const s of c.signals) if (s.name === wanted || s.delegate === wanted) once(s.line, "definition");
+    }
+    for (const u of outline.usages) {
+      if ((u.kind === "node" || u.kind === "unique node") && u.name.replace(/^%/, "").split("/").includes(wanted)) once(u.line, "node path");
+    }
+    const word = new RegExp(`(?<![\\w@])${escape(wanted)}(?!\\w)`);
+    maskCSharp(source)
+      .code.split("\n")
+      .forEach((code, i) => {
+        if (word.test(code)) once(i + 1, "reference");
+      });
+    for (const l of outline.literals) {
+      if (l.value === wanted || (!l.interpolated && l.value.replace(/^%/, "").split("/").includes(wanted))) once(l.line, "string");
     }
   }
 

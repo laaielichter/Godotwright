@@ -75,6 +75,30 @@ node dist/cli.js --help
   it was there). Read-only; commit names are checked before they reach git.
 - `src/diff/`: `godot_diff`, the diff by meaning: scenes and resources (`diffResourceText`), scripts
   (`diffScriptText`), settings, shaders and import files, and what each removal breaks elsewhere in the project.
+- `src/merge/`: `godot_merge`. `merge.ts` is the three-way merge of one file (`mergeText`: sections by identity, properties
+  one by one, resource ids aligned first, then a repair pass so nothing points at a dropped resource or parent);
+  `project.ts` finds the three versions (a merge in progress from the git index, or a branch against HEAD), is the git
+  merge driver (`merge --driver`) and installs it (`merge --install`: `.gitattributes` and the clone's git config).
+- `src/bisect/`: `godot_bisect`: the review run on copies of the project at earlier commits (`git archive` into a temp
+  folder), halving the range to the first commit with the problem. Nothing in the working tree or the repository changes.
+- `src/scene/structure.ts`: the structure operations of `godot_scene_edit` (create_scene, rename_node, move_node,
+  duplicate_node, set_groups, add_nodes); `test/integration/scene-structure-corpus.test.ts` runs them on real scenes.
+- `src/format/`: `godot_format`. `tokenizer.ts` is a full GDScript tokenizer, `format.ts` the formatter with its guard
+  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project.
+- `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
+  classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
+  `dotnet build` and reads MSBuild's diagnostics.
+- `src/editor/`: `godot_editor`: `bridge.ts` is the client of the editor addon in `data/editor-bridge/` (localhost,
+  token from `.godot/godotwright_bridge.json`), `install.ts` copies and enables the addon. The addon cannot be run in
+  CI: a test checks every engine method it calls against the bundled API data; `docs/editor-bridge.md` has the manual
+  test.
+- `src/metrics/`: `godot_metrics`: `complexity.ts`, `signals.ts` (signal flow and its three bug lists), `stats.ts`.
+- `src/tilemap/`: `godot_tilemap`: `codec.ts` reads and writes `tile_map_data`, `plan.ts` is the plan, journal and
+  `load_steps` code that `src/animation/` shares. `src/animation/`: `godot_animation`.
+- `src/scaffold/`: `godot_new` (`project.ts`, `script.ts` with the templates), `godot_preset` (`presets.ts`) and
+  `godot_translations` (`translations.ts`).
+- Corpus tests (`test/integration/*-corpus.test.ts`) run on real projects: set `GODOTWRIGHT_CORPUS=<folder>`. They
+  never write there.
 - `src/impact/`: `godot_impact`: the file graph of `src/deps/` walked backwards from the changed files to scenes,
   tests and saved scenarios, and the checks to run.
 - `src/collisions/`: `godot_collisions`: physics layers and masks read from the scenes, who detects whom, and what can

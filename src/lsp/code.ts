@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { findProjectRoot, fromResPath, listProjectFiles, toResPath } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { fromResPath, listProjectFiles, toResPath } from "../project/files.js";
+import { projectRootOf } from "../scan/scan.js";
 import { GodotLanguageServer, LanguageServerPool, pathOfUri, uriOf, type LspDiagnostic } from "./server.js";
 
 /**
@@ -179,8 +179,7 @@ function position(text: string, line: number | undefined, column: number | undef
 }
 
 export async function codeIntel(path: string, options: CodeOptions): Promise<CodeResult> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   if (!CODE_OPS.includes(options.op)) throw new CodeError(`op must be one of ${CODE_OPS.join(", ")}`);
   if (options.op !== "diagnostics" && !options.file) throw new CodeError(`${options.op} needs file (a res:// .gd path)`);
   if (options.code !== undefined && !options.file) throw new CodeError("code needs file: the res:// path the unsaved code belongs to");

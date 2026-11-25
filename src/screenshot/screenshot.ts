@@ -8,7 +8,7 @@ import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { findProjectRoot, fromResPath } from "../project/files.js";
 import { ProtectedPathError, assertWritable } from "../project/protect.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { BaselineError, UPDATE_HINT, baselineFiles, baselineName, compareBaseline, compareBaselineFile, formatBaseline, readBaselineMeta, type BaselineMeta, type BaselineResult } from "./baseline.js";
 import { imageStats } from "./diff.js";
 
@@ -431,8 +431,7 @@ async function render(path: string, options: ScreenshotOptions): Promise<Screens
     writeFileSync(join(temp, "project.godot"), 'config_version=5\n\n[application]\n\nconfig/name="Screenshot"\n\n[rendering]\n\nrenderer/rendering_method="gl_compatibility"\n');
     root = temp;
   } else {
-    const found = findProjectRoot(path);
-    if (!found) throw new ProjectNotFoundError(path);
+    const found = projectRootOf(path);
     root = found;
     const settings = parseProjectSettings(readFileSync(join(root, "project.godot"), "utf8"));
     scene = options.scene ? (options.scene.startsWith("res://") ? options.scene : `res://${options.scene.replace(/^\/+/, "")}`) : settings.mainScene;

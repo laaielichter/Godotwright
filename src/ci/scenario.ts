@@ -2,8 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { JournalWriter } from "../journal/journal.js";
 import { parseCondition, parseTimeline, playScene, type PlayReport } from "../play/play.js";
-import { findProjectRoot } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { DEFAULT_THRESHOLD, DEFAULT_TOLERANCE } from "../screenshot/diff.js";
 import { BaselineError, baselineFiles, baselineName, compareBaseline, formatBaseline, readBaselineMeta, type BaselineResult } from "../screenshot/baseline.js";
 
@@ -220,8 +219,7 @@ function parseScreenshots(value: unknown): ScreenshotStep[] {
 
 /** The scenario files of a project, sorted by name. */
 export function loadScenarios(path: string): { root: string; scenarios: { file: string; scenario: Scenario }[] } {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const dir = join(root, SCENARIO_DIR);
   if (!existsSync(dir)) return { root, scenarios: [] };
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort();
@@ -443,8 +441,7 @@ export interface SaveResult {
  * so godot_undo can take it back). A file that is there already is only replaced with `overwrite`.
  */
 export async function saveScenario(path: string, data: Record<string, unknown>, options: ScenarioRunOptions & { overwrite?: boolean } = {}): Promise<SaveResult> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const name = data["name"];
   if (typeof name !== "string" || !SCENARIO_NAME.test(name)) throw new ScenarioError("name must be 1 to 64 letters, digits, _ or -");
   const scenario = parseScenario(data, name);

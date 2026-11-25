@@ -1,9 +1,8 @@
 import { cpSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, sep } from "node:path";
-import { findProjectRoot } from "../project/files.js";
 import { plural } from "../scan/format.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { checkProject, type CheckOptions, type CheckResult } from "./check.js";
 import { formatDiagnostic, type Diagnostic } from "./log.js";
 
@@ -42,8 +41,7 @@ export function compareBinary(explicit: string | undefined, env: NodeJS.ProcessE
 const SKIP = new Set([".godot", ".git", ".hg", ".svn"]);
 
 export async function compareGodot(path: string, options: CompareOptions = {}): Promise<CompareResult> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const second = compareBinary(options.compareGodot);
   const parent = mkdtempSync(join(tmpdir(), "godotwright-compare-"));
   const copy = join(parent, basename(root));

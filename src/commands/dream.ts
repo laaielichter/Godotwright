@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import { applyDream, DreamError, dream, formatApply, formatDream, markDreamed, parseSince, setAutoApplyConsent } from "../dream/dream.js";
-import { findProjectRoot } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { ProjectNotFoundError, projectRootOf } from "../scan/scan.js";
 import { writeOut } from "./output.js";
 
 interface DreamCommandOptions {
@@ -33,8 +32,7 @@ export function dreamCommand(): Command {
         if (options.detail !== "brief" && options.detail !== "full") throw new DreamError("detail must be brief or full");
         if (options.autoApply !== undefined) {
           if (options.autoApply !== "yes" && options.autoApply !== "no") throw new DreamError("--auto-apply takes yes or no");
-          const root = findProjectRoot(path);
-          if (!root) throw new ProjectNotFoundError(path);
+          const root = projectRootOf(path);
           setAutoApplyConsent(root, options.autoApply === "yes");
           writeOut(
             command,

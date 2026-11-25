@@ -88,6 +88,29 @@ describe("godotwright fix", () => {
     expect(none.exitCode).toBe(1);
   });
 
+  it("stops for a path that does not exist, and never fixes the project around it (#197)", async () => {
+    const code = "extends Node\n\n\nfunc f() -> void:\n\tvar x := abs(-1)\n\tprint(x)\n";
+    const { root, read } = project(code);
+    const missing = join(root, "scripts");
+    expect(() => fixProject(missing, { write: true })).toThrow(`${missing}: no such file or directory`);
+    const printed: string[] = [];
+    const written = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      printed.push(String(chunk));
+      return true;
+    });
+    try {
+      expect((await runCli(["fix", missing, "--write"])).exitCode).toBe(1);
+    } finally {
+      written.mockRestore();
+    }
+    expect(printed.join("")).toBe(`${missing}: no such file or directory\n`);
+    expect(read()).toBe(code);
+    expect(existsSync(join(root, ".godot"))).toBe(false);
+    process.exitCode = undefined;
+    // The project itself is still fixed.
+    expect(fixProject(root, { write: true }).changes.length).toBeGreaterThan(0);
+  });
+
   it("names the nearest rule for a typo, and writes nothing", () => {
     const code = "extends Node\n\n\nfunc f(x: Node) -> void:\n\tif x is Node3D and is_instance_valid(x):\n\t\tprint(x)\n";
     const { root, read } = project(code);

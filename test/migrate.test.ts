@@ -226,6 +226,47 @@ describe("migrate a script", () => {
     expect(code("OS.window_position = Vector2(10, 10)")).toBe("get_window().position = Vector2(10, 10)");
   });
 
+  it("rewrites OS.get_system_time_msecs() and OS.set_window_title() around their arguments (#185)", () => {
+    const source = 'extends Node\n\nfunc _ready():\n\tvar ms = OS.get_system_time_msecs()\n\tOS.set_window_title("Game (%s)" % str(ms))\n';
+    const m = migrateScript(source, api);
+    expect(m.code).toContain("\tvar ms = int(Time.get_unix_time_from_system() * 1000)\n");
+    expect(m.code).toContain('\tDisplayServer.window_set_title("Game (%s)" % str(ms))\n');
+    expect(m.left).toEqual([]);
+    const root = makeProject({ "project.godot": PROJECT, "main.gd": m.code });
+    expect(reviewProject(root).findings.filter((f) => f.rule === "api/unknown-member")).toEqual([]);
+    // A call that goes on over more lines is not guessed at: it gets a TO DO.
+    const open = migrateScript("OS.set_window_title(\n\ttitle)", api);
+    expect(open.code).toBe("OS.set_window_title(\n\ttitle)");
+    expect(open.left[0]?.message).toContain("DisplayServer.window_set_title(...)");
+    // Strings stay, the moves around them still work, and a second run changes nothing.
+    expect(code('print("OS.set_window_title(x)")')).toBe('print("OS.set_window_title(x)")');
+    expect(code("OS.get_datetime(true)")).toBe("Time.get_datetime_dict_from_system(true)");
+    expect(migrateScript("OS.window_fullscreen = true", api).left).toHaveLength(1);
+    expect(migrateScript(m.code, api).changes).toEqual([]);
+  });
+
+  it("turns RigidBody mode into freeze and freeze_mode, or a TO DO, never mode = FREEZE_MODE_... (#195)", () => {
+    const source = "extends RigidBody\n\nfunc _ready():\n\tmode = MODE_RIGID\n\tmode = MODE_STATIC # stop\n\tself.mode = RigidBody.MODE_KINEMATIC\n\tmode = MODE_CHARACTER\n\tset_mode(MODE_STATIC)\n\tif mode == MODE_STATIC:\n\t\tpass\n";
+    const m = migrateScript(source, api);
+    expect(m.code).toBe("extends RigidBody3D\n\nfunc _ready():\n\tfreeze = false\n\tfreeze_mode = FREEZE_MODE_STATIC # stop\n\tfreeze = true\n\tself.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC\n\tself.freeze = true\n\tmode = MODE_CHARACTER\n\tset_mode(MODE_STATIC)\n\tif mode == MODE_STATIC:\n\t\tpass\n");
+    expect(m.left.map((l) => l.line)).toEqual([7, 8, 9]);
+    expect(m.left[0]?.message).toContain("RigidBody.mode is gone in Godot 4: use freeze = true with freeze_mode = FREEZE_MODE_STATIC");
+    expect(m.code).not.toMatch(/(?<!freeze_)mode\b.*FREEZE_MODE_|set_mode\(FREEZE/);
+    const twice = migrateScript(m.code, api);
+    expect(twice.changes).toEqual([]);
+    expect(twice.code).toBe(m.code);
+    // The 2D body, and another script that names the RigidBody constant.
+    expect(code("extends RigidBody2D\nfunc f():\n\tmode = MODE_KINEMATIC")).toBe("extends RigidBody2D\nfunc f():\n\tfreeze_mode = FREEZE_MODE_KINEMATIC\n\tfreeze = true");
+    expect(code("extends Node\nfunc f(body):\n\tbody.mode = RigidBody.MODE_STATIC")).toBe("extends Node\nfunc f(body):\n\tbody.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC\n\tbody.freeze = true");
+    // A script with another base, and a RigidBody script with its own `mode`, are not about RigidBody.mode.
+    const other = migrateScript("extends Node\nvar mode = 1\nfunc f():\n\tmode = 2\n\tif mode == 1:\n\t\tpass", api);
+    expect(other.changes).toEqual([]);
+    expect(other.left).toEqual([]);
+    const own = migrateScript("extends RigidBody3D\nvar mode := 0\nfunc f():\n\tmode = 2", api);
+    expect(own.changes).toEqual([]);
+    expect(own.left).toEqual([]);
+  });
+
   it("leaves File.new() and Directory.new() alone and adds TO DOs naming FileAccess and DirAccess (#158)", () => {
     const src = "var f = File.new()\nvar d = Directory.new()\n";
     const m = migrateScript(src, api);

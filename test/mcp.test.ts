@@ -27,8 +27,10 @@ describe("MCP server (cheap profile)", () => {
   it("lists the tools with read-only hints", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      "godot_animation",
       "godot_api",
       "godot_api_search",
+      "godot_bisect",
       "godot_check",
       "godot_checklist",
       "godot_code",
@@ -37,15 +39,19 @@ describe("MCP server (cheap profile)", () => {
       "godot_diff",
       "godot_doctor",
       "godot_dream",
+      "godot_editor",
       "godot_export",
       "godot_export_run",
       "godot_feedback",
       "godot_fix",
+      "godot_format",
       "godot_game",
       "godot_impact",
       "godot_leaks",
       "godot_lesson_add",
       "godot_lessons",
+      "godot_merge",
+      "godot_metrics",
       "godot_migrate",
       "godot_model_brief",
       "godot_model_build",
@@ -55,8 +61,10 @@ describe("MCP server (cheap profile)", () => {
       "godot_model_lint",
       "godot_model_spec",
       "godot_model_view",
+      "godot_new",
       "godot_perf",
       "godot_play",
+      "godot_preset",
       "godot_project_edit",
       "godot_rename",
       "godot_resource_edit",
@@ -68,6 +76,8 @@ describe("MCP server (cheap profile)", () => {
       "godot_session",
       "godot_shader",
       "godot_test",
+      "godot_tilemap",
+      "godot_translations",
       "godot_undo",
       "godot_usages",
     ]);
@@ -105,6 +115,85 @@ describe("MCP server (cheap profile)", () => {
     expect(bad.isError).toBe(true);
     expect(textOf(bad)).toMatch(/no option edit\/loop; did you mean .*edit\/loop_mode/);
     await Promise.all([local.close(), server.close()]);
+  });
+
+  it("runs the tools for metrics, tilemaps, animations, new files, export presets and translations", async () => {
+    const tiles = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).toString("base64");
+    const root = makeProject({
+      "project.godot": 'config_version=5\n\n[application]\n\nconfig/name="T"\nrun/main_scene="res://level.tscn"\n',
+      "player.gd": "extends Node\n\nsignal died\n\nfunc hit(n: int) -> void:\n\tif n > 3 and n < 9:\n\t\tdied.emit()\n",
+      "level.tscn": `[gd_scene format=3]\n\n[node name="Level" type="Node2D"]\n\n[node name="Map" type="TileMapLayer" parent="."]\ntile_map_data = PackedByteArray("${tiles}")\n\n[node name="Sprite" type="Sprite2D" parent="."]\n\n[node name="Anim" type="AnimationPlayer" parent="."]\n`,
+      "text.csv": "keys,en,nl\nHELLO,Hello,Hallo\n",
+    });
+    const server = createServer({ tier: "cheap", root, godot: "/no/such/godot" });
+    const local = new Client({ name: "test", version: "1.0.0" });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(a), local.connect(b)]);
+    const call = async (name: string, args: Record<string, unknown> = {}) => (await local.callTool({ name, arguments: args })) as Result;
+    const ok = (r: Result) => {
+      expect(r.isError, textOf(r)).not.toBe(true);
+      return textOf(r);
+    };
+
+    expect(ok(await call("godot_metrics", { op: "complexity", threshold: 1 }))).toMatch(/hit/);
+    expect(ok(await call("godot_metrics", { op: "signals" }))).toMatch(/died/);
+    expect(ok(await call("godot_metrics", { op: "signals", mermaid: true }))).toMatch(/flowchart/);
+    expect(ok(await call("godot_metrics", { op: "stats" }))).toMatch(/1 script|scripts/);
+
+    expect(ok(await call("godot_tilemap", { scene: "res://level.tscn", op: "read" }))).toMatch(/1 cell/);
+    ok(await call("godot_tilemap", { scene: "res://level.tscn", op: "set", cells: [{ x: 2, y: 1, source: 0, atlas: [1, 0] }], write: true }));
+    expect(ok(await call("godot_tilemap", { scene: "res://level.tscn", op: "read" }))).toMatch(/2 cells/);
+
+    ok(await call("godot_animation", { scene: "res://level.tscn", op: "create", name: "walk", length: 1, write: true }));
+    ok(await call("godot_animation", { scene: "res://level.tscn", op: "add_track", animation: "walk", path: "Sprite:position", keys: [{ time: 0, value: "Vector2(0, 0)" }, { time: 1, value: "Vector2(10, 0)" }], write: true }));
+    expect(ok(await call("godot_animation", { scene: "res://level.tscn", op: "read" }))).toMatch(/walk[^]*Sprite:position/);
+    const wrong = await call("godot_animation", { scene: "res://level.tscn", op: "add_track", animation: "walk", path: "Sprit:position", keys: [{ time: 0, value: "Vector2(0, 0)" }] });
+    expect(wrong.isError).toBe(true);
+
+    writeFileSync(join(root, "messy.gd"), "extends Node\n\nfunc f( a,b ):\n\treturn a+b   \n");
+    expect(ok(await call("godot_format", { files: ["res://messy.gd"] }))).toMatch(/messy\.gd/);
+    expect(readFileSync(join(root, "messy.gd"), "utf8")).toContain("f( a,b )");
+    ok(await call("godot_format", { files: ["res://messy.gd"], write: true }));
+    expect(readFileSync(join(root, "messy.gd"), "utf8")).toBe("extends Node\n\n\nfunc f(a, b):\n\treturn a + b\n");
+
+    expect(ok(await call("godot_editor", { op: "ops" }))).toMatch(/reload_scene/);
+    expect(ok(await call("godot_editor", { op: "addon" }))).toMatch(/not installed/i);
+    const noEditor = await call("godot_editor", { op: "status" });
+    expect(noEditor.isError).toBe(true);
+    expect(textOf(noEditor)).toMatch(/godotwright editor install/);
+
+    expect(ok(await call("godot_new", { op: "script", file: "res://enemy.gd", template: "character_2d" }))).toMatch(/enemy\.gd/);
+    expect(existsSync(join(root, "enemy.gd"))).toBe(true);
+    expect(ok(await call("godot_new", { op: "shader", file: "res://glow.gdshader", write: false }))).toMatch(/shader_type canvas_item/);
+    expect(existsSync(join(root, "glow.gdshader"))).toBe(false);
+    ok(await call("godot_new", { op: "project", dir: "fresh", kind: "3d" }));
+    expect(readFileSync(join(root, "fresh", "project.godot"), "utf8")).toMatch(/config_version=5/);
+    expect((await call("godot_new", { op: "project", dir: "fresh" })).isError).toBe(true);
+
+    ok(await call("godot_preset", { op: "add", platform: "Linux", export_path: "build/game.x86_64", write: true }));
+    expect(ok(await call("godot_preset", { op: "list" }))).toMatch(/Linux/);
+    expect(readFileSync(join(root, "export_presets.cfg"), "utf8")).toMatch(/\[preset\.0\]/);
+
+    ok(await call("godot_translations", { op: "add", file: "res://text.csv", write: true }));
+    expect(ok(await call("godot_translations", { op: "list" }))).toMatch(/text\.csv/);
+    ok(await call("godot_translations", { op: "check", file: "res://text.csv" }));
+    await Promise.all([local.close(), server.close()]);
+
+    // A read-only server shows but does not write.
+    const ro = createServer({ tier: "cheap", root, godot: "/no/such/godot", readOnly: true });
+    const roClient = new Client({ name: "test", version: "1.0.0" });
+    const [c, d] = InMemoryTransport.createLinkedPair();
+    await Promise.all([ro.connect(c), roClient.connect(d)]);
+    const roCall = async (name: string, args: Record<string, unknown>) => (await roClient.callTool({ name, arguments: args })) as Result;
+    expect(textOf(await roCall("godot_new", { op: "script", file: "res://x.gd" }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_new", { op: "project", dir: "other" }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_tilemap", { scene: "res://level.tscn", op: "clear", write: true }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_editor", { op: "install" }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_editor", { op: "play" }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_editor", { op: "status" }))).not.toMatch(/read-only session/);
+    expect((await roCall("godot_new", { op: "script", file: "res://x.gd", write: false })).isError).not.toBe(true);
+    expect(existsSync(join(root, "x.gd"))).toBe(false);
+    await Promise.all([roClient.close(), ro.close()]);
   });
 
   it("answers godot_collisions, godot_impact and godot_diff from the project's files", async () => {
@@ -302,7 +391,7 @@ describe("MCP server (cheap profile)", () => {
       arguments: { path: "/no/such/project" },
     })) as Result;
     expect(r.isError).toBe(true);
-    expect(textOf(r)).toContain("No project.godot found");
+    expect(textOf(r)).toBe("/no/such/project: no such file or directory");
   });
 });
 

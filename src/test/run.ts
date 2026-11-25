@@ -4,9 +4,8 @@ import { join } from "node:path";
 import { findGodot, runGodot } from "../check/godot.js";
 import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { runOutput } from "../check/check.js";
-import { findProjectRoot } from "../project/files.js";
 import { plural } from "../scan/format.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 
 export class TestRunError extends Error {}
 
@@ -156,8 +155,7 @@ function newestFile(dir: string, name: string): string | undefined {
  * failing tests with file:line and message, not pages of runner output.
  */
 export async function runTests(path: string, options: TestOptions = {}): Promise<TestReport> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const framework = options.framework ?? detectFramework(root);
   if (!framework) throw new TestRunError("no test framework found: install GUT (res://addons/gut) or GdUnit4 (res://addons/gdUnit4), or pass --framework");
   if (!installed(root, framework))

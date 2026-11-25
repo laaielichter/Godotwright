@@ -1,10 +1,10 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
 import { GodotApi } from "../api/api.js";
 import type { ApiMethod } from "../api/types.js";
 import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
 import { checkFiles } from "../project/options.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { assertPathExists, ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
 import { assertWritable } from "../project/protect.js";
 import { migrateShader } from "./shader.js";
@@ -158,6 +158,18 @@ function splitArgs(text: string): string[] {
 
 const quoted = (s: string): string | undefined => (/^&?"[^"]*"$/.test(s) || /^&?'[^']*'$/.test(s) ? s.replace(/^&?["']|["']$/g, "") : undefined);
 
+/**
+ * MOVED entries whose Godot 4 form is not a plain member, so movedMembers() cannot write it: the Godot 4 call,
+ * with $ where the arguments of the Godot 3 call go.
+ */
+const MOVED_CALLS: Record<string, string> = {
+  "OS.get_system_time_msecs": "int(Time.get_unix_time_from_system() * 1000)",
+  "OS.set_window_title": "DisplayServer.window_set_title($)",
+};
+
+const RIGID_MODE_TODO =
+  "RigidBody.mode is gone in Godot 4: use freeze = true with freeze_mode = FREEZE_MODE_STATIC (or FREEZE_MODE_KINEMATIC), freeze = false for a body that simulates, and lock_rotation = true for MODE_CHARACTER";
+
 class Migrator {
   private readonly changes: Change[] = [];
   private readonly left: Leftover[] = [];
@@ -168,6 +180,8 @@ class Migrator {
   private readonly classNames: Set<string>;
   private readonly isCanvasItem: boolean;
   private readonly baseIsPath: boolean;
+  /** The script extends a RigidBody and has no `mode` of its own: `mode` is the Godot 3 property. */
+  private readonly rigidMode: boolean;
 
   constructor(
     private readonly api: GodotApi,
@@ -194,6 +208,9 @@ class Migrator {
       this.baseIsPath = false;
       this.isCanvasItem = false;
     }
+    const base = extMatch?.[3]?.split(".")[0];
+    const isRigidBody = base !== undefined && /^RigidBody[23]D$/.test(this.api.renamedClass(base)?.to ?? base);
+    this.rigidMode = isRigidBody && !/^\s*(?:export\b.*|onready\s+|@\w+.*)?\b(?:var|const)\s+mode\b/m.test(source) && !this.defined.has("set_mode");
   }
 
   migrate(source: string): ScriptMigration {
@@ -280,6 +297,8 @@ class Migrator {
     // Members that moved to another class: OS.get_ticks_msec() is Time.get_ticks_msec().
     line = this.movedMembers(line);
 
+    line = this.movedCalls(line);
+
     // Renamed classes and built-in types, only when the Godot 3 name does not exist in Godot 4 or this script.
     line = this.sub(line, /(?<![$/%.\w])[A-Z]\w*\b/g, "class", (m) => {
       if (m[0] === "Directory" && /^\s*\.\s*new\s*\(/.test(m.input.slice(m.index + m[0].length))) return undefined;
@@ -297,13 +316,38 @@ class Migrator {
       const to = r.properties?.[m[1] as string];
       return to && !this.godot4.has(m[1] as string) ? to : undefined;
     });
+    const rigid = this.rigidBodyMode(line);
+    line = rigid.line;
     line = this.sub(line, /\b([A-Z][A-Z0-9_]{2,})\b/g, "rename", (m) => {
       const to = r.constants?.[m[1] as string];
+      // On a line that still uses RigidBody.mode, MODE_STATIC must not become FREEZE_MODE_STATIC: `mode` takes neither.
+      if (rigid.left && /^MODE_/.test(m[1] as string)) return undefined;
       return to && !this.godot4.has(m[1] as string) ? to : undefined;
     });
 
     this.leftovers(line);
     return line;
+  }
+
+  /**
+   * RigidBody.mode became freeze and freeze_mode in Godot 4. A plain `mode = MODE_RIGID / MODE_STATIC / MODE_KINEMATIC`
+   * statement is rewritten; every other use (set_mode(), a comparison, MODE_CHARACTER) gets a TO DO and is `left`.
+   */
+  private rigidBodyMode(line: string): { line: string; left: boolean } {
+    const mask = codeMask(line, {});
+    const code = [...line].map((c, i) => (mask[i] ? c : " ")).join("");
+    const own = this.rigidMode && /(?<![\w.$])(?:self\.)?(?:mode\b|[sg]et_mode\s*\()/.test(code);
+    const named = /(?:\.mode\b|\.[sg]et_mode\s*\().*\bRigidBody[23]D\.MODE_(?:RIGID|STATIC|KINEMATIC|CHARACTER)\b/.test(code);
+    if (!own && !named) return { line, left: false };
+    const m = /^(\s*)((?:[\w.]+\.)?)mode\s*=\s*((?:RigidBody[23]D\.)?)MODE_(RIGID|STATIC|KINEMATIC)(?=\s*$)/.exec(code);
+    if (!m || !(m[2] === "" || m[2] === "self." ? own : m[3])) {
+      this.todo(RIGID_MODE_TODO);
+      return { line, left: true };
+    }
+    const start = `${m[1]}${m[2]}`;
+    const to = m[4] === "RIGID" ? `${start}freeze = false` : `${start}freeze_mode = ${m[3]}FREEZE_MODE_${m[4]}${line.slice(m[0].length)}\n${start}freeze = true`;
+    this.note("rename", m[0].trim(), to.trim().replace(/\n\s*/, "; "));
+    return { line: m[4] === "RIGID" ? to + line.slice(m[0].length) : to, left: false };
   }
 
   /** Members that moved to another class (the MOVED table): the Godot 4 name replaces the old
@@ -342,6 +386,34 @@ class Migrator {
         }
         this.note("moved", m[0], toText);
         line = line.slice(0, m.index) + toText + line.slice(end);
+        at = m.index + toText.length;
+      }
+    }
+    return line;
+  }
+
+  /** Calls of the MOVED table whose Godot 4 form is an expression (MOVED_CALLS): rewritten around their arguments. */
+  private movedCalls(line: string): string {
+    for (const [from, to] of Object.entries(MOVED_CALLS)) {
+      const re = new RegExp(`\\b${from.replace(".", "\\.")}\\s*\\(`, "g");
+      let at = 0;
+      for (;;) {
+        const mask = codeMask(line, {});
+        re.lastIndex = at;
+        const m = re.exec(line);
+        if (!m) break;
+        at = m.index + m[0].length;
+        if (!mask[m.index]) continue;
+        const open = at - 1;
+        const close = closeParen(line, open, mask);
+        if (close < 0) {
+          // The call goes on over more lines: say what it becomes instead of guessing where it ends.
+          this.todo(`${from}() is gone in Godot 4: use ${to.replaceAll("$", "...")}`);
+          continue;
+        }
+        const toText = to.replaceAll("$", () => line.slice(open + 1, close));
+        this.note("moved", line.slice(m.index, close + 1), toText);
+        line = line.slice(0, m.index) + toText + line.slice(close + 1);
         at = m.index + toText.length;
       }
     }
@@ -599,7 +671,7 @@ const SHADER_FILE = /\.gdshader(inc)?$/;
 /** Migrates every GDScript and shader file of a project (or one .gd or .gdshader file), and writes the result when asked. */
 export function migrateProject(path: string, options: MigrateOptions = {}): ProjectMigration {
   const api = GodotApi.load();
-  if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
+  assertPathExists(path);
   const single = path.endsWith(".gd") || SHADER_FILE.test(path);
   const root = single ? undefined : findProjectRoot(path);
   if (!single && !root) throw new ProjectNotFoundError(path);

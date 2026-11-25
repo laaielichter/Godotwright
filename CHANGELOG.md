@@ -4,6 +4,70 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **Seven tools and six scene operations other Godot servers have, without an editor plugin.** All work on the files,
+  so they run in CI and without Godot. Checked on a real project of 12,000 scripts and 433 scenes
+  (`GODOTWRIGHT_CORPUS=<folder>` runs those checks; they never write there).
+  - `godot_scene_edit`: `create_scene`, `rename_node` (descendants, connections, editable paths and NodePaths follow;
+    scripts that name the old path are listed), `move_node` (another parent or another place among its siblings),
+    `duplicate_node`, `set_groups` and `add_nodes` (several nodes, all or nothing). On 433 real scenes: 3,956 steps,
+    0 failures. That run found a file with one stray CRLF being read as a Windows file, which the older operations had
+    too.
+  - `godot_format` (`godotwright format`, `--check` for CI): formats GDScript to the official style guide and cannot
+    change what the code means: the tokens before and after must be the same, strings, comments and node paths stay
+    byte for byte, and lines are not wrapped or joined. A file that is not valid GDScript is skipped with the reason.
+    On 12,472 real scripts: 11,365 changed, 0 guard refusals, 0 not stable on a second run, 28 skipped (patch files
+    and files with conflict markers or broken brackets).
+  - `godot_metrics`: cyclomatic complexity per function with a grade; the signal flow (who emits, who connects) with
+    signals never emitted, never connected, and connections to a missing method, also as mermaid; project statistics
+    and the heaviest scenes.
+  - `godot_tilemap`: the cells of a TileMapLayer read and edited in the scene file (a map with a legend; set, fill,
+    erase, clear), checked against the TileSet.
+  - `godot_animation`: the animations of an AnimationPlayer read and authored in the scene file (create, value and
+    method tracks, keys, length, loop mode), with the track path checked against the scene.
+  - `godot_new`: a new project (2D, 3D or UI), a typed script from a template that passes the review, or a shader.
+  - `godot_preset`: export presets listed, added, changed and removed. `godot_translations`: translation files
+    registered, and a CSV checked against the `tr()` keys the code uses.
+- **C# projects.** C# scripts are read into the project map (classes, `[Export]`, `[Signal]`, methods, what they
+  load), and count in usages, dependencies and scene edits (a connection to a C# method is checked). New review rules:
+  `api/csharp-not-partial`, `api/csharp-class-name`, `api/csharp-signal-name` (errors) and `api/csharp-callback`
+  (warning). `godot_check` runs `dotnet build` when the project has a `.csproj` and `dotnet` is installed, and reports
+  the compiler's errors by file and line. `godot_new` has C# templates and `--dotnet` for a new project. Quiet on the
+  official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
+  built, and the templates were not compiled.
+- **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
+  the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
+  unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload
+  a scene it edited, scan, reimport, play, stop and take a screenshot. No scene editing and no code execution through
+  the bridge. The addon has not run in Godot where this was built; see `docs/editor-bridge.md` for the manual test.
+- `godot_merge` is checked on 494 real scenes, resources and project files: two different changes merge into a file
+  that parses, with every reference resolving.
+- **`godot_merge` (and `godotwright merge`): scenes, resources and `project.godot` merged by meaning.** Git merges these
+  files line by line. Two branches, or two agents in two worktrees, that each add a node to one scene get a conflict, or
+  a clean merge of a file Godot cannot load: both sides gave their new resource the same id, `load_steps` is off, a node
+  sits under a parent the other side removed. This is a three-way merge that knows the format: nodes by their path,
+  ext_resources by uid or path (whatever id each side gave them), connections by signal, source, target and method, and
+  properties one by one. The resource ids of both sides are brought into one numbering and every reference follows;
+  a resource one side removed and the other still uses is kept; `load_steps` is recounted. Only a property both sides set
+  to different values is a conflict, reported with base, ours and theirs (`--prefer theirs` to take their side). Without
+  arguments it finishes the files a merge, rebase or cherry-pick left in conflict (`--write`); `--theirs <branch>`
+  previews a merge before you make it; `godotwright merge --install` sets it up as the git merge driver for `*.tscn`,
+  `*.tres` and `project.godot`, so `git merge` finishes by itself. No Godot needed.
+- **`godot_bisect` (and `godotwright bisect`): which commit broke it.** Reviews the project as it was at each commit, on
+  copies from git in a temp folder (the working tree and the repository are not touched), and halves the range to the
+  first commit with the problem: a finding of a rule, in a file, with words in its message, or any error the review
+  reports. Without `--good` it looks back 1, 2, 4, 8 ... commits by itself. Errors that were already there before the
+  range are left out, so an old known error does not hide the new one. The answer names the commit, the findings, the
+  files it changed, and says when the finding is in a file the commit did not touch.
+- **A path that does not exist is an error, never the project around it** (#197): `fix scripts --write` with a mistyped
+  folder used to walk up to the project and change all of it. Every command and tool now answers
+  `<path>: no such file or directory`.
+- `deps of` and `deps why` refuse a file that is not in the project, with the nearest name, instead of answering
+  "loads 0 files" with exit code 0 (#213).
+- `rename` refuses a GDScript keyword, a Godot class, a global function or a constant as the new name of something
+  used in code (`func func`, `var Node`, `func print`) (#212).
+- `migrate`: a RigidBody `mode = MODE_STATIC` becomes `freeze_mode` and `freeze = true` (RigidBody has no `mode` in
+  Godot 4), `MODE_RIGID` becomes `freeze = false`, and what cannot be decided gets a TO DO (#195);
+  `OS.get_system_time_msecs()` and `OS.set_window_title()` are rewritten to their Godot 4 forms (#185).
 - **A mistyped model kind, recipe or archetype, and a mistyped lesson topic, name the nearest match**: `model build chiar` answers `unknown model kind "chiar"; did you mean chair?` and points at the full list (`model kinds`), the same way `godotwright api` already does. A name with nothing close keeps the whole list, and the exit code stays 1. Thanks to @tnalbant! (#217, #222)
 - **Review value returns from `-> void` functions** (`api/void-return-value`, error): Godot cannot load a script that returns a value from a void function. Thanks to @dannyward630! (#188, #201)
 - Docs: Spanish translation of the README quick start (`docs/translations/README.es.md`). Thanks to @mafujahmedridoy22-commits! (#200, #207)

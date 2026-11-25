@@ -1,9 +1,11 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, posix } from "node:path";
+import { closest } from "../api/api.js";
 import { matchesFilter, parsePresets } from "../export/export.js";
+import { maskCSharp } from "../godot/csharp.js";
 import { shaderIncludes } from "../godot/shader.js";
-import { findProjectRoot, fromResPath } from "../project/files.js";
-import { baseRoots, listedFiles, loadProject, ProjectNotFoundError, type ProjectData } from "../scan/scan.js";
+import { fromResPath } from "../project/files.js";
+import { baseRoots, listedFiles, loadProject, type ProjectData, projectRootOf } from "../scan/scan.js";
 
 /**
  * The project as a graph of files: what each scene, resource, script and shader loads, starting from what the game
@@ -83,8 +85,7 @@ function namePattern(literal: string): RegExp | undefined {
 }
 
 export function buildGraph(path: string): DepsGraph {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const data: ProjectData = loadProject(root);
   let dirs = [root];
   try {
@@ -172,7 +173,13 @@ export function buildGraph(path: string): DepsGraph {
         }
       }
     };
-    if (/\.cs$/i.test(file)) readText(dirs, file).split("\n").forEach((l, i) => literals(l.replace(/(^|[\s;{})])\/\/.*$/, "$1"), i + 1));
+    // C#: comments and inactive #if branches blanked, strings kept; a multi-line string counts on the line it starts.
+    const csharp = data.csharp.get(file);
+    if (csharp) {
+      maskCSharp(csharp.source)
+        .text.split("\n")
+        .forEach((l, i) => literals(l, i + 1));
+    } else if (/\.cs$/i.test(file)) readText(dirs, file).split("\n").forEach((l, i) => literals(l.replace(/(^|[\s;{})])\/\/.*$/, "$1"), i + 1));
     const outline = data.scripts.get(file);
     if (outline) {
       for (const ll of outline.logicalLines) {
@@ -327,11 +334,26 @@ export function unusedFiles(path: string): UnusedReport {
   return { project: g.root, files, bytes: files.reduce((n, f) => n + f.bytes, 0), total: g.assets.length, roots: g.roots.size, folders };
 }
 
+/** The file `deps why` or `deps of` was asked about is not in the project. */
+export class DepsFileError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DepsFileError";
+  }
+}
+
+/** The file as a res:// path. A file that is not in the project is an error, not "unused" or "loads nothing". */
+function knownFile(g: DepsGraph, file: string): string {
+  const target = file.startsWith("res://") ? file : `res://${file.replace(/^\/+/, "")}`;
+  if (g.exists(target)) return target;
+  const near = closest(target.slice(6), g.assets.map((f) => f.slice(6)), 1)[0];
+  throw new DepsFileError(`${target} does not exist in the project${near ? `; did you mean res://${near}?` : ""}`);
+}
+
 /** The chain from where the game starts to a file, or why nothing reaches it. */
 export function whyUsed(path: string, file: string): { file: string; chain: string[]; used: boolean } {
   const g = buildGraph(path);
-  const target = file.startsWith("res://") ? file : `res://${file.replace(/^\/+/, "")}`;
-  if (!g.exists(target)) return { file: target, chain: [`${target} does not exist in the project`], used: false };
+  const target = knownFile(g, file);
   const chain: string[] = [];
   let at = target;
   for (let i = 0; i < 100; i++) {
@@ -361,7 +383,7 @@ export interface DepsOf {
 /** Everything a scene or resource pulls in when it loads (ext_resource, preload, and what those pull in). */
 export function depsOf(path: string, file: string): DepsOf {
   const g = buildGraph(path);
-  const start = file.startsWith("res://") ? file : `res://${file.replace(/^\/+/, "")}`;
+  const start = knownFile(g, file);
   const depth = new Map<string, number>([[start, 0]]);
   const queue = [start];
   while (queue.length) {

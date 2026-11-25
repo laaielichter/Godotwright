@@ -107,6 +107,27 @@ export interface CSharpScriptInfo {
   /** Comes from a base project, not from this one. */
   external?: boolean;
   path: string;
+  language: "csharp";
+  uid?: string;
+  /** The class Godot uses for the script: the one named after the file. Undefined when the file has none. */
+  className?: string;
+  namespace?: string;
+  /** Its base class, as written. */
+  extends?: string;
+  partial: boolean;
+  tool: boolean;
+  /** [GlobalClass]: the class shows in the editor like a class_name. */
+  globalClass: boolean;
+  /** [Signal] delegates, by the signal's name (the delegate without EventHandler). */
+  signals: { name: string; signature: string; line: number }[];
+  functions: FunctionSummary[];
+  /** [Export] properties and fields; scenes store them under these names. */
+  exports: { name: string; type: string; hint?: string; group?: string; line: number }[];
+  /** Other classes, structs and records in the file. */
+  otherClasses: string[];
+  /** Scenes that attach this script to a node. */
+  usedBy: string[];
+  lineCount: number;
 }
 
 export interface Warning {

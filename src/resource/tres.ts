@@ -7,7 +7,7 @@ import { parseResourceText } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { asString } from "../godot/variant.js";
 import { fromResPath, isInside } from "../project/files.js";
-import { resourceType, scriptInfo } from "../scene/edit.js";
+import { resourceType, scriptFacts } from "../scene/edit.js";
 import { uidOf } from "../scene/uid.js";
 import { ResourceEditError, type ResourceOp } from "./types.js";
 
@@ -100,7 +100,7 @@ export function planTres(root: string, resPath: string, original: string, ops: R
       const scriptSpan = propSpan(lines, block, "script");
       const scriptRef = scriptSpan ? /ExtResource\(\s*"([^"]+)"\s*\)/.exec(lines.slice(scriptSpan.start, scriptSpan.start + scriptSpan.count).join(" "))?.[1] : undefined;
       const scriptPath = file.extResources.find((e) => e.id === scriptRef)?.path;
-      const script = scriptPath?.endsWith(".gd") && existsSync(fromResPath(root, scriptPath)) ? scriptInfo(readFileSync(fromResPath(root, scriptPath), "utf8")) : undefined;
+      const script = scriptFacts(root, scriptPath);
       const enumValues: Record<string, number> = {};
       if (script?.exports.has(property)) return { type: script.exports.get(property), enumValues };
       if (property.includes("/")) {

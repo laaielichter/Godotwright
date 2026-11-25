@@ -93,3 +93,39 @@ export function fileAt(root: string, ref: string, file: string): Buffer | undefi
     return undefined;
   }
 }
+
+/** The common ancestor of two commits: the version both sides of a merge started from. */
+export function mergeBase(root: string, a: string, b: string): string {
+  const out = git(root, ["merge-base", checkRef(a), checkRef(b)], `${a} or ${b}`).toString("utf8").trim();
+  if (!out) throw new GitError(`"${a}" and "${b}" have no commit in common`);
+  return out;
+}
+
+export interface UnmergedFile {
+  /** `res://` path. */
+  file: string;
+  /** Which versions the index holds: 1 the common ancestor, 2 ours, 3 theirs. */
+  stages: (1 | 2 | 3)[];
+}
+
+/** Project files a merge, rebase or cherry-pick left in conflict. */
+export function unmergedFiles(root: string): UnmergedFile[] {
+  if (!inGit(root)) throw new GitError("this project is not in a git repository, so there is no merge to finish");
+  const byFile = new Map<string, (1 | 2 | 3)[]>();
+  for (const entry of git(root, ["ls-files", "-u", "-z", "--", "."]).toString("utf8").split("\0")) {
+    const m = /^\d+ [0-9a-f]+ ([123])\t(.+)$/s.exec(entry);
+    if (!m || SKIP.test(m[2]!)) continue;
+    byFile.set(m[2]!, [...(byFile.get(m[2]!) ?? []), Number(m[1]) as 1 | 2 | 3]);
+  }
+  return [...byFile].map(([file, stages]) => ({ file: res(file), stages })).sort((a, b) => a.file.localeCompare(b.file));
+}
+
+/** One version of a file in conflict, from the index; undefined when that side does not have the file. */
+export function stagedFile(root: string, stage: 1 | 2 | 3, file: string): Buffer | undefined {
+  try {
+    return git(root, ["show", `:${stage}:./${file.replace(/^res:\/\//, "")}`]);
+  } catch (error) {
+    if (error instanceof GitError && /is not installed|not in a git repository/.test(error.message)) throw error;
+    return undefined;
+  }
+}

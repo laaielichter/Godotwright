@@ -1,5 +1,5 @@
 import { formatVariant } from "../godot/variant.js";
-import type { NodeInfo, ProjectMap, SceneInfo, ScriptInfo } from "./types.js";
+import type { CSharpScriptInfo, NodeInfo, ProjectMap, SceneInfo, ScriptInfo } from "./types.js";
 
 export type Detail = "brief" | "full";
 
@@ -94,6 +94,14 @@ export function formatProjectMap(all: ProjectMap, detail: Detail = "brief"): str
   for (const script of scripts.shown) out.push(...formatScript(script, full));
   if (scripts.hidden) out.push(`  +${scripts.hidden} more scripts (use full detail)`);
 
+  if (map.csharpScripts.length) {
+    out.push("");
+    out.push(`C# scripts (${map.csharpScripts.length}):`);
+    const csharp = limit(map.csharpScripts, max);
+    for (const script of csharp.shown) out.push(...formatCSharpScript(script, full));
+    if (csharp.hidden) out.push(`  +${csharp.hidden} more C# scripts (use full detail)`);
+  }
+
   if (map.resources.length) {
     out.push("");
     out.push(`resources (${map.resources.length}):`);
@@ -144,6 +152,31 @@ function formatScene(scene: SceneInfo, full: boolean): string[] {
     out.push(`    signal ${name(c.from)}.${c.signal} -> ${name(c.to)}.${c.method}()  :${c.line}`);
   }
   if (scene.subResourceTypes.length) out.push(`    sub_resources: ${scene.subResourceTypes.join(", ")}`);
+  return out;
+}
+
+function formatCSharpScript(script: CSharpScriptInfo, full: boolean): string[] {
+  const kind = [
+    script.tool ? "[Tool]" : undefined,
+    script.globalClass ? "[GlobalClass]" : undefined,
+    script.className ? `${script.partial ? "partial " : ""}class ${script.namespace ? `${script.namespace}.` : ""}${script.className}` : "(no class named after the file)",
+    script.extends ? `: ${script.extends}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (!full) {
+    const parts = [`  ${script.path}  ${kind}`];
+    if (script.exports.length) parts.push(`exports: ${list(script.exports.map((e) => e.name), 12)}`);
+    if (script.signals.length) parts.push(`signals: ${list(script.signals.map((s) => s.name), 12)}`);
+    if (script.functions.length) parts.push(`methods: ${list(script.functions.map((f) => f.name), 12)}`);
+    return [parts.join("  ")];
+  }
+  const out = [`  ${script.path}  ${kind}  (${script.lineCount} lines)`];
+  if (script.usedBy.length) out.push(`    used by: ${script.usedBy.join(", ")}`);
+  for (const s of script.signals) out.push(`    signal ${s.signature}  :${s.line}`);
+  for (const e of script.exports) out.push(`    [Export${e.hint ? `(${e.hint})` : ""}] ${e.type} ${e.name}${e.group ? `  group ${e.group}` : ""}  :${e.line}`);
+  for (const f of script.functions) out.push(`    ${f.signature}  :${f.line}-${f.endLine}`);
+  if (script.otherClasses.length) out.push(`    other classes: ${script.otherClasses.join(", ")}`);
   return out;
 }
 

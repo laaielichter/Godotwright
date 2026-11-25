@@ -3,8 +3,8 @@ import { isAbsolute, join } from "node:path";
 import { findGodot, godotVersion, runGodot, type RunResult } from "../check/godot.js";
 import type { Diagnostic } from "../check/log.js";
 import { excludePath } from "../check/checker-script.js";
-import { findProjectRoot, fromResPath, listProjectFiles, resolveResPath, toResPath, withoutSubResource } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { fromResPath, listProjectFiles, resolveResPath, toResPath, withoutSubResource } from "../project/files.js";
+import { projectRootOf } from "../scan/scan.js";
 import { screen } from "../screenshot/screenshot.js";
 import { godot3Hint } from "./hints.js";
 import { parseShaderLog, type ShaderLog, type ShaderLogEntry, type ShaderSeen } from "./log.js";
@@ -363,8 +363,7 @@ function seconds(ms: number): string {
 }
 
 export async function checkShaders(path: string, options: ShaderCheckOptions = {}): Promise<ShaderCheckResult> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const exclude = [...new Set([...(options.exclude ?? []), ...(options.includeAddons ? [] : ["addons"])])];
   const all = findShaderFiles(root, exclude);
   // Files asked for by name are checked even inside a skipped folder; the shaders they only refer to are not.

@@ -96,6 +96,38 @@ describe("godotwright CLI", () => {
   });
 });
 
+describe("a path that does not exist (#197)", () => {
+  it("is an error for scan, review, fix, doctor, shader and deps, never the project around it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "godotwright-missing-path-"));
+    writeFileSync(join(root, "project.godot"), 'config_version=5\n\n[application]\nconfig/name="T"\n');
+    const code = "extends Node\n\nfunc _ready() -> void:\n\tvar x := abs(-1)\n\tprint(x)\n";
+    writeFileSync(join(root, "a.gd"), code);
+    const folder = join(root, "scripts");
+    const file = join(root, "nosuch.gd");
+    const printed: string[] = [];
+    const write = process.stderr.write;
+    process.stderr.write = ((chunk: unknown) => (printed.push(String(chunk)), true)) as typeof process.stderr.write;
+    try {
+      // scan and review leave the error to the entry point, which prints it and exits with code 1.
+      await expect(run(["scan", folder])).rejects.toThrow(`${folder}: no such file or directory`);
+      await expect(run(["review", folder])).rejects.toThrow(`${folder}: no such file or directory`);
+      await expect(run(["review", root, file])).rejects.toThrow(`${file}: no such file or directory`);
+      for (const args of [["fix", folder, "--write"], ["doctor", folder, "--no-godot"], ["shader", folder, "--no-compile"], ["deps", "--path", folder, "unused"], ["migrate", file], ["usages", "x", folder]]) {
+        printed.length = 0;
+        expect((await run(args)).exitCode, args.join(" ")).toBe(1);
+        expect(printed.join(""), args.join(" ")).toBe(`${args.includes(file) ? file : folder}: no such file or directory\n`);
+      }
+    } finally {
+      process.stderr.write = write;
+    }
+    expect(readFileSync(join(root, "a.gd"), "utf8")).toBe(code);
+    expect(existsSync(join(root, ".godot"))).toBe(false);
+    // Paths that exist work as before: the project, and a file in it that narrows the findings.
+    expect((await run(["scan", root])).output).toContain("project: T");
+    expect((await run(["review", root, join(root, "a.gd")])).output).toContain("findings shown only for: res://a.gd");
+  });
+});
+
 describe("godotwright doctor", () => {
   it("uses singular script and scene counts in the text summary", async () => {
     const root = mkdtempSync(join(tmpdir(), "godotwright-doctor-counts-"));

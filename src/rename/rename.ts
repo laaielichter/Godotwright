@@ -1,9 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
+import { GLOBAL_SCOPES, GodotApi } from "../api/api.js";
 import { JournalWriter } from "../journal/journal.js";
 import { codeMask } from "../migrate/migrate.js";
-import { findProjectRoot, fromResPath } from "../project/files.js";
+import { fromResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { KEYWORDS } from "../review/tokens.js";
+import { projectRootOf } from "../scan/scan.js";
 import { findUsages, type Usage } from "../usages/usages.js";
 
 export class RenameError extends Error {}
@@ -33,6 +35,25 @@ export interface RenamePlan {
 }
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Why a name in code cannot be called `to`: it is a GDScript keyword, or a Godot class, global function or global
+ * constant it would hide. Names that live only in scenes and settings (a node, a group, an input action) are free.
+ */
+function reservedName(to: string, usages: Usage[]): string | undefined {
+  if (!usages.some((u) => u.kind === "definition" || u.kind === "reference" || u.kind === "autoload")) return undefined;
+  if (KEYWORDS.has(to)) return `"${to}" is a GDScript keyword; pick another name`;
+  const api = GodotApi.load();
+  const global = GLOBAL_SCOPES.flatMap((scope) => {
+    const cls = api.getClass(scope);
+    return cls ? api.ownMembers(cls, to) : [];
+  })[0];
+  const what = api.getClass(to)?.name === to ? "Godot class" : global ? `global ${global.kind === "method" ? "function" : "constant"} of Godot` : undefined;
+  if (!what) return undefined;
+  const word = /^\s*(?:static\s+)?(func|signal|var|const|enum|class_name|class)\b/.exec(usages.find((u) => u.kind === "definition")?.text ?? "")?.[1];
+  const kind = { func: "function", signal: "signal", var: "variable", const: "constant", enum: "enum", class_name: "class", class: "class" }[word ?? ""] ?? "name";
+  return `"${to}" is a ${what}; a ${kind} with that name would hide it`;
+}
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const swapSegments = (path: string, from: string, to: string): string =>
   path
@@ -95,9 +116,7 @@ function renamePathsThrough(lines: string[], from: string, to: string): void {
  * It is built on `findUsages`, so it changes what `usages` shows and nothing else, and lists what it could not change.
  */
 export function renameInProject(path: string, from: string, to: string, options: { write?: boolean } = {}): RenamePlan {
-  if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const isFile = from.startsWith("res://");
   if (isFile !== to.startsWith("res://")) throw new RenameError("rename a res:// path to another res:// path, or a name to another name");
   if (!isFile && (!IDENT.test(from) || !IDENT.test(to))) throw new RenameError(`"${from}" and "${to}" must both be plain names (letters, digits and _)`);
@@ -109,6 +128,8 @@ export function renameInProject(path: string, from: string, to: string, options:
     if (existsSync(fromResPath(root, to))) throw new RenameError(`${to} already exists`);
   } else {
     if (report.usages.length === 0) throw new RenameError(`"${from}" is not used anywhere in the project (see godotwright usages)`);
+    const reserved = reservedName(to, report.usages);
+    if (reserved) throw new RenameError(reserved);
     const taken = findUsages(root, to).usages.filter((u) => u.kind === "definition" || u.kind === "autoload" || u.kind === "input action");
     if (taken.length) throw new RenameError(`"${to}" is already defined at ${taken[0]?.file}:${taken[0]?.line}; pick another name`);
   }

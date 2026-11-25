@@ -1,16 +1,19 @@
 import { existsSync, readFileSync } from "node:fs";
 import { JournalWriter } from "../journal/journal.js";
-import { basename, dirname, isAbsolute, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
 import { blocksOf, contentEnd, propSpan, type Block, type Splice } from "../godot/blocks.js";
+import { outlineCSharp, sameGodotName, scriptClass } from "../godot/csharp.js";
+import { csharpClassIndex, godotTypeOf, resolveCSharpClass } from "../scan/csharp.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
-import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { fromResPath, toResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { lockedInstances } from "../review/checks/integrity.js";
-import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
+import { loadProject, projectRootOf } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
-import { uidOf } from "./uid.js";
+import { NODE_NAME, joinPath, lineHunks, structureEdit, type StructureEdit, type StructureResult } from "./structure.js";
+import { generateUid, uidOf } from "./uid.js";
 
 export class SceneError extends Error {}
 
@@ -22,7 +25,29 @@ export type SceneEdit =
   | { op: "connect"; from: string; signal: string; to: string; method: string; makeEditable?: boolean }
   | { op: "set_editable"; node: string; editable?: boolean }
   | { op: "disconnect"; from: string; signal: string; to: string; method: string }
-  | { op: "attach_script"; node: string; script: string };
+  | { op: "attach_script"; node: string; script: string }
+  | { op: "create_scene"; type?: string; instance?: string; name?: string; script?: string }
+  | { op: "add_nodes"; nodes: NewNode[]; makeEditable?: boolean }
+  | StructureEdit;
+
+/** One node of add_nodes: like add_node, with its properties (as `set` takes them) and script in the same go. */
+export interface NewNode {
+  parent: string;
+  name: string;
+  type?: string;
+  instance?: string;
+  props?: Record<string, string>;
+  script?: string;
+}
+
+type SingleEdit = Exclude<SceneEdit, { op: "create_scene" | "add_nodes" }>;
+
+interface Planned {
+  text: string;
+  hunks: SceneHunk[];
+  summary: string;
+  warnings: string[];
+}
 
 export interface SceneHunk {
   line: number;
@@ -44,12 +69,72 @@ export interface ScenePlan {
 /** Bottom-up order for applying splices; at the same line, a tail splice is applied first so it ends up last. */
 export const spliceOrder = (a: Splice, b: Splice) => b.start - a.start || b.count - a.count || Number(b.tail ?? false) - Number(a.tail ?? false);
 
-const NODE_NAME = /^[^.:@/"%]+$/;
-
 const inside = (path: string, root: string): boolean => root === "." || path === root || path.startsWith(`${root}/`);
 
+export interface ScriptFacts {
+  extends?: string;
+  signals: Map<string, string>;
+  funcs: Map<string, { min: number; max: number }>;
+  exports: Map<string, string | undefined>;
+  /** Set for a C# script: names in scenes are the C# names (PascalCase), and what is wrong with the class, if anything. */
+  csharp?: { className?: string; partial: boolean; complete: boolean };
+}
+
+/**
+ * What a C# script declares, in the shape of scriptInfo: the class named after the file with its other `partial` parts
+ * and its base classes in the project. Signals carry the name scenes use (the delegate without EventHandler), methods
+ * and exported members their C# names. `extends` is the Godot class at the end of the chain.
+ */
+export function csharpScriptInfo(root: string, path: string): ScriptFacts {
+  const facts: ScriptFacts = { signals: new Map(), funcs: new Map(), exports: new Map(), csharp: { partial: false, complete: false } };
+  const outline = outlineCSharp(readFileSync(fromResPath(root, path), "utf8"));
+  if (!scriptClass(outline, path)) return facts;
+  // Partial parts and base classes can be in any file of the project.
+  let others = [outline];
+  try {
+    others = [outline, ...[...loadProject(root).csharp].filter(([file]) => file !== path).map(([, c]) => c.outline)];
+  } catch {
+    // Outside a readable project the file stands alone.
+  }
+  const resolved = resolveCSharpClass(outline, path, csharpClassIndex(others));
+  if (!resolved) return facts;
+  facts.csharp = { className: resolved.cls.name, partial: resolved.cls.partial, complete: resolved.complete };
+  if (resolved.nativeBase) facts.extends = resolved.nativeBase === "GodotObject" ? "Object" : resolved.nativeBase;
+  for (const s of resolved.signals) if (!facts.signals.has(s.name)) facts.signals.set(s.name, `(${s.params.map((p) => `${p.name}: ${p.type.replace(/,\s*/g, "; ")}`).join(", ")})`);
+  for (const m of resolved.methods) {
+    const max = m.params.some((p) => p.modifier === "params") ? Number.POSITIVE_INFINITY : m.params.length;
+    const min = m.params.filter((p) => !p.hasDefault && p.modifier !== "params").length;
+    const have = facts.funcs.get(m.name);
+    // Overloads: any of them can take the call.
+    facts.funcs.set(m.name, have ? { min: Math.min(have.min, min), max: Math.max(have.max, max) } : { min, max });
+  }
+  for (const e of resolved.exports) if (!facts.exports.has(e.name)) facts.exports.set(e.name, godotTypeOf(e.type) ?? (/^[A-Z]\w*$/.test(e.type) && GodotApi.load().getClass(e.type) ? e.type : undefined));
+  return facts;
+}
+
+/** What the script at a res:// path declares: GDScript or C#. Undefined for a file that is not there or is neither. */
+export function scriptFacts(root: string, path: string | undefined): ScriptFacts | undefined {
+  if (!path || !existsSync(fromResPath(root, path))) return undefined;
+  if (path.endsWith(".gd")) return scriptInfo(readFileSync(fromResPath(root, path), "utf8"));
+  if (path.endsWith(".cs")) return csharpScriptInfo(root, path);
+  return undefined;
+}
+
+/** Why Godot cannot attach a script to a node of class `cls`; undefined when nothing speaks against it. */
+function attachProblem(api: GodotApi, root: string, script: string, cls: string | undefined, what: string): string | undefined {
+  const facts = scriptFacts(root, script);
+  if (!facts) return undefined;
+  if (facts.csharp && !facts.csharp.className) {
+    const name = basename(script).replace(/\.cs$/, "");
+    return `${script} has no class named ${name}; Godot needs the script's class to have the name of its file`;
+  }
+  const base = facts.extends ?? (facts.csharp ? undefined : "RefCounted");
+  if (cls && base && api.getClass(base) && !api.inheritsFrom(cls, base)) return `${what} is a ${cls}, but ${script} extends ${base}; Godot will not attach it`;
+  return undefined;
+}
+
 /** What a script declares, read with simple patterns (enough for checks; Godot has the last word). */
-export function scriptInfo(source: string): { extends?: string; signals: Map<string, string>; funcs: Map<string, { min: number; max: number }>; exports: Map<string, string | undefined> } {
+export function scriptInfo(source: string): ScriptFacts {
   const signals = new Map<string, string>();
   const funcs = new Map<string, { min: number; max: number }>();
   const exports = new Map<string, string | undefined>();
@@ -60,6 +145,20 @@ export function scriptInfo(source: string): { extends?: string; signals: Map<str
   }
   for (const m of source.matchAll(/^\s*@export\w*(?:\([^)]*\))?\s+(?:@\w+(?:\([^)]*\))?\s+)*var\s+(\w+)\s*(?::\s*([\w.]+))?/gm)) exports.set(m[1] ?? "", m[2]);
   return { extends: /^\s*extends\s+([A-Za-z_]\w*)/m.exec(source)?.[1], signals, funcs, exports };
+}
+
+/** Signal parameters written `name: Type` as a C# parameter list (Godot's int and float are long and double in C#). */
+function csharpParams(params: string): string {
+  const types: Record<string, string> = { int: "long", float: "double", String: "string", Variant: "Variant" };
+  return params
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const [name, type] = p.split(":").map((x) => x.trim());
+      return `${types[type ?? ""] ?? type ?? "Variant"} ${name}`;
+    })
+    .join(", ");
 }
 
 /** The resource type an ext_resource line names for a file. */
@@ -79,19 +178,155 @@ export function resourceType(root: string, path: string, fallback?: string): str
 
 /**
  * Plans (and with `write`, applies) one change to a .tscn: add or remove a node, set a property, connect or
- * disconnect a signal, or attach a script. Only the lines of that change are touched (plus a new ext_resource and
+ * disconnect a signal, attach a script, rename, move or copy a node, set its groups, add several nodes, or make a new
+ * scene. Only the lines of that change are touched (plus a new ext_resource and
  * load_steps when needed). Types, properties, signals and files are checked against Godot 4.7 and the project first.
  */
 export function editScene(scenePath: string, edit: SceneEdit, options: { write?: boolean; project?: string } = {}): ScenePlan {
+  if (edit.op === "create_scene") return createScene(scenePath, edit, options);
   const projectStart = options.project ?? (scenePath.startsWith("res://") ? process.cwd() : dirname(resolve(scenePath)));
-  const root = findProjectRoot(projectStart);
-  if (!root) throw new ProjectNotFoundError(projectStart);
+  const root = projectRootOf(projectStart);
   const full = scenePath.startsWith("res://") ? fromResPath(root, scenePath) : isAbsolute(scenePath) ? scenePath : resolve(scenePath);
   if (!existsSync(full)) throw new SceneError(`${scenePath} does not exist`);
   if (!full.endsWith(".tscn")) throw new SceneError(`${scenePath} is not a text scene (.tscn)`);
   const resPath = toResPath(root, full);
   const original = readFileSync(full, "utf8");
-  const eol = original.includes("\r\n") ? "\r\n" : "\n";
+  const planned = edit.op === "add_nodes" ? planBatch({ root, resPath }, original, edit) : planEdit({ root, resPath }, original, edit);
+  return finish(root, full, resPath, planned, options.write === true);
+}
+
+/** The line end of a file, read from its first line: a stray \\r\\n further down in a Unix file does not make it a Windows file. */
+function eolOf(text: string): string {
+  const first = text.indexOf("\n");
+  return first > 0 && text[first - 1] === "\r" ? "\r\n" : "\n";
+}
+
+/** Writes a planned change through the journal, with the review errors before and after. */
+function finish(root: string, full: string, resPath: string, planned: Planned, write: boolean): ScenePlan {
+  const { text, summary } = planned;
+  const plan: ScenePlan = { summary, file: resPath, hunks: planned.hunks, warnings: planned.warnings, written: false };
+  if (!write) return plan;
+  const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
+  const before = errors();
+  const journal = new JournalWriter(root, "scene edit", `${summary} (${resPath})`);
+  journal.write(full, text);
+  const id = journal.commit();
+  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
+}
+
+/** The Godot class a new node gets, checked against the reference. */
+function nodeClass(api: GodotApi, type: string): string {
+  const cls = api.getClass(type);
+  if (!cls || cls.name !== type) {
+    const near = api.closeClassNames(type).slice(0, 3);
+    throw new SceneError(`${type} is not a Godot ${api.version} class${near.length ? `; did you mean ${near.join(", ")}?` : ""}`);
+  }
+  if (!api.inheritsFrom(cls.name, "Node")) throw new SceneError(`${cls.name} is not a Node, so it cannot be in a scene tree (use it as a property value)`);
+  return cls.name;
+}
+
+/** The root type of a scene file, through the scenes it inherits from. */
+function rootClassOf(root: string, path: string | undefined): string | undefined {
+  for (let depth = 0; path && depth < 8; depth++) {
+    if (!existsSync(fromResPath(root, path))) return undefined;
+    const sub = parseResourceText(readFileSync(fromResPath(root, path), "utf8"));
+    const top = sub.nodes[0];
+    if (top?.type) return top.type;
+    path = sub.extResources.find((e) => e.id === top?.instanceRef)?.path;
+  }
+  return undefined;
+}
+
+/** A new .tscn: a root node of a type (or an inherited scene), with a fresh uid. Never overwrites a file. */
+function createScene(scenePath: string, edit: Extract<SceneEdit, { op: "create_scene" }>, options: { write?: boolean; project?: string }): ScenePlan {
+  let start = options.project ?? (scenePath.startsWith("res://") ? process.cwd() : dirname(resolve(scenePath)));
+  while (!existsSync(start) && dirname(start) !== start) start = dirname(start);
+  const root = projectRootOf(start);
+  const full = scenePath.startsWith("res://") ? fromResPath(root, scenePath) : isAbsolute(scenePath) ? scenePath : resolve(scenePath);
+  if (!full.endsWith(".tscn")) throw new SceneError(`${scenePath} is not a text scene: give a path that ends in .tscn`);
+  if (relative(root, full).startsWith("..")) throw new SceneError(`${scenePath} is outside the project at ${root}; a scene lives in the project folder`);
+  const resPath = toResPath(root, full);
+  if (existsSync(full)) throw new SceneError(`${resPath} already exists and create_scene never overwrites a file; change it with the other ops (add_node, set, ...), or give another path`);
+  if (!edit.type === !edit.instance) throw new SceneError(`create_scene needs the root's type (Node2D), or an instance (res://base.tscn) for a scene that inherits from another, not both`);
+  const api = GodotApi.load();
+  const lines: string[] = [];
+  let cls: string | undefined;
+  const ext: string[] = [];
+  let rootAttr: string;
+  if (edit.type) {
+    cls = nodeClass(api, edit.type.trim());
+    rootAttr = ` type="${cls}"`;
+  } else {
+    const base = (edit.instance ?? "").trim();
+    if (!/\.(tscn|scn)$/.test(base)) throw new SceneError(`an instance is a scene (.tscn or .scn); ${base} is not`);
+    if (!existsSync(fromResPath(root, base))) throw new SceneError(`${base} does not exist in the project`);
+    const uid = uidOf(root, base);
+    ext.push(`[ext_resource type="PackedScene"${uid ? ` uid="${uid}"` : ""} path="${base}" id="1_base"]`);
+    rootAttr = ` instance=ExtResource("1_base")`;
+    cls = rootClassOf(root, base);
+  }
+  const fallback = basename(full, ".tscn").split(/[^A-Za-z0-9]+/).filter(Boolean).map((w) => w[0]!.toUpperCase() + w.slice(1)).join("");
+  const name = (edit.name ?? fallback).trim() || cls || "Root";
+  if (!NODE_NAME.test(name)) throw new SceneError(`"${name}" is not a usable node name (no . : @ / " or %)`);
+  let scriptLine: string | undefined;
+  if (edit.script) {
+    const script = edit.script.trim();
+    if (!/\.(gd|cs)$/.test(script)) throw new SceneError(`a script is a .gd or .cs file; ${script} is not`);
+    if (!existsSync(fromResPath(root, script))) throw new SceneError(`${script} does not exist in the project; write the script first, then create the scene`);
+    const problem = attachProblem(api, root, script, cls, "the root");
+    if (problem) throw new SceneError(problem);
+    const id = `${ext.length + 1}_${basename(script).replace(/\.\w+$/, "").replace(/\W+/g, "_").toLowerCase() || "script"}`;
+    const uid = uidOf(root, script);
+    ext.push(`[ext_resource type="Script"${uid ? ` uid="${uid}"` : ""} path="${script}" id="${id}"]`);
+    scriptLine = `script = ExtResource("${id}")`;
+  }
+  const uid = generateUid(new Set(loadProject(root).uidClaims.map((c) => c.uid)));
+  lines.push(`[gd_scene format=3 uid="${uid}"]`, "");
+  if (ext.length) lines.push(...ext, "");
+  lines.push(`[node name="${name}"${rootAttr}]`, ...(scriptLine ? [scriptLine] : []));
+  const text = `${lines.join("\n")}\n`;
+  parseResourceText(text);
+  const summary = `create ${resPath} with root ${name} (${edit.type ? cls : `inherits ${edit.instance}`})${edit.script ? ` and ${edit.script.trim()}` : ""}`;
+  return finish(root, full, resPath, { text, hunks: [{ line: 1, removed: [], added: lines }], summary, warnings: [] }, options.write === true);
+}
+
+/** add_nodes: each node, its properties and its script in order on the text in memory, so it is all or nothing. */
+function planBatch(ctx: { root: string; resPath: string }, original: string, edit: Extract<SceneEdit, { op: "add_nodes" }>): Planned {
+  if (!edit.nodes.length) throw new SceneError(`add_nodes needs nodes: a list of { parent, name, type or instance, props, script }`);
+  let text = original;
+  const warnings: string[] = [];
+  const names: string[] = [];
+  const step = (one: SingleEdit): void => {
+    const done = planEdit(ctx, text, one, true);
+    text = done.text;
+    for (const w of done.warnings) if (!warnings.includes(w)) warnings.push(w);
+  };
+  edit.nodes.forEach((item, i) => {
+    try {
+      if (typeof item.parent !== "string" || typeof item.name !== "string") throw new SceneError(`it needs parent and name`);
+      const parent = item.parent.replace(/^\.\//, "") || ".";
+      const path = joinPath(parent, item.name.trim());
+      step({ op: "add_node", parent, name: item.name, ...(item.type ? { type: item.type } : {}), ...(item.instance ? { instance: item.instance } : {}), ...(edit.makeEditable ? { makeEditable: true } : {}) });
+      for (const [property, value] of Object.entries(item.props ?? {})) step({ op: "set", node: path, property, value: String(value) });
+      if (item.script) step({ op: "attach_script", node: path, script: item.script });
+      names.push(path);
+    } catch (error) {
+      if (!(error instanceof SceneError)) throw error;
+      throw new SceneError(`nodes[${i}]${typeof item.name === "string" ? ` (${item.name})` : ""}: ${error.message}. Nothing is changed: fix this node and send the whole list again.`);
+    }
+  });
+  const eol = eolOf(original);
+  const shown = names.length > 6 ? `${names.slice(0, 6).join(", ")} and ${names.length - 6} more` : names.join(", ");
+  return { text, hunks: lineHunks(original.split(eol), text.split(eol)), summary: `add ${names.length} node${names.length === 1 ? "" : "s"}: ${shown}`, warnings };
+}
+
+/**
+ * Plans one change on the text of a scene. `batch` is a step of add_nodes: the check against instances that are not
+ * editable is skipped where it cannot apply (it loads the whole project).
+ */
+function planEdit(ctx: { root: string; resPath: string }, original: string, edit: SingleEdit, batch = false): Planned {
+  const { root, resPath } = ctx;
+  const eol = eolOf(original);
   const lines = original.split(eol);
   const blocks = blocksOf(lines);
   const scene = parseResourceText(original);
@@ -119,15 +354,7 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
   /** The Godot class of a node: its type, or the root type of the scene it instances (and so on, down). */
   const classOf = (node: SceneNode): string | undefined => {
     if (node.type) return node.type;
-    let path = extPath(node.instanceRef);
-    for (let depth = 0; path && depth < 8; depth++) {
-      if (!existsSync(fromResPath(root, path))) return undefined;
-      const sub = parseResourceText(readFileSync(fromResPath(root, path), "utf8"));
-      const top = sub.nodes[0];
-      if (top?.type) return top.type;
-      path = sub.extResources.find((e) => e.id === top?.instanceRef)?.path;
-    }
-    return undefined;
+    return rootClassOf(root, extPath(node.instanceRef));
   };
   /** The script on a node, or on the root of the scene it instances. */
   const scriptOf = (node: SceneNode): ReturnType<typeof scriptInfo> | undefined => {
@@ -139,8 +366,7 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
         path = sub.extResources.find((e) => e.id === sub.nodes[0]?.scriptRef)?.path;
       }
     }
-    if (!path || !path.endsWith(".gd") || !existsSync(fromResPath(root, path))) return undefined;
-    return scriptInfo(readFileSync(fromResPath(root, path), "utf8"));
+    return scriptFacts(root, path);
   };
 
   /** An ext_resource for a file: the one the scene has, or a new line after the others. */
@@ -190,6 +416,9 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
   };
 
   let summary = "";
+  let structured: StructureResult | undefined;
+  /** [editable] entries a structure change needs at the end of the file. */
+  const extraEditable: string[] = [];
   switch (edit.op) {
     case "add_node": {
       const parent = findNode(edit.parent);
@@ -202,13 +431,7 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
       let header: string;
       const parentAttr = parentPath === "." ? "." : parentPath;
       if (edit.type) {
-        const cls = api.getClass(edit.type);
-        if (!cls || cls.name !== edit.type) {
-          const near = api.closeClassNames(edit.type).slice(0, 3);
-          throw new SceneError(`${edit.type} is not a Godot ${api.version} class${near.length ? `; did you mean ${near.join(", ")}?` : ""}`);
-        }
-        if (!api.inheritsFrom(cls.name, "Node")) throw new SceneError(`${cls.name} is not a Node, so it cannot be in a scene tree (use it as a property value)`);
-        header = `[node name="${name}" type="${cls.name}" parent="${parentAttr}"]`;
+        header = `[node name="${name}" type="${nodeClass(api, edit.type)}" parent="${parentAttr}"]`;
       } else {
         const instance = (edit.instance ?? "").trim();
         if (!/\.(tscn|scn)$/.test(instance)) throw new SceneError(`an instance is a scene (.tscn or .scn); ${instance} is not`);
@@ -270,6 +493,9 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
         const member = api.member(cls, property).find((e) => e.kind === "property");
         if (!member) {
           const names = new Set([...api.ancestors(cls).flatMap((c) => (c.members ?? []).map((m) => m.name)), ...(script?.exports.keys() ?? [])]);
+          // Godot's own properties are snake_case in a scene; a C# export keeps its C# name.
+          const other = [...names].find((n) => sameGodotName(property, n));
+          if (other) throw new SceneError(`${node.path} (${cls}) has no property ${property}; it is ${other} in the scene file (${script?.exports.has(other) ? "a C# export keeps its C# name" : "Godot's own properties are snake_case there, also when the script is C#"})`);
           const near = closest(property, [...names], 3);
           throw new SceneError(`${node.path} (${cls}) has no property ${property}${near.length ? `; did you mean ${near.join(", ")}?` : ""}`);
         }
@@ -319,6 +545,9 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
       if (!apiSignal && scriptSignal === undefined) {
         if (cls) {
           const names = [...api.ancestors(cls).flatMap((c) => (c.signals ?? []).map((s) => s.name)), ...(fromScript?.signals.keys() ?? [])];
+          // Godot's own signals are snake_case in a scene (pressed, body_entered); a C# [Signal] keeps its C# name.
+          const other = names.find((n) => sameGodotName(edit.signal, n));
+          if (other) throw new SceneError(`${from.path} (${cls}) has no signal ${edit.signal}; it is ${other} in the scene file (${fromScript?.signals.has(other) ? "a C# [Signal] keeps its C# name, without EventHandler" : "Godot's own signals are snake_case there, also when the script is C#"})`);
           const near = closest(edit.signal, names, 3);
           throw new SceneError(`${from.path} (${cls}) has no signal ${edit.signal}${near.length ? `; did you mean ${near.join(", ")}?` : ""}`);
         }
@@ -330,7 +559,12 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
         : (scriptSignal ?? "()").replace(/^\(|\)$/g, "").trim();
       const argCount = params ? params.split(",").length : 0;
       const target = toScript?.funcs.get(edit.method);
-      if (!target) warnings.push(`${to.path} ${toScript ? "has no" : "has no script, so no"} method ${edit.method}; Godot reports an error when the signal fires. Add: func ${edit.method}(${params}) -> void:`);
+      if (!target && toScript?.csharp) {
+        // A C# method is connected by its C# name; a part of the class Godotwright cannot see may still hold it.
+        const other = [...toScript.funcs.keys()].find((n) => sameGodotName(n, edit.method) || sameGodotName(n, edit.method.replace(/^_+/, "")));
+        if (other) warnings.push(`${to.path} has no method ${edit.method}, but its C# script has ${other}: a C# method is connected by its C# name, so use method ${other}`);
+        else if (toScript.csharp.complete) warnings.push(`${to.path} has no method ${edit.method} in its C# script; Godot reports an error when the signal fires. Add: private void ${edit.method}(${csharpParams(params)}) { }`);
+      } else if (!target) warnings.push(`${to.path} ${toScript ? "has no" : "has no script, so no"} method ${edit.method}; Godot reports an error when the signal fires. Add: func ${edit.method}(${params}) -> void:`);
       else if (argCount < target.min || argCount > target.max)
         warnings.push(`${edit.signal} passes ${argCount} argument${argCount === 1 ? "" : "s"} (${params || "none"}), but ${edit.method}() takes ${target.min === target.max ? target.min : `${target.min} to ${target.max}`}; Godot reports an error when it fires`);
       const line = `[connection signal="${edit.signal}" from="${from.path}" to="${to.path}" method="${edit.method}"]`;
@@ -366,12 +600,44 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
       if (!/\.(gd|cs)$/.test(script)) throw new SceneError(`a script is a .gd or .cs file; ${script} is not`);
       if (!existsSync(fromResPath(root, script))) throw new SceneError(`${script} does not exist in the project`);
       const cls = classOf(node);
-      if (script.endsWith(".gd")) {
-        const base = scriptInfo(readFileSync(fromResPath(root, script), "utf8")).extends ?? "RefCounted";
-        if (cls && api.getClass(base) && !api.inheritsFrom(cls, base)) throw new SceneError(`${node.path} is a ${cls}, but ${script} extends ${base}; Godot will not attach it`);
-      }
+      const problem = attachProblem(api, root, script, cls, node.path);
+      if (problem) throw new SceneError(problem);
+      if (scriptFacts(root, script)?.csharp?.partial === false) warnings.push(`the class in ${script} is not partial; Godot 4 needs \`partial\` on every script class (its source generators add to the class), so the project will not build`);
       setProp(blockAt(node.line), "script", `ExtResource("${extFor(script)}")`);
       summary = `attach ${script} to ${node.path}`;
+      break;
+    }
+    case "rename_node":
+    case "move_node":
+    case "duplicate_node":
+    case "set_groups": {
+      /** Children a node only has through the scene it instances (through inherited scenes too). */
+      const inheritedNames = (node: SceneNode): string[] => {
+        const names: string[] = [];
+        let path = extPath(node.instanceRef);
+        for (let depth = 0; path && depth < 8 && existsSync(fromResPath(root, path)); depth++) {
+          const sub = parseResourceText(readFileSync(fromResPath(root, path), "utf8"));
+          for (const n of sub.nodes) if (n.path !== "." && !n.path.includes("/")) names.push(n.name);
+          path = sub.extResources.find((e) => e.id === sub.nodes[0]?.instanceRef)?.path;
+        }
+        return names;
+      };
+      structured = structureEdit({ lines, blocks, scene, file: resPath, findNode, inheritedNames, fail: (m) => new SceneError(m) }, edit);
+      summary = structured.summary;
+      warnings.push(...structured.warnings);
+      const scripts = structured.scripts;
+      if (scripts) {
+        // Scripts are reported, not changed: a path in code may be built from parts, or mean another scene's node.
+        const uses = findUsages(root, scripts.name).usages.filter((u) => (u.kind === "node path" || u.kind === "string") && u.file !== resPath);
+        const where = `${uses.slice(0, 3).map((u) => `${u.file}:${u.line}`).join(", ")}${uses.length > 3 ? ", ..." : ""}`;
+        if (uses.length)
+          warnings.push(
+            edit.op === "rename_node"
+              ? `"${scripts.name}" is named in ${uses.length} place${uses.length === 1 ? "" : "s"} outside this scene (${where}): $${scripts.from}, get_node("${scripts.from}") and %${scripts.name} are not changed here. Check them with godot_usages ${scripts.name}; godot_rename ${scripts.name} ${scripts.to.split("/").at(-1)} renames a node name everywhere`
+              : `"${scripts.name}" is named in ${uses.length} place${uses.length === 1 ? "" : "s"} outside this scene (${where}): a path such as $${scripts.from} or get_node("${scripts.from}") must become ${scripts.to}. Check them with godot_usages ${scripts.name}`,
+          );
+        else warnings.push(`no script names "${scripts.name}" in a way Godotwright can see; paths built in code are not found, so check with godot_usages ${scripts.name} when in doubt`);
+      }
       break;
     }
   }
@@ -385,15 +651,25 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
     if (updated !== lines[head.start]) splices.push({ start: head.start, count: 1, added: [updated] });
   }
 
-  if (splices.every((sp) => sp.added.join("\n") === lines.slice(sp.start, sp.start + sp.count).join("\n"))) throw new SceneError(`nothing to change: ${summary} is already so`);
+  if (structured ? structured.lines.join("\n") === lines.join("\n") : splices.every((sp) => sp.added.join("\n") === lines.slice(sp.start, sp.start + sp.count).join("\n")))
+    throw new SceneError(`nothing to change: ${summary} is already so`);
   const apply = (): string => {
+    if (structured) {
+      const out = [...structured.lines];
+      let at = out.length;
+      while (at > 0 && (out[at - 1] ?? "").trim() === "") at--;
+      out.splice(at, 0, ...extraEditable.flatMap((p) => ["", `[editable path="${p}"]`]));
+      return out.join(eol);
+    }
     const out = [...lines];
     for (const sp of [...splices].sort(spliceOrder)) out.splice(sp.start, sp.count, ...sp.added);
     return out.join(eol);
   };
   let text = apply();
   try {
-    parseResourceText(text);
+    const after = parseResourceText(text);
+    const paths = after.nodes.map((n) => n.path);
+    if (structured && new Set(paths).size !== paths.length && new Set(scene.nodes.map((n) => n.path)).size === scene.nodes.length) throw new Error("two nodes would get the same path");
   } catch (error) {
     throw new SceneError(`the change would leave ${resPath} unreadable (${(error as Error).message}); nothing was written`);
   }
@@ -402,33 +678,33 @@ export function editScene(scenePath: string, edit: SceneEdit, options: { write?:
     if (lost) warnings.push(`${lost} edit${lost === 1 ? "" : "s"} inside it will be dropped on the next save from the editor`);
   }
   // A change inside an instanced scene that is not editable: Godot would drop it on the next save from the editor.
-  if (edit.op === "add_node" || edit.op === "set" || edit.op === "connect") {
+  if (edit.op === "add_node" || edit.op === "set" || edit.op === "connect" || (structured && structured.touched.length)) {
     // The nodes this change is about: inside a locked instance when strictly below its root.
-    const touched = edit.op === "add_node" ? [edit.parent.replace(/^\.\//, "")] : edit.op === "set" ? [edit.node.replace(/^\.\//, "")] : [edit.from, edit.to];
-    const added = lockedOf(text)
-      .locked.map((l) => l.root)
-      .filter((r) => touched.some((t) => t.startsWith(`${r}/`)));
-    if (added.length && !edit.makeEditable) {
+    const touched = structured ? structured.touched : edit.op === "add_node" ? [edit.parent.replace(/^\.\//, "")] : edit.op === "set" ? [edit.node.replace(/^\.\//, "")] : edit.op === "connect" ? [edit.from, edit.to] : [];
+    // Only below an instance (or in an inherited scene) can a change be dropped; a node made in this batch was checked with its parent.
+    const canLock = scene.nodes[0]?.instanceRef !== undefined || scene.nodes.some((n) => n.instanceRef && touched.some((t) => t.startsWith(`${n.path}/`)));
+    const added =
+      (batch && (edit.op === "set" || !canLock)) || (structured && !canLock)
+        ? []
+        : lockedOf(text)
+            .locked.map((l) => l.root)
+            .filter((r) => touched.some((t) => t.startsWith(`${r}/`)));
+    const makeEditable = "makeEditable" in edit && edit.makeEditable === true;
+    if (added.length && !makeEditable) {
       throw new SceneError(
         `this changes the inside of the instanced scene at ${added.map((r) => `"${r}"`).join(", ")}, which is not editable: Godot would drop it on the next save from the editor. Pass make_editable (adds [editable path="${added[0]}"]), or change the instanced scene itself.`,
       );
     }
     if (added.length) {
-      splices.push(editableSplice(added));
+      if (structured) extraEditable.push(...added);
+      else splices.push(editableSplice(added));
       text = apply();
       summary += ` (and make ${added.join(", ")} editable)`;
     }
   }
   splices.sort(spliceOrder);
-  const hunks = [...splices].reverse().map((s) => ({ line: s.start + 1, removed: lines.slice(s.start, s.start + s.count), added: s.added }));
-  const plan: ScenePlan = { summary, file: resPath, hunks, warnings, written: false };
-  if (!options.write) return plan;
-  const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
-  const before = errors();
-  const journal = new JournalWriter(root, "scene edit", `${summary} (${resPath})`);
-  journal.write(full, text);
-  const id = journal.commit();
-  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
+  const hunks = structured ? lineHunks(lines, text.split(eol)) : [...splices].reverse().map((s) => ({ line: s.start + 1, removed: lines.slice(s.start, s.start + s.count), added: s.added }));
+  return { text, hunks, summary, warnings };
 }
 
 /** The plan as a compact diff, with the warnings and, when written, the review errors before and after. */

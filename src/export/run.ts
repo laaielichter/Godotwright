@@ -8,7 +8,7 @@ import { parseResourceFile } from "../godot/resource-file.js";
 import { asString } from "../godot/variant.js";
 import { JournalWriter } from "../journal/journal.js";
 import { findProjectRoot } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { checkContents, kb, type ContentsReport } from "./contents.js";
 import { BOM_MESSAGE, hasBom, parsePresets, templateBases, type ExportPreset } from "./export.js";
@@ -220,8 +220,7 @@ export interface Prepared {
 
 /** Finds the project and the preset, and Godot; reports what stops an export before Godot runs. */
 export async function prepare(path: string, presetName: string, mode: ExportRun["mode"], godot: string | undefined, deps: ExportDeps): Promise<Prepared> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const result: ExportRun = { project: root, mode, steps: [], diagnostics: [], errors: 0, warnings: 0, notes: [] };
   const file = join(root, "export_presets.cfg");
   if (!existsSync(file)) {

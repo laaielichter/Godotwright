@@ -5,9 +5,9 @@ import { GodotApi, closest } from "../api/api.js";
 import { describeInputEvent, parseProjectSettings } from "../godot/project-settings.js";
 import { typedValue, tryParse } from "../godot/typed-value.js";
 import { isObject, parseVariant } from "../godot/variant.js";
-import { findProjectRoot, fromResPath } from "../project/files.js";
+import { fromResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
 
 export class SettingsError extends Error {}
@@ -280,9 +280,7 @@ function stillUsed(root: string, name: string, skipKinds: string[]): string | un
  * against the Godot 4.7 reference and the project first (setting names and types, keys, buttons, files, name clashes).
  */
 export function editProjectSettings(path: string, edit: SettingsEdit, options: { write?: boolean } = {}): SettingsPlan {
-  if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const file = join(root, "project.godot");
   const original = readFileSync(file, "utf8");
   const doc = new Document(original);

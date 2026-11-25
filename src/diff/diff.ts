@@ -5,9 +5,9 @@ import { parseResourceFile } from "../godot/resource-file.js";
 import { parseResourceText, refId, type ResourceFile, type SceneNode } from "../godot/scene.js";
 import { parseShader } from "../godot/shader.js";
 import { formatVariant, isCall, isObject, type Variant } from "../godot/variant.js";
-import { findProjectRoot, fromResPath, realResPath } from "../project/files.js";
+import { fromResPath, realResPath } from "../project/files.js";
 import { changedFiles, fileAt, GitError, type GitChange } from "../project/git.js";
-import { loadProject, ProjectNotFoundError, type LoadOptions, type ProjectData } from "../scan/scan.js";
+import { loadProject, type LoadOptions, type ProjectData, projectRootOf } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
 
 /**
@@ -614,8 +614,7 @@ const toRes = (file: string) => (file.startsWith("res://") ? file : `res://${fil
 
 /** The semantic diff of a project against a commit (default HEAD), or of one file against another file. */
 export function diffProject(path: string, options: DiffOptions = {}): DiffReport {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const load: LoadOptions = { base: options.base, baseFiles: options.baseFiles };
   const ctx: Context = { root, data: loadProject(root, load), options: load, searches: { left: 40, skipped: [] } };
   const only = (options.files ?? []).map(toRes);

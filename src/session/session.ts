@@ -9,8 +9,8 @@ import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { isObject, parseVariant } from "../godot/variant.js";
 import { parseCondition, parseTimeline, PlayError } from "../play/play.js";
-import { findProjectRoot, fromResPath, listProjectFiles } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { fromResPath, listProjectFiles } from "../project/files.js";
+import { projectRootOf } from "../scan/scan.js";
 import { inputEventText } from "../settings/edit.js";
 import { SESSION_MARK, sessionScript } from "./script.js";
 
@@ -64,8 +64,7 @@ const paths = (root: string) => ({
 });
 
 function projectRoot(path: string): string {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   return root;
 }
 

@@ -120,7 +120,8 @@ export function checkStructure(pm: ProjectModel, options: StructureOptions = {})
     if (f.startsWith("res://addons/") || f.endsWith(".import") || f.endsWith(".uid")) return false;
     const parts = f.slice("res://".length).split("/");
     return parts.some(
-      (p, i) => !p.startsWith(".") && !ROOT_FILES_OK.has(p) && !(i === parts.length - 1 && /^[A-Z]+(\.md|\.txt)?$/.test(p)) && !SNAKE_FILE.test(p),
+      // A C# script has the name of its class (Player.cs), and the project files the name of the assembly.
+      (p, i) => !p.startsWith(".") && !ROOT_FILES_OK.has(p) && !(i === parts.length - 1 && (/^[A-Z]+(\.md|\.txt)?$/.test(p) || /\.(cs|csproj|sln|slnx|props|targets)$/.test(p))) && !SNAKE_FILE.test(p),
     );
   });
   if (badNames.length > 0) {

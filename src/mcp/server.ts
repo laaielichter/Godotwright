@@ -108,7 +108,21 @@ import { LanguageServerError } from "../lsp/server.js";
 import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
+import { bisectProject, formatBisect } from "../bisect/bisect.js";
 import { diffProject, formatDiff } from "../diff/diff.js";
+import { formatMergeReport, mergeProject } from "../merge/project.js";
+import { formatFormatReport, formatProject } from "../format/project.js";
+import { addonState, editorCall, EditorBridgeError, EditorInstallError, EDITOR_OP_NAMES, formatAddonState, formatEditorOps, formatEditorResult, formatInstall, formatUninstall, installAddon, uninstallAddon } from "../editor/index.js";
+import { AnimationError, editAnimation, formatAnimationPlan, formatAnimationReport, readAnimations, type AnimationEditArgs } from "../animation/animation.js";
+import { complexityReport, formatComplexity } from "../metrics/complexity.js";
+import { formatSignals, formatSignalsMermaid, signalFlow } from "../metrics/signals.js";
+import { formatStats, projectStats } from "../metrics/stats.js";
+import { ScaffoldError } from "../scaffold/error.js";
+import { EXPORT_PLATFORMS, exportPreset, formatExportPreset } from "../scaffold/presets.js";
+import { formatNewProject, newProject } from "../scaffold/project.js";
+import { formatNewScript, formatNewShader, newScript, newShader, SCRIPT_TEMPLATES, SHADER_KINDS } from "../scaffold/script.js";
+import { formatTranslations, translations } from "../scaffold/translations.js";
+import { editTilemap, formatTilemapPlan, formatTilemapReport, readTilemap, TilemapError, type TilemapEditArgs } from "../tilemap/tilemap.js";
 import { formatImpact, impactOf } from "../impact/impact.js";
 import { collisionMap, formatBetween, formatBits, formatCollisions } from "../collisions/collisions.js";
 import { LEAN_NOTE, catalogue, checkArgs, findTool, help, unknownTool, type LeanTool } from "./lean.js";
@@ -665,9 +679,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Change a scene",
       description:
-        "Change a .tscn safely without the editor, touching only the lines of that change. `op` and its fields: add_node (parent, name, and type or instance), remove_node (node; with its children, connections and the resources only it used), set (node, property, value; checked against Godot 4.7, enums by name, resources as res:// files), connect and disconnect (from, signal, to, method; checks the signal exists, warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach_script (node, script; refuses a script that extends another node type), set_editable (node, editable). A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; make_editable adds [editable] with it. Node paths are relative to the scene root \".\". Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a refused change is an error and writes nothing. For project.godot use godot_project_edit; to rename a node everywhere, godot_rename.",
+        "Change a .tscn safely without the editor, touching only the lines of that change. `op` and its fields: add_node (parent, name, and type or instance), remove_node (node; with its children, connections and the resources only it used), set (node, property, value; checked against Godot 4.7, enums by name, resources as res:// files), connect and disconnect (from, signal, to, method; checks the signal exists, warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach_script (node, script; refuses a script that extends another node type), set_editable (node, editable), create_scene (scene is the new file; type or instance to inherit from, name, script; a fresh uid, never overwrites), add_nodes (nodes: a list of {parent, name, type or instance, props, script} applied in order, all or nothing), rename_node (node, name; children, connections, [editable] and NodePath values in this scene follow, scripts that name it are listed, not changed), move_node (node, and parent to reparent and/or index, before or after for its place among siblings; the subtree moves with it and the file keeps parents before children), duplicate_node (node, name, parent, connections; the copy shares the sub-resources, connections are copied only with connections: true), set_groups (node, and groups for the whole list or add_groups and remove_groups). A node that only exists through an instanced scene cannot be renamed, moved or copied here. A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; make_editable adds [editable] with it. Node paths are relative to the scene root \".\". Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a refused change is an error and writes nothing. For project.godot use godot_project_edit; to rename a node in every scene and script, godot_rename.",
       inputSchema: {
-        scene: z.string().describe("the scene: res://main.tscn, or a path"),
+        scene: z.string().describe("the scene: res://main.tscn, or a path (create_scene: the new file)"),
         op: z
           .enum([
             "add_node",
@@ -677,27 +691,33 @@ export function createServer(options: ServerOptions = {}): McpServer {
             "disconnect",
             "attach_script",
             "set_editable",
+            "create_scene",
+            "add_nodes",
+            "rename_node",
+            "move_node",
+            "duplicate_node",
+            "set_groups",
           ])
           .describe("what to change"),
         node: z
           .string()
           .optional()
           .describe(
-            'remove_node/set/attach_script/set_editable: path of the node ("." is the root)',
+            'remove_node/set/attach_script/set_editable/rename_node/move_node/duplicate_node/set_groups: path of the node ("." is the root)',
           ),
         parent: z
           .string()
           .optional()
-          .describe('add_node: path of the parent ("." is the root)'),
-        name: z.string().optional().describe("add_node: name of the new node"),
+          .describe('add_node: path of the parent ("." is the root); move_node: the new parent; duplicate_node: parent of the copy (default: the same)'),
+        name: z.string().optional().describe("add_node: name of the new node; rename_node: the new name; duplicate_node: name of the copy; create_scene: name of the root (default: from the file name)"),
         type: z
           .string()
           .optional()
-          .describe("add_node: a Godot node class, e.g. Sprite2D"),
+          .describe("add_node/create_scene: a Godot node class, e.g. Sprite2D"),
         instance: z
           .string()
           .optional()
-          .describe("add_node: a res:// scene to instance instead of a type"),
+          .describe("add_node: a res:// scene to instance instead of a type; create_scene: a res:// scene to inherit from"),
         property: z
           .string()
           .optional()
@@ -727,9 +747,29 @@ export function createServer(options: ServerOptions = {}): McpServer {
         script: z
           .string()
           .optional()
-          .describe("attach_script: res:// path of the script"),
+          .describe("attach_script/create_scene: res:// path of the script"),
         editable: z.boolean().optional().describe("set_editable: false to make it not editable (default true)"),
-        make_editable: z.boolean().optional().describe("add_node/set/connect: also make the instance editable when the change is inside one"),
+        make_editable: z.boolean().optional().describe("add_node/add_nodes/set/connect/move_node/duplicate_node/set_groups: also make the instance editable when the change is inside one"),
+        nodes: z
+          .array(
+            z.object({
+              parent: z.string().describe('path of the parent ("." is the root); may be a node earlier in the list'),
+              name: z.string(),
+              type: z.string().optional().describe("a Godot node class"),
+              instance: z.string().optional().describe("a res:// scene to instance instead of a type"),
+              props: z.record(z.string(), z.string()).optional().describe('properties as set takes them: {"position": "Vector2(10, 20)", "texture": "res://icon.svg"}'),
+              script: z.string().optional().describe("res:// path of a script to attach"),
+            }),
+          )
+          .optional()
+          .describe("add_nodes: the nodes, added in order"),
+        index: z.number().int().min(0).optional().describe("move_node: place among the children of the parent (0 is the first)"),
+        before: z.string().optional().describe("move_node: path of the sibling it goes before"),
+        after: z.string().optional().describe("move_node: path of the sibling it goes after"),
+        connections: z.boolean().optional().describe("duplicate_node: also copy the signal connections of the copied nodes (default false)"),
+        groups: z.array(z.string()).optional().describe("set_groups: the whole list of groups ([] for none)"),
+        add_groups: z.array(z.string()).optional().describe("set_groups: groups to add"),
+        remove_groups: z.array(z.string()).optional().describe("set_groups: groups to remove"),
         write: z
           .boolean()
           .optional()
@@ -779,7 +819,34 @@ export function createServer(options: ServerOptions = {}): McpServer {
                     ? { op, node: need("node"), editable: args.editable !== false }
                     : op === "connect"
                       ? { op, from: need("from"), signal: need("signal"), to: need("to"), method: need("method"), ...make }
-                      : {
+                      : op === "create_scene"
+                        ? { op, ...(args.instance ? { instance: args.instance } : { type: need("type") }), ...(args.name ? { name: args.name } : {}), ...(args.script ? { script: args.script } : {}) }
+                        : op === "add_nodes"
+                          ? { op, nodes: args.nodes ?? [], ...make }
+                          : op === "rename_node"
+                            ? { op, node: need("node"), name: need("name") }
+                            : op === "move_node"
+                              ? {
+                                  op,
+                                  node: need("node"),
+                                  ...(args.parent !== undefined ? { parent: args.parent } : {}),
+                                  ...(args.index !== undefined ? { index: args.index } : {}),
+                                  ...(args.before !== undefined ? { before: args.before } : {}),
+                                  ...(args.after !== undefined ? { after: args.after } : {}),
+                                  ...make,
+                                }
+                              : op === "duplicate_node"
+                                ? { op, node: need("node"), name: need("name"), ...(args.parent !== undefined ? { parent: args.parent } : {}), ...(args.connections ? { connections: true } : {}), ...make }
+                                : op === "set_groups"
+                                  ? {
+                                      op,
+                                      node: need("node"),
+                                      ...(args.groups !== undefined ? { groups: args.groups } : {}),
+                                      ...(args.add_groups?.length ? { add: args.add_groups } : {}),
+                                      ...(args.remove_groups?.length ? { remove: args.remove_groups } : {}),
+                                      ...make,
+                                    }
+                                  : {
                           op,
                           from: need("from"),
                           signal: need("signal"),
@@ -849,6 +916,236 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return report.errors > 0 ? failure(body) : text(body);
       } catch (error) {
         return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  tool(
+    "godot_format",
+    {
+      title: "Format GDScript, safely",
+      description:
+        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes.",
+      inputSchema: {
+        path: pathParam,
+        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: every script, without addons)"),
+        write: z.boolean().optional().describe("write the formatted files (default false: list what would change)"),
+        diff: z.boolean().optional().describe("show the changes as a unified diff"),
+        include_addons: z.boolean().optional().describe("also format res://addons/"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, files, write, diff, include_addons }) =>
+      guard(() => text(formatFormatReport(formatProject(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20))),
+  );
+
+  tool(
+    "godot_editor",
+    {
+      title: "See and drive the open Godot editor",
+      description:
+        `Talks to the Godot editor the user has open, through the optional Godotwright addon (127.0.0.1 only, a new token every start). Everything else in Godotwright works without it. op install copies the addon into the project and enables it (the user then restarts the editor or enables it under Project Settings > Plugins); op uninstall removes it; op addon says whether it is installed and running; op ops lists every op with its arguments. Reading: status (open scenes, which is current, unsaved changes, whether the game runs), selection, tree (the edited scene as the editor has it now, unsaved changes included), inspect (a node's stored properties), errors (errors and warnings the editor logged, Godot 4.5+; pass since to get only new ones), is_scanning. Acting: open_scene, select, edit_node, save_scene, save_all, reload_scene (after you changed a scene file, so the editor shows it; refuses unsaved editor changes unless discard: true), close_scene, filesystem_scan, reimport, play (main, current or a scene), stop, screenshot (editor, viewport_2d or viewport_3d; a PNG under .godot/godotwright/). It does not edit scenes: do that with godot_scene_edit and the other file tools, then reload_scene. Errors of the running game are not seen here: use godot_session or godot_play. Ops: ${EDITOR_OP_NAMES.join(", ")}.`,
+      inputSchema: {
+        path: pathParam,
+        op: z.string().describe("install, uninstall, addon, ops, or an editor op such as status, tree, errors, reload_scene, play, screenshot"),
+        args: z.record(z.string(), z.unknown()).optional().describe('arguments of the editor op, e.g. {"path": "res://main.tscn"} or {"since": 12}'),
+        timeout_seconds: z.number().min(1).max(120).optional().describe("how long to wait for the editor (default 10)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, op, args, timeout_seconds }) => {
+      try {
+        const project = where(path);
+        if (op === "ops") return text(formatEditorOps());
+        if (op === "addon") return text(formatAddonState(addonState(project)));
+        if (op === "install") return text(formatInstall(installAddon(project)));
+        if (op === "uninstall") return text(formatUninstall(uninstallAddon(project)));
+        const out = await editorCall(project, op, args ?? {}, timeout_seconds ? { timeoutMs: timeout_seconds * 1000 } : {});
+        return text(formatEditorResult(op, out));
+      } catch (error) {
+        if (error instanceof EditorBridgeError || error instanceof EditorInstallError || error instanceof SettingsError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  tool(
+    "godot_tilemap",
+    {
+      title: "Read and edit TileMapLayer cells",
+      description:
+        "The cells of a TileMapLayer node, read from and written to the scene file (Godot 4.3+; no Godot needed). A text editor cannot do this: the cells are packed bytes. op read: the used area, a map with one character per tile and a legend, counts per tile, and which sources and atlas coordinates the TileSet has. op set: cells [{x, y, source, atlas: [x, y], alternative?}]. op fill: a rect with one tile. op erase: cells or a rect. op clear: every cell. A source or atlas coordinate the TileSet does not have is refused. Dry run by default; write: true writes, and godot_undo takes it back.",
+      inputSchema: {
+        scene: z.string().describe("the .tscn file (res:// path, or relative to the project)"),
+        node: z.string().optional().describe("path of the TileMapLayer in the scene (default: the only one)"),
+        op: z.enum(["read", "set", "fill", "erase", "clear"]).describe("what to do"),
+        cells: z.array(z.object({ x: z.number().int(), y: z.number().int(), source: z.number().int().optional(), atlas: z.tuple([z.number().int(), z.number().int()]).optional(), alternative: z.number().int().optional() })).optional().describe("set: cells with source and atlas; erase: cells with x and y"),
+        rect: z.object({ x: z.number().int(), y: z.number().int(), width: z.number().int().min(1), height: z.number().int().min(1) }).optional().describe("fill or erase: the area"),
+        source: z.number().int().optional().describe("fill: the TileSet source id"),
+        atlas: z.tuple([z.number().int(), z.number().int()]).optional().describe("fill: atlas coordinates of the tile"),
+        alternative: z.number().int().optional().describe("fill: alternative tile id (default 0)"),
+        limit: z.number().int().min(1).max(5000).optional().describe("read: cells to list"),
+        write: z.boolean().optional().describe("write the change (default false: show it)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        const file = args.scene.startsWith("res://") ? args.scene : where(args.scene);
+        const node = args.node ? { node: args.node } : {};
+        if (args.op === "read") return text(formatTilemapReport(readTilemap(file, { ...node, ...(args.limit ? { limit: args.limit } : {}) }, { project: base })));
+        const { scene: _scene, write, limit: _limit, ...edit } = args;
+        return text(formatTilemapPlan(editTilemap(file, edit as unknown as TilemapEditArgs, { write: write === true, project: base })));
+      } catch (error) {
+        if (error instanceof TilemapError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  tool(
+    "godot_animation",
+    {
+      title: "Read and author animations",
+      description:
+        "The animations of an AnimationPlayer, read from and written to the scene file (or an Animation .tres); no Godot needed. op read: every animation with length, loop mode and tracks, keyframes as time -> value. op create: a new animation (the library is made when the player has none). op add_track: a value track (path such as Sprite2D:position) or a method track with keys [{time, value | method + args, transition?}]. op set_key / remove_key: one keyframe of a track. op remove_track, op remove (an animation), op set (length, loop_mode, step). The track path must name a node that exists in the scene and a property its class has; otherwise the nearest name is given. Dry run by default; write: true writes, and godot_undo takes it back.",
+      inputSchema: {
+        scene: z.string().describe("the .tscn or .tres file (res:// path, or relative to the project)"),
+        player: z.string().optional().describe("path of the AnimationPlayer in the scene (default: the only one)"),
+        library: z.string().optional().describe('the animation library name (default "")'),
+        op: z.enum(["read", "create", "add_track", "set_key", "remove_key", "remove_track", "remove", "set"]).describe("what to do"),
+        animation: z.string().optional().describe("the animation's name (read: only this one)"),
+        name: z.string().optional().describe("create: the new animation's name"),
+        length: z.number().min(0).optional().describe("create or set: length in seconds"),
+        loop_mode: z.enum(["none", "linear", "pingpong"]).optional().describe("create or set: how it loops"),
+        step: z.number().min(0).optional().describe("create or set: the snap step in seconds"),
+        type: z.enum(["value", "method"]).optional().describe("add_track: the track type (default value)"),
+        path: z.string().optional().describe('add_track: node and property, e.g. "Sprite2D:position"; for a method track the node'),
+        keys: z.array(z.object({ time: z.number().min(0), value: z.unknown().optional(), method: z.string().optional(), args: z.array(z.unknown()).optional(), transition: z.number().optional() })).optional().describe("add_track: the keyframes; a value is Godot text such as \"Vector2(10, 0)\" or a number"),
+        track: z.number().int().min(0).optional().describe("set_key, remove_key, remove_track: the track index"),
+        time: z.number().min(0).optional().describe("set_key, remove_key: the keyframe's time"),
+        value: z.unknown().optional().describe("set_key: the value (Godot text or a number)"),
+        method: z.string().optional().describe("set_key on a method track: the method"),
+        args: z.array(z.unknown()).optional().describe("set_key on a method track: its arguments"),
+        transition: z.number().optional().describe("set_key: the easing (default 1)"),
+        interp: z.number().int().optional().describe("add_track: interpolation (0 nearest, 1 linear, 2 cubic)"),
+        update: z.number().int().optional().describe("add_track: update mode (0 continuous, 1 discrete, 2 capture)"),
+        loop_wrap: z.boolean().optional().describe("add_track: wrap interpolation at the loop"),
+        write: z.boolean().optional().describe("write the change (default false: show it)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        const file = args.scene.startsWith("res://") ? args.scene : where(args.scene);
+        const who = { ...(args.player ? { player: args.player } : {}), ...(args.library !== undefined ? { library: args.library } : {}) };
+        if (args.op === "read") return text(formatAnimationReport(readAnimations(file, { ...who, ...(args.animation ? { animation: args.animation } : {}) }, { project: base })));
+        const { scene: _scene, write, ...edit } = args;
+        return text(formatAnimationPlan(editAnimation(file, edit as unknown as AnimationEditArgs, { write: write === true, project: base })));
+      } catch (error) {
+        if (error instanceof AnimationError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  tool(
+    "godot_new",
+    {
+      title: "New project, script or shader from a template",
+      description:
+        "Starts things the way Godot 4.7 expects them. op project: a new project in an empty folder (project.godot, a main scene with a typed root and its script, an icon, .gitignore and .gitattributes; kind 2d, 3d or ui; renderer forward_plus, mobile or gl_compatibility). `dotnet: true` makes it a C# project: it also writes <Name>.csproj (Godot.NET.Sdk, net8.0) and <Name>.sln as Godot generates them, and sets the assembly name. op script: a typed GDScript from a template that passes the review with no errors or warnings: node, character_2d, character_3d, area_trigger, state_machine, autoload, resource, ui_control, test_gut, test_gdunit4; the result names the input actions the script uses so you can add them with godot_project_edit. A file that ends in .cs gets the C# form instead (a partial class named after the file, with [Export] and [Signal] where they fit): node, character_2d, character_3d, area_trigger, autoload, resource, ui_control. op shader: canvas_item, spatial, particles, sky or fog. Nothing that exists is overwritten. Scripts and shaders are written unless write is false; godot_undo takes them back.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["project", "script", "shader"]).describe("what to make"),
+        dir: z.string().optional().describe("project: the folder for the new project (created when missing)"),
+        name: z.string().optional().describe("project: the game's name (default: the folder's name)"),
+        kind: z.enum(["2d", "3d", "ui"]).optional().describe("project: the root of the main scene (default 2d)"),
+        renderer: z.enum(["forward_plus", "mobile", "gl_compatibility"]).optional().describe("project: the rendering method (default forward_plus)"),
+        merge_driver: z.boolean().optional().describe("project: also set up .gitattributes for godot_merge"),
+        mcp: z.boolean().optional().describe("project: also write a .mcp.json that starts Godotwright"),
+        dotnet: z.boolean().optional().describe("project: a C# (.NET) project, with <Name>.csproj and <Name>.sln"),
+        file: z.string().optional().describe("script or shader: the res:// path of the new file (.gd, or .cs for a C# script)"),
+        template: z.enum(SCRIPT_TEMPLATES).optional().describe("script: the template (default node); for a .cs file: node, character_2d, character_3d, area_trigger, autoload, resource or ui_control"),
+        class_name: z.string().optional().describe("script: a class_name for it (a C# class always has the name of its file)"),
+        base: z.string().optional().describe("script: the class it extends, when the template allows another"),
+        shader: z.enum(SHADER_KINDS).optional().describe("shader: the shader type (default canvas_item)"),
+        write: z.boolean().optional().describe("script or shader: false shows the file without writing it (default true)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        if (args.op === "project") {
+          if (!args.dir) return failure("op project needs dir (the folder for the new project)");
+          return text(formatNewProject(newProject(isAbsolute(args.dir) ? args.dir : resolve(base, args.dir), { ...(args.name ? { name: args.name } : {}), ...(args.kind ? { kind: args.kind } : {}), ...(args.renderer ? { renderer: args.renderer } : {}), ...(args.merge_driver ? { mergeDriver: true } : {}), ...(args.mcp ? { mcp: true } : {}), ...(args.dotnet ? { dotnet: true } : {}) })));
+        }
+        if (!args.file) return failure(`op ${args.op} needs file (the res:// path of the new file)`);
+        const project = where(args.path);
+        const write = args.write === false ? { write: false } : {};
+        if (args.op === "shader") return text(formatNewShader(newShader(project, args.file, args.shader ?? "canvas_item", write)));
+        return text(formatNewScript(newScript(project, args.file, { ...(args.template ? { template: args.template } : {}), ...(args.class_name ? { className: args.class_name } : {}), ...(args.base ? { base: args.base } : {}), ...write })));
+      } catch (error) {
+        if (error instanceof ScaffoldError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  tool(
+    "godot_preset",
+    {
+      title: "Export presets: list, add, change, remove",
+      description:
+        "Edits export_presets.cfg without the editor. op list: the presets. op add: a preset for Windows Desktop, Linux, macOS, Web, Android or iOS with name, export_path, runnable, export_filter and include/exclude filters, plus options as key/value; Godot fills in the options you do not give when it loads the file. op set: change keys or options of a preset (unset removes them). op remove: a preset; the ones after it are renumbered, as Godot needs. Dry run by default; write: true writes, and godot_undo takes it back. To build with a preset use godot_export.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["list", "add", "set", "remove"]).describe("what to do"),
+        preset: z.union([z.string(), z.number().int()]).optional().describe("set or remove: the preset's name or number"),
+        platform: z.enum(EXPORT_PLATFORMS).optional().describe("add: the platform"),
+        name: z.string().optional().describe("add: the preset's name (default: the platform)"),
+        export_path: z.string().optional().describe("add: where the build goes, e.g. build/game.exe"),
+        runnable: z.boolean().optional().describe("add: the preset one-click deploy uses"),
+        export_filter: z.string().optional().describe("add: all_resources, scenes, resources, exclude or customized"),
+        include_filter: z.string().optional().describe("add: extra files to include, e.g. *.json"),
+        exclude_filter: z.string().optional().describe("add: files to leave out"),
+        set: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("set: preset keys to change"),
+        options: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("add or set: platform options, e.g. {\"binary_format/embed_pck\": true}"),
+        unset: z.array(z.string()).optional().describe("set: keys to remove (options/<key> for an option)"),
+        write: z.boolean().optional().describe("write the change (default false: show it)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, op, write, ...rest }) => {
+      try {
+        return text(formatExportPreset(exportPreset(where(path), op, rest as never, { write: write === true })));
+      } catch (error) {
+        if (error instanceof ScaffoldError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  tool(
+    "godot_translations",
+    {
+      title: "Translation files: register and check",
+      description:
+        "op list: the translation files the project has registered, and CSV or PO files that are in the project but not registered. op add / remove: a file in internationalization/locale/translations. op check: for a CSV translation file, the keys the code uses with tr(\"KEY\") (and key-like texts in scenes) that are missing from it, keys in it that nothing uses, and locales with empty cells. Dry run by default for add and remove; write: true writes.",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["list", "add", "remove", "check"]).describe("what to do"),
+        file: z.string().optional().describe("add, remove, check: the translation file (res:// path)"),
+        write: z.boolean().optional().describe("add or remove: write the change (default false: show it)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, op, file, write }) => {
+      try {
+        return text(formatTranslations(translations(where(path), op, file ? { file } : {}, { write: write === true })));
+      } catch (error) {
+        if (error instanceof ScaffoldError || error instanceof SettingsError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
       }
     },
   );
@@ -1072,6 +1369,81 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
         const body = formatDiff(report, (detail ?? profile.detail) === "full" ? 200 : 25);
         return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_merge",
+    {
+      title: "Merge scenes and resources by meaning",
+      description:
+        "A three-way merge of .tscn, .tres and project.godot that knows what the files mean, offline. Git merges them line by line: two branches (or two agents in two worktrees) that each add a node to one scene conflict, or merge into a file Godot cannot load (both gave a new resource the same id, load_steps is off, a node sits under a removed parent). This merges nodes by their path, ext_resources by uid or path, connections by signal, source, target and method, and properties one by one; resource ids of both sides are brought into one numbering and every reference follows; a resource one side removed and the other still uses is kept. Only a property both sides set to different values is a conflict, reported with base, ours and theirs. Without theirs: the files a git merge, rebase or cherry-pick left in conflict (dry run; write: true puts the merged files in the working tree, then you git add them). With theirs (a branch or commit): a preview of merging it into HEAD, before you merge. Never use a text editor on conflict markers in a scene.",
+      inputSchema: {
+        path: pathParam,
+        theirs: z.string().optional().describe("a branch or commit: preview what merging it into HEAD does to the Godot files (nothing is written)"),
+        files: z.array(z.string()).optional().describe("only these res:// files"),
+        prefer: z.enum(["ours", "theirs"]).optional().describe("the side a conflict takes in the merged file (default ours); the conflict is reported either way"),
+        write: z.boolean().optional().describe("write the merged files into the working tree (a merge in progress only; default false: show what it would be)"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, theirs, files, prefer, write, detail }) =>
+      guard(() => {
+        const report = mergeProject(where(path), { ...(theirs ? { theirs } : {}), ...(files ? { files } : {}), ...(prefer ? { prefer } : {}), ...(write && !theirs ? { write: true } : {}) });
+        const body = formatMergeReport(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_bisect",
+    {
+      title: "Which commit broke it",
+      description:
+        "Finds the first commit that has a problem, offline and without touching the working tree: reviews the project as it was at each commit (a copy from git in a temp folder) and halves the range. The problem is a review finding: of a rule (rule: \"api/unknown-member\"), in a file, with words in its message, or with none of these any finding of severity error. Give good (a commit known to be without it) or leave it out: history is then searched backwards 1, 2, 4, 8 ... commits. Returns the first bad commit and the last good one, the findings there, the files that commit changed (the finding is often in a file it did not touch: it removed something that file uses) and the godot_diff call to read the change. Use it when something that worked no longer does and many commits lie in between, instead of reading every diff.",
+      inputSchema: {
+        path: pathParam,
+        bad: z.string().optional().describe("a commit that has the problem (default HEAD; uncommitted changes are not searched)"),
+        good: z.string().optional().describe("a commit known to be without it, e.g. main or HEAD~30 (default: search backwards)"),
+        rule: z.string().optional().describe("the problem is a finding of this review rule, e.g. api/unknown-member"),
+        file: z.string().optional().describe("the problem is a finding in this res:// file"),
+        text: z.string().optional().describe("the problem is a finding whose message holds this text"),
+        max: z.number().int().min(2).max(5000).optional().describe("how many commits to look back when good is not given (default 200)"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, bad, good, rule, file, text: words, max }) =>
+      guard(() => {
+        const report = bisectProject(where(path), { base: options.base, baseFiles: options.baseFiles, ...(bad ? { bad } : {}), ...(good ? { good } : {}), ...(rule ? { rule } : {}), ...(file ? { file } : {}), ...(words ? { text: words } : {}), ...(max ? { max } : {}) });
+        const body = formatBisect(report, profile.detail === "full" ? 40 : 15);
+        return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_metrics",
+    {
+      title: "Complexity, signal flow and project statistics",
+      description:
+        "Three measurements from the project's files, offline. op complexity: cyclomatic complexity per function (1 plus every if, elif, for, while, match arm, and, or, ternary) with a grade A to F, lines and nesting; the functions above threshold (default 10) worst first, and the project average. Use it to pick what to split before you change it. op signals: every signal with who emits it and who connects to it (scenes and code), and three lists that are bugs: declared but never emitted, emitted but never connected, and a connection to a method that does not exist; mermaid: true draws the flow. op stats: counts of scripts, scenes, resources and assets, lines of code, comment and blank, how much is typed, the biggest scripts, and the heaviest scenes (nodes, depth, scripts, instances, sub-resources).",
+      inputSchema: {
+        path: pathParam,
+        op: z.enum(["complexity", "signals", "stats"]).describe("what to measure"),
+        threshold: z.number().int().min(1).optional().describe("complexity: list functions above this (default 10)"),
+        mermaid: z.boolean().optional().describe("signals: return a mermaid flowchart instead of the lists"),
+        limit: z.number().int().min(1).max(500).optional().describe("how many entries to list"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, op, threshold, mermaid, limit }) =>
+      guard(() => {
+        const dir = where(path);
+        const load = { base: options.base, baseFiles: options.baseFiles };
+        if (op === "complexity") return text(formatComplexity(complexityReport(dir, { ...load, ...(threshold ? { threshold } : {}) }), limit ?? (profile.detail === "full" ? 40 : 15)));
+        if (op === "stats") return text(formatStats(projectStats(dir, load), limit ?? 10));
+        const flow = signalFlow(dir, load);
+        return text(mermaid ? formatSignalsMermaid(flow, limit ?? 30) : formatSignals(flow, limit ?? (profile.detail === "full" ? 60 : 20)));
       }),
   );
 
@@ -1492,6 +1864,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         lines.push(
           `${plural(checked.errors, "error")}, ${plural(checked.warnings, "warning")} (Godot ${checked.godotVersion}, ${plural(checked.scripts, "script")}, ${plural(checked.scenes, "scene")}${checked.shaderFiles ? `, ${plural(checked.shaderFiles, "shader")}` : ""})`,
         );
+        if (checked.csharp) lines.push(`C#: ${checked.csharp.note}`);
         if (checked.shaders) lines.push(shaderSummary(checked.shaders));
         lines.push(...lessonHintsForMessages(checked.diagnostics.map((d) => d.message)));
         if (checked.output !== undefined)

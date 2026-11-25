@@ -16,12 +16,11 @@ import { addLocalLesson, LessonError, projectKey, type LessonInput } from "../le
 import { projectNames } from "../lessons/names.js";
 import { allLessons, errorTemplate } from "../lessons/search.js";
 import type { Lesson, LocalLesson } from "../lessons/types.js";
-import { findProjectRoot } from "../project/files.js";
 import { localDataDir } from "../project/local-dir.js";
 import { ProtectedPathError, protectionOf } from "../project/protect.js";
 import { scrubText } from "../lessons/anonymize.js";
 import { shareableQuery } from "../learn/share.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { emptyFacts, readTranscripts, sessionFolders, type TranscriptFacts, type TranscriptOptions } from "./transcripts.js";
 
 /**
@@ -390,8 +389,7 @@ function since(options: DreamOptions, now: Date): number {
 
 /** Looks back at what was learned and done, and returns the proposals. Reads only; changes nothing. */
 export function dream(path: string, options: DreamOptions = {}): DreamResult {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const now = options.now ?? new Date();
   const from = since(options, now);
   const api = GodotApi.load();

@@ -3,11 +3,11 @@ import { JournalWriter } from "../journal/journal.js";
 import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
 import { emptyLearning } from "../learn/store.js";
-import { findProjectRoot, fromResPath } from "../project/files.js";
+import { fromResPath } from "../project/files.js";
 import { checkFiles, checkRules } from "../project/options.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import type { Finding } from "../review/rules.js";
-import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
+import { loadProject, projectRootOf } from "../scan/scan.js";
 import { parseShader } from "../godot/shader.js";
 import { shaderRenames } from "../migrate/shader.js";
 import { REMOVED_TEXTURES, removedTextureUniform } from "../review/checks/shader.js";
@@ -468,8 +468,7 @@ FIXERS["api/upgrade-mesh-skeleton"] = addProperty("skeleton", 'NodePath("..")');
 export const FIXABLE_RULES = [...Object.keys(FIXERS), ...PROJECT_FIXES].sort();
 
 export function fixProject(path: string, options: FixOptions = {}): FixResult {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   checkRules(options.rules ?? [], FIXABLE_RULES);
   const learning = { learning: currentLearning() ?? emptyLearning(), shared: bundledLearning() };
   const focus = options.files ? checkFiles(root, options.files) : undefined;

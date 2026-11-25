@@ -87,6 +87,24 @@ describe("rename", () => {
     expect(() => renameInProject(root, "res://scenes/player.tscn", "res://scenes/main.tscn")).toThrow(/already exists/);
   });
 
+  it("refuses a GDScript keyword or a Godot name as the new name of something in code (#212)", async () => {
+    const files = { "project.godot": '[application]\nconfig/name="T"\n', "a.gd": "extends Node\n\nvar health: int = 10\nvar Node2D := 1\n\nfunc take_damage(amount: int) -> void:\n\thealth -= amount\n", "main.tscn": '[gd_scene format=3]\n\n[node name="World" type="Node" groups=["mobs"]]\n' };
+    const root = makeProject(files);
+    expect(() => renameInProject(root, "take_damage", "func", { write: true })).toThrow('"func" is a GDScript keyword; pick another name');
+    expect(() => renameInProject(root, "health", "Node", { write: true })).toThrow('"Node" is a Godot class; a variable with that name would hide it');
+    expect(() => renameInProject(root, "take_damage", "print", { write: true })).toThrow('"print" is a global function of Godot; a function with that name would hide it');
+    expect(() => renameInProject(root, "health", "PI")).toThrow(RenameError);
+    expect(() => renameInProject(root, "health", "KEY_A")).toThrow(/global constant of Godot/);
+    expect(read(root, "a.gd")).toBe(files["a.gd"]);
+    expect((await runCli(["rename", "take_damage", "func", root])).exitCode).toBe(1);
+    process.exitCode = undefined;
+    // An ordinary name, a rename away from a Godot name, and names that are not code (a node, a group) still work.
+    expect(renameInProject(root, "health", "hp").edits).toHaveLength(2);
+    expect(renameInProject(root, "Node2D", "count").edits).toHaveLength(1);
+    expect(renameInProject(root, "World", "Node").edits).toHaveLength(1);
+    expect(renameInProject(root, "mobs", "print").edits).toHaveLength(1);
+  });
+
   it("runs from the CLI with a dry run, --write and --json", async () => {
     const root = demo();
     const dry = await runCli(["rename", "take_damage", "apply_damage", root]);

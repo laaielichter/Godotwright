@@ -21,6 +21,14 @@ Use them instead of memory: models learned Godot from years of Godot 3 tutorials
    error before saving it.
 4. **Review after every edit.** Call `godot_review` with the changed `files`; in a fix loop pass
    `only_new: true` to see only what changed.
+Two more for work with git: a merge conflict in a `.tscn`, `.tres` or `project.godot` is settled with `godot_merge`
+(never by editing conflict markers in a scene), and `godot_bisect` finds the commit that broke something.
+
+For structure use the tools, not a text editor: `godot_scene_edit` (create a scene, rename, move, duplicate nodes),
+`godot_tilemap` (cells), `godot_animation` (tracks and keys), `godot_new` (a script from a template that already
+passes the review). `godot_format` tidies scripts without changing them; `godot_metrics` shows the functions that are
+too complex and signals nobody emits or hears.
+
 5. **Look at the whole change before you finish.** `godot_impact` lists the scenes, tests and saved scenarios your
    edits reach and the checks to run for them; `godot_diff` shows what changed by meaning, and every line marked `!`
    is something the change broke elsewhere (a scene connection to a removed function, a saved `@export` value).

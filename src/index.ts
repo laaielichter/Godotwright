@@ -2,7 +2,9 @@ export { closest, formatMethodSignature, GodotApi, type LookupResult, type Searc
 export { formatLookup, formatSearch } from "./api/format.js";
 export type * from "./api/types.js";
 export { checkProject, type CheckOptions, type CheckResult } from "./check/check.js";
+export { buildCSharp, findDotnet, parseMsbuildOutput, type CSharpBuildOptions, type CSharpBuildResult } from "./check/csharp-build.js";
 export { findGodot } from "./check/godot.js";
+export { outlineCSharp, type CSharpOutline, type CsClass, type CsUsage } from "./godot/csharp.js";
 export { applyDream, dream, formatApply, formatDream, type ApplyResult, type DreamResult, type Proposal } from "./dream/dream.js";
 export { formatDiagnostic, parseGodotLog, type Diagnostic } from "./check/log.js";
 export { compileShaders, type ShaderCompileResult, type ShaderToCompile } from "./check/shader-compile.js";

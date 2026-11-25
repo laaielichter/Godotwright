@@ -4,6 +4,7 @@ import type { LearnedData } from "../collector/collector.js";
 import type { LearningData } from "../learn/store.js";
 import { loadProject } from "../scan/scan.js";
 import { checkScriptApi } from "./checks/api.js";
+import { checkCSharp } from "./checks/csharp.js";
 import { checkScriptPhysics } from "./checks/physics.js";
 import { checkScriptRuntime } from "./checks/runtime.js";
 import { checkScenePitfalls, checkScriptPitfalls } from "./checks/pitfalls.js";
@@ -110,6 +111,7 @@ export function reviewProject(path: string, options: ReviewOptions = {}): Review
     typing.total += quality.typing.total;
   }
   const project = (f: Finding) => inScope(f.file) && focused(f.file);
+  findings.push(...checkCSharp(pm, { inputActions, inScope: (file) => inScope(file) && focused(file) }));
   findings.push(...checkScenePerformance(pm).filter(project));
   findings.push(...checkScenePitfalls(pm).filter(project));
   findings.push(...checkShaders(pm).filter(project));
