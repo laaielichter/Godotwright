@@ -147,7 +147,13 @@ describe("godot_code on C# files", () => {
     ]);
     expect(starts).toHaveLength(1);
     // It was asked for its settings and got one null per item; documents were opened as csharp and closed again.
-    const log = messages();
+    // The last didClose is sent after the answer: give the fake server a moment to log it.
+    const count = (l: ReturnType<typeof messages>, method: string) => l.filter((m) => m.method === method).length;
+    let log = messages();
+    for (let i = 0; i < 40 && count(log, "textDocument/didOpen") !== count(log, "textDocument/didClose"); i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      log = messages();
+    }
     expect(log.find((m) => m.response !== undefined)).toMatchObject({ result: [null] });
     expect(log.find((m) => m.method === "initialize")?.params.capabilities.textDocument.documentSymbol).toEqual({ hierarchicalDocumentSymbolSupport: true });
     expect(log.filter((m) => m.method === "textDocument/didOpen").every((m) => m.params.textDocument.languageId === "csharp")).toBe(true);
