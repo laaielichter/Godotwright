@@ -172,6 +172,40 @@ describe("new script", () => {
     expect(scriptTemplateText("state_machine")).toContain("class State extends RefCounted:");
   });
 
+  it("adds the input actions a character reads to project.godot, in the same undo entry, so the review is clean", () => {
+    const dir = join(tempFolder("gw-new-"), "game");
+    newProject(dir, { kind: "3d" });
+    const before = read(dir, "project.godot");
+    const r = newScript(dir, "res://speler.gd", { template: "character_3d" });
+    expect(r.inputActions.map((a) => [a.name, a.added])).toEqual([["move_left", true], ["move_right", true], ["move_forward", true], ["move_back", true], ["jump", true]]);
+    const settings = parseProjectSettings(read(dir, "project.godot"));
+    expect(settings.inputActions.map((a) => [a.name, a.events])).toEqual([["move_left", ["Key:A"]], ["move_right", ["Key:D"]], ["move_forward", ["Key:W"]], ["move_back", ["Key:S"]], ["jump", ["Key:Space"]]]);
+    expect(reviewProject(dir).findings.filter((f) => f.rule === "api/unknown-input-action")).toEqual([]);
+    expect(formatNewScript(r)).toContain("move_left (added: Key:A)");
+    // One undo takes the script and the actions back.
+    undoJournal(dir);
+    expect(existsSync(join(dir, "speler.gd"))).toBe(false);
+    expect(read(dir, "project.godot")).toBe(before);
+    // input_actions: false leaves project.godot alone and lists what to add.
+    const off = newScript(dir, "res://speler.gd", { template: "character_3d", inputActions: false });
+    expect(read(dir, "project.godot")).toBe(before);
+    expect(off.inputActions.every((a) => !a.defined && !a.added)).toBe(true);
+    expect(formatNewScript(off)).toContain("add: godot_project_edit input_add jump Key:Space");
+  });
+
+  it("a shader without a kind is spatial in a 3D project and canvas_item in a 2D one", () => {
+    const three = join(tempFolder("gw-new-"), "three");
+    newProject(three, { kind: "3d" });
+    const s3 = newShader(three, "res://gloed.gdshader");
+    expect(s3.template).toBe("spatial");
+    expect(read(three, "gloed.gdshader")).toMatch(/^shader_type spatial;/);
+    expect(s3.notes[0]).toMatch(/no kind given: spatial/);
+    const two = join(tempFolder("gw-new-"), "two");
+    newProject(two, { kind: "2d" });
+    expect(newShader(two, "res://gloed.gdshader").template).toBe("canvas_item");
+    expect(newShader(two, "res://lucht.gdshader", "sky").template).toBe("sky");
+  });
+
   it("refuses to overwrite, bad names and bad paths, and undo removes what it wrote", () => {
     const root = makeProject({ "project.godot": PROJECT, "a.gd": "extends Node\n", "hero.gd": "class_name Hero\nextends Node\n" });
     expect(() => newScript(root, "res://a.gd")).toThrow(/already exists/);

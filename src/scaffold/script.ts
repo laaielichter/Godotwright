@@ -1,10 +1,12 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { GodotApi } from "../api/api.js";
 import { JournalWriter } from "../journal/journal.js";
 import { fromResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { loadProject, projectRootOf } from "../scan/scan.js";
 import { generateUid } from "../scene/uid.js";
+import { applySettingsEdit } from "../settings/edit.js";
 import { ScaffoldError, cleanResPath } from "./error.js";
 
 /**
@@ -34,6 +36,11 @@ export interface NewScriptOptions {
   dimension?: "2d" | "3d";
   /** Default true. With false nothing is written and the result holds the text. */
   write?: boolean;
+  /**
+   * Default true: the input actions the template reads and project.godot lacks are added to it with their default
+   * event, in the same journal entry, so the script is clean in godot_review. False leaves project.godot alone.
+   */
+  inputActions?: boolean;
 }
 
 /** An input action a template reads, with an event to give it (the notation of godot_project_edit input_add). */
@@ -42,6 +49,8 @@ export interface TemplateAction {
   event: string;
   /** Whether project.godot has the action already. */
   defined: boolean;
+  /** Added to project.godot by this write. */
+  added?: boolean;
 }
 
 export interface NewFileResult {
@@ -533,6 +542,20 @@ function countReview(root: string, file: string): { errors: number; warnings: nu
   return { errors: findings.filter((f) => f.severity === "error").length, warnings: findings.filter((f) => f.severity === "warning").length };
 }
 
+/**
+ * Adds the template's missing input actions to project.godot through the journal of the new script (one undo takes
+ * both back). Returns the actions with `added` set.
+ */
+function addMissingActions(root: string, journal: JournalWriter, actions: TemplateAction[], enabled: boolean | undefined): TemplateAction[] {
+  const missing = actions.filter((a) => !a.defined);
+  const file = join(root, "project.godot");
+  if (enabled === false || !missing.length || !existsSync(file)) return actions;
+  let text = readFileSync(file, "utf8");
+  for (const a of missing) text = applySettingsEdit(root, text, { op: "input_add", action: a.name, events: [a.event] }).text;
+  journal.write(file, text);
+  return actions.map((a) => (a.defined ? a : { ...a, added: true }));
+}
+
 export function newScript(project: string, resPath: string, options: NewScriptOptions = {}): NewScriptResult {
   const root = projectRootOf(project);
   const template = options.template ?? "node";
@@ -582,8 +605,9 @@ export function newScript(project: string, resPath: string, options: NewScriptOp
   const full = fromResPath(root, file);
   journal.write(full, text);
   journal.write(`${full}.uid`, `${uid}\n`);
+  const actions = addMissingActions(root, journal, inputActions, options.inputActions);
   const id = journal.commit();
-  return { ...result, written: true, ...(id ? { journal: id } : {}), review: countReview(root, file) };
+  return { ...result, inputActions: actions, written: true, ...(id ? { journal: id } : {}), review: countReview(root, file) };
 }
 
 /** A new C# script: the class has the name of the file, as Godot needs. */
@@ -620,8 +644,9 @@ function newCSharpScript(root: string, file: string, template: ScriptTemplate, o
   const full = fromResPath(root, file);
   journal.write(full, text);
   journal.write(`${full}.uid`, `${uid}\n`);
+  const actions = addMissingActions(root, journal, inputActions, options.inputActions);
   const id = journal.commit();
-  return { ...result, written: true, ...(id ? { journal: id } : {}), review: countReview(root, file) };
+  return { ...result, inputActions: actions, written: true, ...(id ? { journal: id } : {}), review: countReview(root, file) };
 }
 
 const SHADERS: Record<ShaderKind, { body: string[]; note: string }> = {
@@ -689,14 +714,23 @@ export function shaderTemplateText(kind: ShaderKind): string {
   return `${[`shader_type ${kind};`, "", ...SHADERS[kind].body].join("\n")}\n`;
 }
 
-export function newShader(project: string, resPath: string, kind: ShaderKind = "canvas_item", options: { write?: boolean } = {}): NewFileResult {
+/** The shader kind for a project when none is given: spatial when the main scene's root is 3D, else canvas_item. */
+export function defaultShaderKind(root: string): ShaderKind {
+  const map = loadProject(root).map;
+  const type = map.scenes.find((sc) => sc.path === map.project.mainScene)?.nodes[0]?.type;
+  return type && GodotApi.load().inheritsFrom(type, "Node3D") ? "spatial" : "canvas_item";
+}
+
+export function newShader(project: string, resPath: string, kind?: ShaderKind, options: { write?: boolean } = {}): NewFileResult {
   const root = projectRootOf(project);
+  const given = kind;
+  kind ??= defaultShaderKind(root);
   if (!SHADER_KINDS.includes(kind)) throw new ScaffoldError(`"${kind}" is not a shader kind; use one of ${SHADER_KINDS.join(", ")}`);
   const file = cleanResPath(resPath, ["gdshader"], "a shader");
   refuseExisting(root, file);
   const text = shaderTemplateText(kind);
   const uid = generateUid(new Set(loadProject(root).uids.keys()));
-  const result: NewFileResult = { file, template: kind, text, uid, written: false, notes: [SHADERS[kind].note] };
+  const result: NewFileResult = { file, template: kind, text, uid, written: false, notes: [...(given ? [] : [`no kind given: ${kind}, because the main scene is ${kind === "spatial" ? "3D" : "not 3D"} (--kind to choose)`]), SHADERS[kind].note] };
   if (options.write === false) return result;
   const journal = new JournalWriter(root, "new shader", `new ${kind} shader ${file}`);
   const full = fromResPath(root, file);
@@ -716,8 +750,10 @@ export function formatNewScript(r: NewScriptResult): string {
   const out = formatFile("script", r);
   out[0] += r.file.endsWith(".cs") ? `: partial class ${r.className} : ${r.extends}` : `: extends ${r.extends}${r.className ? `, class_name ${r.className}` : ""}`;
   if (r.inputActions.length) {
-    out.push(`input actions it reads: ${r.inputActions.map((a) => `${a.name}${a.defined ? "" : " (missing)"}`).join(", ")}`);
-    for (const a of r.inputActions.filter((x) => !x.defined)) out.push(`  add: godot_project_edit input_add ${a.name} ${a.event}`);
+    out.push(`input actions it reads: ${r.inputActions.map((a) => `${a.name}${a.defined ? "" : a.added ? ` (added: ${a.event})` : " (missing)"}`).join(", ")}`);
+    const added = r.inputActions.filter((x) => x.added);
+    if (added.length) out.push(`  added to project.godot in the same journal entry; change the keys with godot_project_edit input_add/input_remove`);
+    for (const a of r.inputActions.filter((x) => !x.defined && !x.added)) out.push(`  add: godot_project_edit input_add ${a.name} ${a.event}`);
   }
   for (const n of r.notes) out.push(`note: ${n}`);
   if (!r.written) out.push("", r.text.trimEnd());

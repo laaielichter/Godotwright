@@ -292,7 +292,21 @@ function stillUsed(root: string, name: string, skipKinds: string[]): string | un
 export function editProjectSettings(path: string, edit: SettingsEdit, options: { write?: boolean } = {}): SettingsPlan {
   const root = projectRootOf(path);
   const file = join(root, "project.godot");
-  const original = readFileSync(file, "utf8");
+  const { text, plan } = applySettingsEdit(root, readFileSync(file, "utf8"), edit);
+  if (!options.write) return plan;
+  const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
+  const before = errors();
+  const journal = new JournalWriter(root, "project edit", plan.summary);
+  journal.write(file, text);
+  const id = journal.commit();
+  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
+}
+
+/**
+ * One settings edit applied to the text of project.godot, without writing: the new text and the plan. Edits can be
+ * chained (the text of one is the input of the next), so a caller can write several in one journal entry.
+ */
+export function applySettingsEdit(root: string, original: string, edit: SettingsEdit): { text: string; plan: SettingsPlan } {
   const doc = new Document(original);
   const api = GodotApi.load();
   const settings = parseProjectSettings(original);
@@ -412,14 +426,7 @@ export function editProjectSettings(path: string, edit: SettingsEdit, options: {
   } catch (error) {
     throw new SettingsError(`the change would leave project.godot unreadable (${(error as Error).message}); nothing was written`);
   }
-  const plan: SettingsPlan = { summary: describe(edit), file: "res://project.godot", hunks: doc.hunks, warnings, written: false };
-  if (!options.write) return plan;
-  const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
-  const before = errors();
-  const journal = new JournalWriter(root, "project edit", plan.summary);
-  journal.write(file, text);
-  const id = journal.commit();
-  return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
+  return { text, plan: { summary: describe(edit), file: "res://project.godot", hunks: doc.hunks, warnings, written: false } };
 }
 
 /** Long Object(InputEvent...) texts shown as their label, so a diff of the input map stays short. */

@@ -54,17 +54,18 @@ export function newCommand(): Command {
 
   cmd.addCommand(
     new Command("script")
-      .description(`a new GDScript from a template (${SCRIPT_TEMPLATES.join(", ")}): typed, and clean in godotwright review. A file that ends in .cs gets the C# form (${CSHARP_TEMPLATES.join(", ")}): a partial class named after the file`)
+      .description(`a new GDScript from a template (${SCRIPT_TEMPLATES.join(", ")}): typed, and clean in godotwright review (the input actions a template reads are added to project.godot when missing). A file that ends in .cs gets the C# form (${CSHARP_TEMPLATES.join(", ")}): a partial class named after the file`)
       .argument("<file>", "res:// path of the new script, e.g. res://player/player.gd or res://player/Player.cs")
       .argument("[path]", "project directory (or any path inside it)", ".")
       .option("--template <name>", "the template", "node")
       .option("--class-name <name>", "give the script a class_name")
       .option("--base <class>", "for the node template: the class to extend (default Node)")
       .option("--dimension <d>", "for area_trigger: 2d or 3d")
+      .option("--no-input-actions", "do not add the input actions the template reads to project.godot (they are added by default when missing)")
       .option("--dry-run", "print the script, write nothing")
       .option("--json", "print the result as JSON")
-      .action((file: string, path: string, o: { template: string; className?: string; base?: string; dimension?: string; dryRun?: boolean; json?: boolean }, command: Command) =>
-        run(command, o.json, () => newScript(path, file, { template: o.template as ScriptTemplate, className: o.className, base: o.base, dimension: o.dimension as "2d" | "3d" | undefined, write: !o.dryRun }), formatNewScript),
+      .action((file: string, path: string, o: { template: string; className?: string; base?: string; dimension?: string; inputActions: boolean; dryRun?: boolean; json?: boolean }, command: Command) =>
+        run(command, o.json, () => newScript(path, file, { template: o.template as ScriptTemplate, className: o.className, base: o.base, dimension: o.dimension as "2d" | "3d" | undefined, inputActions: o.inputActions, write: !o.dryRun }), formatNewScript),
       ),
   );
 
@@ -73,11 +74,11 @@ export function newCommand(): Command {
       .description(`a new .gdshader with a minimal working body (${SHADER_KINDS.join(", ")})`)
       .argument("<file>", "res:// path of the new shader, e.g. res://fx/tint.gdshader")
       .argument("[path]", "project directory (or any path inside it)", ".")
-      .option("--kind <kind>", "the shader type", "canvas_item")
+      .option("--kind <kind>", `the shader type: ${SHADER_KINDS.join(", ")} (default: spatial when the main scene is 3D, else canvas_item)`)
       .option("--dry-run", "print the shader, write nothing")
       .option("--json", "print the result as JSON")
-      .action((file: string, path: string, o: { kind: string; dryRun?: boolean; json?: boolean }, command: Command) =>
-        run(command, o.json, () => newShader(path, file, o.kind as ShaderKind, { write: !o.dryRun }), formatNewShader),
+      .action((file: string, path: string, o: { kind?: string; dryRun?: boolean; json?: boolean }, command: Command) =>
+        run(command, o.json, () => newShader(path, file, o.kind as ShaderKind | undefined, { write: !o.dryRun }), formatNewShader),
       ),
   );
   return cmd;
