@@ -4,6 +4,8 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+## 0.9.0 (scenes that merge, the commit that broke it, C#, and the open editor: 53 tools)
+
 - **Fixes from a run of the new tools in Godot 4.7.2, on a copy of a large game.**
   - A relative `ext_resource` path (`path="flight.gd"`, `"../shared/fx.tres"`) is read from the scene's folder, as
     Godot loads it. Before, `godot_check` and the review called those files missing, and `godot_scene_edit`,

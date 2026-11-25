@@ -110,7 +110,7 @@ models; `--tier cheap` (the default) gives short output and step-by-step instruc
 
 ## What is new
 
-Not released yet (on `main`, after 0.8.0):
+In 0.9.0:
 
 - **Scenes that merge.** Two branches, or two agents in two worktrees, that each add a node to the same scene give git
   a conflict, or a clean merge of a file Godot cannot load (both sides numbered their new resource `3`). `godot_merge`
@@ -147,9 +147,11 @@ Measured on a real project, from its files:
 | Scene operations | 433 scenes, 3,956 steps | 0 failures |
 | Merge | 494 scenes, resources and project files | 0 problems: each result parses and every reference resolves |
 
-The limits: none of this has been run in Godot yet. The results above were read back by Godotwright, not loaded by the
-engine. The editor addon has run in a headless Godot 4.7.2 editor, not yet in one with a window, and
-`godot_tilemap` and `godot_animation` are tested on fixtures.
+Then run in Godot 4.7.2, on a copy of a large game (556 scripts, 19 scenes): formatting 525 scripts left Godot's own
+check with exactly the errors it had before; scene renames, moves, duplicates and groups survive opening and saving in
+the editor; a TileMapLayer cell set by `godot_tilemap` and an animation track from `godot_animation` load and play;
+`git merge` with the merge driver finishes by itself and the scene opens with both sides' nodes; and the editor addon
+ran in an editor with a window (play, stop, screenshot). Not run yet: Windows and macOS editors.
 
 In 0.8.0:
 
