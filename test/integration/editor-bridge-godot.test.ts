@@ -28,6 +28,11 @@ describe.skipIf(!GODOT)("the editor bridge in a running Godot editor", () => {
       if (Date.now() > deadline) throw new Error("the bridge did not start");
       await new Promise((r) => setTimeout(r, 300));
     }
+    // The plugin starts before the editor has opened the main scene (on a first import that takes longer).
+    while (!((await editorCall(root, "status", {}, { timeoutMs: 30_000 })) as Result)["has_scene"]) {
+      if (Date.now() > deadline) throw new Error("the editor did not open the main scene");
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }, 180_000);
 
   afterAll(() => {
