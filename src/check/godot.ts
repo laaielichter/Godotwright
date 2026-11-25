@@ -292,7 +292,9 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
     // With a signal, Godot gets its own process group so a cancel stops what it started too. Without one (the CLI),
     // it stays in ours, so Ctrl+C in a terminal still reaches it.
     const group = signal !== undefined && process.platform !== "win32";
-    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group, ...(options.env ? { env: { ...process.env, ...options.env } } : {}) });
+    // Every option is written out, with no spread: the process is started directly, never through a shell.
+    const env = options.env ? { ...process.env, ...options.env } : process.env;
+    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group, env, shell: false });
     if (group) trackGroup(child);
     let stdout = "";
     let stderr = "";

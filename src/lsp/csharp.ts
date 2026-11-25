@@ -173,7 +173,7 @@ export async function startCSharpServer(options: CSharpStartOptions): Promise<La
   stamp.refresh();
   // A .slnx or several solutions: csharp-ls then loads the .csproj files it finds under the root.
   const args = found.sln && /\.sln$/i.test(found.sln) ? ["--solution", found.sln] : [];
-  const child = spawn(bin, args, { cwd: root, stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, ...DOTNET_ENV } });
+  const child = spawn(bin, args, { cwd: root, stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, ...DOTNET_ENV }, shell: false });
   trackProcess(child);
   let output = "";
   let exited: string | undefined;
