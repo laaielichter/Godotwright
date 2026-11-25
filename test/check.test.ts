@@ -2,7 +2,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rm
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { checkProject, cleanup, runOutput } from "../src/check/check.js";
+import { checkProject, cleanup, runOutput, unexplainedExit } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
 import { descendantPids, findGodot, GodotNotFoundError, runGodot } from "../src/check/godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
@@ -177,8 +177,20 @@ describe("checkProject", () => {
     const result = await checkProject(root, { godot, runFrames: 10 });
     expect(result.diagnostics.filter((d) => d.source === "import" || d.source === "run")).toEqual([
       { severity: "error", message: "import exited with code 3", source: "import" },
-      { severity: "error", message: "run was killed by a signal", source: "run" },
+      { severity: "error", message: "run was killed by SIGKILL (the system does this when memory runs out); last output: (none)", source: "run" },
     ]);
+    // Godot's crash handler catches the fault, prints it and aborts: the report names the crash, not only the abort.
+    const crashed = {
+      code: null,
+      signal: "SIGABRT",
+      stdout: "",
+      stderr: "ERROR: boom\n   at: crash (core/core_bind.cpp:349)\n\n================================================================\nhandle_crash: Program crashed with signal 11\nEngine version: Godot Engine v4.7.2.stable.official\n[1] 7fe4d9645330 (libc.so.6+45330)\n-- END OF C++ BACKTRACE --\n",
+      timedOut: false,
+      ms: 1,
+    };
+    expect(unexplainedExit("import", crashed, [])?.message).toBe(
+      "import was killed by SIGABRT: Godot crashed (signal 11); last output before the crash: ERROR: boom |    at: crash (core/core_bind.cpp:349)",
+    );
     // An exit that Godot explained with an error is not reported twice.
     const explained = fakeGodot({
       importLog: "ERROR: Failed loading resource: res://missing.png.\n   at: _load (core/io/resource_loader.cpp:317)\n",
