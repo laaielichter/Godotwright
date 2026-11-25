@@ -108,7 +108,9 @@ import { LanguageServerError } from "../lsp/server.js";
 import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
 import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
+import { bisectProject, formatBisect } from "../bisect/bisect.js";
 import { diffProject, formatDiff } from "../diff/diff.js";
+import { formatMergeReport, mergeProject } from "../merge/project.js";
 import { formatImpact, impactOf } from "../impact/impact.js";
 import { collisionMap, formatBetween, formatBits, formatCollisions } from "../collisions/collisions.js";
 import { LEAN_NOTE, catalogue, checkArgs, findTool, help, unknownTool, type LeanTool } from "./lean.js";
@@ -1071,6 +1073,55 @@ export function createServer(options: ServerOptions = {}): McpServer {
           baseFiles: options.baseFiles,
         });
         const body = formatDiff(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_merge",
+    {
+      title: "Merge scenes and resources by meaning",
+      description:
+        "A three-way merge of .tscn, .tres and project.godot that knows what the files mean, offline. Git merges them line by line: two branches (or two agents in two worktrees) that each add a node to one scene conflict, or merge into a file Godot cannot load (both gave a new resource the same id, load_steps is off, a node sits under a removed parent). This merges nodes by their path, ext_resources by uid or path, connections by signal, source, target and method, and properties one by one; resource ids of both sides are brought into one numbering and every reference follows; a resource one side removed and the other still uses is kept. Only a property both sides set to different values is a conflict, reported with base, ours and theirs. Without theirs: the files a git merge, rebase or cherry-pick left in conflict (dry run; write: true puts the merged files in the working tree, then you git add them). With theirs (a branch or commit): a preview of merging it into HEAD, before you merge. Never use a text editor on conflict markers in a scene.",
+      inputSchema: {
+        path: pathParam,
+        theirs: z.string().optional().describe("a branch or commit: preview what merging it into HEAD does to the Godot files (nothing is written)"),
+        files: z.array(z.string()).optional().describe("only these res:// files"),
+        prefer: z.enum(["ours", "theirs"]).optional().describe("the side a conflict takes in the merged file (default ours); the conflict is reported either way"),
+        write: z.boolean().optional().describe("write the merged files into the working tree (a merge in progress only; default false: show what it would be)"),
+        detail: detailParam,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, theirs, files, prefer, write, detail }) =>
+      guard(() => {
+        const report = mergeProject(where(path), { ...(theirs ? { theirs } : {}), ...(files ? { files } : {}), ...(prefer ? { prefer } : {}), ...(write && !theirs ? { write: true } : {}) });
+        const body = formatMergeReport(report, (detail ?? profile.detail) === "full" ? 200 : 25);
+        return report.ok ? text(body) : failure(body);
+      }),
+  );
+
+  tool(
+    "godot_bisect",
+    {
+      title: "Which commit broke it",
+      description:
+        "Finds the first commit that has a problem, offline and without touching the working tree: reviews the project as it was at each commit (a copy from git in a temp folder) and halves the range. The problem is a review finding: of a rule (rule: \"api/unknown-member\"), in a file, with words in its message, or with none of these any finding of severity error. Give good (a commit known to be without it) or leave it out: history is then searched backwards 1, 2, 4, 8 ... commits. Returns the first bad commit and the last good one, the findings there, the files that commit changed (the finding is often in a file it did not touch: it removed something that file uses) and the godot_diff call to read the change. Use it when something that worked no longer does and many commits lie in between, instead of reading every diff.",
+      inputSchema: {
+        path: pathParam,
+        bad: z.string().optional().describe("a commit that has the problem (default HEAD; uncommitted changes are not searched)"),
+        good: z.string().optional().describe("a commit known to be without it, e.g. main or HEAD~30 (default: search backwards)"),
+        rule: z.string().optional().describe("the problem is a finding of this review rule, e.g. api/unknown-member"),
+        file: z.string().optional().describe("the problem is a finding in this res:// file"),
+        text: z.string().optional().describe("the problem is a finding whose message holds this text"),
+        max: z.number().int().min(2).max(5000).optional().describe("how many commits to look back when good is not given (default 200)"),
+      },
+      annotations: readOnly,
+    },
+    async ({ path, bad, good, rule, file, text: words, max }) =>
+      guard(() => {
+        const report = bisectProject(where(path), { base: options.base, baseFiles: options.baseFiles, ...(bad ? { bad } : {}), ...(good ? { good } : {}), ...(rule ? { rule } : {}), ...(file ? { file } : {}), ...(words ? { text: words } : {}), ...(max ? { max } : {}) });
+        const body = formatBisect(report, profile.detail === "full" ? 40 : 15);
         return report.ok ? text(body) : failure(body);
       }),
   );

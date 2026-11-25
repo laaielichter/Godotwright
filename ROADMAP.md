@@ -232,6 +232,7 @@ Godotwright gets better with every use, without collecting anything personal.
 - [x] Step 29: Dreaming (`godotwright dream`, `godot_dream`, the `godot-dreamer` subagent)
 - [x] Step 30: The whole change (`godot_diff`, `godot_impact`, `godot_collisions`)
 - [x] Step 31: Lean mode (`godotwright mcp --lean`)
+- [x] Step 32: Work with git (`godot_merge` with a git merge driver, `godot_bisect`)
 - [ ] Step 19: Recipes for most archetypes
   - [ ] Contact-sheet render
   - [ ] Archetypes without a recipe: the airplane, and coast, river, biome and settlement

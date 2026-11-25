@@ -75,6 +75,12 @@ node dist/cli.js --help
   it was there). Read-only; commit names are checked before they reach git.
 - `src/diff/`: `godot_diff`, the diff by meaning: scenes and resources (`diffResourceText`), scripts
   (`diffScriptText`), settings, shaders and import files, and what each removal breaks elsewhere in the project.
+- `src/merge/`: `godot_merge`. `merge.ts` is the three-way merge of one file (`mergeText`: sections by identity, properties
+  one by one, resource ids aligned first, then a repair pass so nothing points at a dropped resource or parent);
+  `project.ts` finds the three versions (a merge in progress from the git index, or a branch against HEAD), is the git
+  merge driver (`merge --driver`) and installs it (`merge --install`: `.gitattributes` and the clone's git config).
+- `src/bisect/`: `godot_bisect`: the review run on copies of the project at earlier commits (`git archive` into a temp
+  folder), halving the range to the first commit with the problem. Nothing in the working tree or the repository changes.
 - `src/impact/`: `godot_impact`: the file graph of `src/deps/` walked backwards from the changed files to scenes,
   tests and saved scenarios, and the checks to run.
 - `src/collisions/`: `godot_collisions`: physics layers and masks read from the scenes, who detects whom, and what can

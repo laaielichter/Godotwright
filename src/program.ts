@@ -9,8 +9,10 @@ import { codeCommand } from "./commands/code.js";
 import { exportCommand } from "./commands/export.js";
 import { undoCommand } from "./commands/undo.js";
 import { depsCommand } from "./commands/deps.js";
+import { bisectCommand } from "./commands/bisect.js";
 import { diffCommand } from "./commands/diff.js";
 import { impactCommand } from "./commands/impact.js";
+import { mergeCommand } from "./commands/merge.js";
 import { collisionsCommand } from "./commands/collisions.js";
 import { leaksCommand } from "./commands/leaks.js";
 import { perfCommand } from "./commands/perf.js";
@@ -72,6 +74,8 @@ export function createProgram(): Command {
     .addCommand(depsCommand())
     .addCommand(diffCommand())
     .addCommand(impactCommand())
+    .addCommand(mergeCommand())
+    .addCommand(bisectCommand())
     .addCommand(collisionsCommand())
     .addCommand(usagesCommand())
     .addCommand(renameCommand())

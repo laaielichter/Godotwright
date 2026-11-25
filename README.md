@@ -110,7 +110,15 @@ models; `--tier cheap` (the default) gives short output and step-by-step instruc
   connection to a function that is gone or an `@export` value a scene still saves; `godot_impact` walks back to every
   scene, test and saved scenario the change reaches and lists the checks to run; `godot_collisions` maps physics
   layers and masks and says who detects whom, with the exact mask value to set.
-- **A tool list that costs almost nothing.** Every MCP tool definition is sent to the model on every turn: 43 tools
+- **Scenes that merge.** Two branches, or two agents in two worktrees, that each add a node to the same scene give git
+  a conflict, or a clean merge of a file Godot cannot load (both sides numbered their new resource `3`). `godot_merge`
+  merges `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids
+  renumbered so both sides fit. `godotwright merge --install` sets it up as the git merge driver, so `git merge`
+  finishes by itself; only a property both sides really changed differently is left to decide.
+- **Which commit broke it.** `godot_bisect` reviews the project as it was at each commit and halves the range to the
+  first commit with the problem, in a few seconds and without touching the working tree. An agent that made forty
+  commits gets one commit to read instead of forty diffs.
+- **A tool list that costs almost nothing.** Every MCP tool definition is sent to the model on every turn: 45 tools
   are about 22,000 tokens before the agent has done anything, and some clients stop at 40 tools. `godotwright mcp --lean`
   offers two tools instead (`godot` runs any tool by name, `godot_help` gives its parameters): about 900 tokens, 96%
   less, with the same tools and results behind them.
@@ -229,7 +237,7 @@ godotwright model library furniture/dining-chair-oak-ladder --spec > my-chair.js
 `godotwright model brief <thing>` names the library assets of that thing too. Browse all of them with their Godot
 renders on the [asset library page](https://laaielichter.github.io/Godotwright/library.html); the full list is also in [LIBRARY.md](LIBRARY.md).
 
-## The 43 tools
+## The 45 tools
 
 <details>
 <summary>All MCP tools (most are also CLI commands; <code>--tools core</code> loads 13)</summary>
@@ -249,6 +257,8 @@ renders on the [asset library page](https://laaielichter.github.io/Godotwright/l
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_diff` | A diff by meaning against git: scene nodes added, removed, moved or renamed, properties with resource ids resolved, connections, script functions, signals and exports, settings and shader uniforms; marks what the change breaks elsewhere (a connection to a removed function, a saved `@export` value, callers with the wrong argument count) |
 | `godot_impact` | What a change reaches: every scene that loads the changed files (default: what differs from git), whether it is global (autoload, `project.godot`), the tests and saved scenarios that cover it, and the checks to run |
+| `godot_merge` | A three-way merge of `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids of both sides renumbered so they fit, `load_steps` recounted; only a property both sides changed differently is a conflict. Finishes a merge git stopped on, or previews merging a branch; `godotwright merge --install` makes git use it by itself |
+| `godot_bisect` | Which commit broke it: reviews the project as it was at each commit (copies from git, the working tree is not touched) and halves the range to the first commit with the problem, with the findings and the files that commit changed |
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
@@ -305,7 +315,7 @@ Method, raw data and a second, harder round: [bench/RESULTS.md](bench/RESULTS.md
 | Shader review and compile | yes, headless, also in CI | compile through the editor (godot-ai) | no | renames only |
 | Export, read the `.pck` and run the build | yes, headless; patch packs | export or patch through the editor (Godot MCP Pro) | no | no |
 | Visual regression | screenshot baselines in scenarios and CI | screenshot diffs in one fork (grinry) | no | no |
-| Smaller tool list, read-only mode | `--lean` (2 tools, ~900 tokens for all 43), tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
+| Smaller tool list, read-only mode | `--lean` (2 tools, ~900 tokens for all 45), tool sets, `--read-only` | some have tool tiers or a read-only flag | – | – |
 | C# | no | some do | no | not yet |
 | Best for | checking and fixing what an agent writes, in the loop and in CI | working in the open editor with an agent | code style | a one-time port |
 

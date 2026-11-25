@@ -30,7 +30,7 @@ export const TOOLSETS = {
     "godot_dream",
   ],
   // The whole change, read from the files: what changed by meaning, what it reaches, and the physics layers.
-  verify: ["godot_diff", "godot_impact", "godot_collisions"],
+  verify: ["godot_diff", "godot_impact", "godot_merge", "godot_bisect", "godot_collisions"],
   run: ["godot_test", "godot_play", "godot_scenario", "godot_perf", "godot_leaks", "godot_screenshot"],
   game: ["godot_session", "godot_game"],
   export: ["godot_export", "godot_export_run", "godot_deps"],
@@ -78,7 +78,7 @@ export function enabledTools(list?: string | readonly string[]): Set<string> {
 /** Tools a read-only server leaves out: they always change project files. */
 export const WRITE_ONLY_TOOLS: readonly string[] = ["godot_undo", "godot_model_build", "godot_export_run"];
 
-const DRY_RUN_TOOLS = new Set(["godot_fix", "godot_rename", "godot_scene_edit", "godot_project_edit", "godot_resource_edit", "godot_migrate"]);
+const DRY_RUN_TOOLS = new Set(["godot_merge", "godot_fix", "godot_rename", "godot_scene_edit", "godot_project_edit", "godot_resource_edit", "godot_migrate"]);
 
 /**
  * Why a read-only server refuses this call, or undefined when it may run. Edit tools still show their dry run;

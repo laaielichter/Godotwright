@@ -834,7 +834,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 43 tools
+### The 45 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -851,6 +851,8 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_usages` | Every place a name or `res://` path is used: code, scenes, connections, groups, settings |
 | `godot_diff` | A diff by meaning against git: scene nodes added, removed, moved or renamed, properties with resource ids resolved, connections, script functions, signals and exports, settings and shader uniforms; marks what the change breaks elsewhere (a connection to a removed function, a saved `@export` value, callers with the wrong argument count) |
 | `godot_impact` | What a change reaches: every scene that loads the changed files (default: what differs from git), whether it is global (autoload, `project.godot`), the tests and saved scenarios that cover it, and the checks to run |
+| `godot_merge` | A three-way merge of `.tscn`, `.tres` and `project.godot` by meaning: nodes by path, properties one by one, resource ids of both sides renumbered so they fit, `load_steps` recounted; only a property both sides changed differently is a conflict. Finishes a merge git stopped on, or previews merging a branch; `godotwright merge --install` makes git use it by itself |
+| `godot_bisect` | Which commit broke it: reviews the project as it was at each commit (copies from git, the working tree is not touched) and halves the range to the first commit with the problem, with the findings and the files that commit changed |
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
@@ -884,7 +886,7 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 43 cost about 88,000 characters (about
+Every tool definition goes into the agent's context on every turn. All 45 cost about 88,000 characters (about
 22,000 tokens); the `core` set about 24,000. Load only what the work needs, or run lean (below):
 
 ```sh
@@ -903,7 +905,7 @@ godotwright mcp --lean                  # two tools instead of all: see Lean mod
 | `game` | session, game | 2 tools, ~5,400 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
 | `model` | model_brief, model_identify, model_spec, model_library, model_build, model_view, model_lint, model_inspect | 8 tools, ~11,800 |
-| `all` (default) | everything | 43 tools, ~88,100 |
+| `all` (default) | everything | 45 tools, ~88,100 |
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never
@@ -925,7 +927,7 @@ scripts, and Godot rewrites its cache in `.godot/`. For a project you do not tru
 Godot (`--tools core` still has `godot_check` and `godot_doctor`; pass `godot: false` to the doctor) or do not install
 Godot where the agent runs.
 
-## Lean mode: two tools instead of 43
+## Lean mode: two tools instead of 45
 
 ```sh
 godotwright mcp --lean                  # or GODOTWRIGHT_LEAN=1
@@ -942,7 +944,7 @@ A full tool list is paid on every turn, whether a tool is called or not, and som
 
 | | Tools in the list | Size of the tool list |
 | --- | ---: | --- |
-| full (default) | 43 | ~88,100 characters (~22,000 tokens) |
+| full (default) | 45 | ~88,100 characters (~22,000 tokens) |
 | `--tools core` | 13 | ~23,900 |
 | `--lean` | 2 | ~3,500 (~900 tokens): 96% less |
 | `--lean --tools core` | 2 | ~2,100 |
