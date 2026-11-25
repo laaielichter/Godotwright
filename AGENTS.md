@@ -33,7 +33,21 @@ node dist/cli.js --help
 - `src/lsp/`: Godot's own GDScript language server (`godot_code`). `jsonrpc.ts` is the JSON-RPC client with LSP
   framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
   stop, killed on exit, restarted when a class_name, project.godot or a file that needs an import changes; a restart
-  waits for the calls queued on the old server), `code.ts` holds the ops and output.
+  waits for the calls queued on the old server), `code.ts` holds the ops and output. A .cs file goes to a second
+  server in its own pool, with the same pool logic: `GodotLanguageServer.startProcess` starts it over stdio,
+  `CSharpStamp` restarts it when a .csproj, .sln, .props, .targets or project.godot changes or a .cs file is added or
+  removed, and an edited .cs file is sent as `workspace/didChangeWatchedFiles`.
+- Which C# language server: csharp-ls (razzmatazz/csharp-language-server), found on PATH, in `~/.dotnet/tools`, or
+  named in `$GODOTWRIGHT_CSHARP_LS` (a path, or a JSON array for any other server that speaks LSP over stdio). The
+  other candidate was the Roslyn language server of Microsoft's C# extension. Both are MIT and Roslyn-based, and both
+  load SDK-style projects such as Godot.NET.Sdk through MSBuild. csharp-ls won because it is one command to install
+  (`dotnet tool install --global csharp-ls`), starts on its own with plain stdio and `--solution`, and needs nothing
+  outside LSP; the Roslyn server ships inside the VS Code extension or a separate NuGet feed, has no install of its own,
+  and needs its own `solution/open` notification. Its start time is that of loading the solution (seconds, like
+  `dotnet build`). Godotwright never installs it: without it godot_code says the install command and everything else
+  works. Not yet run against a real csharp-ls (the machine this was built on could not download it): the client is
+  tested against a fake stdio server (`test/fixtures/fake-csharp-ls.mjs`), and `test/integration/code-csharp.test.ts`
+  runs against the real one when it is installed.
 - `src/shaders/`: the GPU pass over shaders: draws every shader in Godot (Compatibility renderer, xvfb-run on Linux
   without a display), for what only the GPU driver rejects (a uniform block that is too big, a sampler array indexed by
   a variable). Language errors are found headless, without it: `src/check/shader-compile.ts` (`Shader.get_rid()` runs

@@ -1886,16 +1886,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_code",
     {
-      title: "Ask Godot's GDScript language server",
+      title: "Ask the GDScript or C# language server",
       description:
-        "Engine-exact answers from Godot 4.7's own GDScript language server (kept warm for 10 minutes; the first call takes a few seconds). op `diagnostics`: errors and warnings at the project's warning levels, as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column). op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow there (members after a dot, node paths after $), up to `limit`. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot. Like opening the editor, Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset and a missing .uid file next to each script. A new class_name, a changed project.godot or a new asset restarts the server. Without Godot use godot_review; to load scenes too use godot_check.",
+        "Engine-exact answers from Godot 4.7's own GDScript language server (kept warm for 10 minutes; the first call takes a few seconds). op `diagnostics`: errors and warnings at the project's warning levels, as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column). op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `references`: every place that names the symbol at `line`/`column`, declaration included. op `symbols`: the classes, methods, fields and signals of `file`, nested. op `completion`: what can follow there (members after a dot, node paths after $), up to `limit`. Pass `code` to analyse unsaved text as `file` without writing it. A .cs `file` goes to the C# language server csharp-ls instead (diagnostics, hover, definition, references, symbols; one warm server per project, restarted when a .csproj, .sln or the set of .cs files changes); it is the user's own: without it the answer says how to install it (`dotnet tool install --global csharp-ls`) and every other tool still works. Needs Godot for .gd files. Like opening the editor, Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset and a missing .uid file next to each script. A new class_name, a changed project.godot or a new asset restarts the server. Without Godot use godot_review; to load scenes too use godot_check.",
       inputSchema: {
         path: pathParam,
-        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition or completion"),
-        file: z.string().optional().describe("the .gd file: res:// path or a path (diagnostics without it: every script)"),
-        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, completion)"),
-        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, completion)"),
-        code: z.string().optional().describe("unsaved GDScript to analyse as `file` instead of the file on disk; nothing is written"),
+        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition, references, symbols or completion"),
+        file: z.string().optional().describe("the .gd or .cs file: res:// path or a path (diagnostics without it: every GDScript)"),
+        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, references, completion)"),
+        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, references, completion)"),
+        code: z.string().optional().describe("unsaved code to analyse as `file` instead of the file on disk; nothing is written"),
         limit: z.number().int().min(1).max(200).optional().describe("completion: most items shown (default 40)"),
       },
       // Not read-only: the headless editor imports the project and adds .import and .uid files next to its files, as

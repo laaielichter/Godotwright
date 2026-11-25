@@ -1,8 +1,8 @@
-import type { Socket } from "node:net";
+import type { Duplex } from "node:stream";
 
 /**
  * JSON-RPC 2.0 over a byte stream with LSP framing (`Content-Length: N\r\n\r\n` and N bytes of JSON), as Godot's
- * GDScript language server speaks it over TCP.
+ * GDScript language server speaks it over TCP and a C# language server over its stdin and stdout.
  */
 
 export interface RpcMessage {
@@ -80,12 +80,13 @@ export class RpcConnection {
   private readonly reader = new MessageReader();
   private readonly pending = new Map<number, Pending>();
   private readonly listeners = new Set<(method: string, params: unknown) => void>();
+  private requestHandler: ((method: string, params: unknown) => unknown) | undefined;
   private readonly closeWaiters = new Set<(error: Error) => void>();
   private nextId = 1;
   private closedError: Error | undefined;
 
   constructor(
-    private readonly socket: Socket,
+    private readonly socket: Duplex,
     private readonly defaultTimeoutMs = 30_000,
   ) {
     socket.on("data", (chunk: Buffer) => {
@@ -103,6 +104,11 @@ export class RpcConnection {
   onNotification(fn: (method: string, params: unknown) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /** Answers the server's own requests; without it (or when it returns undefined) every one is answered with null. */
+  onRequest(fn: (method: string, params: unknown) => unknown): void {
+    this.requestHandler = fn;
   }
 
   request<T = unknown>(method: string, params: unknown, timeoutMs = this.defaultTimeoutMs): Promise<T> {
@@ -164,9 +170,16 @@ export class RpcConnection {
 
   private dispatch(message: RpcMessage): void {
     if (message.method !== undefined) {
-      // A request from the server (it has an id): answer it so the server does not wait. Godot sends none we need.
+      // A request from the server (it has an id): answer it so the server does not wait. Godot sends none we need;
+      // a C# server asks for its settings (workspace/configuration) and registers capabilities.
       if (message.id !== undefined && message.id !== null) {
-        this.socket.write(encodeMessage({ jsonrpc: "2.0", id: message.id, result: null }));
+        let result: unknown = null;
+        try {
+          result = this.requestHandler?.(message.method, message.params) ?? null;
+        } catch {
+          result = null;
+        }
+        this.socket.write(encodeMessage({ jsonrpc: "2.0", id: message.id, result }));
       }
       for (const fn of [...this.listeners]) fn(message.method, message.params);
       return;

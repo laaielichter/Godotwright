@@ -2,21 +2,21 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { Argument, Command, Option } from "commander";
 import { GodotNotFoundError } from "../check/godot.js";
-import { CODE_OPS, CodeError, codeIntel, formatCode, type CodeOp } from "../lsp/code.js";
-import { LanguageServerError, LanguageServerPool } from "../lsp/server.js";
+import { CODE_OPS, CodeError, codeIntel, formatCode, startCSharpServer, type CodeOp } from "../lsp/code.js";
+import { findCSharpServer, LanguageServerError, LanguageServerPool } from "../lsp/server.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { parseNumber, writeOut } from "./output.js";
 
 export function codeCommand(): Command {
   return new Command("code")
     .description(
-      "ask Godot's own GDScript language server: diagnostics with the project's warning levels (all scripts, or one file), the type or signature at a place (hover), where a name is defined, or completion; also for unsaved code. Starts Godot headless for the call",
+      "ask Godot's own GDScript language server: diagnostics with the project's warning levels (all scripts, or one file), the type or signature at a place (hover), where a name is defined, its references, the symbols of a file, or completion; also for unsaved code. Starts Godot headless for the call. A .cs file goes to the C# language server csharp-ls (install: dotnet tool install --global csharp-ls)",
     )
-    .addArgument(new Argument("<op>", "diagnostics, hover, definition or completion").choices([...CODE_OPS]))
-    .argument("[file]", "the .gd file (res:// or a path); diagnostics without it checks every script")
+    .addArgument(new Argument("<op>", "diagnostics, hover, definition, references, symbols or completion").choices([...CODE_OPS]))
+    .argument("[file]", "the .gd or .cs file (res:// or a path); diagnostics without it checks every GDScript")
     .addOption(new Option("--path <dir>", "project directory (or any path inside it)").default("."))
-    .option("--line <n>", "1-based line (hover, definition, completion)", parseNumber)
-    .option("--column <n>", "1-based column, a tab is one column (hover, definition, completion)", parseNumber)
+    .option("--line <n>", "1-based line (hover, definition, references, completion)", parseNumber)
+    .option("--column <n>", "1-based column, a tab is one column (hover, definition, references, completion)", parseNumber)
     .option("--code <file>", "analyse this text instead of the file on disk (a file, or - for stdin); the file is not changed")
     .option("--limit <n>", "most completion items shown (default 40)", parseNumber)
     .option("--godot <path>", "Godot binary (default: $GODOT, then PATH, then the usual install folders)")
@@ -30,6 +30,7 @@ export function codeCommand(): Command {
       ) => {
         // The servers stop when the command ends: nothing stays warm between CLI calls.
         const pool = new LanguageServerPool({ keepWarm: false });
+        const csharpPool = new LanguageServerPool({ keepWarm: false, start: (root) => startCSharpServer(root, findCSharpServer(root)) });
         try {
           const code = options.code === undefined ? undefined : readFileSync(options.code === "-" ? 0 : options.code, "utf8");
           // A plain path is relative to where the command runs; res:// is inside the project.
@@ -43,6 +44,7 @@ export function codeCommand(): Command {
             ...(options.limit !== undefined ? { limit: options.limit } : {}),
             ...(options.godot ? { godot: options.godot } : {}),
             pool,
+            csharpPool,
           });
           writeOut(command, options.json ? `${JSON.stringify(result, null, 2)}\n` : formatCode(result));
           if (result.diagnostics?.some((d) => d.severity === "error")) process.exitCode = 1;
@@ -58,6 +60,7 @@ export function codeCommand(): Command {
           } else throw error;
         } finally {
           pool.stopAll();
+          csharpPool.stopAll();
         }
       },
     );

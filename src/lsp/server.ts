@@ -1,8 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, realpathSync, statSync } from "node:fs";
 import { connect, createServer, type Socket } from "node:net";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { delimiter, join } from "node:path";
+import { Duplex } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { findCSharpProject } from "../check/csharp-build.js";
 import { findGodot } from "../check/godot.js";
 import { fromResPath, listProjectFiles } from "../project/files.js";
 import { RpcConnection } from "./jsonrpc.js";
@@ -166,12 +169,130 @@ export class ProjectStamp {
   }
 }
 
+/** What decides that a warm server is stale. */
+export interface ServerStamp {
+  /** Reads the project again; says why the server must be started again, if it must. */
+  refresh(): string | undefined;
+  /** Files changed on disk since the last call that the server can be told about without a restart (absolute). */
+  takeChanged?(): string[];
+}
+
+/** The build files of a C# project: a change to any of them changes what the language server loaded. */
+const CS_BUILD_FILE = /\.(?:csproj|sln|slnx|props|targets)$|(?:^|\/)(?:global\.json|nuget\.config)$/i;
+
+/**
+ * What makes a warm C# language server stale. It loaded the solution at its start: a changed .csproj, .sln, .props,
+ * .targets, global.json or project.godot, and a C# file added or removed, need a new start. A .cs file that only
+ * changed on disk is sent as workspace/didChangeWatchedFiles, which is cheaper than a restart.
+ */
+export class CSharpStamp implements ServerStamp {
+  private files = new Map<string, number>();
+  private build = new Map<string, number>();
+  private changed: string[] = [];
+  private initialized = false;
+
+  constructor(private readonly root: string) {}
+
+  refresh(): string | undefined {
+    const first = !this.initialized;
+    this.initialized = true;
+    let reason: string | undefined;
+    const files = new Map<string, number>();
+    const build = new Map<string, number>();
+    for (const res of listProjectFiles(this.root)) {
+      if (/\.cs$/i.test(res)) files.set(res, mtime(fromResPath(this.root, res)));
+      else if (CS_BUILD_FILE.test(res) || res === "res://project.godot") build.set(res, mtime(fromResPath(this.root, res)));
+    }
+    if (!first) {
+      for (const [res, time] of build) if (this.build.get(res) !== time) reason ??= `${res} ${this.build.has(res) ? "changed" : "was added"}`;
+      for (const res of this.build.keys()) if (!build.has(res)) reason ??= `${res} was removed`;
+      for (const res of files.keys()) if (!this.files.has(res)) reason ??= `${res} was added`;
+      for (const res of this.files.keys()) if (!files.has(res)) reason ??= `${res} was removed`;
+      if (!reason) for (const [res, time] of files) if (this.files.get(res) !== time) this.changed.push(fromResPath(this.root, res));
+    }
+    this.files = files;
+    this.build = build;
+    if (reason) this.changed = [];
+    return reason;
+  }
+
+  takeChanged(): string[] {
+    const out = this.changed;
+    this.changed = [];
+    return out;
+  }
+}
+
 function mtime(file: string): number {
   try {
     return statSync(file).mtimeMs;
   } catch {
     return -1;
   }
+}
+
+/** The C# language server Godotwright uses: csharp-ls (see AGENTS.md for why). It is the user's; nothing installs it. */
+export const CSHARP_SERVER_NAME = "csharp-ls";
+export const CSHARP_SERVER_INSTALL = "dotnet tool install --global csharp-ls";
+
+export interface CSharpServerCommand {
+  command: string;
+  args: string[];
+  /** Where it came from: $GODOTWRIGHT_CSHARP_LS, PATH, or the .NET global tools folder. */
+  from: "env" | "path" | "dotnet-tools";
+}
+
+/**
+ * The C# language server to start for a project: `$GODOTWRIGHT_CSHARP_LS` (a path, or a JSON array of the command and
+ * its arguments, for another server that speaks LSP over stdio), else csharp-ls on PATH, else in ~/.dotnet/tools.
+ * csharp-ls gets `--solution` with the project's .sln (or .csproj) so it loads the one Godot builds.
+ */
+export function findCSharpServer(root: string, env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): CSharpServerCommand | undefined {
+  const configured = env["GODOTWRIGHT_CSHARP_LS"]?.trim();
+  if (configured) {
+    if (configured.startsWith("[")) {
+      try {
+        const parts = JSON.parse(configured) as unknown;
+        if (Array.isArray(parts) && parts.length && parts.every((p) => typeof p === "string")) return { command: parts[0] as string, args: parts.slice(1) as string[], from: "env" };
+      } catch {
+        // Not JSON: a path.
+      }
+    }
+    return { command: configured, args: solutionArgs(root), from: "env" };
+  }
+  const names = platform === "win32" ? ["csharp-ls.exe", "csharp-ls.cmd", "csharp-ls"] : ["csharp-ls"];
+  const dirs = (env["PATH"] ?? env["Path"] ?? "").split(delimiter).filter(Boolean);
+  for (const dir of dirs) for (const name of names) if (isFile(join(dir, name))) return { command: join(dir, name), args: solutionArgs(root), from: "path" };
+  const tools = join(env["HOME"] ?? env["USERPROFILE"] ?? homedir(), ".dotnet", "tools");
+  for (const name of names) if (isFile(join(tools, name))) return { command: join(tools, name), args: solutionArgs(root), from: "dotnet-tools" };
+  return undefined;
+}
+
+function solutionArgs(root: string): string[] {
+  const found = findCSharpProject(root);
+  const target = found.sln ?? found.csproj;
+  return target ? ["--solution", join(root, target)] : [];
+}
+
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+export interface ProcessStartOptions {
+  root: string;
+  command: string;
+  args: string[];
+  /** The languageId of the documents it is sent (csharp). */
+  languageId: string;
+  /** What it is called in messages. */
+  name: string;
+  stamp: ServerStamp;
+  startTimeoutMs?: number;
+  requestTimeoutMs?: number;
 }
 
 /** One running language server for one project, with a single connection. Calls are run one at a time. */
@@ -187,9 +308,76 @@ export class GodotLanguageServer {
     readonly rpc: RpcConnection,
     readonly child: ChildProcess | undefined,
     private readonly log: () => string,
-    /** The project as it was when Godot started (and scanned it). */
-    readonly stamp: ProjectStamp,
+    /** The project as it was when the server started (and scanned it). */
+    readonly stamp: ServerStamp,
+    /** The languageId of the documents it is sent: gdscript for Godot's server, csharp for a C# one. */
+    readonly languageId = "gdscript",
+    /** The server's capabilities from its initialize answer. */
+    readonly capabilities: Record<string, unknown> = {},
   ) {}
+
+  /**
+   * Starts a language server that speaks LSP over its stdin and stdout (a C# server), in the project folder. The
+   * process belongs to this one, like a Godot language server: unref'd, killed on exit and on the usual signals.
+   */
+  static async startProcess(options: ProcessStartOptions): Promise<GodotLanguageServer> {
+    const started = Date.now();
+    options.stamp.refresh();
+    hookProcess();
+    let output = "";
+    let exited: string | undefined;
+    const child = spawn(options.command, options.args, { cwd: options.root, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    godots.add(child);
+    child.on("exit", () => godots.delete(child));
+    child.on("error", () => godots.delete(child));
+    child.stderr?.on("data", (chunk: Buffer) => (output = (output + chunk.toString("utf8")).slice(-8000)));
+    let failed: (error: Error) => void = () => undefined;
+    const failure = new Promise<never>((_resolve, reject) => (failed = reject));
+    failure.catch(() => undefined);
+    child.on("error", (error) => {
+      exited = `could not start ${options.name}: ${error.message}`;
+      failed(new LanguageServerError(exited));
+    });
+    child.on("exit", (code, signal) => {
+      exited ??= `${options.name} exited (${signal ?? `code ${code}`})`;
+      failed(new LanguageServerError(`${exited}${tailOf(output)}`));
+    });
+    child.unref();
+    for (const pipe of [child.stdin, child.stdout, child.stderr]) (pipe as unknown as { unref?: () => void } | null)?.unref?.();
+    const stream = Duplex.from({ readable: child.stdout!, writable: child.stdin! });
+    // A write after the process ended must not throw out of a stream event.
+    stream.on("error", () => undefined);
+    const rpc = new RpcConnection(stream, options.requestTimeoutMs ?? 60_000);
+    // csharp-ls asks for its settings; null for each item keeps its defaults.
+    rpc.onRequest((method, params) => (method === "workspace/configuration" ? ((params as { items?: unknown[] })?.items ?? []).map(() => null) : null));
+    const timeout = options.startTimeoutMs ?? 180_000;
+    const uri = uriOf(options.root);
+    let init: { capabilities?: Record<string, unknown> };
+    try {
+      init = await Promise.race([
+        rpc.request<{ capabilities?: Record<string, unknown> }>(
+          "initialize",
+          {
+            processId: process.pid,
+            rootUri: uri,
+            rootPath: options.root,
+            workspaceFolders: [{ uri, name: "project" }],
+            capabilities: CLIENT_CAPABILITIES,
+          },
+          timeout,
+        ),
+        failure,
+      ]);
+    } catch (error) {
+      rpc.close();
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      throw new LanguageServerError(`${options.name} did not initialize: ${error instanceof Error ? error.message : String(error)}${tailOf(output)}`);
+    }
+    rpc.notify("initialized", {});
+    const server = new GodotLanguageServer(options.root, rpc, child, () => output, options.stamp, options.languageId, init?.capabilities ?? {});
+    server.startMs = Date.now() - started;
+    return server;
+  }
 
   static async start(options: StartOptions): Promise<GodotLanguageServer> {
     const started = Date.now();
@@ -305,7 +493,7 @@ export class GodotLanguageServer {
       `diagnostics for ${path}`,
     );
     try {
-      this.rpc.notify("textDocument/didOpen", { textDocument: { uri, languageId: "gdscript", version: 1, text } });
+      this.rpc.notify("textDocument/didOpen", { textDocument: { uri, languageId: this.languageId, version: 1, text } });
     } catch (error) {
       // The connection is gone (Godot died, or the server was stopped while this call waited its turn): nobody awaits
       // `wait` now, and an unhandled rejection would end the whole process (the MCP server with every tool).
@@ -313,6 +501,19 @@ export class GodotLanguageServer {
       throw error;
     }
     return wait;
+  }
+
+  /** Opens the text as the document at `path` without waiting for anything; call `close` when done. */
+  openOnly(path: string, text: string): void {
+    this.lastUsed = Date.now();
+    this.rpc.notify("textDocument/didOpen", { textDocument: { uri: uriOf(path), languageId: this.languageId, version: 1, text } });
+  }
+
+  /** Tells the server about files that changed on disk since its last call (workspace/didChangeWatchedFiles). */
+  syncChanged(): number {
+    const changed = this.stamp.takeChanged?.() ?? [];
+    if (changed.length && !this.rpc.closed) this.rpc.notify("workspace/didChangeWatchedFiles", { changes: changed.map((p) => ({ uri: uriOf(p), type: 2 })) });
+    return changed.length;
   }
 
   close(path: string): void {
@@ -328,6 +529,26 @@ export class GodotLanguageServer {
     this.rpc.close();
     if (this.child && this.child.exitCode === null && this.child.signalCode === null) this.child.kill("SIGKILL");
   }
+}
+
+/** What Godotwright asks of a language server: plain hover text, nested symbols, versioned edits for rename. */
+export const CLIENT_CAPABILITIES = {
+  textDocument: {
+    synchronization: { didSave: false },
+    hover: { contentFormat: ["markdown", "plaintext"] },
+    definition: { linkSupport: true },
+    references: {},
+    documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+    rename: { prepareSupport: true },
+    publishDiagnostics: { relatedInformation: false },
+    diagnostic: { dynamicRegistration: false },
+  },
+  workspace: { workspaceEdit: { documentChanges: true }, workspaceFolders: true, configuration: true, didChangeWatchedFiles: { dynamicRegistration: false } },
+};
+
+function tailOf(output: string): string {
+  const lines = output.replace(/\x1b\[[0-9;]*m/g, "").split(/\r?\n/).filter((l) => l.trim());
+  return lines.length ? `\nlast output:\n${lines.slice(-8).join("\n")}` : "";
 }
 
 export interface PoolOptions {

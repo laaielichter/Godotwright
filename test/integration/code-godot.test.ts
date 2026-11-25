@@ -66,6 +66,13 @@ describe.skipIf(!GODOT)("godot_code with Godot's language server", () => {
     expect(engine.engine).toEqual({ signature: "func Node.get_parent() -> Node", lookup: "Node.get_parent" });
   });
 
+  it("lists references (declaration included) and the symbols of a file", { timeout: 60_000 }, async () => {
+    const refs = await codeIntel(root, { op: "references", file: "res://main.gd", line: 3, column: 6, godot: GODOT!, pool });
+    expect(refs.references?.map((r) => `${r.file}:${r.line}`)).toEqual(["res://main.gd:3", "res://main.gd:9"]);
+    const syms = await codeIntel(root, { op: "symbols", file: "res://main.gd", godot: GODOT!, pool });
+    expect(syms.symbols?.map((s) => `${s.kind} ${s.name}`)).toEqual(expect.arrayContaining(["variable speed", "method _ready"]));
+  });
+
   it("analyses unsaved code without touching the file on disk", { timeout: 60_000 }, async () => {
     const before = statSync(join(root, "main.gd")).mtimeMs;
     const code = "extends Node2D\n\n\nfunc _ready() -> void:\n\tvar spare := 1\n\tvar s: String = position\n\tprint(s)\n";
