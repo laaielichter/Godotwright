@@ -8,9 +8,10 @@ stop, a screenshot, a filesystem scan. Without the addon every other tool works 
 > `godot --editor --headless` with the addon on a copy of `test/fixtures/demo` and checks status, tree, inspect, select,
 > selection, is_scanning, open_scene, close_scene, reload_scene, reimport, errors, the four edit ops (each one an undo
 > step named in its answer) and save_scene (the saved .tscn holds the edits). save_all, filesystem_scan and edit_node
-> were also run by hand there. Not proven: `screenshot` (a headless editor draws nothing), `play`/`stop` (the headless
-> editor accepted play, but no game stayed running), the editor with a window, and Ctrl+Z pressed by a person (the
-> answers show the step is in the scene's undo history). Every engine method the addon uses is also checked against
+> were also run by hand there. In an editor with a window (Godot 4.7.2 on Linux, Compatibility renderer, Xvfb) `play`
+> (main and a named scene) started the game, `status` showed it playing, `stop` closed it, and `screenshot` wrote the
+> editor (1600x900) and the 3D viewport; a wrong token got no answer. Not proven: Windows and macOS, and Ctrl+Z
+> pressed by a person (the answers show the step is in the scene's undo history). Every engine method the addon uses is also checked against
 > the bundled class reference by a test, and the Node client is tested against a fake editor.
 
 ## Parts

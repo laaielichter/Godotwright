@@ -135,7 +135,7 @@ func _status() -> Dictionary:
 		"has_scene": root != null,
 		"unsaved_known": knows,
 		"playing": EditorInterface.is_playing_scene(),
-		"playing_scene": EditorInterface.get_playing_scene(),
+		"playing_scene": _res_path(EditorInterface.get_playing_scene()),
 		"main_screen": main_screen,
 		"errors_supported": error_log != null,
 		"scanning": EditorInterface.get_resource_filesystem().is_scanning(),
@@ -356,12 +356,21 @@ func _tree(args: Dictionary) -> Dictionary:
 	return _done({"scene": root.scene_file_path, "depth": depth, "nodes": nodes, "truncated": truncated})
 
 
+## A scene as a res:// path: the main scene setting and the playing scene can be a uid:// (Godot 4.4+ writes main_scene
+## as a uid), which says nothing to a reader. An unknown uid stays as it is.
+func _res_path(scene: String) -> String:
+	if not scene.begins_with("uid://"):
+		return scene
+	var path := ResourceUID.uid_to_path(scene)
+	return path if path != "" else scene
+
+
 func _play(args: Dictionary) -> Dictionary:
 	var scene := _text_arg(args, "scene")
 	var mode := _text_arg(args, "mode", "scene" if scene != "" else "main")
 	match mode:
 		"main":
-			scene = str(ProjectSettings.get_setting("application/run/main_scene", ""))
+			scene = _res_path(str(ProjectSettings.get_setting("application/run/main_scene", "")))
 			if scene == "":
 				return _failed("the project has no main scene (application/run/main_scene); play a scene by path, or mode: current")
 			EditorInterface.play_main_scene()
