@@ -53,6 +53,16 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
     against the real csharp-ls 0.16.0 on a generated Godot.NET.Sdk 4.7.0 project (dotnet 8.0.134), where it knows
     Godot's API and the names Godot's source generators make. Newer csharp-ls releases need .NET 9 or later and
     were not run.
+  - **`godot_rename` inside C#.** A C# class, method, property, field or `[Signal]` is renamed by the language
+    server's own rename, never as text (without csharp-ls it refuses and names the install command). Then what the
+    server does not know follows: the names Godot's source generators make (`SignalName.X`, `EmitSignalX`,
+    `MethodName.X`, `PropertyName.X`; found by the compiler, which is asked about the renamed code), scene
+    connections to the method and of the signal, the exported property stored in scenes and resources (only where
+    the script is that class, one that inherits from it, or an instance of its scene), GDScript that uses the member,
+    and for a script class its file and `.uid`. The plan shows a compile error the rename would leave, and a write
+    is then refused. Same contract as before: shown first, written with `write`, all or nothing, undone with
+    `godot_undo`. Before this, `godot_rename` of a name declared in C# replaced text in the `.cs` files; it no longer
+    touches C# code that way. Tested with csharp-ls 0.16.0 and a real `dotnet build` after each rename.
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload

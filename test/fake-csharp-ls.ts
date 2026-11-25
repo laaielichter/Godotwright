@@ -7,7 +7,8 @@ import { tempFolder } from "./helpers.js";
  * real one): it asks for its configuration, loads "the solution" and says so with `$/progress`, publishes diagnostics
  * for an opened document, and answers the requests godot_code and godot_rename make. `nope` in a document is a
  * CS0103; every method it gets is appended to calls.log. The rename it answers replaces the word at the position in
- * every open or told .cs file (whole words), as edits per document.
+ * every .cs file it knows (whole words, but not in a string and not after `SignalName.`, `MethodName.` or `PropertyName.`), as edits per
+ * document; like Godot's source generators in the real one, those names exist only while a file declares the member.
  */
 export function fakeCSharpLs(options: { loadMs?: number; exitAtStart?: number } = {}): { bin: string; log: string } {
   const dir = tempFolder("fake-csharp-ls-");
@@ -22,7 +23,11 @@ let buffer = Buffer.alloc(0);
 const docs = new Map();
 const send = (m) => { const body = Buffer.from(JSON.stringify({ jsonrpc: "2.0", ...m })); process.stdout.write("Content-Length: " + body.length + "\\r\\n\\r\\n"); process.stdout.write(body); };
 const textOf = (uri) => docs.has(uri) ? docs.get(uri) : (() => { try { return fs.readFileSync(url.fileURLToPath(uri), "utf8"); } catch { return ""; } })();
-const diagnose = (uri) => textOf(uri).split("\\n").flatMap((line, i) => { const at = line.indexOf("nope"); return at < 0 ? [] : [{ range: { start: { line: i, character: at }, end: { line: i, character: at + 4 } }, severity: 1, code: "CS0103", source: "lsp", message: "The name 'nope' does not exist in the current context" }]; }).concat(/using System;/.test(textOf(uri)) ? [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } }, severity: 4, code: "IDE0005", message: "Using directive is unnecessary." }] : []);
+const diagnose = (uri) => textOf(uri).split("\\n").flatMap((line, i) => { const at = line.indexOf("nope"); return at < 0 ? [] : [{ range: { start: { line: i, character: at }, end: { line: i, character: at + 4 } }, severity: 1, code: "CS0103", source: "lsp", message: "The name 'nope' does not exist in the current context" }]; }).concat(generated(uri)).concat(/using System;/.test(textOf(uri)) ? [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } }, severity: 4, code: "IDE0005", message: "Using directive is unnecessary." }] : []);
+// Like Godot's source generators in the real server: SignalName.X, MethodName.X and PropertyName.X exist only while a
+// known file declares X; a method declared twice in one file is CS0111.
+const declared = (kind, name) => [...known].some((uri) => new RegExp(kind === "SignalName" ? "delegate\\\\s+void\\\\s+" + name + "EventHandler\\\\b" : kind === "MethodName" ? "\\\\bvoid\\\\s+" + name + "\\\\s*\\\\(" : "\\\\b" + name + "\\\\s*\\\\{\\\\s*get").test(textOf(uri)));
+const generated = (uri) => { const out = []; textOf(uri).split("\\n").forEach((line, i) => { const re = /\\b(SignalName|MethodName|PropertyName)\\.(\\w+)/g; let m; while ((m = re.exec(line))) if (!declared(m[1], m[2])) { const at = m.index + m[1].length + 1; out.push({ range: { start: { line: i, character: at }, end: { line: i, character: at + m[2].length } }, severity: 1, code: "CS0117", message: "'Hello." + m[1] + "' does not contain a definition for '" + m[2] + "'" }); } const dup = /void\\s+(\\w+)\\s*\\(/.exec(line); if (dup && textOf(uri).split("void " + dup[1] + "(").length > 2) out.push({ range: { start: { line: i, character: dup.index + 5 }, end: { line: i, character: dup.index + 5 + dup[1].length } }, severity: 1, code: "CS0111", message: "Type already defines a member called '" + dup[1] + "' with the same parameter types" }); }); return out; };
 const wordAt = (uri, pos) => { const line = textOf(uri).split("\\n")[pos.line] || ""; return ((/[A-Za-z_]\\w*$/.exec(line.slice(0, pos.character)) || [""])[0]) + ((/^\\w*/.exec(line.slice(pos.character)) || [""])[0]); };
 const known = new Set();
 const occurrences = (word) => { const out = []; for (const uri of known) { textOf(uri).split("\\n").forEach((line, i) => { const re = new RegExp("\\\\b" + word + "\\\\b", "g"); let m; while ((m = re.exec(line))) out.push({ uri, range: { start: { line: i, character: m.index }, end: { line: i, character: m.index + word.length } } }); }); } return out; };
@@ -47,6 +52,7 @@ function handle(m) {
       break;
     case "textDocument/didChange":
       docs.set(p.textDocument.uri, p.contentChanges[0].text);
+      send({ method: "textDocument/publishDiagnostics", params: { uri: p.textDocument.uri, diagnostics: diagnose(p.textDocument.uri) } });
       break;
     case "textDocument/didClose":
       break;
@@ -88,7 +94,8 @@ function handle(m) {
     case "textDocument/rename": {
       const word = wordAt(p.textDocument.uri, p.position);
       const byUri = new Map();
-      for (const o of occurrences(word)) byUri.set(o.uri, [...(byUri.get(o.uri) || []), { range: o.range, newText: p.newName }]);
+      // Not the names the source generators make: the real server does not rename those either.
+      for (const o of occurrences(word).filter((o) => !/((SignalName|MethodName|PropertyName)\\.|")$/.test(textOf(o.uri).split("\\n")[o.range.start.line].slice(0, o.range.start.character)))) byUri.set(o.uri, [...(byUri.get(o.uri) || []), { range: o.range, newText: p.newName }]);
       send({ id: m.id, result: { documentChanges: [...byUri].map(([uri, edits]) => ({ textDocument: { uri, version: null }, edits })) } });
       break;
     }

@@ -446,7 +446,7 @@ interface PulledDiagnostics {
 /** The ops on a C# file: the same results as for GDScript, from csharp-ls. */
 async function runCSharp(server: LanguageServer, root: string, file: string, text: string, pos: { line: number; character: number } | undefined, options: CodeOptions, result: CodeResult): Promise<void> {
   // Files written since the last call (by an agent, the editor, git): the server only knows what it is told.
-  syncCSharpFiles(server);
+  await syncCSharpFiles(server);
   const res = display(root, file);
   const uri = uriOf(file);
   const hover = async (): Promise<ReturnType<typeof parseCSharpHover>> => parseCSharpHover(hoverText((await server.request<{ contents?: unknown } | null>("textDocument/hover", { textDocument: { uri }, position: pos }))?.contents));

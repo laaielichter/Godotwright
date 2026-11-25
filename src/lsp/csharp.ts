@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 import { DOTNET_ENV, findCSharpProject, findDotnet, isRestored } from "../check/csharp-build.js";
@@ -228,11 +228,28 @@ export async function startCSharpServer(options: CSharpStartOptions): Promise<La
   return server;
 }
 
-/** Tells a warm csharp-ls which C# files changed on disk since it last looked. */
-export function syncCSharpFiles(server: LanguageServer): number {
+/**
+ * Tells a warm csharp-ls which C# files changed on disk since it last looked, and waits until it has taken them in.
+ * The notification has no answer and the server handles it when it gets to it, so each new or changed file is also
+ * opened with its text on disk and closed again: the diagnostics the server publishes for it say it is known.
+ */
+export async function syncCSharpFiles(server: LanguageServer): Promise<number> {
   if (!(server.stamp instanceof CSharpStamp)) return 0;
   const changes = server.stamp.changes();
-  if (changes.length) server.rpc.notify("workspace/didChangeWatchedFiles", { changes: changes.map((c) => ({ uri: uriOf(c.path), type: c.type })) });
+  if (!changes.length) return 0;
+  server.rpc.notify("workspace/didChangeWatchedFiles", { changes: changes.map((c) => ({ uri: uriOf(c.path), type: c.type })) });
+  for (const c of changes.filter((x) => x.type !== 3).slice(0, 200)) {
+    let text: string;
+    try {
+      text = readFileSync(c.path, "utf8");
+    } catch {
+      continue;
+    }
+    await server.open(c.path, text, 10_000).catch((error: unknown) => {
+      if (server.rpc.closed) throw error;
+    });
+    server.close(c.path);
+  }
   return changes.length;
 }
 

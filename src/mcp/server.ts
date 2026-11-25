@@ -35,8 +35,8 @@ import { findUsages, formatUsages } from "../usages/usages.js";
 import {
   RenameError,
   formatRename,
-  renameInProject,
 } from "../rename/rename.js";
+import { renameAnywhere } from "../rename/csharp.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import {
   currentLearning,
@@ -508,10 +508,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Rename everywhere",
       description:
-        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. `from` and `to` are both names or both res:// paths. Without `write` it changes nothing and returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after (an error result when there are more after). Refuses, with an error, when the new name is already taken. Call godot_usages first to see what it will touch. For a setting value, an input event or a node property, use godot_project_edit or godot_scene_edit instead.",
+        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. `from` and `to` are both names or both res:// paths. Without `write` it changes nothing and returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after (an error result when there are more after). Refuses, with an error, when the new name is already taken. Call godot_usages first to see what it will touch. For a setting value, an input event or a node property, use godot_project_edit or godot_scene_edit instead. A name declared in C# (a class, method, property, field or `[Signal]` delegate, with or without `EventHandler`) is renamed by the C# language server csharp-ls, never as text: the C# code first, then the names Godot generates for it (`SignalName.X`, `EmitSignalX`, `MethodName.X`, `PropertyName.X`), scene connections to the method or of the signal, the exported property stored in scenes and resources, GDScript that uses the member, and for a script class its file. Pass `file` when several C# classes declare the name. It is refused, with the reason, when csharp-ls is not installed (the answer names the install command) or when the compiler would report an error after the rename.",
       inputSchema: {
         from: z.string().describe("the current name, or a res:// path"),
         to: z.string().describe("the new name, or the new res:// path"),
+        file: z.string().optional().describe("for a C# symbol declared in more than one class: the .cs file that declares the one you mean (res:// path)"),
         write: z
           .boolean()
           .optional()
@@ -525,10 +526,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ from, to, write, path }) => {
+    async ({ from, to, write, path, file }) => {
       try {
-        const plan = renameInProject(where(path), from, to, {
+        const plan = await renameAnywhere(where(path), from, to, {
           write: write === true,
+          ...(file ? { file } : {}),
         });
         const body = formatRename(plan);
         return plan.review && plan.review.after > plan.review.before

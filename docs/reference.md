@@ -87,6 +87,7 @@ godotwright review [path]             # AAA review with a score per category
 godotwright usages take_damage       # every place a name or res:// path is used: code, scenes, connections, groups, settings
 godotwright rename take_damage apply_damage --write   # rename everywhere (code, scenes, connections, node paths); dry run without --write
 godotwright rename res://a.tscn res://scenes/a.tscn --write   # move a file with its .uid and .import, and every reference
+godotwright rename HealthChanged HpChanged --write    # a C# [Signal]: the C# code by csharp-ls, then scenes and GDScript (--file Player.cs when two classes declare the name)
 godotwright project set display/window/size/viewport_width 1920 --write   # change a setting; name and type checked against Godot 4.7
 godotwright project input add jump --key Space --joy-button A --write   # input map without hand-editing Object(InputEventKey,...)
 godotwright project autoload add Game res://game.gd --write   # checks the file is a Node and the name is free
@@ -694,7 +695,30 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
   (`SignalName.X`). Ran with csharp-ls 0.16.0 on dotnet 8.0.134 and Godot.NET.Sdk 4.7.0; newer csharp-ls releases
   need .NET 9 or later and were not run. `csharp-ls` is found in `$CSHARP_LS`, on PATH, then in `~/.dotnet/tools`.
 
-Not there: a C# formatter, rename inside C# code, and migration of C# code. The rules are quiet
+- **`rename`** (`godot_rename`): a name declared in C# (a class, method, property, field or `[Signal]` delegate, named
+  with or without `EventHandler`) is renamed in this order, shown first and written with `--write`, all or nothing,
+  through the journal (`godotwright undo`):
+  1. the C# code, by the language server's own rename. Never as text: without csharp-ls the rename is refused with
+     the install command, and nothing changes;
+  2. the names Godot's source generators make for it (`SignalName.X`, `EmitSignalX`, the signal's event,
+     `MethodName.X`, `PropertyName.X`). These are found by the compiler: the renamed code is given to the server, and
+     where it now reports that the old name does not exist, the new one is written;
+  3. scenes and resources: a `[connection]` to the method, a `[connection]` of the signal, and the exported property
+     stored on a node or resource. Only where the script is that class, a class that inherits from it, or an instance
+     of a scene with it; another class with a member of the same name is left alone;
+  4. GDScript that uses the member. Godot keeps the names of a C# script's own members as they are written
+     (`node.TakeDamage()`, `node.HealthChanged.connect(...)`; snake_case is only for the engine's API), so the same
+     name is renamed there. When GDScript declares that name itself, its uses are listed to check by hand instead;
+  5. for a script class: the file (a C# script class has the name of its file), its `.uid` file and every path to it.
+
+  A C# string that holds the old name (`Call("TakeDamage")`) is listed as CHECK BY HAND. When the compiler would
+  report an error after the rename (the new name is taken in another part of the class), the plan shows it as
+  `WOULD NOT COMPILE` and a write is refused. A method with overloads and an override of an engine callback are
+  refused. Ran against csharp-ls 0.16.0: a signal, a method, a property and a script class renamed in a generated
+  project, `dotnet build` clean after each, the scene still running in the .NET build of Godot 4.7.2, and undo
+  bringing everything back. Not tested: nested classes, generic classes, and a project with several `.csproj` files.
+
+Not there: a C# formatter and migration of C# code. The rules are quiet
 on the official `mono/` demos and two public C# projects (about 650 files). The build ran for real: a generated
 project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.0, and a scene with a C# script
 ran in the .NET build of Godot 4.7.2. The check builds with `--no-incremental` (an up-to-date build would report no
@@ -1340,7 +1364,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_translations` | Register translation files, and check a CSV against the `tr()` keys the code uses |
 | `godot_editor` | Optional: see and drive the open editor through a small addon (localhost, token): open scenes and unsaved state, selection, the edited tree, logged errors, save, reload, play, stop, screenshot. See [editor-bridge.md](editor-bridge.md) |
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
-| `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
+| `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right. A C# class, method, property or `[Signal]` is renamed by the C# language server, and scenes, resources and GDScript follow |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
 | `godot_scene_edit` | Make a scene, add (one or many), remove, rename, move and duplicate nodes, set properties and groups, connect signals, attach scripts and make instances editable in a `.tscn`; paths follow a rename or move; refuses a change Godot would drop on the next editor save |
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
