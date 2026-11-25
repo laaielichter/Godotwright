@@ -119,19 +119,19 @@ Use a project with a main scene, a second scene, and at least one script. `P` be
 ### 1. Install and start
 
 1. Close the editor. Run `godotwright editor install P`.
-   Expect: `installed the editor bridge (version 1): 5 files in res://addons/godotwright_bridge/` and
+   Expect: `installed the editor bridge (version 2): 5 files in res://addons/godotwright_bridge/` and
    `enabled it in project.godot`. `P/project.godot` has
    `enabled=PackedStringArray("res://addons/godotwright_bridge/plugin.cfg")` under `[editor_plugins]`.
 2. Open `P` in Godot 4.7.2. Expect: **no errors in the Output panel**, and Project Settings > Plugins shows
    "Godotwright Bridge" enabled. If the Output shows a parse error in `plugin.gd`, `bridge_ops.gd` or `error_log.gd`,
    that is the first thing to report (file and line).
 3. Expect a file `P/.godot/godotwright_bridge.json` such as
-   `{"bridge_version":"1","godot_version":"4.7.2-stable (official)","pid":12345,"port":6510,"project":"...","token":"<32 hex>"}`.
+   `{"bridge_version":"2","godot_version":"4.7.2-stable (official)","pid":12345,"port":6510,"project":"...","token":"<32 hex>"}`.
    On Linux and macOS: `ls -l` shows `-rw-------`.
 4. `godotwright editor status P`. Expect:
 
    ```
-   addon: installed, version 1; enabled in project.godot
+   addon: installed, version 2; enabled in project.godot
    editor: Godot 4.7.2-stable (official), project "<name>"
    open scenes (1):
      * res://main.tscn

@@ -9,7 +9,7 @@ extends EditorPlugin
 
 const BridgeOps := preload("res://addons/godotwright_bridge/bridge_ops.gd")
 
-const BRIDGE_VERSION := "1"
+const BRIDGE_VERSION := "2"
 const BRIDGE_FILE := "res://.godot/godotwright_bridge.json"
 const ERROR_LOG_SCRIPT := "res://addons/godotwright_bridge/error_log.gd"
 const DEFAULT_PORT := 6510
