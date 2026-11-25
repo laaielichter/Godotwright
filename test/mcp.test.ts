@@ -39,6 +39,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_diff",
       "godot_doctor",
       "godot_dream",
+      "godot_editor",
       "godot_export",
       "godot_export_run",
       "godot_feedback",
@@ -155,6 +156,12 @@ describe("MCP server (cheap profile)", () => {
     ok(await call("godot_format", { files: ["res://messy.gd"], write: true }));
     expect(readFileSync(join(root, "messy.gd"), "utf8")).toBe("extends Node\n\n\nfunc f(a, b):\n\treturn a + b\n");
 
+    expect(ok(await call("godot_editor", { op: "ops" }))).toMatch(/reload_scene/);
+    expect(ok(await call("godot_editor", { op: "addon" }))).toMatch(/not installed/i);
+    const noEditor = await call("godot_editor", { op: "status" });
+    expect(noEditor.isError).toBe(true);
+    expect(textOf(noEditor)).toMatch(/godotwright editor install/);
+
     expect(ok(await call("godot_new", { op: "script", file: "res://enemy.gd", template: "character_2d" }))).toMatch(/enemy\.gd/);
     expect(existsSync(join(root, "enemy.gd"))).toBe(true);
     expect(ok(await call("godot_new", { op: "shader", file: "res://glow.gdshader", write: false }))).toMatch(/shader_type canvas_item/);
@@ -181,6 +188,9 @@ describe("MCP server (cheap profile)", () => {
     expect(textOf(await roCall("godot_new", { op: "script", file: "res://x.gd" }))).toMatch(/read-only session/);
     expect(textOf(await roCall("godot_new", { op: "project", dir: "other" }))).toMatch(/read-only session/);
     expect(textOf(await roCall("godot_tilemap", { scene: "res://level.tscn", op: "clear", write: true }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_editor", { op: "install" }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_editor", { op: "play" }))).toMatch(/read-only session/);
+    expect(textOf(await roCall("godot_editor", { op: "status" }))).not.toMatch(/read-only session/);
     expect((await roCall("godot_new", { op: "script", file: "res://x.gd", write: false })).isError).not.toBe(true);
     expect(existsSync(join(root, "x.gd"))).toBe(false);
     await Promise.all([roClient.close(), ro.close()]);

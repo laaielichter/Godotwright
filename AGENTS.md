@@ -85,6 +85,13 @@ node dist/cli.js --help
   duplicate_node, set_groups, add_nodes); `test/integration/scene-structure-corpus.test.ts` runs them on real scenes.
 - `src/format/`: `godot_format`. `tokenizer.ts` is a full GDScript tokenizer, `format.ts` the formatter with its guard
   (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project.
+- `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
+  classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
+  `dotnet build` and reads MSBuild's diagnostics.
+- `src/editor/`: `godot_editor`: `bridge.ts` is the client of the editor addon in `data/editor-bridge/` (localhost,
+  token from `.godot/godotwright_bridge.json`), `install.ts` copies and enables the addon. The addon cannot be run in
+  CI: a test checks every engine method it calls against the bundled API data; `docs/editor-bridge.md` has the manual
+  test.
 - `src/metrics/`: `godot_metrics`: `complexity.ts`, `signals.ts` (signal flow and its three bug lists), `stats.ts`.
 - `src/tilemap/`: `godot_tilemap`: `codec.ts` reads and writes `tile_map_data`, `plan.ts` is the plan, journal and
   `load_steps` code that `src/animation/` shares. `src/animation/`: `godot_animation`.

@@ -13,6 +13,7 @@ import { bisectCommand } from "./commands/bisect.js";
 import { diffCommand } from "./commands/diff.js";
 import { impactCommand } from "./commands/impact.js";
 import { animationCommand } from "./commands/animation.js";
+import { editorCommand } from "./commands/editor.js";
 import { formatCommand } from "./commands/format.js";
 import { mergeCommand } from "./commands/merge.js";
 import { metricsCommand } from "./commands/metrics.js";
@@ -81,6 +82,7 @@ export function createProgram(): Command {
     .addCommand(impactCommand())
     .addCommand(mergeCommand())
     .addCommand(bisectCommand())
+    .addCommand(editorCommand())
     .addCommand(formatCommand())
     .addCommand(metricsCommand())
     .addCommand(tilemapCommand())

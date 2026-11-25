@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { basename, join, resolve } from "node:path";
 import { assertWritable } from "../project/protect.js";
 import { generateUid, isUidText } from "../scene/uid.js";
@@ -25,6 +26,11 @@ export interface NewProjectOptions {
   mergeDriver?: boolean;
   /** Also write a .mcp.json that starts the Godotwright MCP server. */
   mcp?: boolean;
+  /**
+   * A C# (.NET) project: also writes `<Name>.csproj` and `<Name>.sln` in the shape Godot generates, adds the "C#"
+   * feature and sets `[dotnet] project/assembly_name`. It needs the .NET build of Godot and the .NET SDK.
+   */
+  dotnet?: boolean;
   /** Use a folder that already holds files. A file that is there is never overwritten; it is listed as skipped. */
   force?: boolean;
 }
@@ -87,7 +93,7 @@ const GITIGNORE = [
 const MERGE_ATTRIBUTES = ["*.tscn merge=godotwright", "*.tres merge=godotwright", "project.godot merge=godotwright"];
 
 /** The text of project.godot for a new project. `mainScene` is a uid:// or res:// path. */
-export function projectGodotText(name: string, renderer: RenderingMethod, mainScene: string): string {
+export function projectGodotText(name: string, renderer: RenderingMethod, mainScene: string, assemblyName?: string): string {
   const out = [
     ...HEADER,
     "",
@@ -97,16 +103,84 @@ export function projectGodotText(name: string, renderer: RenderingMethod, mainSc
     "",
     `config/name=${JSON.stringify(name)}`,
     `run/main_scene=${JSON.stringify(mainScene)}`,
-    `config/features=PackedStringArray(${JSON.stringify(GODOT_TARGET)}, ${JSON.stringify(RENDERER_FEATURES[renderer])})`,
+    // The .NET editor adds the "C#" feature after the version.
+    `config/features=PackedStringArray(${[GODOT_TARGET, ...(assemblyName ? ["C#"] : []), RENDERER_FEATURES[renderer]].map((f) => JSON.stringify(f)).join(", ")})`,
     'config/icon="res://icon.svg"',
   ];
   // Forward+ is Godot's default, so the project manager writes no [rendering] section for it. For Compatibility it
   // also sets the override for mobile devices, whose default would otherwise be the Mobile renderer.
+  // Sections in the order Godot saves them: [dotnet] before [rendering].
+  if (assemblyName) out.push("", "[dotnet]", "", `project/assembly_name=${JSON.stringify(assemblyName)}`);
   if (renderer !== "forward_plus") {
     out.push("", "[rendering]", "", `renderer/rendering_method=${JSON.stringify(renderer)}`);
     if (renderer === "gl_compatibility") out.push('renderer/rendering_method.mobile="gl_compatibility"');
   }
   return `${out.join("\n")}\n`;
+}
+
+/** The .NET SDK the C# project file names: Godot's own NuGet SDK at the targeted Godot version. */
+export const GODOT_NET_SDK = `Godot.NET.Sdk/${GODOT_TARGET}.0`;
+/** The target framework Godot 4.7 writes for a new C# project. */
+export const DOTNET_TARGET_FRAMEWORK = "net8.0";
+
+/**
+ * A C# namespace from a project name, as Godot's IdentifierUtils.SanitizeQualifiedIdentifier does it: characters an
+ * identifier cannot hold become `_`, and a part that starts with a digit gets a `_` in front.
+ */
+export function sanitizeNamespace(name: string): string {
+  return name
+    .split(".")
+    .map((part) => {
+      const clean = part.replace(/[^\p{L}\p{Nd}_]/gu, "_");
+      return clean === "" ? "_" : /^\p{Nd}/u.test(clean) ? `_${clean}` : clean;
+    })
+    .join(".");
+}
+
+/**
+ * The .csproj of a new Godot C# project. The shape is the one Godot's editor generates:
+ * modules/mono/editor/GodotTools/GodotTools.ProjectEditor/ProjectGenerator.cs (GenGameProject) in godotengine/godot:
+ * the Godot.NET.Sdk as the project Sdk, one PropertyGroup with TargetFramework and EnableDynamicLoading, and a
+ * RootNamespace only when the project name is not a valid namespace. Godot 4.7 writes net8.0 (see the 4.7 C# projects
+ * in godotengine/godot-demo-projects, mono/); Godot's master branch has moved on to net10.0.
+ */
+export function csprojText(name: string): string {
+  const namespace = sanitizeNamespace(name);
+  const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return [
+    `<Project Sdk="${GODOT_NET_SDK}">`,
+    "  <PropertyGroup>",
+    `    <TargetFramework>${DOTNET_TARGET_FRAMEWORK}</TargetFramework>`,
+    "    <EnableDynamicLoading>true</EnableDynamicLoading>",
+    ...(namespace !== name ? [`    <RootNamespace>${escape(namespace)}</RootNamespace>`] : []),
+    "  </PropertyGroup>",
+    "</Project>",
+    "",
+  ].join("\n");
+}
+
+/**
+ * The .sln of a new Godot C# project, from the template in
+ * modules/mono/editor/GodotTools/GodotTools.ProjectEditor/DotNetSolution.cs (godotengine/godot): one C# project with
+ * the Debug, ExportDebug and ExportRelease configurations. Godot saves it as UTF-8 with a BOM; so does this.
+ */
+export function slnText(name: string, csproj: string, guid: string): string {
+  const configs = ["Debug", "ExportDebug", "ExportRelease"];
+  return [
+    "\uFEFFMicrosoft Visual Studio Solution File, Format Version 12.00",
+    "# Visual Studio 2012",
+    `Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "${name}", "${csproj.replace(/\//g, "\\")}", "{${guid}}"`,
+    "EndProject",
+    "Global",
+    "\tGlobalSection(SolutionConfigurationPlatforms) = preSolution",
+    ...configs.map((c) => `\t${c}|Any CPU = ${c}|Any CPU`),
+    "\tEndGlobalSection",
+    "\tGlobalSection(ProjectConfigurationPlatforms) = postSolution",
+    ...configs.flatMap((c) => [`\t\t{${guid}}.${c}|Any CPU.ActiveCfg = ${c}|Any CPU`, `\t\t{${guid}}.${c}|Any CPU.Build.0 = ${c}|Any CPU`]),
+    "\tEndGlobalSection",
+    "EndGlobal",
+    "",
+  ].join("\n");
 }
 
 function mainSceneText(kind: ProjectKind, sceneUid: string, scriptUid: string): string {
@@ -149,7 +223,7 @@ export function newProject(dir: string, options: NewProjectOptions = {}): NewPro
   const scriptUid = isUidText(kept) ? kept : generateUid(new Set([sceneUid]));
   const files: [string, string][] = [
     // With main.tscn already there (force), the scene keeps its own uid, so the setting names it by path.
-    ["project.godot", projectGodotText(name, renderer, existsSync(join(root, "main.tscn")) ? "res://main.tscn" : sceneUid)],
+    ["project.godot", projectGodotText(name, renderer, existsSync(join(root, "main.tscn")) ? "res://main.tscn" : sceneUid, options.dotnet ? name : undefined)],
     ["main.tscn", mainSceneText(kind, sceneUid, scriptUid)],
     ["main.gd", `extends ${PROJECT_KINDS[kind]}\n\n\nfunc _ready() -> void:\n\tpass\n`],
     ["main.gd.uid", `${scriptUid}\n`],
@@ -161,6 +235,12 @@ export function newProject(dir: string, options: NewProjectOptions = {}): NewPro
     ],
   ];
   if (options.mcp) files.push([".mcp.json", `${JSON.stringify({ mcpServers: { godotwright: { command: "npx", args: ["-y", "godotwright", "mcp", "--tier", "premium"] } } }, null, 2)}\n`]);
+
+  if (options.dotnet) {
+    // The assembly has the project's name, and the two files are named after it (Godot does the same).
+    if (/[<>:"/\\|?*\x00-\x1f]/.test(name)) throw new ScaffoldError(`a C# project names its .csproj and .sln after the project, and "${name}" has characters a file name cannot hold; give a name without < > : " / \\ | ? *`);
+    files.push([`${name}.csproj`, csprojText(name)], [`${name}.sln`, slnText(name, `${name}.csproj`, randomUUID().toUpperCase())]);
+  }
 
   for (const [rel] of files) assertWritable(join(root, rel));
   mkdirSync(root, { recursive: true });
@@ -182,6 +262,7 @@ export function newProject(dir: string, options: NewProjectOptions = {}): NewPro
   if (skipped.some((f) => f.startsWith("main."))) notes.push("a main.* file was already there and was kept: check that main.tscn, main.gd and main.gd.uid still belong together");
   if (options.mergeDriver && created.includes(".gitattributes")) notes.push("the merge driver itself lives in each clone's git config: run `godotwright merge --install` once per clone");
   if (options.mergeDriver && skipped.includes(".gitattributes")) notes.push(".gitattributes was already there: run `godotwright merge --install` to add the merge lines to it");
+  if (options.dotnet) notes.push(`C#: open the project with the .NET build of Godot ${GODOT_TARGET} (it needs the .NET SDK 8 or later); main.gd is GDScript, add C# scripts with godot_new op script and a .cs file. Godot offers to update ${GODOT_NET_SDK} in the .csproj to its own version when they differ`);
   notes.push("Godot makes .godot/, icon.svg.import and missing .uid files on its first import (open the project, or run godot --headless --import)");
   return { project: root, name, kind, renderer, mainScene: "res://main.tscn", created, skipped, notes };
 }

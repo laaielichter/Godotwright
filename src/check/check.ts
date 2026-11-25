@@ -6,6 +6,7 @@ import { scanProject, projectRootOf } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { asCheckDiagnostic, checkShaders, ShaderCheckError } from "../shaders/shaders.js";
 import { checkerSource, excludePath } from "./checker-script.js";
+import { buildCSharp, hasCSharpProject, type CSharpBuildResult } from "./csharp-build.js";
 import { parseExitLeaks, type ExitLeaks } from "./exit-leaks.js";
 import { findGodot, godotVersion, runGodot, type RunResult } from "./godot.js";
 import { MARKER, parseGodotLog, type Diagnostic } from "./log.js";
@@ -33,6 +34,10 @@ export interface CheckOptions {
   leakDetails?: boolean;
   /** Also draw every shader on the GPU (Compatibility renderer; needs a display or xvfb-run), for what only the driver rejects. */
   shaders?: boolean;
+  /** Build the C# project with `dotnet build` when the project has a .csproj or .sln (default true). */
+  csharp?: boolean;
+  /** The dotnet executable; found on PATH when omitted. */
+  dotnet?: string;
 }
 
 export interface CheckStep {
@@ -61,6 +66,8 @@ export interface CheckResult {
   ran?: { frames: number; fps: number; seconds: number };
   /** With `shaders`: how many were compiled, parsed only (fog) or not reached (the check stopped early), and on which renderer. */
   shaders?: { compiled: number; parsed: number; notReached: number; errors: number; renderer: string };
+  /** For a project with a .csproj or .sln: how `dotnet build` went (its errors and warnings are in `diagnostics`), or that dotnet is missing. */
+  csharp?: Pick<CSharpBuildResult, "status" | "target" | "restored" | "errors" | "warnings" | "note">;
 }
 
 /** How much of a run's output is kept: the last lines, so a loop that prints every frame does not drown the rest. */
@@ -133,6 +140,16 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     }
     return result;
   };
+
+  // The C# build comes first: Godot loads C# scripts from the assembly it makes.
+  let csharp: CheckResult["csharp"];
+  if (options.csharp !== false && hasCSharpProject(root)) {
+    const built = await buildCSharp(root, { timeoutMs, ...(options.dotnet ? { dotnet: options.dotnet } : {}) });
+    csharp = { status: built.status, target: built.target, restored: built.restored, errors: built.errors, warnings: built.warnings, note: built.note };
+    diagnostics.push(...built.diagnostics);
+    if (built.status !== "no-dotnet") steps.push({ name: "dotnet build", ms: built.ms, exitCode: built.exitCode, timedOut: built.status === "timed-out" });
+    if (options.keepLogs && built.log !== undefined) logs["dotnet build"] = built.log;
+  }
 
   if (options.import !== false) {
     const result = await run("import", ["--import"]);
@@ -237,6 +254,7 @@ export async function checkProject(path: string, options: CheckOptions = {}): Pr
     warnings: clean.filter((d) => d.severity === "warning").length,
     ...(options.keepLogs ? { logs } : {}),
     ...(shaders ? { shaders } : {}),
+    ...(csharp ? { csharp } : {}),
     ...(output !== undefined ? { output, ran: { frames, fps, seconds: Math.round((frames / fps) * 100) / 100 } } : {}),
   };
 }

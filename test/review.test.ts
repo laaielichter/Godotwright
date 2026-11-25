@@ -1459,3 +1459,21 @@ describe("scene and resource integrity", () => {
     expect(found).toEqual([expect.stringMatching(/^res:\/\/copy\.tscn:1: error \[structure\/duplicate-uid\] .*res:\/\/child\.tscn \(base\), res:\/\/dup_in_base\.tscn \(base\)/)]);
   });
 });
+
+describe("C# scripts in the review (the rules have their own tests in test/csharp.test.ts)", () => {
+  const scene = '[gd_scene format=3]\n\n[ext_resource type="Script" path="res://Hero.cs" id="1_h"]\n\n[node name="Main" type="Node2D"]\nscript = ExtResource("1_h")\n\n[node name="Sprite" type="Sprite2D" parent="."]\n';
+  const hero = (body: string, head = "public partial class Hero : Node2D") => `using Godot;\n\n${head}\n{\n${body}\n}\n`;
+
+  it("is quiet on a correct C# script next to GDScript", () => {
+    expect(findings({ "main.tscn": scene, "Hero.cs": hero('\t[Signal] public delegate void HitEventHandler();\n\tpublic override void _Ready() { GetNode<Sprite2D>("Sprite").Show(); }'), "util.gd": "extends Node\n" })).toEqual([]);
+  });
+
+  it("api/csharp-not-partial, api/csharp-class-name, api/csharp-signal-name, api/csharp-callback", () => {
+    const rules = (files: Record<string, string>) => findings({ "main.tscn": scene, ...files }).map((l) => /\[([^\]]+)\]/.exec(l)![1]);
+    expect(rules({ "Hero.cs": hero("", "public class Hero : Node2D") })).toEqual(["api/csharp-not-partial"]);
+    expect(rules({ "Hero.cs": hero("", "public partial class Player : Node2D") })).toEqual(["api/csharp-class-name"]);
+    expect(rules({ "Hero.cs": hero("\t[Signal] public delegate void Hit();") })).toEqual(["api/csharp-signal-name"]);
+    expect(rules({ "Hero.cs": hero("\tpublic void _process(float delta) { }") })).toEqual(["api/csharp-callback"]);
+    expect(rules({ "Hero.cs": hero('\tpublic override void _Ready() { GetNode<Sprite2D>("Sprit").Show(); }') })).toEqual(["structure/missing-node"]);
+  });
+});

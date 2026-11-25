@@ -37,6 +37,11 @@ const list: Rule[] = [
   { id: "api/node-only-member", category: "api", severity: "error", title: "@onready or node export outside a Node", fix: "Remove @onready or the node export: only classes that inherit Node can use them." },
   { id: "api/duplicate-declaration", category: "api", severity: "error", title: "Declared twice", fix: "Remove the second declaration (a merge or a patch often adds the same code twice), or rename one." },
   { id: "api/redefines-native-member", category: "api", severity: "error", title: "Member already defined in native class", fix: "Remove the declaration to use the inherited member, or rename it." },
+  // C# scripts (Godot 4 .NET), from the files: what stops the build or the script from working.
+  { id: "api/csharp-not-partial", category: "api", severity: "error", title: "C# script class is not partial", fix: "Add `partial` to the class: Godot 4's source generators add to every class that derives from a Godot class." },
+  { id: "api/csharp-class-name", category: "api", severity: "error", title: "C# class name differs from the file name", fix: "Give the class the name of its file (Player.cs holds class Player), or rename the file." },
+  { id: "api/csharp-signal-name", category: "api", severity: "error", title: "[Signal] delegate without EventHandler", fix: "End the delegate's name with EventHandler: `[Signal] public delegate void HealthChangedEventHandler(int value);` declares the signal HealthChanged." },
+  { id: "api/csharp-callback", category: "api", severity: "warning", title: "C# engine callback Godot never calls", fix: "Override the callback with its C# name and parameters: `public override void _Ready()`, `public override void _Process(double delta)`." },
   // Runtime pitfalls from real projects (see data/lessons.json and `godotwright lessons`).
   { id: "api/override-signature", category: "api", severity: "error", title: "Override does not match its parent", fix: "Give the override the parent's parameters; parameters it adds need a default value." },
   { id: "api/void-return-value", category: "api", severity: "error", title: "Value returned from a void function", fix: "Remove the returned value, or give the function a return type." },

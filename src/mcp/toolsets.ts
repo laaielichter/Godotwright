@@ -38,7 +38,7 @@ export const TOOLSETS = {
   // The whole change, read from the files: what changed by meaning, what it reaches, and the physics layers.
   verify: ["godot_diff", "godot_impact", "godot_merge", "godot_bisect", "godot_collisions", "godot_metrics"],
   run: ["godot_test", "godot_play", "godot_scenario", "godot_perf", "godot_leaks", "godot_screenshot"],
-  game: ["godot_session", "godot_game"],
+  game: ["godot_session", "godot_game", "godot_editor"],
   export: ["godot_export", "godot_export_run", "godot_deps"],
   model: [
     "godot_model_brief",
@@ -96,6 +96,8 @@ export function readOnlyRefusal(tool: string, args: Record<string, unknown>): st
   if (DRY_RUN_TOOLS.has(tool) && args["write"] === true) return no("with write: true") + " Leave write out to see the changes.";
   // New files are written unless write is false; a new project is always written.
   if (tool === "godot_new" && (args["op"] === "project" || args["write"] !== false)) return no("writes files and") + (args["op"] === "project" ? "" : " Pass write: false to see the file.");
+  // The open editor: looking is allowed, everything that changes what it shows, saves or runs is not.
+  if (tool === "godot_editor" && !["status", "selection", "inspect", "tree", "is_scanning", "errors", "ops"].includes(String(args["op"]))) return no(`op ${String(args["op"])}`);
   if (tool === "godot_scenario" && args["op"] === "save") return no("op save");
   if (tool === "godot_dream" && args["apply"] !== undefined) return no("with apply") + " Leave apply out to see the proposals.";
   if (tool === "godot_game" && ["set", "call", "eval"].includes(String(args["op"]))) return no(`op ${String(args["op"])}`);

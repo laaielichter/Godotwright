@@ -1,5 +1,6 @@
 import { closeSync, existsSync, fstatSync, openSync, readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
+import { allClasses, formatCsMethod, formatCsParams, outlineCSharp, scriptClass, type CSharpOutline } from "../godot/csharp.js";
 import { formatParams, formatSignature, outlineScript, type ScriptOutline } from "../godot/gdscript.js";
 import { KEY_SETTINGS, parseProjectSettings, type ProjectSettings } from "../godot/project-settings.js";
 import { parseResourceFile } from "../godot/resource-file.js";
@@ -50,6 +51,8 @@ export interface ProjectData {
   scripts: Map<string, ScriptOutline>;
   /** Script sources by `res://` path. */
   sources: Map<string, string>;
+  /** C# scripts by `res://` path: the source and its outline. GDScript-only code never sees them. */
+  csharp: Map<string, { source: string; outline: CSharpOutline }>;
   /** Parsed .tscn/.tres files by `res://` path. */
   resources: Map<string, ResourceFile>;
   /**
@@ -273,6 +276,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
   const resources = new Map<string, ResourceFile>();
   const scripts = new Map<string, ScriptOutline>();
   const sources = new Map<string, string>();
+  const csharp = new Map<string, { source: string; outline: CSharpOutline }>();
   for (const file of files) {
     const ext = extension(file);
     try {
@@ -299,6 +303,8 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
         const script = parsed(file, "script", (source) => ({ source, outline: outlineScript(source) }));
         sources.set(file, script.source);
         scripts.set(file, script.outline);
+      } else if (ext === "cs") {
+        csharp.set(file, parsed(file, "csharp", (source) => ({ source, outline: outlineCSharp(source) })));
       }
     } catch (error) {
       fail(file, error);
@@ -521,7 +527,32 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
         fail(file, error);
       }
     } else if (ext === "cs") {
-      csharpScripts.push({ ...(external.has(file) ? { external: true } : {}), path: file });
+      const outline = csharp.get(file)?.outline;
+      if (!outline) continue;
+      // Files a C# script loads by a literal path.
+      for (const use of outline.usages) {
+        if (use.kind !== "load" || !/^(res|uid):\/\//.test(use.name) || resolve({ path: use.name })) continue;
+        warnings.push({ file, line: use.line, message: `${use.call}() path not found: ${use.name}` });
+      }
+      const cls = scriptClass(outline, file);
+      csharpScripts.push({
+        ...(external.has(file) ? { external: true } : {}),
+        path: file,
+        language: "csharp",
+        uid: scriptUids.get(file),
+        className: cls?.name,
+        namespace: cls?.namespace ?? outline.namespace,
+        extends: cls?.base,
+        partial: cls?.partial ?? false,
+        tool: cls?.tool ?? false,
+        globalClass: cls?.globalClass ?? false,
+        signals: (cls?.signals ?? []).map((s) => ({ name: s.name, signature: `${s.name}(${formatCsParams(s.params)})`, line: s.line })),
+        functions: (cls?.methods ?? []).map((m) => ({ name: m.name, signature: formatCsMethod(m), line: m.line, endLine: m.endLine })),
+        exports: (cls?.exports ?? []).map((e) => ({ name: e.name, type: e.type, ...(e.hint ? { hint: e.hint } : {}), ...(e.group ? { group: e.group } : {}), line: e.line })),
+        otherClasses: allClasses(outline).filter((c) => c !== cls).map((c) => c.name),
+        usedBy: [...(usedBy.get(file) ?? [])].sort(),
+        lineCount: outline.lineCount,
+      });
     } else if (!external.has(file)) {
       const kind = ext === "scn" ? "binary_scene" : ext === "res" ? "binary_resource" : ASSET_KINDS[ext];
       if (kind) assets[kind] = (assets[kind] ?? 0) + 1;
@@ -562,7 +593,7 @@ export function loadProject(path: string, options: LoadOptions = {}): ProjectDat
     // A base project's own problems are not this project's.
     warnings: warnings.filter((w) => !external.has(withoutSubResource(w.file))).sort((a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0)),
   };
-  return { root, files, map, scripts, sources, resources, shaders: shaderSources, uids, uidClaims, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
+  return { root, files, map, scripts, sources, csharp, resources, shaders: shaderSources, uids, uidClaims, external, shipped: new Set([...listed].filter((f) => !fileSet.has(f))) };
 }
 
 /** Settings of a base project with the project's own on top; autoloads and input actions add up. */

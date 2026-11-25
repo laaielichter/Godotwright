@@ -107,6 +107,7 @@ export function checkCommand(): Command {
               ` (Godot ${result.godotVersion}, ${plural(result.scripts, "script")}, ${plural(result.scenes, "scene")}${result.shaderFiles ? `, ${plural(result.shaderFiles, "shader")}` : ""})`,
           );
           if (result.shaders) lines.push(shaderSummary(result.shaders));
+          if (result.csharp) lines.push(`C#: ${result.csharp.note}`);
           lines.push(...lessonHintsForMessages(result.diagnostics.map((d) => d.message)));
           writeOut(command, `${lines.join("\n")}\n`);
         }

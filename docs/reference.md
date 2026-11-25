@@ -834,7 +834,7 @@ Pick a profile with `--tier`:
 
 CI connects both Claude Code and Codex to the server on every push.
 
-### The 52 tools
+### The 53 tools
 
 | Tool | What it does |
 | --- | --- |
@@ -860,6 +860,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_new` | A new project (2D, 3D or UI), a typed script from a template that passes the review, or a shader |
 | `godot_preset` | Export presets without the editor: list, add, change, remove (renumbered as Godot needs) |
 | `godot_translations` | Register translation files, and check a CSV against the `tr()` keys the code uses |
+| `godot_editor` | Optional: see and drive the open editor through a small addon (localhost, token): open scenes and unsaved state, selection, the edited tree, logged errors, save, reload, play, stop, screenshot. See [editor-bridge.md](editor-bridge.md) |
 | `godot_collisions` | Physics layers and masks from the scenes: every body, area and ray by name and bit value, who detects whom between two of them with the exact mask to set, and what can never work (a mask on an empty layer, monitoring off, no shape) |
 | `godot_rename` | Rename a name or move a file everywhere at once, keeping connections, node paths and `.uid` files right |
 | `godot_project_edit` | Change settings, input actions and autoloads in `project.godot`, touching only that entry |
@@ -893,7 +894,7 @@ CI connects both Claude Code and Codex to the server on every push.
 
 ## Tool sets and read-only mode
 
-Every tool definition goes into the agent's context on every turn. All 52 cost about 88,000 characters (about
+Every tool definition goes into the agent's context on every turn. All 53 cost about 88,000 characters (about
 22,000 tokens); the `core` set about 24,000. Load only what the work needs, or run lean (below):
 
 ```sh
@@ -912,7 +913,7 @@ godotwright mcp --lean                  # two tools instead of all: see Lean mod
 | `game` | session, game | 2 tools, ~5,400 |
 | `export` | export, export_run, deps | 3 tools, ~5,500 |
 | `model` | model_brief, model_identify, model_spec, model_library, model_build, model_view, model_lint, model_inspect | 8 tools, ~11,800 |
-| `all` (default) | everything | 52 tools, ~88,100 |
+| `all` (default) | everything | 53 tools, ~88,100 |
 
 Sets and single tool names mix (`core,godot_play`; the `godot_` prefix may be left out). An unknown name stops the
 server with the valid names. The server instructions name only the tools that are enabled, so a small model is never
@@ -934,7 +935,7 @@ scripts, and Godot rewrites its cache in `.godot/`. For a project you do not tru
 Godot (`--tools core` still has `godot_check` and `godot_doctor`; pass `godot: false` to the doctor) or do not install
 Godot where the agent runs.
 
-## Lean mode: two tools instead of 52
+## Lean mode: two tools instead of 53
 
 ```sh
 godotwright mcp --lean                  # or GODOTWRIGHT_LEAN=1
@@ -951,7 +952,7 @@ A full tool list is paid on every turn, whether a tool is called or not, and som
 
 | | Tools in the list | Size of the tool list |
 | --- | ---: | --- |
-| full (default) | 52 | ~88,100 characters (~22,000 tokens) |
+| full (default) | 53 | ~88,100 characters (~22,000 tokens) |
 | `--tools core` | 13 | ~23,900 |
 | `--lean` | 2 | ~3,500 (~900 tokens): 96% less |
 | `--lean --tools core` | 2 | ~2,100 |

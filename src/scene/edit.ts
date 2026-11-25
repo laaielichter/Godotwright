@@ -3,6 +3,8 @@ import { JournalWriter } from "../journal/journal.js";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { GodotApi, closest } from "../api/api.js";
 import { blocksOf, contentEnd, propSpan, type Block, type Splice } from "../godot/blocks.js";
+import { outlineCSharp, sameGodotName, scriptClass } from "../godot/csharp.js";
+import { csharpClassIndex, godotTypeOf, resolveCSharpClass } from "../scan/csharp.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
 import { fromResPath, toResPath } from "../project/files.js";
@@ -69,8 +71,70 @@ export const spliceOrder = (a: Splice, b: Splice) => b.start - a.start || b.coun
 
 const inside = (path: string, root: string): boolean => root === "." || path === root || path.startsWith(`${root}/`);
 
+export interface ScriptFacts {
+  extends?: string;
+  signals: Map<string, string>;
+  funcs: Map<string, { min: number; max: number }>;
+  exports: Map<string, string | undefined>;
+  /** Set for a C# script: names in scenes are the C# names (PascalCase), and what is wrong with the class, if anything. */
+  csharp?: { className?: string; partial: boolean; complete: boolean };
+}
+
+/**
+ * What a C# script declares, in the shape of scriptInfo: the class named after the file with its other `partial` parts
+ * and its base classes in the project. Signals carry the name scenes use (the delegate without EventHandler), methods
+ * and exported members their C# names. `extends` is the Godot class at the end of the chain.
+ */
+export function csharpScriptInfo(root: string, path: string): ScriptFacts {
+  const facts: ScriptFacts = { signals: new Map(), funcs: new Map(), exports: new Map(), csharp: { partial: false, complete: false } };
+  const outline = outlineCSharp(readFileSync(fromResPath(root, path), "utf8"));
+  if (!scriptClass(outline, path)) return facts;
+  // Partial parts and base classes can be in any file of the project.
+  let others = [outline];
+  try {
+    others = [outline, ...[...loadProject(root).csharp].filter(([file]) => file !== path).map(([, c]) => c.outline)];
+  } catch {
+    // Outside a readable project the file stands alone.
+  }
+  const resolved = resolveCSharpClass(outline, path, csharpClassIndex(others));
+  if (!resolved) return facts;
+  facts.csharp = { className: resolved.cls.name, partial: resolved.cls.partial, complete: resolved.complete };
+  if (resolved.nativeBase) facts.extends = resolved.nativeBase === "GodotObject" ? "Object" : resolved.nativeBase;
+  for (const s of resolved.signals) if (!facts.signals.has(s.name)) facts.signals.set(s.name, `(${s.params.map((p) => `${p.name}: ${p.type.replace(/,\s*/g, "; ")}`).join(", ")})`);
+  for (const m of resolved.methods) {
+    const max = m.params.some((p) => p.modifier === "params") ? Number.POSITIVE_INFINITY : m.params.length;
+    const min = m.params.filter((p) => !p.hasDefault && p.modifier !== "params").length;
+    const have = facts.funcs.get(m.name);
+    // Overloads: any of them can take the call.
+    facts.funcs.set(m.name, have ? { min: Math.min(have.min, min), max: Math.max(have.max, max) } : { min, max });
+  }
+  for (const e of resolved.exports) if (!facts.exports.has(e.name)) facts.exports.set(e.name, godotTypeOf(e.type) ?? (/^[A-Z]\w*$/.test(e.type) && GodotApi.load().getClass(e.type) ? e.type : undefined));
+  return facts;
+}
+
+/** What the script at a res:// path declares: GDScript or C#. Undefined for a file that is not there or is neither. */
+export function scriptFacts(root: string, path: string | undefined): ScriptFacts | undefined {
+  if (!path || !existsSync(fromResPath(root, path))) return undefined;
+  if (path.endsWith(".gd")) return scriptInfo(readFileSync(fromResPath(root, path), "utf8"));
+  if (path.endsWith(".cs")) return csharpScriptInfo(root, path);
+  return undefined;
+}
+
+/** Why Godot cannot attach a script to a node of class `cls`; undefined when nothing speaks against it. */
+function attachProblem(api: GodotApi, root: string, script: string, cls: string | undefined, what: string): string | undefined {
+  const facts = scriptFacts(root, script);
+  if (!facts) return undefined;
+  if (facts.csharp && !facts.csharp.className) {
+    const name = basename(script).replace(/\.cs$/, "");
+    return `${script} has no class named ${name}; Godot needs the script's class to have the name of its file`;
+  }
+  const base = facts.extends ?? (facts.csharp ? undefined : "RefCounted");
+  if (cls && base && api.getClass(base) && !api.inheritsFrom(cls, base)) return `${what} is a ${cls}, but ${script} extends ${base}; Godot will not attach it`;
+  return undefined;
+}
+
 /** What a script declares, read with simple patterns (enough for checks; Godot has the last word). */
-export function scriptInfo(source: string): { extends?: string; signals: Map<string, string>; funcs: Map<string, { min: number; max: number }>; exports: Map<string, string | undefined> } {
+export function scriptInfo(source: string): ScriptFacts {
   const signals = new Map<string, string>();
   const funcs = new Map<string, { min: number; max: number }>();
   const exports = new Map<string, string | undefined>();
@@ -81,6 +145,20 @@ export function scriptInfo(source: string): { extends?: string; signals: Map<str
   }
   for (const m of source.matchAll(/^\s*@export\w*(?:\([^)]*\))?\s+(?:@\w+(?:\([^)]*\))?\s+)*var\s+(\w+)\s*(?::\s*([\w.]+))?/gm)) exports.set(m[1] ?? "", m[2]);
   return { extends: /^\s*extends\s+([A-Za-z_]\w*)/m.exec(source)?.[1], signals, funcs, exports };
+}
+
+/** Signal parameters written `name: Type` as a C# parameter list (Godot's int and float are long and double in C#). */
+function csharpParams(params: string): string {
+  const types: Record<string, string> = { int: "long", float: "double", String: "string", Variant: "Variant" };
+  return params
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const [name, type] = p.split(":").map((x) => x.trim());
+      return `${types[type ?? ""] ?? type ?? "Variant"} ${name}`;
+    })
+    .join(", ");
 }
 
 /** The resource type an ext_resource line names for a file. */
@@ -195,10 +273,8 @@ function createScene(scenePath: string, edit: Extract<SceneEdit, { op: "create_s
     const script = edit.script.trim();
     if (!/\.(gd|cs)$/.test(script)) throw new SceneError(`a script is a .gd or .cs file; ${script} is not`);
     if (!existsSync(fromResPath(root, script))) throw new SceneError(`${script} does not exist in the project; write the script first, then create the scene`);
-    if (script.endsWith(".gd")) {
-      const base = scriptInfo(readFileSync(fromResPath(root, script), "utf8")).extends ?? "RefCounted";
-      if (cls && api.getClass(base) && !api.inheritsFrom(cls, base)) throw new SceneError(`the root is a ${cls}, but ${script} extends ${base}; Godot will not attach it`);
-    }
+    const problem = attachProblem(api, root, script, cls, "the root");
+    if (problem) throw new SceneError(problem);
     const id = `${ext.length + 1}_${basename(script).replace(/\.\w+$/, "").replace(/\W+/g, "_").toLowerCase() || "script"}`;
     const uid = uidOf(root, script);
     ext.push(`[ext_resource type="Script"${uid ? ` uid="${uid}"` : ""} path="${script}" id="${id}"]`);
@@ -290,8 +366,7 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
         path = sub.extResources.find((e) => e.id === sub.nodes[0]?.scriptRef)?.path;
       }
     }
-    if (!path || !path.endsWith(".gd") || !existsSync(fromResPath(root, path))) return undefined;
-    return scriptInfo(readFileSync(fromResPath(root, path), "utf8"));
+    return scriptFacts(root, path);
   };
 
   /** An ext_resource for a file: the one the scene has, or a new line after the others. */
@@ -418,6 +493,9 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
         const member = api.member(cls, property).find((e) => e.kind === "property");
         if (!member) {
           const names = new Set([...api.ancestors(cls).flatMap((c) => (c.members ?? []).map((m) => m.name)), ...(script?.exports.keys() ?? [])]);
+          // Godot's own properties are snake_case in a scene; a C# export keeps its C# name.
+          const other = [...names].find((n) => sameGodotName(property, n));
+          if (other) throw new SceneError(`${node.path} (${cls}) has no property ${property}; it is ${other} in the scene file (${script?.exports.has(other) ? "a C# export keeps its C# name" : "Godot's own properties are snake_case there, also when the script is C#"})`);
           const near = closest(property, [...names], 3);
           throw new SceneError(`${node.path} (${cls}) has no property ${property}${near.length ? `; did you mean ${near.join(", ")}?` : ""}`);
         }
@@ -467,6 +545,9 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
       if (!apiSignal && scriptSignal === undefined) {
         if (cls) {
           const names = [...api.ancestors(cls).flatMap((c) => (c.signals ?? []).map((s) => s.name)), ...(fromScript?.signals.keys() ?? [])];
+          // Godot's own signals are snake_case in a scene (pressed, body_entered); a C# [Signal] keeps its C# name.
+          const other = names.find((n) => sameGodotName(edit.signal, n));
+          if (other) throw new SceneError(`${from.path} (${cls}) has no signal ${edit.signal}; it is ${other} in the scene file (${fromScript?.signals.has(other) ? "a C# [Signal] keeps its C# name, without EventHandler" : "Godot's own signals are snake_case there, also when the script is C#"})`);
           const near = closest(edit.signal, names, 3);
           throw new SceneError(`${from.path} (${cls}) has no signal ${edit.signal}${near.length ? `; did you mean ${near.join(", ")}?` : ""}`);
         }
@@ -478,7 +559,12 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
         : (scriptSignal ?? "()").replace(/^\(|\)$/g, "").trim();
       const argCount = params ? params.split(",").length : 0;
       const target = toScript?.funcs.get(edit.method);
-      if (!target) warnings.push(`${to.path} ${toScript ? "has no" : "has no script, so no"} method ${edit.method}; Godot reports an error when the signal fires. Add: func ${edit.method}(${params}) -> void:`);
+      if (!target && toScript?.csharp) {
+        // A C# method is connected by its C# name; a part of the class Godotwright cannot see may still hold it.
+        const other = [...toScript.funcs.keys()].find((n) => sameGodotName(n, edit.method) || sameGodotName(n, edit.method.replace(/^_+/, "")));
+        if (other) warnings.push(`${to.path} has no method ${edit.method}, but its C# script has ${other}: a C# method is connected by its C# name, so use method ${other}`);
+        else if (toScript.csharp.complete) warnings.push(`${to.path} has no method ${edit.method} in its C# script; Godot reports an error when the signal fires. Add: private void ${edit.method}(${csharpParams(params)}) { }`);
+      } else if (!target) warnings.push(`${to.path} ${toScript ? "has no" : "has no script, so no"} method ${edit.method}; Godot reports an error when the signal fires. Add: func ${edit.method}(${params}) -> void:`);
       else if (argCount < target.min || argCount > target.max)
         warnings.push(`${edit.signal} passes ${argCount} argument${argCount === 1 ? "" : "s"} (${params || "none"}), but ${edit.method}() takes ${target.min === target.max ? target.min : `${target.min} to ${target.max}`}; Godot reports an error when it fires`);
       const line = `[connection signal="${edit.signal}" from="${from.path}" to="${to.path}" method="${edit.method}"]`;
@@ -514,10 +600,9 @@ function planEdit(ctx: { root: string; resPath: string }, original: string, edit
       if (!/\.(gd|cs)$/.test(script)) throw new SceneError(`a script is a .gd or .cs file; ${script} is not`);
       if (!existsSync(fromResPath(root, script))) throw new SceneError(`${script} does not exist in the project`);
       const cls = classOf(node);
-      if (script.endsWith(".gd")) {
-        const base = scriptInfo(readFileSync(fromResPath(root, script), "utf8")).extends ?? "RefCounted";
-        if (cls && api.getClass(base) && !api.inheritsFrom(cls, base)) throw new SceneError(`${node.path} is a ${cls}, but ${script} extends ${base}; Godot will not attach it`);
-      }
+      const problem = attachProblem(api, root, script, cls, node.path);
+      if (problem) throw new SceneError(problem);
+      if (scriptFacts(root, script)?.csharp?.partial === false) warnings.push(`the class in ${script} is not partial; Godot 4 needs \`partial\` on every script class (its source generators add to the class), so the project will not build`);
       setProp(blockAt(node.line), "script", `ExtResource("${extFor(script)}")`);
       summary = `attach ${script} to ${node.path}`;
       break;

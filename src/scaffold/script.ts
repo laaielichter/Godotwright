@@ -16,13 +16,17 @@ import { ScaffoldError, cleanResPath } from "./error.js";
 export const SCRIPT_TEMPLATES = ["node", "character_2d", "character_3d", "area_trigger", "state_machine", "autoload", "resource", "ui_control", "test_gut", "test_gdunit4"] as const;
 export type ScriptTemplate = (typeof SCRIPT_TEMPLATES)[number];
 
+/** The templates that have a C# form: used when the new file ends in .cs. */
+export const CSHARP_TEMPLATES = ["node", "character_2d", "character_3d", "area_trigger", "autoload", "resource", "ui_control"] as const satisfies readonly ScriptTemplate[];
+export type CSharpTemplate = (typeof CSHARP_TEMPLATES)[number];
+
 export const SHADER_KINDS = ["canvas_item", "spatial", "particles", "sky", "fog"] as const;
 export type ShaderKind = (typeof SHADER_KINDS)[number];
 
 export interface NewScriptOptions {
   /** Default node. */
   template?: ScriptTemplate;
-  /** `class_name` to give the script (optional; the resource template is far more useful with one). */
+  /** `class_name` to give the script (optional; the resource template is far more useful with one). A C# class always has the name of its file. */
   className?: string;
   /** For the node template: the class to extend. Default Node. */
   base?: string;
@@ -295,6 +299,219 @@ function build(template: ScriptTemplate, options: NewScriptOptions): Built {
   }
 }
 
+/** A C# class body as lines, indented with tabs like the scripts Godot makes. */
+function buildCSharp(template: CSharpTemplate, options: NewScriptOptions): Built & { usings?: string[]; attributes?: string[]; doc?: string } {
+  switch (template) {
+    case "node":
+      return { extends: options.base ?? "Node", body: ["public override void _Ready()", "{", "}"] };
+    case "character_2d":
+      return {
+        extends: "CharacterBody2D",
+        actions: MOVE_2D,
+        body: [
+          "[Export]",
+          "public float Speed { get; set; } = 300.0f;",
+          "",
+          "[Export]",
+          "public float JumpVelocity { get; set; } = -400.0f;",
+          "",
+          "public override void _PhysicsProcess(double delta)",
+          "{",
+          "\tVector2 velocity = Velocity;",
+          "",
+          "\tif (!IsOnFloor())",
+          "\t{",
+          "\t\tvelocity += GetGravity() * (float)delta;",
+          "\t}",
+          '\telse if (Input.IsActionJustPressed("jump"))',
+          "\t{",
+          "\t\tvelocity.Y = JumpVelocity;",
+          "\t}",
+          "",
+          '\tfloat direction = Input.GetAxis("move_left", "move_right");',
+          "\tif (Mathf.IsZeroApprox(direction))",
+          "\t{",
+          "\t\tvelocity.X = Mathf.MoveToward(velocity.X, 0.0f, Speed);",
+          "\t}",
+          "\telse",
+          "\t{",
+          "\t\tvelocity.X = direction * Speed;",
+          "\t}",
+          "",
+          "\tVelocity = velocity;",
+          "\tMoveAndSlide();",
+          "}",
+        ],
+      };
+    case "character_3d":
+      return {
+        extends: "CharacterBody3D",
+        actions: MOVE_3D,
+        body: [
+          "[Export]",
+          "public float Speed { get; set; } = 5.0f;",
+          "",
+          "[Export]",
+          "public float JumpVelocity { get; set; } = 4.5f;",
+          "",
+          "public override void _PhysicsProcess(double delta)",
+          "{",
+          "\tVector3 velocity = Velocity;",
+          "",
+          "\tif (!IsOnFloor())",
+          "\t{",
+          "\t\tvelocity += GetGravity() * (float)delta;",
+          "\t}",
+          '\telse if (Input.IsActionJustPressed("jump"))',
+          "\t{",
+          "\t\tvelocity.Y = JumpVelocity;",
+          "\t}",
+          "",
+          '\tVector2 input = Input.GetVector("move_left", "move_right", "move_forward", "move_back");',
+          "\tVector3 direction = (Transform.Basis * new Vector3(input.X, 0.0f, input.Y)).Normalized();",
+          "\tif (direction != Vector3.Zero)",
+          "\t{",
+          "\t\tvelocity.X = direction.X * Speed;",
+          "\t\tvelocity.Z = direction.Z * Speed;",
+          "\t}",
+          "\telse",
+          "\t{",
+          "\t\tvelocity.X = Mathf.MoveToward(velocity.X, 0.0f, Speed);",
+          "\t\tvelocity.Z = Mathf.MoveToward(velocity.Z, 0.0f, Speed);",
+          "\t}",
+          "",
+          "\tVelocity = velocity;",
+          "\tMoveAndSlide();",
+          "}",
+        ],
+      };
+    case "area_trigger": {
+      const d = options.dimension === "3d" ? "3D" : "2D";
+      return {
+        extends: `Area${d}`,
+        doc: "Emits Triggered when a body in TargetGroup enters the area.",
+        notes: [`the area needs a CollisionShape${d} child, and a collision mask that holds the layer of the bodies it should see`, "in a scene the signal is Triggered: a C# [Signal] keeps its C# name, without EventHandler"],
+        body: [
+          "[Signal]",
+          `public delegate void TriggeredEventHandler(Node${d} body);`,
+          "",
+          "[Export]",
+          'public StringName TargetGroup { get; set; } = "player";',
+          "",
+          "[Export]",
+          "public bool OneShot { get; set; }",
+          "",
+          "public override void _Ready()",
+          "{",
+          "\tBodyEntered += OnBodyEntered;",
+          "}",
+          "",
+          `private void OnBodyEntered(Node${d} body)`,
+          "{",
+          "\tif (!body.IsInGroup(TargetGroup))",
+          "\t{",
+          "\t\treturn;",
+          "\t}",
+          "",
+          "\tEmitSignal(SignalName.Triggered, body);",
+          "\tif (OneShot)",
+          "\t{",
+          `\t\tSetDeferred(Area${d}.PropertyName.Monitoring, false);`,
+          "\t}",
+          "}",
+        ],
+      };
+    }
+    case "autoload":
+      return {
+        extends: "Node",
+        usings: ["Godot.Collections"],
+        doc: "Autoload: shared state that lives for the whole run.",
+        notes: ["register it with godot_project_edit (autoload_add <Name> <this file>); from other C# code reach it with GetNode<T>(\"/root/<Name>\")"],
+        body: [
+          "[Signal]",
+          "public delegate void ValueChangedEventHandler(StringName key, Variant value);",
+          "",
+          "private readonly Dictionary<StringName, Variant> _values = new();",
+          "",
+          "public void SetValue(StringName key, Variant value)",
+          "{",
+          "\t_values[key] = value;",
+          "\tEmitSignal(SignalName.ValueChanged, key, value);",
+          "}",
+          "",
+          "public Variant GetValue(StringName key, Variant fallback = default)",
+          "{",
+          "\treturn _values.TryGetValue(key, out Variant value) ? value : fallback;",
+          "}",
+        ],
+      };
+    case "resource":
+      return {
+        extends: "Resource",
+        attributes: ["[GlobalClass]"],
+        notes: ["[GlobalClass] puts the resource in the editor's New Resource list once the project is built"],
+        body: [
+          "[Export]",
+          'public string DisplayName { get; set; } = "";',
+          "",
+          "[Export(PropertyHint.MultilineText)]",
+          'public string Description { get; set; } = "";',
+          "",
+          "[Export]",
+          "public Texture2D Icon { get; set; }",
+          "",
+          '[Export(PropertyHint.Range, "0,999,1")]',
+          "public int Amount { get; set; } = 1;",
+        ],
+      };
+    case "ui_control":
+      return {
+        extends: "Control",
+        doc: "A screen or panel: Open() shows it, ui_cancel closes it.",
+        body: [
+          "[Signal]",
+          "public delegate void ClosedEventHandler();",
+          "",
+          "public override void _UnhandledInput(InputEvent @event)",
+          "{",
+          '\tif (Visible && @event.IsActionPressed("ui_cancel"))',
+          "\t{",
+          "\t\tGetViewport().SetInputAsHandled();",
+          "\t\tClose();",
+          "\t}",
+          "}",
+          "",
+          "public void Open()",
+          "{",
+          "\tShow();",
+          "\tControl first = FindNextValidFocus();",
+          "\tfirst?.GrabFocus();",
+          "}",
+          "",
+          "public void Close()",
+          "{",
+          "\tHide();",
+          "\tEmitSignal(SignalName.Closed);",
+          "}",
+        ],
+      };
+  }
+}
+
+/**
+ * The text of a C# script template: a partial class with the given name (Godot needs the name of the file), `using
+ * Godot`, typed members, and [Export] and [Signal] where the template has them. Written from Godot 4's C# API; nothing
+ * here was compiled, so `godot_check` (dotnet build) has the last word.
+ */
+export function csharpTemplateText(template: CSharpTemplate, className: string, options: NewScriptOptions = {}): string {
+  const built = buildCSharp(template, options);
+  const out = ["using Godot;", ...(built.usings ?? []).map((u) => `using ${u};`), ""];
+  if (built.doc) out.push("/// <summary>", `/// ${built.doc}`, "/// </summary>");
+  out.push(...(built.attributes ?? []), `public partial class ${className} : ${built.extends}`, "{", ...built.body.map((l) => (l ? `\t${l}` : "")), "}");
+  return `${out.join("\n")}\n`;
+}
+
 /** The text of a script template, without touching a project. */
 export function scriptTemplateText(template: ScriptTemplate, options: NewScriptOptions = {}): string {
   const built = build(template, options);
@@ -320,11 +537,12 @@ export function newScript(project: string, resPath: string, options: NewScriptOp
   const root = projectRootOf(project);
   const template = options.template ?? "node";
   if (!SCRIPT_TEMPLATES.includes(template)) throw new ScaffoldError(`"${template}" is not a script template; use one of ${SCRIPT_TEMPLATES.join(", ")}`);
-  const file = cleanResPath(resPath, ["gd"], "a script");
+  const file = cleanResPath(resPath, ["gd", "cs"], "a script");
   refuseExisting(root, file);
   const api = GodotApi.load();
   const data = loadProject(root);
   const notes: string[] = [];
+  if (file.toLowerCase().endsWith(".cs")) return newCSharpScript(root, file, template, options);
 
   const className = options.className?.trim() || undefined;
   if (className !== undefined) {
@@ -361,6 +579,44 @@ export function newScript(project: string, resPath: string, options: NewScriptOp
   const result: NewScriptResult = { file, template, text, uid, written: false, notes, extends: built.extends, ...(className ? { className } : {}), inputActions };
   if (options.write === false) return result;
   const journal = new JournalWriter(root, "new script", `new ${template} script ${file}`);
+  const full = fromResPath(root, file);
+  journal.write(full, text);
+  journal.write(`${full}.uid`, `${uid}\n`);
+  const id = journal.commit();
+  return { ...result, written: true, ...(id ? { journal: id } : {}), review: countReview(root, file) };
+}
+
+/** A new C# script: the class has the name of the file, as Godot needs. */
+function newCSharpScript(root: string, file: string, template: ScriptTemplate, options: NewScriptOptions): NewScriptResult {
+  const api = GodotApi.load();
+  const data = loadProject(root);
+  const notes: string[] = [];
+  if (!(CSHARP_TEMPLATES as readonly string[]).includes(template)) throw new ScaffoldError(`the ${template} template is GDScript only; C# templates: ${CSHARP_TEMPLATES.join(", ")}`);
+  const className = file.slice(file.lastIndexOf("/") + 1).replace(/\.cs$/i, "");
+  if (!IDENT.test(className)) throw new ScaffoldError(`a C# script's class has the name of its file, and "${className}" is not a usable class name (letters, digits and _, not starting with a digit); name the file like Player.cs`);
+  if (options.className !== undefined && options.className.trim() !== className) throw new ScaffoldError(`a C# script's class must have the name of its file: ${file} holds class ${className}, not ${options.className.trim()} (rename the file instead)`);
+  if (api.getClass(className)?.name === className) throw new ScaffoldError(`${className} is a Godot class; a C# class with that name would clash with it`);
+  const taken = [...data.csharp].find(([, c]) => c.outline.classes.some((k) => k.name === className && !k.namespace));
+  if (taken) throw new ScaffoldError(`class ${className} is already declared in ${taken[0]}`);
+  if (!/^[A-Z]/.test(className)) notes.push(`C# classes and their files are PascalCase by convention: ${className[0]!.toUpperCase()}${className.slice(1)}.cs`);
+  if (options.base !== undefined) {
+    if (template !== "node") throw new ScaffoldError(`base is only for the node template; ${template} extends a fixed class`);
+    const known = api.getClass(options.base)?.name === options.base || [...data.csharp.values()].some((c) => c.outline.classes.some((k) => k.name === options.base));
+    if (!IDENT.test(options.base) || !known) throw new ScaffoldError(`${options.base} is not a Godot ${api.version} class or a C# class in this project`);
+  }
+  if (options.dimension !== undefined && options.dimension !== "2d" && options.dimension !== "3d") throw new ScaffoldError(`dimension is 2d or 3d`);
+  const csTemplate = template as CSharpTemplate;
+  const built = buildCSharp(csTemplate, options);
+  notes.push(...(built.notes ?? []));
+  if (!data.files.some((f) => /^res:\/\/[^/]+\.csproj$/i.test(f))) notes.push("the project has no .csproj yet: make one in Godot (Project > Tools > C# > Create C# solution), or start projects with godot_new op project and dotnet true");
+  notes.push("build the project before Godot can use the script (the editor's Build button, or godot_check, which runs dotnet build)");
+  const defined = new Set(data.map.inputActions.map((a) => a.name));
+  const inputActions = (built.actions ?? []).map(([name, event]) => ({ name, event, defined: defined.has(name) }));
+  const text = csharpTemplateText(csTemplate, className, options);
+  const uid = generateUid(new Set(data.uids.keys()));
+  const result: NewScriptResult = { file, template, text, uid, written: false, notes, extends: built.extends, className, inputActions };
+  if (options.write === false) return result;
+  const journal = new JournalWriter(root, "new script", `new ${template} C# script ${file}`);
   const full = fromResPath(root, file);
   journal.write(full, text);
   journal.write(`${full}.uid`, `${uid}\n`);
@@ -458,7 +714,7 @@ function formatFile(what: string, r: NewFileResult): string[] {
 
 export function formatNewScript(r: NewScriptResult): string {
   const out = formatFile("script", r);
-  out[0] += `: extends ${r.extends}${r.className ? `, class_name ${r.className}` : ""}`;
+  out[0] += r.file.endsWith(".cs") ? `: partial class ${r.className} : ${r.extends}` : `: extends ${r.extends}${r.className ? `, class_name ${r.className}` : ""}`;
   if (r.inputActions.length) {
     out.push(`input actions it reads: ${r.inputActions.map((a) => `${a.name}${a.defined ? "" : " (missing)"}`).join(", ")}`);
     for (const a of r.inputActions.filter((x) => !x.defined)) out.push(`  add: godot_project_edit input_add ${a.name} ${a.event}`);

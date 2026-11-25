@@ -27,6 +27,18 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - `godot_new`: a new project (2D, 3D or UI), a typed script from a template that passes the review, or a shader.
   - `godot_preset`: export presets listed, added, changed and removed. `godot_translations`: translation files
     registered, and a CSV checked against the `tr()` keys the code uses.
+- **C# projects.** C# scripts are read into the project map (classes, `[Export]`, `[Signal]`, methods, what they
+  load), and count in usages, dependencies and scene edits (a connection to a C# method is checked). New review rules:
+  `api/csharp-not-partial`, `api/csharp-class-name`, `api/csharp-signal-name` (errors) and `api/csharp-callback`
+  (warning). `godot_check` runs `dotnet build` when the project has a `.csproj` and `dotnet` is installed, and reports
+  the compiler's errors by file and line. `godot_new` has C# templates and `--dotnet` for a new project. Quiet on the
+  official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
+  built, and the templates were not compiled.
+- **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
+  the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
+  unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload
+  a scene it edited, scan, reimport, play, stop and take a screenshot. No scene editing and no code execution through
+  the bridge. The addon has not run in Godot where this was built; see `docs/editor-bridge.md` for the manual test.
 - `godot_merge` is checked on 494 real scenes, resources and project files: two different changes merge into a file
   that parses, with every reference resolving.
 - **`godot_merge` (and `godotwright merge`): scenes, resources and `project.godot` merged by meaning.** Git merges these

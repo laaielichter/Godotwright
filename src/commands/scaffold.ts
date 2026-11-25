@@ -4,7 +4,7 @@ import { ProjectNotFoundError } from "../scan/scan.js";
 import { ScaffoldError } from "../scaffold/error.js";
 import { EXPORT_PLATFORMS, exportPreset, formatExportPreset, type PresetArgs, type PresetValue } from "../scaffold/presets.js";
 import { formatNewProject, newProject, type ProjectKind, type RenderingMethod } from "../scaffold/project.js";
-import { SCRIPT_TEMPLATES, SHADER_KINDS, formatNewScript, formatNewShader, newScript, newShader, type ScriptTemplate, type ShaderKind } from "../scaffold/script.js";
+import { CSHARP_TEMPLATES, SCRIPT_TEMPLATES, SHADER_KINDS, formatNewScript, formatNewShader, newScript, newShader, type ScriptTemplate, type ShaderKind } from "../scaffold/script.js";
 import { formatTranslations, translations } from "../scaffold/translations.js";
 import { SettingsError } from "../settings/edit.js";
 import { collect, writeOut } from "./output.js";
@@ -44,17 +44,18 @@ export function newCommand(): Command {
       .option("--renderer <method>", "forward_plus, mobile or gl_compatibility", "forward_plus")
       .option("--merge-driver", "add the merge=godotwright lines to .gitattributes")
       .option("--mcp", "add a .mcp.json that starts the Godotwright MCP server")
+      .option("--dotnet", "a C# project: also write <Name>.csproj and <Name>.sln, and set the assembly name")
       .option("--force", "use a folder that is not empty; files that are there are never overwritten")
       .option("--json", "print the result as JSON")
-      .action((dir: string, o: { name?: string; kind: string; renderer: string; mergeDriver?: boolean; mcp?: boolean; force?: boolean; json?: boolean }, command: Command) =>
-        run(command, o.json, () => newProject(dir, { name: o.name, kind: o.kind as ProjectKind, renderer: o.renderer as RenderingMethod, mergeDriver: o.mergeDriver, mcp: o.mcp, force: o.force }), formatNewProject),
+      .action((dir: string, o: { name?: string; kind: string; renderer: string; mergeDriver?: boolean; mcp?: boolean; dotnet?: boolean; force?: boolean; json?: boolean }, command: Command) =>
+        run(command, o.json, () => newProject(dir, { name: o.name, kind: o.kind as ProjectKind, renderer: o.renderer as RenderingMethod, mergeDriver: o.mergeDriver, mcp: o.mcp, dotnet: o.dotnet, force: o.force }), formatNewProject),
       ),
   );
 
   cmd.addCommand(
     new Command("script")
-      .description(`a new GDScript from a template (${SCRIPT_TEMPLATES.join(", ")}): typed, and clean in godotwright review`)
-      .argument("<file>", "res:// path of the new script, e.g. res://player/player.gd")
+      .description(`a new GDScript from a template (${SCRIPT_TEMPLATES.join(", ")}): typed, and clean in godotwright review. A file that ends in .cs gets the C# form (${CSHARP_TEMPLATES.join(", ")}): a partial class named after the file`)
+      .argument("<file>", "res:// path of the new script, e.g. res://player/player.gd or res://player/Player.cs")
       .argument("[path]", "project directory (or any path inside it)", ".")
       .option("--template <name>", "the template", "node")
       .option("--class-name <name>", "give the script a class_name")

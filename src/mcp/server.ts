@@ -112,6 +112,7 @@ import { bisectProject, formatBisect } from "../bisect/bisect.js";
 import { diffProject, formatDiff } from "../diff/diff.js";
 import { formatMergeReport, mergeProject } from "../merge/project.js";
 import { formatFormatReport, formatProject } from "../format/project.js";
+import { addonState, editorCall, EditorBridgeError, EditorInstallError, EDITOR_OP_NAMES, formatAddonState, formatEditorOps, formatEditorResult, formatInstall, formatUninstall, installAddon, uninstallAddon } from "../editor/index.js";
 import { AnimationError, editAnimation, formatAnimationPlan, formatAnimationReport, readAnimations, type AnimationEditArgs } from "../animation/animation.js";
 import { complexityReport, formatComplexity } from "../metrics/complexity.js";
 import { formatSignals, formatSignalsMermaid, signalFlow } from "../metrics/signals.js";
@@ -939,6 +940,36 @@ export function createServer(options: ServerOptions = {}): McpServer {
   );
 
   tool(
+    "godot_editor",
+    {
+      title: "See and drive the open Godot editor",
+      description:
+        `Talks to the Godot editor the user has open, through the optional Godotwright addon (127.0.0.1 only, a new token every start). Everything else in Godotwright works without it. op install copies the addon into the project and enables it (the user then restarts the editor or enables it under Project Settings > Plugins); op uninstall removes it; op addon says whether it is installed and running; op ops lists every op with its arguments. Reading: status (open scenes, which is current, unsaved changes, whether the game runs), selection, tree (the edited scene as the editor has it now, unsaved changes included), inspect (a node's stored properties), errors (errors and warnings the editor logged, Godot 4.5+; pass since to get only new ones), is_scanning. Acting: open_scene, select, edit_node, save_scene, save_all, reload_scene (after you changed a scene file, so the editor shows it; refuses unsaved editor changes unless discard: true), close_scene, filesystem_scan, reimport, play (main, current or a scene), stop, screenshot (editor, viewport_2d or viewport_3d; a PNG under .godot/godotwright/). It does not edit scenes: do that with godot_scene_edit and the other file tools, then reload_scene. Errors of the running game are not seen here: use godot_session or godot_play. Ops: ${EDITOR_OP_NAMES.join(", ")}.`,
+      inputSchema: {
+        path: pathParam,
+        op: z.string().describe("install, uninstall, addon, ops, or an editor op such as status, tree, errors, reload_scene, play, screenshot"),
+        args: z.record(z.string(), z.unknown()).optional().describe('arguments of the editor op, e.g. {"path": "res://main.tscn"} or {"since": 12}'),
+        timeout_seconds: z.number().min(1).max(120).optional().describe("how long to wait for the editor (default 10)"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ path, op, args, timeout_seconds }) => {
+      try {
+        const project = where(path);
+        if (op === "ops") return text(formatEditorOps());
+        if (op === "addon") return text(formatAddonState(addonState(project)));
+        if (op === "install") return text(formatInstall(installAddon(project)));
+        if (op === "uninstall") return text(formatUninstall(uninstallAddon(project)));
+        const out = await editorCall(project, op, args ?? {}, timeout_seconds ? { timeoutMs: timeout_seconds * 1000 } : {});
+        return text(formatEditorResult(op, out));
+      } catch (error) {
+        if (error instanceof EditorBridgeError || error instanceof EditorInstallError || error instanceof SettingsError || error instanceof ProjectNotFoundError) return failure(error.message);
+        throw error;
+      }
+    },
+  );
+
+  tool(
     "godot_tilemap",
     {
       title: "Read and edit TileMapLayer cells",
@@ -1023,7 +1054,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "New project, script or shader from a template",
       description:
-        "Starts things the way Godot 4.7 expects them. op project: a new project in an empty folder (project.godot, a main scene with a typed root and its script, an icon, .gitignore and .gitattributes; kind 2d, 3d or ui; renderer forward_plus, mobile or gl_compatibility). op script: a typed GDScript from a template that passes the review with no errors or warnings: node, character_2d, character_3d, area_trigger, state_machine, autoload, resource, ui_control, test_gut, test_gdunit4; the result names the input actions the script uses so you can add them with godot_project_edit. op shader: canvas_item, spatial, particles, sky or fog. Nothing that exists is overwritten. Scripts and shaders are written unless write is false; godot_undo takes them back.",
+        "Starts things the way Godot 4.7 expects them. op project: a new project in an empty folder (project.godot, a main scene with a typed root and its script, an icon, .gitignore and .gitattributes; kind 2d, 3d or ui; renderer forward_plus, mobile or gl_compatibility). `dotnet: true` makes it a C# project: it also writes <Name>.csproj (Godot.NET.Sdk, net8.0) and <Name>.sln as Godot generates them, and sets the assembly name. op script: a typed GDScript from a template that passes the review with no errors or warnings: node, character_2d, character_3d, area_trigger, state_machine, autoload, resource, ui_control, test_gut, test_gdunit4; the result names the input actions the script uses so you can add them with godot_project_edit. A file that ends in .cs gets the C# form instead (a partial class named after the file, with [Export] and [Signal] where they fit): node, character_2d, character_3d, area_trigger, autoload, resource, ui_control. op shader: canvas_item, spatial, particles, sky or fog. Nothing that exists is overwritten. Scripts and shaders are written unless write is false; godot_undo takes them back.",
       inputSchema: {
         path: pathParam,
         op: z.enum(["project", "script", "shader"]).describe("what to make"),
@@ -1033,9 +1064,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         renderer: z.enum(["forward_plus", "mobile", "gl_compatibility"]).optional().describe("project: the rendering method (default forward_plus)"),
         merge_driver: z.boolean().optional().describe("project: also set up .gitattributes for godot_merge"),
         mcp: z.boolean().optional().describe("project: also write a .mcp.json that starts Godotwright"),
-        file: z.string().optional().describe("script or shader: the res:// path of the new file"),
-        template: z.enum(SCRIPT_TEMPLATES).optional().describe("script: the template (default node)"),
-        class_name: z.string().optional().describe("script: a class_name for it"),
+        dotnet: z.boolean().optional().describe("project: a C# (.NET) project, with <Name>.csproj and <Name>.sln"),
+        file: z.string().optional().describe("script or shader: the res:// path of the new file (.gd, or .cs for a C# script)"),
+        template: z.enum(SCRIPT_TEMPLATES).optional().describe("script: the template (default node); for a .cs file: node, character_2d, character_3d, area_trigger, autoload, resource or ui_control"),
+        class_name: z.string().optional().describe("script: a class_name for it (a C# class always has the name of its file)"),
         base: z.string().optional().describe("script: the class it extends, when the template allows another"),
         shader: z.enum(SHADER_KINDS).optional().describe("shader: the shader type (default canvas_item)"),
         write: z.boolean().optional().describe("script or shader: false shows the file without writing it (default true)"),
@@ -1046,7 +1078,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       try {
         if (args.op === "project") {
           if (!args.dir) return failure("op project needs dir (the folder for the new project)");
-          return text(formatNewProject(newProject(isAbsolute(args.dir) ? args.dir : resolve(base, args.dir), { ...(args.name ? { name: args.name } : {}), ...(args.kind ? { kind: args.kind } : {}), ...(args.renderer ? { renderer: args.renderer } : {}), ...(args.merge_driver ? { mergeDriver: true } : {}), ...(args.mcp ? { mcp: true } : {}) })));
+          return text(formatNewProject(newProject(isAbsolute(args.dir) ? args.dir : resolve(base, args.dir), { ...(args.name ? { name: args.name } : {}), ...(args.kind ? { kind: args.kind } : {}), ...(args.renderer ? { renderer: args.renderer } : {}), ...(args.merge_driver ? { mergeDriver: true } : {}), ...(args.mcp ? { mcp: true } : {}), ...(args.dotnet ? { dotnet: true } : {}) })));
         }
         if (!args.file) return failure(`op ${args.op} needs file (the res:// path of the new file)`);
         const project = where(args.path);
@@ -1832,6 +1864,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         lines.push(
           `${plural(checked.errors, "error")}, ${plural(checked.warnings, "warning")} (Godot ${checked.godotVersion}, ${plural(checked.scripts, "script")}, ${plural(checked.scenes, "scene")}${checked.shaderFiles ? `, ${plural(checked.shaderFiles, "shader")}` : ""})`,
         );
+        if (checked.csharp) lines.push(`C#: ${checked.csharp.note}`);
         if (checked.shaders) lines.push(shaderSummary(checked.shaders));
         lines.push(...lessonHintsForMessages(checked.diagnostics.map((d) => d.message)));
         if (checked.output !== undefined)

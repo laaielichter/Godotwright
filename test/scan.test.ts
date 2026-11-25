@@ -250,7 +250,13 @@ describe("C# scripts", () => {
 
   it("lists and counts only the project's own, flagging a base's", () => {
     const map = scanProject(mod, { base: [game] });
-    expect(map.csharpScripts).toEqual([{ path: "res://Mine.cs" }, { path: "res://Util.cs", external: true }]);
+    expect(map.csharpScripts.map((s) => ({ path: s.path, className: s.className, partial: s.partial, ...(s.external ? { external: true } : {}) }))).toEqual([
+      { path: "res://Mine.cs", className: "Mine", partial: false },
+      { path: "res://Util.cs", className: "Util", partial: false, external: true },
+    ]);
+    expect(map.csharpScripts[0]).toMatchObject({ language: "csharp", signals: [], functions: [], exports: [], usedBy: [], lineCount: 2 });
+    // The brief lists the project's own C# scripts with their class.
+    expect(formatProjectMap(map)).toContain("C# scripts (1):\n  res://Mine.cs  class Mine\n");
     expect(formatProjectMap(map)).toMatch(/files: .*, 1 C# script\n/);
   });
 

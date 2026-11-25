@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, posix } from "node:path";
 import { closest } from "../api/api.js";
 import { matchesFilter, parsePresets } from "../export/export.js";
+import { maskCSharp } from "../godot/csharp.js";
 import { shaderIncludes } from "../godot/shader.js";
 import { fromResPath } from "../project/files.js";
 import { baseRoots, listedFiles, loadProject, type ProjectData, projectRootOf } from "../scan/scan.js";
@@ -172,7 +173,13 @@ export function buildGraph(path: string): DepsGraph {
         }
       }
     };
-    if (/\.cs$/i.test(file)) readText(dirs, file).split("\n").forEach((l, i) => literals(l.replace(/(^|[\s;{})])\/\/.*$/, "$1"), i + 1));
+    // C#: comments and inactive #if branches blanked, strings kept; a multi-line string counts on the line it starts.
+    const csharp = data.csharp.get(file);
+    if (csharp) {
+      maskCSharp(csharp.source)
+        .text.split("\n")
+        .forEach((l, i) => literals(l, i + 1));
+    } else if (/\.cs$/i.test(file)) readText(dirs, file).split("\n").forEach((l, i) => literals(l.replace(/(^|[\s;{})])\/\/.*$/, "$1"), i + 1));
     const outline = data.scripts.get(file);
     if (outline) {
       for (const ll of outline.logicalLines) {
