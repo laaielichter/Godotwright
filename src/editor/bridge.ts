@@ -52,7 +52,7 @@ export interface EditorOp {
   timeoutMs?: number;
 }
 
-/** Every op of the bridge. The addon has no op that runs code and none that edits a scene. */
+/** Every op of the bridge. The addon has no op that runs code; its scene edits are undoable editor actions. */
 export const EDITOR_OPS = {
   status: { args: "{}", what: "Godot version, project, open scenes (current, unsaved), whether the game runs, main screen", kind: "read" },
   open_scene: { args: "{path: res://x.tscn}", what: "open a scene, or switch to its tab", kind: "view" },
@@ -72,6 +72,10 @@ export const EDITOR_OPS = {
   reimport: { args: "{paths: [res://file, ...]}", what: "import files again that already have an .import file (blocks until done)", kind: "write", timeoutMs: 300_000 },
   is_scanning: { args: "{}", what: "whether the editor is scanning or importing", kind: "read" },
   errors: { args: "{since?: number, limit?: 1-500}", what: "errors and warnings of the editor process since sequence number `since` (Godot 4.5+); pass the returned `next` the next time", kind: "read" },
+  set_property: { args: '{path: node path, property: name, value: 3 | true | "Vector2(1, 2)" (Variant text, as in a .tscn)}', what: "set a property of a node in the open scene, as one undoable editor action (Ctrl+Z takes it back); the scene stays unsaved until save_scene", kind: "write" },
+  add_node: { args: '{parent?: node path, type?: Sprite2D, scene?: res://x.tscn, name?: text, properties?: {name: value}}', what: "add a node of a class, or an instance of a scene, to the open scene, as one undoable editor action", kind: "write" },
+  remove_node: { args: "{path: node path}", what: "remove a node (and its children) from the open scene, as one undoable editor action", kind: "write" },
+  rename_node: { args: "{path: node path, name: text}", what: "rename a node of the open scene, as one undoable editor action", kind: "write" },
 } as const satisfies Record<string, EditorOp>;
 
 export type EditorOpName = keyof typeof EDITOR_OPS;

@@ -136,6 +136,18 @@ export function formatEditorResult(op: string, result: unknown): string {
       lines = [`imported again: ${done.join(", ")}`];
       break;
     }
+    case "set_property":
+      lines = [`${nodeLine(r)}: ${str(r["property"])} ${str(r["before"])} -> ${str(r["after"])} (one undo step in the editor; the scene is unsaved until save_scene)`];
+      break;
+    case "add_node":
+      lines = [`added ${nodeLine(r)} (one undo step in the editor; the scene is unsaved until save_scene)`];
+      break;
+    case "remove_node":
+      lines = [`removed ${nodeLine(obj(r["removed"]))} (one undo step in the editor; the scene is unsaved until save_scene)`];
+      break;
+    case "rename_node":
+      lines = [`renamed ${str(r["before"])} to ${nodeLine(r)} (one undo step; node paths in code and other scenes are not changed: godot_rename does those in files)`];
+      break;
     default:
       lines = [JSON.stringify(result, null, 2)];
   }
