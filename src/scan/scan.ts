@@ -195,13 +195,28 @@ export function listedFiles(root: string, lists: string[] = []): Set<string> {
   return out;
 }
 
+/** Stops with "<path>: no such file or directory" for a path the user named that is not there. */
+export function assertPathExists(path: string): void {
+  if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
+}
+
+/**
+ * The project root of a path the user named. A path that does not exist is an error, never the project around it:
+ * walking up from a typo ends in the working directory's project, and a command that writes would change all of it.
+ */
+export function projectRootOf(path: string): string {
+  assertPathExists(path);
+  const root = findProjectRoot(path);
+  if (!root) throw new ProjectNotFoundError(path);
+  return root;
+}
+
 export function scanProject(path: string, options: LoadOptions = {}): ProjectMap {
   return loadProject(path, options).map;
 }
 
 export function loadProject(path: string, options: LoadOptions = {}): ProjectData {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
 
   const overrides = options.overrides ?? {};
   const warnings: Warning[] = [];

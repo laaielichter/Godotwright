@@ -2,8 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { lessonsForError, searchLessons } from "../lessons/search.js";
 import { playScene, PlayError, type PlayReport, type PlayTimings } from "../play/play.js";
-import { findProjectRoot } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 
 /**
  * Measures a scene the way a player feels it: frame times over many frames (percentiles, not an average), the frames
@@ -74,8 +73,7 @@ function baselinePath(root: string, scene: string): string {
 }
 
 export async function perfScene(path: string, options: PerfOptions = {}): Promise<PerfReport> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const frames = options.frames ?? 600;
   const warmup = options.warmup ?? 60;
   const budgetMs = options.budgetMs ?? 16.6;

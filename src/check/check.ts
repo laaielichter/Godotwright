@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseProjectSettings } from "../godot/project-settings.js";
-import { findProjectRoot, withoutSubResource } from "../project/files.js";
-import { ProjectNotFoundError, scanProject } from "../scan/scan.js";
+import { withoutSubResource } from "../project/files.js";
+import { scanProject, projectRootOf } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { asCheckDiagnostic, checkShaders, ShaderCheckError } from "../shaders/shaders.js";
 import { checkerSource, excludePath } from "./checker-script.js";
@@ -98,8 +98,7 @@ const CHECKER_DIR = ".godot/godotwright/check";
 const CHECKER_RES = `res://${CHECKER_DIR}/check.gd`;
 
 export async function checkProject(path: string, options: CheckOptions = {}): Promise<CheckResult> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const bin = findGodot(options.godot);
   const version = await godotVersion(bin);
   const timeoutMs = options.timeoutMs ?? 10 * 60_000;

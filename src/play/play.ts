@@ -7,8 +7,8 @@ import { parseGodotLog, type Diagnostic } from "../check/log.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { parseResourceText } from "../godot/scene.js";
 import { isObject, parseVariant } from "../godot/variant.js";
-import { findProjectRoot, fromResPath } from "../project/files.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { fromResPath } from "../project/files.js";
+import { projectRootOf } from "../scan/scan.js";
 import { screen } from "../screenshot/screenshot.js";
 import { inputEventText } from "../settings/edit.js";
 
@@ -542,8 +542,7 @@ func _joy_axis(axis: int, value: float, down: bool) -> void:
  * and samples the properties you name, so an agent can see what the game does without a screen.
  */
 export async function playScene(path: string, options: PlayOptions = {}): Promise<PlayReport> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const settingsText = existsSync(join(root, "project.godot")) ? readFileSync(join(root, "project.godot"), "utf8") : "";
   const settings = parseProjectSettings(settingsText);
   const scene = options.scene ? (options.scene.startsWith("res://") ? options.scene : `res://${options.scene.replace(/^\/+/, "")}`) : settings.mainScene;

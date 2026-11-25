@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import { applyLearningUndo, saveLearning, type LearningUndo } from "../learn/store.js";
-import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { fromResPath, toResPath } from "../project/files.js";
 import { localDataDir } from "../project/local-dir.js";
 import { assertWritable } from "../project/protect.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 
 /**
  * Every file a Godotwright write touches is kept as it was before, one entry per call, in .godot/godotwright/journal/,
@@ -227,8 +227,7 @@ export class JournalWriter {
 }
 
 export function readJournal(path: string): { root: string; entries: JournalEntry[] } {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const entries = entryIds(root).map(({ dir }) => JSON.parse(readFileSync(join(dir, "entry.json"), "utf8")) as JournalEntry);
   return { root, entries };
 }

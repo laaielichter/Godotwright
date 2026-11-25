@@ -5,8 +5,7 @@ import { logicalLines } from "../godot/gdscript.js";
 import { bundledLessons } from "../lessons/library.js";
 import { lessonsForError } from "../lessons/search.js";
 import { playScene, PlayError, type ExitLeaks, type LeakSnapshot, type PlayReport, type SnapshotGroup } from "../play/play.js";
-import { findProjectRoot } from "../project/files.js";
-import { loadProject, ProjectNotFoundError, type ProjectData } from "../scan/scan.js";
+import { loadProject, type ProjectData, projectRootOf } from "../scan/scan.js";
 
 /**
  * Finds leaks the way they hurt a long session: runs a scene headless in cycles (load it, run it, free it, again),
@@ -387,8 +386,7 @@ const LESSON_OBJECT = "performance/object-new-needs-free";
 const LESSON_RECORD = "performance/record-per-reload-grows-forever";
 
 export async function leakScene(path: string, options: LeakOptions = {}): Promise<LeakReport> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const cycles = options.cycles ?? 5;
   const cycleFrames = options.cycleFrames ?? 60;
   const warmupCycles = options.warmupCycles ?? 1;

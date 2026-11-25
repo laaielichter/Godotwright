@@ -1,7 +1,8 @@
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { Command, Option } from "commander";
 import { findProjectRoot, toResPath } from "../project/files.js";
+import { assertPathExists } from "../scan/scan.js";
 import { toSarif } from "../review/sarif.js";
 import { reviewAnnotations } from "../review/annotations.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
@@ -26,7 +27,9 @@ export function reviewCommand(): Command {
     .option("--sarif", "print the report as SARIF 2.1.0, for GitHub code scanning (findings inline on pull requests)")
     .option("--github", "print findings as GitHub Actions workflow annotations (no code-scanning permission needed)")
     .action((paths: string[], options: { detail: Detail; includeAddons?: boolean; base: string[]; baseFiles: string[]; onlyNew?: boolean; target?: string; from?: string; minScore?: number; json?: boolean; sarif?: boolean; github?: boolean }, command: Command) => {
-      const files = paths.filter((p) => existsSync(p) && statSync(p).isFile());
+      // A path that is not there is an error, not a silent "review the project around it".
+      paths.forEach(assertPathExists);
+      const files = paths.filter((p) => statSync(p).isFile());
       const path = paths.find((p) => !files.includes(p)) ?? (files[0] ? dirname(resolve(files[0])) : ".");
       const full = reviewLearning(path, { includeAddons: options.includeAddons, base: options.base, baseFiles: options.baseFiles, target: options.target, from: options.from });
       // Named files narrow the findings shown, not the review: scores and counts stay for the whole project.

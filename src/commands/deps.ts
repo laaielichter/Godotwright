@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
+import { DepsFileError, depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycles, unusedFiles, whyUsed } from "../deps/deps.js";
 import { ProjectNotFoundError } from "../scan/scan.js";
 import { writeOut } from "./output.js";
 
@@ -12,7 +12,7 @@ export function depsCommand(): Command {
       writeOut(c, body());
       if (failed) process.exitCode = 1;
     } catch (error) {
-      if (!(error instanceof ProjectNotFoundError)) throw error;
+      if (!(error instanceof ProjectNotFoundError) && !(error instanceof DepsFileError)) throw error;
       process.stderr.write(`${error.message}\n`);
       process.exitCode = 1;
     }

@@ -6,11 +6,11 @@ import { bundledLearning } from "../learn/bundled.js";
 import { currentLearning } from "../learn/learn.js";
 import { emptyLearning } from "../learn/store.js";
 import { lessonsForError, lessonsForRule, searchLessons, type LessonHit } from "../lessons/search.js";
-import { findProjectRoot, toResPath } from "../project/files.js";
+import { toResPath } from "../project/files.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import { RULES, type Finding } from "../review/rules.js";
 import { plural } from "../scan/format.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 
 /**
  * One call that answers "what is wrong here, and in which order do I fix it": the review, Godot itself when it is
@@ -72,8 +72,7 @@ function place(file: string, line?: number): string {
 }
 
 export async function doctorProject(path: string, options: DoctorOptions = {}): Promise<DoctorReport> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const learning = currentLearning();
   const shared = bundledLearning();
   const focus = options.files?.map((f) => (f.startsWith("res://") ? f : toResPath(root, f)));

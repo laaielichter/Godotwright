@@ -1,9 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { logicalLines } from "../godot/gdscript.js";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { tokenize } from "../review/tokens.js";
-import { loadProject, ProjectNotFoundError, type LoadOptions } from "../scan/scan.js";
+import { loadProject, type LoadOptions } from "../scan/scan.js";
 import { withoutSubResource } from "../project/files.js";
 
 /** What kind of place a name turns up in. */
@@ -57,7 +57,6 @@ const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * A `res://` path or `uid://` finds every file that refers to that resource.
  */
 export function findUsages(path: string, name: string, options: UsageOptions = {}): UsageReport {
-  if (!existsSync(path)) throw Object.assign(new ProjectNotFoundError(path), { message: `${path}: no such file or directory` });
   const data = loadProject(path, options);
   const wanted = name.trim();
   const inScope = (file: string): boolean => !data.external.has(withoutSubResource(file)) && (options.includeAddons || !file.startsWith("res://addons/"));

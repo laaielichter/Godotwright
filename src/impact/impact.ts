@@ -1,8 +1,7 @@
 import { loadScenarios } from "../ci/scenario.js";
 import { buildGraph, type EdgeKind } from "../deps/deps.js";
-import { findProjectRoot } from "../project/files.js";
 import { changedFiles, GitError, inGit } from "../project/git.js";
-import { loadProject, ProjectNotFoundError, type LoadOptions } from "../scan/scan.js";
+import { loadProject, type LoadOptions, projectRootOf } from "../scan/scan.js";
 
 /**
  * What a change reaches. An agent that edits a script tends to check that script and stop; the scene three levels
@@ -62,8 +61,7 @@ const toRes = (file: string) => (file.startsWith("res://") ? file : `res://${fil
 const GRAPHED = /\.(tscn|tres|gd|cs|gdshader|gdshaderinc|json|cfg|csv|txt)$/i;
 
 export function impactOf(path: string, options: ImpactOptions = {}): ImpactReport {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   let source = "the files given";
   let changed = (options.files ?? []).map(toRes);
   if (changed.length === 0) {

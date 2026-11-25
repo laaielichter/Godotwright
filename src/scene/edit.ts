@@ -5,10 +5,10 @@ import { GodotApi, closest } from "../api/api.js";
 import { blocksOf, contentEnd, propSpan, type Block, type Splice } from "../godot/blocks.js";
 import { parseResourceText, type SceneNode } from "../godot/scene.js";
 import { typedValue } from "../godot/typed-value.js";
-import { findProjectRoot, fromResPath, toResPath } from "../project/files.js";
+import { fromResPath, toResPath } from "../project/files.js";
 import { reviewProject } from "../review/review.js";
 import { lockedInstances } from "../review/checks/integrity.js";
-import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
+import { loadProject, projectRootOf } from "../scan/scan.js";
 import { findUsages } from "../usages/usages.js";
 import { uidOf } from "./uid.js";
 
@@ -84,8 +84,7 @@ export function resourceType(root: string, path: string, fallback?: string): str
  */
 export function editScene(scenePath: string, edit: SceneEdit, options: { write?: boolean; project?: string } = {}): ScenePlan {
   const projectStart = options.project ?? (scenePath.startsWith("res://") ? process.cwd() : dirname(resolve(scenePath)));
-  const root = findProjectRoot(projectStart);
-  if (!root) throw new ProjectNotFoundError(projectStart);
+  const root = projectRootOf(projectStart);
   const full = scenePath.startsWith("res://") ? fromResPath(root, scenePath) : isAbsolute(scenePath) ? scenePath : resolve(scenePath);
   if (!existsSync(full)) throw new SceneError(`${scenePath} does not exist`);
   if (!full.endsWith(".tscn")) throw new SceneError(`${scenePath} is not a text scene (.tscn)`);

@@ -29,6 +29,7 @@ describe("MCP server (cheap profile)", () => {
     expect(tools.map((t) => t.name).sort()).toEqual([
       "godot_api",
       "godot_api_search",
+      "godot_bisect",
       "godot_check",
       "godot_checklist",
       "godot_code",
@@ -46,6 +47,7 @@ describe("MCP server (cheap profile)", () => {
       "godot_leaks",
       "godot_lesson_add",
       "godot_lessons",
+      "godot_merge",
       "godot_migrate",
       "godot_model_brief",
       "godot_model_build",
@@ -302,7 +304,7 @@ describe("MCP server (cheap profile)", () => {
       arguments: { path: "/no/such/project" },
     })) as Result;
     expect(r.isError).toBe(true);
-    expect(textOf(r)).toContain("No project.godot found");
+    expect(textOf(r)).toBe("/no/such/project: no such file or directory");
   });
 });
 

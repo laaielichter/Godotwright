@@ -3,8 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseResourceFile } from "../godot/resource-file.js";
 import { asString, type Variant } from "../godot/variant.js";
-import { findProjectRoot } from "../project/files.js";
-import { loadProject, ProjectNotFoundError } from "../scan/scan.js";
+import { loadProject, projectRootOf } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 
 /**
@@ -175,8 +174,7 @@ function references(root: string): Reference[] {
 }
 
 export function checkExport(path: string, options: { preset?: string } = {}): ExportCheck {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const file = join(root, "export_presets.cfg");
   const notes: string[] = [];
   let presetsText = "";

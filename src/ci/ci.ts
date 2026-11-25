@@ -1,12 +1,11 @@
 import { checkProject, type CheckOptions, type CheckResult } from "../check/check.js";
 import { kb } from "../export/contents.js";
 import { runExport, type ExportRun } from "../export/run.js";
-import { findProjectRoot } from "../project/files.js";
 import { formatFinding } from "../review/format.js";
 import { ciAnnotations } from "../review/annotations.js";
 import { reviewProject, type ReviewReport } from "../review/review.js";
 import { plural } from "../scan/format.js";
-import { ProjectNotFoundError } from "../scan/scan.js";
+import { projectRootOf } from "../scan/scan.js";
 import { DIFF_DIR, formatBaseline, loadBaselines, type BaselineResult } from "../screenshot/baseline.js";
 import { ScreenshotError, takeScreenshot } from "../screenshot/screenshot.js";
 import { detectFramework, runTests, testsPassed, type TestReport } from "../test/run.js";
@@ -162,8 +161,7 @@ function exportStep(r: ExportRun, max: number): CiStep {
  * A step that has nothing to run (no test framework, no scenario files) is skipped and says why.
  */
 export async function runCi(path: string, options: CiOptions = {}): Promise<CiReport> {
-  const root = findProjectRoot(path);
-  if (!root) throw new ProjectNotFoundError(path);
+  const root = projectRootOf(path);
   const deps = { ...REAL, ...options.deps };
   const max = options.maxDetails ?? 10;
   const steps: CiStep[] = [];

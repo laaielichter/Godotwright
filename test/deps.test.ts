@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { depsOf, formatCycles, formatUnused, sceneCycles, unusedFiles, whyUsed } from "../src/deps/deps.js";
-import { makeProject } from "./helpers.js";
+import { describe, expect, it, vi } from "vitest";
+import { DepsFileError, depsOf, formatCycles, formatUnused, sceneCycles, unusedFiles, whyUsed } from "../src/deps/deps.js";
+import { makeProject, runCli } from "./helpers.js";
 
 const scene = (name: string, ext: string[] = [], body = "") =>
   `[gd_scene load_steps=${ext.length + 1} format=3]\n\n${ext.map((p, i) => `[ext_resource type="${p.endsWith(".gd") ? "Script" : "PackedScene"}" path="${p}" id="${i + 1}"]\n`).join("")}\n[node name="${name}" type="Node"]\n${body}`;
@@ -62,6 +62,36 @@ describe("the project as a graph of files", () => {
     const d = depsOf(game(), "res://player/player.tscn");
     expect(d.files.map((f) => f.file).sort()).toEqual(["res://fx/boom.tscn", "res://player/player.gd"]);
     expect(d.missing).toEqual([{ from: "res://player/player.gd", to: "res://fx/gone.tscn", line: 4 }]);
+  });
+
+  it("stops for a file that is not in the project, instead of calling it unused or empty (#213)", async () => {
+    const root = game();
+    expect(() => depsOf(root, "res://player/plaeyr.tscn")).toThrow(DepsFileError);
+    expect(() => depsOf(root, "res://player/plaeyr.tscn")).toThrow("res://player/plaeyr.tscn does not exist in the project; did you mean res://player/player.tscn?");
+    expect(() => whyUsed(root, "res://nothing/like/it.xyz")).toThrow(/^res:\/\/nothing\/like\/it\.xyz does not exist in the project$/);
+    const printed: string[] = [];
+    const written = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      printed.push(String(chunk));
+      return true;
+    });
+    try {
+      for (const op of ["of", "why"]) {
+        const typo = await runCli(["deps", "--path", root, op, "res://mian.gd"]);
+        expect(typo.exitCode).toBe(1);
+        expect(typo.output).toBe("");
+      }
+    } finally {
+      written.mockRestore();
+    }
+    expect(printed).toEqual(Array(2).fill("res://mian.gd does not exist in the project; did you mean res://main.gd?\n"));
+    // A file that exists still gets its answer with exit code 0, used or not.
+    const unused = await runCli(["deps", "--path", root, "why", "res://stray.gd"]);
+    expect(unused.output).toMatch(/^res:\/\/stray\.gd looks unused:/);
+    expect(unused.exitCode).toBe(0);
+    const of = await runCli(["deps", "--path", root, "of", "res://fx/boom.tscn"]);
+    expect(of.output).toMatch(/^res:\/\/fx\/boom\.tscn loads 0 files with it/);
+    expect(of.exitCode).toBe(0);
+    process.exitCode = undefined;
   });
 
   it("finds scenes that load each other, which Godot cannot load", () => {
