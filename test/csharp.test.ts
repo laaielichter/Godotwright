@@ -682,7 +682,7 @@ describe("C# build diagnostics", () => {
     const r = await buildCSharp(root, { dotnet: failing.bin, configuration: "ExportDebug" });
     expect(r).toMatchObject({ status: "failed", target: "CsDemo.sln", restored: true, errors: 5, warnings: 3, exitCode: 1 });
     expect(r.note).toBe("dotnet build CsDemo.sln: 5 errors, 3 warnings (NuGet packages were restored first: there was no project.assets.json)");
-    expect(JSON.parse(readFileSync(join(failing.dir, "calls.log"), "utf8").trim())).toEqual(["build", "CsDemo.sln", "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "--no-incremental", "-c", "ExportDebug"]);
+    expect(JSON.parse(readFileSync(join(failing.dir, "calls.log"), "utf8").trim())).toEqual(["build", "CsDemo.sln", "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "--no-incremental", "--configuration", "ExportDebug"]);
     // Restored before: no restore, so no network.
     mkdirSync(join(root, "obj"));
     writeFileSync(join(root, "obj", "project.assets.json"), "{}");

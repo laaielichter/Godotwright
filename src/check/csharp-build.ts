@@ -180,7 +180,7 @@ export async function buildCSharp(project: string, options: CSharpBuildOptions =
   // Restored before: build with what is there, so a check never waits on (or fails for) the network.
   const assets = isRestored(root, found.csproj);
   // --no-incremental: a build that is up to date skips the compiler, and with it every warning it gave last time.
-  const args = ["build", target, "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "--no-incremental", ...(options.configuration ? ["-c", options.configuration] : []), ...(assets ? ["--no-restore"] : [])];
+  const args = ["build", target, "--nologo", "-v", "q", "-consoleloggerparameters:NoSummary", "--no-incremental", ...(options.configuration ? ["--configuration", options.configuration] : []), ...(assets ? ["--no-restore"] : [])];
   const timeoutMs = options.timeoutMs ?? 5 * 60_000;
   const run = await runGodot(dotnet, args, { cwd: root, timeoutMs, env: DOTNET_ENV });
   const log = `${run.stdout}\n${run.stderr}`;
