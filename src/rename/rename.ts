@@ -32,6 +32,18 @@ export interface RenamePlan {
   journal?: number;
   /** Review errors before and after, when written. */
   review?: { before: number; after: number };
+  /** For a C# symbol: what was renamed, and what the language server and the compiler said. */
+  csharp?: {
+    kind: "class" | "method" | "property" | "signal";
+    /** The declaring class and its res:// file. */
+    className: string;
+    file: string;
+    /** Names Godot's source generators make that followed (SignalName.X, EmitSignalX, the signal's event). */
+    generated: number;
+    /** Compile errors the rename would leave, by the language server; a write is refused while there are any. */
+    problems: string[];
+  };
+  notes?: string[];
 }
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -62,14 +74,14 @@ const swapSegments = (path: string, from: string, to: string): string =>
     .join("/");
 
 /** Replaces the name where it is code (not in strings or comments) on one GDScript line. */
-function replaceInCode(line: string, from: string, to: string): string {
+export function replaceInCode(line: string, from: string, to: string): string {
   const mask = codeMask(line, {});
   const re = new RegExp(`(?<![\\w$%])${esc(from)}(?!\\w)`, "g");
   return line.replace(re, (m: string, offset: number) => (mask[offset] ? to : m));
 }
 
 /** Replaces the name inside string literals where Godot looks it up: "name", &"name", and as a segment of a node path. */
-function replaceInStrings(line: string, from: string, to: string): string {
+export function replaceInStrings(line: string, from: string, to: string): string {
   return line.replace(/(&?)(["'])([^"'\n]*)\2/g, (m: string, amp: string, q: string, body: string) =>
     body.split("/").includes(from) ? `${amp}${q}${swapSegments(body, from, to)}${q}` : m,
   );
@@ -117,6 +129,13 @@ function renamePathsThrough(lines: string[], from: string, to: string): void {
  */
 export function renameInProject(path: string, from: string, to: string, options: { write?: boolean } = {}): RenamePlan {
   const root = projectRootOf(path);
+  const { plan, newText } = planRename(root, from, to);
+  if (!options.write) return plan;
+  return applyRename(root, plan, newText);
+}
+
+/** The plan of a rename and the new text of every file it changes (by absolute path); nothing is written. */
+export function planRename(root: string, from: string, to: string): { plan: RenamePlan; newText: Map<string, string> } {
   const isFile = from.startsWith("res://");
   if (isFile !== to.startsWith("res://")) throw new RenameError("rename a res:// path to another res:// path, or a name to another name");
   if (!isFile && (!IDENT.test(from) || !IDENT.test(to))) throw new RenameError(`"${from}" and "${to}" must both be plain names (letters, digits and _)`);
@@ -128,6 +147,9 @@ export function renameInProject(path: string, from: string, to: string, options:
     if (existsSync(fromResPath(root, to))) throw new RenameError(`${to} already exists`);
   } else {
     if (report.usages.length === 0) throw new RenameError(`"${from}" is not used anywhere in the project (see godotwright usages)`);
+    // A C# symbol is renamed by the C# language server (renameAnywhere in csharp.ts), never by replacing text.
+    const declared = report.usages.find((u) => u.kind === "definition" && /\.cs$/i.test(u.file));
+    if (declared) throw new RenameError(`"${from}" is declared in C# (${declared.file}:${declared.line}); a C# symbol is renamed through the C# language server, not as text`);
     const reserved = reservedName(to, report.usages);
     if (reserved) throw new RenameError(reserved);
     const taken = findUsages(root, to).usages.filter((u) => u.kind === "definition" || u.kind === "autoload" || u.kind === "input action");
@@ -154,9 +176,12 @@ export function renameInProject(path: string, from: string, to: string, options:
     const lines = [...original];
     const isScene = /\.(tscn|tres)$/.test(full);
     const isSettings = file === "res://project.godot";
+    const isCSharp = /\.cs$/i.test(file);
     for (const u of uses) {
       const before = lines[u.line - 1];
-      if (before === undefined) {
+      // In C# only strings Godot looks up (an input action, a group, a node path) are renamed here; code is the
+      // language server's.
+      if (before === undefined || (isCSharp && !isFile && u.kind !== "string" && u.kind !== "node path")) {
         skipped.push(u);
         continue;
       }
@@ -164,7 +189,7 @@ export function renameInProject(path: string, from: string, to: string, options:
       if (isFile) after = before.split(from).join(to);
       else if (isScene) after = replaceInScene(before, u, from, to);
       else if (isSettings) after = before.replace(new RegExp(`^(\\s*)${esc(from)}(\\s*=)`), `$1${to}$2`);
-      else if (u.kind === "string") after = replaceInStrings(before, from, to);
+      else if (u.kind === "string" || isCSharp) after = replaceInStrings(before, from, to);
       else if (u.kind === "node path") after = replaceInNodePaths(replaceInStrings(before, from, to), from, to);
       else after = replaceInNodePaths(replaceInStrings(replaceInCode(before, from, to), from, to), from, to);
       if (after === before) skipped.push(u);
@@ -181,9 +206,12 @@ export function renameInProject(path: string, from: string, to: string, options:
   const moves: { from: string; to: string }[] = [];
   if (isFile) for (const ext of ["", ".uid", ".import"]) if (existsSync(fromResPath(root, from) + ext)) moves.push({ from: from + ext, to: to + ext });
 
-  const plan: RenamePlan = { from, to, kind: isFile ? "file" : "symbol", edits, moves, skipped, written: false };
-  if (!options.write) return plan;
+  return { plan: { from, to, kind: isFile ? "file" : "symbol", edits, moves, skipped, written: false }, newText };
+}
 
+/** Writes a planned rename through the journal: every file or none (godot_undo reverts it), with the review errors before and after. */
+export function applyRename(root: string, plan: RenamePlan, newText: Map<string, string>): RenamePlan {
+  const { from, to, moves } = plan;
   const errors = () => reviewProject(root).categories.reduce((n, c) => n + c.errors, 0);
   const before = errors();
   const journal = new JournalWriter(root, "rename", `${from} -> ${to}`);
@@ -193,7 +221,7 @@ export function renameInProject(path: string, from: string, to: string, options:
   const imported = moves.find((m) => m.to.endsWith(".import"));
   if (imported) {
     const f = fromResPath(root, imported.to);
-    journal.write(f, readFileSync(f, "utf8").split(from).join(to));
+    journal.write(f, readFileSync(f, "utf8").split(imported.from.replace(/\.import$/, "")).join(imported.to.replace(/\.import$/, "")));
   }
   const id = journal.commit();
   return { ...plan, written: true, ...(id ? { journal: id } : {}), review: { before, after: errors() } };
@@ -217,6 +245,12 @@ export function formatRename(plan: RenamePlan): string {
     out.push(`  ${String(e.line).padStart(4)}  - ${e.before}`, `        + ${e.after}`);
   }
   for (const s of plan.skipped) out.push(`  CHECK BY HAND ${s.file}:${s.line}  ${s.kind}  ${s.text}`);
+  if (plan.csharp) {
+    out.push(`C# ${plan.csharp.kind} of ${plan.csharp.className} (${plan.csharp.file}): the C# code was renamed by the language server${plan.csharp.generated ? `, and ${plan.csharp.generated} use${plan.csharp.generated === 1 ? "" : "s"} of the names Godot generates for it followed` : ""}`);
+    for (const p of plan.csharp.problems) out.push(`  WOULD NOT COMPILE ${p}`);
+    if (plan.csharp.problems.length && !plan.written) out.push("  the rename is refused while the compiler reports these: nothing would be written");
+  }
+  for (const n of plan.notes ?? []) out.push(`note: ${n}`);
   if (plan.review) out.push(`review errors: ${plan.review.before} before, ${plan.review.after} after${plan.review.after > plan.review.before ? "  <- the rename broke something: run godotwright review" : ""}`);
   return `${out.join("\n")}\n`;
 }

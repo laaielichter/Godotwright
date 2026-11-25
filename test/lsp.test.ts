@@ -306,7 +306,7 @@ describe("godot_code against a fake language server", () => {
     await expect(codeIntel(root, { op: "hover", file: "res://main.gd", line: 3, column: 80, pool })).rejects.toThrow("column 80 is outside line 3");
     await expect(codeIntel(root, { op: "diagnostics", file: "res://missing.gd", pool })).rejects.toThrow("does not exist; pass code");
     await expect(codeIntel(root, { op: "diagnostics", file: "/elsewhere/x.gd", pool })).rejects.toThrow("is not inside the project");
-    await expect(codeIntel(root, { op: "diagnostics", file: "res://project.godot", pool })).rejects.toThrow("is not a GDScript file");
+    await expect(codeIntel(root, { op: "diagnostics", file: "res://project.godot", pool })).rejects.toThrow("is not a GDScript (.gd) or C# (.cs) file");
     expect(starts).toEqual([]);
   });
 

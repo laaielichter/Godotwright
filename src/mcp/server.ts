@@ -35,8 +35,8 @@ import { findUsages, formatUsages } from "../usages/usages.js";
 import {
   RenameError,
   formatRename,
-  renameInProject,
 } from "../rename/rename.js";
+import { renameAnywhere } from "../rename/csharp.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import {
   currentLearning,
@@ -111,7 +111,7 @@ import { depsOf, formatCycles, formatDepsOf, formatUnused, formatWhy, sceneCycle
 import { bisectProject, formatBisect } from "../bisect/bisect.js";
 import { diffProject, formatDiff } from "../diff/diff.js";
 import { formatMergeReport, mergeProject } from "../merge/project.js";
-import { formatFormatReport, formatProject } from "../format/project.js";
+import { formatFormatReport, formatProjectAll } from "../format/project.js";
 import { addonState, editorCall, EditorBridgeError, EditorInstallError, EDITOR_OP_NAMES, formatAddonState, formatEditorOps, formatEditorResult, formatInstall, formatUninstall, installAddon, uninstallAddon } from "../editor/index.js";
 import { AnimationError, editAnimation, formatAnimationPlan, formatAnimationReport, readAnimations, type AnimationEditArgs } from "../animation/animation.js";
 import { complexityReport, formatComplexity } from "../metrics/complexity.js";
@@ -508,10 +508,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Rename everywhere",
       description:
-        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. `from` and `to` are both names or both res:// paths. Without `write` it changes nothing and returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after (an error result when there are more after). Refuses, with an error, when the new name is already taken. Call godot_usages first to see what it will touch. For a setting value, an input event or a node property, use godot_project_edit or godot_scene_edit instead.",
+        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. `from` and `to` are both names or both res:// paths. Without `write` it changes nothing and returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after (an error result when there are more after). Refuses, with an error, when the new name is already taken. Call godot_usages first to see what it will touch. For a setting value, an input event or a node property, use godot_project_edit or godot_scene_edit instead. A name declared in C# (a class, method, property, field or `[Signal]` delegate, with or without `EventHandler`) is renamed by the C# language server csharp-ls, never as text: the C# code first, then the names Godot generates for it (`SignalName.X`, `EmitSignalX`, `MethodName.X`, `PropertyName.X`), scene connections to the method or of the signal, the exported property stored in scenes and resources, GDScript that uses the member, and for a script class its file. Pass `file` when several C# classes declare the name. It is refused, with the reason, when csharp-ls is not installed (the answer names the install command) or when the compiler would report an error after the rename.",
       inputSchema: {
         from: z.string().describe("the current name, or a res:// path"),
         to: z.string().describe("the new name, or the new res:// path"),
+        file: z.string().optional().describe("for a C# symbol declared in more than one class: the .cs file that declares the one you mean (res:// path)"),
         write: z
           .boolean()
           .optional()
@@ -525,10 +526,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ from, to, write, path }) => {
+    async ({ from, to, write, path, file }) => {
       try {
-        const plan = renameInProject(where(path), from, to, {
+        const plan = await renameAnywhere(where(path), from, to, {
           write: write === true,
+          ...(file ? { file } : {}),
         });
         const body = formatRename(plan);
         return plan.review && plan.review.after > plan.review.before
@@ -923,12 +925,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_format",
     {
-      title: "Format GDScript, safely",
+      title: "Format GDScript and C#, safely",
       description:
-        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes.",
+        "Formats GDScript to the official style guide without changing what it means: tabs for indentation, no trailing spaces, one space around operators and after commas, none inside brackets, two blank lines around functions, one newline at the end. It keeps the lines as they are (nothing is wrapped, joined or reordered) and leaves strings, comments and node paths byte for byte. A guard compares the tokens before and after; when they differ, or the file is not valid GDScript (mixed indentation, conflict markers, an unclosed bracket), the file is skipped with the reason and never written. Default: list the files that would change; write: true writes them (godot_undo takes it back); diff: true shows the changes. C# files (.cs) are formatted by `dotnet format` with the project's .editorconfig, restricted to the requested files; it needs the .NET SDK (without it the C# files are skipped with that reason). The same promise holds: after formatting, the outline of each C# file (classes, members, signals, methods, calls, every string literal) must be the same as before and, when the project has a .csproj, it must still build; a file that fails either is put back and reported as skipped. A dry run of C# lists the files and how many lines would change (dotnet format --verify-no-changes); the checks and the diff come with write: true.",
       inputSchema: {
         path: pathParam,
-        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: every script, without addons)"),
+        files: z.array(z.string()).optional().describe("only these res:// files or folders (default: every .gd and .cs script, without addons)"),
         write: z.boolean().optional().describe("write the formatted files (default false: list what would change)"),
         diff: z.boolean().optional().describe("show the changes as a unified diff"),
         include_addons: z.boolean().optional().describe("also format res://addons/"),
@@ -936,7 +938,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ path, files, write, diff, include_addons }) =>
-      guard(() => text(formatFormatReport(formatProject(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20))),
+      guardAsync(async () => text(formatFormatReport(await formatProjectAll(where(path), { ...(files ? { files } : {}), ...(write ? { write: true } : {}), ...(diff ? { diff: true } : {}), ...(include_addons ? { includeAddons: true } : {}) }), profile.detail === "full" ? 60 : 20))),
   );
 
   tool(
@@ -1206,9 +1208,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_migrate",
     {
-      title: "Port Godot 3 scripts to Godot 4",
+      title: "Port Godot 3 scripts (GDScript, C#) to Godot 4",
       description:
-        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, network keywords to @rpc(...), setget to property syntax, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, moved members (OS.get_ticks_msec() to Time), shader renames (hint_albedo to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. Strings, comments and node paths are left alone. Without `write` it only reports; with `write: true` it rewrites the scripts. It lists what still needs a hand (complex setget, move_and_slide arguments, master/mastersync, unknown export hints). Scenes and project settings are not migrated (Godot's --convert-3to4 does those). `files` limits it to some scripts; `detail` brief shows up to 12 changes per file. Running it twice changes nothing more. Use it before fixing Godot 3 findings one by one, then run godot_review.",
+        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, network keywords to @rpc(...), setget to property syntax, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, moved members (OS.get_ticks_msec() to Time), shader renames (hint_albedo to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. Strings, comments and node paths are left alone. Without `write` it only reports; with `write: true` it rewrites the scripts. It lists what still needs a hand (complex setget, move_and_slide arguments, master/mastersync, unknown export hints). Scenes and project settings are not migrated (Godot's --convert-3to4 does those). `files` limits it to some scripts; `detail` brief shows up to 12 changes per file. Running it twice changes nothing more. Use it before fixing Godot 3 findings one by one, then run godot_review. Godot 3 C# is migrated too: script classes become partial, [Signal] delegates get EventHandler and nameof(Sig)/EmitSignal(\"Sig\") become SignalName.Sig, Connect(\"s\", target, nameof(M)) gets a Callable, Godot.Object becomes GodotObject, classes and members are renamed from the same table in their C# names, _Process(float) takes a double, struct fields get PascalCase, one-to-one moves of OS and Engine members are made, and the .csproj gets the Godot 4 SDK and net8.0; what cannot be decided from the text (MoveAndSlide arguments, [Master], RpcUnreliable, Variant in Godot's collections) is a TO DO with its line. Then run godot_check, which builds the C# code.",
       inputSchema: {
         path: pathParam,
         write: z
@@ -1886,16 +1888,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_code",
     {
-      title: "Ask Godot's GDScript language server",
+      title: "Ask the GDScript or C# language server",
       description:
-        "Engine-exact answers from Godot 4.7's own GDScript language server (kept warm for 10 minutes; the first call takes a few seconds). op `diagnostics`: errors and warnings at the project's warning levels, as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column). op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `completion`: what can follow there (members after a dot, node paths after $), up to `limit`. Pass `code` to analyse unsaved text as `file` without writing it. Needs Godot. Like opening the editor, Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset and a missing .uid file next to each script. A new class_name, a changed project.godot or a new asset restarts the server. Without Godot use godot_review; to load scenes too use godot_check.",
+        "Engine-exact answers from Godot 4.7's own GDScript language server (kept warm for 10 minutes; the first call takes a few seconds). op `diagnostics`: errors and warnings at the project's warning levels, as `res://x.gd:12:5: warning [UNUSED_VARIABLE] ...`, for `file` or every script. op `hover`: the type or signature at `line`/`column` (1-based; a tab is one column). op `definition`: where the name there is declared, as res://file:line, or that it is an engine symbol. op `references`: every place the symbol there is used (code only; godot_usages adds scenes and resources). op `symbols`: what `file` declares. op `completion`: what can follow there (members after a dot, node paths after $), up to `limit`. Pass `code` to analyse unsaved text as `file` without writing it. A `.cs` file is answered by the C# language server csharp-ls instead (the same ops; diagnostics carry the compiler's code, as `res://Player.cs:12:9: error [CS0103] ...`); it needs no Godot, but the user must have installed csharp-ls and the project must have been built or restored once: when it is missing the answer names the install command and nothing else is affected. A changed .csproj or .sln restarts it; changed .cs files are told to it. For .gd files: needs Godot. Like opening the editor, Godot imports the project: it updates .godot/ and adds a missing .import file next to each asset and a missing .uid file next to each script. A new class_name, a changed project.godot or a new asset restarts the server. Without Godot use godot_review; to load scenes too use godot_check.",
       inputSchema: {
         path: pathParam,
-        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition or completion"),
-        file: z.string().optional().describe("the .gd file: res:// path or a path (diagnostics without it: every script)"),
-        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, completion)"),
-        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, completion)"),
-        code: z.string().optional().describe("unsaved GDScript to analyse as `file` instead of the file on disk; nothing is written"),
+        op: z.enum(CODE_OPS).describe("diagnostics, hover, definition, references, symbols or completion"),
+        file: z.string().optional().describe("the .gd or .cs file: res:// path or a path (diagnostics without it: every GDScript)"),
+        line: z.number().int().min(1).optional().describe("1-based line (hover, definition, references, completion)"),
+        column: z.number().int().min(1).optional().describe("1-based column; a tab is one column (hover, definition, references, completion)"),
+        code: z.string().optional().describe("unsaved GDScript or C# to analyse as `file` instead of the file on disk; nothing is written"),
         limit: z.number().int().min(1).max(200).optional().describe("completion: most items shown (default 40)"),
       },
       // Not read-only: the headless editor imports the project and adds .import and .uid files next to its files, as
@@ -2859,6 +2861,14 @@ function isSymlink(path: string): boolean {
 function guard<T>(fn: () => T): T | ReturnType<typeof failure> {
   try {
     return fn();
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function guardAsync<T>(fn: () => Promise<T>): Promise<T | ReturnType<typeof failure>> {
+  try {
+    return await fn();
   } catch (error) {
     return failure(error instanceof Error ? error.message : String(error));
   }

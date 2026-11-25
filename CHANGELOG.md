@@ -32,8 +32,52 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   `api/csharp-not-partial`, `api/csharp-class-name`, `api/csharp-signal-name` (errors) and `api/csharp-callback`
   (warning). `godot_check` runs `dotnet build` when the project has a `.csproj` and `dotnet` is installed, and reports
   the compiler's errors by file and line. `godot_new` has C# templates and `--dotnet` for a new project. Quiet on the
-  official `mono/` demos and two public C# projects (about 650 files). No real `dotnet build` ran where this was
-  built, and the templates were not compiled.
+  official `mono/` demos and two public C# projects (about 650 files).
+  - The build is proven on a real one: a project from `godotwright new project --dotnet` with every C# template builds
+    with 0 errors and 0 warnings (dotnet 8.0.134, Godot.NET.Sdk 4.7.0 from NuGet, no Godot needed), and
+    `godotwright check` on it passes with Godot 4.7.2 and with its .NET build. The tests now hold the lines a real
+    `dotnet build` printed (a compile error, a warning, a warning as error, a broken `.csproj`, a missing package, an
+    SDK error); the parser read them all as it was. Three things were wrong and are fixed: the check restored NuGet
+    packages on every run (the Godot.NET.Sdk keeps `obj/` under `.godot/mono/temp/`, not next to the `.csproj`); a
+    second check of unchanged code reported no warnings, because an up-to-date build skips the compiler (it now
+    builds with `--no-incremental`); and the compiler's messages came in the machine's language (builds now run with
+    `DOTNET_CLI_UI_LANGUAGE=en`). `test/integration/csharp-dotnet.test.ts` builds a generated project for real and
+    is skipped without `dotnet`.
+  - **`godot_code` for C#.** A `.cs` file is answered by the C# language server
+    [csharp-ls](https://github.com/razzmatazz/csharp-language-server) (MIT, plain LSP over stdio, no editor): the
+    compiler's diagnostics (also for unsaved code), hover, definition, references, the symbols of a file and
+    completion. `references` and `symbols` are new for GDScript too. You install csharp-ls yourself
+    (`dotnet tool install --global csharp-ls`; with the .NET 8 SDK `--version 0.16.0`); without it the answer names
+    that command and everything else keeps working. One warm server per project with the same idle stop as the
+    GDScript one; C# files changed on disk are told to it, a changed `.csproj` or `.sln` starts it again. Tested
+    against the real csharp-ls 0.16.0 on a generated Godot.NET.Sdk 4.7.0 project (dotnet 8.0.134), where it knows
+    Godot's API and the names Godot's source generators make. Newer csharp-ls releases need .NET 9 or later and
+    were not run.
+  - **`godot_rename` inside C#.** A C# class, method, property, field or `[Signal]` is renamed by the language
+    server's own rename, never as text (without csharp-ls it refuses and names the install command). Then what the
+    server does not know follows: the names Godot's source generators make (`SignalName.X`, `EmitSignalX`,
+    `MethodName.X`, `PropertyName.X`; found by the compiler, which is asked about the renamed code), scene
+    connections to the method and of the signal, the exported property stored in scenes and resources (only where
+    the script is that class, one that inherits from it, or an instance of its scene), GDScript that uses the member,
+    and for a script class its file and `.uid`. The plan shows a compile error the rename would leave, and a write
+    is then refused. Same contract as before: shown first, written with `write`, all or nothing, undone with
+    `godot_undo`. Before this, `godot_rename` of a name declared in C# replaced text in the `.cs` files; it no longer
+    touches C# code that way. Tested with csharp-ls 0.16.0 and a real `dotnet build` after each rename.
+  - **`godot_format` for C#.** `.cs` files are formatted by `dotnet format` on the project, restricted to the
+    requested files, with the project's `.editorconfig`; `--check` uses `--verify-no-changes`. After formatting, the
+    outline of each file must be the same as before and the project must still build; a file that fails either is
+    put back and reported as skipped. Writes go through the journal. `new project --dotnet` now writes an
+    `.editorconfig` with tabs for `*.cs`, because `dotnet format` otherwise turns the tabs of Godot's templates into
+    spaces. Tested with the real `dotnet format` of dotnet 8.0.134 on a generated project.
+  - **`godot_migrate` for C#.** Godot 3 C# is ported where that is mechanical: script classes become `partial`,
+    `[Signal]` delegates get `EventHandler` (and `nameof(Hit)` becomes `SignalName.Hit`), `Connect` gets a
+    `Callable`, `Godot.Object` becomes `GodotObject`, classes, methods and properties are renamed from Godot's own
+    3-to-4 table in their C# names, `_Process(float)` takes a `double`, struct fields get PascalCase, one-to-one
+    moves of `OS` and `Engine` members are made, and the `.csproj` gets `Godot.NET.Sdk/4.7.0` and `net8.0`. What
+    cannot be decided from the text is a TO DO with its line. On the five official Godot 3 C# demos, built with a
+    real `dotnet build` after the migration: `dodge_the_creeps` and `pong` build; `multiplayer_pong` (5 errors),
+    `2.5d` (17) and `android_iap` (31) do not, and every one of those errors is in a file with TO DOs. The scenes of
+    those demos were not converted, so none was run.
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload

@@ -150,6 +150,8 @@ export function findGodot(explicit?: string, env: NodeJS.ProcessEnv = process.en
 
 export interface RunResult {
   code: number | null;
+  /** The signal that ended the process (e.g. "SIGKILL", "SIGABRT") when it did not exit by itself. */
+  signal?: string;
   stdout: string;
   stderr: string;
   timedOut: boolean;
@@ -234,6 +236,8 @@ export interface RunOptions {
   signal?: AbortSignal;
   /** Called with every complete line Godot prints. */
   onLine?: (line: string, stream: "stdout" | "stderr") => void;
+  /** Extra environment variables for the process, on top of this process's own. */
+  env?: Record<string, string>;
 }
 
 /**
@@ -290,13 +294,16 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
     // With a signal, Godot gets its own process group so a cancel stops what it started too. Without one (the CLI),
     // it stays in ours, so Ctrl+C in a terminal still reaches it.
     const group = signal !== undefined && process.platform !== "win32";
-    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group });
+    // Every option is written out, with no spread: the process is started directly, never through a shell.
+    const env = options.env ? { ...process.env, ...options.env } : process.env;
+    const child = spawn(bin, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], detached: group, env, shell: false });
     if (group) trackGroup(child);
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     let cancelled = false;
     let exitCode: number | null | undefined;
+    let exitSignal: string | undefined;
     let done = false;
     let timer: NodeJS.Timeout | undefined;
     let grace: NodeJS.Timeout | undefined;
@@ -343,7 +350,7 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       if (cancelled) report?.stop();
       else report?.flush();
       if (cancelled) reject(new CancelledError());
-      else resolve({ code, stdout, stderr, timedOut, ms: Date.now() - started });
+      else resolve({ code, ...(exitSignal ? { signal: exitSignal } : {}), stdout, stderr, timedOut, ms: Date.now() - started });
     };
     const lines = (stream: "stdout" | "stderr") => {
       let partial = "";
@@ -400,8 +407,9 @@ export function runGodot(bin: string, args: string[], options: RunOptions = {}):
       if (grace) clearTimeout(grace);
       reject(error);
     });
-    child.on("exit", (code) => {
+    child.on("exit", (code, killedBy) => {
       exitCode = code;
+      if (killedBy) exitSignal = killedBy;
       groups.delete(child);
       if (timedOut || cancelled) finishWhenGone(code);
     });

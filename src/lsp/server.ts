@@ -174,89 +174,34 @@ function mtime(file: string): number {
   }
 }
 
-/** One running language server for one project, with a single connection. Calls are run one at a time. */
-export class GodotLanguageServer {
+/** What a warm server keeps of the project to know when it is stale. */
+export interface ServerStamp {
+  /** Reads the project again; a reason when the server must be started again to see what changed. */
+  refresh(): string | undefined;
+}
+
+/**
+ * One running language server for one project, with a single connection. Calls are run one at a time. The lifecycle
+ * (the queue, idle time, stop) is the same for every server; `GodotLanguageServer.start` and `startCSharpServer`
+ * (csharp.ts) are the two ways to get one.
+ */
+export class LanguageServer {
   private queue: Promise<unknown> = Promise.resolve();
   private waiting = 0;
   lastUsed = Date.now();
   /** How long the start took, in ms. */
   startMs = 0;
 
-  private constructor(
+  constructor(
     readonly root: string,
     readonly rpc: RpcConnection,
     readonly child: ChildProcess | undefined,
     private readonly log: () => string,
-    /** The project as it was when Godot started (and scanned it). */
-    readonly stamp: ProjectStamp,
+    /** The project as it was when the server started (and scanned it). */
+    readonly stamp: ServerStamp,
+    /** The languageId of the documents it takes. */
+    readonly languageId: string = "gdscript",
   ) {}
-
-  static async start(options: StartOptions): Promise<GodotLanguageServer> {
-    const started = Date.now();
-    // Taken before Godot scans the project: a file added during the start counts as new.
-    const stamp = new ProjectStamp(options.root);
-    stamp.refresh();
-    const port = options.port ?? (await freePort());
-    let child: ChildProcess | undefined;
-    let output = "";
-    let exited: string | undefined;
-    if (options.godot) {
-      // The editor also serves the GDScript debug adapter, on 6006 unless told otherwise: a free port keeps 6006 for
-      // the editor the user opens (and for their debugger to attach to it, not to this hidden one).
-      let dap = await freePort();
-      while (dap === port) dap = await freePort();
-      // Before the spawn: a signal during the start (seconds, on a first import minutes) must stop this Godot too.
-      hookProcess();
-      child = spawn(options.godot, ["--editor", "--headless", "--path", options.root, "--lsp-port", String(port), "--dap-port", String(dap)], {
-        cwd: options.root,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      const spawned = child;
-      godots.add(spawned);
-      spawned.on("exit", () => godots.delete(spawned));
-      spawned.on("error", () => godots.delete(spawned));
-      const keep = (chunk: Buffer) => {
-        output = (output + chunk.toString("utf8")).slice(-8000);
-      };
-      child.stdout?.on("data", keep);
-      child.stderr?.on("data", keep);
-      child.on("error", (error) => (exited = `could not start Godot: ${error.message}`));
-      child.on("exit", (code, signal) => (exited ??= `Godot exited (${signal ?? `code ${code}`})`));
-      // A warm server must not keep this process alive (an MCP server ends when its client goes): the exit handler
-      // stops it.
-      child.unref();
-      for (const pipe of [child.stdout, child.stderr]) (pipe as unknown as { unref?: () => void } | null)?.unref?.();
-    }
-    const log = () => output;
-    const tail = () => {
-      const lines = output.replace(/\x1b\[[0-9;]*m/g, "").split(/\r?\n/).filter((l) => l.trim() && !/^\[\s*\d+% \]/.test(l));
-      return lines.length ? `\nlast output:\n${lines.slice(-8).join("\n")}` : "";
-    };
-    const deadline = started + (options.startTimeoutMs ?? 120_000);
-    let socket: Socket | undefined;
-    for (;;) {
-      if (exited) throw new LanguageServerError(`${exited} before its language server answered${tail()}`);
-      socket = await tryConnect(port);
-      if (socket) break;
-      if (Date.now() > deadline) {
-        child?.kill("SIGKILL");
-        throw new LanguageServerError(`the GDScript language server did not answer on port ${port} within ${Math.round((options.startTimeoutMs ?? 120_000) / 100) / 10} s${tail()}`);
-      }
-      await sleep(150);
-    }
-    socket.unref();
-    const rpc = new RpcConnection(socket, options.requestTimeoutMs ?? 30_000);
-    const server = new GodotLanguageServer(options.root, rpc, child, log, stamp);
-    try {
-      await rpc.request("initialize", { processId: process.pid, rootUri: uriOf(options.root), rootPath: options.root, capabilities: {} }, Math.max(10_000, deadline - Date.now()));
-      rpc.notify("initialized", {});
-    } catch (error) {
-      server.stop();
-      throw new LanguageServerError(`the language server on port ${port} did not initialize: ${error instanceof Error ? error.message : String(error)}${tail()}`);
-    }
-    server.startMs = Date.now() - started;
-    return server;
-  }
 
   get alive(): boolean {
     return !this.rpc.closed && (!this.child || (this.child.exitCode === null && this.child.signalCode === null));
@@ -305,7 +250,7 @@ export class GodotLanguageServer {
       `diagnostics for ${path}`,
     );
     try {
-      this.rpc.notify("textDocument/didOpen", { textDocument: { uri, languageId: "gdscript", version: 1, text } });
+      this.rpc.notify("textDocument/didOpen", { textDocument: { uri, languageId: this.languageId, version: 1, text } });
     } catch (error) {
       // The connection is gone (Godot died, or the server was stopped while this call waited its turn): nobody awaits
       // `wait` now, and an unhandled rejection would end the whole process (the MCP server with every tool).
@@ -313,6 +258,12 @@ export class GodotLanguageServer {
       throw error;
     }
     return wait;
+  }
+
+  /** Opens the text as the document at `path` without waiting for anything (for a server that is asked for its diagnostics). */
+  didOpen(path: string, text: string): void {
+    this.lastUsed = Date.now();
+    this.rpc.notify("textDocument/didOpen", { textDocument: { uri: uriOf(path), languageId: this.languageId, version: 1, text } });
   }
 
   close(path: string): void {
@@ -330,10 +281,76 @@ export class GodotLanguageServer {
   }
 }
 
+/** Godot's own GDScript language server: the headless editor, over TCP. */
+export class GodotLanguageServer extends LanguageServer {
+  static async start(options: StartOptions): Promise<GodotLanguageServer> {
+    const started = Date.now();
+    // Taken before Godot scans the project: a file added during the start counts as new.
+    const stamp = new ProjectStamp(options.root);
+    stamp.refresh();
+    const port = options.port ?? (await freePort());
+    let child: ChildProcess | undefined;
+    let output = "";
+    let exited: string | undefined;
+    if (options.godot) {
+      // The editor also serves the GDScript debug adapter, on 6006 unless told otherwise: a free port keeps 6006 for
+      // the editor the user opens (and for their debugger to attach to it, not to this hidden one).
+      let dap = await freePort();
+      while (dap === port) dap = await freePort();
+      // Tracked from its spawn: a signal during the start (seconds, on a first import minutes) must stop this Godot too.
+      child = spawn(options.godot, ["--editor", "--headless", "--path", options.root, "--lsp-port", String(port), "--dap-port", String(dap)], {
+        cwd: options.root,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      trackProcess(child);
+      const keep = (chunk: Buffer) => {
+        output = (output + chunk.toString("utf8")).slice(-8000);
+      };
+      child.stdout?.on("data", keep);
+      child.stderr?.on("data", keep);
+      child.on("error", (error) => (exited = `could not start Godot: ${error.message}`));
+      child.on("exit", (code, signal) => (exited ??= `Godot exited (${signal ?? `code ${code}`})`));
+      // A warm server must not keep this process alive (an MCP server ends when its client goes): the exit handler
+      // stops it.
+      child.unref();
+      for (const pipe of [child.stdout, child.stderr]) (pipe as unknown as { unref?: () => void } | null)?.unref?.();
+    }
+    const log = () => output;
+    const tail = () => {
+      const lines = output.replace(/\x1b\[[0-9;]*m/g, "").split(/\r?\n/).filter((l) => l.trim() && !/^\[\s*\d+% \]/.test(l));
+      return lines.length ? `\nlast output:\n${lines.slice(-8).join("\n")}` : "";
+    };
+    const deadline = started + (options.startTimeoutMs ?? 120_000);
+    let socket: Socket | undefined;
+    for (;;) {
+      if (exited) throw new LanguageServerError(`${exited} before its language server answered${tail()}`);
+      socket = await tryConnect(port);
+      if (socket) break;
+      if (Date.now() > deadline) {
+        child?.kill("SIGKILL");
+        throw new LanguageServerError(`the GDScript language server did not answer on port ${port} within ${Math.round((options.startTimeoutMs ?? 120_000) / 100) / 10} s${tail()}`);
+      }
+      await sleep(150);
+    }
+    socket.unref();
+    const rpc = new RpcConnection(socket, options.requestTimeoutMs ?? 30_000);
+    const server = new GodotLanguageServer(options.root, rpc, child, log, stamp);
+    try {
+      await rpc.request("initialize", { processId: process.pid, rootUri: uriOf(options.root), rootPath: options.root, capabilities: {} }, Math.max(10_000, deadline - Date.now()));
+      rpc.notify("initialized", {});
+    } catch (error) {
+      server.stop();
+      throw new LanguageServerError(`the language server on port ${port} did not initialize: ${error instanceof Error ? error.message : String(error)}${tail()}`);
+    }
+    server.startMs = Date.now() - started;
+    return server;
+  }
+}
+
 export interface PoolOptions {
   /** Stop a server unused this long (default 10 minutes). */
   idleMs?: number;
-  start?: (root: string, godot: string | undefined) => Promise<GodotLanguageServer>;
+  start?: (root: string, godot: string | undefined) => Promise<LanguageServer>;
   /** False when the owner stops the servers right after its call (the CLI), so nothing stays warm (default true). */
   keepWarm?: boolean;
 }
@@ -343,7 +360,15 @@ const pools = new Set<LanguageServerPool>();
 const godots = new Set<ChildProcess>();
 let hooked = false;
 
-/** Kills every Godot language server this process started (synchronous, for exit handlers). */
+/** Remembers a language server process (Godot, csharp-ls) so it never outlives this one. */
+export function trackProcess(child: ChildProcess): void {
+  hookProcess();
+  godots.add(child);
+  child.on("exit", () => godots.delete(child));
+  child.on("error", () => godots.delete(child));
+}
+
+/** Kills every language server this process started (synchronous, for exit handlers). */
 export function killGodots(): void {
   for (const child of godots) if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
 }
@@ -384,12 +409,12 @@ export interface ServerInfo {
  * project, and a restart lets the calls already queued on the old server finish first.
  */
 export class LanguageServerPool {
-  private readonly servers = new Map<string, Promise<GodotLanguageServer>>();
+  private readonly servers = new Map<string, Promise<LanguageServer>>();
   private readonly locks = new Map<string, Promise<unknown>>();
   private timer: NodeJS.Timeout | undefined;
   private readonly idleMs: number;
-  private readonly startServer: (root: string, godot: string | undefined) => Promise<GodotLanguageServer>;
-  private readonly live = new Set<GodotLanguageServer>();
+  private readonly startServer: (root: string, godot: string | undefined) => Promise<LanguageServer>;
+  private readonly live = new Set<LanguageServer>();
 
   /** Whether a server outlives the call that started it (false in the CLI). */
   readonly keepsWarm: boolean;
@@ -405,7 +430,7 @@ export class LanguageServerPool {
    * (`godot` is the binary, or undefined to find it), and started again when it died or the project changed in a way
    * a running server does not see.
    */
-  async run<T>(root: string, godot: string | undefined, fn: (server: GodotLanguageServer, info: ServerInfo) => Promise<T>, retried = false): Promise<T> {
+  async run<T>(root: string, godot: string | undefined, fn: (server: LanguageServer, info: ServerInfo) => Promise<T>, retried = false): Promise<T> {
     let job: Promise<T | typeof RETRY> | undefined;
     await this.locked(root, async () => {
       const { server, info } = await this.acquire(root, godot);
@@ -479,7 +504,7 @@ export class LanguageServerPool {
   }
 
   /** Only inside `locked(root)`. */
-  private async acquire(root: string, godot: string | undefined): Promise<{ server: GodotLanguageServer; info: ServerInfo }> {
+  private async acquire(root: string, godot: string | undefined): Promise<{ server: LanguageServer; info: ServerInfo }> {
     const existing = this.servers.get(root);
     let restarted: string | undefined;
     if (existing) {
@@ -500,7 +525,7 @@ export class LanguageServerPool {
     }
     const starting = this.startServer(root, godot);
     this.servers.set(root, starting);
-    let server: GodotLanguageServer;
+    let server: LanguageServer;
     try {
       server = await starting;
     } catch (error) {
@@ -512,7 +537,7 @@ export class LanguageServerPool {
     return { server, info: { fresh: true, ...(restarted ? { restarted } : {}) } };
   }
 
-  private drop(server: GodotLanguageServer): void {
+  private drop(server: LanguageServer): void {
     server.stop();
     this.live.delete(server);
   }

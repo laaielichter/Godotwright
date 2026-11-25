@@ -301,12 +301,24 @@ export function physicsRate(root: string): number {
 /** A step that exits badly must not pass as clean just because Godot printed no error for it. */
 export function unexplainedExit(name: string, result: RunResult, found: Diagnostic[]): Diagnostic | undefined {
   if (result.timedOut || result.code === 0 || cleanup(found).some((d) => d.severity === "error")) return undefined;
-  const how = result.code === null ? "was killed by a signal" : `exited with code ${result.code}`;
-  return { severity: "error", message: `${name} ${how}`, source: name };
+  if (result.code !== null) return { severity: "error", message: `${name} exited with code ${result.code}`, source: name };
+  return { severity: "error", message: `${name} was killed by ${result.signal ?? "a signal"}${killedWhy(result)}`, source: name };
+}
+
+/**
+ * Why a signal ended Godot, as far as its output tells: its own crash handler names the signal it caught (and then
+ * aborts, so the process ends with SIGABRT), and a SIGKILL with no word from Godot is the system or a person.
+ */
+function killedWhy(result: RunResult): string {
+  const crash = /^=+\r?\nhandle_crash: Program crashed with signal (\d+)/m.exec(result.stderr);
+  // What Godot printed before it crashed says more than the backtrace of addresses after it.
+  if (crash) return `: Godot crashed (signal ${crash[1]}); last output before the crash: ${tail(result.stderr.slice(0, crash.index))}`;
+  const last = `; last output: ${tail(result.stderr || result.stdout)}`;
+  return result.signal === "SIGKILL" ? ` (the system does this when memory runs out)${last}` : last;
 }
 
 function tail(text: string): string {
-  return text.trim().split(/\r?\n/).slice(-3).join(" | ").slice(0, 400) || "(none)";
+  return text.replace(/\x1b\[[0-9;]*m/g, "").trim().split(/\r?\n/).slice(-3).join(" | ").slice(0, 400) || "(none)";
 }
 
 const MENTIONED_PATH = /res:\/\/[^\s'"()]+[^\s'"().,:;]/g;

@@ -1,9 +1,16 @@
 import type { Socket } from "node:net";
+import type { Readable, Writable } from "node:stream";
 
 /**
  * JSON-RPC 2.0 over a byte stream with LSP framing (`Content-Length: N\r\n\r\n` and N bytes of JSON), as Godot's
- * GDScript language server speaks it over TCP.
+ * GDScript language server speaks it over TCP and csharp-ls over its stdin and stdout.
  */
+
+/** The two pipes of a language server that talks over stdio. */
+export interface RpcPipes {
+  input: Readable;
+  output: Writable;
+}
 
 export interface RpcMessage {
   jsonrpc: "2.0";
@@ -84,15 +91,28 @@ export class RpcConnection {
   private nextId = 1;
   private closedError: Error | undefined;
 
+  private readonly input: Readable;
+  private readonly output: Writable;
+  /**
+   * Answers a request the server sends (workspace/configuration, client/registerCapability): its return value is the
+   * result. Without it, and for what it returns undefined for, the answer is null.
+   */
+  onRequest: ((method: string, params: unknown) => unknown) | undefined;
+
   constructor(
-    private readonly socket: Socket,
+    stream: Socket | RpcPipes,
     private readonly defaultTimeoutMs = 30_000,
   ) {
-    socket.on("data", (chunk: Buffer) => {
+    const pipes = "input" in stream ? stream : { input: stream, output: stream };
+    this.input = pipes.input;
+    this.output = pipes.output;
+    this.input.on("data", (chunk: Buffer) => {
       for (const message of this.reader.push(chunk)) this.dispatch(message);
     });
-    socket.on("error", (error) => this.close(new Error(`language server connection failed: ${error.message}`)));
-    socket.on("close", () => this.close(new Error("the language server closed the connection")));
+    for (const end of new Set<Readable | Writable>([this.input, this.output])) {
+      end.on("error", (error) => this.close(new Error(`language server connection failed: ${error.message}`)));
+    }
+    this.input.on("close", () => this.close(new Error("the language server closed the connection")));
   }
 
   get closed(): boolean {
@@ -114,13 +134,13 @@ export class RpcConnection {
         reject(new RpcTimeoutError(method, timeoutMs));
       }, timeoutMs);
       this.pending.set(id, { method, resolve: resolve as (v: unknown) => void, reject, timer });
-      this.socket.write(encodeMessage({ jsonrpc: "2.0", id, method, params }));
+      this.output.write(encodeMessage({ jsonrpc: "2.0", id, method, params }));
     });
   }
 
   notify(method: string, params: unknown): void {
     if (this.closedError) throw this.closedError;
-    this.socket.write(encodeMessage({ jsonrpc: "2.0", method, params }));
+    this.output.write(encodeMessage({ jsonrpc: "2.0", method, params }));
   }
 
   /** Waits for the first notification `match` accepts, for at most `timeoutMs`. Register it before causing it. */
@@ -159,14 +179,21 @@ export class RpcConnection {
     }
     this.pending.clear();
     for (const w of [...this.closeWaiters]) w(error);
-    this.socket.destroy();
+    this.input.destroy();
+    this.output.destroy();
   }
 
   private dispatch(message: RpcMessage): void {
     if (message.method !== undefined) {
       // A request from the server (it has an id): answer it so the server does not wait. Godot sends none we need.
       if (message.id !== undefined && message.id !== null) {
-        this.socket.write(encodeMessage({ jsonrpc: "2.0", id: message.id, result: null }));
+        let result: unknown = null;
+        try {
+          result = this.onRequest?.(message.method, message.params) ?? null;
+        } catch {
+          // The answer stays null: a server must never wait for one.
+        }
+        this.output.write(encodeMessage({ jsonrpc: "2.0", id: message.id, result }));
       }
       for (const fn of [...this.listeners]) fn(message.method, message.params);
       return;

@@ -511,7 +511,7 @@ describe("formatProject and the command", () => {
     expect(formatProject(root, { files: ["res://sub"] }).changed.map((c) => c.file)).toEqual(["res://sub/other.gd"]);
     expect(formatProject(root, { files: [join(root, "main.gd"), "res://addons/plugin/plugin.gd"] }).changed.map((c) => c.file)).toEqual(["res://addons/plugin/plugin.gd", "res://main.gd"]);
     expect(() => formatProject(root, { files: ["res://missing.gd"] })).toThrow(/does not exist in the project/);
-    expect(() => formatProject(root, { files: ["res://project.godot"] })).toThrow(/not a GDScript file/);
+    expect(() => formatProject(root, { files: ["res://project.godot"] })).toThrow(/not a GDScript or C# file/);
   });
 
   it("the command checks, diffs, writes and prints JSON", async () => {

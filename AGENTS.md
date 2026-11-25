@@ -33,7 +33,19 @@ node dist/cli.js --help
 - `src/lsp/`: Godot's own GDScript language server (`godot_code`). `jsonrpc.ts` is the JSON-RPC client with LSP
   framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
   stop, killed on exit, restarted when a class_name, project.godot or a file that needs an import changes; a restart
-  waits for the calls queued on the old server), `code.ts` holds the ops and output.
+  waits for the calls queued on the old server), `code.ts` holds the ops and output. `csharp.ts` is the second server,
+  for `.cs` files: csharp-ls over stdio, through the same `RpcConnection`, `LanguageServer` and `LanguageServerPool`
+  (`code.ts` picks the server by the file's extension).
+  Why csharp-ls: a C# server for Godotwright must start without an editor, speak plain LSP over stdio, load a
+  Godot.NET.Sdk project as it is, and be something a user can install with one command and no licence question.
+  csharp-ls is one `dotnet tool` (MIT), built on Roslyn, so its diagnostics are the compiler's and Godot's source
+  generators run in it (`SignalName.X` resolves, and breaks when the delegate is renamed, which is what `godot_rename`
+  relies on). OmniSharp is in maintenance and needs its own protocol or a wrapper; Microsoft's Roslyn language server
+  ships inside the C# extension for VS Code, is not a documented standalone tool and its C# Dev Kit part is not open
+  source. Measured with csharp-ls 0.16.0 (the last release for .NET 8; each release targets one .NET): it loads a
+  generated Godot project in 2-4 s, answers nothing before the load ends (`$/progress` "end"), keeps an opened
+  document's text after didClose, and sees files changed on disk only through `workspace/didChangeWatchedFiles`.
+  Godotwright never installs it: `csharpLsMissing()` names the command for the user's SDK.
 - `src/shaders/`: the GPU pass over shaders: draws every shader in Godot (Compatibility renderer, xvfb-run on Linux
   without a display), for what only the GPU driver rejects (a uniform block that is too big, a sampler array indexed by
   a variable). Language errors are found headless, without it: `src/check/shader-compile.ts` (`Shader.get_rid()` runs
@@ -84,10 +96,22 @@ node dist/cli.js --help
 - `src/scene/structure.ts`: the structure operations of `godot_scene_edit` (create_scene, rename_node, move_node,
   duplicate_node, set_groups, add_nodes); `test/integration/scene-structure-corpus.test.ts` runs them on real scenes.
 - `src/format/`: `godot_format`. `tokenizer.ts` is a full GDScript tokenizer, `format.ts` the formatter with its guard
-  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project.
+  (the tokens before and after must be the same; otherwise the file is left alone), `project.ts` runs it on a project. `csharp.ts` is the C# side:
+  `dotnet format` restricted to the files, then the outline compared before and after and a build; `formatProjectAll`
+  runs both languages into one report and one journal entry.
+- `src/rename/`: `godot_rename`. `rename.ts` plans and applies a rename by name (GDScript, scenes, settings) or of a
+  file; `csharp.ts` (`renameAnywhere`, what the CLI and the MCP tool call) renames a symbol declared in C# through the
+  language server and then updates scenes, resources and GDScript. C# code is never renamed as text.
+- `src/migrate/`: `godot_migrate`. `migrate.ts` is the GDScript migration and the project runner, `shader.ts` the
+  shaders, `csharp.ts` Godot 3 C# and the `.csproj` (the same rename table, with the names in C# form;
+  `csharp-names.ts` holds the Godot 4 classes whose C# name is not the engine's). A C# rule must be certain from the
+  text alone; what is not becomes a TO DO. `GODOT3_MONO_DEMOS=<folder>` runs the official Godot 3 C# demos through
+  `test/integration/migrate-csharp.test.ts`.
 - `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
   classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
-  `dotnet build` and reads MSBuild's diagnostics.
+  `dotnet build` and reads MSBuild's diagnostics. The C# tools were run with dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and
+  csharp-ls 0.16.0; the integration tests that need `dotnet` or `csharp-ls` (`test/integration/*csharp*.test.ts`) are
+  skipped without them. Godotwright never installs either.
 - `src/editor/`: `godot_editor`: `bridge.ts` is the client of the editor addon in `data/editor-bridge/` (localhost,
   token from `.godot/godotwright_bridge.json`), `install.ts` copies and enables the addon. The addon cannot be run in
   CI: a test checks every engine method it calls against the bundled API data; `docs/editor-bridge.md` has the manual
@@ -166,7 +190,8 @@ node dist/cli.js --help
   `test/fixtures/messy` has one example of most review findings.
 - `test/integration/`: tests that need a real Godot binary in `$GODOT`
   (and `$GODOT_DEMOS` for the official demo projects), or the Claude Code and
-  Codex CLIs (`AGENT_CLIS=1`). CI runs them.
+  Codex CLIs (`AGENT_CLIS=1`). CI runs them. The `*csharp*` ones need `dotnet` on PATH (and NuGet for the first
+  restore), some also `csharp-ls`; they are skipped where those are missing.
 - Never write to stdout in code the MCP server runs: stdout is the protocol channel.
 
 ## Conventions
