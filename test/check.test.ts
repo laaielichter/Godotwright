@@ -291,7 +291,10 @@ describe("runGodot on a timeout", () => {
     // Like xvfb-run: a server in the background, the command in the foreground, cleanup in an EXIT trap.
     const script = `trap 'rm -f "${marker}"' EXIT; sleep 60 & echo $! > "${pidFile}"; sleep 60; exit 0`;
     const started = Date.now();
-    const result = await runGodot("sh", ["-c", script], { timeoutMs: 500 });
+    // The script runs from a file, as xvfb-run itself is a script file: runGodot never gets a command line for a shell.
+    const wrapper = join(dir, "wrapper.sh");
+    writeFileSync(wrapper, script);
+    const result = await runGodot("sh", [wrapper], { timeoutMs: 500 });
     expect(result.timedOut).toBe(true);
     expect(Date.now() - started).toBeLessThan(5000);
     const server = Number(readFileSync(pidFile, "utf8"));
