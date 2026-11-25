@@ -219,6 +219,9 @@ const RENAME_TABLES: Record<string, string> = {
   builtinTypes: "builtin_types_renames",
   shaders: "shaders_renames",
   projectSettings: "project_settings_renames",
+  csharpFunctions: "csharp_function_renames",
+  csharpProperties: "csharp_properties_renames",
+  csharpSignals: "csharp_signals_renames",
 };
 
 /**
@@ -245,6 +248,36 @@ export function readRenames(source: string): Record<string, Record<string, strin
       const swap = key === "constants" && SWAPPED_CONSTANTS.has(m[1]!);
       const [from, to] = swap ? [m[2]!, m[1]!] : [m[1]!, m[2]!];
       if (!(from in pairs)) pairs[from] = to;
+    }
+    out[key] = pairs;
+  }
+  return out;
+}
+
+/**
+ * The renames Godot's table keeps in comments because they only hold for some classes, named after the pair:
+ * `// { "offset", "progress" }, // PathFollow2D, PathFollow3D`. A migration may apply one only where it knows the
+ * value has one of those classes. A group the file itself marks as needing a bespoke solution (a type that changed)
+ * is left out. Classes are kept only when the class reference has them.
+ */
+export function readTypedRenames(source: string, known: Set<string>): Record<string, Record<string, { to: string; classes: string[] }>> {
+  const file = [join(source, "editor", "project_upgrade", "renames_map_3_to_4.cpp"), join(source, "editor", "renames_map_3_to_4.cpp")].find(existsSync);
+  if (!file) return {};
+  const cpp = readFileSync(file, "utf8");
+  const out: Record<string, Record<string, { to: string; classes: string[] }>> = {};
+  for (const [key, table] of Object.entries({ typedFunctions: "gdscript_function_renames", typedProperties: "gdscript_properties_renames" })) {
+    const start = cpp.indexOf(`RenamesMap3To4::${table}[][2] = {`);
+    if (start < 0) continue;
+    const body = cpp.slice(start, cpp.indexOf("\n};", start));
+    const pairs: Record<string, { to: string; classes: string[] }> = {};
+    let bespoke = false;
+    for (const line of body.split("\n")) {
+      if (!line.trim()) bespoke = false;
+      if (/^\s*\/\/(?!\s*\{).*bespoke/i.test(line)) bespoke = true;
+      const m = /^\s*\/\/\s*\{\s*"([a-z_0-9]+)",\s*"([a-z_0-9]+)"\s*\},?\s*\/\/\s*([^-]*)/.exec(line);
+      if (!m || bespoke) continue;
+      const classes = [...m[3]!.matchAll(/\b[A-Z][A-Za-z0-9]+\b/g)].map((c) => c[0]).filter((c) => known.has(c));
+      if (classes.length && !(m[1]! in pairs)) pairs[m[1]!] = { to: m[2]!, classes };
     }
     out[key] = pairs;
   }
@@ -332,13 +365,13 @@ function main(): void {
   const classes = xmlFiles(source)
     .map((file) => convertClass(parseXml(readFileSync(file, "utf8"))))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const renames = readRenames(source);
+  const renames = { ...readRenames(source), ...readTypedRenames(source, new Set(classes.map((c) => c.name))) };
   const shaders = readShaderTypes(source);
   const data = { godot: version, commit, license: "MIT (Godot Engine contributors)", classes, renames, ...(Object.keys(shaders).length ? { shaders } : {}) };
   const json = JSON.stringify(data);
   const out = join(import.meta.dirname, "..", "data", "godot-api.json.gz");
   writeFileSync(out, gzipSync(json, { level: 9 }));
-  const renameCount = Object.values(renames).reduce((n, t) => n + Object.keys(t).length, 0);
+  const renameCount = Object.values(renames).reduce((n, t) => n + Object.keys(t as object).length, 0);
   const builtins = Object.values(shaders).reduce((n, m) => n + Object.values(m.functions).reduce((k, f) => k + Object.keys(f.builtins).length, 0), 0);
   console.log(`${classes.length} classes, ${renameCount} renames, ${builtins} shader built-ins, ${(json.length / 1e6).toFixed(1)} MB JSON -> ${out}`);
 }

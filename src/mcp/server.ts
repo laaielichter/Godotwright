@@ -27,7 +27,7 @@ import {
   lookupLearning,
   reviewLearning,
 } from "../learn/hooks.js";
-import { formatMigration, migrateProject } from "../migrate/migrate.js";
+import { formatMigration, migrateProjectChecked, migrateProject } from "../migrate/migrate.js";
 import { formatShaderReport, shaderReport } from "../shader/shader.js";
 import { FIXABLE_RULES, fixProject, formatFix } from "../fix/fix.js";
 import { doctorProject, formatDoctor } from "../doctor/doctor.js";
@@ -1211,9 +1211,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
   tool(
     "godot_migrate",
     {
-      title: "Port Godot 3 scripts to Godot 4",
+      title: "Port Godot 3 scripts and C# to Godot 4",
       description:
-        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, network keywords to @rpc(...), setget to property syntax, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, moved members (OS.get_ticks_msec() to Time), shader renames (hint_albedo to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. Strings, comments and node paths are left alone. Without `write` it only reports; with `write: true` it rewrites the scripts. It lists what still needs a hand (complex setget, move_and_slide arguments, master/mastersync, unknown export hints). Scenes and project settings are not migrated (Godot's --convert-3to4 does those). `files` limits it to some scripts; `detail` brief shows up to 12 changes per file. Running it twice changes nothing more. Use it before fixing Godot 3 findings one by one, then run godot_review.",
+        "Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical: @export/@onready/@tool, network keywords to @rpc(...), setget to property syntax, renamed classes, functions, properties and constants, yield() to await, connect()/emit_signal() to signals, funcref() to callables, moved members (OS.get_ticks_msec() to Time), shader renames (hint_albedo to source_color, WORLD_MATRIX to MODEL_MATRIX, ...) and SCREEN_TEXTURE/DEPTH_TEXTURE to a hint uniform. C# (.cs, the root .csproj and .sln) too: `partial` on Godot classes, `[Signal] delegate void Hit()` to HitEventHandler with nameof(Hit) to SignalName.Hit, Connect(signal, target, method) to a Callable, [Remote]/[Sync]/[Puppet] to [Rpc(...)], renamed classes, types and members from Godot's official rename table (where the value's type confirms it), v.x to v.X, Godot.Object to GodotObject, OS./Engine. members that moved, _Process(float) to double, the SceneTree's multiplayer API to Multiplayer, Godot.NET.Sdk 4.7.2 and net8.0 in the .csproj; GetNode<T> stays. Then the migrated C# is built on a temp copy (with the .NET SDK) and every compiler error left is a TO DO with its line. Strings, comments and node paths are left alone. Without `write` it only reports; with `write: true` it rewrites the scripts. It lists what still needs a hand (complex setget, move_and_slide arguments, master/mastersync, unknown export hints). Scenes and project settings are not migrated (Godot's --convert-3to4 does those). `files` limits it to some scripts; `detail` brief shows up to 12 changes per file. Running it twice changes nothing more. Use it before fixing Godot 3 findings one by one, then run godot_review.",
       inputSchema: {
         path: pathParam,
         write: z
@@ -1233,9 +1233,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ path, write, files, detail }) =>
-      guard(() => {
-        const result = migrateProject(where(path), {
+    async ({ path, write, files, detail }) => {
+      try {
+        const result = await migrateProjectChecked(where(path), {
           write: write === true,
           ...(files
             ? {
@@ -1246,7 +1246,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
             : {}),
         });
         return text(formatMigration(result, detail ?? profile.detail));
-      }),
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
   );
 
   tool(

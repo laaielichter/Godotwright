@@ -84,6 +84,13 @@ export interface ApiRenames {
   builtinTypes?: Record<string, string>;
   shaders?: Record<string, string>;
   projectSettings?: Record<string, string>;
+  /** The C# tables of the same file: methods, properties and signals in PascalCase. */
+  csharpFunctions?: Record<string, string>;
+  csharpProperties?: Record<string, string>;
+  csharpSignals?: Record<string, string>;
+  /** Renames Godot's table keeps in comments because they hold only on these (Godot 4) classes, snake_case. */
+  typedFunctions?: Record<string, { to: string; classes: string[] }>;
+  typedProperties?: Record<string, { to: string; classes: string[] }>;
 }
 
 /** One function scope of a shader type in Godot's shader_types.cpp ("global", "constants", or a processor function). */

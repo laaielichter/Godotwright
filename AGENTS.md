@@ -110,6 +110,15 @@ node dist/cli.js --help
 - `src/godot/csharp.ts`: the outline of a Godot C# script; `src/scan/csharp.ts` resolves partial classes and base
   classes for the project map; `src/review/checks/csharp.ts` holds the C# rules; `src/check/csharp-build.ts` runs
   `dotnet build` and reads MSBuild's diagnostics.
+- `src/migrate/`: `godot_migrate`. `migrate.ts` is the GDScript migration and `migrateProject`; `shader.ts` the shader
+  one; `csharp.ts` the C# one (partial, signal delegates, Connect to a Callable, RPC attributes, renamed classes, types
+  and members, math-type fields, moved OS/Engine members, `_Process(float)`, the .csproj and .sln as Godot's editor
+  upgrades them). A member is renamed only where the evidence says it is Godot 3's: the receiver's type (from a
+  declaration, `GetNode<T>`, a cast, a property of the class) or a name that does not exist in Godot 4. The renames
+  come from Godot's own table (`data/godot-api.json.gz` `renames`, read by `scripts/build-api.ts` from
+  editor/project_upgrade/renames_map_3_to_4.cpp: the C# tables and the commented, class-bound pairs as `typedFunctions`
+  and `typedProperties`). `migrateProjectChecked` builds the migrated C# on a temp copy and lists every compiler error
+  left as a TO DO. `test/integration/migrate-csharp-demos.test.ts` runs it on the 3.x C# demos (`$GODOT3_DEMOS`).
 - `src/editor/`: `godot_editor`: `bridge.ts` is the client of the editor addon in `data/editor-bridge/` (localhost,
   token from `.godot/godotwright_bridge.json`), `install.ts` copies and enables the addon. The addon cannot be run in
   CI: a test checks every engine method it calls against the bundled API data; `docs/editor-bridge.md` has the manual

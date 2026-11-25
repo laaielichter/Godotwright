@@ -7,6 +7,7 @@ import { checkFiles } from "../project/options.js";
 import { assertPathExists, ProjectNotFoundError } from "../scan/scan.js";
 import { MOVED } from "../review/checks/api.js";
 import { assertWritable } from "../project/protect.js";
+import { csharpProjectContext, migrateCSharp, migrateCsproj, migrateSln } from "./csharp.js";
 import { migrateShader } from "./shader.js";
 
 /** One mechanical rewrite in a script. */
@@ -43,6 +44,11 @@ export interface ProjectMigration {
   written: boolean;
   /** The journal entry of the write (godot_undo). */
   journal?: number;
+  /**
+   * The trial build of the migrated C# (migrateProjectChecked): dotnet build on a copy of the project's C# with the
+   * migrated text, so every compiler error left is listed as a TO DO.
+   */
+  build?: { status: "ok" | "failed" | "no-dotnet" | "no-project" | "timed-out"; errors: number; note: string };
 }
 
 /** Godot 3 method names that the bundled rename table does not carry, with the Godot 4 name. */
@@ -662,32 +668,49 @@ export interface MigrateOptions {
   write?: boolean;
   /** Also migrate scripts in res://addons/ (default false). */
   includeAddons?: boolean;
-  /** Only these res:// files (default: every .gd, .gdshader and .gdshaderinc in the project). */
+  /** Only these res:// files (default: every .gd, .gdshader, .gdshaderinc and .cs, and the root .csproj and .sln). */
   files?: string[];
 }
 
 const SHADER_FILE = /\.gdshader(inc)?$/;
+const CSHARP_FILE = /\.cs$/;
+/** The C# project files in the project root, which Godot 4 upgrades too. */
+const DOTNET_PROJECT_FILE = /^res:\/\/[^/]+\.(csproj|sln)$/;
 
 /** Migrates every GDScript and shader file of a project (or one .gd or .gdshader file), and writes the result when asked. */
 export function migrateProject(path: string, options: MigrateOptions = {}): ProjectMigration {
   const api = GodotApi.load();
   assertPathExists(path);
-  const single = path.endsWith(".gd") || SHADER_FILE.test(path);
+  const single = path.endsWith(".gd") || SHADER_FILE.test(path) || CSHARP_FILE.test(path);
   const root = single ? undefined : findProjectRoot(path);
   if (!single && !root) throw new ProjectNotFoundError(path);
   const named = options.files && root ? checkFiles(root, options.files) : options.files;
   const targets = single
     ? [{ res: path, full: path }]
     : listProjectFiles(root as string)
-        .filter((f) => (f.endsWith(".gd") || SHADER_FILE.test(f)) && (options.includeAddons || !f.startsWith("res://addons/")))
+        .filter((f) => (f.endsWith(".gd") || SHADER_FILE.test(f) || CSHARP_FILE.test(f) || DOTNET_PROJECT_FILE.test(f)) && (options.includeAddons || !f.startsWith("res://addons/")))
         .filter((f) => !named || named.includes(f))
         .map((res) => ({ res, full: fromResPath(root as string, res) }));
   const files: FileMigration[] = [];
   // One .gd file outside a project is written as it is; inside one, the write goes in the journal.
   const journal = root ? new JournalWriter(root, "migrate", "Godot 3 code rewritten for Godot 4") : undefined;
+  // C# is migrated with what the whole project declares (signals, classes, members), so every .cs file is read first.
+  const csFiles = single ? (CSHARP_FILE.test(path) ? [path] : []) : listProjectFiles(root as string).filter((f) => CSHARP_FILE.test(f)).map((f) => fromResPath(root as string, f));
+  const ctx = csFiles.length ? csharpProjectContext(csFiles.map((f) => readFileSync(f, "utf8"))) : undefined;
   for (const t of targets) {
-    const source = readFileSync(t.full, "utf8");
-    const result = SHADER_FILE.test(t.res) ? migrateShader(source, api) : migrateScript(source, api);
+    const source = readFileSync(t.full, "utf8").replace(/^\uFEFF/, "");
+    const bom = readFileSync(t.full, "utf8").startsWith("\uFEFF") ? "\uFEFF" : "";
+    const name = t.res.slice(t.res.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "");
+    const migrated = SHADER_FILE.test(t.res)
+      ? migrateShader(source, api)
+      : CSHARP_FILE.test(t.res)
+        ? migrateCSharp(source, api, ctx)
+        : t.res.endsWith(".csproj")
+          ? migrateCsproj(source, name)
+          : t.res.endsWith(".sln")
+            ? migrateSln(source)
+            : migrateScript(source, api);
+    const result = { ...migrated, code: bom + migrated.code };
     if (result.changes.length === 0 && result.left.length === 0) continue;
     const written = options.write === true && result.changes.length > 0;
     if (written) {
@@ -710,11 +733,66 @@ export function migrateProject(path: string, options: MigrateOptions = {}): Proj
   };
 }
 
+/**
+ * migrateProject, then for a C# project a trial build: the project's .cs files (migrated where the migration changed
+ * them), .csproj, .sln and build files are copied to a temp folder and built there with dotnet, so the project's own
+ * folder gets no obj/ and nothing is written without `write`. Each compiler error becomes a TO DO on its file and
+ * line: nothing that does not build in Godot 4 is left unreported. Without dotnet the result says so.
+ */
+export async function migrateProjectChecked(path: string, options: MigrateOptions = {}): Promise<ProjectMigration> {
+  const result = migrateProject(path, options);
+  const root = findProjectRoot(path);
+  if (!root || !listProjectFiles(root).some((f) => CSHARP_FILE.test(f))) return result;
+  const { buildCSharp, findCSharpProject, findDotnet } = await import("../check/csharp-build.js");
+  const found = findCSharpProject(root);
+  if (!found.csproj && !found.sln) {
+    result.build = { status: "no-project", errors: 0, note: "no .csproj or .sln in the project root: the migrated C# was not built" };
+    return result;
+  }
+  if (!findDotnet()) {
+    result.build = { status: "no-dotnet", errors: 0, note: "dotnet is not on PATH, so the migrated C# was not built: compiler errors left after the migration are not listed (install the .NET SDK 8 or later)" };
+    return result;
+  }
+  const { cpSync, mkdirSync, mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { dirname, join } = await import("node:path");
+  const temp = mkdtempSync(join(tmpdir(), "godotwright-migrate-"));
+  try {
+    const migrated = new Map(result.files.map((f) => [f.file, f.code]));
+    for (const f of listProjectFiles(root)) {
+      if (!(CSHARP_FILE.test(f) || DOTNET_PROJECT_FILE.test(f) || /^res:\/\/(?:Directory\.Build\.(?:props|targets)|global\.json|nuget\.config|project\.godot)$/i.test(f))) continue;
+      const target = join(temp, f.slice("res://".length));
+      mkdirSync(dirname(target), { recursive: true });
+      const text = migrated.get(f);
+      if (text !== undefined && !options.write) writeFileSync(target, text);
+      else cpSync(fromResPath(root, f), target);
+    }
+    const build = await buildCSharp(temp);
+    result.build = { status: build.status === "ok" || build.status === "failed" || build.status === "timed-out" ? build.status : "failed", errors: build.errors, note: (build.note ?? "").replace(temp, "the migrated copy") };
+    for (const d of build.diagnostics) {
+      if (d.severity !== "error" || !d.file) continue;
+      let entry = result.files.find((f) => f.file === d.file);
+      if (!entry) {
+        const code = readFileSync(fromResPath(root, d.file), "utf8");
+        entry = { file: d.file, code, changes: [], left: [], written: false };
+        result.files.push(entry);
+      }
+      const message = `does not build in Godot 4 yet: ${d.message}`;
+      if (!entry.left.some((l) => l.line === (d.line ?? 1) && l.message === message)) entry.left.push({ line: d.line ?? 1, message });
+    }
+    for (const f of result.files) f.left.sort((a, b) => a.line - b.line);
+    result.left = result.files.reduce((n, f) => n + f.left.length, 0);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+  return result;
+}
+
 /** The migration as text: a compact diff per file (changed lines only) and what is left to do by hand. */
 export function formatMigration(m: ProjectMigration, detail: "brief" | "full" = "brief"): string {
   const out: string[] = [];
   const changed = m.files.filter((f) => f.changes.length > 0).length;
-  out.push(`migrate: ${changed} script${changed === 1 ? "" : "s"} with ${m.changes} change${m.changes === 1 ? "" : "s"}, ${m.left} thing${m.left === 1 ? "" : "s"} to do by hand${m.written ? ` (written${m.journal ? `, journal #${m.journal}: godot_undo reverts it` : ""})` : m.changes ? " (dry run: add --write to apply)" : ""}`);
+  out.push(`migrate: ${changed} file${changed === 1 ? "" : "s"} with ${m.changes} change${m.changes === 1 ? "" : "s"}, ${m.left} thing${m.left === 1 ? "" : "s"} to do by hand${m.written ? ` (written${m.journal ? `, journal #${m.journal}: godot_undo reverts it` : ""})` : m.changes ? " (dry run: add --write to apply)" : ""}`);
   for (const f of m.files) {
     out.push(`${f.file}${f.changes.length ? ` (${f.changes.length} change${f.changes.length === 1 ? "" : "s"})` : ""}`);
     const limit = detail === "full" ? f.changes.length : 12;
@@ -723,6 +801,7 @@ export function formatMigration(m: ProjectMigration, detail: "brief" | "full" = 
     for (const l of f.left) out.push(`  ${String(l.line).padStart(4)}: TO DO: ${l.message}`);
     for (const n of f.notes ?? []) out.push(`  note: ${n}`);
   }
+  if (m.build) out.push(`C#: trial build of the migrated code: ${m.build.status === "ok" ? "it builds" : m.build.status === "failed" ? `${m.build.errors} compiler error${m.build.errors === 1 ? "" : "s"} left (TO DOs above)` : m.build.note}`);
   if (m.files.length === 0) out.push("Nothing to migrate: no Godot 3 code found.");
   else out.push("", "Next: run `godotwright review` for what is still wrong, then `godotwright check` with Godot 4. Scenes and project settings are not migrated here; Godot's own `--convert-3to4` does those.");
   return `${out.join("\n")}\n`;

@@ -356,7 +356,7 @@ describe("migrate a project", () => {
     expect(dry.written).toBe(false);
     expect(readFileSync(`${root}/player.gd`, "utf8")).toBe("export var a = 1\n");
     const text = formatMigration(dry);
-    expect(text).toContain("1 script with 1 change");
+    expect(text).toContain("1 file with 1 change");
     expect(text).toContain("dry run");
     const wet = migrateProject(root, { write: true });
     expect(wet.files[0]?.written).toBe(true);
