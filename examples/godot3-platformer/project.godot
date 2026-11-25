@@ -1,0 +1,15 @@
+; Godot 3.5 project file. Deliberately small: this example exists so you can
+; see `godotwright migrate` work, not to ship a game. No scenes, no art, no
+; sound: every script builds its nodes from code, so the whole project is
+; text and there is nothing to convert besides the scripts.
+
+config_version=4
+
+[application]
+
+config/name="Godot 3 Platformer Example"
+
+[display]
+
+window/size/width=480
+window/size/height=270
