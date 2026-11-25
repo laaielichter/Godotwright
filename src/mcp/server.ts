@@ -667,9 +667,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Change a scene",
       description:
-        "Change a .tscn safely without the editor, touching only the lines of that change. `op` and its fields: add_node (parent, name, and type or instance), remove_node (node; with its children, connections and the resources only it used), set (node, property, value; checked against Godot 4.7, enums by name, resources as res:// files), connect and disconnect (from, signal, to, method; checks the signal exists, warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach_script (node, script; refuses a script that extends another node type), set_editable (node, editable). A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; make_editable adds [editable] with it. Node paths are relative to the scene root \".\". Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a refused change is an error and writes nothing. For project.godot use godot_project_edit; to rename a node everywhere, godot_rename.",
+        "Change a .tscn safely without the editor, touching only the lines of that change. `op` and its fields: add_node (parent, name, and type or instance), remove_node (node; with its children, connections and the resources only it used), set (node, property, value; checked against Godot 4.7, enums by name, resources as res:// files), connect and disconnect (from, signal, to, method; checks the signal exists, warns when the method is missing or takes the wrong number of arguments, with the func line to add), attach_script (node, script; refuses a script that extends another node type), set_editable (node, editable), create_scene (scene is the new file; type or instance to inherit from, name, script; a fresh uid, never overwrites), add_nodes (nodes: a list of {parent, name, type or instance, props, script} applied in order, all or nothing), rename_node (node, name; children, connections, [editable] and NodePath values in this scene follow, scripts that name it are listed, not changed), move_node (node, and parent to reparent and/or index, before or after for its place among siblings; the subtree moves with it and the file keeps parents before children), duplicate_node (node, name, parent, connections; the copy shares the sub-resources, connections are copied only with connections: true), set_groups (node, and groups for the whole list or add_groups and remove_groups). A node that only exists through an instanced scene cannot be renamed, moved or copied here. A change inside an instance that is not editable is refused, because Godot drops it on the next editor save; make_editable adds [editable] with it. Node paths are relative to the scene root \".\". Without `write` it returns the diff and warnings; with `write: true` it writes and reports the review errors before and after (an error result when there are more after). A missing field or a refused change is an error and writes nothing. For project.godot use godot_project_edit; to rename a node in every scene and script, godot_rename.",
       inputSchema: {
-        scene: z.string().describe("the scene: res://main.tscn, or a path"),
+        scene: z.string().describe("the scene: res://main.tscn, or a path (create_scene: the new file)"),
         op: z
           .enum([
             "add_node",
@@ -679,27 +679,33 @@ export function createServer(options: ServerOptions = {}): McpServer {
             "disconnect",
             "attach_script",
             "set_editable",
+            "create_scene",
+            "add_nodes",
+            "rename_node",
+            "move_node",
+            "duplicate_node",
+            "set_groups",
           ])
           .describe("what to change"),
         node: z
           .string()
           .optional()
           .describe(
-            'remove_node/set/attach_script/set_editable: path of the node ("." is the root)',
+            'remove_node/set/attach_script/set_editable/rename_node/move_node/duplicate_node/set_groups: path of the node ("." is the root)',
           ),
         parent: z
           .string()
           .optional()
-          .describe('add_node: path of the parent ("." is the root)'),
-        name: z.string().optional().describe("add_node: name of the new node"),
+          .describe('add_node: path of the parent ("." is the root); move_node: the new parent; duplicate_node: parent of the copy (default: the same)'),
+        name: z.string().optional().describe("add_node: name of the new node; rename_node: the new name; duplicate_node: name of the copy; create_scene: name of the root (default: from the file name)"),
         type: z
           .string()
           .optional()
-          .describe("add_node: a Godot node class, e.g. Sprite2D"),
+          .describe("add_node/create_scene: a Godot node class, e.g. Sprite2D"),
         instance: z
           .string()
           .optional()
-          .describe("add_node: a res:// scene to instance instead of a type"),
+          .describe("add_node: a res:// scene to instance instead of a type; create_scene: a res:// scene to inherit from"),
         property: z
           .string()
           .optional()
@@ -729,9 +735,29 @@ export function createServer(options: ServerOptions = {}): McpServer {
         script: z
           .string()
           .optional()
-          .describe("attach_script: res:// path of the script"),
+          .describe("attach_script/create_scene: res:// path of the script"),
         editable: z.boolean().optional().describe("set_editable: false to make it not editable (default true)"),
-        make_editable: z.boolean().optional().describe("add_node/set/connect: also make the instance editable when the change is inside one"),
+        make_editable: z.boolean().optional().describe("add_node/add_nodes/set/connect/move_node/duplicate_node/set_groups: also make the instance editable when the change is inside one"),
+        nodes: z
+          .array(
+            z.object({
+              parent: z.string().describe('path of the parent ("." is the root); may be a node earlier in the list'),
+              name: z.string(),
+              type: z.string().optional().describe("a Godot node class"),
+              instance: z.string().optional().describe("a res:// scene to instance instead of a type"),
+              props: z.record(z.string(), z.string()).optional().describe('properties as set takes them: {"position": "Vector2(10, 20)", "texture": "res://icon.svg"}'),
+              script: z.string().optional().describe("res:// path of a script to attach"),
+            }),
+          )
+          .optional()
+          .describe("add_nodes: the nodes, added in order"),
+        index: z.number().int().min(0).optional().describe("move_node: place among the children of the parent (0 is the first)"),
+        before: z.string().optional().describe("move_node: path of the sibling it goes before"),
+        after: z.string().optional().describe("move_node: path of the sibling it goes after"),
+        connections: z.boolean().optional().describe("duplicate_node: also copy the signal connections of the copied nodes (default false)"),
+        groups: z.array(z.string()).optional().describe("set_groups: the whole list of groups ([] for none)"),
+        add_groups: z.array(z.string()).optional().describe("set_groups: groups to add"),
+        remove_groups: z.array(z.string()).optional().describe("set_groups: groups to remove"),
         write: z
           .boolean()
           .optional()
@@ -781,7 +807,34 @@ export function createServer(options: ServerOptions = {}): McpServer {
                     ? { op, node: need("node"), editable: args.editable !== false }
                     : op === "connect"
                       ? { op, from: need("from"), signal: need("signal"), to: need("to"), method: need("method"), ...make }
-                      : {
+                      : op === "create_scene"
+                        ? { op, ...(args.instance ? { instance: args.instance } : { type: need("type") }), ...(args.name ? { name: args.name } : {}), ...(args.script ? { script: args.script } : {}) }
+                        : op === "add_nodes"
+                          ? { op, nodes: args.nodes ?? [], ...make }
+                          : op === "rename_node"
+                            ? { op, node: need("node"), name: need("name") }
+                            : op === "move_node"
+                              ? {
+                                  op,
+                                  node: need("node"),
+                                  ...(args.parent !== undefined ? { parent: args.parent } : {}),
+                                  ...(args.index !== undefined ? { index: args.index } : {}),
+                                  ...(args.before !== undefined ? { before: args.before } : {}),
+                                  ...(args.after !== undefined ? { after: args.after } : {}),
+                                  ...make,
+                                }
+                              : op === "duplicate_node"
+                                ? { op, node: need("node"), name: need("name"), ...(args.parent !== undefined ? { parent: args.parent } : {}), ...(args.connections ? { connections: true } : {}), ...make }
+                                : op === "set_groups"
+                                  ? {
+                                      op,
+                                      node: need("node"),
+                                      ...(args.groups !== undefined ? { groups: args.groups } : {}),
+                                      ...(args.add_groups?.length ? { add: args.add_groups } : {}),
+                                      ...(args.remove_groups?.length ? { remove: args.remove_groups } : {}),
+                                      ...make,
+                                    }
+                                  : {
                           op,
                           from: need("from"),
                           signal: need("signal"),
