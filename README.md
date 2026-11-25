@@ -209,7 +209,7 @@ four review rules. With the .NET SDK, `check` reports `dotnet build` errors, `fo
 kept only when its outline is the same and the project still builds) and `migrate` ports Godot 3 C# to Godot 4 where
 that is mechanical. With the C# language server `csharp-ls` (you install it), `godot_code` answers for `.cs` files and
 `godot_rename` renames C# symbols with their scene connections, exported properties and GDScript callers. Run with
-dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and csharp-ls 0.16.0; see [C# projects](docs/reference.md#c-projects) for what
+dotnet 8.0.134, Godot.NET.Sdk 4.7.0 and 4.7.2, and csharp-ls 0.16.0; see [C# projects](docs/reference.md#c-projects) for what
 was and was not tested.
 
 **The open editor, optionally.** `editor install` puts a small addon in the project (localhost, a new token every

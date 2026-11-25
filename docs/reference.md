@@ -614,7 +614,10 @@ extends CharacterBody2D
 ...
 ```
 
-The C# templates and the generated `.csproj` and `.sln` build with 0 errors and 0 warnings (dotnet 8.0.134, Godot.NET.Sdk 4.7.0).
+The C# templates and the generated `.csproj` and `.sln` build with 0 errors and 0 warnings (dotnet 8.0.134, Godot.NET.Sdk 4.7.2).
+The `.csproj` is byte for byte what Godot 4.7.2's own generator writes: `Godot.NET.Sdk/4.7.2`, `net8.0` with Godot's
+`net9.0` line for Android, and a `RootNamespace` only when the name is not one, by Godot's rules ("Space Game" is
+`SpaceGame`).
 
 ## Export presets and translations
 
@@ -744,27 +747,34 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
   `Engine.EditorHint`, `JSON.Print` and the like move where the move is one to one; `PropertyHint.ExpRange`,
   `[Remote]`, `[Puppet]`, `GetTree().IsNetworkServer()` and the `network_peer_connected` signals get their Godot 4
   form; `follow.Offset` is `Progress` where `follow` is declared as a `PathFollow2D` in the file. The `.csproj` gets
-  `Godot.NET.Sdk/4.7.0`, `net8.0` and `EnableDynamicLoading`. A name the project declares itself is left alone. TO DOs
-  cover what cannot be decided from the text: `MoveAndSlide` with arguments, `[Master]`, `RpcUnreliable` and `Rset`,
-  `OS.WindowSize` and its relatives, `new File()`, a `.x` whose type is not declared in the file while the project has
-  an `x` of its own, and the `Variant` that Godot's untyped `Dictionary` and `Array` now hold.
+  `Godot.NET.Sdk/4.7.2`, `net8.0` and `EnableDynamicLoading`. `MoveAndCollide(m, true, true, false)` loses the two
+  flags Godot 4 dropped and keeps test-only, and Godot 3's `Texture` as a type is `Texture2D`. A receiver's type is
+  read from the file: a declaration, `GetNode<T>`, a cast, `new`, `value` in a property's setter (the property's
+  type) and member chains (`t.spatialPosition.x` through the project's own classes). A name the project declares
+  itself is left alone. TO DOs cover what cannot be decided from the text: `MoveAndSlide` with arguments, `[Master]`,
+  `RpcUnreliable` and `Rset`, `OS.WindowSize` and its relatives, `new File()`, a `.x` whose type is not known while the
+  project has an `x` of its own, and the `Variant` that Godot's untyped `Dictionary` and `Array` now hold.
+
+  Then the migrated C# is built on a temp copy of the project's C# (the project gets no `obj/`, and nothing is written
+  without `write`), and every compiler error left is a TO DO on its line (`does not build in Godot 4 yet: ...`), with
+  a closing line `C#: trial build of the migrated code: ...`. Without the .NET SDK that line says it was not built.
 
   Tested on the five official Godot 3 C# demos (`mono/` on the 3.x branch of godot-demo-projects, 29 files), migrated
-  with `--include-addons` and built with dotnet 8.0.134 against Godot.NET.Sdk 4.7.0:
+  with `--include-addons` and built with dotnet 8.0.134 against Godot.NET.Sdk 4.7.2:
 
   | Demo | After `migrate --write` | TO DOs |
   | --- | --- | --- |
   | `dodge_the_creeps` | builds | 0 |
   | `pong` | builds | 0 |
-  | `multiplayer_pong` | 5 errors, each on a line with a TO DO (`CompressionMode`, `RpcUnreliable`) | 3 |
-  | `2.5d` | 17 errors, all in files with TO DOs (14 on the line: `.x` of an undeclared type, `MoveAndSlide`, `MoveAndCollide`; 3 are `Texture` used where a `Texture2D` is needed) | 48 |
-  | `android_iap` | 31 errors, all in files with TO DOs (the `Variant` in Godot's collections: 27 are the cases of `switch` statements that have the TO DO) | 9 |
+  | `multiplayer_pong` | 5 errors, each a TO DO (`CompressionMode`, `RpcUnreliable`) | 8 |
+  | `2.5d` | 1 error, a TO DO: `MoveAndSlide(velocity)` | 33 |
+  | `android_iap` | 31 errors, each a TO DO (the `Variant` in Godot's collections: 27 are the cases of `switch` statements) | 40 |
 
   "Builds" means the C# compiles against Godot 4's API; the scenes and `project.godot` of these demos are still Godot
   3 files (Godot's `--convert-3to4` does those), so none of them was run. `test/integration/migrate-csharp.test.ts`
   builds a migrated sample, and the demos when `GODOT3_MONO_DEMOS` points at that folder. The rules are quiet
 on the official `mono/` demos and two public C# projects (about 650 files). The build ran for real: a generated
-project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.0, and a scene with a C# script
+project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.2, and a scene with a C# script
 ran in the .NET build of Godot 4.7.2. The check builds with `--no-incremental` (an up-to-date build would report no
 warnings) and in English, and restores NuGet packages only when the project was never restored.
 

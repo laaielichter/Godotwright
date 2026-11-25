@@ -17,6 +17,19 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
   - The editor bridge shows the playing scene and the main scene as res:// instead of the uid:// the main scene
     setting holds. `play`, `stop` and `screenshot` ran in a Godot 4.7.2 editor with a window (Linux).
 
+- **C#: Godot's own `.csproj`, and a migration that leaves less and says all of it.**
+  - A new C# project's `.csproj` is now byte for byte what Godot 4.7.2's own project generator writes (run from the
+    4.7.2 .NET download to compare): `Godot.NET.Sdk/4.7.2` (it was 4.7.0), Godot's `net9.0` line for Android, and
+    Godot's `RootNamespace` rules ("Space Game" is `SpaceGame`, not `Space_Game`). `godot_migrate` moves a Godot 3
+    `.csproj` to 4.7.2 too. Every C# template still builds with 0 errors and 0 warnings against it.
+  - `godot_migrate` finds the type of more receivers: `value` in a property's setter and member chains (`a.b.x`), so
+    `.x` on a Godot math type becomes `.X` also where the project has an `x` of its own. `MoveAndCollide(m, true,
+    true, false)` loses the two flags Godot 4 dropped and keeps test-only; Godot 3's `Texture` as a type is
+    `Texture2D`. Then the migrated C# is built on a temp copy (the project gets no `obj/`) and every compiler error
+    left is a TO DO on its line, so nothing that fails to build goes unreported. On the five official Godot 3 C#
+    demos: `2.5d` goes from 17 errors to 1 (the `MoveAndSlide(velocity)` TO DO); `dodge_the_creeps` and `pong`
+    build; `multiplayer_pong` (5) and `android_iap` (31) are unchanged, and each of their errors is now a TO DO.
+
 - **`godot_editor` edits the open scene, and has run in a real editor.** New ops `set_property`, `add_node` (a class
   or a scene instance), `remove_node` and `rename_node`, each one undoable step in the editor's history (Ctrl+Z takes
   it back; the answer names the step), leaving the scene unsaved until `save_scene`. The addon is version 2. An
@@ -93,7 +106,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
     `[Signal]` delegates get `EventHandler` (and `nameof(Hit)` becomes `SignalName.Hit`), `Connect` gets a
     `Callable`, `Godot.Object` becomes `GodotObject`, classes, methods and properties are renamed from Godot's own
     3-to-4 table in their C# names, `_Process(float)` takes a `double`, struct fields get PascalCase, one-to-one
-    moves of `OS` and `Engine` members are made, and the `.csproj` gets `Godot.NET.Sdk/4.7.0` and `net8.0`. What
+    moves of `OS` and `Engine` members are made, and the `.csproj` gets `Godot.NET.Sdk/4.7.2` and `net8.0`. What
     cannot be decided from the text is a TO DO with its line. On the five official Godot 3 C# demos, built with a
     real `dotnet build` after the migration: `dodge_the_creeps` and `pong` build; `multiplayer_pong` (5 errors),
     `2.5d` (17) and `android_iap` (31) do not, and every one of those errors is in a file with TO DOs. The scenes of

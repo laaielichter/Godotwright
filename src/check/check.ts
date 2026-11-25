@@ -1,8 +1,9 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import { parseProjectSettings } from "../godot/project-settings.js";
 import { withoutSubResource } from "../project/files.js";
-import { scanProject, projectRootOf } from "../scan/scan.js";
+import { baseRoots, CONFIG_FILE, listedFiles, scanProject, projectRootOf } from "../scan/scan.js";
 import { GODOT_TARGET } from "../version.js";
 import { asCheckDiagnostic, checkShaders, ShaderCheckError } from "../shaders/shaders.js";
 import { checkerSource, excludePath } from "./checker-script.js";
@@ -66,6 +67,13 @@ export interface CheckResult {
   ran?: { frames: number; fps: number; seconds: number };
   /** With `shaders`: how many were compiled, parsed only (fog) or not reached (the check stopped early), and on which renderer. */
   shaders?: { compiled: number; parsed: number; notReached: number; errors: number; renderer: string };
+  /**
+   * For a project laid over base projects (godotwright.json `base`): Godot ran on a merged copy, the bases first and
+   * the project on top, as the game loads them. Only findings in the project's own files are kept; `baseErrors` counts
+   * the rest, and `packed` the "does not exist" errors for files the shipped game holds (`baseFiles`), which a check
+   * from the sources cannot see.
+   */
+  overlay?: { bases: string[]; baseErrors: number; packed: number; note: string };
   /** For a project with a .csproj or .sln: how `dotnet build` went (its errors and warnings are in `diagnostics`), or that dotnet is missing. */
   csharp?: Pick<CSharpBuildResult, "status" | "target" | "restored" | "errors" | "warnings" | "note">;
 }
@@ -104,8 +112,55 @@ export const EXIT_LEAK =
 const CHECKER_DIR = ".godot/godotwright/check";
 const CHECKER_RES = `res://${CHECKER_DIR}/check.gd`;
 
+/** A missing res:// file in a Godot message ("Preload file "res://x" does not exist", "Could not resolve ... "res://x""). */
+const MISSING_FILE = /(?:does not exist|Could not resolve|Failed loading resource|No loader found|Cannot open file|not found)[^"]*"(res:\/\/[^"]+)"|"(res:\/\/[^"]+)"[^"]*(?:does not exist|could not be found)/i;
+
+/**
+ * Checks a project with Godot. A project laid over base projects (godotwright.json `base`, as a mod or overlay over a
+ * game) is run as Godot would load the game: on a merged copy in a temp folder, each base first and the project's own
+ * files on top. The project's files are never touched; the copy is removed afterwards.
+ */
 export async function checkProject(path: string, options: CheckOptions = {}): Promise<CheckResult> {
   const root = projectRootOf(path);
+  const bases = existsSync(join(root, CONFIG_FILE)) ? baseRoots(root) : [];
+  if (!bases.length) return checkOne(root, options);
+  const merged = join(mkdtempSync(join(tmpdir(), "godotwright-overlay-")), basename(root));
+  try {
+    // Godot's own folders (.godot/, .import caches) are not copied: the copy imports itself, as a fresh clone does.
+    const filter = (src: string) => !/[\\/]\.godot(?:[\\/]|$)/.test(src) && basename(src) !== CONFIG_FILE;
+    for (const dir of [...bases].reverse()) cpSync(dir, merged, { recursive: true, filter });
+    cpSync(root, merged, { recursive: true, force: true, filter });
+    const result = await checkOne(merged, options);
+    const own = (file: string) => existsSync(join(root, withoutSubResource(file).replace(/^res:\/\//, "")));
+    const packedFiles = listedFiles(root);
+    let baseErrors = 0;
+    let packed = 0;
+    const kept: Diagnostic[] = [];
+    for (const d of result.diagnostics) {
+      if (d.file && !own(d.file)) {
+        if (d.severity === "error") baseErrors++;
+        continue;
+      }
+      const missing = MISSING_FILE.exec(d.message);
+      const target = missing?.[1] ?? missing?.[2];
+      if (d.severity === "error" && target && packedFiles.has(target) && !existsSync(join(merged, target.replace(/^res:\/\//, "")))) {
+        packed++;
+        continue;
+      }
+      kept.push(d.message.includes(merged) ? { ...d, message: d.message.split(merged).join(root) } : d);
+    }
+    const errors = kept.filter((d) => d.severity === "error").length;
+    const note =
+      `ran on a merged copy: ${bases.length} base project${bases.length === 1 ? "" : "s"} with this project on top; ` +
+      `${baseErrors} error${baseErrors === 1 ? "" : "s"} in files of the base left out` +
+      (packed ? `, and ${packed} error${packed === 1 ? "" : "s"} for files the shipped game holds (baseFiles) but no source folder has: those are not checked here` : "");
+    return { ...result, diagnostics: kept, errors, warnings: kept.length - errors, overlay: { bases, baseErrors, packed, note } };
+  } finally {
+    rmSync(dirname(merged), { recursive: true, force: true });
+  }
+}
+
+async function checkOne(root: string, options: CheckOptions): Promise<CheckResult> {
   const bin = findGodot(options.godot);
   const version = await godotVersion(bin);
   const timeoutMs = options.timeoutMs ?? 10 * 60_000;

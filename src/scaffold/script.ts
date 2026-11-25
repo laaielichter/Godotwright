@@ -511,7 +511,7 @@ function buildCSharp(template: CSharpTemplate, options: NewScriptOptions): Built
 /**
  * The text of a C# script template: a partial class with the given name (Godot needs the name of the file), `using
  * Godot`, typed members, and [Export] and [Signal] where the template has them. Every template compiles without errors or
- * warnings against Godot.NET.Sdk 4.7.0 (test/integration/csharp-dotnet.test.ts builds them with a real `dotnet build`).
+ * warnings against Godot.NET.Sdk 4.7.2 (test/integration/csharp-dotnet.test.ts builds them with a real `dotnet build`).
  */
 export function csharpTemplateText(template: CSharpTemplate, className: string, options: NewScriptOptions = {}): string {
   const built = buildCSharp(template, options);

@@ -1,10 +1,11 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GodotApi } from "../src/api/api.js";
 import { undoJournal } from "../src/journal/journal.js";
 import { csharpMigrationContext, godot3CSharpName, migrateCSharp, migrateCsproj } from "../src/migrate/csharp.js";
-import { formatMigration, migrateProject } from "../src/migrate/migrate.js";
+import { formatMigration, migrateProject, migrateProjectChecked } from "../src/migrate/migrate.js";
 import { DOTNET_TARGET_FRAMEWORK, GODOT_NET_SDK } from "../src/scaffold/project.js";
 import { makeProject } from "./helpers.js";
 
@@ -274,8 +275,9 @@ describe("C# migration from Godot 3 to Godot 4", () => {
 
   it("lists what it cannot rewrite", () => {
     const out = body("\tprivate Texture _icon;\n\tvoid Run()\n\t{\n\t\tvar f = new File();\n\t\tvelocity = MoveAndSlide(velocity, Vector2.Up);\n\t\tMoveAndSlide();\n\t\tvar pad = JoystickList.Axis0;\n\t}");
+    // Godot 3's Texture was the 2D texture: as a type it is rewritten, not left.
+    expect(out.code).toContain("private Texture2D _icon;");
     expect(out.left.map((l) => [l.line, l.message.slice(0, 36)])).toEqual([
-      [5, "Texture is the abstract base class i"],
       [8, "new File() is gone in Godot 4: use F"],
       [9, "MoveAndSlide() takes no arguments in"],
       [11, "JoystickList is split in Godot 4: Jo"],
@@ -285,7 +287,7 @@ describe("C# migration from Godot 3 to Godot 4", () => {
   it("migrates the .csproj to the Godot 4 SDK and target framework", () => {
     const old = '<Project Sdk="Godot.NET.Sdk/3.3.0">\r\n  <PropertyGroup>\r\n    <TargetFramework>net472</TargetFramework>\r\n    <RootNamespace>DodgeTheCreeps</RootNamespace>\r\n  </PropertyGroup>\r\n</Project>';
     const out = migrateCsproj(old, GODOT_NET_SDK, DOTNET_TARGET_FRAMEWORK);
-    expect(out.code).toBe('<Project Sdk="Godot.NET.Sdk/4.7.0">\r\n  <PropertyGroup>\r\n    <TargetFramework>net8.0</TargetFramework>\r\n    <EnableDynamicLoading>true</EnableDynamicLoading>\r\n    <RootNamespace>DodgeTheCreeps</RootNamespace>\r\n  </PropertyGroup>\r\n</Project>');
+    expect(out.code).toBe('<Project Sdk="Godot.NET.Sdk/4.7.2">\r\n  <PropertyGroup>\r\n    <TargetFramework>net8.0</TargetFramework>\r\n    <EnableDynamicLoading>true</EnableDynamicLoading>\r\n    <RootNamespace>DodgeTheCreeps</RootNamespace>\r\n  </PropertyGroup>\r\n</Project>');
     expect(out.changes.map((c) => c.rule)).toEqual(["sdk", "framework", "framework"]);
     // Already Godot 4: untouched.
     expect(migrateCsproj(out.code, GODOT_NET_SDK, DOTNET_TARGET_FRAMEWORK).changes).toEqual([]);
@@ -317,11 +319,47 @@ describe("C# migration from Godot 3 to Godot 4", () => {
     expect(readFileSync(join(root, "Player.cs"), "utf8")).toBe(
       "using Godot;\n\npublic partial class Player : CharacterBody2D\n{\n\t[Signal]\n\tpublic delegate void HitEventHandler();\n\n\tpublic override void _Process(double delta)\n\t{\n\t\tPosition += Vector2.Right * (float)delta;\n\t\tEmitSignal(SignalName.Hit);\n\t}\n}\n",
     );
-    expect(readFileSync(join(root, "Old.csproj"), "utf8")).toContain('<Project Sdk="Godot.NET.Sdk/4.7.0">');
+    expect(readFileSync(join(root, "Old.csproj"), "utf8")).toContain('<Project Sdk="Godot.NET.Sdk/4.7.2">');
     expect(readFileSync(join(root, "main.gd"), "utf8")).toContain("extends CharacterBody2D");
     // One file, by path.
     expect(migrateProject(join(root, "Player.cs")).files).toEqual([]);
     undoJournal(root);
     expect(readFileSync(join(root, "Player.cs"), "utf8")).toBe(player);
+  });
+});
+
+describe("C# migration: types from the file, MoveAndCollide, and the trial build", () => {
+  const run = (src: string, others: string[] = []) => migrateCSharp(src, api, csharpMigrationContext([src, ...others]));
+
+  it("rewrites .x on a Godot math type even when the project has a member x: through value and member chains", () => {
+    const basis = "using Godot;\npublic struct Basis25D\n{\n    public Vector2 x;\n    public Vector3 Row0\n    {\n        get { return new Vector3(x.x, 0, 0); }\n        set { x.x = value.x; }\n    }\n}\n";
+    const node = "using Godot;\npublic class Transform25D { public Vector3 spatialPosition; }\npublic class N : Node\n{\n    Transform25D t;\n    float F() => t.spatialPosition.y + t.spatialPosition.x;\n}\n";
+    const b = run(basis, [node]);
+    expect(b.code).toContain("return new Vector3(x.X, 0, 0);");
+    expect(b.code).toContain("set { x.X = value.X; }");
+    expect(run(node, [basis]).code).toContain("float F() => t.spatialPosition.Y + t.spatialPosition.X;");
+  });
+
+  it("drops MoveAndCollide's removed flags and keeps testOnly, and leaves other arguments to a TO DO", () => {
+    const r = run("using Godot;\npublic class K : KinematicBody\n{\n    void F(Vector3 m, float s)\n    {\n        MoveAndCollide(m, true, true, true);\n        MoveAndCollide(m, false);\n        MoveAndCollide(m, true, true, false);\n        MoveAndCollide(m, s, true);\n    }\n}\n");
+    expect(r.code).toContain("MoveAndCollide(m, true);\n        MoveAndCollide(m);\n        MoveAndCollide(m);");
+    expect(r.left.map((l) => l.line)).toContain(9);
+  });
+
+  it("says when the migrated C# could not be built", async () => {
+    const root = mkdtempSync(join(tmpdir(), "godotwright-mig-cs-check-"));
+    writeFileSync(join(root, "project.godot"), "config_version=4\n");
+    writeFileSync(join(root, "Game.csproj"), '<Project Sdk="Godot.NET.Sdk/3.3.0">\n  <PropertyGroup>\n    <TargetFramework>net472</TargetFramework>\n  </PropertyGroup>\n</Project>');
+    writeFileSync(join(root, "Hud.cs"), "using Godot;\npublic class Hud : CanvasLayer { }\n");
+    const saved = process.env["PATH"];
+    process.env["PATH"] = "/nonexistent";
+    try {
+      const checked = await migrateProjectChecked(root);
+      expect(checked.build?.status).toBe("no-dotnet");
+      expect(formatMigration(checked)).toContain("C#: trial build of the migrated code: dotnet is not on PATH");
+      expect(readFileSync(join(root, "Hud.cs"), "utf8")).toBe("using Godot;\npublic class Hud : CanvasLayer { }\n");
+    } finally {
+      process.env["PATH"] = saved;
+    }
   });
 });

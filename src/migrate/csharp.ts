@@ -23,10 +23,12 @@ export interface CSharpMigrationContext {
   signals: Map<string, Set<string>>;
   /** Base class by class. */
   bases: Map<string, string>;
+  /** The declared type of each member, by class: `spatialPosition` of Transform25D is a Vector3. */
+  memberTypes: Map<string, Map<string, string>>;
 }
 
 export function csharpMigrationContext(sources: Iterable<string>): CSharpMigrationContext {
-  const ctx: CSharpMigrationContext = { classes: new Set(), methods: new Set(), lowerMembers: new Set(), signals: new Map(), bases: new Map() };
+  const ctx: CSharpMigrationContext = { classes: new Set(), methods: new Set(), lowerMembers: new Set(), signals: new Map(), bases: new Map(), memberTypes: new Map() };
   for (const source of sources) {
     let classes: CsClass[];
     try {
@@ -39,6 +41,9 @@ export function csharpMigrationContext(sources: Iterable<string>): CSharpMigrati
       if (c.base) ctx.bases.set(c.name, c.base.replace(/<[\s\S]*$/, "").replace(/^.*\./, ""));
       for (const m of c.methods) ctx.methods.add(m.name);
       for (const m of c.members) if (/^[a-z]/.test(m.name)) ctx.lowerMembers.add(m.name);
+      const types = ctx.memberTypes.get(c.name) ?? new Map<string, string>();
+      for (const m of [...c.members, ...c.exports]) types.set(m.name, m.type.replace(/<[\s\S]*$/, "").replace(/^.*\./, "").replace(/\?$/, ""));
+      ctx.memberTypes.set(c.name, types);
       if (c.signals.length) ctx.signals.set(c.name, new Set([...(ctx.signals.get(c.name) ?? []), ...c.signals.map((s) => s.name)]));
     }
   }
@@ -294,6 +299,8 @@ class CSharpMigrator {
     this.stringNames();
     this.variants();
     this.structFields();
+    this.moveAndCollide();
+    this.textures();
     this.leftovers();
     this.changes.sort((a, b) => a.line - b.line);
     this.left.sort((a, b) => a.line - b.line);
@@ -543,6 +550,63 @@ class CSharpMigrator {
     return assigned ? (assigned[1] ?? assigned[2] ?? assigned[3] ?? assigned[4]) : undefined;
   }
 
+  /**
+   * The type of the value before the `.` that ends at `offset`, where this file says it: a variable or field declared
+   * here (declaredType), `value` in a property's setter (the property's type), or a chain `a.b` (the type of member b
+   * on the type of a, from the project's own classes).
+   */
+  private receiverType(code: string, offset: number, depth = 0): string | undefined {
+    const before = code.slice(0, offset);
+    const dot = /\.\s*$/.exec(before);
+    if (!dot || depth > 6) return undefined;
+    const head = before.slice(0, dot.index);
+    const ident = /([A-Za-z_]\w*)\s*$/.exec(head);
+    if (!ident) return undefined;
+    const name = ident[1]!;
+    const start = head.length - ident[0].length;
+    // A chain: a.b.x is the field x of member b of a.
+    if (/\.\s*$/.test(head.slice(0, start))) {
+      const owner = this.receiverType(code, start, depth + 1);
+      return owner ? this.ctx.memberTypes.get(owner)?.get(name) : undefined;
+    }
+    if (name === "value") {
+      // The nearest property header above: `public Vector3 Row0` ... `set { x.x = value.x; }`.
+      for (const line of head.split("\n").reverse().slice(0, 40)) {
+        const property = /^\s*(?:(?:public|private|protected|internal|static|override|virtual|new)\s+)*([A-Z]\w*)\s+[A-Z]\w*\s*(?:\{|$)/.exec(line);
+        if (property) return property[1];
+        if (/\(.*\)\s*\{?\s*$/.test(line) && !/\bset\b|\bget\b/.test(line)) break;
+      }
+      return undefined;
+    }
+    return this.declaredType(code, name);
+  }
+
+  /**
+   * MoveAndCollide(motion, infiniteInertia, excludeRaycastShapes, testOnly) in Godot 3 is MoveAndCollide(motion, testOnly)
+   * in Godot 4: the two flags that are gone are dropped, and testOnly keeps its value. Only for literal true/false.
+   */
+  private moveAndCollide(): void {
+    const code = maskCSharp(this.source).code;
+    const edits: Edit[] = [];
+    for (const m of code.matchAll(/(?<![\w])MoveAndCollide\s*\(/g)) {
+      const a = this.args(code, m.index + m[0].length - 1);
+      if (!a || a.list.length < 2) continue;
+      const arg = (i: number) => this.source.slice(a.list[i]!.start, a.list[i]!.end).trim();
+      if (!a.list.slice(1).every((_, i) => /^(true|false)$/.test(arg(i + 1)))) continue;
+      edits.push({ start: a.list[0]!.start, end: a.close, text: a.list.length >= 4 && arg(3) === "true" ? `${arg(0)}, true` : arg(0), rule: "rename" });
+    }
+    this.apply(edits);
+  }
+
+  /** Godot 3's Texture was the 2D texture: where it is a type (a declaration, a generic argument, a cast) it is Texture2D. */
+  private textures(): void {
+    if (this.ctx.classes.has("Texture")) return;
+    const to = () => "Texture2D";
+    this.pass("class", /(?<![\w.])Texture(?=\s+[A-Za-z_@]\w*\s*[;=,)])/g, to);
+    this.pass("class", /(?<=<\s*)Texture(?=\s*>)/g, to);
+    this.pass("class", /(?<=\(\s*)Texture(?=\s*\)\s*[A-Za-z_(])/g, to);
+  }
+
   /** Members renamed or removed on one class: `follow.Offset` is Progress on a PathFollow2D only. */
   private typedMembers(): void {
     const members = new Set([...Object.values(TYPED_RENAMES), ...Object.values(TYPED_TODO)].flatMap((m) => Object.keys(m)));
@@ -603,8 +667,7 @@ class CSharpMigrator {
       const name = m[1]!;
       if (this.ctx.lowerMembers.has(name)) {
         // The project has a member of that name too: only a receiver declared here as a Godot struct is certain.
-        const receiver = /(?<![\w.)\]>]\s*\.\s*)(?<![\w@])([A-Za-z_]\w*)\s*\.\s*$/.exec(code.slice(0, m.index))?.[1];
-        const type = receiver ? this.declaredType(code, receiver) : undefined;
+        const type = this.receiverType(code, m.index);
         if (type && GODOT_STRUCTS.has(type)) return name[0]!.toUpperCase() + name.slice(1);
         this.todo(m.index, `.${name} is .${name[0]!.toUpperCase()}${name.slice(1)} in Godot 4 when this is a Godot struct (Vector2, Vector3, Color, Transform...); the project also has a member "${name}" of its own and the type is not declared in this file, so it was not rewritten`);
         return undefined;
@@ -628,8 +691,7 @@ class CSharpMigrator {
     each(/\bJoystickList\s*\./g, "JoystickList is split in Godot 4: JoyButton and JoyAxis");
     each(/(?<![\w])MoveAndSlide\s*\(\s*(?!\))/g, "MoveAndSlide() takes no arguments in Godot 4: set Velocity (and UpDirection) first, call MoveAndSlide(), and read Velocity afterwards");
     each(/(?<![\w])MoveAndSlideWithSnap\s*\(/g, "MoveAndSlideWithSnap() is gone in Godot 4: set Velocity and FloorSnapLength, then call MoveAndSlide()");
-    each(/(?<![\w])MoveAndCollide\s*\([^;]*?,\s*(?:true|false)\s*,/g, "MoveAndCollide() is (motion, testOnly = false, safeMargin = 0.08f, recoveryAsCollision = false, maxCollisions = 1) in Godot 4: check the arguments");
-    each(/(?<![\w.])Texture\s+[A-Za-z_]\w*\s*[;=,)]/g, "Texture is the abstract base class in Godot 4: a texture that is drawn is a Texture2D");
+    each(/(?<![\w])MoveAndCollide\s*\([^;]*?,\s*(?!true\b|false\b)[^,;)]+,/g, "MoveAndCollide() is (motion, testOnly = false, safeMargin = 0.08f, recoveryAsCollision = false, maxCollisions = 1) in Godot 4: check the arguments");
     // Elements of the untyped collections are Variant now.
     const collection = /\b(?:Godot\s*\.\s*)?Collections\s*\.\s*(Dictionary|Array)\b(?!\s*<)/.exec(code);
     if (collection) {

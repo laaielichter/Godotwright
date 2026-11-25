@@ -771,13 +771,14 @@ describe("C# scaffolding", () => {
     const dir = join(tempFolder("godotwright-new-cs-"), "game");
     const r = newProject(dir, { name: "Space Game", dotnet: true });
     expect(r.created).toEqual(["project.godot", "main.tscn", "main.gd", "main.gd.uid", "icon.svg", ".gitignore", ".gitattributes", "Space Game.csproj", "Space Game.sln", ".editorconfig"]);
-    // Godot's C# templates use tabs: dotnet format must keep them.
+    // Godotwright's C# templates use tabs (Godot's own use 4 spaces): dotnet format must keep them.
     expect(readFileSync(join(dir, ".editorconfig"), "utf8")).toBe("root = true\n\n[*]\ncharset = utf-8\n\n[*.cs]\nindent_style = tab\n");
     const project = readFileSync(join(dir, "project.godot"), "utf8");
     expect(project).toContain('config/features=PackedStringArray("4.7", "C#", "Forward Plus")');
     expect(project).toContain('[dotnet]\n\nproject/assembly_name="Space Game"\n');
     expect(readFileSync(join(dir, "Space Game.csproj"), "utf8")).toBe(
-      '<Project Sdk="Godot.NET.Sdk/4.7.0">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <EnableDynamicLoading>true</EnableDynamicLoading>\n    <RootNamespace>Space_Game</RootNamespace>\n  </PropertyGroup>\n</Project>\n',
+            // Byte for byte what Godot 4.7.2's own ProjectGenerator wrote for "Space Game" (GodotTools.ProjectEditor.dll).
+      '<Project Sdk="Godot.NET.Sdk/4.7.2">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <TargetFramework Condition=" \'$(GodotTargetPlatform)\' == \'android\' ">net9.0</TargetFramework>\n    <EnableDynamicLoading>true</EnableDynamicLoading>\n    <RootNamespace>SpaceGame</RootNamespace>\n  </PropertyGroup>\n</Project>',
     );
     const sln = readFileSync(join(dir, "Space Game.sln"), "utf8");
     const guid = /, "\{([0-9A-F-]{36})\}"/.exec(sln)![1]!;
@@ -790,7 +791,12 @@ describe("C# scaffolding", () => {
     expect(findCSharpProject(dir)).toEqual({ csproj: "Space Game.csproj", sln: "Space Game.sln" });
     // A name that is a namespace needs no RootNamespace; one that cannot be a file name is refused.
     expect(csprojText("Game")).not.toContain("RootNamespace");
-    expect(sanitizeNamespace("3D Demo: C#")).toBe("_3D_Demo__C_");
+    // The RootNamespace Godot 4.7.2's generator wrote for each name (none: the name is a namespace already).
+    const godot: Record<string, string | undefined> = {
+      "3D Demo: C#": "DDemoC", Game: undefined, "Space Game": "SpaceGame", _9: undefined, __x: "@__x", "a.b": undefined,
+      class: "@class", "my.2x": "my.x", "x..y": "x.Empty.y", "é_ü": undefined, "2d-demo": "ddemo",
+    };
+    for (const [name, ns] of Object.entries(godot)) expect([name, sanitizeNamespace(name) === name ? undefined : sanitizeNamespace(name)]).toEqual([name, ns]);
     expect(() => newProject(join(dir, "..", "bad"), { name: "A/B", dotnet: true })).toThrow(/characters a file name cannot hold/);
     // Without the option nothing about C# is written.
     const plain = newProject(join(dir, "..", "plain"));
