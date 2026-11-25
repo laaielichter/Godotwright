@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { buildCSharp, findDotnet } from "../../src/check/csharp-build.js";
 import { codeIntel, formatCode, sharedCSharpPool } from "../../src/lsp/code.js";
 import { findCSharpServer } from "../../src/lsp/server.js";
+import { renameCSharp } from "../../src/rename/csharp.js";
 import { newProject } from "../../src/scaffold/project.js";
 import { newScript } from "../../src/scaffold/script.js";
 
@@ -34,5 +35,12 @@ describe.skipIf(!enabled)("godot_code on C# with a real C# language server", () 
     expect(hover.hover?.signature).toContain("OnBodyEntered");
     const diagnostics = await codeIntel(root, { op: "diagnostics", file, code: "using Godot;\npublic partial class AreaTriggerT : Area2D { void F() { GD.Print(missingName); } }\n" });
     expect(formatCode(diagnostics)).toContain("CS0103");
+  });
+
+  it("renames a method and a signal through the real server, and the project still builds", { timeout: 600_000 }, async () => {
+    expect((await renameCSharp(root, "OnBodyEntered", "HandleBody", { write: true })).written).toBe(true);
+    const signal = await renameCSharp(root, "Triggered", "Fired", { write: true });
+    expect(signal.skipped).toEqual([]);
+    expect((await buildCSharp(root)).diagnostics).toEqual([]);
   });
 });

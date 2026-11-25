@@ -127,7 +127,8 @@ export const DOTNET_TARGET_FRAMEWORK = "net8.0";
 /** The target framework Godot 4.7 writes for Android builds (the export template's jar libraries need .NET 9). */
 export const DOTNET_ANDROID_TARGET_FRAMEWORK = "net9.0";
 
-const CS_KEYWORDS = new Set(
+/** The C# keywords (IdentifierUtils.cs in Godot): a name that is one needs @ in front. */
+export const CS_KEYWORDS = new Set(
   "as do if in is for int new out ref try base bool byte case char else enum goto lock long null this true uint void break catch class const event false fixed float sbyte short throw ulong using where while yield double extern object params public return sealed sizeof static string struct switch typeof unsafe ushort checked decimal default finally foreach partial private virtual abstract continue delegate explicit implicit internal operator override readonly volatile interface namespace protected unchecked stackalloc".split(" "),
 );
 

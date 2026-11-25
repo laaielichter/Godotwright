@@ -32,11 +32,7 @@ import { formatShaderReport, shaderReport } from "../shader/shader.js";
 import { FIXABLE_RULES, fixProject, formatFix } from "../fix/fix.js";
 import { doctorProject, formatDoctor } from "../doctor/doctor.js";
 import { findUsages, formatUsages } from "../usages/usages.js";
-import {
-  RenameError,
-  formatRename,
-  renameInProject,
-} from "../rename/rename.js";
+import { RenameError, formatRename } from "../rename/rename.js";
 import { formatDelta, reviewDelta } from "../review/delta.js";
 import {
   currentLearning,
@@ -104,6 +100,7 @@ import { checkExport, formatExportCheck } from "../export/export.js";
 import { patchExport } from "../export/patch.js";
 import { formatExportRun, inspectPack, runExport, smokePack } from "../export/run.js";
 import { CODE_OPS, CodeError, codeIntel, formatCode } from "../lsp/code.js";
+import { renameAnything } from "../rename/csharp.js";
 import { LanguageServerError } from "../lsp/server.js";
 import { shaderSummary } from "../shaders/shaders.js";
 import { formatJournal, formatUndo, readJournal, undoJournal } from "../journal/journal.js";
@@ -508,10 +505,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Rename everywhere",
       description:
-        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. `from` and `to` are both names or both res:// paths. Without `write` it changes nothing and returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after (an error result when there are more after). Refuses, with an error, when the new name is already taken. Call godot_usages first to see what it will touch. For a setting value, an input event or a node property, use godot_project_edit or godot_scene_edit instead.",
+        "Rename a function, signal, variable, class_name, autoload, input action, group or node name everywhere it is used (GDScript, scene connections, node paths, groups, project settings), or move a res:// file together with its .uid and .import files and every reference to it. `from` and `to` are both names or both res:// paths. A name declared in C# (class, method, [Signal], [Export] or other member) is renamed in the C# code by the C# language server csharp-ls, and by Godotwright in scene connections, signal names in scenes (without EventHandler), exported values in .tscn/.tres, GDScript that names it, and Godot's generated SignalName/MethodName/PropertyName/EmitSignal uses where the server resolves them; a class named after its file moves with the file. Without csharp-ls a C# rename is refused (never a text replace); `file` picks the .cs file when the name is declared in more than one. Without `write` it changes nothing and returns the exact lines it would change and what it could not change; with `write: true` it applies them and reports the review errors before and after (an error result when there are more after). Refuses, with an error, when the new name is already taken. Call godot_usages first to see what it will touch. For a setting value, an input event or a node property, use godot_project_edit or godot_scene_edit instead.",
       inputSchema: {
         from: z.string().describe("the current name, or a res:// path"),
         to: z.string().describe("the new name, or the new res:// path"),
+        file: z.string().optional().describe("C#: the .cs file (res://) that declares the name, when more than one does"),
         write: z
           .boolean()
           .optional()
@@ -525,10 +523,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         openWorldHint: false,
       },
     },
-    async ({ from, to, write, path }) => {
+    async ({ from, to, write, path, file }) => {
       try {
-        const plan = renameInProject(where(path), from, to, {
+        const plan = await renameAnything(where(path), from, to, {
           write: write === true,
+          ...(file ? { file } : {}),
         });
         const body = formatRename(plan);
         return plan.review && plan.review.after > plan.review.before

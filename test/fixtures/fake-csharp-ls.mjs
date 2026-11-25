@@ -31,16 +31,27 @@ function csFiles(dir) {
 
 const textOf = (uri) => docs.get(uri) ?? readFileSync(fileURLToPath(uri), "utf8");
 
-/** Every place the symbol is named, as LSP locations. */
-function places() {
+/** The identifier at an LSP position, like a Roslyn server resolves it (here: by its text). */
+function wordAt(p) {
+  const line = textOf(p.textDocument.uri).split("\n")[p.position.line] ?? "";
+  let s = p.position.character;
+  let e = s;
+  while (s > 0 && /\w/.test(line[s - 1])) s--;
+  while (e < line.length && /\w/.test(line[e])) e++;
+  return line.slice(s, e);
+}
+
+/** Every place an identifier is named in code (not in strings), as LSP locations. */
+function places(word = symbol) {
   const out = [];
   for (const file of csFiles(process.cwd())) {
     const uri = pathToFileURL(file).href;
     textOf(uri)
       .split("\n")
       .forEach((line, i) => {
-        const re = new RegExp(`\\b${symbol}\\b`, "g");
-        for (let m = re.exec(line); m; m = re.exec(line)) out.push({ uri, range: { start: { line: i, character: m.index }, end: { line: i, character: m.index + symbol.length } } });
+        const code = line.replace(/"[^"\n]*"/g, (q) => " ".repeat(q.length));
+        const re = new RegExp(`\\b${word}\\b`, "g");
+        for (let m = re.exec(code); m; m = re.exec(code)) out.push({ uri, range: { start: { line: i, character: m.index }, end: { line: i, character: m.index + word.length } } });
       });
   }
   return out;
@@ -96,9 +107,13 @@ function handle(m) {
     case "textDocument/definition":
       send({ id: m.id, result: at(p) ? places().slice(0, 1) : [] });
       break;
-    case "textDocument/references":
-      send({ id: m.id, result: at(p) ? places() : [] });
+    case "textDocument/references": {
+      const word = wordAt(p);
+      // $FAKE_NO_GENERATED: like a server that has not seen the generated code yet (the project was never built).
+      const generated = /^(EmitSignal\w+)$/.test(word) || /(SignalName|MethodName|PropertyName)\.$/.test((textOf(p.textDocument.uri).split("\n")[p.position.line] ?? "").slice(0, p.position.character));
+      send({ id: m.id, result: word && !(generated && process.env.FAKE_NO_GENERATED) ? places(word) : [] });
       break;
+    }
     case "textDocument/documentSymbol":
       send({
         id: m.id,
@@ -116,16 +131,19 @@ function handle(m) {
         ],
       });
       break;
-    case "textDocument/prepareRename":
-      send({ id: m.id, result: at(p) ? { range: places()[0].range, placeholder: symbol } : null });
+    case "textDocument/prepareRename": {
+      const word = wordAt(p);
+      send({ id: m.id, result: word ? { range: places(word)[0]?.range, placeholder: word } : null });
       break;
+    }
     case "textDocument/rename": {
-      if (!at(p)) {
+      const word = wordAt(p);
+      if (!word) {
         send({ id: m.id, error: { code: -32602, message: "No symbol to rename at this position" } });
         break;
       }
       const changes = {};
-      for (const loc of places()) (changes[loc.uri] ??= []).push({ range: loc.range, newText: p.newName });
+      for (const loc of places(word)) (changes[loc.uri] ??= []).push({ range: loc.range, newText: p.newName });
       send({ id: m.id, result: process.env.FAKE_DOCUMENT_CHANGES ? { documentChanges: Object.entries(changes).map(([uri, edits]) => ({ textDocument: { uri, version: null }, edits })) } : { changes } });
       break;
     }

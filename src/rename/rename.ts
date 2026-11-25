@@ -62,21 +62,21 @@ const swapSegments = (path: string, from: string, to: string): string =>
     .join("/");
 
 /** Replaces the name where it is code (not in strings or comments) on one GDScript line. */
-function replaceInCode(line: string, from: string, to: string): string {
+export function replaceInCode(line: string, from: string, to: string): string {
   const mask = codeMask(line, {});
   const re = new RegExp(`(?<![\\w$%])${esc(from)}(?!\\w)`, "g");
   return line.replace(re, (m: string, offset: number) => (mask[offset] ? to : m));
 }
 
 /** Replaces the name inside string literals where Godot looks it up: "name", &"name", and as a segment of a node path. */
-function replaceInStrings(line: string, from: string, to: string): string {
+export function replaceInStrings(line: string, from: string, to: string): string {
   return line.replace(/(&?)(["'])([^"'\n]*)\2/g, (m: string, amp: string, q: string, body: string) =>
     body.split("/").includes(from) ? `${amp}${q}${swapSegments(body, from, to)}${q}` : m,
   );
 }
 
 /** Replaces a node name inside $Path/To/Node and %Unique tokens. */
-function replaceInNodePaths(line: string, from: string, to: string): string {
+export function replaceInNodePaths(line: string, from: string, to: string): string {
   return line.replace(/([$%])("?)([A-Za-z_./][\w./]*)\2/g, (m: string, sigil: string, q: string, path: string) =>
     path.split("/").includes(from) ? `${sigil}${q}${swapSegments(path, from, to)}${q}` : m,
   );

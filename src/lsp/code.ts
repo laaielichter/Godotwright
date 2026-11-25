@@ -499,6 +499,19 @@ async function csharpDiagnostics(server: GodotLanguageServer, path: string, text
   return last === undefined ? { list: [], how: "none" } : { list: last, how: "pushed" };
 }
 
+/**
+ * Runs `fn` on the project's C# language server in `pool` (warm, started on first use); without a pool, on a server
+ * started with `command` for this call only and stopped after it.
+ */
+export async function codeIntelServer<T>(root: string, command: CSharpServerCommand, pool: LanguageServerPool | undefined, fn: (server: GodotLanguageServer) => Promise<T>): Promise<T> {
+  const own = pool ?? new LanguageServerPool({ start: (r) => startCSharpServer(r, command), keepWarm: false });
+  try {
+    return await own.run(root, undefined, (server) => fn(server));
+  } finally {
+    if (!pool && !own.keepsWarm) own.stopAll();
+  }
+}
+
 async function codeIntelCSharp(root: string, file: string, text: string, pos: { line: number; character: number } | undefined, options: CodeOptions): Promise<CodeResult> {
   const base: CodeResult = {
     project: root,
