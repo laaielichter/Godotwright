@@ -90,9 +90,11 @@ export function findDotnet(env: NodeJS.ProcessEnv = process.env, platform: NodeJ
 }
 
 // path(line,col): error CS0103: message [project.csproj]   (also path(line,col,endLine,endCol) and path(line))
-const LOCATED = /^\s*(?:\d+>)?(.+?)\((\d+)(?:,(\d+))?(?:,\d+,\d+)?\)\s*:\s*(error|warning)\s+([A-Za-z]+\d+)\s*:\s*(.*)$/;
+// The code is optional: NuGet.targets(156,5): warning : Unable to find a project to restore!
+const LOCATED = /^\s*(?:\d+>)?(.+?)\((\d+)(?:,(\d+))?(?:,\d+,\d+)?\)\s*:\s*(error|warning)(?:\s+([A-Za-z]+\d+))?\s*:[ \t]?(.*)$/;
 // MSBUILD : error MSB1009: message      /x/Game.csproj : error NU1101: message [/x/Game.sln]      CSC : error CS5001: ...
-const UNLOCATED = /^\s*(?:\d+>)?(?:(.+?)\s*:\s*)?(error|warning)\s+([A-Za-z]+\d+)\s*:\s*(.*)$/;
+// /x/Game.csproj : error : Could not resolve SDK "Godot.NET.Sdk". ...   and its indented detail lines below it.
+const UNLOCATED = /^\s*(?:\d+>)?(?:(.+?)\s*:\s*)?(error|warning)(?:\s+([A-Za-z]+\d+))?\s*:[ \t]?(.*)$/;
 const IN_PROJECT = /\s+\[([^\]]+?\.(?:cs|fs|vb)proj|[^\]]+?\.slnx?)(?:::[^\]]*)?\]\s*$/i;
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
@@ -101,7 +103,9 @@ const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
  * MSBuild's console output as diagnostics. `root` is the Godot project: files inside it become res:// paths, a file
  * outside it (an SDK targets file) stays in the message. A relative path is relative to the project file MSBuild names
  * in the brackets at the end of the line. The same line printed twice (once per target framework, or again in the
- * summary) is kept once.
+ * summary) is kept once. A message without a code (`error : Could not resolve SDK ...`) is kept too, and the indented
+ * lines MSBuild prints under it from the same origin (the SDK resolver's reasons) become part of its message. The
+ * formats are checked against real `dotnet build` output in test/fixtures/msbuild/.
  */
 export function parseMsbuildOutput(output: string, root: string): Diagnostic[] {
   const out: Diagnostic[] = [];
@@ -112,27 +116,48 @@ export function parseMsbuildOutput(output: string, root: string): Diagnostic[] {
     const rel = relative(root, full).replace(/\\/g, "/");
     return rel === "" || rel.startsWith("..") || isAbsolute(rel) || /^[A-Za-z]:/.test(rel) ? undefined : `res://${rel}`;
   };
+  // The last diagnostic without a code, with its origin: indented lines from the same origin continue it.
+  let open: { d: Diagnostic; origin: string } | undefined;
   for (const raw of output.split(/\r?\n/)) {
     let line = raw.replace(ANSI, "").trimEnd();
-    if (!/\b(error|warning)\s+[A-Za-z]+\d+\s*:/.test(line)) continue;
+    if (!/\b(error|warning)(\s+[A-Za-z]+\d+)?\s*:/.test(line)) {
+      open = undefined;
+      continue;
+    }
     const project = IN_PROJECT.exec(line)?.[1];
     if (project) line = line.replace(IN_PROJECT, "");
     const located = LOCATED.exec(line);
     let d: Diagnostic;
+    let origin = "";
+    let detail = false;
     if (located) {
       const [, path, lineNo, , severity, code, message] = located;
       const file = toRes(path!.trim(), project);
-      d = { severity: severity as "error" | "warning", ...(file ? { file, line: Number(lineNo) } : {}), message: `${code}: ${message!.trim()}${file ? "" : ` (${path!.trim()}:${lineNo})`}`, source: "csharp" };
+      origin = `${path}(${lineNo})`;
+      const text = `${code ? `${code}: ` : ""}${message!.trim()}`;
+      d = { severity: severity as "error" | "warning", ...(file ? { file, line: Number(lineNo) } : {}), message: `${text}${file ? "" : ` (${path!.trim()}:${lineNo})`}`, source: "csharp" };
     } else {
       const m = UNLOCATED.exec(line);
-      if (!m) continue;
-      const [, origin, severity, code, message] = m;
+      if (!m) {
+        open = undefined;
+        continue;
+      }
+      const [, originText, severity, code, message] = m;
       // The origin is a file (Game.csproj) or a tool (MSBUILD, CSC, NuGet).
-      const isFile = origin !== undefined && /[\\/.]/.test(origin) && !/\s/.test(origin.trim());
-      const file = isFile ? toRes(origin!.trim(), project) : undefined;
-      d = { severity: severity as "error" | "warning", ...(file ? { file } : {}), message: `${code}: ${message!.trim()}`, source: "csharp" };
+      const isFile = originText !== undefined && /[\\/.]/.test(originText) && !/\s/.test(originText.trim());
+      const file = isFile ? toRes(originText!.trim(), project) : undefined;
+      origin = `${severity}|${originText?.trim() ?? ""}`;
+      detail = /^\s/.test(message!);
+      if (!message!.trim() && !code) continue;
+      d = { severity: severity as "error" | "warning", ...(file ? { file } : {}), message: `${code ? `${code}: ` : ""}${message!.trim()}${!file && isFile ? ` (${originText!.trim()})` : ""}`, source: "csharp" };
+    }
+    if (detail && open && open.origin === origin) {
+      open.d.message += `; ${d.message}`;
+      continue;
     }
     const key = `${d.severity}|${d.file ?? ""}|${d.line ?? ""}|${d.message}`;
+    const codeless = !/^[A-Za-z]+\d+: /.test(d.message);
+    open = codeless && !located ? { d, origin } : undefined;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(d);

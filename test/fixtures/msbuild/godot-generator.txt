@@ -1,0 +1,1 @@
+/tmp/gw1/cs/bad/NotPartial.cs(3,14): error GD0001: Missing partial modifier on declaration of type 'NotPartial' that derives from 'Godot.GodotObject' (https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/diagnostics/GD0001.html) [/tmp/gw1/cs/cs.csproj]

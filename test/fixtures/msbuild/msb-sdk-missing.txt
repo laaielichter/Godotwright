@@ -1,0 +1,8 @@
+/tmp/gw4/cs.csproj : warning NU1503: Skipping restore for project '/tmp/gw4/cs.csproj'. The project file may be invalid or missing targets required for restore. [/tmp/gw4/cs.sln]
+/usr/lib/dotnet/sdk/8.0.134/NuGet.targets(156,5): warning : Unable to find a project to restore! [/tmp/gw4/cs.sln]
+/tmp/gw4/cs.csproj : error : Could not resolve SDK "Godot.NET.Sdk". Exactly one of the probing messages below indicates why we could not resolve the SDK. Investigate and resolve that message to correctly specify the SDK.
+/tmp/gw4/cs.csproj : error :   SDK resolver "Microsoft.DotNet.MSBuildWorkloadSdkResolver" returned null.
+/tmp/gw4/cs.csproj : error :   Unable to find package Godot.NET.Sdk with version (= 4.7.0)
+/tmp/gw4/cs.csproj : error :   - Found 1 version(s) in GodotSharp 4.7.2 [ Nearest version: 4.7.2 ]
+/tmp/gw4/cs.csproj : error :   MSB4276: The default SDK resolver failed to resolve SDK "Godot.NET.Sdk" because directory "/usr/lib/dotnet/sdk/8.0.134/Sdks/Godot.NET.Sdk/Sdk" did not exist.
+/tmp/gw4/cs.csproj : error MSB4236: The SDK 'Godot.NET.Sdk/4.7.0' specified could not be found.

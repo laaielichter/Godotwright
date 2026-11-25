@@ -1,0 +1,2 @@
+/tmp/gw1/cs/bad/Broken.cs(8,18): error CS0103: The name 'missingName' does not exist in the current context [/tmp/gw1/cs/cs.csproj]
+/tmp/gw1/cs/bad/Broken.cs(7,13): warning CS0219: The variable 'unused' is assigned but its value is never used [/tmp/gw1/cs/cs.csproj]

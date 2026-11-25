@@ -604,6 +604,31 @@ describe("C# build diagnostics", () => {
     ]);
   });
 
+  it("reads real dotnet build output (Godot 4.7.2 .NET, .NET SDK 8.0.134), kept verbatim in test/fixtures/msbuild", () => {
+    const fixture = (name: string) => readFileSync(join(import.meta.dirname, "fixtures", "msbuild", name), "utf8");
+    // A compiler error and a warning in one file of the project at /tmp/gw1/cs.
+    expect(parseMsbuildOutput(fixture("cs-error-warning.txt"), "/tmp/gw1/cs")).toEqual([
+      { severity: "error", file: "res://bad/Broken.cs", line: 8, message: "CS0103: The name 'missingName' does not exist in the current context", source: "csharp" },
+      { severity: "warning", file: "res://bad/Broken.cs", line: 7, message: "CS0219: The variable 'unused' is assigned but its value is never used", source: "csharp" },
+    ]);
+    // Godot's source generator, with the link to its docs page.
+    expect(parseMsbuildOutput(fixture("godot-generator.txt"), "/tmp/gw1/cs")).toEqual([
+      { severity: "error", file: "res://bad/NotPartial.cs", line: 3, message: "GD0001: Missing partial modifier on declaration of type 'NotPartial' that derives from 'Godot.GodotObject' (https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/diagnostics/GD0001.html)", source: "csharp" },
+    ]);
+    // An MSB error without a location; the "Switch:" line under it is not a diagnostic.
+    expect(parseMsbuildOutput(fixture("msb-no-file.txt"), "/tmp/gw1/cs")).toEqual([{ severity: "error", message: "MSB1009: Project file does not exist.", source: "csharp" }]);
+    // A Godot.NET.Sdk version that is not there: codeless lines, the resolver's indented reasons, then MSB4236.
+    const sdk = parseMsbuildOutput(fixture("msb-sdk-missing.txt"), "/tmp/gw4");
+    expect(sdk.map((d) => [d.severity, d.file, d.message.slice(0, 41)])).toEqual([
+      ["warning", "res://cs.csproj", "NU1503: Skipping restore for project '/tm"],
+      ["warning", undefined, "Unable to find a project to restore! (/us"],
+      ["error", "res://cs.csproj", 'Could not resolve SDK "Godot.NET.Sdk". Ex'],
+      ["error", "res://cs.csproj", "MSB4236: The SDK 'Godot.NET.Sdk/4.7.0' sp"],
+    ]);
+    expect(sdk[1]!.message).toBe("Unable to find a project to restore! (/usr/lib/dotnet/sdk/8.0.134/NuGet.targets:156)");
+    expect(sdk[2]!.message).toContain("; Unable to find package Godot.NET.Sdk with version (= 4.7.0); - Found 1 version(s) in GodotSharp 4.7.2 [ Nearest version: 4.7.2 ]; MSB4276: The default SDK resolver failed");
+  });
+
   it("finds the project file Godot builds", () => {
     const root = makeProject({ "project.godot": PROJECT, "Tools.csproj": "<Project />", "CsDemo.csproj": "<Project />", "CsDemo.sln": "" });
     expect(findCSharpProject(root)).toEqual({ csproj: "CsDemo.csproj", sln: "CsDemo.sln" });
@@ -726,7 +751,8 @@ describe("C# scaffolding", () => {
     expect(project).toContain('config/features=PackedStringArray("4.7", "C#", "Forward Plus")');
     expect(project).toContain('[dotnet]\n\nproject/assembly_name="Space Game"\n');
     expect(readFileSync(join(dir, "Space Game.csproj"), "utf8")).toBe(
-      '<Project Sdk="Godot.NET.Sdk/4.7.0">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <EnableDynamicLoading>true</EnableDynamicLoading>\n    <RootNamespace>Space_Game</RootNamespace>\n  </PropertyGroup>\n</Project>\n',
+      // Byte for byte what Godot 4.7.2's own ProjectGenerator wrote for "Space Game" (GodotTools.ProjectEditor.dll).
+      '<Project Sdk="Godot.NET.Sdk/4.7.2">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <TargetFramework Condition=" \'$(GodotTargetPlatform)\' == \'android\' ">net9.0</TargetFramework>\n    <EnableDynamicLoading>true</EnableDynamicLoading>\n    <RootNamespace>SpaceGame</RootNamespace>\n  </PropertyGroup>\n</Project>',
     );
     const sln = readFileSync(join(dir, "Space Game.sln"), "utf8");
     const guid = /, "\{([0-9A-F-]{36})\}"/.exec(sln)![1]!;
@@ -739,7 +765,12 @@ describe("C# scaffolding", () => {
     expect(findCSharpProject(dir)).toEqual({ csproj: "Space Game.csproj", sln: "Space Game.sln" });
     // A name that is a namespace needs no RootNamespace; one that cannot be a file name is refused.
     expect(csprojText("Game")).not.toContain("RootNamespace");
-    expect(sanitizeNamespace("3D Demo: C#")).toBe("_3D_Demo__C_");
+    // The RootNamespace Godot 4.7.2's generator wrote for each name (none: the name is a namespace already).
+    const godot: Record<string, string | undefined> = {
+      "3D Demo: C#": "DDemoC", Game: undefined, "Space Game": "SpaceGame", _9: undefined, __x: "@__x", "a.b": undefined,
+      class: "@class", "my.2x": "my.x", "x..y": "x.Empty.y", "é_ü": undefined, "2d-demo": "ddemo",
+    };
+    for (const [name, ns] of Object.entries(godot)) expect([name, sanitizeNamespace(name) === name ? undefined : sanitizeNamespace(name)]).toEqual([name, ns]);
     expect(() => newProject(join(dir, "..", "bad"), { name: "A/B", dotnet: true })).toThrow(/characters a file name cannot hold/);
     // Without the option nothing about C# is written.
     const plain = newProject(join(dir, "..", "plain"));

@@ -118,31 +118,55 @@ export function projectGodotText(name: string, renderer: RenderingMethod, mainSc
   return `${out.join("\n")}\n`;
 }
 
+/** The Godot engine version whose Godot.NET.Sdk a new C# project names (Godot writes its own full version). */
+export const GODOT_ENGINE_VERSION = "4.7.2";
 /** The .NET SDK the C# project file names: Godot's own NuGet SDK at the targeted Godot version. */
-export const GODOT_NET_SDK = `Godot.NET.Sdk/${GODOT_TARGET}.0`;
+export const GODOT_NET_SDK = `Godot.NET.Sdk/${GODOT_ENGINE_VERSION}`;
 /** The target framework Godot 4.7 writes for a new C# project. */
 export const DOTNET_TARGET_FRAMEWORK = "net8.0";
+/** The target framework Godot 4.7 writes for Android builds (the export template's jar libraries need .NET 9). */
+export const DOTNET_ANDROID_TARGET_FRAMEWORK = "net9.0";
 
-/**
- * A C# namespace from a project name, as Godot's IdentifierUtils.SanitizeQualifiedIdentifier does it: characters an
- * identifier cannot hold become `_`, and a part that starts with a digit gets a `_` in front.
- */
-export function sanitizeNamespace(name: string): string {
-  return name
-    .split(".")
-    .map((part) => {
-      const clean = part.replace(/[^\p{L}\p{Nd}_]/gu, "_");
-      return clean === "" ? "_" : /^\p{Nd}/u.test(clean) ? `_${clean}` : clean;
-    })
-    .join(".");
+const CS_KEYWORDS = new Set(
+  "as do if in is for int new out ref try base bool byte case char else enum goto lock long null this true uint void break catch class const event false fixed float sbyte short throw ulong using where while yield double extern object params public return sealed sizeof static string struct switch typeof unsafe ushort checked decimal default finally foreach partial private virtual abstract continue delegate explicit implicit internal operator override readonly volatile interface namespace protected unchecked stackalloc".split(" "),
+);
+
+/** One part of a namespace, as GodotTools.ProjectEditor/IdentifierUtils.cs SanitizeIdentifier does it (allowEmpty). */
+function sanitizeIdentifier(identifier: string): string {
+  if (identifier === "") return "Empty";
+  const source = identifier.slice(0, 511);
+  let out = "";
+  let start = 0;
+  if (source[0] === "@") {
+    out = "@";
+    start = 1;
+  }
+  // C# walks UTF-16 code units; so does this (a lone surrogate is no letter, and is skipped as Godot skips it).
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i]!;
+    if (/[\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}]/u.test(ch)) out += ch;
+    // Marks, connectors and digits only after the first character; an underscore may start an identifier.
+    else if (/[\p{Mn}\p{Mc}\p{Pc}\p{Nd}]/u.test(ch) && (out.length > start || ch === "_")) out += ch;
+  }
+  if (out.length === start) out += "Empty";
+  const isKeyword = (v: string) => (v.length > 2 && v[0] === "_" && v[1] === "_" && v[2] !== "_") || CS_KEYWORDS.has(v);
+  return out[0] !== "@" && isKeyword(out) ? `@${out}` : out;
 }
 
 /**
- * The .csproj of a new Godot C# project. The shape is the one Godot's editor generates:
- * modules/mono/editor/GodotTools/GodotTools.ProjectEditor/ProjectGenerator.cs (GenGameProject) in godotengine/godot:
- * the Godot.NET.Sdk as the project Sdk, one PropertyGroup with TargetFramework and EnableDynamicLoading, and a
- * RootNamespace only when the project name is not a valid namespace. Godot 4.7 writes net8.0 (see the 4.7 C# projects
- * in godotengine/godot-demo-projects, mono/); Godot's master branch has moved on to net10.0.
+ * A C# namespace from a project name, exactly as Godot's IdentifierUtils.SanitizeQualifiedIdentifier does it: each
+ * dot-separated part keeps its letters (and digits, marks and `_` after the first character), an empty part becomes
+ * `Empty`, and a keyword gets `@` in front. "Space Game" becomes `SpaceGame`, "3D Demo: C#" `DDemoC`.
+ */
+export function sanitizeNamespace(name: string): string {
+  return name.split(".").map(sanitizeIdentifier).join(".");
+}
+
+/**
+ * The .csproj of a new Godot C# project, byte for byte what Godot 4.7.2's editor writes
+ * (GodotTools.ProjectEditor ProjectGenerator.GenAndSaveGameProject, run from the 4.7.2 .NET build to compare): the
+ * Godot.NET.Sdk at Godot's own version, net8.0 with net9.0 for Android, EnableDynamicLoading, and a RootNamespace only
+ * when the project name is not a valid namespace. Godot saves it without a BOM and without a final newline.
  */
 export function csprojText(name: string): string {
   const namespace = sanitizeNamespace(name);
@@ -151,11 +175,11 @@ export function csprojText(name: string): string {
     `<Project Sdk="${GODOT_NET_SDK}">`,
     "  <PropertyGroup>",
     `    <TargetFramework>${DOTNET_TARGET_FRAMEWORK}</TargetFramework>`,
+    `    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">${DOTNET_ANDROID_TARGET_FRAMEWORK}</TargetFramework>`,
     "    <EnableDynamicLoading>true</EnableDynamicLoading>",
     ...(namespace !== name ? [`    <RootNamespace>${escape(namespace)}</RootNamespace>`] : []),
     "  </PropertyGroup>",
     "</Project>",
-    "",
   ].join("\n");
 }
 
@@ -262,7 +286,7 @@ export function newProject(dir: string, options: NewProjectOptions = {}): NewPro
   if (skipped.some((f) => f.startsWith("main."))) notes.push("a main.* file was already there and was kept: check that main.tscn, main.gd and main.gd.uid still belong together");
   if (options.mergeDriver && created.includes(".gitattributes")) notes.push("the merge driver itself lives in each clone's git config: run `godotwright merge --install` once per clone");
   if (options.mergeDriver && skipped.includes(".gitattributes")) notes.push(".gitattributes was already there: run `godotwright merge --install` to add the merge lines to it");
-  if (options.dotnet) notes.push(`C#: open the project with the .NET build of Godot ${GODOT_TARGET} (it needs the .NET SDK 8 or later); main.gd is GDScript, add C# scripts with godot_new op script and a .cs file. Godot offers to update ${GODOT_NET_SDK} in the .csproj to its own version when they differ`);
+  if (options.dotnet) notes.push(`C#: open the project with the .NET build of Godot ${GODOT_TARGET} (it needs the .NET SDK 8 or later); main.gd is GDScript, add C# scripts with godot_new op script and a .cs file. The .csproj names ${GODOT_NET_SDK}, as Godot ${GODOT_ENGINE_VERSION} writes it; another Godot version offers to update it`);
   notes.push("Godot makes .godot/, icon.svg.import and missing .uid files on its first import (open the project, or run godot --headless --import)");
   return { project: root, name, kind, renderer, mainScene: "res://main.tscn", created, skipped, notes };
 }
