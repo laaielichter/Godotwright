@@ -33,7 +33,19 @@ node dist/cli.js --help
 - `src/lsp/`: Godot's own GDScript language server (`godot_code`). `jsonrpc.ts` is the JSON-RPC client with LSP
   framing, `server.ts` starts `godot --editor --headless --lsp-port` and keeps one warm server per project (idle
   stop, killed on exit, restarted when a class_name, project.godot or a file that needs an import changes; a restart
-  waits for the calls queued on the old server), `code.ts` holds the ops and output.
+  waits for the calls queued on the old server), `code.ts` holds the ops and output. `csharp.ts` is the second server,
+  for `.cs` files: csharp-ls over stdio, through the same `RpcConnection`, `LanguageServer` and `LanguageServerPool`
+  (`code.ts` picks the server by the file's extension).
+  Why csharp-ls: a C# server for Godotwright must start without an editor, speak plain LSP over stdio, load a
+  Godot.NET.Sdk project as it is, and be something a user can install with one command and no licence question.
+  csharp-ls is one `dotnet tool` (MIT), built on Roslyn, so its diagnostics are the compiler's and Godot's source
+  generators run in it (`SignalName.X` resolves, and breaks when the delegate is renamed, which is what `godot_rename`
+  relies on). OmniSharp is in maintenance and needs its own protocol or a wrapper; Microsoft's Roslyn language server
+  ships inside the C# extension for VS Code, is not a documented standalone tool and its C# Dev Kit part is not open
+  source. Measured with csharp-ls 0.16.0 (the last release for .NET 8; each release targets one .NET): it loads a
+  generated Godot project in 2-4 s, answers nothing before the load ends (`$/progress` "end"), keeps an opened
+  document's text after didClose, and sees files changed on disk only through `workspace/didChangeWatchedFiles`.
+  Godotwright never installs it: `csharpLsMissing()` names the command for the user's SDK.
 - `src/shaders/`: the GPU pass over shaders: draws every shader in Godot (Compatibility renderer, xvfb-run on Linux
   without a display), for what only the GPU driver rejects (a uniform block that is too big, a sampler array indexed by
   a variable). Language errors are found headless, without it: `src/check/shader-compile.ts` (`Shader.get_rid()` runs

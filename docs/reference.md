@@ -74,7 +74,7 @@ godotwright new project my-game --kind 3d    # a new Godot 4.7 project; `new scr
 godotwright preset add linux --export-path build/game.x86_64 --write   # export presets without the editor: list, add, set, remove
 godotwright translations check res://text.csv   # a CSV against the tr() keys the code uses; list, add, remove
 godotwright editor install            # optional: the addon for the open editor; then `editor status`, `editor play`, `editor errors`
-godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, completion; --code for unsaved text)
+godotwright code diagnostics res://player.gd   # Godot's own language server: warnings at the project's levels (also hover, definition, references, symbols, completion; --code for unsaved text; a .cs file goes to csharp-ls)
 godotwright shaders                   # the GPU pass: draw every shader (Compatibility renderer) for driver errors; errors at the line in the .gdshader
 godotwright screenshot --scene res://hud.tscn --baseline   # visual test: compares with .godotwright/baselines/, exit 1 when it changed
 godotwright undo                      # take back the last Godotwright write (--steps n, --list)
@@ -677,7 +677,24 @@ A Godot 4 .NET project is read from its files, like a GDScript one.
   (install the .NET SDK 8 or later); the review still checks the C# files.
 - **`new`** (`godot_new`): C# script templates, and `new project --dotnet`.
 
-Not there: a C# language server, a C# formatter, rename inside C# code, and migration of C# code. The rules are quiet
+- **`code`** (`godot_code`): a `.cs` file is answered by the C# language server
+  [csharp-ls](https://github.com/razzmatazz/csharp-language-server) (MIT), with the same ops as GDScript:
+  `diagnostics` (the compiler's own, with its codes, also for unsaved code), `hover`, `definition`, `references`,
+  `symbols` and `completion`. It needs no Godot and no editor. You install it yourself; Godotwright never does:
+
+  ```sh
+  dotnet tool install --global csharp-ls                    # the newest, for the newest .NET SDK
+  dotnet tool install --global csharp-ls --version 0.16.0   # with the .NET 8 SDK
+  ```
+
+  Without it the answer names the command for your .NET SDK, and every other tool keeps working. The project must
+  have been built or restored once (`godotwright check` does that). One server per project stays warm in the MCP
+  server, with the same idle stop as the GDScript one; C# files changed on disk are told to it before every call, and
+  a changed `.csproj`, `.sln` or restore starts it again. It knows the names Godot's source generators make
+  (`SignalName.X`). Ran with csharp-ls 0.16.0 on dotnet 8.0.134 and Godot.NET.Sdk 4.7.0; newer csharp-ls releases
+  need .NET 9 or later and were not run. `csharp-ls` is found in `$CSHARP_LS`, on PATH, then in `~/.dotnet/tools`.
+
+Not there: a C# formatter, rename inside C# code, and migration of C# code. The rules are quiet
 on the official `mono/` demos and two public C# projects (about 650 files). The build ran for real: a generated
 project with every C# template builds clean with dotnet 8.0.134 and Godot.NET.Sdk 4.7.0, and a scene with a C# script
 ran in the .NET build of Godot 4.7.2. The check builds with `--no-incremental` (an up-to-date build would report no
@@ -1329,7 +1346,7 @@ CI connects both Claude Code and Codex to the server on every push.
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
-| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code |
+| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition, references, symbols and completion, also for unsaved code. A `.cs` file is answered by the C# language server `csharp-ls` (you install it) with the same ops |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`, uid repairs across files included; shows them first, then reviews the changed files again |

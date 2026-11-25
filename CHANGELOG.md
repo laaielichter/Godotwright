@@ -43,6 +43,16 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
     builds with `--no-incremental`); and the compiler's messages came in the machine's language (builds now run with
     `DOTNET_CLI_UI_LANGUAGE=en`). `test/integration/csharp-dotnet.test.ts` builds a generated project for real and
     is skipped without `dotnet`.
+  - **`godot_code` for C#.** A `.cs` file is answered by the C# language server
+    [csharp-ls](https://github.com/razzmatazz/csharp-language-server) (MIT, plain LSP over stdio, no editor): the
+    compiler's diagnostics (also for unsaved code), hover, definition, references, the symbols of a file and
+    completion. `references` and `symbols` are new for GDScript too. You install csharp-ls yourself
+    (`dotnet tool install --global csharp-ls`; with the .NET 8 SDK `--version 0.16.0`); without it the answer names
+    that command and everything else keeps working. One warm server per project with the same idle stop as the
+    GDScript one; C# files changed on disk are told to it, a changed `.csproj` or `.sln` starts it again. Tested
+    against the real csharp-ls 0.16.0 on a generated Godot.NET.Sdk 4.7.0 project (dotnet 8.0.134), where it knows
+    Godot's API and the names Godot's source generators make. Newer csharp-ls releases need .NET 9 or later and
+    were not run.
 - **`godot_editor`: the open editor, through an optional addon.** `godotwright editor install` puts a small addon in
   the project that listens on 127.0.0.1 with a new token every start. With it an agent sees the open scenes and
   unsaved changes, the selection, the edited tree and the errors the editor logged (Godot 4.5+), and can save, reload

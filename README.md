@@ -175,8 +175,8 @@ Earlier:
 - **Resources and imports.** `godot_resource_edit` edits `.tres` files and import settings and verifies the reimport.
 - **For agents and teams.** Tool sets (`--tools core` is about a fifth of the tool list), `--lean`, `--read-only`,
   structured results, progress and cancel for long Godot runs, and protected folders that no write may touch.
-- **Godot's own language server.** `godot_code`: warnings at the project's levels, inferred types, definitions and
-  completion, also for unsaved code. Shader compilation by drawing (`godotwright shaders`) and visual tests with
+- **Godot's own language server.** `godot_code`: warnings at the project's levels, inferred types, definitions,
+  references and completion, also for unsaved code; for C# files from `csharp-ls`, when you have installed it. Shader compilation by drawing (`godotwright shaders`) and visual tests with
   screenshot baselines.
 
 All changes: [CHANGELOG.md](CHANGELOG.md).
@@ -338,7 +338,7 @@ renders on the [asset library page](https://laaielichter.github.io/Godotwright/l
 | `godot_resource_edit` | Edit a `.tres` (properties, sub_resources, uids kept) and import settings (`.import` options, per-animation, mesh, material and node options, importer switch); a written `.import` is reimported headless and checked |
 | `godot_migrate` | Rewrite Godot 3 GDScript and shaders to Godot 4 where that is mechanical, and list what is left |
 | `godot_shader` | Review every shader against Godot 4.7's shader tables and compile it with Godot headless; `gpu: true` also draws it for GPU driver errors; errors as `file:line` |
-| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition and completion, also for unsaved code |
+| `godot_code` | Godot's own GDScript language server, kept warm: diagnostics at the project's warning levels, hover (inferred types and signatures), definition, references, symbols and completion, also for unsaved code. A `.cs` file is answered by the C# language server `csharp-ls` (you install it) with the same ops |
 | `godot_deps` | The project as a graph of files from where the game starts: unused files with their size (paths the code builds count), why a file is used, what a scene loads with it, scene loops Godot cannot load |
 | `godot_undo` | Undo the last Godotwright writes (edits, renames with their moves, migrations, fixes, model builds), newest first; a file changed by hand since is left alone |
 | `godot_fix` | Apply the mechanical fixes for review findings, each labelled `safe` or `check`, uid repairs across files included; shows them first, then reviews the changed files again |
