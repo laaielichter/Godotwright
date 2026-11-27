@@ -302,6 +302,17 @@ describe("performance hints", () => {
     expect(one("shader_type spatial;\nvoid fragment() {\n\tif (UV.x > 0.5) { discard; }\n\tALBEDO = vec3(1.0);\n\tALPHA = 0.5;\n}\n")).toEqual([]);
   });
 
+  it("reports a light() that overwrites the light of earlier lights", () => {
+    const rule = "quality/shader-light-overwrites";
+    expect(one("shader_type spatial;\nvoid light() {\n\tDIFFUSE_LIGHT = max(dot(NORMAL, LIGHT), 0.0) * LIGHT_COLOR * ATTENUATION;\n\tSPECULAR_LIGHT.rgb = vec3(0.0);\n}\n", rule)).toEqual([
+      "res://s.gdshader:3: warning [quality/shader-light-overwrites] DIFFUSE_LIGHT = ... in light() replaces what the lights before this one added (light() runs once per light), so only the last light shows. Use DIFFUSE_LIGHT += ... .",
+      "res://s.gdshader:4: warning [quality/shader-light-overwrites] SPECULAR_LIGHT = ... in light() replaces what the lights before this one added (light() runs once per light), so only the last light shows. Use SPECULAR_LIGHT += ... .",
+    ]);
+    expect(one("shader_type spatial;\nvoid light() {\n\tDIFFUSE_LIGHT += LIGHT_COLOR * ATTENUATION;\n\tSPECULAR_LIGHT = SPECULAR_LIGHT + LIGHT_COLOR * 0.1;\n}\n", rule)).toEqual([]);
+    expect(one("shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(1.0);\n}\n", rule)).toEqual([]);
+    expect(one("shader_type canvas_item;\nvoid light() {\n\tLIGHT = vec4(1.0);\n}\n", rule)).toEqual([]);
+  });
+
   it("reports a spatial shader that reads the screen", () => {
     expect(one("shader_type spatial;\nuniform sampler2D screen : hint_screen_texture;\nvoid fragment() {\n\tALBEDO = texture(screen, SCREEN_UV).rgb;\n}\n")).toEqual([
       "res://s.gdshader:2: info [performance/shader-screen-read] screen uses hint_screen_texture: Godot draws this material in the transparent pass after the opaque objects, without a depth prepass, and it casts no shadow; Godot copies the screen for it every frame it is drawn.",

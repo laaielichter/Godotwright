@@ -90,6 +90,7 @@ export function checkShaders(pm: ProjectModel): Finding[] {
       if (includes.complete) checkBuiltins(ctx, type, includes.declared);
       checkSourceColor(ctx);
       checkPerformance(ctx);
+      checkLightOverwrites(ctx);
     }
     checkReadsOwnDepth(ctx);
   }
@@ -414,6 +415,39 @@ function checkPerformance(ctx: Context): void {
         ctx.path,
         ctx.at(tok.line),
         `${tok.t}() inside a loop: ${reads === undefined ? "the number of reads per pixel depends on the loop bound" : `${reads} texture reads per pixel`}. Keep the count small and fixed, use a lower mip level (textureLod), or split a blur into two passes.`,
+      ),
+    );
+  }
+}
+
+/**
+ * Godot runs a spatial light() once per light and adds nothing up itself: DIFFUSE_LIGHT and SPECULAR_LIGHT hold the
+ * sum so far, so `DIFFUSE_LIGHT = ...` throws away every light drawn before this one ("If you want the lights to add
+ * together, add the light contribution to DIFFUSE_LIGHT using +=", Godot 4.7 spatial shader reference).
+ */
+function checkLightOverwrites(ctx: Context): void {
+  const { parsed } = ctx;
+  if (parsed.type !== "spatial") return;
+  const light = parsed.functions.findIndex((f) => f.name === "light");
+  if (light < 0) return;
+  const tokens = parsed.tokens;
+  const reported = new Set<string>();
+  for (let n = 0; n < tokens.length; n++) {
+    const tok = tokens[n]!;
+    if (tok.fn !== light || (tok.t !== "DIFFUSE_LIGHT" && tok.t !== "SPECULAR_LIGHT") || tokens[n - 1]?.t === "." || reported.has(tok.t)) continue;
+    let j = n + 1;
+    while (tokens[j]?.t === "." && /^[A-Za-z_]/.test(tokens[j + 1]?.t ?? "")) j += 2;
+    if (tokens[j]?.t !== "=") continue;
+    let reads = false;
+    for (let k = j + 1; k < tokens.length && tokens[k]!.t !== ";"; k++) if (tokens[k]!.t === tok.t) reads = true;
+    if (reads) continue;
+    reported.add(tok.t);
+    ctx.out.push(
+      finding(
+        "quality/shader-light-overwrites",
+        ctx.path,
+        ctx.at(tok.line),
+        `${tok.t} = ... in light() replaces what the lights before this one added (light() runs once per light), so only the last light shows. Use ${tok.t} += ... .`,
       ),
     );
   }
