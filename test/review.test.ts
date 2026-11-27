@@ -26,7 +26,7 @@ describe("literal resource paths", () => {
   it("reports missing scene-change and threaded-load paths exactly once", () => {
     const root = makeProject({
       "project.godot": PROJECT,
-      "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n',
+      "main.tscn": '[gd_scene format=3 uid="uid://bchild1"]\n[node name="Main" type="Node"]\n',
       "paths.gd": [
         "extends Node",
         "func visit(level: String) -> void:",
@@ -40,6 +40,10 @@ describe("literal resource paths", () => {
         '\t# ResourceLoader.load_threaded_request("res://comment.tscn")',
         '\tvar a := load("res://missing_load.tres")',
         '\tvar b := preload("res://missing_preload.tres")',
+        '\tget_tree().change_scene_to_file("uid://bchild1")',
+        '\tResourceLoader.load_threaded_request("uid://bchild1")',
+        '\tResourceLoader.load_threaded_request("res://%s.tscn" % level)',
+        '\tFileAccess.file_exists("res://not_a_load.tscn")',
       ].join("\n"),
     });
     const broken = reviewProject(root).findings

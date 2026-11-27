@@ -231,6 +231,10 @@ describe("outlineScript", () => {
       '# get_tree().change_scene_to_file("res://comment.tscn")',
       `var text := 'ResourceLoader.load_threaded_request("res://text.tscn")'`,
       'my_loader.load_threaded_request("res://custom.tscn")',
+      'my_loader. load_threaded_request("res://custom_threaded.tscn")',
+      'my_tree . change_scene_to_file("res://custom_scene.tscn")',
+      'get_tree() . change_scene_to_file("res://spaced_scene.tscn")',
+      'ResourceLoader . load_threaded_request("res://spaced_threaded.tscn")',
       'load_threaded_request("not-a-project-path")',
     ].join("\n"));
     expect(script.preloads).toEqual([
@@ -238,6 +242,8 @@ describe("outlineScript", () => {
       { path: "res://b.tscn", kind: "change_scene_to_file", line: 2 },
       { path: "res://c.tscn", kind: "load_threaded_request", line: 3 },
       { path: "res://d.tscn", kind: "load_threaded_request", line: 4 },
+      { path: "res://spaced_scene.tscn", kind: "change_scene_to_file", line: 12 },
+      { path: "res://spaced_threaded.tscn", kind: "load_threaded_request", line: 13 },
     ]);
   });
 

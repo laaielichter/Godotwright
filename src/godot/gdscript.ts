@@ -350,7 +350,10 @@ function resourceRefs(ll: LogicalLine): ResourceRef[] {
     if (close < 0 || !/^\s*[,)]/.test(ll.code.slice(close + 1))) continue;
     const path = ll.text.slice(open + 1, close);
     const kind = (match[1] ?? match[2]) as ResourceRef["kind"];
-    if ((kind === "change_scene_to_file" || kind === "load_threaded_request") && !/^(?:res|uid):\/\//.test(path)) continue;
+    if (kind === "change_scene_to_file" || kind === "load_threaded_request") {
+      // Whitespace after a dot must not turn an unrecognized receiver into a bare call.
+      if (ll.code.slice(0, match.index).trimEnd().endsWith(".") || !/^(?:res|uid):\/\//.test(path)) continue;
+    }
     refs.push({ path, kind, line: ll.line });
   }
   return refs;
