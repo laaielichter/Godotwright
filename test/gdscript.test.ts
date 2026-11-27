@@ -220,6 +220,27 @@ describe("outlineScript", () => {
     ]);
   });
 
+  it("extracts literal scene-change and threaded-load paths", () => {
+    const script = outlineScript([
+      'get_tree().change_scene_to_file("res://a.tscn")',
+      "change_scene_to_file('res://b.tscn')",
+      'ResourceLoader.load_threaded_request("res://c.tscn", "PackedScene")',
+      'load_threaded_request("res://d.tscn")',
+      'get_tree().change_scene_to_file("res://%s.tscn" % level)',
+      'ResourceLoader.load_threaded_request(path)',
+      '# get_tree().change_scene_to_file("res://comment.tscn")',
+      `var text := 'ResourceLoader.load_threaded_request("res://text.tscn")'`,
+      'my_loader.load_threaded_request("res://custom.tscn")',
+      'load_threaded_request("not-a-project-path")',
+    ].join("\n"));
+    expect(script.preloads).toEqual([
+      { path: "res://a.tscn", kind: "change_scene_to_file", line: 1 },
+      { path: "res://b.tscn", kind: "change_scene_to_file", line: 2 },
+      { path: "res://c.tscn", kind: "load_threaded_request", line: 3 },
+      { path: "res://d.tscn", kind: "load_threaded_request", line: 4 },
+    ]);
+  });
+
   it("reads Unicode identifiers for functions, variables, constants and signals", () => {
     const script = outlineScript(
       [

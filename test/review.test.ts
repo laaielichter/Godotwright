@@ -22,6 +22,38 @@ describe("review of the demo fixture", () => {
   });
 });
 
+describe("literal resource paths", () => {
+  it("reports missing scene-change and threaded-load paths exactly once", () => {
+    const root = makeProject({
+      "project.godot": PROJECT,
+      "main.tscn": '[gd_scene format=3]\n[node name="Main" type="Node"]\n',
+      "paths.gd": [
+        "extends Node",
+        "func visit(level: String) -> void:",
+        '\tget_tree().change_scene_to_file("res://missing_scene.tscn")',
+        '\tResourceLoader.load_threaded_request("res://missing_threaded.tscn")',
+        '\tget_tree().change_scene_to_file("res://main.tscn")',
+        '\tResourceLoader.load_threaded_request("res://main.tscn")',
+        '\tget_tree().change_scene_to_file("res://%s.tscn" % level)',
+        '\tResourceLoader.exists("res://probe.tscn")',
+        '\tvar label := "res://just_text.tscn"',
+        '\t# ResourceLoader.load_threaded_request("res://comment.tscn")',
+        '\tvar a := load("res://missing_load.tres")',
+        '\tvar b := preload("res://missing_preload.tres")',
+      ].join("\n"),
+    });
+    const broken = reviewProject(root).findings
+      .filter((f) => f.file === "res://paths.gd" && f.rule === "structure/broken-reference")
+      .map((f) => [f.line, f.message]);
+    expect(broken).toEqual([
+      [3, "change_scene_to_file() path not found: res://missing_scene.tscn"],
+      [4, "load_threaded_request() path not found: res://missing_threaded.tscn"],
+      [11, "load() path not found: res://missing_load.tres"],
+      [12, "preload() path not found: res://missing_preload.tres"],
+    ]);
+  });
+});
+
 describe("review summary counts", () => {
   it.each([0, 1, 2])("formats counts of %i in human-readable output", (count) => {
     const report = reviewProject(DEMO);
