@@ -271,3 +271,22 @@ describe("model rules from lessons", () => {
     expect(rules(named("Wheel_FL"))).not.toContain("model/renamed-on-import");
   });
 });
+
+describe("api/callback-missing-underscore", () => {
+  const rule = "api/callback-missing-underscore";
+
+  it("reports engine callbacks written without their underscore", () => {
+    expect(lines("func enter_tree() -> void:\n\tprint(1)\n\n\nfunc physics_process(delta: float) -> void:\n\tprint(delta)\n", rule)).toEqual([
+      "res://main.gd:4: warning [api/callback-missing-underscore] enter_tree() is never called by Godot: the engine calls Node3D._enter_tree(), with the underscore, and nothing in the project calls enter_tree(). Rename it to _enter_tree().",
+      "res://main.gd:8: warning [api/callback-missing-underscore] physics_process() is never called by Godot: the engine calls Node3D._physics_process(), with the underscore, and nothing in the project calls physics_process(). Rename it to _physics_process().",
+    ]);
+  });
+
+  it("stays quiet when the method is used, the callback exists too, or the name is not a callback", () => {
+    expect(lines("func _ready() -> void:\n\tready()\n\n\nfunc ready() -> void:\n\tprint(1)\n", rule)).toEqual([]);
+    expect(lines("func _process(delta: float) -> void:\n\tprint(delta)\n\n\nfunc process(delta: float) -> void:\n\tprint(delta)\n", rule)).toEqual([]);
+    expect(lines("func input(e: InputEvent) -> void:\n\tprint(e)\n", rule, { "other.gd": "extends Node\n\n\nfunc f(n) -> void:\n\tn.input(null)\n" })).toEqual([]);
+    expect(lines("func jump() -> void:\n\tprint(1)\n", rule)).toEqual([]);
+    expect(lines("func notification(what: int) -> void:\n\tprint(what)\n", rule)).toEqual([]);
+  });
+});

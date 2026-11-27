@@ -43,6 +43,7 @@ const list: Rule[] = [
   { id: "api/csharp-signal-name", category: "api", severity: "error", title: "[Signal] delegate without EventHandler", fix: "End the delegate's name with EventHandler: `[Signal] public delegate void HealthChangedEventHandler(int value);` declares the signal HealthChanged." },
   { id: "api/csharp-callback", category: "api", severity: "warning", title: "C# engine callback Godot never calls", fix: "Override the callback with its C# name and parameters: `public override void _Ready()`, `public override void _Process(double delta)`." },
   // Runtime pitfalls from real projects (see data/lessons.json and `godotwright lessons`).
+  { id: "api/callback-missing-underscore", category: "api", severity: "warning", title: "Engine callback without its underscore", fix: "Name it like the engine callback (`_ready`, `_process`, ...), or call it yourself if it is your own method." },
   { id: "api/override-signature", category: "api", severity: "error", title: "Override does not match its parent", fix: "Give the override the parent's parameters; parameters it adds need a default value." },
   { id: "api/void-return-value", category: "api", severity: "error", title: "Value returned from a void function", fix: "Remove the returned value, or give the function a return type." },
   { id: "api/freed-check-order", category: "api", severity: "warning", title: "Type test before the freed check", fix: "Check is_instance_valid(x) first and test `x is T` after it: a type test on a freed object is itself an error." },

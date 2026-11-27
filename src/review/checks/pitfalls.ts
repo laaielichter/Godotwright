@@ -136,6 +136,7 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
 
   out.push(...treeTestReadsTooEarly(pm, path, lines));
   out.push(...overrideSignatures(pm, path));
+  out.push(...callbacksWithoutUnderscore(pm, path));
   out.push(...duplicateDeclarations(pm, path));
   out.push(...voidReturnValues(pm, path, lines));
   out.push(...connectCalledHandlers(pm, path, lines));
@@ -645,6 +646,49 @@ function overrideSignatures(pm: ProjectModel, path: string): Finding[] {
     }
   }
   return out;
+}
+
+/**
+ * `func ready():` in a Node script: Godot only calls the virtual `_ready()`, so a method with the name minus its
+ * underscore never runs unless the project calls it. Quiet when the engine class has a member with that very name,
+ * when the script chain also defines the underscored callback, and when the name is used anywhere else in the
+ * project (a call, a Callable, a scene connection).
+ */
+function callbacksWithoutUnderscore(pm: ProjectModel, path: string): Finding[] {
+  const out: Finding[] = [];
+  for (const model of pm.modelsOf(path)) {
+    const base = pm.nativeOf(model);
+    const chain = pm.chain(model);
+    for (const fn of model.outline.functions) {
+      if (fn.static || fn.name.startsWith("_")) continue;
+      const callback = `_${fn.name}`;
+      const virtual = pm.api.member(base, callback).find((e) => e.kind === "method")?.item as ApiMethod | undefined;
+      if (!virtual || !/\bvirtual\b/.test(virtual.qualifiers ?? "")) continue;
+      if (pm.api.member(base, fn.name).length > 0) continue;
+      if (chain.some((m) => m.outline.functions.some((f) => f.name === callback || (m !== model && f.name === fn.name)))) continue;
+      if (usedElsewhere(pm, fn.name, path, fn.line)) continue;
+      out.push(
+        finding(
+          "api/callback-missing-underscore",
+          path,
+          fn.line,
+          `${fn.name}() is never called by Godot: the engine calls ${base}.${callback}(), with the underscore, and nothing in the project calls ${fn.name}(). Rename it to ${callback}().`,
+        ),
+      );
+    }
+  }
+  return out;
+}
+
+/** True when `name` appears in a script other than on its declaration line, or as the method of a scene connection. */
+function usedElsewhere(pm: ProjectModel, name: string, path: string, line: number): boolean {
+  const word = new RegExp(String.raw`(?<![\w$])${name}(?!\w)`);
+  for (const [file, source] of pm.data.sources) {
+    const lines = source.split(/\r?\n/);
+    if (lines.some((text, i) => !(file === path && i + 1 === line) && word.test(text.replace(/#.*$/, "")))) return true;
+  }
+  for (const resource of pm.data.resources.values()) if (resource.connections.some((c) => c.method === name)) return true;
+  return false;
 }
 
 /** The parameters of the function a method overrides: in a script it extends, or a virtual method of the engine class. */
