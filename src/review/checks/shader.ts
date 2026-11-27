@@ -4,6 +4,7 @@ import { isWrite, knownRenderMode, parseShader, resolveInclude, type ParsedShade
 import type { ProjectData, ShaderSource } from "../../scan/scan.js";
 import { finding, type Finding } from "../rules.js";
 import type { ProjectModel } from "../model.js";
+import { CLAMP_VALUE_LAST, clampValueLast } from "./pitfalls.js";
 
 /**
  * Review of shader code (.gdshader, .gdshaderinc and Shader resources stored in scenes) against Godot 4.7's own
@@ -92,6 +93,7 @@ export function checkShaders(pm: ProjectModel): Finding[] {
       checkPerformance(ctx);
     }
     checkReadsOwnDepth(ctx);
+    checkClampOrder(ctx);
   }
   return out;
 }
@@ -432,4 +434,14 @@ function checkReadsOwnDepth(ctx: Context): void {
       "This shader writes its own depth in the alpha prepass and also reads the depth texture, so it reads its own surface: depth-based foam or fog shows everywhere. Use depth_draw_always instead of depth_prepass_alpha.",
     ),
   );
+}
+
+/** clamp() with both bounds first: the shading language takes clamp(x, min, max), as GDScript does. */
+function checkClampOrder(ctx: Context): void {
+  const code = ctx.parsed.code;
+  for (const m of code.matchAll(CLAMP_VALUE_LAST)) {
+    if (m[1] !== "clamp") continue;
+    const line = code.slice(0, m.index).split(/\r?\n/).length;
+    ctx.out.push(finding("quality/clamp-argument-order", ctx.path, ctx.at(line), clampValueLast(m)));
+  }
 }

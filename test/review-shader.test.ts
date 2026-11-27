@@ -302,6 +302,19 @@ describe("performance hints", () => {
     expect(one("shader_type spatial;\nvoid fragment() {\n\tif (UV.x > 0.5) { discard; }\n\tALBEDO = vec3(1.0);\n\tALPHA = 0.5;\n}\n")).toEqual([]);
   });
 
+  it("reports clamp() with both bounds before the value", () => {
+    const rule = "quality/clamp-argument-order";
+    // Not a shader-only rule, so `one` (which keeps only shader rule ids) cannot be used here.
+    const one = (code: string, id: string) =>
+      reviewProject(makeProject({ "project.godot": PROJECT, ".gitignore": ".godot/\n", "s.gdshader": code }))
+        .findings.filter((f) => f.rule === id)
+        .map(formatFinding);
+    expect(one("shader_type spatial;\nvoid fragment() {\n\tfloat t = UV.x;\n\tALBEDO = vec3(clamp(0.0, 1.0, t * 2.0));\n}\n", rule)).toEqual([
+      "res://s.gdshader:4: warning [quality/clamp-argument-order] clamp(0.0, 1.0, t * 2.0) clamps 0.0 between 1.0 and t * 2.0: the value comes first. Write clamp(t * 2.0, 0.0, 1.0).",
+    ]);
+    expect(one("shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(clamp(UV.x * 2.0, 0.0, 1.0));\n}\n", rule)).toEqual([]);
+  });
+
   it("reports a spatial shader that reads the screen", () => {
     expect(one("shader_type spatial;\nuniform sampler2D screen : hint_screen_texture;\nvoid fragment() {\n\tALBEDO = texture(screen, SCREEN_UV).rgb;\n}\n")).toEqual([
       "res://s.gdshader:2: info [performance/shader-screen-read] screen uses hint_screen_texture: Godot draws this material in the transparent pass after the opaque objects, without a depth prepass, and it casts no shadow; Godot copies the screen for it every frame it is drawn.",

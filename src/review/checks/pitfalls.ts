@@ -12,6 +12,18 @@ import { bodyOf } from "./performance.js";
 const IMAGE_FILE = /\.(?:png|jpe?g|webp|bmp|tga|svg|exr|hdr|ktx2?|dds)$/i;
 const MOJIBAKE = /Ã[\u0080-¿]|Â[ -¿]|â€/;
 const TICK_CALLBACKS = new Set(["_physics_process", "_process"]);
+const NUMBER = String.raw`[-+]?(?:\d[\d_]*(?:\.[\d_]*)?|\.\d[\d_]*)(?:[eE][-+]?\d+)?`;
+/** `clamp(0.0, 1.0, x)`: both bounds first and the value last. GDScript and shaders both take `clamp(value, min, max)`. */
+export const CLAMP_VALUE_LAST = new RegExp(
+  String.raw`\b(clamp[fi]?)\s*\(\s*(${NUMBER})\s*,\s*(${NUMBER})\s*,\s*(?!${NUMBER}\s*\))([^\s,()][^,()]*(?:\([^()]*\))?[^,()]*)\)`,
+  "g",
+);
+
+/** The message for a clamp() call with its value last; the GDScript and the shader review share it. */
+export function clampValueLast(m: RegExpMatchArray): string {
+  const value = m[4]!.trim();
+  return `${m[1]}(${m[2]}, ${m[3]}, ${value}) clamps ${m[2]} between ${m[3]} and ${value}: the value comes first. Write ${m[1]}(${value}, ${m[2]}, ${m[3]}).`;
+}
 
 export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
   const script = pm.data.scripts.get(path);
@@ -62,6 +74,8 @@ export function checkScriptPitfalls(pm: ProjectModel, path: string): Finding[] {
         ),
       );
     }
+
+    for (const m of ll.code.matchAll(CLAMP_VALUE_LAST)) out.push(finding("quality/clamp-argument-order", path, ll.line, clampValueLast(m)));
 
     if (MOJIBAKE.test(ll.text)) {
       const sample = MOJIBAKE.exec(ll.text)![0];

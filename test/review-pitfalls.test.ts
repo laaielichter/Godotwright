@@ -271,3 +271,19 @@ describe("model rules from lessons", () => {
     expect(rules(named("Wheel_FL"))).not.toContain("model/renamed-on-import");
   });
 });
+
+describe("quality/clamp-argument-order", () => {
+  const rule = "quality/clamp-argument-order";
+
+  it("reports clamp(), clampf() and clampi() with both bounds before the value", () => {
+    expect(lines("func f(t: float, n: int) -> float:\n\tvar a := clampf(0.0, 1.0, t)\n\tvar b := clampi(0, 10, n + 1)\n\treturn a + b + clamp(-1, 1, absf(t))\n", rule)).toEqual([
+      "res://main.gd:5: warning [quality/clamp-argument-order] clampf(0.0, 1.0, t) clamps 0.0 between 1.0 and t: the value comes first. Write clampf(t, 0.0, 1.0).",
+      "res://main.gd:6: warning [quality/clamp-argument-order] clampi(0, 10, n + 1) clamps 0 between 10 and n + 1: the value comes first. Write clampi(n + 1, 0, 10).",
+      "res://main.gd:7: warning [quality/clamp-argument-order] clamp(-1, 1, absf(t)) clamps -1 between 1 and absf(t): the value comes first. Write clamp(absf(t), -1, 1).",
+    ]);
+  });
+
+  it("stays quiet on the right order, all-literal calls and other functions", () => {
+    expect(lines("func f(t: float) -> float:\n\tvar a := clampf(t, 0.0, 1.0)\n\tvar b := clampf(0.5, 0.0, 1.0)\n\tvar c := clampf(0.0, t, 1.0)\n\treturn a + b + c + my_clamp(0.0, 1.0, t)\n\n\nfunc my_clamp(a: float, b: float, c: float) -> float:\n\treturn a + b + c\n", rule)).toEqual([]);
+  });
+});
