@@ -1,10 +1,14 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  chmodSync, closeSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, rmSync, writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 import { checkProject, cleanup, runOutput, unexplainedExit } from "../src/check/check.js";
 import { checkerSource } from "../src/check/checker-script.js";
-import { descendantPids, findGodot, GodotNotFoundError, runGodot } from "../src/check/godot.js";
+import { findGodot, GodotNotFoundError, runGodot } from "../src/check/godot.js";
+import { alive, trackProcess, waitForExit, within, type FakeProcess } from "./fake-godot.js";
 import { FIXTURES, runCli } from "./helpers.js";
 
 /** Temp folders this file creates; removed once the tests are done. */
@@ -284,13 +288,18 @@ describe("findGodot", () => {
   });
 });
 
-/** Whether a process still runs: not gone and not a zombie waiting for its parent. */
-function running(pid: number): boolean {
+/** Capture a live sleep that has already exec'd and is still a direct child of the wrapper. */
+function trackWrapperSleep(pid: number, wrapperPid: number): FakeProcess | undefined {
   try {
+    const child = trackProcess(pid);
+    if (!child) return undefined;
     const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
-    return stat[stat.lastIndexOf(")") + 2] !== "Z";
-  } catch {
-    return false;
+    const sleep = new RegExp(`^${pid} \\(sleep\\) [A-Za-z] ${wrapperPid} `);
+    return sleep.test(stat) && alive(child) ? child : undefined;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ESRCH") return undefined;
+    throw error;
   }
 }
 
@@ -298,21 +307,113 @@ describe("runGodot on a timeout", () => {
   it.skipIf(process.platform !== "linux")("stops what a wrapper such as xvfb-run started, and lets the wrapper clean up", async () => {
     const dir = tempDir("gw-kill-");
     const marker = join(dir, "marker");
-    const pidFile = join(dir, "pid");
-    writeFileSync(marker, "");
-    // Like xvfb-run: a server in the background, the command in the foreground, cleanup in an EXIT trap.
-    const script = `trap 'rm -f "${marker}"' EXIT; sleep 60 & echo $! > "${pidFile}"; sleep 60; exit 0`;
-    const started = Date.now();
-    // The script runs from a file, as xvfb-run itself is a script file: runGodot never gets a command line for a shell.
+    const readinessFile = join(dir, "ready");
+    const lifetimePipe = join(dir, "lifetime");
     const wrapper = join(dir, "wrapper.sh");
-    writeFileSync(wrapper, script);
-    const result = await runGodot("sh", [wrapper], { timeoutMs: 500 });
-    expect(result.timedOut).toBe(true);
-    expect(Date.now() - started).toBeLessThan(5000);
-    const server = Number(readFileSync(pidFile, "utf8"));
-    expect(running(server)).toBe(false);
-    expect(existsSync(marker)).toBe(false);
-    expect(descendantPids(process.pid)).not.toContain(server);
+    writeFileSync(marker, "");
+    // Like xvfb-run: a server in the background, a command in the foreground, and cleanup in an EXIT trap.
+    writeFileSync(wrapper, `trap 'rm -f marker' EXIT
+exec 3> lifetime
+sleep 20 &
+sh -c 'printf "%s %s %s\\n" "$1" "$2" "$$" > ready; exec sleep 20' sh "$$" "$!"
+exit 0
+`);
+
+    // The wrapper opens the writer before it forks. Both sleepers inherit it even if startup fails before
+    // the PID record is written. The reader never blocks, and EOF after the run settles means all writers closed.
+    execFileSync("mkfifo", [lifetimePipe]);
+    const reader = openSync(lifetimePipe, constants.O_RDONLY | constants.O_NONBLOCK);
+
+    const timeoutMs = 3000;
+    const watchdogMs = 7500;
+    const started = performance.now();
+    const deadline = started + timeoutMs;
+    let settled = false;
+    const run = runGodot("sh", [wrapper], { cwd: dir, timeoutMs }).then(({ timedOut }) => ({
+      timedOut,
+      elapsed: performance.now() - started,
+      markerPresent: existsSync(marker),
+    })).finally(() => { settled = true; });
+    const result = within(run, "wrapper run to settle", watchdogMs);
+    void result.catch(() => undefined); // Observe rejection while polling for readiness.
+
+    const children = new Map<string, FakeProcess>();
+    onTestFinished(async () => {
+      const deadline = performance.now() + 30_000;
+      try {
+        await within(run.catch(() => undefined), "wrapper run cleanup", 30_000);
+        const buffer = Buffer.alloc(1);
+        while (performance.now() < deadline) {
+          try {
+            if (readSync(reader, buffer, 0, 1, null) === 0) return;
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== "EAGAIN") throw error;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        throw new Error("timed out waiting for the wrapper fixture to close its lifetime pipe");
+      } finally {
+        closeSync(reader);
+      }
+    }, 31_000);
+
+    let ready = false;
+    let observation = "waiting for a complete wrapper, background, and foreground PID record";
+    while (!settled && performance.now() < deadline) {
+      const record = existsSync(readinessFile) ? readFileSync(readinessFile, "utf8") : "";
+      const match = /^([1-9]\d*) ([1-9]\d*) ([1-9]\d*)\n$/.exec(record);
+      if (match) {
+        const wrapperPid = Number(match[1]);
+        const backgroundPid = Number(match[2]);
+        const foregroundPid = Number(match[3]);
+        const pids = [wrapperPid, backgroundPid, foregroundPid];
+        if (new Set(pids).size !== 3 || pids.some((pid) => pid > 0x7fffffff || pid === process.pid)) {
+          throw new Error(`invalid wrapper readiness record: ${record.trim()}`);
+        }
+        const roles = [["background", backgroundPid], ["foreground", foregroundPid]] as const;
+        for (const [role, pid] of roles) {
+          if (children.has(role)) continue;
+          const child = trackWrapperSleep(pid, wrapperPid);
+          if (child) children.set(role, child);
+        }
+        const missing = roles.filter(([role]) => {
+          const child = children.get(role);
+          return !child || !alive(child);
+        });
+        if (!missing.length && performance.now() < deadline) {
+          ready = true;
+          break;
+        }
+        observation = missing.length
+          ? `missing live sleep under wrapper ${wrapperPid}: ${missing.map(([role, pid]) => `${role} (${pid})`).join(", ")}`
+          : "both sleeps observed after the startup deadline";
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    const { timedOut, elapsed, markerPresent } = await result.catch((error: unknown) => {
+      throw new Error(`wrapper run failed (readiness: ${ready ? "both sleeps ready" : observation})`, { cause: error });
+    });
+
+    const processes = [...children.values()];
+    const exitError = await waitForExit(processes, 3000).catch((error: unknown) => String(error));
+    // Check the original identities even if the wrapper has exited and the sleepers have been reparented.
+    const survivors = processes.filter(alive).map(({ pid }) => pid);
+    expect({
+      readiness: ready ? "both sleeps observed ready" : observation,
+      timedOut,
+      settledWithinWatchdog: elapsed < watchdogMs,
+      markerPresent,
+      exitError,
+      survivors,
+    }, `wrapper run settled after ${Math.round(elapsed)} ms`).toEqual({
+      readiness: "both sleeps observed ready",
+      timedOut: true,
+      settledWithinWatchdog: true,
+      markerPresent: false,
+      exitError: undefined,
+      survivors: [],
+    });
   });
 
   it.skipIf(process.platform === "win32")("still kills a process that started nothing at once", async () => {
