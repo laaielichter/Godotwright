@@ -354,13 +354,14 @@ export type WhyStep =
   | { file: string; by: string; kind: EdgeKind; line?: number }
   | { file: string; kind: "root"; reason: string };
 
-/** Walk from the requested file back to a project root. Unused files have no chain. */
-export function whyUsedDetails(path: string, file: string): { file: string; used: boolean; chain: WhyStep[] } {
+function traceWhy(path: string, file: string, visitLimit?: number): { file: string; used: boolean; chain: WhyStep[] } {
   const g = buildGraph(path);
   const target = knownFile(g, file);
+  // A valid chain can visit each parent entry once, plus its root.
+  const maxVisits = visitLimit ?? g.parent.size + 1;
   const chain: WhyStep[] = [];
   let at = target;
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < maxVisits; i++) {
     const p = g.parent.get(at);
     const root = g.roots.get(at);
     if (!p && root) {
@@ -374,9 +375,14 @@ export function whyUsedDetails(path: string, file: string): { file: string; used
   return { file: target, used: false, chain: [] };
 }
 
+/** Walk from the requested file back to a project root. Unused files have no chain. */
+export function whyUsedDetails(path: string, file: string): { file: string; used: boolean; chain: WhyStep[] } {
+  return traceWhy(path, file);
+}
+
 /** The explanation used by the text CLI and MCP tool. */
 export function whyUsed(path: string, file: string): { file: string; chain: string[]; used: boolean } {
-  const r = whyUsedDetails(path, file);
+  const r = traceWhy(path, file, 100);
   const chain = r.used
     ? r.chain.map((step) => step.kind === "root"
       ? `${step.file}  <- ${step.reason}`

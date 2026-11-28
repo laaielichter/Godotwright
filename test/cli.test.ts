@@ -12,13 +12,16 @@ import { box, writeGlb } from "./model-helpers.js";
  * Runs the CLI in-process and captures its output. Every command gets exitOverride, not just the root,
  * so a usage error in a subcommand comes back as an exit code instead of ending the test process.
  */
-async function run(args: string[]): Promise<{ output: string; exitCode: number }> {
+async function run(
+  args: string[],
+  writeErr?: (text: string) => void,
+): Promise<{ output: string; exitCode: number }> {
   let output = "";
   const program = createProgram();
   const capture = (command: Command): void => {
     command.exitOverride().configureOutput({
       writeOut: (text) => (output += text),
-      writeErr: (text) => (output += text),
+      writeErr: writeErr ?? ((text) => (output += text)),
     });
     command.commands.forEach(capture);
   };
@@ -44,6 +47,23 @@ describe("deps JSON output", () => {
     "", '[node name="Main" type="Node"]', "",
   ].join("\n");
 
+  async function runDeps(root: string, ...command: string[]) {
+    let stderr = "";
+    const writeErr = (text: string) => {
+      stderr += text;
+    };
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      writeErr(String(chunk));
+      return true;
+    });
+    try {
+      const { output: stdout, exitCode } = await run(["deps", "--path", root, ...command], writeErr);
+      return { stdout, stderr, exitCode };
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
   it("explains used and unused files without changing text output", async () => {
     const root = makeProject({
       "project.godot": config, "main.tscn": scene("used.tres"),
@@ -68,6 +88,47 @@ describe("deps JSON output", () => {
     expect(await run(["deps", "--path", root, "why", "unused.tres"])).toEqual({ exitCode: 0, output:
       "res://unused.tres looks unused:\n  nothing the game starts with reaches res://unused.tres: no scene, resource, script, setting, export filter or file list names it, also not by folder or file name\n",
     });
+  });
+
+  it("walks JSON chains to the project root across the legacy 100-visit limit", async () => {
+    const paths = ["main.tscn", ...Array.from({ length: 101 }, (_, i) => `link-${i + 1}.tscn`)];
+    const root = makeProject({
+      "project.godot": config,
+      ...Object.fromEntries(paths.map((file, i) => {
+        const next = paths[i + 1];
+        return [file, next === undefined ? scene() : scene(next)];
+      })),
+      "unused.tres": "",
+    });
+    const unused = await runDeps(root, "unused", "--json");
+    expect(unused.exitCode).toBe(0);
+    expect(unused.stderr).toBe("");
+    expect(JSON.parse(unused.stdout).files).toEqual([{ file: "res://unused.tres", bytes: 0 }]);
+
+    const rootStep = { file: "res://main.tscn", kind: "root", reason: "project.godot: application/run/main_scene" };
+    for (const depth of [99, 100, 101]) {
+      const target = paths[depth]!;
+      const file = `res://${target}`;
+      const edges = paths.slice(1, depth + 1).map((path, i) => ({
+        file: `res://${path}`, by: `res://${paths[i]}`, kind: "ext_resource", line: 3,
+      })).reverse();
+      const result = await runDeps(root, "why", target, "--json");
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.stdout)).toEqual({ file, used: true, chain: [...edges, rootStep] });
+
+      const legacy = await runDeps(root, "why", target);
+      expect(legacy.exitCode).toBe(0);
+      expect(legacy.stderr).toBe("");
+      expect(legacy.stdout).toBe(depth === 99
+        ? [
+          `${file} is used:`,
+          ...edges.map((step) => `  ${step.file}  <- ext_resource in ${step.by}:3`),
+          "  res://main.tscn  <- project.godot: application/run/main_scene",
+          "",
+        ].join("\n")
+        : `${file} looks unused:\n  nothing the game starts with reaches ${file}: no scene, resource, script, setting, export filter or file list names it, also not by folder or file name\n`);
+    }
   });
 
   it("returns every loaded dependency in JSON, even when text is capped at 40", async () => {
@@ -97,13 +158,15 @@ describe("deps JSON output", () => {
     const cyclic = makeProject({
       "project.godot": config, "main.tscn": scene("loop.tscn"), "loop.tscn": scene("main.tscn"),
     });
-    const query = (root: string) => run(["deps", "--path", root, "cycles", "--json"]);
+    const query = (root: string) => runDeps(root, "cycles", "--json");
     const none = await query(clean);
     expect(none.exitCode).toBe(0);
-    expect(JSON.parse(none.output)).toEqual({ cycles: [] });
+    expect(none.stderr).toBe("");
+    expect(JSON.parse(none.stdout)).toEqual({ cycles: [] });
     const result = await query(cyclic);
     expect(result.exitCode).toBe(1);
-    expect(JSON.parse(result.output)).toEqual({ cycles: [["res://loop.tscn", "res://main.tscn"]] });
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual({ cycles: [["res://loop.tscn", "res://main.tscn"]] });
     expect(await run(["deps", "--path", clean, "cycles"])).toEqual({
       output: "cycles: no scene or resource loads itself through ext_resource\n", exitCode: 0,
     });
@@ -115,21 +178,16 @@ describe("deps JSON output", () => {
   it("leaves errors on stderr as plain text, with no stdout", async () => {
     const root = makeProject({ "project.godot": config, "main.tscn": scene() });
     const empty = makeProject({});
-    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-    try {
-      const cases: [string, ...string[]][] = [[root, "why", "absent.gd"], [root, "of", "absent.gd"], [empty, "cycles"]];
-      for (const flags of [[], ["--json"]]) {
-        for (const [dir, ...command] of cases) {
-          stderr.mockClear();
-          expect(await run(["deps", "--path", dir, ...command, ...flags])).toEqual({ exitCode: 1, output: "" });
-          expect(stderr).toHaveBeenCalledTimes(1);
-          expect(stderr.mock.calls[0]?.[0]).toMatch(command[0] === "cycles"
-            ? (flags.length ? /^No project\.godot found / : /^error: No project\.godot found /)
-            : /^res:\/\/absent\.gd does not exist in the project/);
-        }
+    const missingFile = "res://absent.gd does not exist in the project\n";
+    const missingProject = `No project.godot found in ${empty} or its parent directories.\n`;
+    for (const flags of [[], ["--json"]]) {
+      for (const op of ["why", "of"]) {
+        expect(await runDeps(root, op, "absent.gd", ...flags)).toEqual({ exitCode: 1, stdout: "", stderr: missingFile });
+        expect(await runDeps(empty, op, "absent.gd", ...flags)).toEqual({ exitCode: 1, stdout: "", stderr: missingProject });
       }
-    } finally {
-      stderr.mockRestore();
+      expect(await runDeps(empty, "cycles", ...flags)).toEqual({
+        exitCode: 1, stdout: "", stderr: flags.length ? missingProject : `error: ${missingProject}`,
+      });
     }
   });
 });
