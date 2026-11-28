@@ -5,6 +5,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 ## Unreleased
 
 - **Review reports a missing scene in `change_scene_to_file()` and `load_threaded_request()`** (`structure/broken-reference`): a literal `res://` or `uid://` path in `get_tree().change_scene_to_file("res://...")` or `ResourceLoader.load_threaded_request("res://...")` that points at no file is reported with the call's name, like `load()` and `preload()` already were. Paths built at run time and same-named methods on other objects stay quiet. Thanks to @FLYING-SNUFALUF! (#216, #253)
+- **Tests: the cancellation tests no longer time out on a busy runner.** They wait until both the fake Godot and the process it started are really running before cancelling, and count a process that has exited but not yet been reaped as gone, so a slow CI machine no longer fails them while cancelling works. Thanks to @FLYING-SNUFALUF! (#250, #257)
 
 ## 0.9.0 (scenes that merge, the commit that broke it, C#, and the open editor: 53 tools)
 
