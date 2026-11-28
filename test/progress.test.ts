@@ -1,22 +1,22 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { existsSync, readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { runGodot } from "../src/check/godot.js";
 import { CancelledError, ProgressParser, phaseOf, throttle, withRun } from "../src/check/progress.js";
 import { createServer } from "../src/mcp/server.js";
-import { alive, fakeGodot } from "./fake-godot.js";
+import { alive, fakeGodot, trackProcess, waitForExit, waitForFakeProcesses, within, type FakeProcess } from "./fake-godot.js";
 import { makeProject } from "./helpers.js";
 
-const pidIn = (dir: string, name: string) => Number(readFileSync(join(dir, name), "utf8"));
-
-async function waitFor(check: () => boolean, ms = 10_000): Promise<void> {
-  const end = Date.now() + ms;
-  while (!check()) {
-    if (Date.now() > end) throw new Error("timed out waiting");
-    await new Promise((r) => setTimeout(r, 25));
-  }
+// Run every cleanup even when one fails. Vitest records hook failures alongside the original assertion failure.
+async function cleanup(...work: Promise<unknown>[]): Promise<void> {
+  const results = await Promise.allSettled(work);
+  const errors = results.filter((r) => r.status === "rejected").map((r) => r.reason);
+  if (errors.length) throw new AggregateError(errors, "cancellation test cleanup failed");
 }
 
 describe("progress parser", () => {
@@ -76,16 +76,40 @@ describe("progress throttle", () => {
 });
 
 describe("cancelling a Godot run", () => {
-  it("stops Godot and the process it started, and rejects with CancelledError", async () => {
+  // 10 s readiness + 10 s cancellation + 10 s exit + bounded cleanup; below the fixture child's 60 s lifetime.
+  it("stops Godot and the process it started, and rejects with CancelledError", { timeout: 45_000 }, async () => {
     const fake = fakeGodot({ hang: true });
     const controller = new AbortController();
     const run = runGodot(fake.bin, ["--headless", "--script", "res://check.gd"], { signal: controller.signal, timeoutMs: 60_000 });
-    await waitFor(() => existsSync(join(fake.dir, "child.pid")));
-    const godot = pidIn(fake.dir, "godot.pid");
-    const child = pidIn(fake.dir, "child.pid");
+    void run.catch(() => undefined); // Observe an early failure even while waiting for readiness.
+    const processes: FakeProcess[] = [];
+    onTestFinished(async () => {
+      controller.abort();
+      await cleanup(within(run.catch(() => undefined), "cancelled run cleanup", 5000), waitForExit(processes, 5000));
+    }, 10_000);
+    await waitForFakeProcesses(fake, processes);
     controller.abort();
-    await expect(run).rejects.toBeInstanceOf(CancelledError);
-    await waitFor(() => !alive(godot) && !alive(child));
+    await within(expect(run).rejects.toBeInstanceOf(CancelledError), "CancelledError");
+    await waitForExit(processes);
+  });
+
+  it("keeps waiting when one owned process exits and another stays live", { timeout: 15_000 }, async () => {
+    // Helper-level negative control: both handles belong to this test, so there is no orphan to clean up.
+    const children = [0, 1].map(() => spawn(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], { stdio: "ignore" }));
+    const exits = children.map((child) => once(child, "exit"));
+    exits.forEach((exited) => void exited.catch(() => undefined));
+    onTestFinished(() => cleanup(...children.map(async (child, i) => {
+      child.kill("SIGKILL");
+      await within(exits[i]!, "owned process reaping", 5000);
+    })), 10_000);
+    await Promise.all(children.map((child) => once(child, "spawn")));
+    const processes = children.map((child) => trackProcess(child.pid!)!);
+    children[0]!.kill("SIGKILL");
+    await within(exits[0]!, "owned process exit", 5000);
+    await waitForExit([processes[0]!]);
+    expect(alive(processes[1]!)).toBe(true);
+    await expect(waitForExit(processes, 100)).rejects.toThrow("still alive:");
+    expect(alive(processes[1]!)).toBe(true);
   });
 
   it("does not start Godot when the run is already cancelled", async () => {
@@ -121,17 +145,21 @@ describe("MCP progress and cancel", () => {
     expect(seen.map((p) => p.progress)).toEqual(seen.map((_, i) => i + 1));
   });
 
-  it("stops the Godot process tree when the client cancels godot_check", async () => {
+  it("stops the Godot process tree when the client cancels godot_check", { timeout: 45_000 }, async () => {
     const fake = fakeGodot({ hang: true });
     const { client, close } = await connect(project(), fake.bin);
     const controller = new AbortController();
     const call = client.callTool({ name: "godot_check", arguments: {} }, undefined, { signal: controller.signal });
-    await waitFor(() => existsSync(join(fake.dir, "child.pid")));
-    const godot = pidIn(fake.dir, "godot.pid");
-    const child = pidIn(fake.dir, "child.pid");
-    controller.abort();
-    await expect(call).rejects.toThrow();
-    await waitFor(() => !alive(godot) && !alive(child));
-    await close();
+    void call.catch(() => undefined);
+    const processes: FakeProcess[] = [];
+    const reason = new McpError(ErrorCode.RequestTimeout, "intentional cancellation of the process-tree test");
+    onTestFinished(async () => {
+      controller.abort(reason);
+      await cleanup(within(close(), "MCP cleanup", 5000), waitForExit(processes, 5000));
+    }, 10_000);
+    await waitForFakeProcesses(fake, processes);
+    controller.abort(reason);
+    await within(expect(call).rejects.toBe(reason), "MCP cancellation reason");
+    await waitForExit(processes);
   });
 });
