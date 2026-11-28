@@ -350,24 +350,39 @@ function knownFile(g: DepsGraph, file: string): string {
   throw new DepsFileError(`${target} does not exist in the project${near ? `; did you mean res://${near}?` : ""}`);
 }
 
-/** The chain from where the game starts to a file, or why nothing reaches it. */
-export function whyUsed(path: string, file: string): { file: string; chain: string[]; used: boolean } {
+export type WhyStep =
+  | { file: string; by: string; kind: EdgeKind; line?: number }
+  | { file: string; kind: "root"; reason: string };
+
+/** Walk from the requested file back to a project root. Unused files have no chain. */
+export function whyUsedDetails(path: string, file: string): { file: string; used: boolean; chain: WhyStep[] } {
   const g = buildGraph(path);
   const target = knownFile(g, file);
-  const chain: string[] = [];
+  const chain: WhyStep[] = [];
   let at = target;
   for (let i = 0; i < 100; i++) {
     const p = g.parent.get(at);
     const root = g.roots.get(at);
     if (!p && root) {
-      chain.push(`${at}  <- ${root}`);
-      return { file: target, chain, used: true };
+      chain.push({ file: at, kind: "root", reason: root });
+      return { file: target, used: true, chain };
     }
     if (!p) break;
-    chain.push(`${at}  <- ${p.edge.kind} in ${p.from}${p.edge.line ? `:${p.edge.line}` : ""}`);
+    chain.push({ file: at, by: p.from, kind: p.edge.kind, ...(p.edge.line !== undefined ? { line: p.edge.line } : {}) });
     at = p.from;
   }
-  return { file: target, chain: [`nothing the game starts with reaches ${target}: no scene, resource, script, setting, export filter or file list names it, also not by folder or file name`], used: false };
+  return { file: target, used: false, chain: [] };
+}
+
+/** The explanation used by the text CLI and MCP tool. */
+export function whyUsed(path: string, file: string): { file: string; chain: string[]; used: boolean } {
+  const r = whyUsedDetails(path, file);
+  const chain = r.used
+    ? r.chain.map((step) => step.kind === "root"
+      ? `${step.file}  <- ${step.reason}`
+      : `${step.file}  <- ${step.kind} in ${step.by}${step.line ? `:${step.line}` : ""}`)
+    : [`nothing the game starts with reaches ${r.file}: no scene, resource, script, setting, export filter or file list names it, also not by folder or file name`];
+  return { file: r.file, chain, used: r.used };
 }
 
 export interface DepsOf {

@@ -1,11 +1,11 @@
 import { chmodSync, cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CommanderError, type Command } from "commander";
 import { createProgram } from "../src/program.js";
 import { VERSION } from "../src/version.js";
-import { DEMO } from "./helpers.js";
+import { DEMO, makeProject } from "./helpers.js";
 import { box, writeGlb } from "./model-helpers.js";
 
 /**
@@ -35,6 +35,104 @@ async function run(args: string[]): Promise<{ output: string; exitCode: number }
     process.exitCode = previous;
   }
 }
+
+describe("deps JSON output", () => {
+  const config = '[application]\nconfig/name="Deps"\nrun/main_scene="res://main.tscn"\n';
+  const scene = (...paths: string[]) => [
+    `[gd_scene load_steps=${paths.length + 1} format=3]`, "",
+    ...paths.map((p, i) => `[ext_resource type="Resource" path="res://${p}" id="${i + 1}"]`),
+    "", '[node name="Main" type="Node"]', "",
+  ].join("\n");
+
+  it("explains used and unused files without changing text output", async () => {
+    const root = makeProject({
+      "project.godot": config, "main.tscn": scene("used.tres"),
+      "used.tres": "", "unused.tres": "",
+    });
+    const args = ["deps", "--path", root, "why", "used.tres"];
+    const used = await run([...args, "--json"]);
+    expect(used.exitCode).toBe(0);
+    expect(JSON.parse(used.output)).toEqual({
+      file: "res://used.tres", used: true, chain: [
+        { file: "res://used.tres", by: "res://main.tscn", kind: "ext_resource", line: 3 },
+        { file: "res://main.tscn", kind: "root", reason: "project.godot: application/run/main_scene" },
+      ],
+    });
+    expect(used.output).toBe(`${JSON.stringify(JSON.parse(used.output), null, 2)}\n`);
+    expect(await run(args)).toEqual({ exitCode: 0, output:
+      "res://used.tres is used:\n  res://used.tres  <- ext_resource in res://main.tscn:3\n  res://main.tscn  <- project.godot: application/run/main_scene\n",
+    });
+    const unused = await run(["deps", "--path", root, "why", "unused.tres", "--json"]);
+    expect(unused.exitCode).toBe(0);
+    expect(JSON.parse(unused.output)).toEqual({ file: "res://unused.tres", used: false, chain: [] });
+    expect(await run(["deps", "--path", root, "why", "unused.tres"])).toEqual({ exitCode: 0, output:
+      "res://unused.tres looks unused:\n  nothing the game starts with reaches res://unused.tres: no scene, resource, script, setting, export filter or file list names it, also not by folder or file name\n",
+    });
+  });
+
+  it("returns every loaded dependency in JSON, even when text is capped at 40", async () => {
+    const paths = Array.from({ length: 41 }, (_, i) => `asset-${i}.tres`);
+    const root = makeProject({
+      ...Object.fromEntries(paths.map((p) => [p, "x"])),
+      "project.godot": config, "main.tscn": scene(...paths, "missing.tres"),
+    });
+    const args = ["deps", "--path", root, "of", "main.tscn"];
+    const result = await run([...args, "--json"]);
+    expect(result.exitCode).toBe(0);
+    const data = JSON.parse(result.output) as { files: { file: string; bytes: number; depth: number }[] };
+    expect([...data.files].sort((a, b) => a.file.localeCompare(b.file))).toEqual(
+      paths.map((p) => ({ file: `res://${p}`, bytes: 1, depth: 1 })).sort((a, b) => a.file.localeCompare(b.file)),
+    );
+    expect(data).toMatchObject({
+      file: "res://main.tscn",
+      bytes: 41, byType: [{ ext: "tres", files: 41, bytes: 41 }],
+      missing: [{ from: "res://main.tscn", to: "res://missing.tres", line: 44 }],
+      later: { files: 0, bytes: 0 },
+    });
+    expect((await run(args)).output).toContain("\n  +1 more\n");
+  });
+
+  it("prints cycles to stdout even when setting a failing exit code", async () => {
+    const clean = makeProject({ "project.godot": config, "main.tscn": scene() });
+    const cyclic = makeProject({
+      "project.godot": config, "main.tscn": scene("loop.tscn"), "loop.tscn": scene("main.tscn"),
+    });
+    const query = (root: string) => run(["deps", "--path", root, "cycles", "--json"]);
+    const none = await query(clean);
+    expect(none.exitCode).toBe(0);
+    expect(JSON.parse(none.output)).toEqual({ cycles: [] });
+    const result = await query(cyclic);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.output)).toEqual({ cycles: [["res://loop.tscn", "res://main.tscn"]] });
+    expect(await run(["deps", "--path", clean, "cycles"])).toEqual({
+      output: "cycles: no scene or resource loads itself through ext_resource\n", exitCode: 0,
+    });
+    const text = await run(["deps", "--path", cyclic, "cycles"]);
+    expect(text.exitCode).toBe(1);
+    expect(text.output).toContain("  res://loop.tscn -> res://main.tscn -> res://loop.tscn\n");
+  });
+
+  it("leaves errors on stderr as plain text, with no stdout", async () => {
+    const root = makeProject({ "project.godot": config, "main.tscn": scene() });
+    const empty = makeProject({});
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    try {
+      const cases: [string, ...string[]][] = [[root, "why", "absent.gd"], [root, "of", "absent.gd"], [empty, "cycles"]];
+      for (const flags of [[], ["--json"]]) {
+        for (const [dir, ...command] of cases) {
+          stderr.mockClear();
+          expect(await run(["deps", "--path", dir, ...command, ...flags])).toEqual({ exitCode: 1, output: "" });
+          expect(stderr).toHaveBeenCalledTimes(1);
+          expect(stderr.mock.calls[0]?.[0]).toMatch(command[0] === "cycles"
+            ? (flags.length ? /^No project\.godot found / : /^error: No project\.godot found /)
+            : /^res:\/\/absent\.gd does not exist in the project/);
+        }
+      }
+    } finally {
+      stderr.mockRestore();
+    }
+  });
+});
 
 /**
  * A stand-in for the Godot binary. It logs each call (not --version), copies the checker script it

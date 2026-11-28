@@ -59,7 +59,10 @@ godotwright export                    # what the build will miss: excluded prelo
 godotwright export run --preset Linux # export headless, check the pack against what the game loads, run it for 120 frames
 godotwright export patch --preset Linux --against base.pck   # a patch with only what changed, checked and run over the base
 godotwright export pck game.pck       # what a .pck (or a game .exe) holds, against the project; no Godot needed
-godotwright deps unused               # files nothing the game starts with reaches, biggest first; `deps why <file>` before deleting one
+godotwright deps unused [--json]      # files nothing the game starts with reaches, biggest first
+godotwright deps why <file> [--json]  # why the game reaches a file, or why it looks unused
+godotwright deps of <file> [--json]   # what a file loads, including missing dependencies
+godotwright deps cycles [--json]      # scene and resource loops; exits 1 when any are found
 godotwright diff                      # what changed by meaning against git HEAD, and what it breaks elsewhere (`--ref main`, `--against old.tscn`)
 godotwright impact                    # the scenes, tests and scenarios a change reaches, and the checks to run (or name the files)
 godotwright collisions                # physics layers and masks; `--between Player Enemy` says who detects whom and the mask to set
@@ -246,6 +249,15 @@ concrete, asphalt, plaster, leaf, grass, stone, sand, water, ground, granite, an
 small car as an example; `model build --spec car.json --set width=1.9` builds it. Every moving part is
 its own node with its pivot at its origin (a wheel at its hub), and a spec that goes wrong gets a message
 with its path (`nodes[0].children[2].size[1]: unknown variable $x`).
+
+## Dependency reports as JSON
+
+- `deps unused --json` reports unreachable files and their sizes.
+- `deps why <file> --json` returns `file`, `used` and `chain`. The chain starts at the requested file and walks back to the root. A dependency step has `file`, `by` (the referring file), `kind` and, when known, `line`. The last step has `file`, `kind: "root"` and `reason`. For an unused file, `used` is false and `chain` is empty.
+- `deps of <file> --json` returns `file`, `files`, `bytes`, `byType`, `missing` and `later`. Unlike the text display, the list is not capped at 40 files.
+- `deps cycles --json` returns a `cycles` array. A nonempty result is valid JSON on stdout and still exits with code 1; no cycles exits with code 0.
+
+Invalid project paths and unknown files stay plain text on stderr and exit with code 1.
 
 ## The whole change: diff, impact, collisions
 

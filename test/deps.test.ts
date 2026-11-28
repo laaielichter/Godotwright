@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DepsFileError, depsOf, formatCycles, formatUnused, sceneCycles, unusedFiles, whyUsed } from "../src/deps/deps.js";
+import { DepsFileError, depsOf, formatCycles, formatUnused, sceneCycles, unusedFiles, whyUsed, whyUsedDetails } from "../src/deps/deps.js";
 import { makeProject, runCli } from "./helpers.js";
 
 const scene = (name: string, ext: string[] = [], body = "") =>
@@ -56,6 +56,18 @@ describe("the project as a graph of files", () => {
     expect(whyUsed(root, "res://mover.gd").chain[0]).toBe("res://mover.gd  <- class_name in res://main.gd:6");
     expect(whyUsed(root, "res://text/strings.csv").chain[0]).toBe("res://text/strings.csv  <- project.godot: internationalization/locale/translations");
     expect(whyUsed(root, "res://stray.gd").used).toBe(false);
+    expect(whyUsedDetails(root, "fx/boom.tscn")).toEqual({
+      file: "res://fx/boom.tscn", used: true, chain: [
+        { file: "res://fx/boom.tscn", by: "res://player/player.gd", kind: "preload", line: 3 },
+        { file: "res://player/player.gd", by: "res://player/player.tscn", kind: "ext_resource", line: 3 },
+        { file: "res://player/player.tscn", by: "res://main.tscn", kind: "ext_resource", line: 3 },
+        { file: "res://main.tscn", kind: "root", reason: "project.godot: application/run/main_scene" },
+      ],
+    });
+    expect(whyUsedDetails(root, "default_bus_layout.tres").chain).toEqual([
+      { file: "res://default_bus_layout.tres", kind: "root", reason: "Godot's default audio bus layout (audio/buses/default_bus_layout)" },
+    ]);
+    expect(whyUsedDetails(root, "stray.gd")).toEqual({ file: "res://stray.gd", used: false, chain: [] });
   });
 
   it("lists what a scene loads with it and the paths that do not exist", () => {
