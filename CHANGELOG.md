@@ -4,6 +4,7 @@ All notable changes. Versions follow semver; before 1.0 a minor version may chan
 
 ## Unreleased
 
+- **`deps why`, `deps of` and `deps cycles` take `--json`** (only `deps unused` had it): `why` returns `file`, `used` and a typed `chain` of steps (`file`, `by`, `kind`, `line`) that ends in a root step with its `reason`; `of` returns the full result, not the 40-file text preview; `cycles` returns `{ "cycles": [...] }` on stdout and still exits 1 when it finds one. Text output, exit codes and the MCP tools are unchanged, and errors stay plain text on stderr. Thanks to @FLYING-SNUFALUF! (#218, #260)
 - **Review reports a missing scene in `change_scene_to_file()` and `load_threaded_request()`** (`structure/broken-reference`): a literal `res://` or `uid://` path in `get_tree().change_scene_to_file("res://...")` or `ResourceLoader.load_threaded_request("res://...")` that points at no file is reported with the call's name, like `load()` and `preload()` already were. Paths built at run time and same-named methods on other objects stay quiet. Thanks to @FLYING-SNUFALUF! (#216, #253)
 - **Tests: the cancellation tests no longer time out on a busy runner.** They wait until both the fake Godot and the process it started are really running before cancelling, and count a process that has exited but not yet been reaped as gone, so a slow CI machine no longer fails them while cancelling works. Thanks to @FLYING-SNUFALUF! (#250, #257)
 
