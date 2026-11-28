@@ -90,7 +90,7 @@ export interface InnerClass extends ClassOutline {
 
 export interface ResourceRef {
   path: string;
-  kind: "preload" | "load";
+  kind: "preload" | "load" | "change_scene_to_file" | "load_threaded_request";
   line: number;
 }
 
@@ -330,14 +330,14 @@ type Block =
   | { kind: "func"; indent: number; info: FunctionInfo }
   | { kind: "property"; indent: number };
 
-/** Start of a `preload(`, `load(` or `ResourceLoader.load(` call, up to its first argument. */
+/** Start of a resource-loading call, up to its first argument. */
 const RESOURCE_CALL = new RegExp(
-  String.raw`(?<![\p{XID_Continue}.])(?:ResourceLoader\s*\.\s*)?(preload|load)\s*\(\s*(?=["'])`,
+  String.raw`(?<![\p{XID_Continue}.])(?:(?:ResourceLoader\s*\.\s*)?(preload|load|load_threaded_request)|(?:get_tree\s*\(\s*\)\s*\.\s*)?(change_scene_to_file))\s*\(\s*(?=["'])`,
   "gu",
 );
 
 /**
- * Literal paths of the preload and load calls on a statement. The call is found in `code`,
+ * Literal paths of resource-loading calls on a statement. The call is found in `code`,
  * where string contents are blanked, so text inside strings is ignored. The path is read
  * from `text` at the same offset. A path that is only part of an expression is skipped.
  */
@@ -348,7 +348,13 @@ function resourceRefs(ll: LogicalLine): ResourceRef[] {
     const quote = ll.code[open]!;
     const close = ll.code.indexOf(quote, open + 1);
     if (close < 0 || !/^\s*[,)]/.test(ll.code.slice(close + 1))) continue;
-    refs.push({ path: ll.text.slice(open + 1, close), kind: match[1] as "preload" | "load", line: ll.line });
+    const path = ll.text.slice(open + 1, close);
+    const kind = (match[1] ?? match[2]) as ResourceRef["kind"];
+    if (kind === "change_scene_to_file" || kind === "load_threaded_request") {
+      // Whitespace after a dot must not turn an unrecognized receiver into a bare call.
+      if (ll.code.slice(0, match.index).trimEnd().endsWith(".") || !/^(?:res|uid):\/\//.test(path)) continue;
+    }
+    refs.push({ path, kind, line: ll.line });
   }
   return refs;
 }
