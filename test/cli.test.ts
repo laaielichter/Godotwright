@@ -82,9 +82,10 @@ describe("deps JSON output", () => {
     expect(await run(args)).toEqual({ exitCode: 0, output:
       "res://used.tres is used:\n  res://used.tres  <- ext_resource in res://main.tscn:3\n  res://main.tscn  <- project.godot: application/run/main_scene\n",
     });
-    const unused = await run(["deps", "--path", root, "why", "unused.tres", "--json"]);
+    const unused = await runDeps(root, "why", "unused.tres", "--json");
     expect(unused.exitCode).toBe(0);
-    expect(JSON.parse(unused.output)).toEqual({ file: "res://unused.tres", used: false, chain: [] });
+    expect(unused.stderr).toBe("");
+    expect(JSON.parse(unused.stdout)).toEqual({ file: "res://unused.tres", used: false, chain: [] });
     expect(await run(["deps", "--path", root, "why", "unused.tres"])).toEqual({ exitCode: 0, output:
       "res://unused.tres looks unused:\n  nothing the game starts with reaches res://unused.tres: no scene, resource, script, setting, export filter or file list names it, also not by folder or file name\n",
     });
@@ -138,9 +139,10 @@ describe("deps JSON output", () => {
       "project.godot": config, "main.tscn": scene(...paths, "missing.tres"),
     });
     const args = ["deps", "--path", root, "of", "main.tscn"];
-    const result = await run([...args, "--json"]);
+    const result = await runDeps(root, "of", "main.tscn", "--json");
     expect(result.exitCode).toBe(0);
-    const data = JSON.parse(result.output) as { files: { file: string; bytes: number; depth: number }[] };
+    expect(result.stderr).toBe("");
+    const data = JSON.parse(result.stdout) as { files: { file: string; bytes: number; depth: number }[] };
     expect([...data.files].sort((a, b) => a.file.localeCompare(b.file))).toEqual(
       paths.map((p) => ({ file: `res://${p}`, bytes: 1, depth: 1 })).sort((a, b) => a.file.localeCompare(b.file)),
     );
