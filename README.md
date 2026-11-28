@@ -431,6 +431,9 @@ default; see [PRIVACY.md](PRIVACY.md).
 
 **Does it write my game?** No. It checks, runs and fixes what you or your agent write, and builds base 3D models.
 
+**Is my game fast enough?** That is the job of the sister tool
+[Game Optimizer](https://github.com/laaielichter/godotwright-gameoptimizer): audit, fix, and prove each fix with a benchmark.
+
 **Older Godot 4 versions?** Most findings apply to every Godot 4 version; API lookups answer for 4.7.
 
 **Small or local models?** Yes, any MCP client. The `cheap` profile walks small models through checked steps;
@@ -471,7 +474,20 @@ environment for AI.
 
 ## Sister tools
 
-From the same author, local and open source: [ReversePort](https://github.com/laaielichter/Reverseport)
+From the same author, local and open source.
+
+The closest one is the [Game Optimizer](https://github.com/laaielichter/godotwright-gameoptimizer)
+([website](https://laaielichter.github.io/godotwright-gameoptimizer/)): a performance optimizer for Godot 4 games, built
+for coding agents. It audits a project from the files, predicts rendering cost across an open world, applies reversible
+fixes and proves each one with a benchmark and a screenshot comparison. Godotwright makes sure what the agent writes is
+correct; the Game Optimizer makes sure the game runs fast. Run `godotwright review` until the scripts are clean, then
+`optimizer_audit` and the loop of measure, fix, compare.
+
+```bash
+claude mcp add gameoptimizer -- npx -y github:laaielichter/godotwright-gameoptimizer mcp
+```
+
+Also: [ReversePort](https://github.com/laaielichter/Reverseport)
 (reverse engineer and port games between engines), [Threesmith](https://github.com/laaielichter/Threesmith)
 (check the three.js code your agent writes), [Stashpad](https://github.com/laaielichter/Stashpad)
 (agent memory you can trust) and [agentdisk](https://github.com/laaielichter/Agentdisk) (clean up after agents).
